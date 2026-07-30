@@ -1,34 +1,22 @@
-pub mod actor;
-pub mod types;
-
-use common::v2::types::{SERVER_ROOM_ID, SERVER_USER_ID};
-use kerosene_core::types::auth::{Auth5, Auth5Ext};
-use lamprey_backend_data_postgres::DbUserCreate;
-pub use types::{
-    CachedChannel, CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread,
-    CleanupIdleLists, EnsureMembers, GetSnapshot, MemberListCommandMsg, MemberListSubscribeMsg,
-    RoomData, RoomHandle, RoomSnapshot, RoomUnavailable, RoomUnavailableReason, SyncMessage,
-};
-
-pub use actor::RoomActor;
-
-use std::sync::Arc;
-use std::time::Duration;
-
 use crate::consts::IDLE_TIMEOUT_ROOM;
 use crate::globals::messaging::Broadcast;
+use crate::services::rooms::actor::{EnsureMembers, SyncMessage};
+use crate::services::rooms::types::RoomMembers;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
-    AuditLogEntryStatus, AuditLogEntryType, ChannelId, ChannelType, MessageSync, MessageType,
-    PaginationQuery, RoleId, Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch,
-    RoomType, ThreadMemberPut, UserId,
+    AuditLogEntryType, ChannelId, ChannelType, MessageSync, MessageType, PaginationQuery, RoleId,
+    Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, RoomType,
+    ThreadMemberPut, UserId,
 };
+use common::v2::types::{SERVER_ROOM_ID, SERVER_USER_ID};
 use dashmap::{DashMap, DashSet};
+use kerosene_core::types::auth::{Auth5, Auth5Ext};
+use lamprey_backend_data_postgres::DbUserCreate;
 use moka::future::Cache;
+use std::time::Duration;
 use validator::Validate;
 
-use crate::compat::routes::util::auth::Auth4 as Auth;
 use crate::consts::MAX_LOADED_ROOMS;
 use crate::prelude::*;
 use crate::services::room_template::builtin;
@@ -36,12 +24,24 @@ use crate::types::{DbMessageCreate, DbRoomCreate, MediaLinkType};
 
 use futures::future::BoxFuture;
 
+pub mod actor;
+pub mod permissions;
+pub mod types;
+pub mod utils;
+
+pub use actor::{RoomActor, RoomHandle};
+pub use types::{
+    CachedChannel, CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread,
+    LoadedRoom, RoomSnapshot, RoomUnavailable,
+};
+
 pub struct ServiceRooms {
     globals: Globals,
     idempotency_keys: Cache<String, Room>,
     pub(crate) actors: Cache<RoomId, RoomHandle>,
     /// Keep an in-memory map of UserId -> Set of RoomIds for fast fan-out of presence/user updates
     pub(crate) user_rooms: Arc<DashMap<UserId, DashSet<RoomId>>>,
+    // handles: HashMap<RoomId, RoomHandle>,
 }
 
 impl ServiceRooms {
@@ -134,7 +134,11 @@ impl ServiceRooms {
                     if s.is_loading() {
                         return false;
                     }
-                    if ensure_members && s.is_without_members() {
+
+                    let is_without_members = s
+                        .get_data()
+                        .map_or(false, |d| matches!(d.members, RoomMembers::Loading));
+                    if ensure_members && is_without_members {
                         return false;
                     }
                     true
@@ -196,7 +200,7 @@ impl ServiceRooms {
     }
 
     /// mark a room as unavailable
-    pub async fn mark_unavailable(&self, room_id: RoomId, _reason: RoomUnavailableReason) {
+    pub async fn mark_unavailable(&self, room_id: RoomId, _reason: RoomUnavailable) {
         if let Some(_handle) = self.actors.get(&room_id).await {
             // We can't easily update the watch channel from outside the actor
             // unless we have the Sender.
@@ -218,7 +222,7 @@ impl ServiceRooms {
     // TODO: make this not require writing room
     pub async fn get(&self, room_id: RoomId, user_id: Option<UserId>) -> Result<Room> {
         let snapshot = self.load_room(room_id, false).await?;
-        let mut room = snapshot.get_data().unwrap().room.clone();
+        let mut room = (*snapshot.get_data().unwrap().room).clone();
 
         if let Some(user_id) = user_id {
             // PERF: cache
@@ -239,7 +243,7 @@ impl ServiceRooms {
 
         for room_id in room_ids {
             let snapshot = self.load_room(*room_id, false).await?;
-            let room = snapshot.get_data().unwrap().room.clone();
+            let room = (*snapshot.get_data().unwrap().room).clone();
             rooms.push(room);
         }
 
@@ -736,4 +740,16 @@ impl ServiceRooms {
 
         Ok(())
     }
+
+    // /// get a handle to a room
+    // pub fn load(&self, _room_id: RoomId) -> RoomHandle {
+    //     // immediately return room handle, spawn background task to load room data then members
+    //     todo!()
+    // }
+
+    // pub fn unload(&self, room_id: RoomId);
+    // pub fn reload(&self, room_id: RoomId);
+
+    // pub fn create(&self, ...) -> RoomHandle
+    // pub fn edit(&self, ...) // maybe put this on RoomHandle?
 }

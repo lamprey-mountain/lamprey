@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::{globals::messaging::Broadcast, prelude::*};
+use crate::{globals::messaging::Broadcast, prelude::*, services::rooms::actor::SyncMessage};
 
 use common::v1::types::{
     ChannelId, ChannelType, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId,
@@ -20,7 +20,7 @@ pub mod permissions;
 
 pub use crate::services::rooms::{
     CachedChannel, CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread,
-    RoomHandle, RoomSnapshot, RoomUnavailableReason, SyncMessage,
+    RoomHandle, RoomSnapshot, RoomUnavailable,
 };
 
 use common::v1::types::error::ApiError;
@@ -70,22 +70,6 @@ impl ServiceCache {
                 .support_invalidation_closures()
                 .build(),
         }
-    }
-
-    /// register a user as being in a room in the cache
-    pub fn member_register(&self, user_id: UserId, room_id: RoomId) {
-        self.state
-            .services()
-            .rooms
-            .member_register(user_id, room_id);
-    }
-
-    /// unregister a user from a room in the cache
-    pub fn member_unregister(&self, user_id: UserId, room_id: RoomId) {
-        self.state
-            .services()
-            .rooms
-            .member_unregister(user_id, room_id);
     }
 
     pub fn start_background_tasks(&self) {
@@ -149,7 +133,7 @@ impl ServiceCache {
     }
 
     /// mark a room as unavailable
-    pub async fn mark_unavailable(&self, room_id: RoomId, reason: RoomUnavailableReason) {
+    pub async fn mark_unavailable(&self, room_id: RoomId, reason: RoomUnavailable) {
         self.state
             .services()
             .rooms
@@ -480,7 +464,13 @@ impl ServiceCache {
                 all_channels.push(channel.inner.clone());
             }
 
-            for thread in cached_room.threads.values() {
+            for thread in cached_room
+                .threads
+                .as_ref()
+                .map(|t| t.values())
+                .into_iter()
+                .flatten()
+            {
                 let thread_inner = &thread.thread;
 
                 if thread_inner.ty == ChannelType::ThreadPrivate {

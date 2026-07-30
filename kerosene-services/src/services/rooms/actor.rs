@@ -1,25 +1,25 @@
 use common::v1::types::error::ErrorCode;
+use common::v1::types::{MessageSync, RoomId, User, UserId};
 use im::HashMap as ImMap;
-use kameo::prelude::{Actor, ActorRef, Context, Message, Spawn, WeakActorRef};
+use kameo::prelude::{Actor, ActorRef, Spawn, WeakActorRef};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
+use tokio::sync::watch;
 use tokio::time::Duration;
 use tracing::Instrument;
 
-use common::v1::types::{MessageSync, RoomId, User, UserId};
-use tokio::sync::watch;
-
 use super::{
-    CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, CleanupIdleLists,
-    EnsureMembers, GetSnapshot, MemberListCommandMsg, MemberListSubscribeMsg, RoomData, RoomHandle,
-    RoomSnapshot, SyncMessage,
+    CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, LoadedRoom, RoomSnapshot,
 };
 use crate::prelude::*;
 use crate::services::member_lists::actor::MemberList;
 use crate::services::member_lists::util::MemberListKey;
+use crate::services::rooms::types::RoomMembers;
 use crate::types::PermissionBits;
 use crate::{Error, Result};
+
+// PERF: how many `Arc`s are too many?
 
 /// The internal state of a room actor.
 pub struct RoomActor {
@@ -42,7 +42,7 @@ impl Actor for RoomActor {
     ) -> std::result::Result<Self, Self::Error> {
         let span = tracing::info_span!("room actor");
 
-        let snapshot = Arc::new(RoomSnapshot::Loading);
+        let snapshot = Arc::new(RoomSnapshot::loading());
         let mut actor = Self {
             state,
             room_id,
@@ -72,7 +72,7 @@ impl Actor for RoomActor {
             if let Err(e) = actor.load_initial_state().await {
                 if let Error::ApiError(ae) = &e {
                     if ae.code == ErrorCode::UnknownRoom {
-                        actor.snapshot = Arc::new(RoomSnapshot::NotFound);
+                        actor.snapshot = Arc::new(RoomSnapshot::not_found());
                         let _ = actor.snapshot_tx.send(Arc::clone(&actor.snapshot));
                         return Ok(actor);
                     }
@@ -93,10 +93,12 @@ impl Actor for RoomActor {
         _reason: kameo::prelude::ActorStopReason,
     ) -> std::result::Result<(), Self::Error> {
         // cleanup: unregister all members from the cache
-        if let RoomSnapshot::Ready(data) = self.snapshot.as_ref() {
+        if let RoomSnapshot::Available(data) = self.snapshot.as_ref() {
             let srv = self.state.services();
-            for user_id in data.members.keys() {
-                srv.rooms.member_unregister(*user_id, self.room_id);
+            if let RoomMembers::Loaded { members } = &data.members {
+                for user_id in members.keys() {
+                    srv.rooms.member_unregister(*user_id, self.room_id);
+                }
             }
         }
         Ok(())
@@ -105,7 +107,7 @@ impl Actor for RoomActor {
 
 impl RoomActor {
     pub fn spawn_room(room_id: RoomId, state: Globals) -> RoomHandle {
-        let (snapshot_tx, snapshot_rx) = watch::channel(Arc::new(RoomSnapshot::Loading));
+        let (snapshot_tx, snapshot_rx) = watch::channel(Arc::new(RoomSnapshot::loading()));
         let actor_ref = RoomActor::spawn((room_id, state, snapshot_tx));
         RoomHandle {
             room_id,
@@ -235,12 +237,12 @@ impl RoomActor {
             );
         }
 
-        self.snapshot = Arc::new(RoomSnapshot::Ready(Arc::new(RoomData {
-            room,
-            members,
+        self.snapshot = Arc::new(RoomSnapshot::Available(Arc::new(LoadedRoom {
+            room: Arc::new(room),
+            members: RoomMembers::Loaded { members },
             channels,
             roles,
-            threads,
+            threads: Some(threads),
         })));
 
         Ok(())
@@ -252,7 +254,7 @@ impl RoomActor {
         let srv = self.state.services();
 
         let current_data = match self.snapshot.as_ref() {
-            RoomSnapshot::WithoutMembers(data) | RoomSnapshot::Ready(data) => data.as_ref().clone(),
+            RoomSnapshot::Available(data) => data.as_ref().clone(),
             _ => return Ok(()),
         };
 
@@ -278,273 +280,41 @@ impl RoomActor {
             }
         }
 
-        let new_data = Arc::new(RoomData {
-            members,
+        let new_data = Arc::new(LoadedRoom {
+            members: RoomMembers::Loaded { members },
             ..current_data
         });
 
-        self.snapshot = Arc::new(RoomSnapshot::Ready(new_data));
+        self.snapshot = Arc::new(RoomSnapshot::Available(new_data));
 
         Ok(())
     }
 
     async fn handle_sync(&mut self, event: MessageSync) -> Result<()> {
-        let mut snapshot_data = match self.snapshot.as_ref() {
-            RoomSnapshot::Ready(data) | RoomSnapshot::WithoutMembers(data) => data.as_ref().clone(),
+        match self.snapshot.as_ref() {
+            RoomSnapshot::Available(loaded) => {
+                // PERF: return early if event isnt applicable
+                let new = loaded.apply(&event);
+                self.snapshot = Arc::new(RoomSnapshot::Available(Arc::new(new)));
+            }
             _ => return Ok(()),
         };
 
         match &event {
-            MessageSync::RoomUpdate { room } => {
-                snapshot_data.room = room.clone();
+            MessageSync::RoomDelete { room_id } if self.room_id == *room_id => {
+                self.snapshot = Arc::new(RoomSnapshot::deleted());
             }
-            MessageSync::ChannelCreate { channel } => {
-                if channel.room_id != Some(self.room_id) {
-                    return Ok(());
-                }
-                if channel.is_thread() {
-                    snapshot_data.threads.insert(
-                        channel.id,
-                        CachedThread {
-                            thread: *channel.clone(),
-                            members: ImMap::new(),
-                        },
-                    );
-                } else {
-                    snapshot_data
-                        .channels
-                        .insert(channel.id, (*channel.clone()).into());
-                }
-            }
-            MessageSync::ChannelUpdate { channel } => {
-                if channel.room_id != Some(self.room_id) {
-                    return Ok(());
-                }
-                if channel.is_thread() {
-                    if channel.is_removed() {
-                        snapshot_data.threads.remove(&channel.id);
-                    } else {
-                        snapshot_data
-                            .threads
-                            .entry(channel.id)
-                            .and_modify(|t| {
-                                t.thread = *channel.clone();
-                            })
-                            .or_insert_with(|| CachedThread {
-                                thread: *channel.clone(),
-                                members: ImMap::new(),
-                            });
-                    }
-                } else if channel.is_removed() {
-                    snapshot_data.channels.remove(&channel.id);
-                } else {
-                    snapshot_data
-                        .channels
-                        .insert(channel.id, (*channel.clone()).into());
-                }
-            }
-            MessageSync::RoleCreate { role } => {
-                if role.room_id != self.room_id {
-                    return Ok(());
-                }
-                let allow = PermissionBits::from(&role.allow);
-                let deny = PermissionBits::from(&role.deny);
-                snapshot_data.roles.insert(
-                    role.id,
-                    CachedRole {
-                        inner: role.clone(),
-                        allow,
-                        deny,
-                    },
-                );
-            }
-            MessageSync::RoleUpdate { role } => {
-                if role.room_id != self.room_id {
-                    return Ok(());
-                }
-                let allow = PermissionBits::from(&role.allow);
-                let deny = PermissionBits::from(&role.deny);
-                snapshot_data.roles.insert(
-                    role.id,
-                    CachedRole {
-                        inner: role.clone(),
-                        allow,
-                        deny,
-                    },
-                );
-            }
-            MessageSync::RoleDelete { role_id, room_id } => {
-                if *room_id != self.room_id {
-                    return Ok(());
-                }
-                snapshot_data.roles.remove(role_id);
-
-                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
-                    for (user_id, member) in snapshot_data.members.clone().into_iter() {
-                        if member.member.roles.contains(role_id) {
-                            let mut updated_member = member.clone();
-                            updated_member.member.roles.retain(|r| r != role_id);
-                            snapshot_data.members.insert(user_id, updated_member);
-                        }
-                    }
-                }
-            }
-            MessageSync::RoleReorder { roles, room_id } => {
-                if *room_id != self.room_id {
-                    return Ok(());
-                }
-                for item in roles {
-                    if let Some(mut role) = snapshot_data.roles.get(&item.role_id).cloned() {
-                        role.inner.position = item.position;
-                        snapshot_data.roles.insert(item.role_id, role);
-                    }
-                }
-            }
-            MessageSync::EmojiCreate { emoji } => {
-                if emoji.room_id() != Some(self.room_id) {
-                    return Ok(());
-                }
-                snapshot_data.room.emoji_count += 1;
-            }
-            MessageSync::EmojiDelete { room_id, .. } => {
-                if *room_id != self.room_id {
-                    return Ok(());
-                }
-                snapshot_data.room.emoji_count = snapshot_data.room.emoji_count.saturating_sub(1);
-            }
-            MessageSync::RoomMemberCreate { member, user } => {
-                if member.room_id != self.room_id {
-                    return Ok(());
-                }
-
-                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
-                    if !snapshot_data.members.contains_key(&member.user_id) {
-                        snapshot_data.room.member_count += 1;
-                        if user.presence.status.is_online() {
-                            snapshot_data.room.online_count += 1;
-                        }
-                    }
-                    snapshot_data.members.insert(
-                        member.user_id,
-                        CachedRoomMember {
-                            member: member.clone(),
-                            user: Arc::new(user.clone()),
-                        },
-                    );
-                } else {
-                    snapshot_data.room.member_count += 1;
-                    if user.presence.status.is_online() {
-                        snapshot_data.room.online_count += 1;
-                    }
-                }
-
+            MessageSync::RoomMemberCreate { member, .. } if self.room_id == member.room_id => {
                 self.state
                     .services()
                     .rooms
                     .member_register(member.user_id, self.room_id);
             }
-            MessageSync::RoomMemberUpdate { member, user } => {
-                if member.room_id != self.room_id {
-                    return Ok(());
-                }
-
-                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
-                    if let Some(old_member) = snapshot_data.members.get(&member.user_id) {
-                        let old_online = old_member.user.presence.status.is_online();
-                        let new_online = user.presence.status.is_online();
-                        if old_online != new_online {
-                            if new_online {
-                                snapshot_data.room.online_count += 1;
-                            } else {
-                                snapshot_data.room.online_count =
-                                    snapshot_data.room.online_count.saturating_sub(1);
-                            }
-                        }
-                    }
-                    snapshot_data.members.insert(
-                        member.user_id,
-                        CachedRoomMember {
-                            member: member.clone(),
-                            user: Arc::new(user.clone()),
-                        },
-                    );
-                }
-
+            MessageSync::RoomMemberDelete { room_id, user_id } if self.room_id == *room_id => {
                 self.state
                     .services()
                     .rooms
-                    .member_register(member.user_id, self.room_id);
-            }
-            MessageSync::RoomMemberDelete { user_id, room_id } => {
-                if *room_id != self.room_id {
-                    return Ok(());
-                }
-
-                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
-                    if let Some(member) = snapshot_data.members.remove(user_id) {
-                        snapshot_data.room.member_count =
-                            snapshot_data.room.member_count.saturating_sub(1);
-                        if member.user.presence.status.is_online() {
-                            snapshot_data.room.online_count =
-                                snapshot_data.room.online_count.saturating_sub(1);
-                        }
-                    }
-                }
-
-                self.state
-                    .services()
-                    .rooms
-                    .member_unregister(*user_id, self.room_id);
-            }
-            MessageSync::RoomDelete { room_id } => {
-                if *room_id != self.room_id {
-                    return Ok(());
-                }
-                self.snapshot = Arc::new(RoomSnapshot::NotFound);
-            }
-            MessageSync::ThreadMemberUpsert {
-                room_id: msg_room_id,
-                thread_id,
-                added,
-                removed,
-            } => {
-                if *msg_room_id != Some(self.room_id) {
-                    return Ok(());
-                }
-
-                if let RoomSnapshot::Ready(_) = self.snapshot.as_ref() {
-                    for member in added {
-                        // First check if thread exists
-                        let thread_exists = snapshot_data.threads.contains_key(thread_id);
-
-                        if thread_exists {
-                            snapshot_data.threads.entry(*thread_id).and_modify(|t| {
-                                t.members.insert(member.user_id, member.clone());
-                            });
-                        } else {
-                            // Thread doesn't exist, try to create it from channels
-                            if let Some(cached_channel) = snapshot_data.channels.get(thread_id) {
-                                snapshot_data.threads.insert(
-                                    *thread_id,
-                                    CachedThread {
-                                        thread: cached_channel.inner.clone(),
-                                        members: ImMap::from_iter([(
-                                            member.user_id,
-                                            member.clone(),
-                                        )]),
-                                    },
-                                );
-                            }
-                            // If channel doesn't exist either, skip adding the member
-                        }
-                    }
-
-                    for user_id in removed {
-                        if let Some(thread) = snapshot_data.threads.get_mut(thread_id) {
-                            thread.members.remove(user_id);
-                        }
-                    }
-                }
+                    .member_unregister(*user_id, *room_id);
             }
             _ => {}
         }
@@ -554,21 +324,19 @@ impl RoomActor {
                 .await;
         }
 
-        self.snapshot = Arc::new(RoomSnapshot::Ready(Arc::new(snapshot_data)));
         let _ = self.snapshot_tx.send(Arc::clone(&self.snapshot));
 
         Ok(())
     }
 }
 
-impl Message<GetSnapshot> for RoomActor {
-    type Reply = Result<Arc<RoomSnapshot>>;
+// TODO: use tracing::instrument macro
+// something like #[tracing::instrument(parent = &self.span, skip(self), name = "get_snapshot")]
 
-    async fn handle(
-        &mut self,
-        _msg: GetSnapshot,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
+#[kameo::messages]
+impl RoomActor {
+    #[message]
+    pub async fn get_snapshot(&mut self) -> Result<Arc<RoomSnapshot>> {
         let span = tracing::info_span!(parent: &self.span, "GetSnapshot");
         async {
             self.last_active = Instant::now();
@@ -577,20 +345,17 @@ impl Message<GetSnapshot> for RoomActor {
         .instrument(span)
         .await
     }
-}
 
-impl Message<EnsureMembers> for RoomActor {
-    type Reply = Result<()>;
-
-    async fn handle(
-        &mut self,
-        _msg: EnsureMembers,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
+    #[message]
+    pub async fn ensure_members(&mut self) -> Result<()> {
         let span = tracing::info_span!(parent: &self.span, "EnsureMembers");
         async {
             self.last_active = Instant::now();
-            if self.snapshot.is_without_members() {
+            if self
+                .snapshot
+                .get_data()
+                .map_or(false, |d| matches!(d.members, RoomMembers::Loading))
+            {
                 self.load_members().await?;
                 let _ = self.snapshot_tx.send(Arc::clone(&self.snapshot));
             }
@@ -599,39 +364,29 @@ impl Message<EnsureMembers> for RoomActor {
         .instrument(span)
         .await
     }
-}
 
-impl Message<SyncMessage> for RoomActor {
-    type Reply = Result<()>;
-
-    async fn handle(
-        &mut self,
-        msg: SyncMessage,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
+    #[message]
+    pub async fn sync_message(&mut self, sync: MessageSync) -> Result<()> {
         let span = tracing::info_span!(parent: &self.span, "SyncMessage");
         async {
             self.last_active = Instant::now();
-            self.handle_sync(msg.sync).await
+            self.handle_sync(sync).await
         }
         .instrument(span)
         .await
     }
-}
 
-impl Message<MemberListCommandMsg> for RoomActor {
-    type Reply = Result<Option<MessageSync>>;
-
-    async fn handle(
+    #[message]
+    pub async fn member_list_command_msg(
         &mut self,
-        msg: MemberListCommandMsg,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
+        key: crate::services::member_lists::util::MemberListKey,
+        cmd: crate::services::member_lists::actor::MemberListCommand,
+    ) -> Result<Option<MessageSync>> {
         let span = tracing::info_span!(parent: &self.span, "MemberListCommandMsg");
         async {
             self.last_active = Instant::now();
-            if let Some(list) = self.member_lists.get_mut(&msg.key) {
-                Ok(list.handle_command(msg.cmd, &self.snapshot).await)
+            if let Some(list) = self.member_lists.get_mut(&key) {
+                Ok(list.handle_command(cmd, &self.snapshot).await)
             } else {
                 Ok(None)
             }
@@ -639,37 +394,33 @@ impl Message<MemberListCommandMsg> for RoomActor {
         .instrument(span)
         .await
     }
-}
 
-impl Message<MemberListSubscribeMsg> for RoomActor {
-    type Reply = Result<()>;
-
-    async fn handle(
+    #[message]
+    pub async fn member_list_subscribe_msg(
         &mut self,
-        msg: MemberListSubscribeMsg,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
+        key: crate::services::member_lists::util::MemberListKey,
+        events_tx: tokio::sync::broadcast::Sender<
+            crate::services::member_lists::actor::MemberListEvent,
+        >,
+    ) -> Result<()> {
         self.last_active = Instant::now();
-        if !self.member_lists.contains_key(&msg.key) {
-            if self.snapshot.is_without_members() {
+        if !self.member_lists.contains_key(&key) {
+            if self
+                .snapshot
+                .get_data()
+                .map_or(false, |d| matches!(d.members, RoomMembers::Loading))
+            {
                 self.load_members().await?;
             }
-            let mut list = MemberList::new(self.state.clone(), msg.key.clone(), msg.events_tx);
+            let mut list = MemberList::new(self.state.clone(), key.clone(), events_tx);
             let _ = list.initialize(Arc::clone(&self.snapshot)).await;
-            self.member_lists.insert(msg.key, list);
+            self.member_lists.insert(key, list);
         }
         Ok(())
     }
-}
 
-impl Message<CleanupIdleLists> for RoomActor {
-    type Reply = ();
-
-    async fn handle(
-        &mut self,
-        _msg: CleanupIdleLists,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
+    #[message]
+    pub fn cleanup_idle_lists(&mut self) {
         self.member_lists.retain(|key, list| {
             if list.is_idle() {
                 tracing::trace!(room_id = ?self.room_id, ?key, "Removing idle member list");
@@ -679,4 +430,91 @@ impl Message<CleanupIdleLists> for RoomActor {
             }
         });
     }
+}
+
+// pub enum RoomEvent {
+//     /// a sync event happened in this room
+//     Sync(MessageSync),
+
+//     /// the room's snapshot changed
+//     Update(RoomSnapshot),
+
+//     /// room was unloaded
+//     ///
+//     /// this is not emitted if the room is being reloaded. instead, the room snapshot state will become `Loading`
+//     Unload,
+// }
+
+/// a handle for interacting with a room actor
+#[derive(Clone)]
+pub struct RoomHandle {
+    pub room_id: RoomId,
+    pub actor_ref: ActorRef<RoomActor>,
+    pub snapshot_rx: watch::Receiver<Arc<RoomSnapshot>>,
+}
+
+impl RoomHandle {
+    pub fn room_id(&self) -> RoomId {
+        self.room_id
+    }
+
+    // /// wait until the room has successfully loaded
+    // ///
+    // /// - `with_members` will wait until all room members are loaded
+    // /// - `fail_if_unavailable` returns an error if the room is or becomes unavailable
+    // pub async fn ready(
+    //     &mut self,
+    //     with_members: bool,
+    //     fail_if_unavailable: bool,
+    // ) -> Result<Arc<RoomData>> {
+    //     let s = self
+    //         .snapshot
+    //         .wait_for(|s| match &s.state {
+    //             RoomSnapshotState::Loading => false,
+    //             // RoomSnapshotState::Loaded(data) => !with_members || data.members_loaded,
+    //             RoomSnapshotState::Loaded(data) => todo!(),
+    //             RoomSnapshotState::Unavailable(r) => r.is_fatal() || fail_if_unavailable,
+    //         })
+    //         .await
+    //         .expect("todo better error handling");
+    //     let data = match &s.state {
+    //         RoomSnapshotState::Loaded(data) => Arc::clone(data),
+    //         RoomSnapshotState::Unavailable(_) => todo!("return err"),
+    //         _ => unreachable!(),
+    //     };
+    //     Ok(data)
+    // }
+
+    // /// get the current room snapshot
+    // pub fn snapshot(&self) -> Arc<RoomSnapshot> {
+    //     Arc::clone(&self.snapshot.borrow())
+    // }
+
+    // /// get the current room data
+    // pub fn data(&self) -> Result<Arc<RoomData>> {
+    //     match &self.snapshot.borrow().state {
+    //         RoomSnapshotState::Loading => Err(Error::BadStatic("room is still loading")),
+    //         RoomSnapshotState::Loaded(_) => todo!(),
+    //         RoomSnapshotState::Unavailable(_) => Err(Error::BadStatic("room is unavailable")),
+    //     }
+    // }
+
+    // pub fn subscribe(&self) -> mpsc::Receiver<Arc<RoomEvent>> {}
+
+    // pub fn reload(&self) {
+    //     todo!()
+    // }
+
+    // pub fn unload(&self) {
+    //     todo!()
+    // }
+
+    // /// create a subscription to a member list
+    // pub fn member_list(&self, conn_id: ConnectionId) -> MemberList {
+    //     todo!()
+    // }
+
+    // pub(super) fn handle_sync(&self, sync: MessageSync) {
+    //     todo!()
+    // }
 }

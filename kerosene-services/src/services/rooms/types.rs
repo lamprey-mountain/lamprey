@@ -1,96 +1,146 @@
 //! cached/in memory rooms
 
 use im::HashMap as ImMap;
-use kameo::prelude::ActorRef;
 use std::sync::Arc;
-use tokio::sync::watch;
+use tracing::warn;
 use uuid::Uuid;
 
 use common::v1::types::{
     Channel, ChannelId, MessageSync, Permission, PermissionOverwriteType, Role, RoleId, Room,
-    RoomFeature, RoomId, RoomMember, ThreadMember, User, UserId,
+    RoomFeature, RoomMember, ThreadMember, User, UserId,
 };
 use lamprey_backend_core::types::search::ChannelVisibility;
 
 use crate::compat::routes::util::auth::Auth4 as Auth;
 use crate::prelude::*;
 use crate::services::cache::PermissionsCalculator;
+use crate::services::rooms::utils::sync_room_id;
 use crate::types::PermissionBits;
 
 /// a snapshot of a room's state at a point in time.
 #[derive(Debug, Clone)]
 pub enum RoomSnapshot {
-    /// The room is currently being loaded from the database.
-    Loading,
-
-    /// The room is fully loaded, including the complete member list.
-    Ready(Arc<RoomData>),
-
-    /// The room metadata, roles, and channels are loaded, but the member list is not.
-    /// This is used for large rooms or rooms that haven't been "activated" by a member list request.
-    WithoutMembers(Arc<RoomData>),
-
-    /// The room was not found in the database.
-    NotFound,
-
-    /// The room is currently unavailable (e.g. backlogged).
+    Available(Arc<LoadedRoom>),
     Unavailable(RoomUnavailable),
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct RoomUnavailable {
-    pub reason: RoomUnavailableReason,
+impl RoomSnapshot {
+    pub fn loading() -> Self {
+        Self::Unavailable(RoomUnavailable::Loading)
+    }
+
+    pub fn not_found() -> Self {
+        Self::Unavailable(RoomUnavailable::NotFound)
+    }
+
+    pub fn deleted() -> Self {
+        Self::Unavailable(RoomUnavailable::Deleted)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RoomUnavailableReason {
+pub enum RoomUnavailable {
+    /// the room is being loaded from the database
+    Loading,
+
+    /// the room could not be found
+    NotFound,
+
+    /// the room is deleted
+    Deleted,
+
+    // /// the room is quarantined
+    // Quarantined,
+
+    // /// the federated server the room is on is offline
+    // FederationOffline,
+    // FederationTimeout,
+    // // etc..
     /// too many events were received and the room actor is backlogged
     Backlogged,
 }
 
+impl RoomUnavailable {
+    // /// whether `.ready()` should always fail when this reason is encountered
+    // ///
+    // /// otherwise, ready may continue waiting for the room to become available
+    // pub fn is_fatal(&self) -> bool {
+    //     matches!(self, Self::NotFound | Self::Deleted | Self::Quarantined)
+    // }
+}
+
+/// a fully loaded room from the database
 #[derive(Debug, Clone)]
-pub struct RoomData {
-    pub room: Room,
-    pub members: ImMap<UserId, CachedRoomMember>,
+pub struct LoadedRoom {
+    pub room: Arc<Room>,
+    pub members: RoomMembers,
+
+    /// all channels in this room
     pub channels: ImMap<ChannelId, CachedChannel>,
+
+    /// all roles in this room
     pub roles: ImMap<RoleId, CachedRole>,
 
-    /// loaded/active threads
-    pub threads: ImMap<ChannelId, CachedThread>,
+    /// all loaded/active threads in this room
+    ///
+    /// may be None if threads are still loading
+    pub threads: Option<ImMap<ChannelId, CachedThread>>,
+    // NOTE: i could move documents, flumes, automod, etc here? note that flumes can exist outside of a room
+    // pub documents: Option<ImMap<EditContextId, Document>>,
 }
 
-/// Kameo messages for RoomActor
-pub struct GetSnapshot;
+/// the members for a room
+#[derive(Debug, Clone)]
+pub enum RoomMembers {
+    /// all room members are loaded on the local server
+    Loaded {
+        members: ImMap<UserId, CachedRoomMember>,
+        // TODO: add member_lists
+        // member_lists: ImMap<ListTarget, List>,
+    },
 
-pub struct EnsureMembers;
+    /// members are currently loading
+    Loading,
+    // /// this is a server room, so members will only be loaded as needed
+    // Server {
+    //     members: HashMap<UserId, CachedRoomMember>,
+    // },
 
-pub struct SyncMessage {
-    pub sync: MessageSync,
+    // /// currently proxying room member requests to either a remote node or a federated server
+    // Federated {
+    //     member_lists: HashMap<ListTarget, ProxiedList>,
+    // },
 }
 
-pub struct MemberListCommandMsg {
-    pub key: crate::services::member_lists::util::MemberListKey,
-    pub cmd: crate::services::member_lists::actor::MemberListCommand,
+impl RoomMembers {
+    pub fn get(&self, user_id: &UserId) -> Option<&CachedRoomMember> {
+        match self {
+            Self::Loaded { members } => members.get(user_id),
+            Self::Loading => None,
+        }
+    }
+
+    // TODO: make this more robust against mutations during loading
+
+    pub fn insert(&mut self, user_id: UserId, member: CachedRoomMember) {
+        if let Self::Loaded { members } = self {
+            members.insert(user_id, member);
+        } else {
+            warn!("tried to insert() a new member into RoomMembers::Loading");
+        }
+    }
+
+    pub fn remove(&mut self, user_id: &UserId) -> Option<CachedRoomMember> {
+        if let Self::Loaded { members } = self {
+            members.remove(user_id)
+        } else {
+            warn!("tried to remove() a member into RoomMembers::Loading");
+            None
+        }
+    }
 }
 
-pub struct MemberListSubscribeMsg {
-    pub key: crate::services::member_lists::util::MemberListKey,
-    pub events_tx:
-        tokio::sync::broadcast::Sender<crate::services::member_lists::actor::MemberListEvent>,
-}
-
-/// Internal message to clean up idle member lists
-pub struct CleanupIdleLists;
-
-/// A handle to a room actor.
-/// Contains both the ActorRef for sending commands and a watch receiver for snapshots.
-#[derive(Clone)]
-pub struct RoomHandle {
-    pub room_id: RoomId,
-    pub actor_ref: ActorRef<super::actor::RoomActor>,
-    pub snapshot_rx: watch::Receiver<Arc<RoomSnapshot>>,
-}
-
+// TODO: rename to LoadedRoomMember
 #[derive(Debug, Clone)]
 pub struct CachedRoomMember {
     /// the room member
@@ -100,6 +150,7 @@ pub struct CachedRoomMember {
     pub user: Arc<User>,
 }
 
+// TODO: rename to LoadedThread
 #[derive(Debug, Clone)]
 pub struct CachedThread {
     /// the thread itself
@@ -146,27 +197,23 @@ pub struct CachedPermissionOverwrite {
 }
 
 impl RoomSnapshot {
-    pub fn get_data(&self) -> Option<&Arc<RoomData>> {
+    pub fn get_data(&self) -> Option<&Arc<LoadedRoom>> {
         match self {
-            Self::Ready(data) | Self::WithoutMembers(data) => Some(data),
+            Self::Available(data) => Some(data),
             _ => None,
         }
     }
 
     pub fn is_ready(&self) -> bool {
-        matches!(self, Self::Ready(_))
+        matches!(self, Self::Available(_))
     }
 
     pub fn is_not_found(&self) -> bool {
-        matches!(self, Self::NotFound)
+        matches!(self, Self::Unavailable(RoomUnavailable::NotFound))
     }
 
     pub fn is_loading(&self) -> bool {
-        matches!(self, Self::Loading)
-    }
-
-    pub fn is_without_members(&self) -> bool {
-        matches!(self, Self::WithoutMembers(_))
+        matches!(self, Self::Unavailable(RoomUnavailable::Loading))
     }
 
     pub fn is_unavailable(&self) -> bool {
@@ -280,9 +327,200 @@ impl RoomSnapshot {
     }
 }
 
-impl RoomData {
-    // TODO: rename to RoomLoaded or similar
-    // TODO: move impls here
+impl LoadedRoom {
+    /// apply a sync message to this state and calculate a new state
+    // PERF: don't clone on every sync message? eg. return None if an event isnt applicable. or take and return Arc
+    pub fn apply(&self, msg: &MessageSync) -> Self {
+        let mut new_room = self.clone();
+
+        let Some(room_id) = sync_room_id(msg) else {
+            return new_room;
+        };
+
+        if room_id != self.room.id {
+            return new_room;
+        };
+
+        match msg {
+            MessageSync::RoomUpdate { room } => {
+                new_room.room = Arc::new(room.clone());
+            }
+            // TODO: handle RoomDelete (might need to be handled in actor.rs?)
+            // MessageSync::RoomDelete { .. } => { }
+            MessageSync::ChannelCreate { channel } => {
+                if channel.is_thread() {
+                    if let Some(ref mut threads) = new_room.threads {
+                        threads.insert(
+                            channel.id,
+                            CachedThread {
+                                thread: *channel.clone(),
+                                members: ImMap::new(),
+                            },
+                        );
+                    }
+                } else {
+                    new_room
+                        .channels
+                        .insert(channel.id, (*channel.clone()).into());
+                }
+            }
+            MessageSync::ChannelUpdate { channel } => {
+                if channel.is_thread() {
+                    if let Some(ref mut threads) = new_room.threads {
+                        if channel.is_removed() {
+                            threads.remove(&channel.id);
+                        } else {
+                            threads
+                                .entry(channel.id)
+                                .and_modify(|t| {
+                                    t.thread = *channel.clone();
+                                })
+                                .or_insert_with(|| CachedThread {
+                                    thread: *channel.clone(),
+                                    members: ImMap::new(),
+                                });
+                        }
+                    }
+                } else if channel.is_removed() {
+                    new_room.channels.remove(&channel.id);
+                } else {
+                    new_room
+                        .channels
+                        .insert(channel.id, (*channel.clone()).into());
+                }
+            }
+            MessageSync::RoleCreate { role } => {
+                let allow = PermissionBits::from(&role.allow);
+                let deny = PermissionBits::from(&role.deny);
+                new_room.roles.insert(
+                    role.id,
+                    CachedRole {
+                        inner: role.clone(),
+                        allow,
+                        deny,
+                    },
+                );
+            }
+            MessageSync::RoleUpdate { role } => {
+                let allow = PermissionBits::from(&role.allow);
+                let deny = PermissionBits::from(&role.deny);
+                new_room.roles.insert(
+                    role.id,
+                    CachedRole {
+                        inner: role.clone(),
+                        allow,
+                        deny,
+                    },
+                );
+            }
+            MessageSync::RoleDelete { role_id, .. } => {
+                new_room.roles.remove(role_id);
+                if let RoomMembers::Loaded { ref mut members } = new_room.members {
+                    for (user_id, member) in members.clone().into_iter() {
+                        if member.member.roles.contains(role_id) {
+                            let mut updated_member = member.clone();
+                            updated_member.member.roles.retain(|r| r != role_id);
+                            members.insert(user_id, updated_member);
+                        }
+                    }
+                }
+            }
+            MessageSync::RoleReorder { roles, .. } => {
+                for item in roles {
+                    if let Some(mut role) = new_room.roles.get(&item.role_id).cloned() {
+                        role.inner.position = item.position;
+                        new_room.roles.insert(item.role_id, role);
+                    }
+                }
+            }
+            MessageSync::EmojiCreate { .. } => {
+                new_room.room = Arc::new(Room {
+                    emoji_count: self.room.emoji_count + 1,
+                    ..(*self.room).clone()
+                });
+            }
+            MessageSync::EmojiDelete { .. } => {
+                new_room.room = Arc::new(Room {
+                    emoji_count: self.room.emoji_count - 1,
+                    ..(*self.room).clone()
+                });
+            }
+            MessageSync::RoomMemberCreate { member, user } => {
+                if let RoomMembers::Loaded { ref mut members } = new_room.members {
+                    members.insert(
+                        member.user_id,
+                        CachedRoomMember {
+                            member: member.clone(),
+                            user: Arc::new(user.clone()),
+                        },
+                    );
+                }
+
+                new_room.room = Arc::new(Room {
+                    member_count: self.room.member_count + 1,
+                    ..(*self.room).clone()
+                });
+            }
+            MessageSync::RoomMemberUpdate { member, user } => {
+                if let RoomMembers::Loaded { ref mut members } = new_room.members {
+                    members.insert(
+                        member.user_id,
+                        CachedRoomMember {
+                            member: member.clone(),
+                            user: Arc::new(user.clone()),
+                        },
+                    );
+                }
+            }
+            MessageSync::RoomMemberDelete { user_id, .. } => {
+                if let RoomMembers::Loaded { ref mut members } = new_room.members {
+                    members.remove(user_id);
+                }
+
+                new_room.room = Arc::new(Room {
+                    member_count: self.room.member_count - 1,
+                    ..(*self.room).clone()
+                });
+            }
+            MessageSync::ThreadMemberUpsert {
+                thread_id,
+                added,
+                removed,
+                ..
+            } => {
+                if let Some(ref mut threads) = new_room.threads {
+                    for member in added {
+                        if let Some(thread) = threads.get_mut(thread_id) {
+                            thread.members.insert(member.user_id, member.clone());
+                        } else if let Some(cached_channel) = new_room.channels.get(thread_id) {
+                            threads.insert(
+                                *thread_id,
+                                CachedThread {
+                                    thread: cached_channel.inner.clone(),
+                                    members: ImMap::from_iter([(member.user_id, member.clone())]),
+                                },
+                            );
+                        }
+                    }
+
+                    for user_id in removed {
+                        if let Some(thread) = threads.get_mut(thread_id) {
+                            thread.members.remove(user_id);
+                        }
+                    }
+                }
+            }
+            _ => {}
+        };
+
+        new_room
+    }
+
+    // pub fn ensure_sudo_if_needed(&self, auth: &Auth) -> Result<()> {
+    // pub fn ensure_mfa_if_needed(&self, auth: &Auth) -> Result<()> {
+    // pub fn ensure_feature(&self, feature: &RoomFeature) -> Result<()> {
+    // pub fn channel_visibilities()
+    // pub fn permissions() -> RoomPermissions {}
 }
 
 impl From<Channel> for CachedChannel {

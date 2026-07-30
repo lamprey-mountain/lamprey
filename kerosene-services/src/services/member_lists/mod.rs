@@ -8,7 +8,8 @@ use crate::services::member_lists::{
     util::{MemberListKey, MemberListKey1},
     visibility::MemberListVisibility,
 };
-use crate::services::rooms::{MemberListCommandMsg, MemberListSubscribeMsg, RoomActor, RoomHandle};
+use crate::services::rooms::actor::{MemberListCommandMsg, MemberListSubscribeMsg};
+use crate::services::rooms::{RoomActor, RoomHandle};
 
 pub mod actor;
 pub mod syncer;

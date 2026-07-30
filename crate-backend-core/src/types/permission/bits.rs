@@ -29,6 +29,9 @@ pub const QUARANTINE_PERMS: PermissionBits = PermissionBits(
     (1u128 << 10), // MemberNickname
 );
 
+/// bitset with **every** permission (including ones that dont exist yet)
+pub const EVERYTHING: PermissionBits = PermissionBits(u128::MAX);
+
 impl PermissionBits {
     /// Maximum number of permissions that can be represented (currently limited by u128)
     const MAX_PERMISSIONS: usize = 128;
@@ -296,6 +299,14 @@ impl std::ops::Not for PermissionBits {
 
     fn not(self) -> Self::Output {
         PermissionBits(!self.0)
+    }
+}
+
+impl std::ops::Sub for PermissionBits {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        PermissionBits(self.0 & !rhs.0)
     }
 }
 

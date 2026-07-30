@@ -42,7 +42,13 @@ impl ServiceAuditLogs {
             for thread_id in &resolve.threads {
                 if let Some(chan) = snapshot.get_data().unwrap().channels.get(thread_id) {
                     threads.push(chan.inner.clone());
-                } else if let Some(thread) = snapshot.get_data().unwrap().threads.get(thread_id) {
+                } else if let Some(thread) = snapshot
+                    .get_data()
+                    .unwrap()
+                    .threads
+                    .as_ref()
+                    .and_then(|t| t.get(thread_id))
+                {
                     threads.push(thread.thread.clone());
                 } else {
                     missing_threads.push(*thread_id);

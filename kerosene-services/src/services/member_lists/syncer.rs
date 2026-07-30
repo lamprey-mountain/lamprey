@@ -5,13 +5,11 @@ use tokio_stream::{StreamExt, StreamMap, StreamNotifyClose, wrappers::BroadcastS
 use uuid::Uuid;
 
 use crate::prelude::*;
-use crate::services::{
-    member_lists::{
-        actor::{MemberListCommand, MemberListEvent},
-        util::{MemberListKey, MemberListKey1, MemberListTarget},
-    },
-    rooms::MemberListCommandMsg,
+use crate::services::member_lists::{
+    actor::{MemberListCommand, MemberListEvent},
+    util::{MemberListKey, MemberListKey1, MemberListTarget},
 };
+use crate::services::rooms::actor::MemberListCommandMsg;
 
 /// Syncer for member list events
 pub struct MemberListSyncer {

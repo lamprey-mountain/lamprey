@@ -12,7 +12,8 @@ use crate::consts::IDLE_TIMEOUT_MEMBER_LIST;
 use crate::prelude::*;
 use crate::services::cache::permissions::PermissionsCalculator;
 use crate::services::member_lists::util::{MemberGroupInfo, MemberKey, MemberListKey};
-use crate::services::rooms::{RoomData, RoomSnapshot};
+use crate::services::rooms::types::RoomMembers;
+use crate::services::rooms::{LoadedRoom, RoomSnapshot};
 
 /// member list state machine, now owned by RoomActor
 pub struct MemberList {
@@ -129,7 +130,10 @@ impl MemberList {
             let user_ids: Vec<_> = if let Some(ref tm) = thread_members {
                 tm.keys().copied().collect()
             } else {
-                data.members.keys().copied().collect()
+                match &data.members {
+                    RoomMembers::Loaded { members } => members.keys().copied().collect(),
+                    RoomMembers::Loading => vec![],
+                }
             };
 
             // fetch all users in the room to get presences and names
@@ -186,7 +190,7 @@ impl MemberList {
         user_id: &UserId,
         member: &RoomMember,
         perms_calc: &PermissionsCalculator,
-        data: &RoomData,
+        data: &LoadedRoom,
     ) -> bool {
         match &self.key {
             MemberListKey::Room(_) => true,
@@ -203,7 +207,8 @@ impl MemberList {
             MemberListKey::RoomThread(_, _, channel_id) => {
                 // for threads, usually only thread members are shown
                 data.threads
-                    .get(channel_id)
+                    .as_ref()
+                    .and_then(|t| t.get(channel_id))
                     .map_or(false, |t| t.members.contains_key(user_id))
             }
             MemberListKey::Dm(_) => true, // DM lists always include recipients
@@ -214,7 +219,7 @@ impl MemberList {
         &self,
         member: &RoomMember,
         perms_calc: &PermissionsCalculator,
-        data: &RoomData,
+        data: &LoadedRoom,
     ) -> (bool, bool) {
         let mut has_admin = false;
         let mut has_view_allow = false;
@@ -251,7 +256,7 @@ impl MemberList {
         user_id: &UserId,
         member: &RoomMember,
         users: &HashMap<UserId, User>,
-        data: &RoomData,
+        data: &LoadedRoom,
     ) -> MemberKey {
         let user = users.get(user_id).unwrap();
         let is_online = user.presence.is_online();
@@ -571,7 +576,7 @@ impl MemberList {
     async fn get_initial_ranges(
         &self,
         ranges: &[(u64, u64)],
-        data: &RoomData,
+        data: &LoadedRoom,
     ) -> Result<Vec<MemberListOp>> {
         let srv = self.s.services();
 

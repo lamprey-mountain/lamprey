@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::error::Result;
 use crate::services::federation::ServiceFederation;
-use crate::services::rooms::RoomData;
+use crate::services::rooms::LoadedRoom;
 use common::v1::types::federation::{Hostname, ServerSyncRequest};
 use common::v1::types::{ChannelId, MessageSync, RoomId, UserId};
 use kerosene_core::compat::authz::AuthCheck;
@@ -51,7 +51,7 @@ impl ServiceFederation {
 // NOTE: load all relevant data into one big struct for now
 pub struct ServerPerspective {
     /// room data for all the rooms the server is participating in (including members)
-    pub room_data: HashMap<RoomId, Arc<RoomData>>,
+    pub room_data: HashMap<RoomId, Arc<LoadedRoom>>,
     // room members from the server
     // how do i handle dms/gdms? include every non-room channel the server is participating in
     // send user/presence updates for friend requests? what about non-friend relationships, like blocked users?

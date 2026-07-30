@@ -450,7 +450,15 @@ async fn thread_list_room(
 
     let mut filtered_thread_ids = vec![];
 
-    for thread in snapshot.get_data().unwrap().threads.values() {
+    for thread in snapshot
+        .get_data()
+        .unwrap()
+        .threads
+        .as_ref()
+        .map(|t| t.values())
+        .into_iter()
+        .flatten()
+    {
         let thread_channel = &thread.thread;
         let thread_id = thread_channel.id;
 

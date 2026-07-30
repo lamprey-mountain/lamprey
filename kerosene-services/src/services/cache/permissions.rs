@@ -184,9 +184,10 @@ impl PermissionsCalculator {
                 // private thread logic
                 if cached_channel.inner.ty == ChannelType::ThreadPrivate {
                     if !bits.has(Permission::ThreadManage) {
-                        let thread = data.threads.get(&channel.id);
-                        let is_member = if let Some(thread) = thread {
-                            thread.members.contains_key(&user_id)
+                        let is_member = if let Some(threads) = &data.threads {
+                            threads
+                                .get(&channel.id)
+                                .map_or(false, |t| t.members.contains_key(&user_id))
                         } else {
                             // TODO: fetch thread from db
                             // self.state.acquire_data().await?;
