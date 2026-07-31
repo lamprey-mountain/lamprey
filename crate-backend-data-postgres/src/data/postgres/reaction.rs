@@ -30,89 +30,69 @@ impl DataReaction for Postgres {
         let mut tx = self.begin_tx().await?;
         let key_str = key.to_string();
 
-        let key_exists: bool = query_scalar!(
-            "SELECT EXISTS(SELECT 1 FROM reaction WHERE message_id = $1 AND key = $2 AND deleted_seq IS NULL)",
+        struct Checks {
+            user_has_reacted: bool,
+            key_exists: bool,
+            unique_count: i64,
+        }
+
+        let checks = query_as!(
+            Checks,
+            r#"
+            SELECT
+                EXISTS(SELECT 1 FROM reaction WHERE message_id = $1 AND user_id = $2 AND key = $3 AND deleted_seq IS NULL) AS "user_has_reacted!",
+                EXISTS(SELECT 1 FROM reaction WHERE message_id = $1 AND key = $3 AND deleted_seq IS NULL) AS "key_exists!",
+                (SELECT count(DISTINCT key) FROM reaction WHERE message_id = $1 AND deleted_seq IS NULL) AS "unique_count!"
+            "#,
             *message_id,
+            *user_id,
             &key_str
         )
         .fetch_one(tx.ext())
-        .await?
-        .unwrap_or(false);
+        .await?;
 
-        if !key_exists {
-            // new reaction, check limit
-            let unique_reaction_count: i64 = query_scalar!(
-                "SELECT count(DISTINCT key) FROM reaction WHERE message_id = $1 AND deleted_seq IS NULL",
-                *message_id
-            )
-            .fetch_one(tx.ext())
-            .await?
-            .unwrap_or(0);
-
-            if unique_reaction_count as u32 >= crate::consts::MAX_UNIQUE_REACTIONS {
-                return Err(crate::Error::BadRequest(format!(
-                    "too many unique reactions (max {})",
-                    crate::consts::MAX_UNIQUE_REACTIONS
-                )));
-            }
-
-            // Atomically increment the channel's latest_seq and get the new value
-            let new_seq: i64 = query_scalar!(
-                r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
-                *channel_id
-            )
-            .fetch_one(tx.ext())
-            .await?;
-
-            // Check if this specific user+message+key was previously deleted (soft delete)
-            // If so, undelete it instead of inserting a new row
-            let was_deleted_before: bool = query_scalar!(
-                "SELECT EXISTS(SELECT 1 FROM reaction WHERE message_id = $1 AND user_id = $2 AND key = $3 AND deleted_seq IS NOT NULL)",
-                *message_id,
-                *user_id,
-                &key_str
-            )
-            .fetch_one(tx.ext())
-            .await?
-            .unwrap_or(false);
-
-            if was_deleted_before {
-                query!(
-                    r#"
-                    UPDATE reaction
-                    SET deleted_seq = NULL, created_seq = $4
-                    WHERE message_id = $1 AND user_id = $2 AND key = $3
-                    "#,
-                    *message_id,
-                    *user_id,
-                    key_str,
-                    new_seq,
-                )
-                .execute(tx.ext())
-                .await?;
-            } else {
-                query!(
-                    r#"
-                    WITH pos AS (
-                        SELECT coalesce(
-                            (SELECT position FROM reaction WHERE message_id = $1 AND key = $4 AND deleted_seq IS NULL),
-                            (SELECT coalesce(max(position) + 1, 0) FROM reaction WHERE message_id = $1)
-                        ) AS pos
-                    )
-                    INSERT INTO reaction (message_id, user_id, channel_id, key, position, created_seq)
-                    SELECT $1, $2, $3, $4, pos, $5 FROM pos
-                    ON CONFLICT DO NOTHING
-                    "#,
-                    *message_id,
-                    *user_id,
-                    *channel_id,
-                    key_str,
-                    new_seq,
-                )
-                .execute(tx.ext())
-                .await?;
-            }
+        if checks.user_has_reacted {
+            tx.commit().await?;
+            return Ok(());
         }
+
+        if !checks.key_exists && checks.unique_count as u32 >= crate::consts::MAX_UNIQUE_REACTIONS {
+            return Err(crate::Error::BadRequest(format!(
+                "too many unique reactions (max {})",
+                crate::consts::MAX_UNIQUE_REACTIONS
+            )));
+        }
+
+        // Atomically increment the channel's latest_seq and get the new value
+        let new_seq: i64 = query_scalar!(
+            r#"UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as "latest_seq!""#,
+            *channel_id
+        )
+        .fetch_one(tx.ext())
+        .await?;
+
+        query!(
+            r#"
+            WITH pos AS (
+                SELECT coalesce(
+                    (SELECT position FROM reaction WHERE message_id = $1 AND key = $4 AND deleted_seq IS NULL),
+                    (SELECT coalesce(max(position) + 1, 0) FROM reaction WHERE message_id = $1)
+                ) AS pos
+            )
+            INSERT INTO reaction (message_id, user_id, channel_id, key, position, created_seq)
+            SELECT $1, $2, $3, $4, pos, $5 FROM pos
+            ON CONFLICT (message_id, user_id, key)
+            DO UPDATE SET deleted_seq = NULL, created_seq = EXCLUDED.created_seq
+            WHERE reaction.deleted_seq IS NOT NULL
+            "#,
+            *message_id,
+            *user_id,
+            *channel_id,
+            key_str,
+            new_seq,
+        )
+        .execute(tx.ext())
+        .await?;
 
         tx.commit().await?;
         Ok(())
