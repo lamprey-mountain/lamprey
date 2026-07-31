@@ -6,6 +6,7 @@ import { useCtx } from "@/app/context";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { getThumbFromId } from "@/media/util";
+import { RoomIcon } from "./User";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => {
@@ -127,7 +128,6 @@ export const RouteInviteInner = (props: { code: string }) => {
 
 	const target = () => invite()?.target;
 	const room = () => target() && getRoomFromTarget(target());
-	const roomIcon = () => room()?.icon;
 	const roomDescription = () => room()?.description ?? "";
 	const roomMemberCount = () => room()?.member_count ?? 0;
 	const roomOnlineCount = () => room()?.online_count ?? 0;
@@ -183,14 +183,8 @@ export const RouteInviteInner = (props: { code: string }) => {
 						</h3>
 						<div class="box">
 							<div style="display:flex;">
-								<Show when={roomIcon()}>
-									{(icon) => (
-										<img
-											src={getThumbFromId(icon(), 64)}
-											class="avatar"
-											alt={`${name()} room icon`}
-										/>
-									)}
+								<Show when={room()}>
+									{(room) => <RoomIcon room={room()} />}
 								</Show>
 								<div class="info">
 									<div style="font-size: 1.3rem;font-weight: bold">

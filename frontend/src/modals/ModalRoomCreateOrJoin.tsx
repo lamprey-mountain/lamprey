@@ -6,6 +6,7 @@ import { useApi } from "@/api";
 import { CheckboxOptionWithLabel } from "@/atoms/CheckboxOption";
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown";
+import { RoomIcon } from "@/avatar/RoomIcon";
 import { useModals } from "@/contexts/modal";
 import { createResizeTransition } from "@/hooks/createResizeTransition";
 import { getThumbFromId } from "@/media/util";
@@ -306,14 +307,8 @@ export const ModalRoomCreateOrJoin = (_props: ModalRoomCreateOrJoinProps) => {
 
 											return (
 												<>
-													<Show when={roomIcon()}>
-														{(icon) => (
-															<img
-																src={getThumbFromId(icon(), 64)}
-																class="avatar"
-																alt={`${name()} room icon`}
-															/>
-														)}
+													<Show when={room()}>
+														{(room) => <RoomIcon room={room()} />}
 													</Show>
 													<div class="info">
 														<div class="name">{name()}</div>
