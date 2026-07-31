@@ -1,3 +1,5 @@
+// TODO: investigate whether i actually need PartialEq/Eq derives on some types
+
 use lamprey_macros::record;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -39,9 +41,7 @@ pub mod flume;
 pub mod metadata;
 
 /// a message
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Message {
     pub id: MessageId,
     pub channel_id: ChannelId,
@@ -54,19 +54,19 @@ pub struct Message {
     /// exists if this message is pinned
     pub pinned: Option<Pinned>,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub reactions: ReactionCounts,
 
     /// when this message was deleted
     ///
     /// deleted messages can still be viewed by moderators for a period of time, but otherwise cannot be recovered
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<Time>,
 
     /// when this message was removed
     ///
     /// removed messages are hidden for non moderators. they are recoverable by moderators
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub removed_at: Option<Time>,
 
     /// when this message was created
@@ -76,21 +76,21 @@ pub struct Message {
     pub author_id: UserId,
 
     /// the associated thread for this message, if one exists.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub thread: Option<Box<Channel>>,
 
     /// the associated flume for this message, if one exists.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub flume: Option<MessageFlume>,
 
     /// the associated interaction for this message, if one exists.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub interaction: Option<MessageInteraction>,
 
     /// whether this message is ephemeral
     ///
     /// ephemeral messages are only visible to the user who created an interaction and aren't stored
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub ephemeral: bool,
 }
 
@@ -102,37 +102,32 @@ impl Message {
 
 /// a message's content at a point in time
 // TODO: add error "latest message version cannot be deleted"
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageVersion {
     pub version_id: MessageVerId,
 
     /// the id of who this edit. if None, this edit was made by the author
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub author_id: Option<UserId>,
 
     /// the message this version is replying to
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub reply_id: Option<MessageId>,
 
     /// the type and content of this message
     // NOTE: message type generally shouldn't change, but i don't know how to "hoist" the type field to the top level Message struct?
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub message_type: MessageType,
 
     /// who this message mentioned
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Mentions::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Mentions::is_empty")]
     pub mentions: Mentions,
 
     /// when this message version was created, use this as edited_at
     pub created_at: Time,
 
     /// when this message version was deleted
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<Time>,
 }
 
@@ -156,9 +151,7 @@ impl MessageVersion {
 }
 
 /// information about a pinned message
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Pinned {
     /// when this was pinned
     pub time: Time,
@@ -168,25 +161,25 @@ pub struct Pinned {
 }
 
 /// reorder pinned messages
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct PinsReorder {
     /// the messages to reorder
-    #[cfg_attr(feature = "serde", serde(default))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
+    #[serde(default)]
+    #[validate(length(min = 1, max = 1024))]
     pub messages: Vec<PinsReorderItem>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct PinsReorderItem {
     pub id: MessageId,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub position: Option<Option<u16>>,
 }
 
@@ -195,63 +188,54 @@ fn true_fn() -> bool {
 }
 
 /// what mentions to parse from the message content. mentions will only be parsed if the message content actually contains a mention pattern.
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
+// TODO: validate
 pub struct ParseMentions {
     /// only parse mentions for these users. an empty vec disables all mentions, while None allows all mentions.
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
+    #[schema(min_length = 0, max_length = 128)]
     pub users: Option<Vec<UserId>>,
 
     /// only parse mentions for these roles. an empty vec disables all mentions, while None allows all mentions.
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
+    #[schema(min_length = 0, max_length = 128)]
     pub roles: Option<Vec<RoleId>>,
 
     /// whether to parse @everyone mentions from the content
-    #[cfg_attr(feature = "serde", serde(default = "true_fn"))]
+    #[serde(default = "true_fn")]
     pub everyone: bool,
 }
 
 /// who/what this message notified on send
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct Mentions {
     /// the users that were mentioned
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[schema(min_length = 0, max_length = 128)]
     pub users: Vec<MentionsUser>,
 
     /// the roles that were mentioned
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[schema(min_length = 0, max_length = 128)]
     pub roles: Vec<MentionsRole>,
 
     /// the channels that were mentioned
-    // NOTE: this may not be necessary; the user should already have all channels. this is only needed for forwards, but in that case do i really want to leak channel names/types?
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
+    // TODO: populate these channels. this is useful for
+    // - bots that don't sync everything
+    // - for threads which are lazy loaded
+    // - forwards, for consistent rendering. channel types/names will be "leaked" since if someone forwards a message they probably intend it to be rendered the same way they saw it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[schema(min_length = 0, max_length = 128)]
     pub channels: Vec<MentionsChannel>,
 
     /// the custom emojis that were used in this message
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
+    // TODO: enforce no more than 128 unique custom emoji per message
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[schema(min_length = 0, max_length = 128)]
     pub emojis: Vec<MentionsEmoji>,
 
     /// if this message mentions everyone
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub everyone: bool,
 }
 
@@ -266,9 +250,7 @@ impl Mentions {
 }
 
 /// a mentioned user
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MentionsUser {
     /// the id of this user
     pub id: UserId,
@@ -278,9 +260,7 @@ pub struct MentionsUser {
 }
 
 /// a mentioned role
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MentionsRole {
     /// the id of this role
     pub id: RoleId,
@@ -290,9 +270,7 @@ pub struct MentionsRole {
 }
 
 /// a mentioned channel
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MentionsChannel {
     /// the id of this channel
     pub id: ChannelId,
@@ -301,7 +279,7 @@ pub struct MentionsChannel {
     pub room_id: Option<RoomId>,
 
     /// the type of this channel
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[serde(rename = "type")]
     pub ty: ChannelType,
 
     /// the name of this channel
@@ -309,9 +287,7 @@ pub struct MentionsChannel {
 }
 
 /// a custom emoji used in the message
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MentionsEmoji {
     /// the id of this emoji
     pub id: EmojiId,
@@ -323,37 +299,29 @@ pub struct MentionsEmoji {
     pub animated: bool,
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default)]
 pub struct MessageCreate {
     /// the message's content in markdown
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub content: Option<String>,
 
     /// message attachments
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 0, max_length = 32)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[schema(required = false, min_length = 0, max_length = 32)]
+    #[validate(length(min = 0, max = 32))]
+    #[serde(default)]
     pub attachments: Vec<MessageAttachmentCreate>,
 
     /// the message this message is replying to
     pub reply_id: Option<MessageId>,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 0, max_length = 32)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[schema(required = false, min_length = 0, max_length = 32)]
+    #[validate(length(min = 0, max = 32))]
+    #[serde(default)]
     pub embeds: Vec<EmbedCreate>,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub mentions: ParseMentions,
 
     /// application defined metadata
@@ -363,31 +331,33 @@ pub struct MessageCreate {
     pub components: Option<Components<components::Create>>,
 
     /// whether to make this message ephemeral
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub ephemeral: bool,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct MessagePatch {
     /// the new message content in markdown
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[schema(min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub content: Option<Option<String>>,
 
     /// message attachments
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 0, max_length = 32)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 0, max = 32)))]
+    #[schema(required = false, min_length = 0, max_length = 32)]
+    #[validate(length(min = 0, max = 32))]
     pub attachments: Option<Vec<MessageAttachmentCreate>>,
 
     /// the message this message is replying to
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub reply_id: Option<Option<MessageId>>,
 
     pub embeds: Option<Vec<EmbedCreate>>,
@@ -395,7 +365,11 @@ pub struct MessagePatch {
     /// application defined metadata
     ///
     /// passing this will replace metadata
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub metadata: Option<Option<Metadata>>,
 
     /// the components for this message
@@ -403,9 +377,8 @@ pub struct MessagePatch {
 }
 
 // NOTE: utoipa doesnt seem to like #[deprecated] here
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum MessageType {
     /// a basic message, using markdown
     // TODO: rename to Default?
@@ -500,28 +473,24 @@ pub enum MessageType {
 // }
 
 /// Information about a message being pinned
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessagePin {
     pub pinned_message_id: MessageId,
 }
 
 /// Information about an auto moderation execution
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageAutomodExecution {
     /// the rules that were triggered
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 32))]
+    #[schema(min_length = 0, max_length = 32)]
     pub rules: Vec<AutomodRuleStripped>,
 
     /// the actions that were executed
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 32))]
+    #[schema(min_length = 0, max_length = 32)]
     pub actions: Vec<AutomodAction>,
 
     /// the content that was matched
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 32))]
+    #[schema(min_length = 0, max_length = 32)]
     pub matches: Vec<AutomodMatches>,
 
     /// the user who triggered this execution
@@ -546,30 +515,24 @@ pub struct MessageAutomodExecution {
 // }
 
 /// Information about a thread being renamed
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageChannelRename {
-    #[cfg_attr(feature = "serde", serde(alias = "new"))]
+    #[serde(alias = "new")]
     pub name_new: String,
 
-    #[cfg_attr(feature = "serde", serde(alias = "old"))]
+    #[serde(alias = "old")]
     pub name_old: String,
 }
 
 /// Information about a thread being moved
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageChannelMoved {
     pub parent_id_old: Option<ChannelId>,
     pub parent_id_new: Option<ChannelId>,
 }
 
 /// Information about a thread being created
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageThreadCreated {
     /// the message this thread was created from
     pub source_message_id: Option<MessageId>,
@@ -580,9 +543,7 @@ pub struct MessageThreadCreated {
 }
 
 /// Information about the pingback
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageChannelPingback {
     pub source_room_id: RoomId,
     pub source_channel_id: ChannelId,
@@ -590,9 +551,7 @@ pub struct MessageChannelPingback {
 }
 
 /// Information about a channel icon change
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageChannelIcon {
     pub icon_id_old: Option<MediaId>,
     pub icon_id_new: Option<MediaId>,
@@ -602,9 +561,7 @@ pub struct MessageChannelIcon {
 /// Information about one or more messages being moved between threads
 /// probably want this being sent in both the source and target threads, maybe
 /// with a bit of different styling depending on whether its source/target
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessagesMoved {
     // do messages keep their ids when being moved?
     pub start_id: MessageId,
@@ -615,17 +572,13 @@ pub struct MessagesMoved {
 }
 
 /// Information about a member being added or removed from a thread
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageMember {
     pub target_user_id: UserId,
 }
 
 /// Following a room and will receive announcement posts from it
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageRoomFollowed {
     pub thread_id: ChannelId,
     pub reason: Option<String>,
@@ -633,68 +586,53 @@ pub struct MessageRoomFollowed {
 
 // TODO: remove
 /// audit log entries as a message (builtin moderation logging?)
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageModerationLog {
     pub audit_log_entry: AuditLogEntry,
 }
 
 /// a report that moderators should look at
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageModerationReport {
     pub report: Report,
 }
 
 /// a bot command
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageBotCommand {
     pub command_id: String,
 }
 
 /// a basic message, written using markdown
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct MessageDefaultMarkdown {
     /// the message's content in markdown
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub content: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
+    #[schema(min_length = 1, max_length = 32)]
+    #[validate(length(min = 1, max = 32), nested)]
     pub attachments: Vec<MessageAttachment>,
 
     /// application defined metadata
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Metadata>,
 
     /// the message this message is replying to
     pub reply_id: Option<MessageId>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
+    #[schema(min_length = 1, max_length = 32)]
+    #[validate(length(min = 1, max = 32), nested)]
     pub embeds: Vec<Embed>,
 
     /// the components for this message
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Components::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Components::is_empty")]
     pub components: Components<components::Canonical>,
 }
 
 /// an encrypted message
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct MessageEncrypted {
     // TODO: find an appropriate size limit for this (how much overhead does mls cause?)
     /// encrypted content of the message
@@ -715,50 +653,42 @@ pub struct MessageEncrypted {
 }
 
 /// a basic message, written using markdown. for use with e2ee.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct MessageDefaultMarkdownEncrypted {
     /// the message's content in markdown
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub content: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
+    #[schema(min_length = 1, max_length = 32)]
+    #[validate(length(min = 1, max = 32), nested)]
     pub attachments: Vec<MessageAttachmentEncrypted>,
 
     /// application defined metadata
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<Metadata>,
 
     /// the message this message is replying to
     pub reply_id: Option<MessageId>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 32))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 32), nested))]
+    #[schema(min_length = 1, max_length = 32)]
+    #[validate(length(min = 1, max = 32), nested)]
     pub embeds: Vec<Embed>,
 
     /// the components for this message
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Components::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Components::is_empty")]
     pub components: Components<components::Encrypted>,
 }
 
 /// used in `message_create` and `message_update`
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq)]
 pub struct MessageAttachmentCreate {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: MessageAttachmentCreateType,
 
     /// if this is a spoiler and should be blurred
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub spoiler: bool,
 }
 
@@ -774,21 +704,17 @@ pub struct MessageAttachment {
     pub spoiler: bool,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct MessageAttachmentEncrypted {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: MessageAttachmentEncryptedType,
 
     /// if this is a spoiler and should be blurred
     pub spoiler: bool,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum MessageAttachmentEncryptedType {
     /// a piece of media
     Media { media: EncryptedMedia },
@@ -799,43 +725,36 @@ pub enum MessageAttachmentEncryptedType {
 }
 
 /// a snapshot of a message at a point in time, for forwards
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageSnapshot {
     pub room_id: Option<RoomId>,
     pub channel_id: ChannelId,
     pub message_id: MessageId,
     pub version_id: MessageVerId,
     pub created_at: Time,
-    #[cfg_attr(feature = "serde", serde(flatten))]
+
+    #[serde(flatten)]
     pub message_type: MessageType,
 
     /// who this message mentioned
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Mentions::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Mentions::is_empty")]
     pub mentions: Mentions,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq)]
+#[serde(tag = "type")]
 pub enum MessageAttachmentCreateType {
     Media {
-        #[cfg_attr(feature = "serde", serde(flatten))]
+        #[serde(flatten)]
         media: MediaReference,
 
         /// Shortcut for setting alt text on the media item
-        #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
+        #[schema(min_length = 1, max_length = 8192)]
         alt: Option<Option<String>>,
 
         /// Shortcut for setting filename on the media item
-        #[cfg_attr(
-            feature = "utoipa",
-            schema(required = false, min_length = 1, max_length = 256)
-        )]
+        #[schema(required = false, min_length = 1, max_length = 256)]
         filename: Option<String>,
     },
 
@@ -886,10 +805,8 @@ impl Validate for MessageAttachmentCreateType {
     }
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
+#[record]
+#[serde(tag = "type")]
 pub enum MessageAttachmentType {
     /// a piece of media
     // or should this be called File? should i differentiate files and media?
@@ -904,25 +821,21 @@ pub enum MessageAttachmentType {
     // TODO: reference to a range of a document, for document comments
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct MessageCall {
     /// when the call ended. is None if the call is still going.
     pub ended_at: Option<Time>,
 
     /// the people who joined the call
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
+    #[schema(min_length = 0, max_length = 128)]
     pub participants: Vec<UserId>,
 }
 
 /// the interaction that caused this message to be sent
 // who is the message author?
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct MessageInteraction {
     pub id: InteractionId,
     pub application_id: ApplicationId,
@@ -938,9 +851,8 @@ pub struct MessageInteraction {
 
 /// the current status
 #[cfg(feature = "feat_interaction_reaction")]
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum InteractionStatus {
     /// This message is still loading, or the action it represents is in progress
     ///
@@ -969,15 +881,13 @@ pub enum InteractionStatus {
 //     Ratelimit,
 // }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct MessageMove {
     /// which messages to move
-    #[cfg_attr(feature = "serde", serde(default))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 128)))]
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 128))]
+    #[serde(default)]
+    #[validate(length(min = 1, max = 128))]
+    #[schema(min_length = 1, max_length = 128)]
     pub message_ids: Vec<MessageId>,
 
     /// the channel to move the messages to
@@ -986,27 +896,24 @@ pub struct MessageMove {
     pub target_channel_id: ChannelId,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct MessageModerate {
     /// which messages to delete
-    #[cfg_attr(feature = "serde", serde(default))]
-    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
+    #[serde(default)]
+    #[validate(length(max = 128))]
+    #[schema(min_length = 0, max_length = 128)]
     pub delete: Vec<MessageId>,
 
     /// which messages to remove
-    #[cfg_attr(feature = "serde", serde(default))]
-    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
+    #[serde(default)]
+    #[validate(length(max = 128))]
+    #[schema(min_length = 0, max_length = 128)]
     pub remove: Vec<MessageId>,
 
     /// which messages to restore
-    #[cfg_attr(feature = "serde", serde(default))]
-    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
-    #[cfg_attr(feature = "utoipa", schema(min_length = 0, max_length = 128))]
+    #[serde(default)]
+    #[validate(length(max = 128))]
+    #[schema(min_length = 0, max_length = 128)]
     pub restore: Vec<MessageId>,
 }
 
@@ -1028,33 +935,27 @@ pub struct RepliesQuery {
 }
 
 /// a response to a replies query
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RepliesResponse {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub children: RepliesChildren,
     // TODO: return users and room/thread members
 }
 
 /// a single message for a replies query
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RepliesMessage {
     /// the message itself
     pub message: Message,
 
     /// the children for this message
-    #[cfg_attr(feature = "serde", serde(flatten))]
-    #[cfg_attr(feature = "utoipa", schema(no_recursion))]
+    #[serde(flatten)]
+    #[schema(no_recursion)]
     pub children: RepliesChildren,
 }
 
 /// a list of children for a RepliesItem or the top level
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RepliesChildren {
     /// the children for this message
     pub children: Vec<RepliesMessage>,
@@ -1100,9 +1001,7 @@ pub struct RatelimitPut {
     pub slowmode_message_expire_at: Option<Option<Time>>,
 }
 
-#[derive(Debug, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ContextResponse {
     pub items: Vec<Message>,
 
