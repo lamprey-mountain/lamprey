@@ -233,13 +233,15 @@
 .message > .reply {
 	grid-area: reply;
 	display: flex;
-	height: 1em;
+	height: 16px;
 	align-items: center;
 	margin-bottom: 4px;
 	cursor: pointer;
+	overflow: hidden;
 
 	& > .spine {
 		width: 24px;
+		min-width: 24px;
 		height: 50%;
 		align-self: end;
 		margin-left: 24px;
@@ -252,15 +254,18 @@
 	& > .avatar {
 		height: 16px;
 		width: 16px;
+		min-width: 16px;
 		margin-right: 4px;
 		border-radius: 6px;
 		filter: brightness(0.8);
 	}
 
 	& > .content {
-		padding-right: 4em;
+		padding-right: 24px;
 		font-size: 0.9em;
-		@include truncate;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 
 		& > .author {
 			padding-right: 4px;
@@ -270,6 +275,60 @@
 		& > .markdown {
 			display: inline;
 			color: $fg-400;
+			white-space: inherit;
+
+			* {
+				font-size: 1em;
+				display: inline;
+				white-space: inherit;
+			}
+
+			h1,
+			h2,
+			h3,
+			h4,
+			h5,
+			h6 {
+				margin-right: 4px;
+				font-weight: bold;
+			}
+
+			blockquote {
+				margin-right: 8px;
+			}
+
+			.code-block-header {
+				display: none;
+			}
+
+			.code-block-container {
+				// TODO: show border for code block
+				border: 0;
+				margin: 0;
+				padding: 0;
+
+				pre {
+					padding: 0 2px;
+				}
+			}
+
+			table {
+				border: 0;
+
+				& > * {
+					display: none;
+				}
+
+				& > .summary {
+					display: block;
+				}
+
+				&::after {
+					content: var(--summary);
+					font-style: italic;
+					color: $fg-500;
+				}
+			}
 		}
 	}
 

@@ -444,17 +444,21 @@ export function ReplyView(props: {
 
 	const content = () => {
 		const r = reply();
-		if (!r) return;
-		// TODO: handle embeds, components only messages
-		// TODO: apply different style for messages without content
-		return (
-			(r.latest_version.type === "DefaultMarkdown" &&
-				r.latest_version.content) ||
-			(r.latest_version.type === "DefaultMarkdown" &&
-			r.latest_version.attachments
-				? `${r.latest_version.attachments.length} attachment(s)`
-				: undefined)
-		);
+		if (!r) return "*loading...*";
+
+		const v = r.latest_version;
+		switch (v.type) {
+			case "DefaultMarkdown": {
+				if (v.content) return v.content;
+				if (v.attachments.length)
+					return `${v.attachments.length} attachment(s)`;
+				// TODO: handle embeds, components only messages
+				// TODO: apply different style for messages without content
+				return "*TODO: more robust renderer*";
+			}
+			default:
+				return `${v.type} message`;
+		}
 	};
 
 	const scrollToReply = () => {
@@ -483,16 +487,14 @@ export function ReplyView(props: {
 									onClick
 									class="author"
 								/>
-								{/* TODO: typescript compatibility */}
-								<Show
-									when={r().latest_version.type === "DefaultMarkdown"}
-									fallback={content()}
-								>
-									<Markdown
-										content={(r().latest_version as any).content}
-										channel_id={props.channel_id}
-										inline
-									/>
+								<Show when={content()}>
+									{(c) => (
+										<Markdown
+											content={c()}
+											channel_id={props.channel_id}
+											inline
+										/>
+									)}
 								</Show>
 							</>
 						)}

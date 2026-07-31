@@ -320,40 +320,52 @@ function RenderBlock(props: { block: SerializedBlock }) {
 				)}
 			</Match>
 			<Match when={props.block.type === "Table" && props.block}>
-				{(b) => (
-					<table>
-						<thead>
-							<tr>
-								<For each={b().header}>
-									{(cell) => (
-										<th>
-											<For each={cell}>
-												{(inline) => <RenderInline inline={inline} />}
+				{(b) => {
+					const rows = () => b().rows.length;
+					const columns = () => (b().header ?? b().rows[0]).length;
+					const summary = () => `Table (${rows()} rows, ${columns()} columns)`;
+
+					return (
+						<table
+							style={{
+								"--rows": rows(),
+								"--columns": columns(),
+								"--summary": `"${summary()}"`,
+							}}
+						>
+							<thead>
+								<tr>
+									<For each={b().header}>
+										{(cell) => (
+											<th>
+												<For each={cell}>
+													{(inline) => <RenderInline inline={inline} />}
+												</For>
+											</th>
+										)}
+									</For>
+								</tr>
+							</thead>
+							<tbody>
+								<For each={b().rows}>
+									{(row) => (
+										<tr>
+											<For each={row}>
+												{(cell) => (
+													<td>
+														<For each={cell}>
+															{(inline) => <RenderInline inline={inline} />}
+														</For>
+													</td>
+												)}
 											</For>
-										</th>
+										</tr>
 									)}
 								</For>
-							</tr>
-						</thead>
-						<tbody>
-							<For each={b().rows}>
-								{(row) => (
-									<tr>
-										<For each={row}>
-											{(cell) => (
-												<td>
-													<For each={cell}>
-														{(inline) => <RenderInline inline={inline} />}
-													</For>
-												</td>
-											)}
-										</For>
-									</tr>
-								)}
-							</For>
-						</tbody>
-					</table>
-				)}
+							</tbody>
+						</table>
+					);
+				}}
 			</Match>
 		</Switch>
 	);
