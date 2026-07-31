@@ -1,12 +1,16 @@
 import { useNavigate } from "@solidjs/router";
 import { getTimestampFromUUID } from "sdk";
 import { Show } from "solid-js";
+import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { Markdown } from "@/atoms/Markdown";
 import { Time } from "@/atoms/Time";
 import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { useChannel } from "@/contexts/mod";
 import type { ChannelT } from "@/types";
+import { MessageView } from "../chat/Message";
+import { MessageToolbarProvider } from "../chat/message-toolbar-context";
+import { Reactions } from "../chat/Reactions";
 
 export type ThreadCardProps = {
 	thread: ChannelT;
@@ -14,6 +18,7 @@ export type ThreadCardProps = {
 };
 
 export const ThreadCard = (props: ThreadCardProps) => {
+	const api = useApi();
 	const nav = useNavigate();
 	const [_ch, chUpdate] = useChannel();
 	const ctx = useCtx();
@@ -27,6 +32,11 @@ export const ThreadCard = (props: ThreadCardProps) => {
 			nav(`/thread/${props.thread.id}`);
 		}
 	};
+
+	const message = api.messages.use(
+		() => props.thread.id,
+		() => props.thread.id,
+	);
 
 	return (
 		<article
@@ -57,6 +67,24 @@ export const ThreadCard = (props: ThreadCardProps) => {
 				<Show when={props.thread.description}>
 					{(desc) => <Markdown content={desc()} class="description" />}
 				</Show>
+			</div>
+			<div class="preview">
+				<MessageToolbarProvider>
+					<Show when={message()}>
+						{(message) => (
+							<div>
+								<MessageView
+									message={{ ...message(), thread: null, reactions: [] }}
+									separate
+								/>
+								{/* TODO: split out message accessories? */}
+								<div style="margin: 8px">
+									<Reactions message={message()} />
+								</div>
+							</div>
+						)}
+					</Show>
+				</MessageToolbarProvider>
 			</div>
 		</article>
 	);

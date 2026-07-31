@@ -102,7 +102,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const openInSidebar = () => prefs.frontend.threads_sidebar_forum === "yes";
 
 	const [sortBy, setSortBy] = createSignal<Forum2Sort>("new");
-	const [viewAs, setViewAs] = createSignal<Forum2View>("list");
+	const [viewAs, setViewAs] = createSignal<Forum2View>("compact");
 	const [showRemoved, setShowRemoved] = createSignal(false);
 	const [searchQuery, setSearchQuery] = createSignal("");
 	const [debouncedSearch, setDebouncedSearch] = createSignal("");
@@ -234,8 +234,25 @@ export const Forum2 = (props: { channel: Channel }) => {
 	// timeline.commands.on("ackMessage", () => { });
 	// <TimelineProvider channel={...}></TimelineProvider>
 
+	const [columns, setColumns] = createSignal(1);
+	const obs = new ResizeObserver((entries) => {
+		for (const e of entries) {
+			const width = e.contentBoxSize[0].inlineSize;
+			// TODO: don't hardcode this?
+			const THREAD_CARD_WIDTH = 240;
+			setColumns(Math.floor(width / THREAD_CARD_WIDTH));
+		}
+	});
+
+	onCleanup(() => obs.disconnect());
+
 	return (
-		<div class="forum2">
+		<div
+			class="forum2"
+			data-forum-view={viewAs()}
+			style={{ "--column-count": columns() }}
+			ref={(el) => obs.observe(el)}
+		>
 			<div class="forum2-list list">
 				<Show when={flags.has("thread_quick_create") && false}>
 					<br />
@@ -318,7 +335,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 					</div>
 				</div>
 
-				<ul>
+				<ul class="thread-list">
 					<For each={threads().active}>
 						{(thread) => (
 							<li>
@@ -332,7 +349,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 					<h3 class="dim" style="margin-top:16px;">
 						older threads
 					</h3>
-					<ul>
+					<ul class="thread-list">
 						<For each={threads().archived}>
 							{(thread) => (
 								<li>

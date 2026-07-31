@@ -12,7 +12,7 @@ export type Forum2Sort =
 	| "hot2"
 	| string;
 
-export type Forum2View = "list" | "gallery" | string;
+export type Forum2View = "list" | "gallery" | "compact";
 
 export type Forum2SortingProps = {
 	sorting: Forum2Sort;
@@ -40,6 +40,7 @@ const options: Array<Option> = [
 
 const views: Array<Option> = [
 	{ id: "list", label: "List" },
+	{ id: "compact", label: "Compact" },
 	{ id: "gallery", label: "Gallery" },
 ];
 

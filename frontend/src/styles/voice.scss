@@ -119,7 +119,7 @@
 
 		&[data-layout="focus"] {
 			& > .streams-inner > .list {
-				grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+				grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 				gap: 8px;
 
 				// NOTE: these stylings could be useful for something else, but im not sure what?

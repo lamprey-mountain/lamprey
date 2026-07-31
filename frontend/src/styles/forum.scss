@@ -86,6 +86,34 @@
 	}
 }
 
+.forum,
+.forum2 {
+	&[data-forum-view="list"] {
+		// nothing to do. this is the default!
+	}
+
+	&[data-forum-view="compact"] {
+		.thread-card .preview {
+			display: none;
+		}
+	}
+
+	&[data-forum-view="gallery"] {
+		.thread-list {
+			/* display: grid; */
+			/* grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); */
+			column-count: var(--column-count);
+			column-gap: 8px;
+		}
+
+		.thread-card {
+			break-inside: avoid;
+			margin: 0;
+			margin-bottom: 8px;
+		}
+	}
+}
+
 .forum2-sorting {
 	display: flex;
 	background-color: $bg-150;
