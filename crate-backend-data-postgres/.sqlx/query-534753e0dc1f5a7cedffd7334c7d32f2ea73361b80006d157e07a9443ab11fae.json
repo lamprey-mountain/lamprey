@@ -30,7 +30,8 @@
                 "Document",
                 "DocumentComment",
                 "Wiki",
-                "Scripts"
+                "Scripts",
+                "DocumentBranch"
               ]
             }
           }

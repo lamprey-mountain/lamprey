@@ -28,7 +28,11 @@
                 "ChannelMoved",
                 "ChannelPingback",
                 "Call",
-                "ThreadCreated"
+                "ThreadCreated",
+                "Nudge",
+                "DocumentTag",
+                "DocumentEdits",
+                "DocumentMerged"
               ]
             }
           }
