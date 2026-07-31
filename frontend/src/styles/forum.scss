@@ -14,28 +14,6 @@
 		flex-direction: column;
 		overflow-y: auto;
 		height: 100%;
-
-		.sort-view-container {
-			.sort-view-button {
-				border-radius: 4px;
-				display: flex;
-				align-items: center;
-				gap: 8px;
-
-				& .icon2 {
-					rotate: 90deg;
-					/* transition: rotate 200ms; */
-				}
-
-				&.selected {
-					background-color: $bg-400;
-
-					& .icon2 {
-						rotate: 270deg;
-					}
-				}
-			}
-		}
 	}
 
 	.comments {
@@ -58,6 +36,31 @@
 		&.selected {
 			& .icon2 {
 				rotate: 270deg;
+			}
+		}
+	}
+}
+
+.forum,
+.forum2 {
+	.sort-view-container {
+		.sort-view-button {
+			border-radius: 4px;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+
+			& .icon2 {
+				rotate: 90deg;
+				/* transition: rotate 200ms; */
+			}
+
+			&.selected {
+				background-color: $bg-400;
+
+				& .icon2 {
+					rotate: 270deg;
+				}
 			}
 		}
 	}
@@ -99,6 +102,7 @@
 
 	.column {
 		min-width: 128px;
+		width: max-content;
 	}
 
 	.button {
