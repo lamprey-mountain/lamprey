@@ -1,19 +1,14 @@
 {
+	"$schema": "http://json.schemastore.org/tsconfig",
 	"compilerOptions": {
 		// features
 		"lib": ["ES2023", "DOM", "DOM.Iterable", "ESNext.Intl"],
 		"target": "ES2023",
 		"module": "ESNext",
-		"jsxImportSource": "solid-js",
 
 		// bundler
 		"moduleResolution": "bundler",
-		"allowImportingTsExtensions": true,
 		"isolatedModules": true,
-		"moduleDetection": "force",
-		"jsx": "preserve",
-		// "verbatimModuleSyntax": true,
-		"noEmit": true,
 
 		// incremental builds
 		"incremental": true,
@@ -24,18 +19,19 @@
 		"skipLibCheck": true,
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true,
-		// "noPropertyAccessFromIndexSignature": true
+		"noPropertyAccessFromIndexSignature": true,
 
-		"baseUrl": ".",
-
-    "paths": {
-      "@/*": ["frontend/src/*"]
-    },
+		// building
+		"declaration": true,
+		"outDir": "dist/",
+		"baseUrl": "./"
+		// "paths": {
+		//   "@/*": ["./src/*"]
+		// },
 	},
-	"include": [
-		"frontend",
-		"ts-sdk",
-		"sdk2",
-		"frontend/src/custom.d.ts"
-	]
+
+	"include": ["src/**.ts"]
+
+	// TODO: merge with ../tsconfig.json
+	// "extends": "../tsconfig.json"
 }

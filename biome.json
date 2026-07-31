@@ -11,6 +11,8 @@
 			"frontend/**",
 			"!frontend/dist",
 			"ts-sdk/**",
+			"sdk2/**",
+			"!sdk2/dist",
 			"emoji/**",
 			"!emoji/generated"
 		]
