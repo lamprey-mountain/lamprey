@@ -76,7 +76,7 @@ async fn permission_set(
     let existing = channel
         .permission_overwrites
         .iter()
-        .find(|o| o.ty == req.overwrite.ty && o.id == *req.overwrite_id);
+        .find(|o| o.ty == req.overwrite.ty && *o.id == *req.overwrite_id);
 
     if existing.is_none()
         && channel.permission_overwrites.len() >= crate::consts::MAX_PERMISSION_OVERWRITES as usize
@@ -189,7 +189,7 @@ async fn permission_remove(
     let existing = if let Some(existing) = channel
         .permission_overwrites
         .iter()
-        .find(|o| o.id == *req.overwrite_id)
+        .find(|o| *o.id == *req.overwrite_id)
     {
         if let Some(room_id) = channel.room_id {
             let rank = srv.perms.get_user_rank(room_id, auth.user.id).await?;

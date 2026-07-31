@@ -311,6 +311,30 @@ genid!(Eval, "00000000-0000-0000-0000-00000000eval");
 genid!(Call, "00000000-0000-0000-0000-00000000call");
 genid!(Sfu, "00000000-0000-0000-0000-000000000sfu");
 
+impl From<RoleId> for PermissionOverwriteId {
+    fn from(value: RoleId) -> Self {
+        value.inner.into()
+    }
+}
+
+impl From<UserId> for PermissionOverwriteId {
+    fn from(value: UserId) -> Self {
+        value.inner.into()
+    }
+}
+
+impl From<PermissionOverwriteId> for RoleId {
+    fn from(value: PermissionOverwriteId) -> Self {
+        value.inner.into()
+    }
+}
+
+impl From<PermissionOverwriteId> for UserId {
+    fn from(value: PermissionOverwriteId) -> Self {
+        value.inner.into()
+    }
+}
+
 /// the user id of the server system user (aka root)
 // hex translates to "root"
 pub const SERVER_USER_ID: UserId = user_id!("00000000-0000-7000-0000-0000726f6f74");

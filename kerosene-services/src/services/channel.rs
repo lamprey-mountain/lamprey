@@ -618,7 +618,7 @@ impl ServiceChannels {
         for overwrite in json.permission_overwrites {
             data.permission_overwrite_upsert(
                 channel_id,
-                overwrite.id,
+                *overwrite.id,
                 overwrite.ty,
                 overwrite.allow,
                 overwrite.deny,

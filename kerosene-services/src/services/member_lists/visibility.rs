@@ -1,8 +1,8 @@
-use common::v1::types::{
-    Permission, PermissionOverwrite, PermissionOverwriteType, RoomId, RoomMember,
+use common::{
+    v1::types::{Permission, PermissionOverwrite, PermissionOverwriteType, RoomId, RoomMember},
+    v2::types::PermissionOverwriteId,
 };
 use std::collections::HashSet;
-use uuid::Uuid;
 
 /// Minimal calculated visibility for member lists
 #[derive(Debug, Default, Clone, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -15,7 +15,7 @@ pub struct MemberListVisibility {
 #[derive(Debug, Clone, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct VisibilityPermission {
     /// ID of role or user
-    pub id: Uuid,
+    pub id: PermissionOverwriteId,
 
     /// Whether this is for a user or role
     pub ty: PermissionOverwriteType,
@@ -32,7 +32,7 @@ impl MemberListVisibility {
             // application order within each level:
             // 1. everyone allow
             for ow in &ow_set {
-                if ow.id != *room_id {
+                if *ow.id != *room_id {
                     continue;
                 }
                 if ow.allow.contains(&Permission::ChannelView) {
@@ -45,7 +45,7 @@ impl MemberListVisibility {
             }
             // 2. everyone deny
             for ow in &ow_set {
-                if ow.id != *room_id {
+                if *ow.id != *room_id {
                     continue;
                 }
                 if ow.deny.contains(&Permission::ChannelView) {
@@ -58,7 +58,7 @@ impl MemberListVisibility {
             }
             // 3. role allow
             for ow in &ow_set {
-                if ow.ty != PermissionOverwriteType::Role || ow.id == *room_id {
+                if ow.ty != PermissionOverwriteType::Role || *ow.id == *room_id {
                     continue;
                 }
                 if ow.allow.contains(&Permission::ChannelView) {
@@ -71,7 +71,7 @@ impl MemberListVisibility {
             }
             // 4. role deny
             for ow in &ow_set {
-                if ow.ty != PermissionOverwriteType::Role || ow.id == *room_id {
+                if ow.ty != PermissionOverwriteType::Role || *ow.id == *room_id {
                     continue;
                 }
                 if ow.deny.contains(&Permission::ChannelView) {
@@ -130,12 +130,14 @@ impl MemberListVisibility {
         for ow in &self.overwrites {
             match ow.ty {
                 PermissionOverwriteType::Role => {
-                    if member.roles.contains(&ow.id.into()) || ow.id == *member.room_id {
+                    if member.roles.contains(&ow.id.into_inner().into())
+                        || *ow.id == *member.room_id
+                    {
                         has_view = ow.allowed;
                     }
                 }
                 PermissionOverwriteType::User => {
-                    if ow.id == *member.user_id {
+                    if *ow.id == *member.user_id {
                         has_view = ow.allowed;
                     }
                 }

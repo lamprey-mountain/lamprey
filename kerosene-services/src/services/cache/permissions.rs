@@ -421,7 +421,7 @@ impl PermissionsCalculator {
             return;
         }
 
-        let everyone_id = self.room_id.into_inner();
+        let everyone_id = self.room_id.into_inner().into();
 
         // 1. apply everyone allows
         if let Some(ow) = cc.overwrites.get(&everyone_id) {
@@ -437,7 +437,7 @@ impl PermissionsCalculator {
 
         // 3. apply role allows
         for role_id in &member.roles {
-            if let Some(ow) = cc.overwrites.get(&role_id.into_inner()) {
+            if let Some(ow) = cc.overwrites.get(&role_id.into_inner().into()) {
                 if ow.ty == PermissionOverwriteType::Role {
                     bits.add_all(ow.allow);
                 }
@@ -446,7 +446,7 @@ impl PermissionsCalculator {
 
         // 4. apply role denies
         for role_id in &member.roles {
-            if let Some(ow) = cc.overwrites.get(&role_id.into_inner()) {
+            if let Some(ow) = cc.overwrites.get(&role_id.into_inner().into()) {
                 if ow.ty == PermissionOverwriteType::Role {
                     bits.remove_all(ow.deny);
                 }
@@ -454,14 +454,14 @@ impl PermissionsCalculator {
         }
 
         // 5. apply user allows
-        if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner()) {
+        if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner().into()) {
             if ow.ty == PermissionOverwriteType::User {
                 bits.add_all(ow.allow);
             }
         }
 
         // 6. apply user denies
-        if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner()) {
+        if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner().into()) {
             if ow.ty == PermissionOverwriteType::User {
                 bits.remove_all(ow.deny);
             }

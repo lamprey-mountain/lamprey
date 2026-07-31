@@ -307,14 +307,14 @@ impl ServiceRoomTemplates {
             // Apply overwrites
             for overwrite in &template_channel.inner.permission_overwrites {
                 let target_id = match overwrite.ty {
-                    PermissionOverwriteType::Role => *role_map
+                    PermissionOverwriteType::Role => **role_map
                         .get(&overwrite.id)
                         .ok_or_else(|| Error::Internal("failed to create role".to_string()))?,
-                    PermissionOverwriteType::User => overwrite.id.into(),
+                    PermissionOverwriteType::User => *overwrite.id,
                 };
                 data.permission_overwrite_upsert(
                     channel_id,
-                    *target_id,
+                    target_id,
                     overwrite.ty,
                     overwrite.allow.clone(),
                     overwrite.deny.clone(),

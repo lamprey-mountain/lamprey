@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
-use uuid::Uuid;
 
+use crate::v1::types::PermissionOverwriteId;
 #[cfg(feature = "serde")]
 use crate::v1::types::util::deserialize_sorted;
 
@@ -256,6 +256,7 @@ pub enum Permission {
     // like discord's expression create permission
 }
 
+// TODO: either use or remove this
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -269,7 +270,7 @@ pub struct PermissionOverwrites {
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PermissionOverwrite {
     /// id of role or user
-    pub id: Uuid,
+    pub id: PermissionOverwriteId,
 
     /// whether this is for a user or role
     #[cfg_attr(feature = "serde", serde(rename = "type"))]

@@ -1,5 +1,6 @@
 //! cached/in memory rooms
 
+use common::v2::types::PermissionOverwriteId;
 use im::HashMap as ImMap;
 use std::sync::Arc;
 use tracing::warn;
@@ -166,7 +167,7 @@ pub struct CachedChannel {
     pub inner: Channel,
 
     /// channel permission overwrites as bitfields
-    pub overwrites: ImMap<Uuid, CachedPermissionOverwrite>,
+    pub overwrites: ImMap<PermissionOverwriteId, CachedPermissionOverwrite>,
 }
 
 #[derive(Clone, Debug)]
@@ -184,7 +185,7 @@ pub struct CachedRole {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CachedPermissionOverwrite {
     /// id of role or user
-    pub id: Uuid,
+    pub id: PermissionOverwriteId,
 
     /// whether this is for a user or role
     pub ty: PermissionOverwriteType,
