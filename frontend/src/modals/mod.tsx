@@ -28,7 +28,7 @@ export const Modal = (
 	props: ParentProps<{
 		onKeyDown?: (e: KeyboardEvent) => void;
 		class?: string;
-		contentRef: Ref<HTMLDivElement>;
+		contentRef?: Ref<HTMLDivElement>;
 	}>,
 ) => {
 	const [, modalCtl] = useModals();

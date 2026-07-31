@@ -1,11 +1,15 @@
 import { createMemo, createSignal, Show } from "solid-js";
-import { useApi, useRoles, useRooms } from "@/api";
+import { useApi } from "@/api";
 import { Dropdown, MultiDropdown } from "@/atoms/Dropdown";
+import { Icon } from "@/atoms/Icon";
+import { ChannelIcon } from "@/avatar/ChannelIcon";
+import { RoomIcon } from "@/avatar/RoomIcon";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import {
 	calculatePermissions,
 	type PermissionContext,
 } from "@/lib/permissions/calculator";
+import { icChevron } from "@/utils/icons";
 import { Modal } from "./mod";
 
 interface ModalInviteCreateProps {
@@ -14,8 +18,7 @@ interface ModalInviteCreateProps {
 }
 
 export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
-	const api2 = useApi();
-	const roles2 = useRoles();
+	const api = useApi();
 	const [expiry, setExpiry] = createSignal<number | null>(null);
 	const [maxUses, setMaxUses] = createSignal<number | null>(null);
 	const [selectedRoleIds, setSelectedRoleIds] = createSignal<string[]>([]);
@@ -23,9 +26,10 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 	const [creating, setCreating] = createSignal(false);
 	const currentUser = useCurrentUser();
 
-	const rooms2 = useRooms();
-	const room = rooms2.use(() => props.room_id as string);
-	const roles = () => roles2.listByRoom(props.room_id as string);
+	const channel = api.channels.use(() => props.channel_id);
+	const room = api.rooms.use(() => props.room_id);
+
+	const roles = () => api.roles.listByRoom(props.room_id as string);
 
 	const currentUserId = () => currentUser()?.id;
 
@@ -34,7 +38,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		const userId = currentUserId();
 		if (!roomId || !userId) return false;
 		const permissionContext: PermissionContext = {
-			api: api2,
+			api,
 			room_id: roomId,
 			channel_id: props.channel_id,
 		};
@@ -79,7 +83,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		};
 
 		if (props.channel_id) {
-			const { data, error } = await api2.client.http.POST(
+			const { data, error } = await api.client.http.POST(
 				"/api/v1/channel/{channel_id}/invite",
 				{
 					params: { path: { channel_id: props.channel_id } },
@@ -92,7 +96,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 			}
 			if (error) console.error(error);
 		} else if (props.room_id) {
-			const { data, error } = await api2.client.http.POST(
+			const { data, error } = await api.client.http.POST(
 				"/api/v1/room/{room_id}/invite",
 				{
 					params: { path: { room_id: props.room_id } },
@@ -108,12 +112,10 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		setCreating(false);
 	};
 
-	const inviteLink = () =>
-		inviteCode() && `${window.location.origin}/invite/${inviteCode()}`;
-
-	const _copyToClipboard = () => {
-		navigator.clipboard.writeText(inviteLink());
-	};
+	const inviteLink = createMemo(() => {
+		const code = inviteCode();
+		if (code) return new URL(`/invite/${inviteCode()}`, location.origin).href;
+	});
 
 	const [inputRef, setInputRef] = createSignal<HTMLInputElement>();
 
@@ -121,16 +123,39 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 		const input = inputRef();
 		if (input) {
 			input.select();
-			navigator.clipboard.writeText(inviteLink());
+			navigator.clipboard.writeText(inviteLink() ?? "broken link!");
 		}
 	};
 
 	return (
 		<Modal>
 			<div class="modal-invite-create">
-				<h2>create invite</h2>
-				<div style="margin-top:8px">
-					<h3 class="dim">expire after</h3>
+				<header class="header">
+					<div class="dim">Create an invite to</div>
+					<div class="target">
+						<Show when={room()}>
+							{(room) => (
+								<>
+									<RoomIcon room={room()} />
+									<span classList={{ final: !channel() }}>{room().name}</span>
+									<Show when={channel()}>
+										<Icon src={icChevron} />
+									</Show>
+								</>
+							)}
+						</Show>
+						<Show when={channel()}>
+							{(channel) => (
+								<>
+									<ChannelIcon channel={channel()} />
+									<span class="final">{channel().name}</span>
+								</>
+							)}
+						</Show>
+					</div>
+				</header>
+				<div class="invite-option">
+					<h3 class="dim label">expire after</h3>
 					<Dropdown
 						selected={expiry()}
 						onSelect={(v) => setExpiry(v)}
@@ -145,8 +170,8 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 						placeholder="never"
 					/>
 				</div>
-				<div style="margin-top:8px">
-					<h3 class="dim">use count</h3>
+				<div class="invite-option">
+					<h3 class="dim label">use count</h3>
 					<Dropdown
 						selected={maxUses()}
 						onSelect={(v) => setMaxUses(v)}
@@ -161,8 +186,8 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 					/>
 				</div>
 				<Show when={availableRoles().length > 0}>
-					<div style="margin-top:8px">
-						<h3 class="dim">grant roles</h3>
+					<div class="invite-option">
+						<h3 class="dim label">grant roles</h3>
 						<MultiDropdown
 							selected={selectedRoleIds()}
 							onSelect={(id) => setSelectedRoleIds([...selectedRoleIds(), id])}
@@ -171,7 +196,6 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 							}
 							options={availableRoles()}
 							placeholder="select roles..."
-							style="width:min-content"
 						/>
 					</div>
 				</Show>
@@ -181,15 +205,15 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 						type="text"
 						readOnly
 						placeholder={creating() ? "creating..." : "a1b2c3"}
-						value={inviteLink()}
+						value={inviteLink() ?? ""}
 						onClick={(e) => {
 							e.currentTarget.select();
-							navigator.clipboard.writeText(inviteLink());
+							navigator.clipboard.writeText(inviteLink() ?? "broken link!");
 						}}
 					/>
 					<button
 						type="button"
-						class="primary"
+						class="button primary"
 						onClick={() => {
 							if (inviteCode()) {
 								selectAndCopy();

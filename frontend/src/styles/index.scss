@@ -4294,3 +4294,48 @@ button.round {
 		background-color: $bg-400;
 	}
 }
+
+.modal-invite-create {
+	.header {
+		font-size: 1rem;
+
+		& > .target {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			margin-bottom: 16px;
+			color: $fg-600;
+
+			& > .icon2 {
+				background-color: $fg-600;
+			}
+
+			& > .avatar {
+				height: 24px;
+				width: 24px;
+				margin: 0;
+			}
+
+			& > .final {
+				color: $fg-100;
+			}
+		}
+	}
+
+	.invite-option {
+		margin-top: 8px;
+
+		& > .label {
+			margin: 0 2px;
+		}
+	}
+
+	.dropdown-container,
+	.multi-dropdown {
+		width: 100%;
+	}
+
+	.chip .button {
+		border: 0;
+	}
+}

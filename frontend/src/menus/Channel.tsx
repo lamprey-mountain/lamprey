@@ -214,6 +214,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 						modalCtl.open({
 							type: "invite_create",
 							channel_id: props.channel_id,
+							room_id: channel()?.room_id ?? undefined,
 						})
 					}
 				>
