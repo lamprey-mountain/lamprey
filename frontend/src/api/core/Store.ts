@@ -457,6 +457,12 @@ export class RootStore {
 		} else if (msg.type === "MessageDelete") {
 			this.flumes.handleDelete(msg.message_id);
 			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
+		} else if (msg.type === "MessageDeleteBulk") {
+			// PERF: would batch() improve this in any meaningful way?
+			for (const id of msg.message_ids) {
+				this.flumes.handleDelete(id);
+				this.messages.handleMessageDelete(msg.channel_id, id);
+			}
 		} else if (
 			msg.type === "ReactionCreate" ||
 			msg.type === "ReactionDelete" ||
