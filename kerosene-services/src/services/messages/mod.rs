@@ -650,12 +650,12 @@ impl ServiceMessages {
 
         let before = data.message_list(channel_id, before_q).await?;
         let after = data.message_list(channel_id, after_q).await?;
-        let message = data.message_get(channel_id, message_id).await?;
+        let message = data.message_get(channel_id, message_id).await.ok();
 
         let mut items: Vec<Message> = before
             .items
             .into_iter()
-            .chain(Some(message))
+            .chain(message)
             .chain(after.items)
             .collect();
 
