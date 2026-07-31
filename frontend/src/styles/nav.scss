@@ -180,7 +180,6 @@
 			top: 14px;
 		}
 
-		// TODO: brighten icons when channel hovered/focused
 		&:focus-visible > .channel-link,
 		& > .channel-link:hover {
 			background-color: $bg-400;
@@ -193,6 +192,15 @@
 			.channel-actions {
 				display: flex;
 			}
+
+			.channel-icon .inner {
+				fill: oklch(from $fg-200 calc(l + .3) c h);
+			}
+		}
+
+		& > .channel-link:active {
+			color: $fg-100;
+			background-color: oklch(from $bg-400 calc(l + .05) c h);
 		}
 	}
 
@@ -208,10 +216,13 @@
 		gap: 4px;
 		border-radius: 2px;
 
-		// TODO: brighten icons when channel selected
 		&.active {
 			background-color: $bg-300;
 			color: $fg-200;
+
+			.channel-icon .inner {
+				fill: $fg-300;
+			}
 		}
 
 		&[data-muted="true"] {
