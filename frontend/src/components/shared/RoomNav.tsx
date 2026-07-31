@@ -5,6 +5,7 @@ import {
 	createSelector,
 	createSignal,
 	For,
+	Index,
 	Match,
 	Show,
 	Switch,
@@ -204,7 +205,25 @@ export const RoomNav = () => {
 							</A>
 						</div>
 					</li>
-					<For each={dnd.previewedItems()}>
+
+					<For
+						each={dnd.previewedItems()}
+						fallback={
+							<Index each={Array(10).fill(0)}>
+								{(_, index) => (
+									<li
+										class="item room-item"
+										style={{
+											"pointer-events": "none",
+											opacity: 1 - index / 10,
+										}}
+									>
+										<div class="tile with-background"> </div>
+									</li>
+								)}
+							</Index>
+						}
+					>
 						{(item) => (
 							<Switch>
 								<Match when={item.type === "folder" && item} keyed>
