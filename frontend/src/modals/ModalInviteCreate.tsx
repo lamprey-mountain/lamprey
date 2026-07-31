@@ -139,7 +139,7 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 									<RoomIcon room={room()} />
 									<span classList={{ final: !channel() }}>{room().name}</span>
 									<Show when={channel()}>
-										<Icon src={icChevron} />
+										<Icon src={icChevron} class="divider" />
 									</Show>
 								</>
 							)}

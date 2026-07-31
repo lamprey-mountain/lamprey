@@ -102,7 +102,7 @@ export const ChannelIcon = (props: {
 			>
 				<svg
 					aria-hidden="true"
-					class="icon"
+					class="channel-icon"
 					viewBox="0 0 64 64"
 					style={props.style}
 				>
@@ -112,10 +112,17 @@ export const ChannelIcon = (props: {
 							<rect rx="4" width="32" height="32" x="32" y="0" fill="black" />
 						</mask>
 					</defs>
-					<image
-						mask={props.channel.nsfw ? "url(#nsfw)" : undefined}
-						href={channelIcon(props.channel.type, props.channel.id)}
-					/>
+					<g mask={props.channel.nsfw ? "url(#nsfw)" : undefined}>
+						<rect
+							width="64"
+							height="64"
+							x="0"
+							y="0"
+							class="inner"
+							mask={`url(${channelIcon(props.channel.type, props.channel.id)})`}
+						/>
+					</g>
+
 					<Show when={props.channel.nsfw}>
 						<image href={icChanNsfw} />
 					</Show>

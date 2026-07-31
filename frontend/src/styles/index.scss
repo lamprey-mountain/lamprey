@@ -4295,6 +4295,15 @@ button.round {
 	}
 }
 
+.channel-icon {
+	height: 1em;
+	width: 1em;
+
+	& .inner {
+		fill: var(--icon-color, $fg-600);
+	}
+}
+
 .modal-invite-create {
 	.header {
 		font-size: 1rem;
@@ -4302,13 +4311,8 @@ button.round {
 		& > .target {
 			display: flex;
 			align-items: center;
-			gap: 4px;
 			margin-bottom: 16px;
 			color: $fg-600;
-
-			& > .icon2 {
-				background-color: $fg-600;
-			}
 
 			& > .avatar {
 				height: 24px;
@@ -4318,6 +4322,16 @@ button.round {
 
 			& > .final {
 				color: $fg-100;
+			}
+
+			& > .divider {
+				background-color: $fg-600;
+				margin: 0 4px;
+				scale: .8;
+			}
+
+			& > .channel-icon {
+				margin-right: 2px;
 			}
 		}
 	}
