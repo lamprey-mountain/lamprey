@@ -20,7 +20,7 @@ import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { createTooltip } from "@/atoms/Tooltip";
 import { AvatarWithStatus } from "@/components/shared/User";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
-import { useUserPopout } from "@/contexts/mod.tsx";
+import { useModals, useUserPopout } from "@/contexts/mod.tsx";
 import type { ChannelT, UserT } from "@/types";
 import {
 	icCamera,
@@ -112,6 +112,12 @@ export const UserTray = () => {
 	const state = from(ctx.client.state);
 
 	// TODO: color .connection-state depending on "stopped" | "connecting" | "connected" | "ready" | undefined
+
+	const [, modalctl] = useModals();
+	const loginOrRegister = () => {
+		// TODO: login or register flow (either with modal or page)
+		modalctl.alert("not yet implemented");
+	};
 
 	return (
 		<div class="user-tray">
@@ -213,7 +219,28 @@ export const UserTray = () => {
 				)}
 			</Show>
 			<div class="row user-row">
-				<Show when={currentUser()}>
+				<Show
+					when={currentUser()}
+					fallback={
+						<div
+							class="current-user"
+							onClick={loginOrRegister}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									loginOrRegister();
+								}
+							}}
+						>
+							<div class="avatar logged-out"></div>
+
+							<div class="info">
+								<div class="name">anonymous</div>
+								<div class="user-activity">login or register</div>
+							</div>
+						</div>
+					}
+				>
 					{(u) => (
 						<div
 							class="current-user"

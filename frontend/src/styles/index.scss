@@ -2069,6 +2069,11 @@ body.resizing {
 				width: 32px;
 				margin: 0;
 				margin-right: 8px;
+
+				&.logged-out {
+					background: $bg-300;
+					border-radius: 4px;
+				}
 			}
 
 			&:hover,
