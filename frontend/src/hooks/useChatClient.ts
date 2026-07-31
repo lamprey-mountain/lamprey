@@ -32,6 +32,7 @@ import { SlashCommands } from "@/lib/commands/registry.ts";
 import type { Config } from "@/lib/config";
 import { flags } from "@/lib/flags";
 import { type ApiDB, migrations } from "@/lib/sync/db";
+import type { ActivityLogViewData } from "@/types/chat.ts";
 import { colors, logger } from "@/utils/logger";
 import { useMouseTracking } from "./useMouseTracking.ts";
 
@@ -118,6 +119,8 @@ export function useChatClient(config: Config) {
 	const [threadsView, setThreadsView] = createSignal<ThreadsViewData | null>(
 		null,
 	);
+	const [activityLogView, setActivityLogView] =
+		createSignal<ActivityLogViewData | null>(null);
 	const [headerThreadsButtonRef, setHeaderThreadsButtonRef] =
 		createSignal<HTMLElement | null>(null);
 
@@ -141,6 +144,8 @@ export function useChatClient(config: Config) {
 		setPopout,
 		threadsView,
 		setThreadsView,
+		activityLogView,
+		setActivityLogView,
 		headerThreadsButtonRef,
 		setHeaderThreadsButtonRef,
 		uploads: new ReactiveMap(),

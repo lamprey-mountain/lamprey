@@ -28,6 +28,7 @@ import { useCtx } from "@/app/context";
 import { Autocomplete } from "@/atoms/Autocomplete.tsx";
 import { EmojiPicker } from "@/atoms/EmojiPicker.tsx";
 import { ThreadPopout } from "@/components/features/chat/ThreadPopout.tsx";
+import { ThreadActivity } from "@/components/features/forum/ThreadActivity.tsx";
 import {
 	PopupEventEditor,
 	useCalendarPopup,
@@ -225,6 +226,30 @@ export function OverlayProvider(props: ParentProps) {
 		onCleanup(cleanup);
 	});
 
+	const [activityLogViewRef, setActivityLogViewRef] =
+		createSignal<HTMLElement>();
+	const [activityLogViewFloating, setActivityLogViewFloating] =
+		createStore<FloatingPosition>({
+			x: 0,
+			y: 0,
+			strategy: "absolute",
+		});
+
+	createEffect(() => {
+		const reference = ctx.activityLogView()?.ref;
+		const floating = activityLogViewRef();
+		if (!reference || !floating) return;
+		const cleanup = autoUpdate(reference, floating, () => {
+			computePosition(reference, floating, {
+				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+				placement: "bottom-end",
+			}).then(({ x, y, strategy }) => {
+				setActivityLogViewFloating({ x, y, strategy });
+			});
+		});
+		onCleanup(cleanup);
+	});
+
 	const [popoutRef, setPopoutRef] = createSignal<HTMLElement>();
 	const [popoutFloating, setPopoutFloating] = createStore<FloatingPosition>({
 		x: 0,
@@ -381,35 +406,6 @@ export function OverlayProvider(props: ParentProps) {
 						/>
 					</div>
 				</Show>
-				<Show when={userViewData()?.user()}>
-					<div
-						ref={setUserViewRef}
-						style={{
-							position: userViewFloating.strategy,
-							top: "0px",
-							left: "0px",
-							translate: `${userViewFloating.x}px ${userViewFloating.y}px`,
-							"z-index": 100,
-						}}
-					>
-						<Switch>
-							<Match when={userView()?.source === "user-tray"}>
-								<UserProfileEdit
-									user={userViewData()?.user()!}
-									room_member={userViewData()?.room_member() ?? undefined}
-									thread_member={userViewData()?.thread_member() ?? undefined}
-								/>
-							</Match>
-							<Match when={true}>
-								<UserProfile
-									user={userViewData()?.user()!}
-									room_member={userViewData()?.room_member() ?? undefined}
-									thread_member={userViewData()?.thread_member() ?? undefined}
-								/>
-							</Match>
-						</Switch>
-					</div>
-				</Show>
 				<Show when={ctx.threadsView()}>
 					<div
 						ref={setThreadsViewRef}
@@ -423,6 +419,22 @@ export function OverlayProvider(props: ParentProps) {
 					>
 						<Show when={ctx.threadsView()?.channel_id}>
 							{(cid) => <ThreadPopout channel_id={cid()} />}
+						</Show>
+					</div>
+				</Show>
+				<Show when={ctx.activityLogView()}>
+					<div
+						ref={setActivityLogViewRef}
+						style={{
+							position: activityLogViewFloating.strategy,
+							top: "0px",
+							left: "0px",
+							translate: `${activityLogViewFloating.x}px ${activityLogViewFloating.y}px`,
+							"z-index": 100,
+						}}
+					>
+						<Show when={ctx.activityLogView()?.channel_id}>
+							{(cid) => <ThreadActivity channel_id={cid()} />}
 						</Show>
 					</div>
 				</Show>
@@ -474,6 +486,35 @@ export function OverlayProvider(props: ParentProps) {
 								/>
 							)}
 						</Show>
+					</div>
+				</Show>
+				<Show when={userViewData()?.user()}>
+					<div
+						ref={setUserViewRef}
+						style={{
+							position: userViewFloating.strategy,
+							top: "0px",
+							left: "0px",
+							translate: `${userViewFloating.x}px ${userViewFloating.y}px`,
+							"z-index": 100,
+						}}
+					>
+						<Switch>
+							<Match when={userView()?.source === "user-tray"}>
+								<UserProfileEdit
+									user={userViewData()?.user()!}
+									room_member={userViewData()?.room_member() ?? undefined}
+									thread_member={userViewData()?.thread_member() ?? undefined}
+								/>
+							</Match>
+							<Match when={true}>
+								<UserProfile
+									user={userViewData()?.user()!}
+									room_member={userViewData()?.room_member() ?? undefined}
+									thread_member={userViewData()?.thread_member() ?? undefined}
+								/>
+							</Match>
+						</Switch>
 					</div>
 				</Show>
 			</Portal>

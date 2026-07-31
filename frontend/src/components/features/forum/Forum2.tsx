@@ -846,43 +846,6 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 	);
 };
 
-type ThreadActivityProps = {
-	comments: { items: Array<{ id: string }> } | undefined;
-	commentTree: Array<unknown>;
-};
-
-// TODO: implement
-const ThreadActivity = (props: ThreadActivityProps) => {
-	const comments = () => props.comments;
-	const commentTree = () => props.commentTree;
-
-	return (
-		<aside class="aside">
-			<h3 class="dim">thread info</h3>
-			<ul>
-				<li>tags: [foo] [bar] [baz]</li>
-				<li>
-					comments: [{comments()?.items.length ?? 0}] comments ([
-					{commentTree().length}] threads/top level comments)
-				</li>
-				<li>
-					last comment: <a href="#">some time ago</a>
-				</li>
-			</ul>
-			<br />
-			<h3 class="dim">thread log</h3>
-			<ul>
-				<li>[user] renamed to [name]</li>
-				<li>[user] added tag to [name]</li>
-				<li>[user] pinned [a message]</li>
-				<li>[user] added [member] to the thread</li>
-				<li>[user] removed [member] from the thread</li>
-				<li>mentioned in [thread]</li>
-			</ul>
-		</aside>
-	);
-};
-
 export interface CommentNode {
 	message: Message;
 	children: CommentNode[];

@@ -23,6 +23,7 @@ export function useGlobalEventHandlers() {
 		// NOTE: or overlay*s*? how would multiple work?
 		setUserView(null);
 		ctx.setThreadsView(null);
+		ctx.setActivityLogView(null);
 
 		// TODO: implement as written
 		// 3. close modal if background clicked

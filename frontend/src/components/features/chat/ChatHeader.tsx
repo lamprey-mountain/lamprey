@@ -19,6 +19,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
+import { icActivityLog } from "@/utils/icons";
 
 type ChatHeaderProps = {
 	channel: Channel;
@@ -45,6 +46,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	const threadsTooltip = createTooltip({ tip: () => "Threads" });
 	const pinnedTooltip = createTooltip({ tip: () => "Show pinned messages" });
 	const membersTooltip = createTooltip({ tip: () => "Show members" });
+	const activityTooltip = createTooltip({ tip: () => "Show activity log" });
 
 	const selected = () => channelState.selectedMessages;
 	const isSelecting = () => channelState.selectMode;
@@ -344,6 +346,26 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 							}}
 						>
 							<Icon src={icThreads} color={null} />
+						</button>
+					</Show>
+					<Show when={props.channel.type === "ThreadForum2"}>
+						<button
+							type="button"
+							class="button icon-button"
+							onClick={(e) => {
+								if (!ctx.activityLogView()) {
+									const ref = e.currentTarget;
+									setTimeout(() => {
+										ctx.setActivityLogView({
+											channel_id: props.channel.id,
+											ref,
+										});
+									});
+								}
+							}}
+							ref={activityTooltip.content}
+						>
+							<Icon src={icActivityLog} />
 						</button>
 					</Show>
 					<button

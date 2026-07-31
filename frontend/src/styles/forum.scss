@@ -509,3 +509,35 @@
 		}
 	}
 }
+
+.forum2-activity {
+	background: $bg-150;
+	border: solid $sep-300 1px;
+	box-shadow: 0 2px 8px $bg-100;
+	padding: 8px;
+	width: 360px;
+	height: 360px;
+	overflow-y: auto;
+
+	.item {
+		background: $bg-200;
+		padding: 8px;
+		margin: 8px 0;
+		color: $fg-600;
+
+		.user {
+			cursor: pointer;
+			color: $fg-400;
+
+			&:hover,
+			&:focus-visible {
+				color: $fg-200;
+				text-decoration: underline;
+			}
+		}
+
+		.bright {
+			color: $fg-200;
+		}
+	}
+}

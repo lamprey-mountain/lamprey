@@ -72,6 +72,11 @@ export type ThreadsViewData = {
 	ref: HTMLElement;
 };
 
+export type ActivityLogViewData = {
+	channel_id: string;
+	ref: HTMLElement;
+};
+
 export type Popout = {
 	id?: string;
 	ref?: HTMLElement;
@@ -91,6 +96,8 @@ export type ChatCtx = {
 
 	threadsView: Accessor<ThreadsViewData | null>;
 	setThreadsView: Setter<ThreadsViewData | null>;
+	activityLogView: Accessor<ActivityLogViewData | null>;
+	setActivityLogView: Setter<ActivityLogViewData | null>;
 	headerThreadsButtonRef: Accessor<HTMLElement | null>;
 	setHeaderThreadsButtonRef: Setter<HTMLElement | null>;
 	uploads: ReactiveMap<string, Upload>;

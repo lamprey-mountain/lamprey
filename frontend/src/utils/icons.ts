@@ -31,7 +31,11 @@ export { default as icPin } from "@/assets/pin.png";
 export { default as icReactionAdd } from "@/assets/reaction-add.png";
 export { default as icReply } from "@/assets/reply.png";
 export { default as icScreenshare } from "@/assets/screenshare.png";
-export { default as icSettings } from "@/assets/settings.png";
+// TODO: dedicated icon
+export {
+	default as icSettings,
+	default as icActivityLog,
+} from "@/assets/settings.png";
 export { default as icThread } from "@/assets/threads.png";
 
 import { default as icX } from "@/assets/x.png";

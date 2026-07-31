@@ -140,6 +140,15 @@ export const Reactions = (props: ReactionsProps) => {
 					let currentEl!: HTMLDivElement;
 					let oldEl: HTMLDivElement | undefined;
 
+					// TODO: animate reaction keys getting created or removed (count changes to/from 0?)
+
+					// animation for newly created reactions:
+					// currentEl.animate(
+					// 	[{ scale: 0, opacity: 0 }, { scale: 1, opacity: 1 }],
+					// 	{ duration: DURATION, easing: EASING, fill: "backwards" },
+					// );
+					// reverse keyframes for when reaction is removed
+
 					const handleCountChange = (newCount: number, prevCount: number) => {
 						if (newCount === prevCount) return;
 

@@ -214,7 +214,7 @@
 		/* @include truncate; */
 
 		&:hover,
-		&:focus {
+		&:focus-visible {
 			text-decoration: underline;
 		}
 
