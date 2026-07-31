@@ -1,9 +1,10 @@
 import { useNavigate } from "@solidjs/router";
 import type { InviteTarget } from "sdk";
-import { createEffect, Show } from "solid-js";
-import { useInvites } from "@/api";
+import { createEffect, onMount, Show } from "solid-js";
+import { useApi, useInvites } from "@/api";
 import { useCtx } from "@/app/context";
 import { Markdown } from "@/atoms/Markdown.tsx";
+import { useCurrentUser } from "@/contexts/currentUser";
 import { getThumbFromId } from "@/media/util";
 
 const Title = (props: { title?: string }) => {
@@ -46,6 +47,7 @@ function getRoomFromTarget(target: InviteTarget | undefined) {
 export const RouteInviteInner = (props: { code: string }) => {
 	const invites2 = useInvites();
 	const ctx = useCtx();
+	const api = useApi();
 	const nav = useNavigate();
 	const invite = invites2.use(() => props.code);
 
@@ -129,6 +131,46 @@ export const RouteInviteInner = (props: { code: string }) => {
 	const roomDescription = () => room()?.description ?? "";
 	const roomMemberCount = () => room()?.member_count ?? 0;
 	const roomOnlineCount = () => room()?.online_count ?? 0;
+
+	const getMe = useCurrentUser();
+
+	// TODO: fix slash of invite ui before redirect, redirects should be seamless
+	createEffect(() => {
+		const t = invite()?.target;
+		if (!t) return;
+
+		const me = getMe();
+		if (!me) return;
+
+		switch (t.type) {
+			case "User": {
+				// TODO: redirect to user page if already	friends
+				break;
+			}
+			case "Gdm": {
+				const isMember = t.channel.recipients?.some((i) => i.id === me.id);
+				if (isMember) {
+					nav(`/channel/${t.channel.id}`);
+				}
+				break;
+			}
+			case "Room": {
+				const member = api.roomMembers.cache.get(`${t.room.id}:${me.id}`);
+				if (member) {
+					nav(
+						t.channel?.id ? `/channel/${t.channel.id}` : `/room/${t.room.id}`,
+					);
+				}
+				break;
+			}
+			case "Server": {
+				if (me.registered_at) {
+					nav("/");
+				}
+				break;
+			}
+		}
+	});
 
 	return (
 		<>
