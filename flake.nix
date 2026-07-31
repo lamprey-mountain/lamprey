@@ -130,6 +130,8 @@
               "crate-unfurl"
               "crate-script"
               "crate-search"
+              "kerosene-core"
+              "kerosene-services"
             ] ++ baseInternalDeps);
             env = {
               VERGEN_GIT_SHA = self.rev or self.dirtyRev;
