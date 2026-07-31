@@ -238,7 +238,11 @@ export function OverlayProvider(props: ParentProps) {
 		if (!reference || !floating) return;
 		const cleanup = autoUpdate(reference, floating, () => {
 			computePosition(reference, floating, {
-				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+				middleware: [
+					offset({ mainAxis: 4 }),
+					shift({ mainAxis: true, crossAxis: true, padding: 8 }),
+					flip({ altBoundary: true }),
+				],
 				placement: ctx.popout()?.placement ?? "top",
 			}).then(({ x, y, strategy }) => {
 				setPopoutFloating({ x, y, strategy });

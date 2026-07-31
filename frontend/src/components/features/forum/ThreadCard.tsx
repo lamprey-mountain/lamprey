@@ -79,7 +79,7 @@ export const ThreadCard = (props: ThreadCardProps) => {
 								/>
 								{/* TODO: split out message accessories? */}
 								<div style="margin: 8px">
-									<Reactions message={message()} />
+									<Reactions message={message()} prompt />
 								</div>
 							</div>
 						)}

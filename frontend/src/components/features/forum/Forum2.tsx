@@ -706,7 +706,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 											separate
 										/>
 										<br />
-										<Reactions message={m()} />
+										<Reactions message={m()} prompt />
 									</>
 								)}
 							</Match>

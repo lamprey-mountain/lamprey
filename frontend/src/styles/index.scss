@@ -183,6 +183,10 @@
 	&:hover {
 		background-color: oklch(from $bg-300 calc(l + 0.02) c h);
 	}
+
+	.reactions .reaction {
+		background: $bg-200;
+	}
 }
 
 .thread-chat-sidebar {
@@ -2236,8 +2240,8 @@ body.resizing {
 
 	.reaction {
 		cursor: pointer;
-		border: solid #445 1px;
-		background: #4452;
+		border: solid $sep-400 1px;
+		background: $bg-150;
 		border-radius: 4px;
 		padding: 2px 4px;
 		display: flex;
@@ -2257,8 +2261,21 @@ body.resizing {
 	}
 
 	& > .add-reaction {
+		display: flex;
+		align-items: center;
 		height: auto;
 		width: 24px;
+
+		&.prompt {
+			cursor: pointer;
+			border: solid $sep-400 1px;
+			background: $bg-200;
+			color: $fg-400;
+			border-radius: 4px;
+			padding: 2px 4px;
+			gap: 4px;
+			width: auto;
+		}
 	}
 }
 
@@ -3767,7 +3784,7 @@ input[type="color"] {
 	overflow: hidden;
 	max-width: 800px;
 
-	& .thread-card {
+	.thread-card {
 		padding: 2px 0;
 		margin: 0;
 		border: none;

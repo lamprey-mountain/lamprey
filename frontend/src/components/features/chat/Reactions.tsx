@@ -5,6 +5,7 @@ import {
 	For,
 	on,
 	onCleanup,
+	Show,
 	type VoidProps,
 } from "solid-js";
 import { useReactions } from "@/api";
@@ -16,8 +17,11 @@ import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { getEmojiHex } from "@/lib/emoji";
 import { getEmojiUrl } from "@/media/util";
 
-type ReactionsProps = {
+export type ReactionsProps = {
 	message: Message;
+
+	/** whether to prompt to add a reaction */
+	prompt?: boolean;
 };
 
 export const Reactions = (props: ReactionsProps) => {
@@ -94,14 +98,11 @@ export const Reactions = (props: ReactionsProps) => {
 		}
 	};
 
-	createEffect(() => {
-		if (showPicker()) {
-			document.addEventListener("click", closePicker);
-		} else {
-			document.removeEventListener("click", closePicker);
-		}
-		onCleanup(() => document.removeEventListener("click", closePicker));
-	});
+	document.addEventListener("click", closePicker);
+	onCleanup(() => document.removeEventListener("click", closePicker));
+
+	const prompt = () =>
+		(props.prompt ?? false) && !props.message.reactions?.length;
 
 	return (
 		<div class="reactions">
@@ -129,14 +130,16 @@ export const Reactions = (props: ReactionsProps) => {
 			<button
 				type="button"
 				class="button icon-button add-reaction"
-				classList={{ show: showPicker() }}
+				classList={{ show: showPicker(), prompt: prompt() }}
 				ref={addEl!}
 				onClick={(e) => {
 					e.stopPropagation();
+					e.stopImmediatePropagation();
 					setShowPicker(!showPicker());
 				}}
 			>
 				<Icon src={icReactionAdd} />
+				<Show when={prompt()}>add a reaction</Show>
 			</button>
 		</div>
 	);
