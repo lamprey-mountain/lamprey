@@ -89,6 +89,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 		if (menu) {
 			console.log("[menu] resolved menu", menu);
 			e.preventDefault();
+			e.stopPropagation();
 			setMenu({
 				x: e.clientX,
 				y: e.clientY,

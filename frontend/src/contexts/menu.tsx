@@ -36,6 +36,7 @@ export type Menu = {
 			overwrite_type: "Role" | "User" | "Everyone";
 			onDelete?: () => void;
 	  }
+	| { type: "channel_nav"; room_id: string }
 );
 
 export type MenuContextT = {

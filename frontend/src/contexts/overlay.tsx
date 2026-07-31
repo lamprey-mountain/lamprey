@@ -36,6 +36,7 @@ import { UserProfile } from "@/components/shared/UserProfile.tsx";
 import { UserProfileEdit } from "@/components/shared/UserProfileEdit.tsx";
 import {
 	ChannelMenu,
+	ChannelNavMenu,
 	FolderMenu,
 	MessageMenu,
 	PermissionOverwriteMenu,
@@ -317,6 +318,9 @@ export function OverlayProvider(props: ParentProps) {
 						onDelete={menu.onDelete}
 					/>
 				);
+			}
+			case "channel_nav": {
+				return <ChannelNavMenu room_id={menu.room_id} />;
 			}
 		}
 	}

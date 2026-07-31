@@ -378,7 +378,24 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	};
 
 	return (
-		<nav id="channel-nav" ref={keybinds.container} tabindex="-1">
+		<nav
+			id="channel-nav"
+			ref={keybinds.container}
+			tabindex="-1"
+			onContextMenu={(e) => {
+				e.preventDefault();
+				const room_id = props.room_id;
+				if (!room_id) return;
+				queueMicrotask(() => {
+					setMenu({
+						x: e.clientX,
+						y: e.clientY,
+						type: "channel_nav",
+						room_id,
+					});
+				});
+			}}
+		>
 			<Show when={flags.has("nav_header")}>
 				<button
 					id="room-name-btn"
@@ -492,6 +509,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 										}}
 										onContextMenu={(e) => {
 											e.preventDefault();
+											e.stopPropagation();
 											queueMicrotask(() => {
 												setMenu({
 													x: e.clientX,
