@@ -2,7 +2,9 @@ use axum::{
     Json, Router,
     routing::{MethodRouter, get},
 };
-use utoipa::openapi::{Components, Info, OpenApiBuilder, PathItem, Tag, extensions::Extensions};
+use utoipa::openapi::{
+    Components, Info, OpenApi, OpenApiBuilder, PathItem, Tag, extensions::Extensions,
+};
 
 use crate::util::Globals;
 
@@ -14,7 +16,7 @@ pub struct Handler {
 inventory::collect!(Handler);
 
 pub struct Routes {
-    openapi: utoipa::openapi::OpenApi,
+    openapi: OpenApi,
     router: Option<Router<Globals>>,
     prefix: String,
     last_path: Option<String>,
@@ -108,6 +110,16 @@ impl Routes {
             (handler.register)(&mut me);
         }
         me
+    }
+
+    /// get a reference the openapi schema
+    pub fn openapi(&self) -> &OpenApi {
+        &self.openapi
+    }
+
+    /// get a reference the axum router
+    pub fn router(&self) -> &Router<Globals> {
+        self.router.as_ref().unwrap()
     }
 
     /// convert this into an axum router
