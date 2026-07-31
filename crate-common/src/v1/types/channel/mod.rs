@@ -1,3 +1,4 @@
+use lamprey_macros::record;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -637,77 +638,123 @@ pub struct ChannelCreate {
     pub starter_message: Option<MessageCreate>,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct ChannelPatch {
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 64)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(required = false, min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 2048))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[schema(min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub description: Option<Option<String>>,
 
-    #[cfg_attr(
-        feature = "utoipa",
+    #[
         schema(required = false, format = Uri, max_length = 1, min_length = 2048)
+    ]
+    #[validate(url, length(min = 1, max = 2048))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
     )]
-    #[cfg_attr(feature = "validator", validate(url, length(min = 1, max = 2048)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub url: Option<Option<String>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub icon: Option<Option<MediaId>>,
 
     /// tags to apply to this thread (overwrite, not append)
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[validate(length(min = 1, max = 256))]
     pub tags: Option<Vec<TagId>>,
 
     /// not safe for work
     pub nsfw: Option<bool>,
 
-    #[cfg_attr(feature = "validator", validate(range(min = 8192)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[validate(range(min = 8192))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub bitrate: Option<Option<u64>>,
 
-    #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[validate(range(min = 1, max = 100))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub user_limit: Option<Option<u64>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub owner_id: Option<Option<UserId>>,
 
     pub ty: Option<ChannelType>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub parent_id: Option<Option<ChannelId>>,
 
     pub archived: Option<bool>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub locked: Option<Option<Locked>>,
 
     pub invitable: Option<bool>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub auto_archive_duration: Option<Option<u64>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub default_auto_archive_duration: Option<Option<u64>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub slowmode_thread: Option<Option<u64>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub slowmode_message: Option<Option<u64>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub default_slowmode_message: Option<Option<u64>>,
 
     pub document: Option<DocumentPatch>,
@@ -716,42 +763,45 @@ pub struct ChannelPatch {
 }
 
 /// indicates that a channel is locked
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct Locked {
     /// if present, the lock automatically expires and is removed at this time
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub until: Option<Time>,
 
     /// if present, users with these roles bypass the lock
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub allow_roles: Vec<RoleId>,
 }
 
 /// reorder some channels
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ChannelReorder {
     /// the channels to reorder
-    #[cfg_attr(feature = "serde", serde(default))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
+    #[serde(default)]
+    #[validate(length(min = 1, max = 1024))]
     pub channels: Vec<ChannelReorderItem>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ChannelReorderItem {
     pub id: ChannelId,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub position: Option<Option<u16>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub parent_id: Option<Option<ChannelId>>,
 }
 
