@@ -78,7 +78,11 @@ export const generateFavicon = async (
 	mentionCount: number,
 	icon?:
 		| { type: "room"; room: Room }
-		| { type: "channel"; channel: Channel & { recipients?: User[] } }
+		| {
+				type: "channel";
+				channel: Channel & { recipients?: User[] };
+				room?: Room;
+		  }
 		| { type: "user"; user: User },
 ) => {
 	const size = 64;
@@ -105,6 +109,12 @@ export const generateFavicon = async (
 					iconUrl = getThumbFromId(icon.channel.icon, size);
 				} else if (icon.channel.type === "Gdm") {
 					iconBackgroundColor = getColor(icon.channel.id);
+				} else if (icon.room) {
+					if (icon.room?.icon) {
+						iconUrl = getThumbFromId(icon.room.icon, size);
+					} else {
+						iconUrl = await generateRoomIcon(icon.room.id);
+					}
 				}
 				break;
 			case "user":

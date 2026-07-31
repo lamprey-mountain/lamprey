@@ -45,7 +45,10 @@ export function useFavicon() {
 						}
 					}
 				}
-				return { type: "channel" as const, channel };
+				const room = channel.room_id
+					? store.rooms.cache.get(channel.room_id)
+					: undefined;
+				return { type: "channel" as const, channel, room };
 			}
 		}
 		return null;
