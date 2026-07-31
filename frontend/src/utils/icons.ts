@@ -55,6 +55,7 @@ export { icCheck1 as icCheck, icCheck1, icCheck2, icCheck3, icCheck4 };
 
 import { default as icMembers } from "@/assets/members.png";
 
+export { default as icAdd } from "@/assets/add.png";
 export { default as icChanNsfw } from "@/assets/channel-nsfw.png";
 // TODO: dedicated icon?
 export { default as icTableOfContents } from "@/assets/channel-wiki-1.png";
@@ -91,4 +92,5 @@ export { default as icVolumeLow } from "@/assets/volume-low.png";
 export { default as icVolumeMax } from "@/assets/volume-max.png";
 export { default as icVolumeMedium } from "@/assets/volume-medium.png";
 export { default as icVolumeMute } from "@/assets/volume-mute.png";
+export { default as icWarning } from "@/assets/warning.png";
 export { icMembers, icMembers as icUser };

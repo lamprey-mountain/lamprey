@@ -298,12 +298,7 @@ export function getModal(modal: ModalType) {
 		return <ModalCameraPreview stream={modal.stream} />;
 	}
 	if (isRoomCreateOrJoin(modal)) {
-		return (
-			<ModalRoomCreateOrJoin
-				onCreate={modal.onCreate}
-				onInvite={modal.onInvite}
-			/>
-		);
+		return <ModalRoomCreateOrJoin />;
 	}
 
 	if (isEmojiUpload(modal)) {

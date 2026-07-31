@@ -1,12 +1,146 @@
 @use "./util.scss" as *;
 
 .modal.room-create-or-join {
-	// TODO: animation
-	// interpolate-size: allow-keywords;
-	// transition: height .3s ease;
+	.content {
+		min-width: 320px;
 
-	& > .room-name-input-label {
-		display: block;
+		& > .inner {
+			display: flex;
+			flex-direction: column;
+			border: solid 1px transparent;
+			height: 100%;
+		}
+
+		& > .base {
+			border: solid 1px $sep-300;
+		}
+	}
+
+	.main {
+		flex: 1;
+		/* height: 100%; */
+		padding: 16px;
+		padding-bottom: 64px;
+	}
+
+	.bottom {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		margin: 0;
+	}
+
+	.selection {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+
+		& > .button {
+			display: flex;
+			align-items: center;
+			padding: 8px;
+			border-radius: 4px;
+
+			& > .chevron {
+				opacity: 0;
+				translate: 8px 0;
+				transition: opacity 100ms, translate 100ms;
+			}
+
+			&:hover > .chevron {
+				translate: 0 0;
+				opacity: 1;
+			}
+		}
+	}
+
+	.room-form {
 		margin-top: 12px;
+
+		.room-name-input {
+			width: 100%;
+		}
+	}
+
+	.invite-form {
+		margin-top: 12px;
+
+		.invite-input {
+			width: 100%;
+			padding: 4px;
+		}
+	}
+
+	.unnamed {
+		color: $fg-600;
+		font-style: italic;
+	}
+
+	.option {
+		margin-top: 8px;
+	}
+
+	.invite-target {
+		margin-top: 8px;
+
+		& > .invite {
+			align-items: start;
+			background: $bg-150;
+			width: 100%;
+			min-height: 72px;
+			display: flex;
+			padding: 8px;
+			border-radius: 4px;
+			border: solid $sep-300 1px;
+
+					&.loading {
+				opacity: .7;
+					}
+
+
+			&.error {
+				color: $fg-200;
+				border-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h);
+				background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h / .1);
+				align-items: center;
+
+				& > .error-message {
+				display: flex;
+				gap: 4px;
+
+				.error-prefix {
+					color: $color-red;
+					font-weight: bold;
+				}
+
+					& .icon2 {
+						background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h);
+						height: 24px;
+						width: 24px;
+					}
+				}
+
+					& .error-code {
+						font-size: .8rem;
+						color: $fg-500;
+					}
+			}
+
+			& > .avatar {
+				width: 32px;
+				height: 32px;
+			}
+
+			& > .info {
+				flex: 1;
+
+				& > .name {
+					font-size: 1.3rem;
+					font-weight: bold;
+					line-height: 1;
+				}
+			}
+		}
 	}
 }

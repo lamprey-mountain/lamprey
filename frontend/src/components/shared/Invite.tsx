@@ -164,7 +164,7 @@ export const RouteInviteInner = (props: { code: string }) => {
 										<button type="button" class="link" onClick={reject}>
 											cancel
 										</button>
-										<button type="button" class="primary" onClick={join}>
+										<button type="button" class="button primary" onClick={join}>
 											{joinName()}
 										</button>
 									</div>

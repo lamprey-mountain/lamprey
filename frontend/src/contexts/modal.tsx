@@ -105,8 +105,6 @@ export type Modal =
 	  }
 	| {
 			type: "room_create_or_join";
-			onCreate: (data: { name: string; public: boolean } | null) => void;
-			onInvite: (invite_code: string | null) => void;
 	  }
 	| {
 			type: "emoji_upload";

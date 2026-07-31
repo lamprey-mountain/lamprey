@@ -14,6 +14,7 @@ import { channelIcon } from "@/avatar/ChannelIcon";
 import { useCurrentUser } from "@/contexts/currentUser";
 import type { ChannelTypeOption } from "@/contexts/modal";
 import { useModals } from "@/contexts/modal";
+import { createResizeTransition } from "@/hooks/createResizeTransition";
 import { flags } from "@/lib/flags";
 import { Modal } from "./mod";
 
@@ -131,37 +132,14 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 			] as { label: string; type: ChannelType; description: string }[],
 	);
 
-	// TODO: extract this into a hook
-	let modalContentRef: HTMLDivElement;
-	let oldHeight: number | undefined;
-	let anim: Animation | undefined;
-	const obs = new ResizeObserver((entry) => {
-		for (const e of entry) {
-			const height = e.borderBoxSize[0].blockSize;
-			if (oldHeight !== undefined && !anim) {
-				anim = modalContentRef?.animate(
-					[{ height: `${oldHeight}px` }, { height: `${height}px` }],
-					{
-						duration: 200,
-						easing: "ease",
-					},
-				);
-				anim.finished.then(() => {
-					anim = undefined;
-				});
-			}
-			oldHeight = height;
-		}
-	});
-	onCleanup(() => obs.disconnect());
+	const resizeTn = createResizeTransition();
 
 	return (
 		<Modal
 			class="modal-new-channel unpadded"
 			contentRef={(el) => {
-				modalContentRef = el;
-				const inner = el.querySelector(".inner")!;
-				obs.observe(inner);
+				resizeTn.container(el);
+				resizeTn.content(el.querySelector(".inner")!);
 			}}
 		>
 			<Switch>

@@ -27,14 +27,6 @@ export const Home = () => {
 	function openRoomModal() {
 		modalctl.open({
 			type: "room_create_or_join",
-			onCreate: (data: { name: string; public: boolean } | null) => {
-				if (!data) return;
-				rooms.create({ name: data.name, public: data.public });
-			},
-			onInvite: (invite_code: string | null) => {
-				if (!invite_code) return;
-				invites.accept(invite_code);
-			},
 		});
 	}
 
