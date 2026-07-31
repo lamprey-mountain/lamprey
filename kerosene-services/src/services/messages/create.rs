@@ -1140,7 +1140,6 @@ impl ServiceMessages {
     ) -> Result<()> {
         // TODO: skip if message is ephemeral
 
-        let mut txn = self.globals.begin().await?;
         let srv = self.globals.services();
 
         if !op.channel.is_thread() {
@@ -1152,6 +1151,7 @@ impl ServiceMessages {
         };
         let thread_id = op.channel.id;
 
+        let mut txn = self.globals.begin().await?;
         if txn.thread_member_get(thread_id, user_id).await.is_err() {
             txn.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
                 .await?;
