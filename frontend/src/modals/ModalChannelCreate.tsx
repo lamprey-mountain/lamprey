@@ -97,6 +97,15 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 							},
 						]
 					: []),
+				...(flags.has("channel_tickets")
+					? [
+							{
+								label: "ticket channel",
+								type: "Ticket",
+								description: "private threads forum",
+							},
+						]
+					: []),
 				...(flags.has("channel_calendar")
 					? [
 							{

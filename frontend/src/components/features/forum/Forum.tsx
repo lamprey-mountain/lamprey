@@ -77,7 +77,8 @@ export const Forum = (props: { channel: Channel }) => {
 			channels2.create(room_id, {
 				name,
 				parent_id: props.channel.id,
-				type: "ThreadPublic",
+				type:
+					props.channel.type === "Ticket" ? "ThreadPrivate" : "ThreadPublic",
 			});
 		});
 	}
@@ -159,18 +160,20 @@ export const Forum = (props: { channel: Channel }) => {
 						)}
 					</For>
 				</ul>
-				<h3 class="dim" style="margin-top:16px;">
-					older threads
-				</h3>
-				<ul>
-					<For each={getArchivedThreads()}>
-						{(thread) => (
-							<li>
-								<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
-							</li>
-						)}
-					</For>
-				</ul>
+				<Show when={getArchivedThreads().length}>
+					<h3 class="dim" style="margin-top:16px;">
+						older threads
+					</h3>
+					<ul>
+						<For each={getArchivedThreads()}>
+							{(thread) => (
+								<li>
+									<ThreadCard thread={thread} openInSidebar={openInSidebar()} />
+								</li>
+							)}
+						</For>
+					</ul>
+				</Show>
 			</Show>
 			<Show when={threadFilter() === "removed"}>
 				<ul>

@@ -48,6 +48,7 @@ export const allFlags = [
 	{ id: "msgpack" },
 	{ id: "sync_deflate" },
 	{ id: "channel_create_private" },
+	{ id: "channel_tickets" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -75,6 +76,7 @@ const flagsDev: Flag[] = [
 	"msgpack",
 	"sync_deflate",
 	"channel_create_private",
+	"channel_tickets",
 ];
 
 const flagsProd: Flag[] = [

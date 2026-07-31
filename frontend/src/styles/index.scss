@@ -1555,7 +1555,8 @@ input[type="text"].dropdown {
 		}
 
 		& > .icon,
-		& > .icon2 {
+		& > .icon2,
+		& > .channel-icon {
 			position: absolute;
 			left: 4px;
 		}
@@ -3513,7 +3514,8 @@ button.link {
 				margin-top: 2px;
 			}
 
-			&:hover {
+			&:hover,
+			&:focus-visible {
 				background: $bg-300;
 			}
 		}

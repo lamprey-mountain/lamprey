@@ -438,6 +438,10 @@ export const RouteChannel = (
 										<ChatHeader channel={ch()} />
 										<Forum channel={ch()} />
 									</Match>
+									<Match when={ch().type === "Ticket"}>
+										<ChatHeader channel={ch()} />
+										<Forum channel={ch()} />
+									</Match>
 									<Match when={ch().type === "Forum2"}>
 										<ChatHeader channel={ch()} />
 										<Forum2 channel={ch()} />

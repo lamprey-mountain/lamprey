@@ -12,6 +12,7 @@ import icChanText3 from "@/assets/channel-text-3.png";
 import icChanText4 from "@/assets/channel-text-4.png";
 import icChanThreadPublic from "@/assets/channel-thread.png";
 import icChanThreadPrivate from "@/assets/channel-thread-private.png";
+import icChanTicket1 from "@/assets/channel-ticket-1.png";
 import icChanVoice1 from "@/assets/channel-voice-1.png";
 import icChanVoice2 from "@/assets/channel-voice-2.png";
 import icChanWiki1 from "@/assets/channel-wiki-1.png";
@@ -35,6 +36,8 @@ export const channelIcon = (channelType: ChannelType, seed: string) => {
 			return rnd([icChanForum1]);
 		case "Forum2":
 			return rnd([icChanForum2]);
+		case "Ticket":
+			return rnd([icChanTicket1]);
 		case "ThreadPublic":
 		case "ThreadForum2":
 			return rnd([icChanThreadPublic]);
@@ -97,6 +100,7 @@ export const ChannelIcon = (props: {
 						"ThreadPrivate",
 						"ThreadForum2",
 						"Forum2",
+						"Ticket",
 					] as ChannelType[]
 				).includes(props.channel.type)}
 			>
