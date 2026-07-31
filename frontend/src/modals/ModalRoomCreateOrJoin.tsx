@@ -1,4 +1,5 @@
 import { debounce } from "@solid-primitives/scheduled";
+import { useNavigate } from "@solidjs/router";
 import { createResource, createSignal, Match, Show, Switch } from "solid-js";
 import type { Invite, InviteTarget } from "ts-sdk";
 import { useApi } from "@/api";
@@ -33,6 +34,7 @@ const matchInviteError = (i: InviteResult): InviteError | false => {
 export const ModalRoomCreateOrJoin = (_props: ModalRoomCreateOrJoinProps) => {
 	const api = useApi();
 	const [, modalCtl] = useModals();
+	const nav = useNavigate();
 
 	const [view, setView] = createSignal<"selection" | "create" | "invite">(
 		"selection",
@@ -64,17 +66,37 @@ export const ModalRoomCreateOrJoin = (_props: ModalRoomCreateOrJoinProps) => {
 		const name = roomName().trim();
 		if (!name) return; // TODO: "invalid input" ui
 		setLoading(true);
-		await api.rooms.create({ name, public: isPublic() });
+		const room = await api.rooms.create({ name, public: isPublic() });
 		modalCtl.close();
+		nav(`/room/${room.id}`);
 	};
 
 	const handleInvite = async () => {
 		if (loading()) return;
-		const code = inviteCode();
+		const code = parseInvite(inviteCode());
+		const resolved = invite();
 		if (!code) return; // TODO: "invalid input" ui
+		if (!resolved) return; // TODO: "invalid input" ui
+		if ("error" in resolved) return; // TODO: "invalid input" ui
 		setLoading(true);
 		await api.invites.accept(code);
 		modalCtl.close();
+
+		// FIXME: update RoomNav selected room
+
+		const t = resolved.target;
+		switch (t.type) {
+			case "User":
+				return nav(`/user/${t.user.id}`);
+			case "Room":
+				return nav(
+					t.channel?.id ? `/channel/${t.channel.id}` : `/room/${t.room.id}`,
+				);
+			case "Gdm":
+				return nav(`/channel/${t.channel.id}`);
+			case "Server":
+				return nav("/");
+		}
 	};
 
 	const renderError = (code: string) => {
@@ -338,3 +360,7 @@ export const ModalRoomCreateOrJoin = (_props: ModalRoomCreateOrJoinProps) => {
 		</Modal>
 	);
 };
+
+// TODO: upload icon, set description when creating room
+// TODO: list room templates instead of only "create room" button?
+// TODO: split "create room" -> "create private room" and "create public room", have privacy-specific create forms?

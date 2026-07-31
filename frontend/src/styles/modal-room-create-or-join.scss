@@ -94,37 +94,38 @@
 			border-radius: 4px;
 			border: solid $sep-300 1px;
 
-					&.loading {
+			&.loading {
 				opacity: .7;
-					}
-
+			}
 
 			&.error {
 				color: $fg-200;
 				border-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h);
-				background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h / .1);
+				background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h /
+					.1);
 				align-items: center;
 
 				& > .error-message {
-				display: flex;
-				gap: 4px;
+					display: flex;
+					gap: 4px;
 
-				.error-prefix {
-					color: $color-red;
-					font-weight: bold;
-				}
+					.error-prefix {
+						color: $color-red;
+						font-weight: bold;
+					}
 
 					& .icon2 {
-						background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h);
+						background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0)
+							h);
 						height: 24px;
 						width: 24px;
 					}
 				}
 
-					& .error-code {
-						font-size: .8rem;
-						color: $fg-500;
-					}
+				& .error-code {
+					font-size: .8rem;
+					color: $fg-500;
+				}
 			}
 
 			& > .avatar {
