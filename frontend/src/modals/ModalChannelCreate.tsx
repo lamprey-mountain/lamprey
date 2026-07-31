@@ -3,7 +3,7 @@ import {
 	createSignal,
 	For,
 	Match,
-	onMount,
+	onCleanup,
 	Show,
 	Switch,
 } from "solid-js";
@@ -131,97 +131,131 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 			] as { label: string; type: ChannelType; description: string }[],
 	);
 
+	// TODO: extract this into a hook
+	let modalContentRef: HTMLDivElement;
+	let oldHeight: number | undefined;
+	let anim: Animation | undefined;
+	const obs = new ResizeObserver((entry) => {
+		for (const e of entry) {
+			const height = e.borderBoxSize[0].blockSize;
+			if (oldHeight !== undefined && !anim) {
+				anim = modalContentRef?.animate(
+					[{ height: `${oldHeight}px` }, { height: `${height}px` }],
+					{
+						duration: 200,
+						easing: "ease",
+					},
+				);
+				anim.finished.then(() => {
+					anim = undefined;
+				});
+			}
+			oldHeight = height;
+		}
+	});
+	onCleanup(() => obs.disconnect());
+
 	return (
-		<Modal class="modal-new-channel">
+		<Modal
+			class="modal-new-channel unpadded"
+			contentRef={(el) => {
+				modalContentRef = el;
+				const inner = el.querySelector(".inner")!;
+				obs.observe(inner);
+			}}
+		>
 			<Switch>
 				<Match when={channelType() === null}>
-					<ul class="channel-type-options">
-						<For each={channelTypes()}>
-							{(c) => (
-								<li>
-									<button
-										class="button channel-type-option"
-										onClick={[setChannelType, c.type]}
-									>
-										<ChannelTypeIcon channelType={c.type} />
+					<div class="main">
+						<ul class="channel-type-options">
+							<For each={channelTypes()}>
+								{(c) => (
+									<li>
+										<button
+											class="button channel-type-option"
+											onClick={[setChannelType, c.type]}
+										>
+											<ChannelTypeIcon channelType={c.type} />
 
-										<div>
-											<div>{c.label}</div>
-											<div class="dim">{c.description}</div>
-										</div>
-									</button>
-								</li>
-							)}
-						</For>
-						<div class="bottom">
-							<button
-								type="button"
-								class="button link link-dim"
-								onClick={handleCancel}
-							>
-								Cancel
-							</button>
-						</div>
-					</ul>
+											<div>
+												<div>{c.label}</div>
+												<div class="dim">{c.description}</div>
+											</div>
+										</button>
+									</li>
+								)}
+							</For>
+						</ul>
+					</div>
+					<div class="bottom">
+						<button
+							type="button"
+							class="button link link-dim"
+							onClick={handleCancel}
+						>
+							Cancel
+						</button>
+					</div>
 				</Match>
 				<Match when={channelType()}>
 					{(channelType) => (
 						<>
-							<h3 class="header">
-								<ChannelTypeIcon channelType={channelType()} />
-								<Show
-									when={channelName()}
-									fallback={<em class="unnamed">new-channel</em>}
+							<div class="main">
+								<h3 class="header">
+									<ChannelTypeIcon channelType={channelType()} />
+									<Show
+										when={channelName()}
+										fallback={<em class="unnamed">new-channel</em>}
+									>
+										{(name) => <>{name()}</>}
+									</Show>
+								</h3>
+								<form onSubmit={handleSubmit}>
+									<label style="display: block; margin-top: 12px">
+										<h3 class="dim" style="margin: 0 2px">
+											channel name
+										</h3>
+										<input
+											type="text"
+											value={channelName()}
+											onInput={(e) => setChannelName(e.currentTarget.value)}
+											placeholder="talking"
+											required
+											ref={(el) => queueMicrotask(() => el.focus())}
+											disabled={loading()}
+										/>
+									</label>
+
+									<Show when={flags.has("channel_create_private")}>
+										<CheckboxOptionWithLabel
+											id="channel-private"
+											checked={channelPrivate()}
+											onChange={setChannelPrivate}
+											seed="channel-private"
+											label="private channel"
+											description="private channel"
+											disabled={loading()}
+										/>
+									</Show>
+								</form>
+							</div>
+							<div class="bottom">
+								<button
+									type="button"
+									class="button link link-dim"
+									onClick={[setChannelType, null]}
+									disabled={loading()}
 								>
-									{(name) => <>{name()}</>}
-								</Show>
-							</h3>
-							<form onSubmit={handleSubmit}>
-								<label style="display: block; margin-top: 12px">
-									<h3 class="dim" style="margin: 0 2px">
-										channel name
-									</h3>
-									<input
-										type="text"
-										value={channelName()}
-										onInput={(e) => setChannelName(e.currentTarget.value)}
-										placeholder="talking"
-										required
-										ref={(el) => queueMicrotask(() => el.focus())}
-										disabled={loading()}
-									/>
-								</label>
-
-								<Show when={flags.has("channel_create_private")}>
-									<CheckboxOptionWithLabel
-										id="channel-private"
-										checked={channelPrivate()}
-										onChange={setChannelPrivate}
-										seed="channel-private"
-										label="private channel"
-										description="private channel"
-										disabled={loading()}
-									/>
-								</Show>
-
-								<div class="bottom">
-									<button
-										type="button"
-										class="button link link-dim"
-										onClick={[setChannelType, null]}
-										disabled={loading()}
-									>
-										Back
-									</button>
-									<button
-										type="submit"
-										class="button primary"
-										disabled={loading()}
-									>
-										{loading() ? "Creating..." : "Create"}
-									</button>
-								</div>
-							</form>
+									Back
+								</button>
+								<button
+									type="submit"
+									class="button primary"
+									disabled={loading()}
+								>
+									{loading() ? "Creating..." : "Create"}
+								</button>
+							</div>
 						</>
 					)}
 				</Match>

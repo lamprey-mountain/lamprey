@@ -1,4 +1,4 @@
-import { onMount, type ParentProps } from "solid-js";
+import { onMount, type ParentProps, type Ref } from "solid-js";
 import { useApi } from "@/api";
 import type { Modal as ModalType } from "@/app/context";
 import { ModalResetPassword } from "@/components/features/user_settings/mod.tsx";
@@ -28,6 +28,7 @@ export const Modal = (
 	props: ParentProps<{
 		onKeyDown?: (e: KeyboardEvent) => void;
 		class?: string;
+		contentRef: Ref<HTMLDivElement>;
 	}>,
 ) => {
 	const [, modalCtl] = useModals();
@@ -39,7 +40,7 @@ export const Modal = (
 			autofocus
 		>
 			<div class="bg" onClick={() => modalCtl.close()}></div>
-			<div class="content">
+			<div class="content" ref={props.contentRef}>
 				<div class="base"></div>
 				<div class="inner" role="dialog" aria-modal>
 					{props.children}

@@ -614,7 +614,7 @@
 			/* min-width: 100px; */
 			min-height: 50px;
 			overflow: hidden;
-			overflow-y: scroll;
+			height: 100%;
 			max-height: calc(100vh - 32px);
 		}
 	}
@@ -640,7 +640,7 @@
 		justify-content: end;
 		position: sticky;
 		bottom: -16px;
-		border-bottom: solid 1px $sep-300;
+		/* border-bottom: solid 1px $sep-300; */
 	}
 }
 
@@ -3426,9 +3426,36 @@ button.link {
 	}
 }
 
-.modal-new-channel {
-	height: calc-size(auto, size);
-	transition: height 2s;
+.modal.modal-new-channel {
+	.content {
+		overflow-y: hidden;
+
+		& > .inner {
+			display: flex;
+			flex-direction: column;
+			border: solid 1px transparent;
+		}
+
+		& > .base {
+			border: solid 1px $sep-300;
+		}
+	}
+
+	.main {
+		overflow-y: scroll;
+		flex: 1;
+		/* height: 100%; */
+		padding: 16px;
+		padding-bottom: 64px;
+	}
+
+	.bottom {
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		margin: 0;
+	}
 
 	.channel-type-options {
 		display: flex;
