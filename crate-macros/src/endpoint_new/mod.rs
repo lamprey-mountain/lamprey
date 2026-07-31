@@ -49,56 +49,65 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         "api"
     };
 
-    let extract_request_impl = if let Some(f) = body_field {
-        let ty = &f.ty;
-
-        // PERF: don't reencode body!
-        let body_bytes = match f.kind {
-            FieldKind::Json => quote! { ::serde_json::to_vec(&body).unwrap_or_default().into() },
-            FieldKind::Form => {
-                quote! { ::serde_urlencoded::to_string(&body).unwrap_or_default().into_bytes().into() }
-            }
-            FieldKind::Body => quote! { body },
-            _ => unreachable!(),
+    let extract_request_impl = {
+        let error_expr = quote! {
+            ::http::Response::builder()
+                .status(::http::StatusCode::BAD_REQUEST)
+                .body(::bytes::Bytes::from("extraction failed"))
+                .unwrap()
         };
+        let (path_extraction, query_extraction, header_extraction) =
+            build_parts_extraction(&args, &req_fields, &error_expr)?;
 
-        quote! {
-            impl crate::v1::routes::ExtractableRequest for Request {
-                type Body = #ty;
+        let all_idents: Vec<_> = req_fields.iter().map(|f| &f.ident).collect();
 
-                fn extract(
-                    parts: ::http::request::Parts,
-                    body: Self::Body,
-                ) -> Result<Self, ::http::Response<::bytes::Bytes>> {
-                    let body_bytes = #body_bytes;
-                    let req = ::http::Request::from_parts(parts, body_bytes);
-                    <Self as crate::util::routes::Request>::extract(req)
-                        .map_err(|_| {
-                            ::http::Response::builder()
-                                .status(::http::StatusCode::BAD_REQUEST)
-                                .body(::bytes::Bytes::from("extraction failed"))
-                                .unwrap()
+        if let Some(f) = body_field {
+            let ty = &f.ty;
+            let ident = &f.ident;
+
+            quote! {
+                impl crate::v1::routes::ExtractableRequest for Request {
+                    type Body = #ty;
+
+                    fn extract(
+                        parts: ::http::request::Parts,
+                        body: Self::Body,
+                    ) -> Result<Self, ::http::Response<::bytes::Bytes>> {
+                        let path = parts.uri.path();
+                        let query_str = parts.uri.query().unwrap_or("");
+
+                        #path_extraction
+                        #query_extraction
+                        #header_extraction
+
+                        let #ident = body;
+
+                        Ok(Request {
+                            #(#all_idents,)*
                         })
+                    }
                 }
             }
-        }
-    } else {
-        quote! {
-            impl crate::v1::routes::ExtractableRequest for Request {
-                type Body = ();
+        } else {
+            quote! {
+                impl crate::v1::routes::ExtractableRequest for Request {
+                    type Body = ();
 
-                fn extract(
-                    parts: ::http::request::Parts,
-                    _body: Self::Body,
-                ) -> Result<Self, http::Response<::bytes::Bytes>> {
-                    let req = ::http::Request::from_parts(parts, ::bytes::Bytes::new());
-                    <Self as crate::util::routes::Request>::extract(req)
-                        .map_err(|_| {
-                            ::http::Response::builder()
-                                .status(::http::StatusCode::BAD_REQUEST)
-                                .body(::bytes::Bytes::from("extraction failed"))
-                                .unwrap()
+                    fn extract(
+                        parts: ::http::request::Parts,
+                        _body: Self::Body,
+                    ) -> Result<Self, http::Response<::bytes::Bytes>> {
+                        let path = parts.uri.path();
+                        let query_str = parts.uri.query().unwrap_or("");
+
+                        #path_extraction
+                        #query_extraction
+                        #header_extraction
+
+                        Ok(Request {
+                            #(#all_idents,)*
                         })
+                    }
                 }
             }
         }
@@ -467,18 +476,6 @@ fn build_extract_request_fn(
     args: &EndpointArgs,
     fields: &[EndpointField],
 ) -> syn::Result<TokenStream> {
-    let path_fields: Vec<_> = fields
-        .iter()
-        .filter(|f| matches!(f.kind, FieldKind::Path(_)))
-        .collect();
-    let query_fields: Vec<_> = fields
-        .iter()
-        .filter(|f| matches!(f.kind, FieldKind::Query(_)))
-        .collect();
-    let header_fields: Vec<_> = fields
-        .iter()
-        .filter(|f| matches!(f.kind, FieldKind::Header(_)))
-        .collect();
     let json_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
     let form_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Form));
     let body_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Body));
@@ -486,119 +483,9 @@ fn build_extract_request_fn(
     let method_str = args.method.value();
     let method_ident = Ident::new(&method_str, args.method.span());
 
-    let path_template = args.path.value();
-    let (match_arm_pattern, extract_bindings) = build_path_match_pattern(&path_template)?;
-
-    let path_extraction = if path_fields.is_empty() {
-        quote! {}
-    } else {
-        let conversions: Vec<TokenStream> = path_fields
-            .iter()
-            .map(|f| {
-                let ident = &f.ident;
-                let ty = &f.ty;
-                let raw_name = format_ident!("{}_raw", f.ident);
-                quote! {
-                    let #ident: #ty = crate::v1::routes::PathParam::from_path_param(#raw_name)
-                        .map_err(|_| original_req.clone())?;
-                }
-            })
-            .collect();
-        quote! {
-            let decoded_path = ::percent_encoding::percent_decode_str(path)
-                .decode_utf8()
-                .unwrap_or_else(|_| path.into());
-            let segments = decoded_path.split('/').collect::<Vec<_>>();
-            let (#extract_bindings) = match segments.as_slice() {
-                #match_arm_pattern => (#extract_bindings),
-                _ => return Err(original_req),
-            };
-            #(#conversions)*
-        }
-    };
-
-    let query_extraction = if query_fields.is_empty() {
-        quote! {}
-    } else {
-        let mut stmts = Vec::new();
-        let mut named_idents = Vec::new();
-        let mut named_tys = Vec::new();
-        let mut named_renames = Vec::new();
-
-        for f in &query_fields {
-            match &f.kind {
-                FieldKind::Query(Some(name)) => {
-                    named_idents.push(&f.ident);
-                    named_tys.push(&f.ty);
-                    named_renames.push(quote! { #[serde(rename = #name)] });
-                }
-                FieldKind::Query(None) => {
-                    let ident = &f.ident;
-                    let ty = &f.ty;
-                    stmts.push(quote! {
-                        let #ident: #ty = ::serde_urlencoded::from_str(query_str)
-                            .map_err(|_| original_req.clone())?;
-                    });
-                }
-                _ => {}
-            }
-        }
-
-        let named_extraction = if named_idents.is_empty() {
-            quote! {}
-        } else {
-            quote! {
-                #[derive(::serde::Deserialize)]
-                struct __QueryParams {
-                    #(#named_renames #named_idents: #named_tys,)*
-                }
-                let __qp: __QueryParams = ::serde_urlencoded::from_str(query_str)
-                    .map_err(|_| original_req.clone())?;
-                #(let #named_idents = __qp.#named_idents;)*
-            }
-        };
-
-        quote! {
-            #named_extraction
-            #(#stmts)*
-        }
-    };
-
-    let header_extraction = if header_fields.is_empty() {
-        quote! {}
-    } else {
-        let stmts: Vec<_> = header_fields
-            .iter()
-            .map(|f| {
-                let ident = &f.ident;
-                let ty = &f.ty;
-                let header_name = match &f.kind {
-                    FieldKind::Header(Some(n)) => n.clone(),
-                    _ => ident.to_string().replace('_', "-"),
-                };
-                let is_option = matches!(ty, syn::Type::Path(tp) if tp.path.segments.last().map(|s| s.ident == "Option").unwrap_or(false));
-                if is_option {
-                    quote! {
-                        let #ident: #ty = parts
-                            .headers
-                            .get(#header_name)
-                            .and_then(|v| v.to_str().ok())
-                            .and_then(|v| v.parse().ok());
-                    }
-                } else {
-                    quote! {
-                        let #ident: #ty = parts
-                            .headers
-                            .get(#header_name)
-                            .and_then(|v| v.to_str().ok())
-                            .and_then(|v| v.parse().ok())
-                            .ok_or_else(|| original_req.clone())?;
-                    }
-                }
-            })
-            .collect();
-        quote! { #(#stmts)* }
-    };
+    let error_expr = quote! { original_req.clone() };
+    let (path_extraction, query_extraction, header_extraction) =
+        build_parts_extraction(args, fields, &error_expr)?;
 
     let body_extraction = if let Some(f) = json_field {
         let ident = &f.ident;
@@ -1153,4 +1040,139 @@ fn try_parse_rename_arg(attr: &Attribute) -> syn::Result<Option<String>> {
         attr.span(),
         "attribute must use the form #[attr(rename = \"...\")]",
     ))
+}
+
+fn build_parts_extraction(
+    args: &EndpointArgs,
+    fields: &[EndpointField],
+    error_expr: &TokenStream,
+) -> syn::Result<(TokenStream, TokenStream, TokenStream)> {
+    let path_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Path(_)))
+        .collect();
+    let query_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Query(_)))
+        .collect();
+    let header_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Header(_)))
+        .collect();
+
+    let path_template = args.path.value();
+    let (match_arm_pattern, extract_bindings) = build_path_match_pattern(&path_template)?;
+
+    let path_extraction = if path_fields.is_empty() {
+        quote! {}
+    } else {
+        let conversions: Vec<TokenStream> = path_fields
+            .iter()
+            .map(|f| {
+                let ident = &f.ident;
+                let ty = &f.ty;
+                let raw_name = format_ident!("{}_raw", f.ident);
+                quote! {
+                    let #ident: #ty = crate::v1::routes::PathParam::from_path_param(#raw_name)
+                        .map_err(|_| #error_expr)?;
+                }
+            })
+            .collect();
+        quote! {
+            let decoded_path = ::percent_encoding::percent_decode_str(path)
+                .decode_utf8()
+                .unwrap_or_else(|_| path.into());
+            let segments = decoded_path.split('/').collect::<Vec<_>>();
+            let (#extract_bindings) = match segments.as_slice() {
+                #match_arm_pattern => (#extract_bindings),
+                _ => return Err(#error_expr),
+            };
+            #(#conversions)*
+        }
+    };
+
+    let query_extraction = if query_fields.is_empty() {
+        quote! {}
+    } else {
+        let mut stmts = Vec::new();
+        let mut named_idents = Vec::new();
+        let mut named_tys = Vec::new();
+        let mut named_renames = Vec::new();
+
+        for f in &query_fields {
+            match &f.kind {
+                FieldKind::Query(Some(name)) => {
+                    named_idents.push(&f.ident);
+                    named_tys.push(&f.ty);
+                    named_renames.push(quote! { #[serde(rename = #name)] });
+                }
+                FieldKind::Query(None) => {
+                    let ident = &f.ident;
+                    let ty = &f.ty;
+                    stmts.push(quote! {
+                        let #ident: #ty = ::serde_urlencoded::from_str(query_str)
+                            .map_err(|_| #error_expr)?;
+                    });
+                }
+                _ => {}
+            }
+        }
+
+        let named_extraction = if named_idents.is_empty() {
+            quote! {}
+        } else {
+            quote! {
+                #[derive(::serde::Deserialize)]
+                struct __QueryParams {
+                    #(#named_renames #named_idents: #named_tys,)*
+                }
+                let __qp: __QueryParams = ::serde_urlencoded::from_str(query_str)
+                    .map_err(|_| #error_expr)?;
+                #(let #named_idents = __qp.#named_idents;)*
+            }
+        };
+
+        quote! {
+            #named_extraction
+            #(#stmts)*
+        }
+    };
+
+    let header_extraction = if header_fields.is_empty() {
+        quote! {}
+    } else {
+        let stmts: Vec<_> = header_fields
+            .iter()
+            .map(|f| {
+                let ident = &f.ident;
+                let ty = &f.ty;
+                let header_name = match &f.kind {
+                    FieldKind::Header(Some(n)) => n.clone(),
+                    _ => ident.to_string().replace('_', "-"),
+                };
+                let is_option = matches!(ty, syn::Type::Path(tp) if tp.path.segments.last().map(|s| s.ident == "Option").unwrap_or(false));
+                if is_option {
+                    quote! {
+                        let #ident: #ty = parts
+                            .headers
+                            .get(#header_name)
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse().ok());
+                    }
+                } else {
+                    quote! {
+                        let #ident: #ty = parts
+                            .headers
+                            .get(#header_name)
+                            .and_then(|v| v.to_str().ok())
+                            .and_then(|v| v.parse().ok())
+                            .ok_or_else(|| #error_expr)?;
+                    }
+                }
+            })
+            .collect();
+        quote! { #(#stmts)* }
+    };
+
+    Ok((path_extraction, query_extraction, header_extraction))
 }
