@@ -211,6 +211,11 @@ impl From<DbMessageVersion> for MessageVersion {
                         .and_then(|m| serde_json::from_value(m).ok())
                         .expect("invalid data in db"),
                 ),
+                DbMessageType::ChannelTagged => MessageType::ChannelTagged(
+                    row.metadata
+                        .and_then(|m| serde_json::from_value(m).ok())
+                        .expect("invalid data in db"),
+                ),
                 DbMessageType::Call => MessageType::Call(
                     row.metadata
                         .and_then(|m| serde_json::from_value(m).ok())

@@ -5,9 +5,9 @@ use common::v1::types::presence::Status;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message,
-    MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageId, MessageSync,
-    MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomId, ThreadMemberPut,
-    User, UserId,
+    MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageChannelTagged, MessageId,
+    MessageSync, MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomId,
+    ThreadMemberPut, User, UserId,
 };
 use common::v2::types::MessageVerId;
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
@@ -1375,6 +1375,58 @@ impl ServiceChannels {
                         message: icon_message,
                     },
                 )
+                .await?;
+        }
+
+        let tags_old: HashSet<_> = chan_old
+            .tags
+            .as_ref()
+            .map(|t| t.iter())
+            .into_iter()
+            .flatten()
+            .copied()
+            .collect();
+        let tags_new: HashSet<_> = chan_new
+            .tags
+            .as_ref()
+            .map(|t| t.iter())
+            .into_iter()
+            .flatten()
+            .copied()
+            .collect();
+        let tags_added: Vec<_> = tags_new.difference(&tags_old).copied().collect();
+        let tags_removed: Vec<_> = tags_old.difference(&tags_new).copied().collect();
+
+        if !tags_added.is_empty() || !tags_removed.is_empty() {
+            // send thread renamed message to thread
+            // TODO: move this to messages service
+            let mut data = self.state.begin().await?;
+            let message_id = data
+                .message_create(DbMessageCreate {
+                    id: None,
+                    channel_id: thread_id,
+                    attachment_ids: vec![],
+                    author_id: user_id,
+                    embeds: vec![],
+                    components: vec![],
+                    message_type: MessageType::ChannelTagged(MessageChannelTagged {
+                        tags_added,
+                        tags_removed,
+                    })
+                    .into(),
+                    created_at: None,
+                    removed_at: None,
+                    flume: None,
+                    mentions: Default::default(),
+                    interaction: None,
+                    ephemeral: false,
+                })
+                .await?;
+            let message = data.message_get(thread_id, message_id).await?;
+            data.commit().await?;
+            self.state
+                .messaging()
+                .broadcast_channel(thread_id, MessageSync::MessageCreate { message })
                 .await?;
         }
 

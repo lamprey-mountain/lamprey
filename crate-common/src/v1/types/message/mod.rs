@@ -23,7 +23,7 @@ use crate::v1::types::reaction::ReactionCounts;
 use crate::v1::types::util::{Diff, Time};
 use crate::v1::types::{
     ApplicationId, AuditLogEntry, DocumentBranchId, Embed, InteractionId, RoleId, RoomMember,
-    ThreadMember, User, UserId,
+    TagId, ThreadMember, User, UserId,
 };
 use crate::v1::types::{ChannelType, EmojiId, MediaId, RoomId};
 
@@ -420,6 +420,9 @@ pub enum MessageType {
     /// this thread was moved
     ChannelMoved(MessageChannelMoved),
 
+    /// this thread was tagged
+    ChannelTagged(MessageChannelTagged),
+
     /// The channel's icon was changed
     ChannelIcon(MessageChannelIcon),
     // /// (TODO) receive announcement threads from this room
@@ -529,6 +532,16 @@ pub struct MessageChannelRename {
 pub struct MessageChannelMoved {
     pub parent_id_old: Option<ChannelId>,
     pub parent_id_new: Option<ChannelId>,
+}
+
+/// Information about a thread's tags being changed
+#[record]
+pub struct MessageChannelTagged {
+    /// the tags that were added to this thread
+    pub tags_added: Vec<TagId>,
+
+    /// the tags that were removed from this thread
+    pub tags_removed: Vec<TagId>,
 }
 
 /// Information about a thread being created
@@ -1202,6 +1215,7 @@ impl MessageType {
             MessageType::ChannelRename(_) => "ChannelRename",
             MessageType::ChannelPingback(_) => "ChannelPingback",
             MessageType::ChannelMoved(_) => "ChannelMoved",
+            MessageType::ChannelTagged(_) => "ChannelTagged",
             MessageType::ChannelIcon(_) => "ChannelIcon",
             MessageType::ThreadCreated(_) => "ThreadCreated",
             MessageType::AutomodExecution(_) => "AutomodExecution",
@@ -1232,6 +1246,7 @@ impl MessageType {
             MessageType::Call(_) => false,
             MessageType::ThreadCreated(_) => false,
             MessageType::ChannelMoved(_) => false,
+            MessageType::ChannelTagged(_) => false,
             MessageType::DocumentTag(_) => true,
             MessageType::DocumentEdits(_) => true,
             MessageType::DocumentMerged(_) => false,
@@ -1274,6 +1289,7 @@ impl MessageType {
             MessageType::ChannelPingback(_) => true,
             MessageType::ChannelIcon(_) => true,
             MessageType::ChannelMoved(_) => true,
+            MessageType::ChannelTagged(_) => true,
             #[cfg(feature = "feat_message_move")]
             MessageType::MessagesMoved(_) => false,
             MessageType::Call(_) => false,
@@ -1360,6 +1376,9 @@ impl MessageType {
             }
             MessageType::ChannelMoved(_) => {
                 write!(f, "channel moved")
+            }
+            MessageType::ChannelTagged(_) => {
+                write!(f, "channel tagged")
             }
             MessageType::ChannelIcon(_) => {
                 write!(f, "channel icon changed")
