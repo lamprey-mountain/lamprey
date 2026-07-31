@@ -2277,6 +2277,18 @@ body.resizing {
 			width: auto;
 		}
 	}
+
+	.count {
+		position: relative;
+		overflow: hidden;
+		height: 1.2em;
+
+		& > .old {
+			position: absolute;
+			top: 0;
+			left: 0;
+		}
+	}
 }
 
 .upload-item {

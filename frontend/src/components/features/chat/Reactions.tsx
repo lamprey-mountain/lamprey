@@ -1,13 +1,16 @@
-import type { Message, ReactionKey as ReactionKeyT } from "sdk";
+import type { Message, ReactionCount, ReactionKey as ReactionKeyT } from "sdk";
 import {
 	createEffect,
 	createSignal,
 	For,
+	Match,
 	on,
 	onCleanup,
 	Show,
+	Switch,
 	type VoidProps,
 } from "solid-js";
+import { createStore, reconcile } from "solid-js/store";
 import { useReactions } from "@/api";
 import { useCtx } from "@/app/context";
 import icReactionAdd from "@/assets/reaction-add.png";
@@ -104,25 +107,96 @@ export const Reactions = (props: ReactionsProps) => {
 	const prompt = () =>
 		(props.prompt ?? false) && !props.message.reactions?.length;
 
+	const [reactions, updateReactions] = createStore<
+		Array<ReactionCount & { id: string }>
+	>([]);
+
+	createEffect(() => {
+		const raw = props.message.reactions ?? [];
+		const withIds = raw.map((r) => ({ ...r, id: reactionKeyToParam(r.key) }));
+		updateReactions(reconcile(withIds, { key: "id" }));
+	});
+
 	return (
 		<div class="reactions">
-			<For each={props.message.reactions}>
+			<For each={reactions}>
 				{(reaction) => {
 					const tip = createTooltip({
-						tip: () =>
-							reaction.key.type === "Text"
-								? `:${reaction.key.content}:`
-								: ":custom:",
+						tip() {
+							const k = reaction.key;
+							const t = k.type;
+							if (t === "Text") {
+								return `${k.content}`;
+							} else if (t === "Custom") {
+								return `${k.name}`;
+							} else {
+								console.warn("unhandled reaction key type", reaction.key);
+							}
+						},
 					});
+
+					const [oldCount, setOldCount] = createSignal<number | null>(null);
+
+					let currentEl!: HTMLDivElement;
+					let oldEl: HTMLDivElement | undefined;
+
+					const handleCountChange = (newCount: number, prevCount: number) => {
+						if (newCount === prevCount) return;
+
+						// 1 = slide up, -1 = slide down
+						const dir = newCount > prevCount ? 1 : -1;
+
+						setOldCount(prevCount);
+
+						// wait for .old to be mounted in the dom
+						queueMicrotask(() => {
+							if (!oldEl) return;
+
+							const DURATION = 200;
+							const EASING = "cubic-bezier(0.42, 1.31, 0.52, 1.09)";
+
+							currentEl.animate(
+								[{ translate: `0 ${dir * 100}%` }, { translate: `0 0%` }],
+								{ duration: DURATION, easing: EASING, fill: "backwards" },
+							);
+
+							const oldAnim = oldEl.animate(
+								[{ translate: `0 0%` }, { translate: `0 ${-dir * 100}%` }],
+								{ duration: DURATION, easing: EASING, fill: "forwards" },
+							);
+
+							oldAnim.finished.finally(() => setOldCount(null));
+						});
+					};
+
+					createEffect(
+						on(
+							() => reaction.count,
+							(newCount, prevCount) => {
+								if (prevCount !== undefined)
+									handleCountChange(newCount, prevCount);
+							},
+						),
+					);
+
 					return (
 						<div
-							ref={tip.setContentEl}
+							ref={tip.content}
 							class="reaction"
 							classList={{ self: reaction.self }}
 							onClick={() => handleClick(reaction.key, !!reaction.self)}
 						>
 							<ReactionKey key={reaction.key} />
-							<div class="count">{reaction.count}</div>
+							<div class="count">
+								<div class="current" ref={currentEl!}>
+									{reaction.count}
+								</div>
+								<Show when={oldCount() !== null}>
+									<div class="old" ref={oldEl!}>
+										{oldCount()?.toString()}
+									</div>
+								</Show>
+							</div>
 						</div>
 					);
 				}}
@@ -146,18 +220,22 @@ export const Reactions = (props: ReactionsProps) => {
 };
 
 export const ReactionKey = (props: VoidProps<{ key: ReactionKeyT }>) => {
-	// TODO: use switch/match
 	return (
 		<div class="key">
-			{props.key.type === "Text" && props.key.content ? (
-				<UnicodeEmoji hex={getEmojiHex(props.key.content)} />
-			) : props.key.type === "Custom" && props.key.media_id ? (
-				<img
-					src={getEmojiUrl(props.key.media_id)}
-					class="custom-emoji"
-					alt={props.key.name ?? ""}
-				/>
-			) : null}
+			<Switch>
+				<Match when={props.key.type === "Text" && props.key}>
+					{(key) => <UnicodeEmoji hex={getEmojiHex(key().content)} />}
+				</Match>
+				<Match when={props.key.type === "Custom" && props.key}>
+					{(key) => (
+						<img
+							src={getEmojiUrl(key().id)}
+							class="custom-emoji"
+							alt={key().name ?? ""}
+						/>
+					)}
+				</Match>
+			</Switch>
 		</div>
 	);
 };
