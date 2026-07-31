@@ -101,9 +101,32 @@ impl MediaPipeline {
             return Ok(mime.clone());
         }
 
-        let mime_str = infer::get_from_path(self.file.file_path())?
-            .map(|t| t.mime_type())
-            .unwrap_or("application/octet-stream");
+        // TODO: get and cache true file len once (maybe store in Media)
+        let file = self.file.open_ro().await?;
+        let limit = file
+            .metadata()
+            .await
+            .map(|m| std::cmp::min(m.len(), 8192) as usize + 1)
+            .unwrap_or(0);
+        let mut bytes = Vec::with_capacity(limit);
+        file.take(8092).read_to_end(&mut bytes).await?;
+
+        let mut mime_str = infer::get(&bytes).map(|t| t.mime_type());
+
+        if let Some(filename) = &self.import.filename {
+            let guess = mime_guess::from_path(filename).first_raw();
+            if let Some(ext_mime) = guess {
+                if let Some(infer_mime) = mime_str {
+                    if infer_mime != ext_mime {
+                        debug!(%infer_mime, %ext_mime, "spoofing detected or mismatch");
+                    }
+                } else {
+                    mime_str = Some(ext_mime);
+                }
+            }
+        }
+
+        let mime_str = mime_str.unwrap_or("application/octet-stream");
 
         let mut mt: MediaTypeBuf = mime_str.parse()?;
 
