@@ -76,7 +76,10 @@ export const UserTray = () => {
 	};
 
 	const voiceDuration = useVoiceDuration();
-	const [voiceChannel, setVoiceChannel] = createSignal(null as ChannelT | null);
+
+	const voiceChannel = () =>
+		voice.joinedChannelId ? channels.cache.get(voice.joinedChannelId) : null;
+	const voiceRoom = rooms.use(() => voiceChannel()?.room_id ?? undefined);
 
 	const stopScreenshareTooltip = createTooltip({
 		tip: () => "Stop Screenshare",
@@ -95,18 +98,6 @@ export const UserTray = () => {
 		tip: () => (voice.deafened ? "Undeafen" : "Deafen"),
 	});
 	const settingsTooltip = createTooltip({ tip: () => "User Settings" });
-
-	// FIXME: don't automatically reconnect when doing voiceActions.disconnect while navigated to /channel/{voice_channel_id}
-	createEffect(() => {
-		const id = voice.joinedChannelId;
-		if (id) {
-			setVoiceChannel(channels.cache.get(id) ?? null);
-		} else {
-			setVoiceChannel(null);
-		}
-	});
-
-	const voiceRoom = rooms.use(() => voiceChannel()?.id);
 
 	const ctx = useCtx();
 	const state = from(ctx.client.state);
