@@ -132,6 +132,7 @@
               "crate-search"
               "kerosene-core"
               "kerosene-services"
+              "kerosene-sync"
             ] ++ baseInternalDeps);
             env = {
               VERGEN_GIT_SHA = self.rev or self.dirtyRev;
