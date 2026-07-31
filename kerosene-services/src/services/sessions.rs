@@ -1,5 +1,4 @@
 use common::v1::types::{Session, SessionId, SessionToken, UserId};
-use futures::TryFutureExt;
 use moka::future::Cache;
 
 use crate::prelude::*;

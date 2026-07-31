@@ -12,7 +12,6 @@ use validator::Validate;
 
 use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
-use crate::routes::util::auth::Auth4 as Auth;
 
 pub struct ServiceEmoji {
     state: Globals,

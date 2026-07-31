@@ -4,7 +4,6 @@ use common::v2::types::PermissionOverwriteId;
 use im::HashMap as ImMap;
 use std::sync::Arc;
 use tracing::warn;
-use uuid::Uuid;
 
 use common::v1::types::{
     Channel, ChannelId, MessageSync, Permission, PermissionOverwriteType, Role, RoleId, Room,

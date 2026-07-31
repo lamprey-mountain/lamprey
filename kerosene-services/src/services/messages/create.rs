@@ -5,8 +5,8 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::message::MessageAttachmentCreateType;
 use common::v1::types::misc::Time;
 use common::v1::types::{
-    Channel, ChannelId, ChannelPatch, Mentions, Message, MessageAttachmentType, MessageCreate,
-    MessageId, MessagePatch, MessageSync, MessageType, MessageVersion, ParseMentions, Permission,
+    Channel, ChannelId, Mentions, Message, MessageAttachmentType, MessageCreate, MessageId,
+    MessagePatch, MessageSync, MessageType, MessageVersion, ParseMentions, Permission,
     ThreadMemberPut, User, UserId,
 };
 use common::v2::types::media::MediaReference;
@@ -733,7 +733,7 @@ impl ServiceMessages {
         }
 
         match &op.author {
-            Author::User(auth) => {
+            Author::User(_auth) => {
                 let (has_attachments, has_embeds) = match &op.kind {
                     MessageOperationKind::MessageCreate(o) => {
                         (!o.json.attachments.is_empty(), !o.json.embeds.is_empty())
@@ -1109,10 +1109,10 @@ impl ServiceMessages {
     ) -> Result<()> {
         // TODO: skip if message is ephemeral
 
-        let srv = self.globals.services();
+        let _srv = self.globals.services();
 
         // TODO: unarchive thread for system, webhooks
-        let Author::User(auth) = &op.author else {
+        let Author::User(_auth) = &op.author else {
             return Ok(());
         };
 
