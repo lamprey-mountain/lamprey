@@ -227,6 +227,7 @@ export function formatAuditLogEntry(
 	return interpolate(translated, params);
 }
 
+// TODO: format users, roles, channels as mentions
 export function formatChanges(
 	room_id: string,
 	ent: AuditLogEntry | MergedAuditLogEntry,
@@ -248,8 +249,7 @@ export function formatChanges(
 	switch (ent.type) {
 		case "MessageDelete":
 		case "MessageVersionDelete":
-		case "ReactionPurge":
-		case "PermissionOverwriteDelete": {
+		case "ReactionPurge": {
 			formatted.push(
 				<li>{t("audit_log.changes.in_channel", { name: channelName })}</li>,
 			);
@@ -279,7 +279,9 @@ export function formatChanges(
 			);
 			break;
 		}
-		case "PermissionOverwriteSet": {
+		case "PermissionOverwriteCreate":
+		case "PermissionOverwriteUpdate":
+		case "PermissionOverwriteDelete": {
 			const overwriteType = (ent.metadata?.type as string) ?? "unknown";
 			const overwriteName = resolveName(
 				api2,
@@ -485,7 +487,11 @@ export function formatChanges(
 						"permission_unset",
 					),
 				);
-			} else if (ent.type === "PermissionOverwriteSet" && c.key === "allow") {
+			} else if (
+				(ent.type === "PermissionOverwriteCreate" ||
+					ent.type === "PermissionOverwriteUpdate") &&
+				c.key === "allow"
+			) {
 				formatted.push(
 					...renderPermissionDiff(
 						api2,
@@ -496,7 +502,11 @@ export function formatChanges(
 						"permission_unset",
 					),
 				);
-			} else if (ent.type === "PermissionOverwriteSet" && c.key === "deny") {
+			} else if (
+				(ent.type === "PermissionOverwriteCreate" ||
+					ent.type === "PermissionOverwriteUpdate") &&
+				c.key === "deny"
+			) {
 				formatted.push(
 					...renderPermissionDiff(
 						api2,

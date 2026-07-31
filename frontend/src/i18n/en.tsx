@@ -639,11 +639,13 @@ export default {
 		BotAdd: "{{actor}} added bot {{bot_name}}",
 		ThreadMemberAdd: "{{actor}} added {{target}} to thread {{thread_name}}",
 		ThreadMemberRemove:
-			"{{actor}} removed {{target}} from thread {{thread_name}}",
-		PermissionOverwriteSet:
-			"{{actor}} set a permission overwrite for {{target}}",
+			"{{actor}} removed {{target}} from thread #{{thread_name}}",
+		PermissionOverwriteCreate:
+			"{{actor}} created a permission overwrite in #{{channel_name}}",
+		PermissionOverwriteUpdate:
+			"{{actor}} updated a permission overwrite in #{{channel_name}}",
 		PermissionOverwriteDelete:
-			"{{actor}} deleted a permission overwrite for {{target}}",
+			"{{actor}} deleted a permission overwrite in #{{channel_name}}",
 		RoleApply: "{{actor}} applied role {{role_name}}",
 		RoleUnapply: "{{actor}} removed role {{role_name}}",
 		changes: {
