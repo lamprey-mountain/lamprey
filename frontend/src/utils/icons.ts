@@ -76,6 +76,11 @@ export {
 	default as icSync,
 } from "@/assets/edit.png";
 export { default as icExpand } from "@/assets/expand.png";
+export { default as icFileAudio } from "@/assets/file-audio.png";
+export { default as icFileGeneric } from "@/assets/file-generic.png";
+export { default as icFileImage } from "@/assets/file-image.png";
+export { default as icFileText } from "@/assets/file-text.png";
+export { default as icFileVideo } from "@/assets/file-video.png";
 export { default as icFormatBold } from "@/assets/format-bold.png";
 export { default as icFormatCode } from "@/assets/format-code.png";
 export { default as icFormatItalic } from "@/assets/format-italic.png";

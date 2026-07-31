@@ -66,7 +66,15 @@ import {
 	VideoView,
 } from "@/media/mod.tsx";
 import { openThread } from "@/utils/channel";
-import { icChannelMove, icSword } from "@/utils/icons.ts";
+import {
+	icChannelMove,
+	icFileAudio,
+	icFileGeneric,
+	icFileImage,
+	icFileText,
+	icFileVideo,
+	icSword,
+} from "@/utils/icons.ts";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
 import { Reactions } from "./Reactions.tsx";
 
@@ -456,8 +464,39 @@ export function ReplyView(props: {
 				// TODO: apply different style for messages without content
 				return "*TODO: more robust renderer*";
 			}
-			default:
+
+			// TODO: handle more message types in replies
+			default: {
 				return `${v.type} message`;
+			}
+		}
+	};
+
+	const icon = () => {
+		const r = reply();
+		if (!r) return;
+
+		const v = r.latest_version;
+		switch (v.type) {
+			case "DefaultMarkdown": {
+				if (v.attachments.length) {
+					// NOTE: maybe theres a better way to get an icon than only using the first attacment?
+					const m = v.attachments[0].media.content_type.split("/")[0];
+					switch (m) {
+						case "audio":
+							return icFileAudio;
+						case "text":
+							return icFileText;
+						case "image":
+							return icFileImage;
+						case "video":
+							return icFileVideo;
+						default:
+							return icFileGeneric;
+					}
+				}
+				return;
+			}
 		}
 	};
 
@@ -487,6 +526,7 @@ export function ReplyView(props: {
 									onClick
 									class="author"
 								/>
+								<Show when={icon()}>{(icon) => <Icon src={icon()} />}</Show>
 								<Show when={content()}>
 									{(c) => (
 										<Markdown
