@@ -43,7 +43,7 @@ kerosene-core = { version = "0.1.1", path = "../kerosene-core" }
 kerosene-sync = { version = "0.1.1", path = "../kerosene-sync" }
 lamprey-backend-core = { path = "../crate-backend-core" }
 lamprey-backend-data-postgres = { version = "0.1.1", path = "../crate-backend-data-postgres" }
-lamprey-macros = { version = "0.1.1", path = "../crate-macros", features = ["use_new_endpoint_macro"] }
+lamprey-macros = { version = "0.1.1", path = "../crate-macros" }
 lamprey-markdown = { version = "0.1", path = "../crate-markdown" }
 lamprey-script = { package = "lamprey-script", version = "0.1.0", path = "../crate-script" }
 lamprey-search = { package = "lamprey-search", version = "0.1.0", path = "../crate-search" }

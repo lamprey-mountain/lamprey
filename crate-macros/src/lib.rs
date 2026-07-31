@@ -2,12 +2,10 @@ use proc_macro::TokenStream;
 
 mod components;
 mod diff;
-mod endpoint;
 mod endpoint_new;
 mod handler;
 mod handlers_new;
 mod ids;
-mod parse;
 mod record;
 
 #[proc_macro_derive(Diff, attributes(diff))]
@@ -67,14 +65,6 @@ pub fn components(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[cfg(not(feature = "use_new_endpoint_macro"))]
-#[proc_macro_attribute]
-pub fn endpoint(args: TokenStream, item: TokenStream) -> TokenStream {
-    endpoint::expand(args.into(), item.into())
-        .unwrap_or_else(|e| e.to_compile_error())
-        .into()
-}
-
 #[proc_macro_attribute]
 pub fn handler(args: TokenStream, item: TokenStream) -> TokenStream {
     handler::expand(args.into(), item.into())
@@ -89,7 +79,6 @@ pub fn endpoint_new(args: TokenStream, item: TokenStream) -> TokenStream {
         .into()
 }
 
-#[cfg(feature = "use_new_endpoint_macro")]
 #[proc_macro_attribute]
 pub fn endpoint(args: TokenStream, item: TokenStream) -> TokenStream {
     endpoint_new::expand(args.into(), item.into())
