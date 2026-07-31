@@ -42,6 +42,10 @@
 	background-color: $bg-100;
 	accent-color: $link-500;
 	tab-size: 4;
+
+	scrollbar-color: $bg-300 $bg-150;
+	scrollbar-gutter: stable;
+	scrollbar-width: thin;
 }
 
 ::selection {
@@ -614,7 +618,6 @@
 			/* min-width: 100px; */
 			min-height: 50px;
 			overflow: hidden;
-			height: 100%;
 			max-height: calc(100vh - 32px);
 		}
 	}
@@ -3434,6 +3437,7 @@ button.link {
 			display: flex;
 			flex-direction: column;
 			border: solid 1px transparent;
+			height: 100%;
 		}
 
 		& > .base {
