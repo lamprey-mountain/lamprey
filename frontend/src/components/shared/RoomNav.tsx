@@ -15,6 +15,7 @@ import { useCtx } from "@/app/context";
 import icFolder1 from "@/assets/folder-1.png";
 import icHome from "@/assets/home.png";
 import { Icon } from "@/atoms/Icon";
+import { createTooltip } from "@/atoms/Tooltip";
 import { useMenu } from "@/contexts/mod";
 import { useRoomDnd } from "@/hooks/useRoomDnd";
 import {
@@ -154,6 +155,20 @@ export const RoomNav = () => {
 	const RoomItem = (props: { room: Room; folderId?: string }) => {
 		const mentionCount = () => getRoomMentionCount(props.room.id);
 
+		const tip = createTooltip({
+			tip: () => (
+				<div style="text-align: left">
+					<div>{props.room.name}</div>
+					<Show when={false /* TODO: online/member counts */}>
+						<div class="dim">
+							{props.room.online_count}/{props.room.member_count} online
+						</div>
+					</Show>
+				</div>
+			),
+			placement: "right",
+		});
+
 		return (
 			<li
 				draggable="true"
@@ -174,6 +189,7 @@ export const RoomNav = () => {
 					unread: getRoomUnread(props.room.id),
 					selected: isSelected(props.room.id),
 				}}
+				ref={tip.content}
 			>
 				<div class="tile">
 					<A
@@ -189,6 +205,15 @@ export const RoomNav = () => {
 		);
 	};
 
+	const homeTip = createTooltip({
+		tip: () => (
+			<div style="text-align: left">
+				<div>home</div>
+			</div>
+		),
+		placement: "right",
+	});
+
 	return (
 		<Show when={flags.has("two_tier_nav")}>
 			<nav id="room-nav" ref={keybinds.container} tabindex="-1">
@@ -198,6 +223,7 @@ export const RoomNav = () => {
 						classList={{ selected: isSelected("home") }}
 						data-nav-id="home"
 						tabIndex={isFocused("home") ? 0 : -1}
+						ref={homeTip.content}
 					>
 						<div class="tile with-background">
 							<A href="/" end tabIndex={-1}>
@@ -227,61 +253,73 @@ export const RoomNav = () => {
 						{(item) => (
 							<Switch>
 								<Match when={item.type === "folder" && item} keyed>
-									{(folder) => (
-										<div
-											class="folder"
-											data-id={folder.id}
-											data-type="folder"
-											draggable="true"
-											onDragStart={dnd.handle}
-											onDragOver={dnd.handle}
-											onDrop={dnd.handle}
-											onDragLeave={dnd.handle}
-											onDragEnd={dnd.handle}
-											classList={{
-												dragging: dnd.dragging()?.id === folder.id,
-												target: dnd.target()?.folderId === folder.id,
-												collapsed: collapsedFolders().has(folder.id),
-												unread: !!getFolderUnread(folder),
-											}}
-										>
+									{(folder) => {
+										const tip = createTooltip({
+											tip: () => (
+												<div style="text-align: left">
+													<div>{folder.name}</div>
+												</div>
+											),
+											placement: "right",
+										});
+
+										return (
 											<div
-												class="item folder-item"
+												class="folder"
+												data-id={folder.id}
+												data-type="folder"
+												draggable="true"
+												onDragStart={dnd.handle}
+												onDragOver={dnd.handle}
+												onDrop={dnd.handle}
+												onDragLeave={dnd.handle}
+												onDragEnd={dnd.handle}
 												classList={{
+													dragging: dnd.dragging()?.id === folder.id,
+													target: dnd.target()?.folderId === folder.id,
+													collapsed: collapsedFolders().has(folder.id),
 													unread: !!getFolderUnread(folder),
 												}}
-												data-nav-id={folder.id}
-												tabIndex={isFocused(folder.id) ? 0 : -1}
 											>
 												<div
-													class="tile with-background"
-													onClick={() => toggleFolder(folder.id)}
-													onContextMenu={(e) => {
-														e.preventDefault();
-														queueMicrotask(() => {
-															setMenu({
-																x: e.clientX,
-																y: e.clientY,
-																type: "folder",
-																folder_id: folder.id,
-															});
-														});
+													class="item folder-item"
+													classList={{
+														unread: !!getFolderUnread(folder),
 													}}
+													data-nav-id={folder.id}
+													tabIndex={isFocused(folder.id) ? 0 : -1}
+													ref={tip.content}
 												>
-													<Icon src={icFolder1} alt="folder" />
+													<div
+														class="tile with-background"
+														onClick={() => toggleFolder(folder.id)}
+														onContextMenu={(e) => {
+															e.preventDefault();
+															queueMicrotask(() => {
+																setMenu({
+																	x: e.clientX,
+																	y: e.clientY,
+																	type: "folder",
+																	folder_id: folder.id,
+																});
+															});
+														}}
+													>
+														<Icon src={icFolder1} alt="folder" />
+													</div>
 												</div>
+												<Show when={!collapsedFolders().has(folder.id)}>
+													<ul class="folder-items">
+														<For each={folder.items}>
+															{(room) => (
+																<RoomItem room={room} folderId={folder.id} />
+															)}
+														</For>
+													</ul>
+												</Show>
 											</div>
-											<Show when={!collapsedFolders().has(folder.id)}>
-												<ul class="folder-items">
-													<For each={folder.items}>
-														{(room) => (
-															<RoomItem room={room} folderId={folder.id} />
-														)}
-													</For>
-												</ul>
-											</Show>
-										</div>
-									)}
+										);
+									}}
 								</Match>
 								<Match when={item.type === "view"}>
 									{(view: { name: string }) => (
