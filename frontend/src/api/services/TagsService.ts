@@ -1,4 +1,10 @@
 import type { PaginationResponse, Tag } from "sdk";
+import {
+	type Accessor,
+	createEffect,
+	createResource,
+	type Resource,
+} from "solid-js";
 import { BaseService } from "../core/Service";
 
 export class TagsService extends BaseService<Tag> {
@@ -12,8 +18,45 @@ export class TagsService extends BaseService<Tag> {
 		throw new Error("Use fetchByChannel(channel_id, tag_id) instead");
 	}
 
-	async fetchByChannel(_channel_id: string, _tag_id: string): Promise<Tag> {
-		throw new Error("Fetch via list() and cache lookup");
+	async fetchByChannel(channel_id: string, tag_id: string): Promise<Tag> {
+		const tag = await this.retryWithBackoff(() =>
+			this.client.http.GET("/api/v1/channel/{channel_id}/tag/{tag_id}", {
+				params: {
+					path: { channel_id, tag_id },
+				},
+			}),
+		);
+
+		this.upsert(tag);
+		return tag;
+	}
+
+	useTag(
+		channel_id: Accessor<string>,
+		tag_id: Accessor<string>,
+	): Resource<Tag | undefined> {
+		const [resource, { mutate }] = createResource(
+			() => {
+				const cid = channel_id();
+				const tid = tag_id();
+				return cid && tid ? { cid, tid } : undefined;
+			},
+			async ({ cid, tid }) => {
+				const cached = this.cache.get(tid);
+				if (cached) return cached;
+				return this.fetchByChannel(cid, tid);
+			},
+		);
+
+		createEffect(() => {
+			const tid = tag_id();
+			if (!tid) return;
+			if (this.cache.has(tid)) {
+				mutate(this.cache.get(tid));
+			}
+		});
+
+		return resource;
 	}
 
 	/**

@@ -12,6 +12,7 @@ import { useApi, useChannels } from "@/api";
 import icDelete from "@/assets/delete.png";
 import icEdit from "@/assets/edit.png";
 import { Icon } from "@/atoms/Icon";
+import { Search } from "@/atoms/Search";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useModals } from "@/contexts/modal";
 import { usePermissions } from "@/hooks/usePermissions.ts";
@@ -85,15 +86,18 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 	return (
 		<div class="room-settings-integrations">
 			<h2>tags</h2>
-			<header class="applications-header">
-				<input
-					type="search"
+			<header class="applications-header channel-tags-header">
+				<Search
 					placeholder="search tags"
-					aria-label="search tags"
-					onInput={(e) => setSearch(e.target.value)}
+					// TODO: addd aria-label="search tags"
+					onInput={(val) => setSearch(val)}
 				/>
-				<Show when={perms.has("RoleManage")}>
-					<button type="button" class="primary big" onClick={openCreateModal}>
+				<Show when={perms.has("ChannelEdit")}>
+					<button
+						type="button"
+						class="button primary big"
+						onClick={openCreateModal}
+					>
 						create tag
 					</button>
 				</Show>
@@ -134,7 +138,7 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 											</div>
 										</div>
 									</div>
-									<Show when={perms.has("RoleManage")}>
+									<Show when={perms.has("ChannelEdit")}>
 										<TagToolbar
 											onEdit={() => openEditModal(tag)}
 											onDelete={deleteTag(tag.id)}

@@ -57,6 +57,7 @@ import {
 	type Forum2View,
 	ThreadSorting,
 } from "./ThreadSorting.tsx";
+import { ThreadTags } from "./ThreadTags.tsx";
 
 // Type guard for Channel with last_version_id
 function hasLastVersionId(
@@ -692,6 +693,9 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 				<div class="main">
 					<header class="header">
 						<h2 class="title">{props.channel.name}</h2>
+						<Show when={props.channel.tags?.length}>
+							<ThreadTags thread={props.channel} />
+						</Show>
 						<Switch>
 							{/* TODO: better rendering for loading/error/not found */}
 							<Match when={firstMessage.loading}>

@@ -3197,6 +3197,13 @@ button.link {
 					}
 				}
 			}
+
+			.message-toolbar {
+				position: absolute;
+				top: -4px;
+				right: -4px;
+				visibility: hidden;
+			}
 		}
 	}
 }
@@ -3700,6 +3707,27 @@ button.link {
 			color: $fg-500;
 			font-size: 0.8rem;
 		}
+	}
+
+	#tagDescription {
+		border: solid $sep-300 1px;
+		background: $bg-150;
+		padding: 2px 4px;
+		border-radius: 2px;
+
+		&:focus {
+			border: solid $link-500 1px;
+		}
+	}
+}
+
+.channel-tags-header {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 16px;
+
+	.search {
+		flex: 1;
 	}
 }
 

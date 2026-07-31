@@ -1,16 +1,18 @@
 import { useNavigate } from "@solidjs/router";
 import { getTimestampFromUUID } from "sdk";
-import { Show } from "solid-js";
+import { For, Show } from "solid-js";
 import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { Markdown } from "@/atoms/Markdown";
 import { Time } from "@/atoms/Time";
+import { createTooltip } from "@/atoms/Tooltip";
 import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { useChannel } from "@/contexts/mod";
 import type { ChannelT } from "@/types";
 import { MessageView } from "../chat/Message";
 import { MessageToolbarProvider } from "../chat/message-toolbar-context";
 import { Reactions } from "../chat/Reactions";
+import { ThreadTags } from "./ThreadTags";
 
 export type ThreadCardProps = {
 	thread: ChannelT;
@@ -64,10 +66,13 @@ export const ThreadCard = (props: ThreadCardProps) => {
 						)}
 					/>
 				</div>
-				<Show when={props.thread.description}>
-					{(desc) => <Markdown content={desc()} class="description" />}
+				<Show when={props.thread.tags?.length}>
+					<ThreadTags thread={props.thread} />
 				</Show>
 			</div>
+			<Show when={props.thread.description}>
+				{(desc) => <Markdown content={desc()} class="description" />}
+			</Show>
 			<div class="preview">
 				<MessageToolbarProvider>
 					<Show when={message()}>

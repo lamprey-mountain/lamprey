@@ -223,6 +223,10 @@
 			padding: 8px;
 			background: $bg-150;
 			border-bottom: solid $sep-300 1px;
+
+			.thread-tags {
+				margin-bottom: 16px;
+			}
 		}
 	}
 }
@@ -281,6 +285,7 @@
 .comment-sorting-option {
 	display: flex;
 	gap: 8px;
+
 	.icon2 {
 		margin-top: 2px;
 	}
@@ -470,5 +475,37 @@
 .root[data-message-style="cozy"] .message.comment {
 	&.separate {
 		margin-top: 0;
+	}
+}
+
+.thread-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin: 4px 0;
+
+	.thread-tag {
+		display: inline-block;
+		padding: 2px 4px;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: .8rem;
+
+		background-color: var(--color, $bg-300);
+		color: oklch(from var(--color, $bg-300) clamp(0, (l - 0.55) * -999999, 1) 0
+			none);
+		border: solid transparent 1px;
+
+		&:not(.colored) {
+			border-color: $sep-400;
+		}
+
+		&.colored {
+			border-color: oklch(from var(--color) calc(l + .1) calc(c + .02) h);
+		}
+
+		&:hover {
+			background-color: oklch(from var(--color, $bg-300) calc(l + .05) c h);
+		}
 	}
 }
