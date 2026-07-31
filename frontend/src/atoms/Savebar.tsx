@@ -56,7 +56,7 @@ export function Savebar(props: ParentProps<SavebarProps>) {
 						disabled={disabled()}
 						onClick={props.onSave}
 					>
-						{props.saving ? "saving" : (props.saveText ?? "save")}
+						{props.saving ? "Saving" : (props.saveText ?? "Save")}
 					</button>
 				</div>
 			</div>

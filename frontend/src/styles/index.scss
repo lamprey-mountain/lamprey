@@ -2539,6 +2539,8 @@ button.big {
 			&.save {
 				background: $color-green;
 				color: $bg-100;
+				width: 80px;
+				text-align: center;
 			}
 		}
 	}
