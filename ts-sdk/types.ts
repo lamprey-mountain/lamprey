@@ -1,6 +1,7 @@
 import type { components } from "./schema.d.ts";
 
 export type Room = components["schemas"]["Room"];
+export type RoomType = components["schemas"]["RoomType"];
 export type RolePatch = components["schemas"]["RolePatch"];
 export type Channel = Omit<components["schemas"]["Channel"], "type"> & {
 	type: ChannelType;

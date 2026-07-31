@@ -1,12 +1,21 @@
 import { Show } from "solid-js";
 import { Item, Menu } from "./Parts.tsx";
 
-export function PermissionOverwriteMenu(props: {
+export type PermissionOverwriteMenuProps = {
 	channel_id: string;
 	overwrite_id: string;
 	overwrite_type: "Role" | "User" | "Everyone";
 	onDelete?: () => void;
-}) {
+};
+
+// TODO: use this
+// export type PermissionOverwriteMenuProps2 = {
+// 	room_id: string;
+// 	channel_id: string;
+// 	overwrite: PermissionOverwrite;
+// };
+
+export function PermissionOverwriteMenu(props: PermissionOverwriteMenuProps) {
 	const copyId = () => navigator.clipboard.writeText(props.overwrite_id);
 
 	return (
@@ -16,7 +25,13 @@ export function PermissionOverwriteMenu(props: {
 					props.overwrite_type === "User" || props.overwrite_type === "Role"
 				}
 			>
-				<Item onClick={props.onDelete}>remove permissions</Item>
+				<Item color="danger" onClick={props.onDelete}>
+					{props.overwrite_type === "User"
+						? "remove user"
+						: props.overwrite_type === "Role"
+							? "remove role"
+							: "remove permissions"}
+				</Item>
 				<Item onClick={copyId}>
 					{props.overwrite_type === "User"
 						? "copy user id"
@@ -26,7 +41,9 @@ export function PermissionOverwriteMenu(props: {
 				</Item>
 			</Show>
 			<Show when={props.overwrite_type === "Everyone"}>
-				<Item onClick={props.onDelete}>clear permissions</Item>
+				<Item color="danger" onClick={props.onDelete}>
+					clear permissions
+				</Item>
 			</Show>
 		</Menu>
 	);

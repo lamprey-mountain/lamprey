@@ -1706,6 +1706,7 @@ input[type="text"].dropdown {
 .overwrite-dropdown {
 	display: inline-block;
 	width: 100%;
+	margin-top: 16px;
 
 	.dropdown {
 		width: 100%;
@@ -3309,22 +3310,25 @@ button.link {
 		display: flex;
 		flex-direction: column;
 		gap: 1rem;
+		width: 100%;
 
-		li {
+		.overwrite {
+			padding: 8px;
+			border-radius: 4px;
+			cursor: pointer;
+
 			&.editing {
 				font-weight: bold;
+				background: #fff2;
 			}
-		}
-	}
 
-	.permissions-header {
-		display: flex;
-		gap: 0.5rem;
-		align-items: center;
-		margin-bottom: 1rem;
+			&:hover {
+				background: #fff1;
+			}
 
-		.editing-title {
-			margin: 0;
+			& + .overwrite {
+				border-top: solid $sep-300 1px;
+			}
 		}
 	}
 }
@@ -3416,21 +3420,45 @@ button.link {
 }
 
 .channel-settings-permissions {
-	display: flex;
 	height: 100%;
+	overflow: hidden;
 
-	& .main,
+	.wrapper {
+		display: flex;
+		height: 100%;
+	}
+
+	.main,
 	.edit {
-		padding: 0.5rem;
+		padding: 8px;
 		overflow-y: auto;
 	}
 
-	& .main {
+	.main {
 		flex: 1;
 	}
 
-	& .edit {
+	.edit {
 		background: $bg-100;
+	}
+
+	.savebar-sizer {
+		margin: 0 16px;
+	}
+
+	.savebar {
+		left: 8px;
+	}
+
+	.permissions-header {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		margin-bottom: 1rem;
+
+		.editing-title {
+			flex: 1;
+		}
 	}
 }
 

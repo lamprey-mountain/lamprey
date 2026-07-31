@@ -23,7 +23,6 @@ import { OverwriteDropdown } from "@/components/shared/OverwriteDropdown";
 import { PermissionSelector } from "@/components/shared/PermissionSelector";
 import { useMenu } from "@/contexts/mod.tsx";
 import { permissions } from "@/lib/permissions";
-import { Copyable } from "@/utils/general";
 
 function filterPermissionsByChannelType(
 	permList: typeof permissions,
@@ -46,15 +45,6 @@ function getPermState(
 	if (overwrite.allow.includes(perm)) return "allow";
 	if (overwrite.deny.includes(perm)) return "deny";
 	return "inherit";
-}
-
-function isAllInherit(
-	overwrite: PermissionOverwrite,
-	allPermissions: Permission[],
-): boolean {
-	return allPermissions.every(
-		(perm) => getPermState(overwrite, perm) === "inherit",
-	);
 }
 
 function areOverwritesEqual(
@@ -94,121 +84,59 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 	const rooms2 = useRooms();
 	const roles2 = useRoles();
 	const { setMenu } = useMenu();
-	const roles = [...roles2.cache.values()].filter(
-		(r) => r.room_id === props.channel.room_id,
+
+	const roomId = () => props.channel.room_id ?? "";
+	const roles = createMemo(() =>
+		[...roles2.cache.values()].filter((r) => r.room_id === roomId()),
 	);
-	const room = rooms2.use(() => props.channel.room_id ?? "");
+	const room = rooms2.use(roomId);
 
 	const [overwrites, setOverwrites] = createStore(
-		structuredClone(props.channel.permission_overwrites),
+		structuredClone(props.channel.permission_overwrites ?? []),
 	);
-	const [dirtyOverwrites, setDirtyOverwrites] = createStore<
-		Record<string, boolean>
-	>({});
-	const [deletedOverwrites, setDeletedOverwrites] = createStore<
-		Record<string, boolean>
-	>({});
-	const [editingId, setEditingId] = createSignal<string>(
-		props.channel.room_id!,
-	);
+	const [editingId, setEditingId] = createSignal(roomId());
 	const [permSearch, setPermSearch] = createSignal("");
+	const [saving, setSaving] = createSignal(false);
 
-	const resetChangeTracking = () => {
-		setDirtyOverwrites({});
-		setDeletedOverwrites({});
-	};
-
-	createEffect(
-		on(
-			() => props.channel.id,
-			() => {
-				setOverwrites(structuredClone(props.channel.permission_overwrites));
-				resetChangeTracking();
-			},
-		),
+	const dirtyIds = createMemo(() =>
+		overwrites
+			.filter(
+				(o) =>
+					!areOverwritesEqual(
+						o,
+						props.channel.permission_overwrites?.find(
+							(orig) => orig.id === o.id,
+						),
+					),
+			)
+			.map((o) => o.id),
 	);
 
-	createEffect(
-		on(
-			() => props.channel.permission_overwrites,
-			(serverOverwrites) => {
-				if (!serverOverwrites) return;
-				batch(() => {
-					const dirtyIds = Object.keys(dirtyOverwrites).filter(
-						(id) => dirtyOverwrites[id],
-					);
-					for (const id of dirtyIds) {
-						const localOverwrite = overwrites.find((o) => o.id === id);
-						const serverOverwrite = serverOverwrites.find((o) => o.id === id);
-						if (areOverwritesEqual(localOverwrite, serverOverwrite)) {
-							setDirtyOverwrites(id, false);
-						}
-					}
-
-					const deletedIds = Object.keys(deletedOverwrites).filter(
-						(id) => deletedOverwrites[id],
-					);
-					for (const id of deletedIds) {
-						if (!serverOverwrites.some((o) => o.id === id)) {
-							setDeletedOverwrites(id, false);
-						}
-					}
-				});
-			},
-			{ defer: true },
-		),
+	const deletedIds = createMemo(() =>
+		(props.channel.permission_overwrites ?? [])
+			.filter((orig) => !overwrites.some((o) => o.id === orig.id))
+			.map((o) => o.id),
 	);
 
-	const updateChangeState = (id: string) => {
-		const localOverwrite = overwrites.find((o) => o.id === id);
-		const originalOverwrite = props.channel.permission_overwrites?.find(
-			(o) => o.id === id,
-		);
-
-		if (areOverwritesEqual(localOverwrite, originalOverwrite)) {
-			setDirtyOverwrites(id, false);
-			setDeletedOverwrites(id, false);
-			return;
-		}
-
-		if (localOverwrite && !originalOverwrite) {
-			// Added
-			setDirtyOverwrites(id, true);
-			setDeletedOverwrites(id, false);
-		} else if (!localOverwrite && originalOverwrite) {
-			// Deleted
-			setDirtyOverwrites(id, false);
-			setDeletedOverwrites(id, true);
-		} else {
-			// Modified
-			setDirtyOverwrites(id, true);
-			setDeletedOverwrites(id, false);
-		}
-	};
-
-	const isAnyDirty = createMemo(() => {
-		return (
-			Object.values(dirtyOverwrites).some(Boolean) ||
-			Object.values(deletedOverwrites).some(Boolean)
-		);
-	});
+	const isAnyDirty = createMemo(
+		() => dirtyIds().length > 0 || deletedIds().length > 0,
+	);
 
 	const overwritesWithEveryone = createMemo(() => {
-		const roomId = props.channel.room_id!;
-		const hasEveryone = overwrites.some((o) => isEveryoneRole(o.id, roomId));
+		const rId = roomId();
+		const hasEveryone = overwrites.some((o) => isEveryoneRole(o.id, rId));
 		return hasEveryone
 			? overwrites
-			: [...overwrites, createDefaultOverwrite(roomId)];
+			: [...overwrites, createDefaultOverwrite(rId)];
 	});
 
 	const editingOverwrite = createMemo(() => {
 		const id = editingId();
-		if (id === null) return null;
 
 		const overwrite = overwrites.find((o) => o.id === id);
 		if (overwrite) return overwrite;
 
-		if (isEveryoneRole(id, props.channel.room_id ?? "")) {
+		if (isEveryoneRole(id, roomId())) {
 			return createDefaultOverwrite(id);
 		}
 
@@ -217,7 +145,6 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 
 	const setPerm = (perm: Permission, state: PermState) => {
 		const id = editingId();
-		if (!id) return;
 
 		const currentOverwrite = editingOverwrite();
 		if (!currentOverwrite) return;
@@ -233,22 +160,26 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 			deny: newDeny,
 		};
 
-		const isEveryone = isEveryoneRole(id, props.channel.room_id ?? "");
-		const channelPerms = permissions.filter((p) => p.overwrite_group);
-		const shouldBeRemoved =
-			isEveryone &&
-			isAllInherit(
-				updatedOverwrite,
-				channelPerms.map((p) => p.id),
-			);
 		const existsInStore = overwrites.some((o) => o.id === id);
 
-		if (shouldBeRemoved) {
+		const isEveryone = isEveryoneRole(id, roomId());
+		const channelPerms = permissions.filter((p) => p.overwrite_group);
+		const isAllInherit = channelPerms.every(
+			(p) =>
+				!updatedOverwrite.allow.includes(p.id) &&
+				!updatedOverwrite.deny.includes(p.id),
+		);
+
+		if (isEveryone && isAllInherit) {
 			if (existsInStore) {
+				// remove pending everyone overwrite
 				setOverwrites((prev) => prev.filter((o) => o.id !== id));
+			} else {
+				// everyone permission can't be deleted anyways
 			}
 		} else {
 			if (existsInStore) {
+				// update existing overwrite
 				setOverwrites(
 					(o) => o.id === id,
 					produce((o) => {
@@ -257,6 +188,7 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 					}),
 				);
 			} else {
+				// create new overwrite
 				setOverwrites(overwrites.length, {
 					id,
 					type: "Role",
@@ -265,43 +197,33 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 				});
 			}
 		}
-		queueMicrotask(() => updateChangeState(id));
 	};
 
 	const saveAll = async () => {
-		const dirtyIds = Object.keys(dirtyOverwrites).filter(
-			(id) => dirtyOverwrites[id],
-		);
-		const deletedIds = Object.keys(deletedOverwrites).filter(
-			(id) => deletedOverwrites[id],
-		);
-
-		const putPromises = dirtyIds
-			.map((id) => {
-				const overwrite = overwrites.find((o) => o.id === id);
-				if (overwrite) {
-					return api2.client.http.PUT(
-						"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
-						{
-							params: {
-								path: {
-									channel_id: props.channel.id,
-									overwrite_id: overwrite.id,
-								},
-							},
-							body: {
-								type: overwrite.type,
-								allow: overwrite.allow,
-								deny: overwrite.deny,
+		const putPromises = dirtyIds().flatMap((id) => {
+			const o = overwrites.find((o) => o.id === id);
+			if (!o) return [];
+			return [
+				api2.client.http.PUT(
+					"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
+					{
+						params: {
+							path: {
+								channel_id: props.channel.id,
+								overwrite_id: o.id,
 							},
 						},
-					);
-				}
-				return null;
-			})
-			.filter((p) => p !== null) as Promise<unknown>[];
+						body: {
+							type: o.type,
+							allow: o.allow,
+							deny: o.deny,
+						},
+					},
+				),
+			];
+		});
 
-		const deletePromises = deletedIds.map((id) =>
+		const deletePromises = deletedIds().map((id) =>
 			api2.client.http.DELETE(
 				"/api/v1/channel/{channel_id}/permission/{overwrite_id}",
 				{
@@ -315,38 +237,50 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 			),
 		);
 
-		await Promise.all([...putPromises, ...deletePromises]);
+		setSaving(true);
+		await Promise.all([...putPromises, ...deletePromises]).finally(() =>
+			setSaving(false),
+		);
 
-		resetChangeTracking();
+		// ui updates after receiving ChannelUpdate sync event
 	};
 
+	// show latest overwrites unless editing
+	createEffect(
+		on(
+			() => props.channel.permission_overwrites ?? [],
+			(newOverwrites) => {
+				// TODO: automatically update/refresh overwrites that haven't been edited
+				// currently, editing a single overwrite prevents all overwrites from being updated on sync
+				if (isAnyDirty()) return;
+				setOverwrites(structuredClone(newOverwrites));
+			},
+		),
+	);
+
 	const cancelAll = () => {
-		setOverwrites(structuredClone(props.channel.permission_overwrites));
-		resetChangeTracking();
+		setOverwrites(structuredClone(props.channel.permission_overwrites ?? []));
 	};
 
 	const remove = (id: string) => {
-		if (!id) return;
-
 		setOverwrites((prev) => prev.filter((o) => o.id !== id));
-		queueMicrotask(() => updateChangeState(id));
-
 		if (editingId() === id) {
-			setEditingId(props.channel.room_id ?? "");
+			setEditingId(roomId());
 		}
 	};
 
-	const roleName = (id: string) => {
-		if (isEveryoneRole(id, props.channel.room_id!)) {
+	const overwriteName = (ow: PermissionOverwrite) => {
+		if (isEveryoneRole(ow.id, roomId())) {
 			return "@everyone";
 		}
-		const role = roles.find((r: Role) => r.id === id);
+
+		const role = roles().find((r: Role) => r.id === ow.id);
 		if (role) return role.name;
 
-		const user = api2.users.cache.get(id);
+		const user = api2.users.cache.get(ow.id);
 		if (user) return user.name;
 
-		return null;
+		return "unknown";
 	};
 
 	const openOverwriteMenu = (
@@ -355,16 +289,14 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		overwriteType: "Role" | "User" | "Everyone",
 	) => {
 		e.preventDefault();
-		queueMicrotask(() => {
-			setMenu({
-				type: "permission_overwrite",
-				channel_id: props.channel.id,
-				overwrite_id: overwriteId,
-				overwrite_type: overwriteType,
-				x: e.clientX,
-				y: e.clientY,
-				onDelete: () => remove(overwriteId),
-			});
+		setMenu({
+			type: "permission_overwrite",
+			channel_id: props.channel.id,
+			overwrite_id: overwriteId,
+			overwrite_type: overwriteType,
+			x: e.clientX,
+			y: e.clientY,
+			onDelete: () => remove(overwriteId),
 		});
 	};
 
@@ -377,7 +309,6 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 				deny: [],
 			});
 			setEditingId(id);
-			queueMicrotask(() => updateChangeState(id));
 		});
 	};
 
@@ -388,119 +319,109 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 		).filter((p: (typeof permissions)[number]) => p.overwrite_group);
 	});
 
+	const isDirty = (id: string) =>
+		dirtyIds().includes(id) || deletedIds().includes(id);
+
 	return (
 		<div class="channel-settings-permissions">
-			<div class="main">
-				<h2>Permissions</h2>
-				<div class="permission-overwrites">
-					<div class="permissions-layout">
-						<div>
-							<ul>
-								<For each={overwritesWithEveryone()}>
-									{(o) => {
-										const isEveryone = isEveryoneRole(
-											o.id,
-											props.channel.room_id!,
-										);
-										const overwriteType: "Role" | "User" | "Everyone" =
-											isEveryone ? "Everyone" : o.type;
-										return (
-											<li
-												class={editingId() === o.id ? "editing" : ""}
-												onClick={() => setEditingId(o.id)}
-												onContextMenu={(e) =>
-													openOverwriteMenu(e, o.id, overwriteType)
-												}
-											>
-												{roleName(o.id) ?? <Copyable>{o.id}</Copyable>}
-												<Show
-													when={
-														dirtyOverwrites[o.id] || deletedOverwrites[o.id]
-													}
-												>
-													<span class="dirty-indicator">*</span>
-												</Show>
-											</li>
-										);
-									}}
-								</For>
-							</ul>
-						</div>
-						<div>
+			<div class="wrapper">
+				<div class="main">
+					<h2>Permissions</h2>
+					<div class="permission-overwrites">
+						<div class="permissions-layout">
 							<OverwriteDropdown
-								room_id={props.channel.room_id!}
+								room_id={roomId()}
 								excludeIds={overwrites.map((o) => o.id)}
 								onSelect={(id, type) => addOverwrite(id, type)}
 							/>
+							<div>
+								<ul>
+									<For each={overwritesWithEveryone()}>
+										{(o) => {
+											const isEveryone = isEveryoneRole(o.id, roomId());
+											const overwriteType: "Role" | "User" | "Everyone" =
+												isEveryone ? "Everyone" : o.type;
+											return (
+												<li
+													class="overwrite"
+													classList={{ editing: editingId() === o.id }}
+													onClick={() => setEditingId(o.id)}
+													onContextMenu={(e) =>
+														openOverwriteMenu(e, o.id, overwriteType)
+													}
+												>
+													{overwriteName(o)}
+													<Show when={isDirty(o.id)}>
+														<span class="dirty-indicator">*</span>
+													</Show>
+												</li>
+											);
+										}}
+									</For>
+								</ul>
+							</div>
 						</div>
 					</div>
 				</div>
-				<Savebar
-					show={isAnyDirty()}
-					onCancel={cancelAll}
-					onSave={saveAll}
-					cancelText="Cancel"
-					saveText="Save All"
-				/>
-			</div>
-			<Show when={editingOverwrite()} keyed>
-				{(overwrite) => (
-					<Resizable
-						storageKey="channel-permissions-panel-width"
-						initialWidth={500}
-						minWidth={300}
-						maxWidth={800}
-					>
-						<div class="edit">
-							<div class="permissions-header">
-								<h3 class="editing-title">
-									Editing{" "}
-									{overwrite.type === "Role" ? roleName(overwrite.id) : "user"}{" "}
-									<Show
-										when={
-											dirtyOverwrites[overwrite.id] ||
-											deletedOverwrites[overwrite.id]
-										}
-									>
-										<span class="dirty-indicator">*</span>
+				<Show when={editingOverwrite()} keyed>
+					{(overwrite) => (
+						<Resizable
+							storageKey="channel-permissions-panel-width"
+							initialWidth={500}
+							minWidth={300}
+							maxWidth={800}
+						>
+							<div class="edit">
+								<div class="permissions-header">
+									<h3 class="editing-title">
+										Editing {overwriteName(overwrite)}
+										<Show when={isDirty(overwrite.id)}>
+											<span class="dirty-indicator">*</span>
+										</Show>
+									</h3>
+									<Show when={!isEveryoneRole(overwrite.id, roomId())}>
+										<button
+											type="button"
+											class="button danger"
+											onClick={() => remove(overwrite.id)}
+										>
+											delete
+										</button>
 									</Show>
-								</h3>
-								<Show
-									when={!isEveryoneRole(overwrite.id, props.channel.room_id!)}
-								>
-									<button
-										type="button"
-										class="button"
-										onClick={() => remove(overwrite.id)}
-									>
-										delete
-									</button>
-								</Show>
+								</div>
+								<PermissionSelector
+									search={permSearch()}
+									onSearch={setPermSearch}
+									seed={props.channel.id + overwrite.id}
+									permissions={filteredPermissions()}
+									permStates={filteredPermissions().reduce(
+										(
+											acc: Record<Permission, PermState>,
+											p: (typeof permissions)[number],
+										) => {
+											acc[p.id] = getPermState(overwrite, p.id);
+											return acc;
+										},
+										{} as Record<Permission, PermState>,
+									)}
+									onPermChange={setPerm}
+									showDescriptions={true}
+									roomType={room()?.type || "Default"}
+									context="overwrite"
+								/>
 							</div>
-							<PermissionSelector
-								search={permSearch()}
-								onSearch={setPermSearch}
-								seed={props.channel.id + overwrite.id}
-								permissions={filteredPermissions()}
-								permStates={filteredPermissions().reduce(
-									(
-										acc: Record<Permission, PermState>,
-										p: (typeof permissions)[number],
-									) => {
-										acc[p.id as Permission] = getPermState(overwrite, p.id);
-										return acc;
-									},
-									{} as Record<Permission, PermState>,
-								)}
-								onPermChange={setPerm}
-								showDescriptions={true}
-								roomType={room()?.type || "Default"}
-								context="overwrite"
-							/>
-						</div>
-					</Resizable>
-				)}
-			</Show>
+						</Resizable>
+					)}
+				</Show>
+			</div>
+			<Savebar
+				show={isAnyDirty()}
+				onCancel={cancelAll}
+				onSave={saveAll}
+				cancelText="Cancel"
+				saveText="Save All"
+				saving={saving()}
+			/>
 		</div>
 	);
 }

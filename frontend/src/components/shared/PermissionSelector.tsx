@@ -1,4 +1,4 @@
-import type { Permission } from "sdk";
+import type { Permission, RoomType } from "sdk";
 import { type Component, createMemo, createSignal, For } from "solid-js";
 import { useCtx } from "@/app/context";
 import icCheck1 from "@/assets/check-1.png";
@@ -48,11 +48,42 @@ interface PermissionSelectorProps {
 	permStates: Record<Permission, PermState>;
 	onPermChange: (perm: Permission, state: PermState) => void;
 	showDescriptions?: boolean;
-	roomType?: "Default" | "Server";
+	roomType?: "Default" | "Server" | "Emoji";
 	context?: "default" | "overwrite";
 	search?: string;
 	onSearch?: (search: string) => void;
 }
+
+const permissionGroupOrder = (ty: RoomType) => {
+	switch (ty) {
+		case "Default":
+			return [
+				"general", // channel overwrites
+				"room",
+				"members",
+				"messages",
+				"threads", // channel overwrites
+				"channels",
+				"voice",
+				"calendar",
+				"dangerous",
+			];
+		case "Server":
+			return [
+				"server",
+				"server members",
+				"room",
+				"members",
+				"messages",
+				"channels", // remove?
+				"voice", // remove?
+				"calendar", // remove?
+				"dangerous",
+			];
+		case "Emoji":
+			return ["general", "room", "members", "dangerous"];
+	}
+};
 
 export const PermissionSelector: Component<PermissionSelectorProps> = (
 	props,
@@ -85,30 +116,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 		const filtered = filteredPermissions();
 		const groups = new Map<string, PermissionItem[]>();
 
-		const groupOrder =
-			props.roomType === "Default"
-				? [
-						"general", // channel overwrites
-						"room",
-						"members",
-						"messages",
-						"threads", // channel overwrites
-						"channels",
-						"voice",
-						"calendar",
-						"dangerous",
-					]
-				: [
-						"server",
-						"server members",
-						"room",
-						"members",
-						"messages",
-						"channels",
-						"voice",
-						"calendar",
-						"dangerous",
-					];
+		const groupOrder = permissionGroupOrder(props.roomType ?? "Default");
 
 		groupOrder.forEach((group) => {
 			groups.set(group, []);
