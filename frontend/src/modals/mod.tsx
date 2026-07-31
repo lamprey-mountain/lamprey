@@ -223,7 +223,7 @@ export function getModal(modal: ModalType) {
 		return <ModalPalette />;
 	}
 	if (isChannelCreate(modal)) {
-		return <ModalChannelCreate room_id={modal.room_id} cont={modal.cont} />;
+		return <ModalChannelCreate room_id={modal.room_id} />;
 	}
 	if (isTagEditor(modal)) {
 		return (

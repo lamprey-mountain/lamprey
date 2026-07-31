@@ -35,7 +35,7 @@ export function getMessageContent(message: Message | undefined) {
 }
 
 // TODO: inline version of copyable that shows "copied!" as tooltip or inline text instead of modal
-
+// TODO: split into separate component
 export const Copyable = (props: { children: string }) => {
 	const [, modalctl] = useModals();
 	const copy = (e: MouseEvent) => {

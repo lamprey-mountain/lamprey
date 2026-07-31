@@ -55,6 +55,7 @@ export { icCheck1 as icCheck, icCheck1, icCheck2, icCheck3, icCheck4 };
 
 import { default as icMembers } from "@/assets/members.png";
 
+export { default as icChanNsfw } from "@/assets/channel-nsfw.png";
 // TODO: dedicated icon?
 export { default as icTableOfContents } from "@/assets/channel-wiki-1.png";
 export { default as icChevron } from "@/assets/chevron.png";

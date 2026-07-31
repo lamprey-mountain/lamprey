@@ -15,47 +15,53 @@ import icChanThreadPrivate from "@/assets/channel-thread-private.png";
 import icChanVoice1 from "@/assets/channel-voice-1.png";
 import icChanVoice2 from "@/assets/channel-voice-2.png";
 import icChanWiki1 from "@/assets/channel-wiki-1.png";
+import icChanCategory from "@/assets/folder-1.png";
+import icChanUnknown from "@/assets/question.png";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { getColor } from "@/lib/colors";
 import { cyrb53, LCG } from "@/lib/rng";
 import { getThumbFromId } from "@/media/util";
 import { AvatarWithStatus } from "./UserAvatar";
 
+export const channelIcon = (channelType: ChannelType, seed: string) => {
+	const rand = LCG(cyrb53(seed));
+	function rnd<T>(arr: T[]): T {
+		return arr[Math.floor(rand() * arr.length)];
+	}
+	switch (channelType) {
+		case "Voice":
+			return rnd([icChanVoice1, icChanVoice2]);
+		case "Forum":
+			return rnd([icChanForum1]);
+		case "Forum2":
+			return rnd([icChanForum2]);
+		case "ThreadPublic":
+		case "ThreadForum2":
+			return rnd([icChanThreadPublic]);
+		case "ThreadPrivate":
+			return rnd([icChanThreadPrivate]);
+		case "Calendar":
+			return rnd([icChanCalendar1]);
+		case "Document":
+			return rnd([icChanDocument1]);
+		case "Wiki":
+			return rnd([icChanWiki1]);
+		case "Scripts":
+			return rnd([icChanScripts1]);
+		case "Category":
+			return rnd([icChanCategory]);
+		case "Text":
+			return rnd([icChanText1, icChanText2, icChanText3, icChanText4]);
+		default:
+			return rnd([icChanUnknown]);
+	}
+};
+
 export const ChannelIcon = (props: {
 	channel: Channel;
 	animate?: boolean;
 	style?: string;
 }) => {
-	const icon = () => {
-		const rand = LCG(cyrb53(props.channel.id));
-		function rnd<T>(arr: T[]): T {
-			return arr[Math.floor(rand() * arr.length)];
-		}
-		switch (props.channel.type) {
-			case "Voice":
-				return rnd([icChanVoice1, icChanVoice2]);
-			case "Forum":
-				return rnd([icChanForum1]);
-			case "Forum2":
-				return rnd([icChanForum2]);
-			case "ThreadPublic":
-			case "ThreadForum2":
-				return rnd([icChanThreadPublic]);
-			case "ThreadPrivate":
-				return rnd([icChanThreadPrivate]);
-			case "Calendar":
-				return rnd([icChanCalendar1]);
-			case "Document":
-				return rnd([icChanDocument1]);
-			case "Wiki":
-				return rnd([icChanWiki1]);
-			case "Scripts":
-				return rnd([icChanScripts1]);
-			default:
-				return rnd([icChanText1, icChanText2, icChanText3, icChanText4]);
-		}
-	};
-
 	const currentUser = useCurrentUser();
 	const otherUser = createMemo(() => {
 		if (props.channel.type === "Dm") {
@@ -108,7 +114,7 @@ export const ChannelIcon = (props: {
 					</defs>
 					<image
 						mask={props.channel.nsfw ? "url(#nsfw)" : undefined}
-						href={icon()}
+						href={channelIcon(props.channel.type, props.channel.id)}
 					/>
 					<Show when={props.channel.nsfw}>
 						<image href={icChanNsfw} />

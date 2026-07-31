@@ -50,6 +50,11 @@
 		cursor: not-allowed;
 		background-color: oklch(from $bg-400 calc(l - 0.08) c h);
 		color: $fg-600;
+
+		&.primary {
+			background-color: oklch(from $link-300 calc(l - 0.3) calc(c - 0.08) h);
+			border-color: oklch(from $link-300 calc(l - 0.20) calc(c - 0.03) h);
+		}
 	}
 
 	// NOTE: unsure if this will be kept here

@@ -1,7 +1,6 @@
 import { createSignal, Match, Switch } from "solid-js";
 import { CheckboxOptionWithLabel } from "@/atoms/CheckboxOption";
 import { useModals } from "@/contexts/modal";
-import { autofocus } from "@/lib/autofocus";
 import { Modal } from "./mod";
 
 interface ModalRoomCreateOrJoinProps {
@@ -63,7 +62,7 @@ export const ModalRoomCreateOrJoin = (props: ModalRoomCreateOrJoinProps) => {
 								onInput={(e) => setRoomName(e.currentTarget.value)}
 								placeholder="my awesome room"
 								required
-								use:autofocus
+								ref={(el) => queueMicrotask(() => el.focus())}
 							/>
 						</label>
 

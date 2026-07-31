@@ -613,6 +613,9 @@
 			max-width: 500px;
 			/* min-width: 100px; */
 			min-height: 50px;
+			overflow: hidden;
+			overflow-y: scroll;
+			max-height: calc(100vh - 32px);
 		}
 	}
 
@@ -626,6 +629,7 @@
 		}
 	}
 
+	// HACK: really hacky styles, i should either make inner not have padding or styling or lift bottom to .content
 	.bottom {
 		background: $bg-150;
 		margin: -15px;
@@ -634,6 +638,9 @@
 		display: flex;
 		gap: 6px;
 		justify-content: end;
+		position: sticky;
+		bottom: -16px;
+		border-bottom: solid 1px $sep-300;
 	}
 }
 
@@ -2803,12 +2810,23 @@ button.link {
 	border: none;
 	background: none;
 	padding: 0;
-	color: $fg-300;
+	color: $link-500;
 	cursor: pointer;
 
-	&:hover {
+	&.link-dim {
+		color: $fg-400;
+	}
+
+	&:hover,
+	&:focus-visible {
 		text-decoration: underline;
+		background: none;
 		/* color: $fg-100; */
+	}
+
+	&[disabled] {
+		text-decoration: none;
+		background: none;
 	}
 }
 
@@ -3408,28 +3426,45 @@ button.link {
 	}
 }
 
-.new-channel {
-	margin-top: 8px;
+.modal-new-channel {
+	height: calc-size(auto, size);
+	transition: height 2s;
 
-	.type {
+	.channel-type-options {
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
 
-		label {
+		.channel-type-option {
+			width: 100%;
+			border-radius: 4px;
 			display: flex;
-			gap: 2px;
-			cursor: pointer;
-			padding: 2px 0;
+			gap: 4px;
+			border: none;
+			background: none;
+
+			& > .icon2 {
+				margin-top: 2px;
+			}
 
 			&:hover {
 				background: $bg-300;
 			}
-
-			input[type="radio"] {
-				display: none;
-			}
 		}
+	}
+
+	.header {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+
+	.unnamed {
+		color: $fg-600;
+	}
+
+	.icon2 .inner {
+		fill: $fg-400;
 	}
 }
 
@@ -4052,10 +4087,6 @@ img.custom-emoji {
 		height: 64px;
 		width: 64px;
 	}
-}
-
-button.link {
-	color: $link-500;
 }
 
 .emoji-sprite {

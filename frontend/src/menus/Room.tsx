@@ -88,18 +88,6 @@ export function RoomMenu(props: { room_id: string }) {
 						modalctl.open({
 							type: "channel_create",
 							room_id: props.room_id,
-							cont: (data) => {
-								if (!data) return;
-								ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
-									params: {
-										path: { room_id: props.room_id },
-									},
-									body: {
-										name: data.name,
-										type: data.type,
-									},
-								});
-							},
 						});
 					}}
 				>

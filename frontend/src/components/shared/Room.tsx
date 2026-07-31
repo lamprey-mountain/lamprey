@@ -118,22 +118,10 @@ export const RoomHome = (props: { room: RoomT }) => {
 		return list;
 	});
 
-	function createThread(room_id: string) {
+	function createChannel() {
 		modalCtl.open({
 			type: "channel_create",
-			room_id: room_id,
-			cont: (data) => {
-				if (!data) return;
-				ctx.client.http.POST("/api/v1/room/{room_id}/channel", {
-					params: {
-						path: { room_id },
-					},
-					body: {
-						name: data.name,
-						type: data.type,
-					},
-				});
-			},
+			room_id: props.room.id,
 		});
 	}
 
@@ -212,7 +200,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 					type="button"
 					class="button primary"
 					style="margin-left: 8px;border-radius:4px"
-					onClick={() => createThread(room_id())}
+					onClick={createChannel}
 				>
 					create channel
 				</button>

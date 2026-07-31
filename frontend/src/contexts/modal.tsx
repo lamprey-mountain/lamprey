@@ -42,7 +42,6 @@ export type Modal =
 	| {
 			type: "channel_create";
 			room_id: string;
-			cont: (data: { name: string; type: ChannelTypeOption } | null) => void;
 	  }
 	| {
 			type: "tag_editor";
