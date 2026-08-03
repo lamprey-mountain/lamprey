@@ -119,13 +119,9 @@ async fn thumb_response(
                 }
                 writer.flush().await?;
 
-                crate::ffmpeg::generate_thumbnail(
-                    temp_in.file_path(),
-                    temp_out.file_path(),
-                    size,
-                    animate,
-                )
-                .await?;
+                s.ffmpeg
+                    .generate_thumbnail(temp_in.file_path(), temp_out.file_path(), size, animate)
+                    .await?;
 
                 let mut out_reader = temp_out.open_ro().await?;
                 let mut thumb_data = Vec::new();

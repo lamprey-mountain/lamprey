@@ -14,7 +14,10 @@ use common::{
 };
 use futures::stream::FuturesUnordered;
 use image::ImageReader;
-use lamprey_backend_core::types::media::MediaPaths;
+use lamprey_backend_core::{
+    ffmpeg::metadata::{MediaMetadata as FfprobeMetadata, MediaType},
+    types::media::MediaPaths,
+};
 use mediatype::MediaTypeBuf;
 use sha2::{Digest, Sha512_256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
@@ -24,8 +27,7 @@ use tracing::{Instrument, Level, debug, span, trace};
 use crate::{
     prelude::*,
     services::media::{
-        ServiceMedia, ffmpeg,
-        ffprobe::{self, MediaType},
+        ServiceMedia,
         import::Upload,
         util::{Import, MediaItemState, get_s3_url},
     },
@@ -41,7 +43,7 @@ struct MediaPipeline {
     paths: MediaPaths,
 
     // cached stuff
-    ffprobe_metadata: Option<Option<ffprobe::Metadata>>,
+    ffprobe_metadata: Option<Option<FfprobeMetadata>>,
     media_metadata: Option<MediaMetadata>,
     mime: Option<MediaTypeBuf>,
     hashes: Option<Hashes>,
@@ -80,16 +82,13 @@ impl MediaPipeline {
     }
 
     /// run ffprobe on this media and get the metadata
-    async fn get_ffprobe_metadata(&mut self) -> Result<Option<ffprobe::Metadata>> {
+    async fn get_ffprobe_metadata(&mut self) -> Result<Option<FfprobeMetadata>> {
         if let Some(meta) = &self.ffprobe_metadata {
             return Ok(meta.clone());
         };
 
-        let meta = match ffprobe::extract(self.file.file_path()).await {
-            Ok(meta) => Some(meta),
-            Err(Error::Ffmpeg) => None,
-            Err(err) => return Err(err),
-        };
+        let ff = &self.s.services().media.ffmpeg;
+        let meta = ff.extract_metadata(self.file.file_path()).await.ok();
 
         self.ffprobe_metadata = Some(meta.clone());
         Ok(meta)
@@ -245,16 +244,17 @@ impl MediaPipeline {
         };
 
         let path = self.file.file_path();
+        let ff = &self.s.services().media.ffmpeg;
         let bytes = if let Some(thumb) = meta.get_thumb_stream() {
             if thumb.codec_type == MediaType::Attachment {
                 debug!("extract thumb attachment from container");
-                ffmpeg::extract_attachment(path, thumb.index).await?
+                ff.extract_attachment(path, thumb.index).await?
             } else if thumb.disposition.attached_pic == 1 {
                 debug!("extract thumb stream from container");
-                ffmpeg::extract_stream(path, thumb.index).await?
+                ff.extract_stream(path, thumb.index).await?
             } else if thumb.codec_type == MediaType::Video {
                 debug!("generate thumb from video");
-                ffmpeg::generate_thumb(path).await?
+                ff.generate_thumb(path).await?
             } else {
                 debug!("no suitable thumbnail codec");
                 self.poster = Some(None);
@@ -468,7 +468,8 @@ impl MediaPipeline {
         };
 
         let path = self.file.file_path();
-        let output = ffmpeg::strip_metadata(path, format).await?;
+        let ff = &self.s.services().media.ffmpeg;
+        let output = ff.strip_metadata(path, format).await?;
 
         // replace the temp file content with stripped bytes
         let mut f = self.file.open_rw().await?;

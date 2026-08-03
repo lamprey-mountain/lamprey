@@ -1,6 +1,7 @@
 pub mod config;
 pub mod data;
 pub mod error;
+pub mod ffmpeg;
 pub mod queue;
 pub mod types;
 

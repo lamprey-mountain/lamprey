@@ -9,6 +9,8 @@ use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
 use tracing::{debug, error};
 
+use crate::ffmpeg::FfmpegError;
+
 #[derive(thiserror::Error, Debug)]
 // TODO: avoid returning actual error messages to prevent leaking stuff
 pub enum Error {
@@ -84,8 +86,8 @@ pub enum Error {
     // HACK: not really an error, but still kind of helpful to have here
     NotModified,
 
-    #[error("ffmpeg or ffprobe didn't like seem to like that very much")]
-    Ffmpeg,
+    #[error("ffmpeg/ffprobe error: {0}")]
+    Ffmpeg(#[from] FfmpegError),
 
     #[error("media type error: {0}")]
     Media(#[from] mediatype::MediaTypeError),
@@ -283,7 +285,7 @@ impl Error {
             Error::Figment(error) => Error::Figment(error.clone()),
             Error::UrlParseError(parse_error) => Error::UrlParseError(*parse_error),
             Error::NotModified => Error::NotModified,
-            Error::Ffmpeg => Error::Ffmpeg,
+            Error::Ffmpeg(err) => Error::Ffmpeg(err.clone()),
             Error::Media(media_type_error) => Error::Media(*media_type_error),
             Error::Unimplemented => Error::Unimplemented,
             Error::UnknownImageFormat => Error::UnknownImageFormat,

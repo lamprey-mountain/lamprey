@@ -18,7 +18,6 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::{
     AppState,
     error::{Error, Result},
-    ffmpeg,
     routes::util::{ContentInfo, build_headers},
 };
 
@@ -94,7 +93,9 @@ async fn gifv_response(
             let chunk = reader.read(..).await?;
             writer.write_all(&chunk.to_vec()).await?;
 
-            ffmpeg::transcode_to_webm(temp_in.file_path(), temp_out.file_path()).await?;
+            s.ffmpeg
+                .transcode_to_webm(temp_in.file_path(), temp_out.file_path())
+                .await?;
 
             let s_clone = s.blobs.clone();
             let out_clone = temp_out.file_path().to_owned();

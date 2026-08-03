@@ -6,6 +6,7 @@ use common::{
 };
 use lamprey_backend_core::{
     config::{ConfigBlobs, ConfigMedia},
+    ffmpeg::Ffmpeg,
     types::media::MediaPaths,
 };
 use moka::future::Cache;
@@ -19,6 +20,7 @@ pub struct AppState {
     pub(crate) db: PgPool,
     pub(crate) blobs: Operator,
     pub(crate) nats: Option<async_nats::Client>,
+    pub(crate) ffmpeg: Arc<Ffmpeg>,
     pub(crate) config: Arc<Config>,
     pub(crate) media_paths: Arc<MediaPaths>,
 
@@ -88,6 +90,7 @@ impl AppState {
             db,
             blobs,
             nats,
+            ffmpeg: Arc::new(Ffmpeg::from_config(&config)),
             config: Arc::new(config),
             cache_emoji,
             cache_media,

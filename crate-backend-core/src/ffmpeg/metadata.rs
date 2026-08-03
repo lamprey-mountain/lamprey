@@ -1,14 +1,10 @@
-#![allow(unused)] // TEMP: suppress warnings here for now
-
 use std::collections::HashMap;
 
 use serde::Deserialize;
-use tokio::process::Command;
 
-use crate::error::{Error, Result};
-
+/// metadata about a piece of media taken from ffmrobe
 #[derive(Debug, Clone, Default, Deserialize)]
-pub struct Metadata {
+pub struct MediaMetadata {
     pub streams: Vec<Stream>,
     pub format: Format,
 }
@@ -62,7 +58,7 @@ pub enum MediaType {
     Nb,
 }
 
-impl Metadata {
+impl MediaMetadata {
     pub fn get_main(&self, ty: MediaType) -> Option<&Stream> {
         self.streams
             .iter()
@@ -104,31 +100,5 @@ impl Metadata {
             .find(|i| i.disposition.attached_pic == 1)
             .or_else(|| self.get_main(MediaType::Attachment))
             .or_else(|| self.get_main(MediaType::Video))
-    }
-}
-
-pub async fn extract(file: &std::path::Path) -> Result<Metadata> {
-    let out = tokio::time::timeout(
-        std::time::Duration::from_secs(10),
-        Command::new("ffprobe")
-            .args([
-                "-v",
-                "quiet",
-                "-of",
-                "json",
-                "-show_format",
-                "-show_streams",
-                "-i",
-            ])
-            .arg(file)
-            .output(),
-    )
-    .await
-    .map_err(|_| Error::Ffmpeg)??;
-    if out.status.success() {
-        let meta = serde_json::from_slice(&out.stdout)?;
-        Ok(meta)
-    } else {
-        Err(Error::Ffmpeg)
     }
 }

@@ -5,6 +5,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use http::StatusCode;
+use lamprey_backend_core::ffmpeg::FfmpegError;
 use serde::Serialize;
 use tracing::error;
 
@@ -29,7 +30,7 @@ pub enum Error {
     BadRange,
 
     #[error("ffmpeg error")]
-    Ffmpeg,
+    Ffmpeg(#[from] FfmpegError),
 
     #[error("tempfile error: {0}")]
     Tempfile(Arc<std::io::Error>),
@@ -88,7 +89,7 @@ impl Error {
             Error::ImageError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Opendal(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::BadRange => StatusCode::RANGE_NOT_SATISFIABLE,
-            Error::Ffmpeg => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::Ffmpeg(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::Tempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::AsyncTempfile(_) => StatusCode::INTERNAL_SERVER_ERROR,
             Error::StillProcessing => StatusCode::CONFLICT,
@@ -107,7 +108,7 @@ impl Error {
             Error::ImageError(_) => ErrorCode::ImageError,
             Error::Opendal(_) => ErrorCode::Opendal,
             Error::BadRange => ErrorCode::BadRange,
-            Error::Ffmpeg => ErrorCode::Ffmpeg,
+            Error::Ffmpeg(_) => ErrorCode::Ffmpeg,
             Error::Tempfile(_) => ErrorCode::Tempfile,
             Error::AsyncTempfile(_) => ErrorCode::AsyncTempfile,
             Error::StillProcessing => ErrorCode::StillProcessing,

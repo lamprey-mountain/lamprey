@@ -10,14 +10,13 @@ use common::{
     v2::types::media::MediaPatch,
 };
 use dashmap::DashMap;
+use lamprey_backend_core::ffmpeg::Ffmpeg;
 use moka::future::Cache;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error};
 
 use crate::{prelude::*, services::media::util::MediaItemState};
 
-mod ffmpeg;
-mod ffprobe;
 mod import;
 mod process;
 mod util;
@@ -29,14 +28,17 @@ pub struct ServiceMedia {
     state: Globals,
     cache: Cache<MediaId, MediaItem>,
     uploads: Arc<DashMap<MediaId, Upload>>,
+    ffmpeg: Ffmpeg,
 }
 
 impl ServiceMedia {
     pub fn new(state: Globals) -> Self {
+        let ffmpeg = Ffmpeg::from_config(state.config());
         Self {
             state,
             cache: Cache::new(1000), // TODO: make configurable
             uploads: Arc::new(DashMap::new()),
+            ffmpeg,
         }
     }
 
