@@ -5,8 +5,8 @@ use std::{
 
 use crate::prelude::*;
 use common::v1::types::{
-    MessageClient, MessageEnvelope, MessagePayload, MessageSync, SessionToken, SyncResume,
-    presence::Presence,
+    MessageClient, MessageEnvelope, MessageHello, MessagePayload, MessageSync, SessionToken,
+    SyncResume, presence::Presence,
 };
 use futures_util::{SinkExt, StreamExt, stream::BoxStream};
 use reqwest::Url;
@@ -223,11 +223,11 @@ impl Syncer {
             self.set_state(SyncerState::Authenticating).ok();
 
             if let Err(e) = self
-                .send(MessageClient::Hello {
+                .send(MessageClient::Hello(MessageHello {
                     token: token.clone(),
                     resume: self.resume.clone(),
                     presence: None,
-                })
+                }))
                 .await
             {
                 error!("failed to send hello: {e}");
