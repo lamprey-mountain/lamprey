@@ -846,7 +846,6 @@ pub struct MessageCall {
 }
 
 /// the interaction that caused this message to be sent
-// who is the message author?
 #[record]
 #[derive(Default, PartialEq, Eq)]
 pub struct MessageInteraction {

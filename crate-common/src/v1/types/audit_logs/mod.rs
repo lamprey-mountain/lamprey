@@ -737,6 +737,23 @@ impl AuditLogEntry {
 }
 
 impl AuditLogEntryType {
+    // // use strum
+    // pub fn variant_name(&self) -> &'static str {
+    //     match self {
+    //         Self::RoomCreate { .. } => "RoomCreate",
+    //         Self::RoomUpdate { .. } => "RoomUpdate",
+    //         _ => todo!(),
+    //     }
+    // }
+
+    // pub fn target_type(&self) -> &'static str {
+    //     match self {
+    //         Self::RoomCreate { .. } => "Room",
+    //         Self::RoomUpdate { .. } => "Room",
+    //         _ => todo!(),
+    //     }
+    // }
+
     /// if this is a room event
     ///
     /// for example: RoomUpdate, Role events, Channel events, etc

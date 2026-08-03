@@ -1,15 +1,19 @@
 // TODO: impl accepting interactions via webhooks
 
 use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
 use std::time::Duration;
 
 use common::v1::types::interactions::{
     Interaction, InteractionCreate, InteractionCreateType, InteractionErrorCode,
     InteractionResponse, InteractionResponseCreate, InteractionResponseCreateType, InteractionType,
 };
-use common::v1::types::{InteractionId, MessageInteraction, MessageSync, Permission, UserId};
+use common::v1::types::{
+    InteractionId, Message, MessageCreate, MessageInteraction, MessageSync, Permission, UserId,
+};
 use common::v2::types::{ApplicationId, MessageId};
 use dashmap::DashMap;
+use kerosene_core::types::auth::Auth5;
 use lamprey_backend_core::Error;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
@@ -60,6 +64,7 @@ enum InteractionEntryState {
         expire_handle: JoinHandle<Result<()>>,
         deferred: bool,
         original_message_id: Option<MessageId>,
+        followup_message_count: AtomicUsize,
     },
 }
 
@@ -212,7 +217,7 @@ impl ServiceInteractions {
         todo!()
     }
 
-    pub async fn respond(
+    pub async fn handle_callback(
         &self,
         id: InteractionId,
         token: String,
@@ -264,17 +269,28 @@ impl ServiceInteractions {
                     InteractionType::Unfurl { user, .. } => user.clone(),
                 };
 
-                // TODO: add message_interaction to message
-                // let message_interaction = MessageInteraction {
-                //     id,
-                //     application_id: todo!(),
-                //     user_id: todo!(),
-                //     source_message_id: todo!(),
-                // };
+                let (user_id, source_message_id) = match &entry.interaction.ty {
+                    InteractionType::Ping => {
+                        unreachable!("validated that pings cant be replied to already")
+                    }
+                    InteractionType::Button { user, message, .. } => (user.id, Some(message.id)),
+                    InteractionType::Unfurl { user, message, .. } => (user.id, Some(message.id)),
+                };
+                let message_interaction = MessageInteraction {
+                    id,
+                    application_id: entry.interaction.application_id,
+                    user_id,
+                    source_message_id,
+                };
 
                 let _message = srv
                     .messages
-                    .create_as_webhook(channel_id, user.id, reply_message)
+                    .create_as_webhook(
+                        channel_id,
+                        user.id,
+                        reply_message,
+                        Some(message_interaction),
+                    )
                     .await?;
 
                 // TODO: return message
@@ -352,6 +368,7 @@ impl ServiceInteractions {
                     expire_handle,
                     deferred,
                     original_message_id: None, // TODO
+                    followup_message_count: AtomicUsize::new(0),
                 },
             }),
         );
@@ -398,11 +415,76 @@ impl ServiceInteractions {
     }
 
     /// get an interaction if it isn't expired
-    pub async fn get(&self, id: InteractionId) -> Result<Arc<InteractionEntry>> {
+    pub fn get(&self, id: InteractionId) -> Result<Arc<InteractionEntry>> {
         let entry = self
             .interactions
             .get(&id)
             .ok_or(Error::BadStatic("unknown or expired interaction"))?;
         Ok(entry.value().clone())
+    }
+
+    // TODO: remove auth parameter
+    // TODO: make these actual ApiErrors with dedicated ErrorCodes instead of BadStatic
+    pub async fn handle_followup_message_create<A: Auth5>(
+        &self,
+        auth: &mut A,
+        id: InteractionId,
+        token: String,
+        message: MessageCreate,
+        idempotency_key: Option<String>,
+    ) -> Result<Message> {
+        let srv = self.state.services();
+        let inter = self.get(id)?;
+
+        // FIXME: use timing safe equals
+        // or better yet, make token a newtype that is timing safe and cant be logged by default
+        // also, maybe move this check into the interactions service?
+        if inter.inner().token != Some(token) {
+            // TODO: make this an api ErrorCode
+            return Err(Error::BadStatic("unknown or expired interaction"));
+        }
+
+        let channel_id = inter
+            .inner()
+            .ty
+            .channel_id()
+            .ok_or(Error::BadStatic("interaction type has no channel id"))?;
+
+        let chan = srv.channels.get(channel_id, None).await?;
+        chan.ensure_has_text()?;
+
+        match &inter.state {
+            InteractionEntryState::Created { .. } => {
+                return Err(Error::BadStatic("respond to this interaction first "));
+            }
+            InteractionEntryState::Responded {
+                followup_message_count,
+                ..
+            } => {
+                let count =
+                    followup_message_count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                if count >= INTERACTION_FOLLOWUP_LIMIT {
+                    return Err(Error::BadStatic("interaction followup limit reached"));
+                }
+            }
+        }
+
+        // NOTE: maybe i should make interaction_message_create more flexible?
+        // eg. start a comment thread for document interactions
+        // actually, maybe not. that sounds like it could lead to some confusing behavior..
+
+        let message = srv
+            .messages
+            .create(
+                channel_id,
+                auth,
+                idempotency_key,
+                message,
+                None,
+                MessageId::new(),
+            )
+            .await?;
+
+        Ok(message)
     }
 }

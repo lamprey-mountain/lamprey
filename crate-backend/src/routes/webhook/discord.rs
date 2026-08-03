@@ -522,7 +522,7 @@ pub async fn webhook_execute_discord(
 
     let message = srv
         .messages
-        .create_as_webhook(webhook.channel_id, webhook_user_id, message_create)
+        .create_as_webhook(webhook.channel_id, webhook_user_id, message_create, None)
         .await?;
 
     if query.wait.unwrap_or(false) {

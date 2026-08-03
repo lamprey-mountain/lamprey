@@ -6,8 +6,8 @@ use common::v1::types::message::MessageAttachmentCreateType;
 use common::v1::types::misc::Time;
 use common::v1::types::{
     Channel, ChannelId, Mentions, Message, MessageAttachmentType, MessageCreate, MessageId,
-    MessagePatch, MessageSync, MessageType, MessageVersion, ParseMentions, Permission,
-    ThreadMemberPut, User, UserId,
+    MessageInteraction, MessagePatch, MessageSync, MessageType, MessageVersion, ParseMentions,
+    Permission, ThreadMemberPut, User, UserId,
 };
 use common::v2::types::media::MediaReference;
 use common::v2::types::{MediaId, SERVER_USER_ID};
@@ -65,8 +65,10 @@ enum MessageOperationKind {
     MessageEdit(MessageEditOperation),
 }
 
+#[derive(Default)]
 struct New {
     header_timestamp: Option<Time>,
+    interaction: Option<MessageInteraction>,
 }
 
 /// Stage 1: We know the user is allowed to perform this action.
@@ -76,6 +78,7 @@ struct Authorized {
     permissions: MessagePermissions,
     created_at: Option<Time>,
     removed_at: Option<Time>,
+    interaction: Option<MessageInteraction>,
 }
 
 /// Stage 2: The "Point of No Return".
@@ -89,6 +92,7 @@ struct Prepared {
     components: Vec<components::Component<components::Thin>>,
     created_at: Option<Time>,
     removed_at: Option<Time>,
+    interaction: Option<MessageInteraction>,
 }
 
 /// Stage 3: The data is in the database.
@@ -293,9 +297,7 @@ impl ServiceMessages {
             author: Author::Server,
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
             nonce: None,
-            stage: New {
-                header_timestamp: None,
-            },
+            stage: New::default(),
             _ph: PhantomData,
         };
 
@@ -324,7 +326,10 @@ impl ServiceMessages {
             author,
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
             nonce,
-            stage: New { header_timestamp },
+            stage: New {
+                header_timestamp,
+                interaction: None,
+            },
             _ph: PhantomData,
         };
 
@@ -383,7 +388,10 @@ impl ServiceMessages {
             author,
             kind: MessageOperationKind::MessageEdit(MessageEditOperation { json, original }),
             nonce: None,
-            stage: New { header_timestamp },
+            stage: New {
+                header_timestamp,
+                interaction: None,
+            },
             _ph: PhantomData,
         };
 
@@ -400,6 +408,7 @@ impl ServiceMessages {
         channel_id: ChannelId,
         webhook_user_id: UserId,
         json: MessageCreate,
+        interaction: Option<MessageInteraction>,
     ) -> Result<Message> {
         let srv = self.globals.services();
         let channel = srv.channels.get(channel_id, None).await?;
@@ -413,6 +422,7 @@ impl ServiceMessages {
             nonce: None,
             stage: New {
                 header_timestamp: None,
+                interaction,
             },
             _ph: PhantomData,
         };
@@ -449,9 +459,7 @@ impl ServiceMessages {
             author: Author::Webhook { user },
             kind: MessageOperationKind::MessageEdit(MessageEditOperation { json, original }),
             nonce: None,
-            stage: New {
-                header_timestamp: None,
-            },
+            stage: New::default(),
             _ph: PhantomData,
         };
 
@@ -471,10 +479,11 @@ impl ServiceMessages {
         let (permissions, created_at) = self.validate_permissions(&mut op).await?;
         let removed_at = self.enforce_automod(&mut op).await?;
 
-        Ok(op.transition(|_| Authorized {
+        Ok(op.transition(|s| Authorized {
             permissions,
             created_at,
             removed_at,
+            interaction: s.interaction,
         }))
     }
 
@@ -528,14 +537,15 @@ impl ServiceMessages {
             }
         };
 
-        Ok(op.transition(|old| Prepared {
-            permissions: old.permissions,
+        Ok(op.transition(|s| Prepared {
+            permissions: s.permissions,
             sanitized,
             all_media_ids,
             embeds,
             components,
-            created_at: old.created_at,
-            removed_at: old.removed_at,
+            created_at: s.created_at,
+            removed_at: s.removed_at,
+            interaction: s.interaction,
         }))
     }
 
@@ -988,7 +998,6 @@ impl ServiceMessages {
 
         match &op.kind {
             MessageOperationKind::MessageCreate(_) => {
-                // TODO: handle interactions
                 txn.message_create(crate::types::DbMessageCreate {
                     id: Some(op.message_id),
                     channel_id: op.channel.id,
@@ -1001,7 +1010,11 @@ impl ServiceMessages {
                     removed_at: op.stage.removed_at.map(|t| t.into()),
                     flume: None,
                     mentions: op.stage.sanitized.mentions.clone(),
-                    interaction: None,
+                    interaction: op
+                        .stage
+                        .interaction
+                        .clone()
+                        .map(|i| serde_json::to_value(i).unwrap()),
                     ephemeral: false,
                 })
                 .await?;

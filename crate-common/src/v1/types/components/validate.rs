@@ -954,9 +954,7 @@ impl Components<Thin> {
                 | ComponentType::Section {
                     components: children,
                     ..
-                } => {
-                    return Self::recursive_replace(children, target_id, replacements.clone());
-                }
+                } => Self::recursive_replace(children, target_id, replacements.clone()),
                 ComponentType::Details {
                     summary, details, ..
                 } => {

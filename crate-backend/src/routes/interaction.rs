@@ -7,7 +7,6 @@ use axum::response::IntoResponse;
 use common::v1::types::application::Scope;
 use common::v1::types::misc::InteractionMessageReq;
 use common::v1::{routes, types::Permission};
-use common::v2::types::MessageId;
 use lamprey_macros::handler;
 use tracing::warn;
 use utoipa_axum::router::OpenApiRouter;
@@ -64,7 +63,7 @@ async fn interaction_respond(
 
     let inter = srv
         .interactions
-        .respond(req.interaction_id, req.token, req.response)
+        .handle_callback(req.interaction_id, req.token, req.response)
         .await?;
 
     Ok((StatusCode::OK, Json(inter)))
@@ -78,44 +77,16 @@ async fn interaction_message_create(
     req: routes::interaction_message_create::Request,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let inter = srv.interactions.get(req.interaction_id).await?;
-
-    // FIXME: use timing safe equals
-    // or better yet, make token a newtype that is timing safe and cant be logged by default
-    // also, maybe move this check into the interactions service?
-    if inter.inner().token != Some(req.token) {
-        // TODO: make this an api ErrorCode
-        return Err(Error::BadStatic("unknown or expired interaction"));
-    }
-
-    let channel_id = inter
-        .inner()
-        .ty
-        .channel_id()
-        .ok_or(Error::BadStatic("interaction type has no channel id"))?;
-
-    let chan = srv.channels.get(channel_id, None).await?;
-    chan.ensure_has_text()?; // NOTE: maybe i should make interaction_message_create more flexible? eg. start a comment thread for document interactions?
-
-    // TODO: support timestamp massaging?
-    // let header_timestamp = req.timestamp.and_then(|secs| {
-    //     time::OffsetDateTime::from_unix_timestamp(secs)
-    //         .ok()
-    //         .map(Time::from)
-    // });
-
     let message = srv
-        .messages
-        .create(
-            channel_id,
+        .interactions
+        .handle_followup_message_create(
             &mut auth,
-            req.idempotency_key,
+            req.interaction_id,
+            req.token,
             req.message,
-            None,
-            MessageId::new(),
+            req.idempotency_key,
         )
         .await?;
-
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -127,7 +98,7 @@ async fn interaction_message_get(
     req: routes::interaction_message_get::Request,
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
-    let inter = srv.interactions.get(req.interaction_id).await?;
+    let inter = srv.interactions.get(req.interaction_id)?;
 
     if inter.inner().token != Some(req.token) {
         return Err(Error::BadStatic("unknown or expired interaction"));
