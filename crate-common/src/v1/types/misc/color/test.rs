@@ -1,3 +1,7 @@
+use std::str::FromStr;
+
+use crate::v1::types::misc::color::parse::ColorParseError;
+
 use super::*;
 
 #[test]
@@ -7,9 +11,9 @@ fn test_srgb_parsing() {
     assert_eq!(
         c,
         Color::Srgb(ColorSrgb {
-            r: 255,
-            g: 0,
-            b: 0,
+            r: 255.0,
+            g: 0.0,
+            b: 0.0,
             alpha: None
         })
     );
@@ -18,8 +22,8 @@ fn test_srgb_parsing() {
     // hex long with alpha
     let c = Color::from_str("#ff000080").unwrap();
     if let Color::Srgb(s) = c {
-        assert_eq!(s.r, 255);
-        assert_eq!(s.alpha, Some(128));
+        assert_eq!(s.r, 255.0);
+        assert_eq!(s.alpha, Some(128.0));
     } else {
         panic!("Wrong type");
     }
@@ -29,9 +33,9 @@ fn test_srgb_parsing() {
     assert_eq!(
         c,
         Color::Srgb(ColorSrgb {
-            r: 255,
-            g: 255,
-            b: 255,
+            r: 255.0,
+            g: 255.0,
+            b: 255.0,
             alpha: None
         })
     );
@@ -39,7 +43,7 @@ fn test_srgb_parsing() {
     // rgba functional with float alpha
     let c = Color::from_str("rgba(0, 0, 0, 0.5)").unwrap();
     if let Color::Srgb(s) = c {
-        assert_eq!(s.alpha, Some(127)); // 0.5 * 255 = 127.5, cast to 127
+        assert_eq!(s.alpha, Some(127.0)); // 0.5 * 255 = 127.5, cast to 127
     } else {
         panic!("Wrong type");
     }
@@ -101,7 +105,7 @@ fn test_named_parsing() {
     if let Color::Named(n) = c {
         assert_eq!(n.name, ColorName::Success);
         assert_eq!(n.variant.value(), 100);
-        assert_eq!(n.alpha, Some(25)); // 0.1 * 255 = 25.5
+        assert_eq!(n.alpha, Some(25.0)); // 0.1 * 255 = 25.5
     } else {
         panic!("Wrong type");
     }
@@ -154,13 +158,14 @@ fn test_roundtrip() {
     }
 }
 
+// TODO: test more error states
 #[test]
 fn test_empty_input() {
     let res = Color::from_str("");
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().code, ErrorCode::InvalidData);
+    assert_matches!(res.unwrap_err(), ColorParseError::Empty);
 
     let res = Color::from_str("   ");
     assert!(res.is_err());
-    assert_eq!(res.unwrap_err().code, ErrorCode::InvalidData);
+    assert_matches!(res.unwrap_err(), ColorParseError::Empty);
 }

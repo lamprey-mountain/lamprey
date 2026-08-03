@@ -1,11 +1,9 @@
-use core::fmt;
-use std::{ops::Deref, str::FromStr};
+use std::ops::Deref;
 use strum::{Display, EnumString};
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-
 use crate::v1::types::error::{ApiError, ApiResult, ErrorCode, ErrorField, ErrorFieldType};
+
+mod parse;
 
 /// a color
 ///
@@ -38,7 +36,7 @@ pub enum Color {
     Mystery(String),
 }
 
-/// a named (builtin) color
+/// a named builtin color to use from the theme
 ///
 /// **COLOR NAMES CURRENTLY UNSTABLE AND MAY CHANGE**
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumString, Display)]
@@ -102,30 +100,56 @@ pub enum ColorName {
     Success,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// TODO: hoist alpha to Color? ie:
+// pub struct Color {
+//     pub kind: ColorKind,
+//     pub alpha: Option<f32>,
+// }
+//
+// pub enum ColorKind {
+//     Srgb(ColorSrgb),
+//     Oklch(ColorOklch),
+//     Named(ColorNamed),
+//     Mystery(String),
+// }
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ColorNamed {
-    name: ColorName,
-    variant: ColorVariant,
-    alpha: Option<u8>,
+    pub name: ColorName,
+    pub variant: ColorVariant,
+
+    // 0.0 to 1.0
+    pub alpha: Option<f32>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ColorSrgb {
-    r: u8,
-    g: u8,
-    b: u8,
-    alpha: Option<u8>,
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+
+    // 0.0 to 1.0
+    pub alpha: Option<f32>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ColorOklch {
-    l: f32,             // 0.0 to 1.0 (or 0-100%)
-    c: f32,             // 0.0 to ~0.4
-    h: f32,             // 0.0 to 360.0
-    alpha: Option<f32>, // 0.0 to 1.0
+    // 0.0 to 1.0 (or 0-100%)
+    pub l: f32,
+
+    // 0.0 to ~0.4
+    pub c: f32,
+
+    // 0.0 to 360.0
+    pub h: f32,
+
+    // 0.0 to 1.0
+    pub alpha: Option<f32>,
 }
 
-// ColorOklch should never have NaN
+// Colors should never have NaN
+impl Eq for ColorNamed {}
+impl Eq for ColorSrgb {}
 impl Eq for ColorOklch {}
 
 /// a color variant
@@ -134,9 +158,37 @@ impl Eq for ColorOklch {}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ColorVariant(u16);
 
+impl ColorNamed {
+    pub fn alpha(&self) -> Option<f32> {
+        match self.alpha {
+            Some(1.0) | None => None,
+            Some(a) => Some(a),
+        }
+    }
+}
+
+impl ColorSrgb {
+    pub fn alpha(&self) -> Option<f32> {
+        match self.alpha {
+            Some(1.0) | None => None,
+            Some(a) => Some(a),
+        }
+    }
+}
+
+impl ColorOklch {
+    pub fn alpha(&self) -> Option<f32> {
+        match self.alpha {
+            Some(1.0) | None => None,
+            Some(a) => Some(a),
+        }
+    }
+}
+
 impl ColorVariant {
     /// create a new validated ColorVariant
     pub fn new(variant: u16) -> ApiResult<Self> {
+        // NOTE: do i want to restrict to these specific variants?
         if matches!(variant, 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800 | 900) {
             Ok(Self(variant))
         } else {
@@ -177,378 +229,29 @@ impl Deref for ColorVariant {
 }
 
 impl Color {
-    pub fn into_string(self) -> String {
-        self.to_string()
-    }
-}
-
-impl fmt::Display for Color {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Color::Srgb(c) => write!(f, "{}", c),
-            Color::Oklch(c) => write!(f, "{}", c),
-            Color::Named(c) => write!(f, "{}", c),
-            Color::Mystery(s) => write!(f, "{}", s),
-        }
-    }
-}
-
-impl fmt::Display for ColorSrgb {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(a) = self.alpha {
-            write!(f, "#{:02x}{:02x}{:02x}{:02x}", self.r, self.g, self.b, a)
-        } else {
-            write!(f, "#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
-        }
-    }
-}
-
-impl fmt::Display for ColorOklch {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(a) = self.alpha {
-            write!(
-                f,
-                "oklch({:.0}% {:.3} {:.2} / {:.2})",
-                self.l * 100.0,
-                self.c,
-                self.h,
-                a
-            )
-        } else {
-            write!(
-                f,
-                "oklch({:.0}% {:.3} {:.2})",
-                self.l * 100.0,
-                self.c,
-                self.h
-            )
-        }
-    }
-}
-
-impl fmt::Display for ColorNamed {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name.to_string())?;
-        if self.variant.value() != 500 {
-            write!(f, "-{}", self.variant.value())?;
-        }
-        if let Some(a) = self.alpha {
-            write!(f, ":{:.2}", a as f32 / 255.0)?;
-        }
-        Ok(())
-    }
-}
-
-impl Color {
     /// parse a color from a string, disallowing `Mystery` colors
     pub fn from_str_strict(s: &str) -> ApiResult<Self> {
-        let s = s.trim();
-        if s.is_empty() {
-            return Err(ApiError::from_code(ErrorCode::InvalidData));
-        }
-
-        if s.starts_with('#') || s.starts_with("rgb") {
-            if let Ok(c) = ColorSrgb::from_str(s) {
-                return Ok(Color::Srgb(c));
-            }
-        } else if s.starts_with("oklch") {
-            if let Ok(c) = ColorOklch::from_str(s) {
-                return Ok(Color::Oklch(c));
-            }
-        } else {
-            if let Ok(c) = ColorNamed::from_str(s) {
-                return Ok(Color::Named(c));
-            }
-        }
-
-        Err(ApiError::from_code(ErrorCode::InvalidData))
-    }
-}
-
-impl FromStr for Color {
-    type Err = ApiError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = s.trim();
-        if s.is_empty() {
-            return Err(ApiError::from_code(ErrorCode::InvalidData));
-        }
-
-        if s.starts_with('#') || s.starts_with("rgb") {
-            if let Ok(c) = ColorSrgb::from_str(s) {
-                return Ok(Color::Srgb(c));
-            }
-        } else if s.starts_with("oklch") {
-            if let Ok(c) = ColorOklch::from_str(s) {
-                return Ok(Color::Oklch(c));
-            }
-        } else {
-            if let Ok(c) = ColorNamed::from_str(s) {
-                return Ok(Color::Named(c));
-            }
-        }
-
-        Ok(Color::Mystery(s.to_string()))
-    }
-}
-
-impl FromStr for ColorSrgb {
-    type Err = ApiError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = s.trim().to_lowercase();
-
-        let parse_err = |msg: String| ApiError {
-            fields: vec![ErrorField {
-                key: vec![],
-                message: msg,
-                ty: ErrorFieldType::Other,
-            }],
-            ..ApiError::from_code(ErrorCode::InvalidData)
-        };
-
-        if s.starts_with('#') {
-            let hex = &s[1..];
-            match hex.len() {
-                3 | 4 => {
-                    let r = u8::from_str_radix(&hex[0..1], 16)
-                        .map_err(|_| parse_err("Invalid hex".into()))?
-                        * 17;
-                    let g = u8::from_str_radix(&hex[1..2], 16)
-                        .map_err(|_| parse_err("Invalid hex".into()))?
-                        * 17;
-                    let b = u8::from_str_radix(&hex[2..3], 16)
-                        .map_err(|_| parse_err("Invalid hex".into()))?
-                        * 17;
-                    let alpha = if hex.len() == 4 {
-                        Some(
-                            u8::from_str_radix(&hex[3..4], 16)
-                                .map_err(|_| parse_err("Invalid hex".into()))?
-                                * 17,
-                        )
-                    } else {
-                        None
-                    };
-                    Ok(ColorSrgb { r, g, b, alpha })
-                }
-                6 | 8 => {
-                    let r = u8::from_str_radix(&hex[0..2], 16)
-                        .map_err(|_| parse_err("Invalid hex".into()))?;
-                    let g = u8::from_str_radix(&hex[2..4], 16)
-                        .map_err(|_| parse_err("Invalid hex".into()))?;
-                    let b = u8::from_str_radix(&hex[4..6], 16)
-                        .map_err(|_| parse_err("Invalid hex".into()))?;
-                    let alpha = if hex.len() == 8 {
-                        Some(
-                            u8::from_str_radix(&hex[6..8], 16)
-                                .map_err(|_| parse_err("Invalid hex".into()))?,
-                        )
-                    } else {
-                        None
-                    };
-                    Ok(ColorSrgb { r, g, b, alpha })
-                }
-                _ => Err(parse_err(
-                    "Hex color must be 3, 4, 6, or 8 characters".into(),
-                )),
-            }
-        } else if s.starts_with("rgb") {
-            let inner = s
-                .split('(')
-                .nth(1)
-                .and_then(|s| s.split(')').next())
-                .ok_or_else(|| parse_err("Malformed rgb()".into()))?;
-            let parts: Vec<&str> = inner.split(',').map(|p| p.trim()).collect();
-
-            if parts.len() < 3 {
-                return Err(parse_err("rgb() requires at least 3 components".into()));
-            }
-
-            let r = parts[0]
-                .parse()
-                .map_err(|_| parse_err("Invalid R".into()))?;
-            let g = parts[1]
-                .parse()
-                .map_err(|_| parse_err("Invalid G".into()))?;
-            let b = parts[2]
-                .parse()
-                .map_err(|_| parse_err("Invalid B".into()))?;
-            let alpha = if parts.len() == 4 {
-                if parts[3].contains('.') {
-                    let a_f: f32 = parts[3]
-                        .parse()
-                        .map_err(|_| parse_err("Invalid alpha".into()))?;
-                    Some((a_f.clamp(0.0, 1.0) * 255.0) as u8)
-                } else {
-                    Some(
-                        parts[3]
-                            .parse()
-                            .map_err(|_| parse_err("Invalid alpha".into()))?,
-                    )
-                }
-            } else {
-                None
-            };
-            Ok(ColorSrgb { r, g, b, alpha })
-        } else {
-            Err(parse_err("Not a valid sRGB format".into()))
+        match s.parse()? {
+            Color::Mystery(_) => Err(ApiError::from_code(ErrorCode::InvalidData)),
+            c => Ok(c),
         }
     }
-}
 
-impl FromStr for ColorOklch {
-    type Err = ApiError;
+    /// returns this color's alpha component
+    pub fn alpha(&self) -> Option<f32> {
+        match self {
+            Color::Srgb(c) => c.alpha(),
+            Color::Oklch(c) => c.alpha(),
+            Color::Named(c) => c.alpha(),
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parse_err = |msg: &str| ApiError {
-            fields: vec![ErrorField {
-                key: vec![],
-                message: msg.to_string(),
-                ty: ErrorFieldType::Other,
-            }],
-            ..ApiError::from_code(ErrorCode::InvalidData)
-        };
-
-        let inner = s
-            .strip_prefix("oklch(")
-            .and_then(|s| s.strip_suffix(')'))
-            .ok_or_else(|| parse_err("Malformed oklch()"))?;
-
-        let (main, alpha_part) = inner
-            .split_once('/')
-            .map(|(m, a)| (m, Some(a.trim())))
-            .unwrap_or((inner, None));
-        let parts: Vec<&str> = main.split_whitespace().collect();
-
-        if parts.len() != 3 {
-            return Err(parse_err("oklch requires L C H"));
+            // colors in the older api never had alpha
+            Color::Mystery(_) => None,
         }
-
-        // Parse L (handle both 0.7 and 70%)
-        let l_raw = parts[0];
-        let l = if l_raw.ends_with('%') {
-            l_raw
-                .trim_end_matches('%')
-                .parse::<f32>()
-                .map_err(|_| parse_err("Invalid L"))?
-                / 100.0
-        } else {
-            l_raw.parse::<f32>().map_err(|_| parse_err("Invalid L"))?
-        };
-
-        let c = parts[1]
-            .parse::<f32>()
-            .map_err(|_| parse_err("Invalid C"))?;
-        let h = parts[2]
-            .parse::<f32>()
-            .map_err(|_| parse_err("Invalid H"))?;
-
-        let alpha = if let Some(a_str) = alpha_part {
-            Some(
-                a_str
-                    .parse::<f32>()
-                    .map_err(|_| parse_err("Invalid alpha"))?,
-            )
-        } else {
-            None
-        };
-
-        Ok(ColorOklch { l, c, h, alpha })
     }
-}
 
-impl FromStr for ColorNamed {
-    type Err = ApiError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (base, alpha_part) = s
-            .split_once(':')
-            .map(|(b, a)| (b, Some(a)))
-            .unwrap_or((s, None));
-        let (name_part, variant_part) = base
-            .split_once('-')
-            .map(|(n, v)| (n, Some(v)))
-            .unwrap_or((base, None));
-
-        let name = ColorName::from_str(name_part).map_err(|_| ApiError {
-            fields: vec![ErrorField {
-                key: vec![],
-                message: format!("Unknown color name '{name_part}'"),
-                ty: ErrorFieldType::Other,
-            }],
-            ..ApiError::from_code(ErrorCode::InvalidData)
-        })?;
-
-        let variant = if let Some(v_str) = variant_part {
-            let v_u16 = v_str
-                .parse()
-                .map_err(|_| ApiError::from_code(ErrorCode::InvalidData))?;
-            ColorVariant::new(v_u16)?
-        } else {
-            ColorVariant::default()
-        };
-
-        let alpha = if let Some(a_str) = alpha_part {
-            let a_f: f32 = a_str
-                .parse()
-                .map_err(|_| ApiError::from_code(ErrorCode::InvalidData))?;
-            Some((a_f.clamp(0.0, 1.0) * 255.0) as u8)
-        } else {
-            None
-        };
-
-        Ok(ColorNamed {
-            name,
-            variant,
-            alpha,
-        })
-    }
-}
-
-macro_rules! impl_serde_via_string {
-    ($t:ty) => {
-        impl Serialize for $t {
-            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: Serializer,
-            {
-                serializer.serialize_str(&self.to_string())
-            }
-        }
-
-        impl<'de> Deserialize<'de> for $t {
-            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-            where
-                D: Deserializer<'de>,
-            {
-                let s = String::deserialize(deserializer)?;
-                Self::from_str(&s).map_err(serde::de::Error::custom)
-            }
-        }
-    };
-}
-
-impl_serde_via_string!(Color);
-impl_serde_via_string!(ColorSrgb);
-impl_serde_via_string!(ColorOklch);
-impl_serde_via_string!(ColorNamed);
-
-impl Serialize for ColorVariant {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_u16(self.0)
-    }
-}
-
-impl<'de> Deserialize<'de> for ColorVariant {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let val = u16::deserialize(deserializer)?;
-        Self::new(val).map_err(serde::de::Error::custom)
+    /// returns whether this color contains an alpha component
+    pub fn has_alpha(&self) -> bool {
+        self.alpha().is_some()
     }
 }
 
