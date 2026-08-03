@@ -1,8 +1,4 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{
     Permission, RoleId, RoomMember, User, UserId,
@@ -14,21 +10,20 @@ use crate::v1::types::{
 /// a restriction on who can interact with this component
 ///
 /// *any* of the checks must pass (checks are or'd, not anded). if all of the fields are empty, nobody can interact.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct Allow {
     // TODO: deduplicate items in vecs
     /// only these users can interact
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub user_ids: Vec<UserId>,
 
     /// only these users with these roles can interact
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub role_ids: Vec<RoleId>,
 
     /// only these users with these permissions can interact
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub permissions: Vec<Permission>,
 }
 
