@@ -1,17 +1,37 @@
-import { createContext, For, Match, Switch, useContext } from "solid-js";
-import type { LampreyComponent, LampreyComponentMedia } from "ts-sdk";
+import {
+	createContext,
+	createSignal,
+	For,
+	Match,
+	Switch,
+	useContext,
+} from "solid-js";
+import type {
+	InteractionCreate,
+	InteractionCreateType,
+	InteractionErrorCode,
+	LampreyComponent,
+	LampreyComponentMedia,
+} from "ts-sdk";
+import { useApi } from "@/api";
 import { AudioView } from "@/media/Audio";
 import { FileView } from "@/media/File";
 import { ImageView } from "@/media/Image";
 import { TextView } from "@/media/Text";
 import { VideoView } from "@/media/Video";
+import type { MessageT } from "@/types";
 import { Markdown } from "./Markdown";
-
-type Interaction = { type: "click"; component: LampreyComponent };
 
 type ComponentContextT = {
 	channelId?: string;
-	handleInteraction(interaction: Interaction): void;
+	loading: boolean;
+	interaction: ComponentsInteraction;
+	handleInteraction(
+		interaction: Omit<
+			InteractionCreate,
+			"application_id" | "channel_id" | "message_id"
+		>,
+	): void;
 };
 
 const ComponentContext = createContext<ComponentContextT>();
@@ -26,23 +46,83 @@ function matches<S extends LampreyComponent>(
 	return predicate(e) ? e : false;
 }
 
-export const Components = (props: {
+export type ComponentsProps = {
 	components: Array<LampreyComponent>;
-	channelId?: string;
-}) => {
-	const context: ComponentContextT = {
-		// use getter for reactivity
-		get channelId() {
-			return props.channelId;
-		},
-		handleInteraction(interaction) {
-			// TODO: send to server or something
-			console.log("handle interaction", {
-				type: interaction.type,
-				// room_id, channel_id, message_id, application_id
-				// component_id, custom_id
-				// data, nonce
+	message?: MessageT;
+};
+
+type ComponentsInteractionReason = InteractionErrorCode | "Network";
+
+type ComponentsInteraction =
+	| { state: "empty" }
+	| { state: "failed"; custom_id?: string; reason: ComponentsInteractionReason }
+	| { state: "pending"; nonce: string; custom_id?: string };
+
+export const Components = (props: ComponentsProps) => {
+	const api = useApi();
+	const [interaction, setInteraction] = createSignal<ComponentsInteraction>({
+		state: "empty",
+	});
+
+	api.events.on("sync", ([sync]) => {
+		const i = interaction();
+		if (i.state !== "pending") return;
+
+		if (sync.type === "InteractionSuccess") {
+			if (i.nonce !== sync.nonce) return;
+			setInteraction({ state: "empty" });
+		} else if (sync.type === "InteractionFailure") {
+			if (i.nonce !== sync.nonce) return;
+			setInteraction({
+				state: "failed",
+				custom_id: i.custom_id,
+				reason: sync.error_code,
 			});
+		}
+	});
+
+	// getters are used for reactivity
+	const context: ComponentContextT = {
+		get channelId() {
+			return props.message?.channel_id;
+		},
+
+		get loading() {
+			return interaction().state === "pending";
+		},
+
+		get interaction() {
+			return interaction();
+		},
+
+		handleInteraction(it) {
+			const m = props.message;
+			if (!m) return;
+
+			const body = {
+				...it,
+				channel_id: m.channel_id,
+				application_id: m.author_id,
+				message_id: m.id,
+			};
+
+			const nonce = "interaction-" + Math.random().toString(36).slice(2);
+			setInteraction({ state: "pending", nonce, custom_id: body.custom_id });
+
+			api.client.http
+				.POST("/api/v1/interaction", {
+					body,
+					headers: {
+						"Idempotency-Key": nonce,
+					},
+				})
+				.catch(() =>
+					setInteraction({
+						state: "failed",
+						custom_id: body.custom_id,
+						reason: "Network",
+					}),
+				);
 		},
 	};
 
@@ -92,10 +172,18 @@ const ComponentRenderer = (props: { component: LampreyComponent }) => {
 			<Match when={matches(props.component, (e) => e.type === "Button")}>
 				{(m) => (
 					<button
-						class={`button component-button button-${m().style.toLowerCase()}`}
-						onClick={() =>
-							c.handleInteraction({ type: "click", component: m() })
-						}
+						class="button component-button"
+						classList={{
+							primary: m().style === "Primary",
+							danger: m().style === "Danger",
+						}}
+						disabled={c.loading}
+						onClick={() => {
+							c.handleInteraction({
+								type: "Button",
+								custom_id: m().custom_id,
+							});
+						}}
 					>
 						{m().label}
 					</button>

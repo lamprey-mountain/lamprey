@@ -3,6 +3,7 @@ import type { ReactiveSet } from "@solid-primitives/set";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import {
 	createEffect,
+	createMemo,
 	createResource,
 	createSignal,
 	For,
@@ -47,6 +48,14 @@ export const Comment = (props: {
 	const isSelected = () => ch.selectedMessages?.includes(message().id) ?? false;
 	const isReplyTarget = () => ch.reply_id === message().id;
 	const inSelectMode = () => ch.selectMode ?? false;
+
+	const components = createMemo(() => {
+		const v = props.node.message.latest_version;
+		if (v.type !== "DefaultMarkdown") return;
+		if (!v.components?.length) return;
+		if (flume()) return;
+		return v.components;
+	});
 
 	const currentUser = useCurrentUser();
 	const isOwnMessage = () => {
@@ -312,26 +321,14 @@ export const Comment = (props: {
 
 							<Show when={flume()}>
 								{(f) => (
-									<Components
-										components={f().components}
-										channelId={message().channel_id}
-									/>
+									<Components components={f().components} message={message()} />
 								)}
 							</Show>
 
-							<Show
-								when={
-									message().latest_version.type === "DefaultMarkdown" &&
-									(message().latest_version as any).components?.length &&
-									!flume()
-								}
-							>
-								<Components
-									components={
-										(message().latest_version as any).components ?? []
-									}
-									channelId={message().channel_id}
-								/>
+							<Show when={components()}>
+								{(components) => (
+									<Components components={components()} message={message()} />
+								)}
 							</Show>
 						</Show>
 					</div>

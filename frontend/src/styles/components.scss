@@ -51,36 +51,8 @@
 
 	.component-button {
 		align-self: start;
-		border: solid color-mix(in srgb, var(--button-color) 70%, transparent) 1px;
-		background: color-mix(in srgb, var(--button-color) 70%, transparent);
-		color: $fg-100;
-		border-radius: 3px;
-		padding: 3px 5px;
-
-		&:hover,
-		&:focus-visible {
-			background: color-mix(in srgb, var(--button-color) 50%, transparent);
-		}
-	}
-
-	.button-primary {
-		--button-color: oklch(var(--color-link-500));
-	}
-
-	.button-secondary {
-		--button-color: oklch(var(--color-sep));
-	}
-
-	.button-danger {
-		--button-color: oklch(var(--color-red));
-	}
-
-	.button-warning {
-		--button-color: oklch(var(--color-yellow));
-	}
-
-	.button-success {
-		--button-color: oklch(var(--color-green));
+		border-radius: 2px;
+		padding: 4px 6px;
 	}
 
 	.details {

@@ -344,3 +344,10 @@ export type UserStatus = components["schemas"]["Status"];
 export type Presence = components["schemas"]["Presence"];
 export type PresenceActivity = components["schemas"]["Activity"];
 export type Serdoc = { components: LampreyComponent[] };
+
+export type Interaction = components["schemas"]["Interaction"];
+export type InteractionCreate = components["schemas"]["InteractionCreate"];
+export type InteractionCreateType =
+	components["schemas"]["InteractionCreateType"];
+export type InteractionErrorCode =
+	components["schemas"]["InteractionErrorCode"];

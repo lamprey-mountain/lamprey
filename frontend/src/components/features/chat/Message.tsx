@@ -934,10 +934,7 @@ function DefaultMessage(
 				{/* flume */}
 				<Show when={flume()}>
 					{(f) => (
-						<Components
-							components={f().components}
-							channelId={props.message.channel_id}
-						/>
+						<Components components={f().components} message={props.message} />
 					)}
 				</Show>
 
@@ -945,7 +942,7 @@ function DefaultMessage(
 				<Show when={version()?.components?.length && !flume()}>
 					<Components
 						components={version()?.components ?? []}
-						channelId={props.message.channel_id}
+						message={props.message}
 					/>
 				</Show>
 
