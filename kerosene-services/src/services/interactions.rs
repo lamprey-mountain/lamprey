@@ -1,5 +1,3 @@
-#![allow(unused)] // TEMP: suppress warnings here for now
-
 // TODO: impl accepting interactions via webhooks
 
 use std::sync::Arc;
@@ -19,7 +17,7 @@ use uuid::Uuid;
 use crate::{Result, prelude::*};
 
 /// how long applications have to respond to an interaction
-const INTERACTION_LIFETIME: Duration = Duration::from_secs(30);
+const INTERACTION_LIFETIME: Duration = Duration::from_secs(5);
 
 /// how long applications have to send follow messages after responding to an interaction
 const INTERACTION_FOLLOWUP_LIFETIME: Duration = Duration::from_secs(60 * 15);
