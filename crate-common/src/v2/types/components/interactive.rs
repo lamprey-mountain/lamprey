@@ -25,7 +25,6 @@ pub enum ButtonStyle {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(feature = "validator", derive(Validate))]
-// TODO: impl From<String> for Label
 // TODO: impl Label pub fn new(text: impl Into<String>, description: ???)
 pub struct Label {
     /// the label text
@@ -192,3 +191,12 @@ pub struct SelectOption {
 
 // interaction response type: input validation failed
 // interaction response type: dynamic select options
+
+impl<S: Into<String>> From<S> for Label {
+    fn from(text: S) -> Self {
+        Label {
+            text: text.into(),
+            description: None,
+        }
+    }
+}

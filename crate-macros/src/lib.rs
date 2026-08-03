@@ -14,8 +14,10 @@ pub fn derive_diff(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn record(_args: TokenStream, input: TokenStream) -> TokenStream {
-    record::expand(input)
+pub fn record(args: TokenStream, input: TokenStream) -> TokenStream {
+    record::expand(args.into(), input.into())
+        .unwrap_or_else(|e| e.to_compile_error())
+        .into()
 }
 
 /// macro to generate components

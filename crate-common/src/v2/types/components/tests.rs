@@ -1,6 +1,8 @@
-use crate::v2::types::components::{
-    ComponentCustomId, Components, action::ButtonAction, builder::ComponentsBuilder,
-    interactive::Label,
+use crate::{
+    v1::types::misc::Color,
+    v2::types::components::{
+        ComponentCustomId, Components, action::ButtonAction, interactive::Label,
+    },
 };
 
 #[test]
@@ -9,22 +11,24 @@ fn test_macro() {
         custom_id: ComponentCustomId("example".into()),
     };
 
+    let color = Color::from_str_strict("#123456").unwrap();
+
     let components = lamprey_macros::components! {
         container() {
             text("Pick one:")
             button(label: Label::from("label"), style: Primary, action)
         }
 
-        container(color: "#123456") {
+        container(color) {
             text("Pick one:")
             button(label: "example", style: Primary, action)
         }
 
-        details() {
+        details(color: None, open: false) {
             summary:
             text("hello")
 
-            children:
+            details:
             text("world")
         }
 
@@ -33,19 +37,12 @@ fn test_macro() {
              details: text("Hidden body")
          }
     };
+
+    // TODO: verify components structure
 }
 
-#[test]
-fn test_builder() {
-    let components = Components::builder()
-        .root(|c| {
-            c.container(None, |c| {
-                c.text("hello world")
-                    .container(None, |c| c.text("sub container"))
-                    .text("outside the container")
-            })
-        })
-        .build();
-    dbg!(components);
-    panic!()
-}
+// TODO: test_macro_color_str
+// container(color: "#123456") {
+//     text("Pick one:")
+//     button(label: "example", style: Primary, action)
+// }

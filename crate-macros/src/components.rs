@@ -19,9 +19,22 @@ pub fn expand(item: TokenStream) -> syn::Result<TokenStream> {
 
     let krate = common_crate();
 
+    // FIXME: populate roots field
+    // FIXME: populate media field
+    // FIXME: set id field for each component. prioritize user-specified id, fall back to sequential ids (like with IdAllocator)
+
+    // TODO: defaults for fields (eg. default container/section/details color to None, details open to false, etc...)
+    // TODO: imply format!() for text(...)
+    // TODO: but also let text(...) accept anything that impls Display, Option
+
+    // future work
+    // TODO: accept iterators for lists/children components
+    // TODO: maybe add pseudo components to generate markdown? (table, ul, ol)
+    // TODO: component update syntax? maybe with an option to construct FlumeDelta?
+
     Ok(quote! {
-        #krate::v2::types::components::types::components::Components {
-            inner: vec![ #(#components),* ],
+        #krate::v2::types::components::types::Components {
+            items: vec![ #(#components),* ],
             ..::std::default::Default::default()
         }
     })
@@ -160,7 +173,11 @@ impl Component {
                 let n = a.name.to_string();
                 n != "id" && n != "allow"
             })
-            .map(|a| a.resolve(&ty.to_string()));
+            .map(|a| {
+                let resolved = a.resolve(&ty.to_string());
+                let name = &a.name;
+                quote! { #name: #resolved.into() }
+            });
 
         let mut sections: Vec<(Ident, Vec<TokenStream>)> = Vec::new();
         for group in self.children {
@@ -202,6 +219,16 @@ impl Arg {
         let value = self.value.clone();
         match (self.name.to_string().as_str(), ty) {
             ("style", "Button") => map_button_style(quote! { #value }),
+
+            // TODO: parse Color from string?
+            // ("color", "Container" | "Details" | "Section") => match value {
+            //     Expr::Lit(ExprLit {
+            //         lit: Lit::Str(s), ..
+            //     }) => {
+            //         todo!()
+            //     }
+            //     _ => quote! { #value },
+            // },
             _ => quote! { #value },
         }
     }
