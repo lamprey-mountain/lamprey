@@ -1,5 +1,6 @@
 import {
 	createContext,
+	createSelector,
 	createSignal,
 	For,
 	Match,
@@ -7,6 +8,7 @@ import {
 	useContext,
 } from "solid-js";
 import type {
+	InteractionAllow,
 	InteractionCreate,
 	InteractionCreateType,
 	InteractionErrorCode,
@@ -14,6 +16,8 @@ import type {
 	LampreyComponentMedia,
 } from "ts-sdk";
 import { useApi } from "@/api";
+import { useCurrentUser } from "@/contexts/currentUser";
+import { usePermissions } from "@/hooks/usePermissions";
 import { AudioView } from "@/media/Audio";
 import { FileView } from "@/media/File";
 import { ImageView } from "@/media/Image";
@@ -21,11 +25,15 @@ import { TextView } from "@/media/Text";
 import { VideoView } from "@/media/Video";
 import type { MessageT } from "@/types";
 import { Markdown } from "./Markdown";
+import { Icon } from "./Icon";
+import { icGear } from "@/utils/icons";
 
 type ComponentContextT = {
 	channelId?: string;
 	loading: boolean;
 	interaction: ComponentsInteraction;
+	isInteracted(id: string | undefined): boolean;
+	check(a: InteractionAllow | undefined): boolean;
 	handleInteraction(
 		interaction: Omit<
 			InteractionCreate,
@@ -64,6 +72,19 @@ export const Components = (props: ComponentsProps) => {
 		state: "empty",
 	});
 
+	const isInteracted = createSelector(() => {
+		const i = interaction();
+		if (i.state === "pending") return i.custom_id;
+		return null;
+	});
+
+	const me = useCurrentUser();
+	const perms = usePermissions(
+		() => me()?.id,
+		() => props.message?.room_id ?? undefined,
+		() => props.message?.channel_id,
+	);
+
 	api.events.on("sync", ([sync]) => {
 		const i = interaction();
 		if (i.state !== "pending") return;
@@ -91,8 +112,26 @@ export const Components = (props: ComponentsProps) => {
 			return interaction().state === "pending";
 		},
 
+		isInteracted,
+
 		get interaction() {
 			return interaction();
+		},
+
+		check(a: InteractionAllow | undefined) {
+			if (!a) return true;
+
+			const u = me();
+			if (!u) return false;
+
+			if (a.user_ids?.includes(u.id)) return true;
+
+			const p = perms.permissions();
+			if (a.role_ids?.some((r) => p.roles.has(r))) return true;
+
+			if (a.permissions?.some((a) => p.permissions.has(a))) return true;
+
+			return false;
 		},
 
 		handleInteraction(it) {
@@ -139,6 +178,10 @@ export const Components = (props: ComponentsProps) => {
 
 const ComponentRenderer = (props: { component: LampreyComponent }) => {
 	const c = useComponents();
+
+	const disabled = () =>
+		c.loading || !c.check(props.component.allow ?? undefined);
+
 	return (
 		<Switch>
 			<Match when={matches(props.component, (e) => e.type === "Text")}>
@@ -176,8 +219,9 @@ const ComponentRenderer = (props: { component: LampreyComponent }) => {
 						classList={{
 							primary: m().style === "Primary",
 							danger: m().style === "Danger",
+							interacted: c.isInteracted(m().custom_id),
 						}}
-						disabled={c.loading}
+						disabled={disabled()}
 						onClick={() => {
 							c.handleInteraction({
 								type: "Button",
@@ -185,6 +229,7 @@ const ComponentRenderer = (props: { component: LampreyComponent }) => {
 							});
 						}}
 					>
+						<Icon src={icGear} />
 						{m().label}
 					</button>
 				)}

@@ -351,3 +351,4 @@ export type InteractionCreateType =
 	components["schemas"]["InteractionCreateType"];
 export type InteractionErrorCode =
 	components["schemas"]["InteractionErrorCode"];
+export type InteractionAllow = components["schemas"]["Allow"];

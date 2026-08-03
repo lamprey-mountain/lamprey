@@ -9,6 +9,7 @@ export interface PermissionContext {
 
 export interface ResolvedPermissions {
 	permissions: Set<Permission>;
+	roles: Set<string>;
 	rank: number;
 	timedOut: boolean;
 	quarantined: boolean;
@@ -185,6 +186,7 @@ export function calculatePermissions(
 		*/
 		return {
 			permissions: new Set(defaultPermissions),
+			roles: new Set(),
 			rank: 0,
 			timedOut: false,
 			quarantined: false,
@@ -197,6 +199,7 @@ export function calculatePermissions(
 		// permLog.debug("no room_id provided, returning empty permissions");
 		return {
 			permissions: new Set<Permission>(),
+			roles: new Set(),
 			rank: 0,
 			timedOut: false,
 			quarantined: false,
@@ -213,20 +216,21 @@ export function calculatePermissions(
 	});
 	*/
 
+	const member = ctx.api.roomMembers.cache.get(`${rid}:${user_id}`);
+	const roles = ctx.api.roles.listByRoom(rid);
+
 	if (room?.owner_id === user_id) {
 		// owners have full permissions (ViewChannel and Admin)
 		// permLog.debug("user is room owner, returning full permissions");
 		return {
 			permissions: ADMIN_PERMS_SET,
+			roles: new Set(member?.roles),
 			rank: Infinity,
 			timedOut: false,
 			quarantined: false,
 			lurker: false,
 		};
 	}
-
-	const member = ctx.api.roomMembers.cache.get(`${rid}:${user_id}`);
-	const roles = ctx.api.roles.listByRoom(rid);
 
 	/*
 	permLog.debug("member and roles lookup", {
@@ -265,6 +269,7 @@ export function calculatePermissions(
 				*/
 				return {
 					permissions: restricted,
+					roles: new Set(member?.roles),
 					rank: 0,
 					timedOut: false,
 					quarantined: false,
@@ -279,6 +284,7 @@ export function calculatePermissions(
 		*/
 		return {
 			permissions: new Set(),
+			roles: new Set(member?.roles),
 			rank: 0,
 			timedOut: false,
 			quarantined: false,
@@ -329,6 +335,7 @@ export function calculatePermissions(
 		// permLog.debug("user has admin, returning full permissions");
 		return {
 			permissions: perms,
+			roles: new Set(member?.roles),
 			rank,
 			timedOut: false,
 			quarantined: false,
@@ -358,6 +365,7 @@ export function calculatePermissions(
 		// permLog.debug("user is timed out, applying restrictions");
 		return {
 			permissions: restricted,
+			roles: new Set(member?.roles),
 			rank: calculateRank(roles, member.roles),
 			timedOut: true,
 			quarantined: false,
@@ -371,6 +379,7 @@ export function calculatePermissions(
 		// permLog.debug("user is quarantined, applying restrictions");
 		return {
 			permissions: restricted,
+			roles: new Set(member?.roles),
 			rank: calculateRank(roles, member.roles),
 			timedOut: false,
 			quarantined: true,
@@ -399,6 +408,7 @@ export function calculatePermissions(
 
 	return {
 		permissions: perms,
+		roles: new Set(member?.roles),
 		rank,
 		timedOut: false,
 		quarantined: false,

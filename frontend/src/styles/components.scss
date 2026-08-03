@@ -50,9 +50,22 @@
 	}
 
 	.component-button {
+		display: flex;
 		align-self: start;
+		align-items: center;
 		border-radius: 2px;
 		padding: 4px 6px;
+
+		& > .icon2 {
+			display: none;
+			margin-right: 4px;
+		}
+
+		&.interacted > .icon2 {
+			display: block;
+			background: $fg-600;
+			animation: spin infinite 800ms linear;
+		}
 	}
 
 	.details {
