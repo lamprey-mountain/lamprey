@@ -299,7 +299,11 @@ export const Comment = (props: {
 											<Show when={version.attachments?.length}>
 												<ul class="attachments">
 													<For each={version.attachments}>
-														{(att) => <AttachmentView att={att} />}
+														{(att) => (
+															<li>
+																<AttachmentView att={att} />
+															</li>
+														)}
 													</For>
 												</ul>
 											</Show>

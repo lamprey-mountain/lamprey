@@ -74,11 +74,9 @@
 		position: absolute;
 		top: 0;
 		width: 100%;
-		background-image: linear-gradient(
-			to bottom,
+		background-image: linear-gradient(to bottom,
 			oklch(var(--color-bg1) / 0.6) 50%,
-			transparent
-		);
+			transparent);
 
 		& > .info {
 			padding: 4px;
@@ -372,10 +370,10 @@
 
 		& > img {
 			grid-area: thumb;
-			margin: 4px;
-			margin-left: 0px;
+			margin-right: 8px;
 			height: 32px;
 			width: 32px;
+			overflow: hidden;
 			object-fit: cover;
 			align-self: center;
 		}
@@ -384,6 +382,7 @@
 	& > .controls {
 		grid-area: controls;
 		display: flex;
+		margin-top: 4px;
 
 		& > button {
 			background: $bg-200;
@@ -407,5 +406,72 @@
 				color: $link-500;
 			}
 		}
+	}
+}
+
+.media.file {
+	background-color: $bg-300;
+	padding: 4px;
+	border: solid $bg-400 1px;
+
+	// NOTE: maybe add?
+	// border-radius: 4px;
+
+	& > .top {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+
+		& > .icon2 {
+			background: $fg-600;
+		}
+	}
+}
+
+.media.three {
+	position: relative;
+	background-color: $bg-300;
+	border: solid $bg-400 1px;
+	min-height: 300px;
+	min-width: 300px;
+	contain: strict;
+
+	// NOTE: maybe add?
+	// border-radius: 4px;
+
+	& > .top {
+		position: absolute;
+		top: 0;
+		padding: 4px;
+		width: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		background: linear-gradient(to bottom, #aaa1 50%, transparent 100%);
+		padding-bottom: 8px;
+		transition: translate 150ms;
+
+		& > .icon2 {
+			background: $fg-600;
+		}
+
+		& > .info {
+			display: flex;
+			align-items: center;
+		}
+	}
+
+	&.hide-ui {
+		cursor: none;
+
+		& > .top {
+			translate: 0 -100%;
+		}
+	}
+
+	& > .media-loader {
+		display: flex;
+		// prevent covering .top while loading
+		align-items: end;
 	}
 }

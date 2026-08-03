@@ -122,6 +122,7 @@ type ResizeProps = {
 };
 type LoaderProps = { loaded: boolean };
 
+// TODO: move into a hook instead of wrapper?
 export const Resize = (props: ParentProps<ResizeProps>) => {
 	return (
 		<div
@@ -138,6 +139,7 @@ export const Resize = (props: ParentProps<ResizeProps>) => {
 };
 
 // TODO: redo media loader animation
+// TODO: smooth transition when loading is done
 export const Loader = (props: VoidProps<LoaderProps>) => {
 	return (
 		<div

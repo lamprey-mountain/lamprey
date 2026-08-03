@@ -228,7 +228,7 @@ export const AudioView = (props: MediaProps) => {
 	});
 
 	return (
-		<article class="audio">
+		<article class="media audio">
 			<svg
 				aria-hidden="true"
 				class="progress"

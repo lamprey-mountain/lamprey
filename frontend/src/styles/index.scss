@@ -1144,11 +1144,6 @@ input[type="url"] {
 	margin-bottom: 8px;
 	scrollbar-width: none;
 
-	& > li:not(.raw) {
-		background-color: $bg-300;
-		padding: 4px;
-	}
-
 	& > li {
 		min-width: 0;
 	}

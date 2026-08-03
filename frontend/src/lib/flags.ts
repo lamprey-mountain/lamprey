@@ -49,6 +49,7 @@ export const allFlags = [
 	{ id: "sync_deflate" },
 	{ id: "channel_create_private" },
 	{ id: "channel_tickets" },
+	{ id: "media_three" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -77,6 +78,7 @@ const flagsDev: Flag[] = [
 	"sync_deflate",
 	"channel_create_private",
 	"channel_tickets",
+	"media_three",
 ];
 
 const flagsProd: Flag[] = [

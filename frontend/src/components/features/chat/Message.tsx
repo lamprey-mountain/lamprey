@@ -3,6 +3,7 @@ import {
 	type Attachment,
 	type Channel as ChannelT,
 	getTimestampFromUUID,
+	Media,
 	type Message as MessageT,
 	type MessageVersion as MessageVersionT,
 	type Preferences,
@@ -57,14 +58,17 @@ import { useMenu, useUserPopout } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
 import { useReadTracking } from "@/contexts/read-tracking.tsx";
 import { colors } from "@/lib/colors.ts";
+import { flags } from "@/lib/flags.ts";
 import { countEmojiOnly } from "@/lib/markdown";
 import {
 	AudioView,
 	FileView,
 	ImageView,
 	TextView,
+	ThreeView,
 	VideoView,
 } from "@/media/mod.tsx";
+import { is3D } from "@/media/three-util.ts";
 import { openThread } from "@/utils/channel";
 import {
 	icChannelMove,
@@ -546,42 +550,45 @@ export function ReplyView(props: {
 }
 
 export function AttachmentView(props: { att: Attachment }) {
-	if (props.att.type !== "Media" || !props.att.media) return null;
-	const b = () => props.att.media?.content_type.split("/")[0];
-	if (b() === "image") {
-		return (
-			<li class="raw">
-				<ImageView media={props.att.media} />
-			</li>
-		);
-	} else if (b() === "video") {
-		return (
-			<li class="raw">
-				<VideoView media={props.att.media} />
-			</li>
-		);
-	} else if (b() === "audio") {
-		return (
-			<li class="raw">
-				<AudioView media={props.att.media} />
-			</li>
-		);
-	} else if (
-		b() === "text" ||
-		/^application\/json\b/.test(props.att.media?.content_type)
-	) {
-		return (
-			<li class="raw">
-				<TextView media={props.att.media} />
-			</li>
-		);
-	} else {
-		return (
-			<li>
-				<FileView media={props.att.media} />
-			</li>
-		);
-	}
+	const contentType = createMemo(() => props.att.media?.content_type);
+	const mainCt = createMemo(() => contentType()?.split("/")[0]);
+
+	// TODO: better mime type parsing/matching for application/json
+	// TODO: split out media to MediaView
+
+	return (
+		<Switch>
+			<Match when={props.att.type === "Media" && props.att.media}>
+				{(media) => (
+					<Switch>
+						<Match when={mainCt() === "image"}>
+							<ImageView media={media()} />
+						</Match>
+						<Match when={mainCt() === "video"}>
+							<VideoView media={media()} />
+						</Match>
+						<Match when={mainCt() === "audio"}>
+							<AudioView media={media()} />
+						</Match>
+						<Match
+							when={
+								mainCt() === "text" ||
+								/^application\/json\b/.test(contentType())
+							}
+						>
+							<TextView media={media()} />
+						</Match>
+						<Match when={flags.has("media_three") && is3D(media())}>
+							<ThreeView media={media()} />
+						</Match>
+						<Match when={true}>
+							<FileView media={media()} />
+						</Match>
+					</Switch>
+				)}
+			</Match>
+		</Switch>
+	);
 }
 
 // TODO: rename to Message
@@ -917,7 +924,11 @@ function DefaultMessage(
 				<Show when={version()?.attachments?.length}>
 					<ul class="attachments">
 						<For each={version()?.attachments}>
-							{(att) => <AttachmentView att={att} />}
+							{(att) => (
+								<li>
+									<AttachmentView att={att} />
+								</li>
+							)}
 						</For>
 					</ul>
 				</Show>

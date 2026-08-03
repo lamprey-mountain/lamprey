@@ -18,15 +18,18 @@ import type {
 import { useApi } from "@/api";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { usePermissions } from "@/hooks/usePermissions";
+import { flags } from "@/lib/flags";
 import { AudioView } from "@/media/Audio";
 import { FileView } from "@/media/File";
 import { ImageView } from "@/media/Image";
+import { ThreeView } from "@/media/mod";
 import { TextView } from "@/media/Text";
+import { is3D } from "@/media/three-util";
 import { VideoView } from "@/media/Video";
 import type { MessageT } from "@/types";
-import { Markdown } from "./Markdown";
-import { Icon } from "./Icon";
 import { icGear } from "@/utils/icons";
+import { Icon } from "./Icon";
+import { Markdown } from "./Markdown";
 
 type ComponentContextT = {
 	channelId?: string;
@@ -278,6 +281,7 @@ const ComponentRenderer = (props: { component: LampreyComponent }) => {
 	);
 };
 
+// TODO: deduplicate code with AttachmentView
 const MediaItem = (props: { media: LampreyComponentMedia }) => {
 	const b = () => props.media.media.content_type.split("/")[0];
 	const isJson = () =>
@@ -297,6 +301,9 @@ const MediaItem = (props: { media: LampreyComponentMedia }) => {
 				</Match>
 				<Match when={b() === "text" || isJson()}>
 					<TextView media={props.media.media} />
+				</Match>
+				<Match when={flags.has("media_three") && is3D(props.media.media)}>
+					<ThreeView media={props.media.media} />
 				</Match>
 				<Match when={true}>
 					<FileView media={props.media.media} />

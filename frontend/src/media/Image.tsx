@@ -40,7 +40,7 @@ export const ImageView = (props: ImageViewProps) => {
 	return (
 		<Resize height={height()} width={width()} ratio={width() / height()}>
 			<article
-				class="image"
+				class="media image"
 				onClick={(e) => {
 					e.stopPropagation();
 					modalctl.open({ type: "media", media: props.media });
