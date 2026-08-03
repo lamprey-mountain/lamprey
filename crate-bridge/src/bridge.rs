@@ -44,6 +44,7 @@ pub struct PortalDiscord {
     pub webhook_url: Url,
     pub last_id: discord::MessageId,
 }
+
 /// metadata for a single logical message
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Message {

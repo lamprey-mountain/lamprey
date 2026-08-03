@@ -1,12 +1,16 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use serenity::all::{ExecuteWebhook, GatewayIntents, Mentionable};
+use serenity::all::{
+    CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage, ExecuteWebhook,
+    GatewayIntents, Mentionable,
+};
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinSet;
 use tracing::{debug, info, warn};
 
 use crate::bridge::{MessageData, PlatformHandle, Portal, PortalHandle, PortalId};
+use crate::discord::events::DiscordEvent;
 use crate::prelude::*;
 use crate::{
     bridge::{BridgeEvent, BridgeHandle, PortalEvent},
@@ -95,18 +99,55 @@ impl Discord {
                     self.handle_bridge_event(&event);
                 }
                 Some(event) = self.rx.recv() => {
-                    match event {
-                        events::DiscordEvent::MessageCreate(message) => {
-                            self.route_portal_event(
-                                message.channel_id,
-                                PortalEvent::MessageCreate(MessageData::Discord {
-                                    message: Box::new(message),
-                                }),
-                            );
-                        }
-                    }
+                    self.handle_discord_event(event);
                 }
             }
+        }
+    }
+
+    fn handle_discord_event(&self, event: DiscordEvent) {
+        match event {
+            DiscordEvent::MessageCreate(message) => {
+                self.route_portal_event(
+                    message.channel_id,
+                    PortalEvent::MessageCreate(MessageData::Discord {
+                        message: Box::new(message),
+                    }),
+                );
+            }
+            DiscordEvent::InteractionCreate(command) => match command.inner {
+                interactions::SlashCommandType::Ping => {
+                    // TODO: better error handling
+                    // TODO: better task supervision
+                    let http = self.http.clone();
+                    tokio::spawn(async move {
+                        let _ = command
+                            .interaction
+                            .create_response(
+                                &http,
+                                CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new()
+                                        .ephemeral(true)
+                                        .content("pong!"),
+                                ),
+                            )
+                            .await;
+                    });
+                }
+                interactions::SlashCommandType::LinkGuild {
+                    discord_guild_id,
+                    lamprey_room_id,
+                    backfill,
+                    continuous,
+                } => todo!(),
+                interactions::SlashCommandType::LinkChannel {
+                    discord_channel_id,
+                    lamprey_channel_id,
+                    backfill,
+                } => todo!(),
+                interactions::SlashCommandType::UnlinkGuild { discord_guild_id } => todo!(),
+                interactions::SlashCommandType::UnlinkChannel { discord_channel_id } => todo!(),
+            },
         }
     }
 

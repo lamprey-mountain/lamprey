@@ -1,5 +1,5 @@
 use serenity::all::{
-    CommandDataOptionValue, CommandInteraction, CommandOptionType, CreateCommand,
+    ChannelId, CommandDataOptionValue, CommandInteraction, CommandOptionType, CreateCommand,
     CreateCommandOption, InteractionContext, Permissions,
 };
 
@@ -7,7 +7,20 @@ use crate::prelude::*;
 
 /// a slash command from discord
 #[derive(Debug)]
-pub enum SlashCommand {
+pub struct SlashCommand {
+    pub interaction: CommandInteraction,
+    pub inner: SlashCommandType,
+}
+
+impl SlashCommand {
+    pub fn channel_id(&self) -> ChannelId {
+        self.interaction.channel_id
+    }
+}
+
+/// a slash command from discord
+#[derive(Debug)]
+pub enum SlashCommandType {
     /// check if the bridge is alive
     Ping,
 
@@ -108,9 +121,9 @@ pub fn get_commands() -> Vec<CreateCommand> {
     vec![ping, link, unlink]
 }
 
-pub fn parse_interaction(interaction: &CommandInteraction) -> Result<SlashCommand> {
-    match interaction.data.name.as_str() {
-        "ping" => Ok(SlashCommand::Ping),
+pub fn parse_interaction(interaction: CommandInteraction) -> Result<SlashCommand> {
+    let inner = match interaction.data.name.as_str() {
+        "ping" => SlashCommandType::Ping,
         "link" => {
             let subcommand = interaction
                 .data
@@ -137,14 +150,14 @@ pub fn parse_interaction(interaction: &CommandInteraction) -> Result<SlashComman
                     let room_id = room_id_str
                         .ok_or_else(|| anyhow::anyhow!("missing room_id"))?
                         .parse()?;
-                    Ok(SlashCommand::LinkGuild {
+                    SlashCommandType::LinkGuild {
                         discord_guild_id: interaction
                             .guild_id
                             .ok_or_else(|| anyhow::anyhow!("not in guild"))?,
                         lamprey_room_id: room_id,
                         backfill,
                         continuous,
-                    })
+                    }
                 }
                 "channel" => {
                     let mut channel_id_str = None;
@@ -161,13 +174,13 @@ pub fn parse_interaction(interaction: &CommandInteraction) -> Result<SlashComman
                     let channel_id = channel_id_str
                         .ok_or_else(|| anyhow::anyhow!("missing channel_id"))?
                         .parse()?;
-                    Ok(SlashCommand::LinkChannel {
+                    SlashCommandType::LinkChannel {
                         discord_channel_id: interaction.channel_id.into(),
                         lamprey_channel_id: channel_id,
                         backfill,
-                    })
+                    }
                 }
-                _ => Err(anyhow::anyhow!("unknown link subcommand")),
+                _ => return Err(anyhow::anyhow!("unknown link subcommand")),
             }
         }
         "unlink" => {
@@ -177,17 +190,19 @@ pub fn parse_interaction(interaction: &CommandInteraction) -> Result<SlashComman
                 .get(0)
                 .ok_or_else(|| anyhow::anyhow!("missing subcommand"))?;
             match subcommand.name.as_str() {
-                "guild" => Ok(SlashCommand::UnlinkGuild {
+                "guild" => SlashCommandType::UnlinkGuild {
                     discord_guild_id: interaction
                         .guild_id
                         .ok_or_else(|| anyhow::anyhow!("not in guild"))?,
-                }),
-                "channel" => Ok(SlashCommand::UnlinkChannel {
+                },
+                "channel" => SlashCommandType::UnlinkChannel {
                     discord_channel_id: interaction.channel_id.into(),
-                }),
-                _ => Err(anyhow::anyhow!("unknown unlink subcommand")),
+                },
+                _ => return Err(anyhow::anyhow!("unknown unlink subcommand")),
             }
         }
-        _ => Err(anyhow::anyhow!("unknown command")),
-    }
+        _ => return Err(anyhow::anyhow!("unknown command")),
+    };
+
+    Ok(SlashCommand { interaction, inner })
 }

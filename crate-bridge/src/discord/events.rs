@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serenity::all::{
-    ChannelId, ChannelType, Context, EventHandler, Guild, GuildChannel, GuildId,
-    GuildMemberUpdateEvent, Interaction, Message, MessageId, MessageUpdateEvent, Presence,
+    ChannelId, ChannelType, CommandInteraction, Context, EventHandler, Guild, GuildChannel,
+    GuildId, GuildMemberUpdateEvent, Interaction, Message, MessageId, MessageUpdateEvent, Presence,
     Reaction, Ready, TypingStartEvent,
 };
 use tokio::sync::mpsc;
@@ -12,7 +12,7 @@ use tracing::{error, info, trace};
 
 use crate::{
     bridge::{BridgeEvent, BridgeHandle, MessageData, PortalEvent, PortalHandle, PortalId},
-    discord::interactions::get_commands,
+    discord::interactions::{SlashCommand, SlashCommandType, get_commands, parse_interaction},
 };
 
 pub struct Handler {
@@ -21,6 +21,7 @@ pub struct Handler {
 
 pub enum DiscordEvent {
     MessageCreate(Message),
+    InteractionCreate(SlashCommand),
 }
 
 #[async_trait]
@@ -100,7 +101,16 @@ impl EventHandler for Handler {
 
     async fn interaction_create(&self, _ctx: Context, interaction: Interaction) {
         info!("interaction create");
-        // TODO: Map to BridgeEvent/PortalEvent
+        if let Some(command) = interaction.command() {
+            match parse_interaction(command) {
+                Ok(parsed) => {
+                    let _ = self.tx.send(DiscordEvent::InteractionCreate(parsed)).await;
+                }
+                Err(e) => {
+                    error!("error parsing interaction: {e:?}");
+                }
+            }
+        }
     }
 
     async fn guild_member_update(
