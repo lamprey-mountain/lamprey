@@ -268,6 +268,32 @@ function Text(props: { text: string }) {
 	return <span innerHTML={html()} />;
 }
 
+function Code(props: { children: SerializedInline[] }) {
+	// TODO: make typescript happy
+	// TODO: support more color formats (rgb(a), oklch, etc...)
+	const color = createMemo(() => {
+		const allText = props.children.every((i) => i.type === "Text");
+		if (!allText) return;
+
+		const text = props.children.map((i) => (i as any).content).join("");
+		if (!/^#[a-f0-9]+$/i.test(text)) return;
+		return text;
+	});
+
+	return (
+		<code>
+			<Show when={flags.has("code_color_preview") && color()}>
+				{(color) => (
+					<div class="color-preview" style={{ "--color": color() }}></div>
+				)}
+			</Show>
+			<For each={props.children}>
+				{(child) => <RenderInline inline={child} />}
+			</For>
+		</code>
+	);
+}
+
 // --- Renderers ---
 
 function RenderBlock(props: { block: SerializedBlock }) {
@@ -421,13 +447,7 @@ function RenderInline(props: { inline: SerializedInline }) {
 				{(i) => <Spoiler children={i().children} />}
 			</Match>
 			<Match when={props.inline.type === "Code" && props.inline}>
-				{(i) => (
-					<code>
-						<For each={i().children}>
-							{(child) => <RenderInline inline={child} />}
-						</For>
-					</code>
-				)}
+				{(i) => <Code children={i().children} />}
 			</Match>
 			<Match when={props.inline.type === "Text" && props.inline}>
 				{(i) => <Text text={i().content} />}

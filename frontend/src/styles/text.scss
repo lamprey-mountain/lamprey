@@ -83,6 +83,17 @@ em {
 /* uuids have ascenders (tall glyphs) but no descenders (eg. qgyj) making code containing uuids look unbalanced */
 code {
 	padding: 0px 2px;
+
+	& > .color-preview {
+		display: inline-block;
+		height: 8px;
+		width: 8px;
+		background-color: var(--color);
+		margin-left: 2px;
+		margin-right: 4px;
+		border-radius: 2px;
+		vertical-align: center;
+	}
 }
 
 // HACK: blockquote markdown parsing
