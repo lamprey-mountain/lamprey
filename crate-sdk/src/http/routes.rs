@@ -143,6 +143,31 @@ macro_rules! route {
         }
     };
 
+    (get $url:expr => $name:ident($($param:ident: $param_type:ty),*) -> $res:ty) => {
+        impl Http {
+            pub async fn $name(
+                &self,
+                $($param: $param_type),*
+            ) -> Result<$res> {
+                let url = self.api_url().join(&format!($url))?;
+                let res = self.client
+                    .get(url.clone())
+                    .send()
+                    .await?;
+                let status = res.status();
+                let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
+                if !status.is_success() {
+                    error!(name = stringify!($name), status = %status, response_body = %text, url = %url, "request failed");
+                    return Err(anyhow::anyhow!("request failed with status {}: {}", status, text));
+                }
+                serde_json::from_str(&text).with_context(|| {
+                    error!(response_body = %text, "failed to decode response body");
+                    format!("failed to decode response body for {}", stringify!($name))
+                })
+            }
+        }
+    };
+
     ($method: ident $url:expr => $name:ident($($param:ident: $param_type:ty),*) -> $res:ty) => {
         impl Http {
             pub async fn $name(
