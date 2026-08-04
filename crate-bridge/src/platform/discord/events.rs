@@ -17,6 +17,7 @@ pub enum DiscordEvent {
     MessageCreate(Message),
     MessageUpdate(MessageUpdateEvent, Option<Message>),
     InteractionCreate(SlashCommand),
+    TypingStart(TypingStartEvent),
 }
 
 #[async_trait]
@@ -86,7 +87,7 @@ impl EventHandler for Handler {
 
     async fn typing_start(&self, _ctx: Context, event: TypingStartEvent) {
         info!("discord typing start: {:?}", event.user_id);
-        // TODO: Map to BridgeEvent/PortalEvent
+        let _ = self.tx.send(DiscordEvent::TypingStart(event)).await;
     }
 
     async fn channel_create(&self, _ctx: Context, channel: GuildChannel) {

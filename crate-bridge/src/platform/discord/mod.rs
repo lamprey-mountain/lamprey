@@ -102,13 +102,13 @@ impl Discord {
                     self.handle_bridge_event(&event).await;
                 }
                 Some(event) = self.rx.recv() => {
-                    self.handle_discord_event(event);
+                    self.handle_discord_event(event).await;
                 }
             }
         }
     }
 
-    fn handle_discord_event(&self, event: DiscordEvent) {
+    async fn handle_discord_event(&mut self, event: DiscordEvent) {
         match event {
             DiscordEvent::MessageCreate(message) => {
                 if let Some(webhook_id) = message.webhook_id {
@@ -138,6 +138,15 @@ impl Discord {
                         PortalEvent::MessageUpdate(MessageData::Discord {
                             message: Box::new(new_message),
                         }),
+                    );
+                }
+            }
+            DiscordEvent::TypingStart(event) => {
+                let discord_id = event.user_id.get().to_string();
+                if let Ok(Some(user)) = self.bridge.db.puppet_get_by_discord_id(discord_id).await {
+                    self.route_portal_event(
+                        event.channel_id,
+                        PortalEvent::Typing(user),
                     );
                 }
             }
@@ -398,7 +407,10 @@ async fn spawn_portal_inner(
         };
 
         match &*event {
-            PortalEvent::Typing(_) => todo!(),
+            PortalEvent::Typing(_) => {
+                // discord doesn't have any good way of bridging typing notifications
+                // NOTE: maybe i could send typing notifs through the bridge bot if anyone is typing on lamprey?
+            }
             PortalEvent::MessageCreate(data) => {
                 let (msg, user, room_member, info) = match data {
                     MessageData::Lamprey {

@@ -428,7 +428,13 @@ async fn spawn_portal_inner(
         debug!("lamprey portal recv event: {event:?}");
 
         match &*event {
-            PortalEvent::Typing(_) => todo!(),
+            PortalEvent::Typing(user) => {
+                let _ = ly
+                    .http
+                    .for_puppet(user.lamprey_id)?
+                    .channel_typing(channel_id)
+                    .await;
+            }
             PortalEvent::MessageCreate(data) => {
                 let dm = match data {
                     bridge_old::MessageData::Lamprey { .. } => {
