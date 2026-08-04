@@ -350,10 +350,13 @@ impl Syncer {
                 // NOTE: should i specify a close frame?
                 self.client().close(None).await?;
             }
-            MessagePayload::Sync { seq, .. } => {
+            MessagePayload::Sync { seq, data, .. } => {
                 if let Some(resume) = &mut self.resume {
                     resume.seq = *seq;
                 }
+
+                // PERF: don't clone
+                self.emit(SyncerEvent::Sync(Arc::new(*data.clone())))?;
             }
             MessagePayload::Resumed => {
                 self.set_state(SyncerState::Connected)?;
