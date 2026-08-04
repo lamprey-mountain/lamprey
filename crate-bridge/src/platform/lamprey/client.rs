@@ -185,9 +185,9 @@ impl LampreyClient {
         let created = http
             .media_create(&MediaCreate {
                 strip_exif: false,
-                alt: import.description,
+                alt: import.description.and_then(empty_to_none),
                 source: MediaCreateSource::Download {
-                    filename: import.filename,
+                    filename: import.filename.and_then(empty_to_none),
                     size: import.size,
                     source_url: import.url,
                 },
@@ -222,6 +222,7 @@ impl LampreyClient {
     }
 }
 
+#[derive(Debug)]
 pub struct ImportUrl {
     pub url: Url,
     pub filename: Option<String>,
@@ -250,8 +251,12 @@ impl From<discord::Attachment> for ImportUrl {
             url: att.url.parse().unwrap(),
             filename: Some(att.filename),
             description: att.description,
-            size: Some(att.size as u64),
+            size: None, // discord's api sometimes gives the wrong size
             user_id: None,
         }
     }
+}
+
+fn empty_to_none(s: String) -> Option<String> {
+    if s.is_empty() { None } else { Some(s) }
 }

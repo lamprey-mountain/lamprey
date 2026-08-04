@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use serenity::all::{
     CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage, CreateWebhook,
-    ExecuteWebhook, GatewayIntents, Mentionable,
+    EditAttachments, ExecuteWebhook, GatewayIntents, Mentionable,
 };
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinSet;
@@ -126,6 +126,7 @@ impl Discord {
             }
             DiscordEvent::MessageUpdate(event, new) => {
                 // TODO: handle message updates without new (fetch from discord's api?)
+                // TODO: at least warn if new doesnt exist right now
                 if let Some(new_message) = new {
                     if let Some(webhook_id) = new_message.webhook_id {
                         if self.webhook_lookup.contains_key(&webhook_id) {
@@ -144,10 +145,7 @@ impl Discord {
             DiscordEvent::TypingStart(event) => {
                 let discord_id = event.user_id.get().to_string();
                 if let Ok(Some(user)) = self.bridge.db.puppet_get_by_discord_id(discord_id).await {
-                    self.route_portal_event(
-                        event.channel_id,
-                        PortalEvent::Typing(user),
-                    );
+                    self.route_portal_event(event.channel_id, PortalEvent::Typing(user));
                 }
             }
             DiscordEvent::InteractionCreate(command) => match command.inner {
@@ -393,8 +391,10 @@ async fn spawn_portal_inner(
     cache: Arc<serenity::all::Cache>,
 ) -> Result<()> {
     let mut events = handle.events.subscribe();
+    let http_client = reqwest::Client::new();
 
     // TODO: backfill missed messages
+    // TODO: reuse http_client, add user-agent header?
 
     loop {
         let event = match events.recv().await {
@@ -451,6 +451,7 @@ async fn spawn_portal_inner(
                     .and_then(|rm| rm.override_name.clone())
                     .unwrap_or_else(|| user.name.clone());
 
+                // TODO: proper url joining
                 let avatar_url = user
                     .avatar
                     .as_ref()
@@ -488,13 +489,29 @@ async fn spawn_portal_inner(
                 }
 
                 // TODO: handle embeds (download, reupload)
+                let mut files = vec![];
+                for attachment in &msg_inner.attachments {
+                    let common::v1::types::MessageAttachmentType::Media { media } = &attachment.ty;
+                    // TODO: proper url joining info.cdn_url.join(...)
+                    let url = format!("{}/media/{}", info.cdn_url, media.id);
+                    if let Ok(response) = http_client.get(&url).send().await {
+                        if let Ok(bytes) = response.bytes().await {
+                            files.push(serenity::all::CreateAttachment::bytes(
+                                bytes,
+                                media.filename.clone(),
+                            ));
+                        }
+                    }
+                }
+
                 // TODO: handle attachments
                 // TODO: handle mentions
 
                 let mut builder = ExecuteWebhook::new()
                     .content(content)
                     .embeds(embeds)
-                    .username(username);
+                    .username(username)
+                    .add_files(files);
 
                 if let Some(avatar_url) = avatar_url {
                     builder = builder.avatar_url(avatar_url);
@@ -508,9 +525,11 @@ async fn spawn_portal_inner(
                 // .allowed_mentions(allowed_mentions);
 
                 webhook.execute(&http, false, builder).await?;
+
+                // FIXME: update database?
             }
             PortalEvent::MessageUpdate(data) => {
-                let (msg, _user, _room_member, _info) = match data {
+                let (msg, _user, _room_member, info) = match data {
                     MessageData::Lamprey {
                         message,
                         user,
@@ -555,17 +574,46 @@ async fn spawn_portal_inner(
                     }
                 });
 
-                // TODO: handle everything in MessageCreate (eg. attachments, embeds, etc...)
+                let mut attachments = EditAttachments::new();
+                for attachment in &msg_inner.attachments {
+                    let common::v1::types::MessageAttachmentType::Media { media } = &attachment.ty;
+
+                    // Check if we already have this attachment
+                    if let Some(discord_id) = portal_msg
+                        .attachments
+                        .iter()
+                        .find(|(l_id, _)| l_id == &media.id)
+                        .map(|(_, d_id)| *d_id)
+                    {
+                        attachments = attachments.keep(discord_id);
+                        continue;
+                    }
+
+                    // Otherwise, download and add
+                    let url = format!("{}/media/{}", info.cdn_url, media.id);
+                    if let Ok(response) = http_client.get(&url).send().await {
+                        if let Ok(bytes) = response.bytes().await {
+                            attachments = attachments.add(serenity::all::CreateAttachment::bytes(
+                                bytes,
+                                media.filename.clone(),
+                            ));
+                        }
+                    }
+                }
 
                 if let Some(message_id) = portal_msg.discord_message_id {
                     webhook
                         .edit_message(
                             &http,
                             message_id,
-                            serenity::all::EditWebhookMessage::new().content(content),
+                            serenity::all::EditWebhookMessage::new()
+                                .content(content)
+                                .attachments(attachments),
                         )
                         .await?;
                 }
+
+                // FIXME: update database?
             }
             PortalEvent::MessageDelete(_) => todo!(),
             PortalEvent::ReactionCreate(_, _, _) => todo!(),

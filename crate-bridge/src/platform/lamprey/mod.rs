@@ -17,7 +17,7 @@ use crate::bridge_old::{
     PortalId,
 };
 use crate::config::LampreyConfig;
-use crate::platform::lamprey::client::LampreyClient;
+use crate::platform::lamprey::client::{ImportUrl, LampreyClient};
 use crate::prelude::*;
 
 // re export lamprey types
@@ -441,25 +441,19 @@ async fn spawn_portal_inner(
                         // don't send messages from lamprey back to lamprey
                         continue;
                     }
-                    bridge_old::MessageData::Discord { message } => {
-                        // TODO: filter out messages on the discord side
-                        // message.webhook_id == Some(webhook_id)
-                        message
-                    }
+                    bridge_old::MessageData::Discord { message } => message,
                 };
 
                 let puppet = ly.sync_puppet_discord(dm).await?;
 
                 // TODO: ly -> async fn process_discord_message(&self, ...) -> Result<MessageCreate>
                 let mut create = MessageCreate {
-                    content: Some(dm.content.clone()),
-                    attachments: vec![],
-                    metadata: None,
-                    reply_id: None,
-                    embeds: vec![],
-                    mentions: Default::default(),
-                    components: None,
-                    ephemeral: false,
+                    content: if dm.content.is_empty() {
+                        None
+                    } else {
+                        Some(dm.content.clone())
+                    },
+                    ..Default::default()
                 };
 
                 // TODO: reformat text (mentions, mostly)
@@ -482,6 +476,24 @@ async fn spawn_portal_inner(
                                 }
                             }
                         }
+                    }
+                }
+
+                for att in &dm.attachments {
+                    let mut import = ImportUrl::from(att.clone());
+                    import.user_id = Some(puppet.id);
+                    if let Ok(media) = ly.import_url(import).await {
+                        create.attachments.push(MessageAttachmentCreate {
+                            ty: MessageAttachmentCreateType::Media {
+                                media: common::v2::types::media::MediaReference::Media {
+                                    media_id: media.id,
+                                },
+                                alt: None,
+                                filename: None,
+                            },
+                            // TODO: set spoiler field
+                            spoiler: false,
+                        });
                     }
                 }
 
@@ -539,6 +551,8 @@ async fn spawn_portal_inner(
                     bridge_old::MessageData::Discord { message } => message,
                 };
 
+                let puppet = ly.sync_puppet_discord(dm).await?;
+
                 if let Some(msg) = handle
                     .bridge
                     .db
@@ -546,18 +560,62 @@ async fn spawn_portal_inner(
                     .await?
                 {
                     if let Some(lamprey_message_id) = msg.lamprey_message_id {
+                        let mut attachments = vec![];
+                        for att in &dm.attachments {
+                            // Check if this attachment was already imported
+                            if let Some(existing_media_id) = msg
+                                .attachments
+                                .iter()
+                                .find(|(_, d_id)| d_id == &att.id)
+                                .map(|(l_id, _)| *l_id)
+                            {
+                                attachments.push(MessageAttachmentCreate {
+                                    ty: MessageAttachmentCreateType::Media {
+                                        media: common::v2::types::media::MediaReference::Media {
+                                            media_id: existing_media_id,
+                                        },
+                                        alt: None,
+                                        filename: None,
+                                    },
+                                    // TODO: populate spoiler field
+                                    spoiler: false,
+                                });
+                            } else {
+                                // Import new attachment
+                                let mut import = ImportUrl::from(att.clone());
+                                import.user_id = Some(puppet.id);
+                                if let Ok(media) = ly.import_url(import).await {
+                                    attachments.push(MessageAttachmentCreate {
+                                        ty: MessageAttachmentCreateType::Media {
+                                            media:
+                                                common::v2::types::media::MediaReference::Media {
+                                                    media_id: media.id,
+                                                },
+                                            alt: None,
+                                            filename: None,
+                                        },
+                                        // TODO: populate spoiler field
+                                        spoiler: false,
+                                    });
+                                }
+                            }
+                        }
+
+                        // TODO: also edit embeds, components
                         let patch = common::v1::types::MessagePatch {
-                            content: Some(Some(dm.content.clone())),
-                            // TODO: also edit attachments, embeds, components
-                            attachments: None,
-                            reply_id: None,
-                            embeds: None,
-                            metadata: None,
-                            components: None,
+                            content: Some(if dm.content.is_empty() {
+                                None
+                            } else {
+                                Some(dm.content.clone())
+                            }),
+                            attachments: Some(attachments),
+                            ..Default::default()
                         };
                         ly.http
                             .message_edit(channel_id, lamprey_message_id, &patch)
                             .await?;
+
+                        // FIXME: update database?
                     }
                 }
             }
