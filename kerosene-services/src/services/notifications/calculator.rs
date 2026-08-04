@@ -138,7 +138,7 @@ impl Calculator {
     ) -> Result<Self> {
         let srv = globals.services();
 
-        let replied_message = if let Some(reply_id) = message.latest_version.reply_id {
+        let replied_message = if let Some(reply_id) = message.reply_id() {
             srv.messages.get(channel.id, reply_id, None).await.ok()
         } else {
             None

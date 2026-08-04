@@ -134,7 +134,7 @@ async fn inbox_post(
                 .any(|u| u.id == auth.user.id),
             mention_everyone: message.latest_version.mentions.everyone,
             mention_role: false, // FIXME
-            reply: message.latest_version.reply_id.is_some(),
+            reply: message.reply_id().is_some(),
         },
         added_at: req.notification.added_at.unwrap_or_else(Time::now_utc),
         read_at: None,

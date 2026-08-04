@@ -101,7 +101,14 @@ pub struct Message {
 
 impl Message {
     pub fn reply_id(&self) -> Option<MessageId> {
-        self.latest_version.reply_id
+        // NOTE: should i copy reply id logic from search service?
+        // kerosene-services/src/services/search/schema/transform.rs
+        match &self.latest_version.message_type {
+            MessageType::DefaultMarkdown(m) => m.reply_id,
+            // MessageType::MessagePinned(p) => Some(p.pinned_message_id),
+            // MessageType::ThreadCreated(m) => m.source_message_id,
+            _ => None,
+        }
     }
 }
 
@@ -114,10 +121,6 @@ pub struct MessageVersion {
     /// the id of who this edit. if None, this edit was made by the author
     #[serde(skip_serializing_if = "Option::is_none")]
     pub author_id: Option<UserId>,
-
-    /// the message this version is replying to
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub reply_id: Option<MessageId>,
 
     /// the type and content of this message
     // NOTE: message type generally shouldn't change, but i don't know how to "hoist" the type field to the top level Message struct?
@@ -535,10 +538,12 @@ pub struct MessageDefaultMarkdown {
     /// the message's content in markdown
     #[schema(min_length = 1, max_length = 8192)]
     #[validate(length(min = 1, max = 8192))]
+    // TODO: does this break anything? #[serde(skip_serializing_if = "Option::is_none")]
     pub content: Option<String>,
 
     #[schema(min_length = 1, max_length = 32)]
     #[validate(length(min = 1, max = 32), nested)]
+    // TODO: does this break anything? #[serde(skip_serializing_if = "Vec::is_empty")]
     pub attachments: Vec<MessageAttachment>,
 
     /// application defined metadata
@@ -548,10 +553,12 @@ pub struct MessageDefaultMarkdown {
     pub metadata: Option<Metadata>,
 
     /// the message this message is replying to
+    // TODO: does this break anything? #[serde(skip_serializing_if = "Option::is_none")]
     pub reply_id: Option<MessageId>,
 
     #[schema(min_length = 1, max_length = 32)]
     #[validate(length(min = 1, max = 32), nested)]
+    // TODO: does this break anything? #[serde(skip_serializing_if = "Vec::is_empty")]
     pub embeds: Vec<Embed>,
 
     /// the components for this message

@@ -134,7 +134,6 @@ impl From<DbMessageVersion> for MessageVersion {
         MessageVersion {
             version_id: row.version_id.into(),
             author_id: Some(row.author_id.into()),
-            reply_id: row.reply_id.map(Into::into),
             message_type: match row.message_type {
                 DbMessageType::DefaultMarkdown => {
                     let attachments: Vec<serde_json::Value> =
