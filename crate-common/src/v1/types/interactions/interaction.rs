@@ -1,28 +1,21 @@
+use lamprey_macros::record;
+
 use crate::v1::types::{
     ApplicationId, Channel, ChannelId, Embed, InteractionId, Message, MessageCreate, MessageId,
     MessagePatch, Permission, Room, RoomMember, User, UserId,
 };
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
 /// create a new interaction
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct InteractionCreate {
     pub application_id: ApplicationId,
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: InteractionCreateType,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum InteractionCreateType {
     /// a button was pressed
     Button {
@@ -33,9 +26,7 @@ pub enum InteractionCreateType {
 }
 
 /// an user interacted with your application
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Interaction {
     pub id: InteractionId,
     pub application_id: ApplicationId,
@@ -48,14 +39,13 @@ pub struct Interaction {
     /// always 1 currently
     pub version: u16,
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: InteractionType,
 }
 
 // TODO: refactor out common interaction context, Ping is only for webhooks anyways
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum InteractionType {
     /// for webhooks
     Ping,
@@ -115,17 +105,14 @@ pub enum InteractionType {
 }
 
 /// respond to an interaction
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct InteractionResponseCreate {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: InteractionResponseCreateType,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum InteractionResponseCreateType {
     /// for webhooks
     Pong,
@@ -153,9 +140,7 @@ pub enum InteractionResponseCreateType {
 }
 
 /// an interaction has been responded to
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct InteractionResponse {
     // TODO: return extra data here
 }

@@ -77,4 +77,5 @@ fn wrap_attributes(attrs: &mut Vec<Attribute>) {
     wrap_attribute(attrs, "serde", "serde");
     wrap_attribute(attrs, "validator", "validator");
     wrap_attribute(attrs, "utoipa", "utoipa");
+    wrap_attribute(attrs, "schema", "utoipa");
 }

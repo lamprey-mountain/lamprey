@@ -1,50 +1,39 @@
 //! Types for acknowledgment operations.
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
+use lamprey_macros::record;
 
 use crate::v1::types::{Channel, ChannelId, MessageId, misc::Time};
 
 /// acknowledge a message in a channel
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AckCreate {
     /// The last read message id. The latest message id will be used if empty.
     pub message_id: Option<MessageId>,
 
     /// The new mention count. Defaults to 0.
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub mention_count: u64,
 }
 
 /// acknowledge many things at once
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AckBulk {
-    #[cfg_attr(feature = "validator", validate(length(max = 1024)))]
+    #[validate(length(max = 1024))]
     pub acks: Vec<AckBulkItem>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AckBulkItem {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: AckType,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[serde(tag = "type")]
 pub enum AckType {
     /// an acknowledgement for a message
     ///
@@ -53,7 +42,7 @@ pub enum AckType {
         channel_id: ChannelId,
         message_id: MessageId,
 
-        #[cfg_attr(feature = "serde", serde(default))]
+        #[serde(default)]
         mention_count: u64,
     },
 
@@ -76,11 +65,10 @@ pub enum AckType {
 }
 
 /// a user's read state for a resource
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AckState {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: AckType,
 
     /// whether this is considered unread
@@ -93,9 +81,8 @@ pub struct AckState {
 // TODO: maybe create an AckStateChannel struct which combines Message and Pins read state
 
 /// relevant read state metadata for a channel
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct ChannelAckMetadata {
     /// the id of the last message that was sent
     ///

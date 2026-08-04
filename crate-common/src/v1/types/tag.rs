@@ -1,11 +1,4 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
-
-#[cfg(feature = "validator")]
-use validator::Validate;
+use lamprey_macros::record;
 
 use crate::v1::types::{ChannelId, TagId, misc::Color};
 
@@ -14,28 +7,26 @@ use crate::v1::types::util::{default_false_opt, some_option};
 
 /// a tag that can be applied to a thread
 // TODO: rename to ThreadTag or ForumTag
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct Tag {
     pub id: TagId,
 
     // TODO: remove?
     pub channel_id: ChannelId,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[schema(min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
     /// the color of this tag
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[schema(required = false)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
 
     /// whether this tag is archived
@@ -57,63 +48,54 @@ pub struct Tag {
 }
 
 /// minimal data needed to render a tag
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct TagMinimal {
     pub id: TagId,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
 
     pub spoiler: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct TagCreate {
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub description: Option<String>,
 
     pub color: Option<Color>,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub restricted: bool,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub spoiler: bool,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct TagPatch {
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 64)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(required = false, min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[schema(min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
+    #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub color: Option<Option<Color>>,
 
     pub archived: Option<bool>,
@@ -121,37 +103,34 @@ pub struct TagPatch {
     pub spoiler: Option<bool>,
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct TagDeleteQuery {
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub force: bool,
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct TagSearchQuery {
     pub query: String,
 
     /// deny, allow, require tag to be archived
     ///
     /// default: deny
-    #[cfg_attr(feature = "serde", serde(default = "default_false_opt"))]
+    #[serde(default = "default_false_opt")]
     pub archived: Option<bool>,
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct TagListQuery {
     /// deny, allow, require tag to be archived
     ///
     /// default: deny
-    #[cfg_attr(feature = "serde", serde(default = "default_false_opt"))]
+    #[serde(default = "default_false_opt")]
     pub archived: Option<bool>,
 }

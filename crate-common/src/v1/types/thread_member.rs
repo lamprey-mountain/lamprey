@@ -51,7 +51,7 @@ pub struct ThreadMemberPatch {
 pub struct ChannelMemberSearch {
     pub query: String,
 
-    #[cfg_attr(feature = "validator", validate(range(min = 1, max = 100)))]
+    #[validate(range(min = 1, max = 100))]
     pub limit: Option<u16>,
 }
 

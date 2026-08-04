@@ -1,13 +1,5 @@
+use lamprey_macros::{Diff, record};
 use std::{fmt, str::FromStr};
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
 
 use crate::v1::types::{ApplicationId, util::Time};
 
@@ -18,30 +10,28 @@ use super::{UserId, ids::SessionId};
 
 // TODO(#250): verify Hash here is timing safe?
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(
     feature = "utoipa",
-    derive(ToSchema),
+    derive(utoipa::ToSchema),
     schema(examples("super_secret_session_token"))
 )]
 pub struct SessionToken(pub String);
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct Session {
     pub id: SessionId,
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub status: SessionStatus,
 
     /// a human readable name for this session
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: Option<String>,
 
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[serde(rename = "type")]
     pub ty: SessionType,
 
     /// when this token will expire. only set for oauth auth tokens
@@ -65,10 +55,8 @@ pub struct Session {
 }
 
 /// metadata that gets updated whenever the session is used
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct SessionImprint {
     /// the last time this session was used
     pub last_seen_at: Time,
@@ -85,9 +73,8 @@ pub struct SessionImprint {
 }
 
 /// minimal session persisted for audit log
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct SessionSummary {
     pub id: SessionId,
     pub name: Option<String>,
@@ -97,43 +84,33 @@ pub struct SessionSummary {
     pub deauthorized_at: Option<Time>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct SessionWithToken {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub session: Session,
     pub token: SessionToken,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct SessionCreate {
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 64)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(required = false, min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, lamprey_macros::Diff)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq, Diff)]
 pub struct SessionPatch {
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[schema(required = false)]
+    #[serde(default, deserialize_with = "some_option")]
     pub name: Option<Option<String>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "status"))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[serde(tag = "status")]
 pub enum SessionStatus {
     /// The session exists but can't do anything besides authenticate
     Unauthorized,
@@ -197,9 +174,8 @@ impl Session {
 }
 
 // TODO: remove?
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum SessionType {
     /// an user token
     // NOTE: i might remove this and switch to purely oauth

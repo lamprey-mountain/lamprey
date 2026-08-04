@@ -1,18 +1,10 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
-
-#[cfg(feature = "validator")]
-use validator::Validate;
+use lamprey_macros::{Diff, record};
 
 use crate::v1::types::{EmojiId, MediaId, RoomId, UserId};
 
 /// a custom emoji
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct EmojiCustom {
     pub id: EmojiId,
     pub name: String,
@@ -42,22 +34,17 @@ pub struct EmojiCustom {
 /// minimal data for a custom emoji
 ///
 /// only contains what is needed to render an emoji
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct EmojiCustomMinimal {
     pub id: EmojiId,
     pub name: String,
     pub animated: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(tag = "owner")
-)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[serde(tag = "owner")]
 pub enum EmojiOwner {
     /// an emoji owned by a room
     Room { room_id: RoomId },
@@ -66,15 +53,10 @@ pub enum EmojiOwner {
     User,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct EmojiCustomCreate {
-    #[cfg_attr(
-        feature = "validator",
-        validate(length(min = 2, max = 32), custom(function = "validate_emoji_name"))
-    )]
+    #[validate(length(min = 2, max = 32), custom(function = "validate_emoji_name"))]
     pub name: String,
     pub animated: bool,
     pub media_id: MediaId,
@@ -101,21 +83,16 @@ fn validate_emoji_name(name: &str) -> Result<(), validator::ValidationError> {
     Ok(())
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, lamprey_macros::Diff)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq, Diff)]
 pub struct EmojiCustomPatch {
-    #[cfg_attr(
-        feature = "validator",
-        validate(length(min = 2, max = 32), custom(function = "validate_emoji_name"))
-    )]
+    #[validate(length(min = 2, max = 32), custom(function = "validate_emoji_name"))]
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct EmojiSearchQuery {
     pub query: String,
 }
