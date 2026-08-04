@@ -1,4 +1,4 @@
-use crate::bridge_old::{BridgeHandle, PortalHandle};
+use crate::bridge_old::BridgeHandle;
 use crate::platform::lamprey::ChannelId;
 use crate::prelude::*;
 use common::util::Diff;

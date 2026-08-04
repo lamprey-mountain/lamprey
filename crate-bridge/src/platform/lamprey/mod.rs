@@ -228,15 +228,37 @@ impl Lamprey {
                         }),
                     );
                 }
-                // MessageSync::MessageUpdate { message } => {
-                //     self.route_portal_event(
-                //         &message.channel_id,
-                //         PortalEvent::MessageUpdate {
-                //             source_message_id: message.id.to_string(),
-                //             content: message.content.clone(),
-                //         },
-                //     );
-                // }
+                MessageSync::MessageUpdate { message } => {
+                    if let Some(db_user) = self
+                        .bridge
+                        .db
+                        .puppet_get_by_lamprey_id(message.author_id.to_string())
+                        .await?
+                    {
+                        if db_user.source_platform != Platform::Lamprey {
+                            return Ok(());
+                        }
+                    }
+
+                    // PERF: cache this
+                    let user = self
+                        .client
+                        .http()
+                        .user_get(UserIdReq::UserId(message.author_id))
+                        .await?;
+
+                    self.route_portal_event(
+                        &message.channel_id,
+                        PortalEvent::MessageUpdate(bridge_old::MessageData::Lamprey {
+                            message: Box::new(message.clone()),
+                            user: Box::new(user.inner),
+                            room_member: None,
+                            info: Box::new(bridge_old::LampreyInfo {
+                                cdn_url: self.client.http().cdn_url().clone(),
+                            }),
+                        }),
+                    );
+                }
                 // MessageSync::MessageDelete {
                 //     channel_id,
                 //     message_id,
@@ -468,7 +490,37 @@ async fn spawn_portal_inner(
                     )
                     .await?;
             }
-            PortalEvent::MessageUpdate(data) => todo!(),
+            PortalEvent::MessageUpdate(data) => {
+                let dm = match data {
+                    bridge_old::MessageData::Lamprey { .. } => {
+                        // don't send edits from lamprey back to lamprey
+                        continue;
+                    }
+                    bridge_old::MessageData::Discord { message } => message,
+                };
+
+                if let Some(msg) = handle
+                    .bridge
+                    .db
+                    .message_get_by_discord_id(portal_id, dm.id)
+                    .await?
+                {
+                    if let Some(lamprey_message_id) = msg.lamprey_message_id {
+                        let patch = common::v1::types::MessagePatch {
+                            content: Some(Some(dm.content.clone())),
+                            // TODO: also edit attachments, embeds, components
+                            attachments: None,
+                            reply_id: None,
+                            embeds: None,
+                            metadata: None,
+                            components: None,
+                        };
+                        ly.http
+                            .message_edit(channel_id, lamprey_message_id, &patch)
+                            .await?;
+                    }
+                }
+            }
             PortalEvent::MessageDelete(_) => todo!(),
             PortalEvent::ReactionCreate(_, _, _) => todo!(),
             PortalEvent::ReactionDelete(_, _, _) => todo!(),

@@ -15,6 +15,7 @@ pub struct Handler {
 
 pub enum DiscordEvent {
     MessageCreate(Message),
+    MessageUpdate(MessageUpdateEvent, Option<Message>),
     InteractionCreate(SlashCommand),
 }
 
@@ -41,11 +42,11 @@ impl EventHandler for Handler {
         &self,
         _ctx: Context,
         _old: Option<Message>,
-        _new: Option<Message>,
-        _event: MessageUpdateEvent,
+        new: Option<Message>,
+        event: MessageUpdateEvent,
     ) {
-        info!("discord message update: {:?}", _event.id);
-        // TODO: Map to BridgeEvent/PortalEvent
+        info!("discord message update: {:?}", event.id);
+        let _ = self.tx.send(DiscordEvent::MessageUpdate(event, new)).await;
     }
 
     async fn message_delete(

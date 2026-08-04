@@ -109,12 +109,24 @@ impl Discord {
     fn handle_discord_event(&self, event: DiscordEvent) {
         match event {
             DiscordEvent::MessageCreate(message) => {
+                // FIXME: don't send portal event if this came from the bridge's webhook
                 self.route_portal_event(
                     message.channel_id,
                     PortalEvent::MessageCreate(MessageData::Discord {
                         message: Box::new(message),
                     }),
                 );
+            }
+            DiscordEvent::MessageUpdate(event, new) => {
+                // TODO: handle message updates without new (fetch from discord's api?)
+                if let Some(new_message) = new {
+                    self.route_portal_event(
+                        event.channel_id,
+                        PortalEvent::MessageUpdate(MessageData::Discord {
+                            message: Box::new(new_message),
+                        }),
+                    );
+                }
             }
             DiscordEvent::InteractionCreate(command) => match command.inner {
                 interactions::SlashCommandType::Ping => {
@@ -377,6 +389,7 @@ async fn spawn_portal_inner(
                     MessageData::Discord { .. } => continue,
                 };
 
+                // PERF: don't fetch webhook every time, cache it (Webhook::from_url)
                 let discord_cfg = portal.discord.as_ref().unwrap();
                 let webhook_url = &discord_cfg.webhook_url;
                 let webhook = serenity::all::Webhook::from_url(&http, webhook_url.as_str()).await?;
@@ -463,7 +476,64 @@ async fn spawn_portal_inner(
 
                 webhook.execute(&http, false, builder).await?;
             }
-            PortalEvent::MessageUpdate(_) => todo!(),
+            PortalEvent::MessageUpdate(data) => {
+                let (msg, _user, _room_member, _info) = match data {
+                    MessageData::Lamprey {
+                        message,
+                        user,
+                        room_member,
+                        info,
+                    } => (&**message, &**user, room_member.as_deref(), &**info),
+                    MessageData::Discord { .. } => continue,
+                };
+
+                // PERF: don't fetch webhook every time, cache it (Webhook::from_url)
+                let discord_cfg = portal.discord.as_ref().unwrap();
+                let webhook_url = &discord_cfg.webhook_url;
+                let webhook = serenity::all::Webhook::from_url(&http, webhook_url.as_str()).await?;
+
+                let Some(portal_msg) = handle
+                    .bridge
+                    .db
+                    .message_get_by_lamprey_id(portal_id, msg.id)
+                    .await?
+                else {
+                    continue;
+                };
+
+                // TODO: deduplicate code with MessageCreate handler
+                let msg_inner = match &msg.latest_version.message_type {
+                    common::v1::types::MessageType::DefaultMarkdown(m) => m,
+                    _ => {
+                        debug!("unsupported lamprey message type");
+                        // TODO: format and send anyways?
+                        continue;
+                    }
+                };
+
+                let content = msg_inner.content.to_owned().unwrap_or_else(|| {
+                    if msg_inner.attachments.is_empty()
+                        && msg_inner.embeds.is_empty()
+                        && msg_inner.components.is_empty()
+                    {
+                        "(no content?)".to_owned()
+                    } else {
+                        "".to_owned()
+                    }
+                });
+
+                // TODO: handle everything in MessageCreate (eg. attachments, embeds, etc...)
+
+                if let Some(message_id) = portal_msg.discord_message_id {
+                    webhook
+                        .edit_message(
+                            &http,
+                            message_id,
+                            serenity::all::EditWebhookMessage::new().content(content),
+                        )
+                        .await?;
+                }
+            }
             PortalEvent::MessageDelete(_) => todo!(),
             PortalEvent::ReactionCreate(_, _, _) => todo!(),
             PortalEvent::ReactionDelete(_, _, _) => todo!(),
