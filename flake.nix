@@ -142,7 +142,7 @@
 
         bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" ];
         voice = mkCrate "lamprey-voice" [ "crate-voice" ];
-        media = mkCrate "lamprey-media" [ "crate-media" ];
+        media = mkCrate "lamprey-media" [ "crate-media" "crate-backend-core" ];
         scanner-malware = mkCrate "scanner-malware" [ "scanner-malware" ];
 
         wasm-cargo-artifacts = craneLib.buildDepsOnly (common // {
