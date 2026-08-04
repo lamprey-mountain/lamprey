@@ -1,5 +1,6 @@
 use crate::ast::impl_ast;
 use crate::ast::inline::Inline;
+use crate::ast::list::List;
 use crate::prelude::*;
 use crate::tree::node::MarkdownLanguage;
 
@@ -13,10 +14,6 @@ pub struct Blockquote(SyntaxNode);
 #[derive(Debug)]
 pub struct Codeblock(SyntaxNode);
 #[derive(Debug)]
-pub struct List(SyntaxNode);
-#[derive(Debug)]
-pub struct ListItem(SyntaxNode);
-#[derive(Debug)]
 pub struct Header(SyntaxNode);
 
 pub use crate::ast::table::Table;
@@ -25,13 +22,6 @@ impl_ast!(Document, NodeKind::Document);
 impl_ast!(Paragraph, NodeKind::Block(BlockKind::Paragraph));
 impl_ast!(Blockquote, NodeKind::Block(BlockKind::Blockquote));
 impl_ast!(Codeblock, NodeKind::Block(BlockKind::Codeblock));
-impl_ast!(ListItem, NodeKind::Block(BlockKind::ListItem));
-impl_ast!(
-    List,
-    NodeKind::Block(BlockKind::ListOrdered)
-        | NodeKind::Block(BlockKind::ListUnordered)
-        | NodeKind::Block(BlockKind::ListTasks)
-);
 impl_ast!(Header, NodeKind::Block(b) if b.is_header());
 
 /// any block type node
@@ -42,30 +32,7 @@ pub enum Block {
     Blockquote(Blockquote),
     Codeblock(Codeblock),
     List(List),
-    ListItem(ListItem),
     Table(Table),
-}
-
-pub enum ListKind {
-    Ordered,
-    Unordered,
-    Task,
-}
-
-impl List {
-    pub fn kind(&self) -> ListKind {
-        match self.0.kind() {
-            NodeKind::Block(BlockKind::ListOrdered) => ListKind::Ordered,
-            NodeKind::Block(BlockKind::ListTasks) => ListKind::Task,
-            _ => ListKind::Unordered,
-        }
-    }
-
-    pub fn items(&self) -> impl Iterator<Item = ListItem> + '_ {
-        self.0
-            .children_with_tokens()
-            .filter_map(|child| child.into_node().and_then(ListItem::cast))
-    }
 }
 
 impl AstNode for Block {
@@ -87,8 +54,6 @@ impl AstNode for Block {
             Codeblock::cast(tn).map(Self::Codeblock)
         } else if List::can_cast(kind) {
             List::cast(tn).map(Self::List)
-        } else if ListItem::can_cast(kind) {
-            ListItem::cast(tn).map(Self::ListItem)
         } else if Table::can_cast(kind) {
             Table::cast(tn).map(Self::Table)
         } else {
@@ -103,7 +68,6 @@ impl AstNode for Block {
             Block::Blockquote(b) => b.syntax(),
             Block::Codeblock(b) => b.syntax(),
             Block::List(b) => b.syntax(),
-            Block::ListItem(b) => b.syntax(),
             Block::Table(b) => b.syntax(),
         }
     }
@@ -154,30 +118,6 @@ impl Codeblock {
                 | NodeKind::Text(TextKind::Padding) => None,
                 _ => Inline::cast(child),
             })
-    }
-}
-
-impl ListItem {
-    pub fn content(&self) -> impl Iterator<Item = Block> + '_ {
-        // TODO: filter out ListPrefix syntax
-        self.0
-            .children_with_tokens()
-            .filter_map(|child| child.into_node().and_then(Block::cast))
-    }
-
-    pub fn number(&self) -> Option<u64> {
-        self.0
-            .children_with_tokens()
-            .find(|c| c.kind() == NodeKind::Text(TextKind::ListPrefix))
-            // NOTE: do i want to use the user defined number or automatically increment? i *think* commonmark always autoincrements starting from the first list item's number.
-            .and_then(|c| c.to_string().trim_end_matches('.').parse().ok())
-    }
-
-    pub fn completed(&self) -> Option<bool> {
-        self.0
-            .children_with_tokens()
-            .find(|c| c.kind() == NodeKind::Text(TextKind::TaskCheck))
-            .map(|c| c.to_string().contains('x'))
     }
 }
 

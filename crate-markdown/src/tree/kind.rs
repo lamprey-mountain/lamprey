@@ -105,7 +105,7 @@ pub enum TextKind {
 
     /// check for a ListTask item
     // NOTE: is this part of markdown syntax..?
-    TaskCheck,
+    TaskMark,
 
     /// the alignment to use for a table colum
     ///
@@ -149,6 +149,7 @@ impl TextKind {
                 | Self::UnicodeEmoji
                 | Self::CustomEmoji
                 | Self::Newline
+                | Self::ListPrefix
         )
     }
 }

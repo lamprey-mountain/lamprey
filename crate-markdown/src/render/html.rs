@@ -1,7 +1,8 @@
 use crate::{
     ast::{
-        block::{Block, Document, ListKind},
+        block::{Block, Document},
         inline::{Inline, MentionData},
+        list::{List, TaskListMark},
     },
     prelude::*,
 };
@@ -74,29 +75,57 @@ impl HtmlRenderer {
                 )
             }
             Block::List(list) => {
-                let tag = match list.kind() {
-                    ListKind::Ordered => "ol",
-                    ListKind::Unordered => "ul",
-                    // TODO: task list rendering
-                    ListKind::Task => "ul",
-                };
-                format!(
-                    "<{}>{}</{}>",
-                    tag,
-                    list.items()
-                        .map(|item| self.render_block(Block::ListItem(item)))
-                        .collect::<String>(),
-                    tag
-                )
-            }
-            Block::ListItem(list_item) => {
-                format!(
-                    "<li>{}</li>",
-                    list_item
-                        .content()
-                        .map(|b| self.render_block(b))
-                        .collect::<String>()
-                )
+                match list {
+                    List::Ordered(l) => {
+                        format!(
+                            "<ol>{}</ol>",
+                            l.items()
+                                .map(|item| {
+                                    format!(
+                                        "<li>{}</li>",
+                                        item.children()
+                                            .map(|node| self.render_inline(node))
+                                            .collect::<String>(),
+                                    )
+                                })
+                                .collect::<String>(),
+                        )
+                    }
+                    List::Unordered(l) => {
+                        format!(
+                            "<ul>{}</ul>",
+                            l.items()
+                                .map(|item| {
+                                    format!(
+                                        "<li>{}</li>",
+                                        item.children()
+                                            .map(|node| self.render_inline(node))
+                                            .collect::<String>(),
+                                    )
+                                })
+                                .collect::<String>(),
+                        )
+                    }
+                    List::Tasks(l) => {
+                        format!(
+                            r#"<ul class="task-list">{}</ul>"#,
+                            l.items()
+                                .map(|item| {
+                                    // TODO: research better ways of rendering this?
+                                    // maybe add config to HtmlRenderer
+                                    let checked = if item.mark() == TaskListMark::Complete { "checked" } else { "" };
+                                    format!(
+                                        r#"<li class="task-item"><input class="task-checkbox" type="checkbox" {} disabled />{}</li>"#,
+                                        checked,
+                                        item.children()
+                                            .map(|node| self.render_inline(node))
+                                            .collect::<String>(),
+                                    )
+                                })
+                                .collect::<String>(),
+                        )
+                    }
+                }
             }
             Block::Table(table) => {
                 let mut rows = table.rows().peekable();

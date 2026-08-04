@@ -2,6 +2,7 @@ use crate::{
     ast::{
         block::{Block, Document},
         inline::{Inline, MentionData},
+        list::List,
     },
     prelude::*,
 };
@@ -49,16 +50,47 @@ impl PlaintextRenderer {
                 .content()
                 .map(|i| self.render_inline(i))
                 .collect::<String>(),
-            // FIXME: prefix list items with bullets/numbers/checkboxes
-            Block::List(list) => list
-                .items()
-                .map(|item| self.render_block(Block::ListItem(item)))
-                .collect::<Vec<String>>()
-                .join("\n"),
-            Block::ListItem(list_item) => list_item
-                .content()
-                .map(|b| self.render_block(b))
-                .collect::<String>(),
+            Block::List(list) => match list {
+                List::Ordered(l) => l
+                    .items()
+                    .enumerate()
+                    .map(|(i, item)| {
+                        format!(
+                            "{}. {}",
+                            i + 1,
+                            item.children()
+                                .map(|node| self.render_inline(node))
+                                .collect::<String>()
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n"),
+                List::Unordered(l) => l
+                    .items()
+                    .map(|item| {
+                        format!(
+                            "- {}",
+                            item.children()
+                                .map(|node| self.render_inline(node))
+                                .collect::<String>()
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n"),
+                List::Tasks(l) => l
+                    .items()
+                    .map(|item| {
+                        format!(
+                            "- [{}] {}",
+                            item.mark(),
+                            item.children()
+                                .map(|node| self.render_inline(node))
+                                .collect::<String>()
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n"),
+            },
             Block::Table(_table) => String::new(), // TODO: render table to plaintext
         }
     }

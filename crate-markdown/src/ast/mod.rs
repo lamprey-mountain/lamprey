@@ -1,5 +1,6 @@
 pub mod block;
 pub mod inline;
+pub mod list;
 pub mod table;
 
 #[cfg(feature = "serde")]

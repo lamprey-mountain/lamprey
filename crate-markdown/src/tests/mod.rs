@@ -5,6 +5,7 @@ mod blocks;
 mod editing;
 mod invalid_links;
 mod lexing;
+mod lists;
 mod server;
 mod tables;
 mod util;

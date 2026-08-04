@@ -8,6 +8,7 @@ use crate::{
     ast::{
         block::{Block, Document},
         inline::{Inline, MentionData},
+        list::{List, TaskListMark},
     },
     util::timestamp_style::TimestampStyle,
 };
@@ -36,17 +37,51 @@ pub enum SerializedBlock {
         language: Option<String>,
         content: String,
     },
-    List {
-        items: Vec<SerializedBlock>,
+    ListOrdered {
+        items: Vec<SerializedListItemOrdered>,
     },
-    ListItem {
-        content: Vec<SerializedBlock>,
+    ListUnordered {
+        items: Vec<SerializedListItemUnordered>,
+    },
+    ListTasks {
+        items: Vec<SerializedListItemTasks>,
     },
     Table {
         header: Vec<Vec<SerializedInline>>,
         rows: Vec<Vec<Vec<SerializedInline>>>,
     },
 }
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
+pub struct SerializedListItemOrdered {
+    pub number: Option<u16>,
+    pub children: Vec<SerializedInline>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
+pub struct SerializedListItemUnordered {
+    pub children: Vec<SerializedInline>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
+pub struct SerializedListItemTasks {
+    pub mark: TaskListMark,
+    pub children: Vec<SerializedInline>,
+}
+
+// TODO: support lists
+// #[derive(Debug, Clone, Serialize)]
+// #[serde(tag = "type")]
+// #[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
+// pub struct SerializedListTasksItem {
+//     pub mark: TaskListMark,
+//     pub content: Vec<SerializedBlock>,
+// }
+// also structs for unordered, ordered items
+// make SerializedBlock have ListOrdered, unordered, etc variants
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type")]
@@ -120,14 +155,33 @@ impl SerializedBlock {
                     .map(|i| i.syntax().to_string())
                     .collect::<String>(),
             },
-            Block::List(l) => Self::List {
-                items: l
-                    .items()
-                    .map(|i| Self::from_block(Block::ListItem(i)))
-                    .collect(),
-            },
-            Block::ListItem(li) => Self::ListItem {
-                content: li.content().map(SerializedBlock::from_block).collect(),
+            Block::List(l) => match l {
+                List::Ordered(l) => Self::ListOrdered {
+                    items: l
+                        .items()
+                        .map(|i| SerializedListItemOrdered {
+                            number: i.number(),
+                            children: i.children().map(SerializedInline::from_inline).collect(),
+                        })
+                        .collect(),
+                },
+                List::Unordered(l) => Self::ListUnordered {
+                    items: l
+                        .items()
+                        .map(|i| SerializedListItemUnordered {
+                            children: i.children().map(SerializedInline::from_inline).collect(),
+                        })
+                        .collect(),
+                },
+                List::Tasks(l) => Self::ListTasks {
+                    items: l
+                        .items()
+                        .map(|i| SerializedListItemTasks {
+                            mark: i.mark(),
+                            children: i.children().map(SerializedInline::from_inline).collect(),
+                        })
+                        .collect(),
+                },
             },
             Block::Table(t) => Self::Table {
                 header: t

@@ -1,5 +1,10 @@
+use crate::ast::list::ListKind;
+use crate::lexer::Token;
 use crate::parser::ParseContext;
+use crate::parser::helpers::{Draft, DraftError};
 use crate::prelude::*;
+
+// TODO: create a macro or some sort of system to make parsing more ergonomic
 
 impl<'a> ParseContext<'a> {
     pub(crate) fn parse_document(mut self) -> Tree {
@@ -175,6 +180,10 @@ impl<'a> ParseContext<'a> {
                 if self.is_table() {
                     self.parse_table();
                 } else {
+                    if self.parse_list() {
+                        return;
+                    }
+
                     self.builder
                         .start_node(NodeKind::Block(BlockKind::Paragraph).into());
 
@@ -398,5 +407,141 @@ impl<'a> ParseContext<'a> {
         }
 
         self.builder.finish_node();
+    }
+
+    /// attempt to parse a markdown list
+    ///
+    /// returns true if a list was successfully parsed
+    fn parse_list(&mut self) -> bool {
+        // skip over leading whitespace
+        self.tokenizer.consume_whitespace();
+
+        // find out what kind of list this is
+        let mut probe = self.tokenizer.clone();
+        let kind = match probe.peek_kind() {
+            Some(TokenKind::Number) => ListKind::Ordered,
+            Some(TokenKind::Asterisk1) => ListKind::Unordered,
+            Some(TokenKind::Dash) => {
+                probe.advance();
+
+                if probe.consume_whitespace() == 0 {
+                    return false;
+                }
+
+                if probe.peek_kind() == Some(TokenKind::BracketOpen) {
+                    ListKind::Tasks
+                } else {
+                    ListKind::Unordered
+                }
+            }
+
+            _ => return false,
+        };
+
+        let mut started = false;
+
+        loop {
+            let Ok(draft) = self.parse_list_prefix(kind) else {
+                break;
+            };
+
+            if !started {
+                self.builder.start_node(kind.node_kind().into());
+                started = true;
+            }
+
+            self.builder
+                .start_node(NodeKind::Block(BlockKind::ListItem).into());
+
+            let (tokens, lexer) = draft.into_tokens_lexer();
+            for (kind, span) in tokens {
+                self.builder.token(kind.into(), self.tokenizer.text(span));
+            }
+            self.tokenizer = lexer;
+
+            // TODO: parse list items as blocks?
+            self.parse_inline(&|t| t.kind == TokenKind::Newline);
+
+            // skip over trailing newline
+            if let Some(tok) = self.tokenizer.peek() {
+                if tok.kind == TokenKind::Newline {
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Newline).into(), "\n");
+                    self.tokenizer.advance();
+                }
+            }
+
+            self.builder.finish_node();
+        }
+
+        if !started {
+            return false;
+        }
+
+        self.builder.finish_node();
+        true
+    }
+
+    /// attempt to parse a markdown list prefix
+    ///
+    /// returns true if a list prefix was successfully parsed
+    fn parse_list_prefix(&mut self, kind: ListKind) -> Result<Draft<'a>, DraftError> {
+        let mut draft = Draft::new(self.tokenizer.clone());
+
+        // skip over leading whitespace
+        // TODO: maybe add TextKind variant specifically for list item "pre-padding"
+        let _ = draft.consume_whitespace(TextKind::Padding);
+
+        match kind {
+            ListKind::Ordered => {
+                let num = draft.read(TokenKind::Number)?;
+                let dot = draft.read(TokenKind::Dot)?;
+                draft.push(TextKind::ListPrefix, (num.start, dot.end).into());
+            }
+            ListKind::Unordered => {
+                let tok = draft
+                    .read(TokenKind::Asterisk1)
+                    .or_else(|_| draft.read(TokenKind::Dash))?;
+
+                draft.push(TextKind::ListPrefix, tok);
+            }
+
+            ListKind::Tasks => {
+                draft.consume(TokenKind::Dash, TextKind::ListPrefix)?;
+                _ = draft.consume_whitespace(TextKind::Padding);
+                draft.consume(TokenKind::BracketOpen, TextKind::ListPrefix)?;
+
+                // FIXME: parse this whitespace as TaskMark instead of Padding if task mark is empty
+                _ = draft.consume_whitespace(TextKind::Padding);
+
+                match draft.advance() {
+                    Some(Token {
+                        kind: TokenKind::BracketClose,
+                        span,
+                    }) => {
+                        // TODO: maybe push mark (see fixme above)
+                        // draft.push(TextKind::TaskMark, span);
+
+                        // empty or only whitespace
+                        draft.push(TextKind::ListPrefix, span);
+                    }
+                    Some(Token { span, .. }) => {
+                        // TODO: parse and merge multiple tokens instead of only the next one?
+                        draft.push(TextKind::TaskMark, span);
+                        _ = draft.consume_whitespace(TextKind::Padding);
+                        draft.consume(TokenKind::BracketClose, TextKind::ListPrefix)?;
+                    }
+                    None => {
+                        // unexpected eof
+                        return Err(DraftError::Mismatch);
+                    }
+                }
+            }
+        };
+
+        // skip over padding whitespace
+        draft.consume_whitespace(TextKind::Padding)?;
+
+        Ok(draft)
     }
 }

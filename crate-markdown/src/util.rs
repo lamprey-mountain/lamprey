@@ -23,6 +23,8 @@ impl Span {
     pub fn intersects(self, other: Span) -> bool {
         self.start < other.end && other.start < self.end
     }
+
+    // TODO: method to merge spans together into longer span
 }
 
 impl From<(Len, Len)> for Span {

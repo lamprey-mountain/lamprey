@@ -10,6 +10,7 @@ use crate::transform::Transform;
 pub mod config;
 
 mod block;
+mod helpers;
 mod inline;
 
 /// a markdown parser

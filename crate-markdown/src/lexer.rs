@@ -92,6 +92,10 @@ impl<'s> Lexer<'s> {
         self.peeked.clone()
     }
 
+    pub fn peek_kind(&mut self) -> Option<TokenKind> {
+        self.peek().map(|t| t.kind)
+    }
+
     pub fn advance(&mut self) -> Option<Token> {
         if let Some(token) = self.peeked.take() {
             Some(token)
@@ -140,6 +144,20 @@ impl<'s> Lexer<'s> {
         } else {
             self.lexer = TokenKind::lexer("");
         }
+    }
+
+    /// skip over as much whitespace as possible
+    ///
+    /// returns the number of whitespace tokens skipped
+    // WARNING: don't use this outside of peeking since the parser needs to create text nodes for every piece of text!
+    // TODO: maybe remove this, it could be a footgun
+    pub fn consume_whitespace(&mut self) -> usize {
+        let mut consumed = 0;
+        while self.peek_kind() == Some(TokenKind::Whitespace) {
+            self.advance();
+            consumed += 1;
+        }
+        consumed
     }
 }
 
