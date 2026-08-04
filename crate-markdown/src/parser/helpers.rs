@@ -67,26 +67,27 @@ impl<'source> Draft<'source> {
 
     /// consume over as much whitespace as possible
     pub fn consume_whitespace(&mut self, kind: TextKind) -> Result<(), DraftError> {
-        let Some(first) = self.lexer.peek() else {
-            return Err(DraftError::Mismatch);
-        };
-
-        let mut text = String::new();
-        let mut span = first.span;
+        let mut span: Option<Span> = None;
 
         while let Some(tok) = self.lexer.peek() {
             if tok.kind == TokenKind::Whitespace {
-                text.push_str(self.lexer.text(tok.span));
-                span.end = tok.span.end;
+                span = Some(match span {
+                    Some(s) => (s.start, tok.span.end).into(),
+                    None => tok.span,
+                });
                 self.lexer.advance();
             } else {
                 break;
             }
         }
 
-        self.tokens.push((NodeKind::Text(kind), span));
-
-        Ok(())
+        match span {
+            Some(span) => {
+                self.tokens.push((NodeKind::Text(kind), span));
+                Ok(())
+            }
+            None => Err(DraftError::Mismatch),
+        }
     }
 
     /// consume a token of a specific kind
