@@ -1,19 +1,13 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use serenity::all::{
-    ChannelId, ChannelType, CommandInteraction, Context, EventHandler, Guild, GuildChannel,
-    GuildId, GuildMemberUpdateEvent, Interaction, Message, MessageId, MessageUpdateEvent, Presence,
-    Reaction, Ready, TypingStartEvent,
+    ChannelId, Context, EventHandler, Guild, GuildChannel, GuildId, GuildMemberUpdateEvent,
+    Interaction, Message, MessageId, MessageUpdateEvent, Presence, Reaction, Ready,
+    TypingStartEvent,
 };
 use tokio::sync::mpsc;
 use tracing::{error, info, trace};
 
-use crate::{
-    bridge::{BridgeEvent, BridgeHandle, MessageData, PortalEvent, PortalHandle, PortalId},
-    discord::interactions::{SlashCommand, SlashCommandType, get_commands, parse_interaction},
-};
+use crate::platform::discord::interactions::{SlashCommand, get_commands, parse_interaction};
 
 pub struct Handler {
     pub tx: mpsc::Sender<DiscordEvent>,

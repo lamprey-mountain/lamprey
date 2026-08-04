@@ -1,4 +1,4 @@
 create table realm (
-    id integer primary key autoincrement,
+    id text primary key,
     continuous boolean not null default 0
 );

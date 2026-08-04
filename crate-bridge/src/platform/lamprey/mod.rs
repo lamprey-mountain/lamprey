@@ -1,21 +1,23 @@
 use std::collections::HashMap;
 
-use common::v1::types::MessageSync;
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::presence::{Activity, Presence, Status};
+use common::v1::types::{MessageSync, MessageType};
 use futures::StreamExt;
 use sdk::http::{Http, MessageCreateOptions};
 use sdk::syncer::SyncerEvent;
+use time::OffsetDateTime;
 use tokio::sync::{broadcast, oneshot};
 use tokio::task::JoinSet;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
-use crate::bridge::{
+use crate::actor::bridge::BridgeCommand;
+use crate::bridge_old::{
     BridgeEvent, BridgeHandle, Platform, PlatformHandle, Portal, PortalEvent, PortalHandle,
     PortalId,
 };
 use crate::config::LampreyConfig;
-use crate::lamprey::client::LampreyClient;
+use crate::platform::lamprey::client::LampreyClient;
 use crate::prelude::*;
 
 // re export lamprey types
@@ -97,12 +99,32 @@ impl Lamprey {
             tokio::select! {
                 Some(event) = sub.next() => self.handle_syncer_event(&event).await.expect("TODO: better error handling"),
                 Ok(event) = ctl.recv() => self.handle_bridge_event(&event),
-                Some(_) = self.portal_tasks.join_next() => todo!("handle dead portal"),
+                Some(result) = self.portal_tasks.join_next() => {
+                    match result {
+                        Ok((portal_id, Err(e))) => {
+                            warn!(%portal_id, "portal task failed: {e:?}");
+                            // TODO: try to restart portal task on failure
+                            if let Some(_handle) = self.portal_handles.remove(&portal_id) {
+                                // Potentially notify bridge/portal that it's dead?
+                            }
+                            self.portal_lookup.retain(|_, v| *v != portal_id);
+                        }
+                        Ok((portal_id, Ok(()))) => {
+                            debug!(%portal_id, "portal task exited cleanly");
+                            self.portal_handles.remove(&portal_id);
+                            self.portal_lookup.retain(|_, v| *v != portal_id);
+                        }
+                        Err(e) => {
+                            warn!("portal task join error: {e:?}");
+                        }
+                    }
+                },
             }
         }
     }
 
     async fn handle_syncer_event(&mut self, event: &SyncerEvent) -> Result<()> {
+        debug!("handle_syncer_event {event:?}");
         match event {
             SyncerEvent::Message(_) => {}
             SyncerEvent::Sync(sync) => match &**sync {
@@ -143,6 +165,43 @@ impl Lamprey {
                         }
                     }
 
+                    // FIXME: allow sending messages containing !accept and !reject if theres no pending link
+                    match &message.latest_version.message_type {
+                        MessageType::DefaultMarkdown(m) => match m.content.as_deref() {
+                            Some(c @ "!accept" | c @ "!reject") => {
+                                let accepted = c == "!accept";
+                                let _ = self
+                                    .bridge
+                                    .commands
+                                    .send(BridgeCommand::LinkResponse {
+                                        lamprey_channel_id: message.channel_id,
+                                        accepted,
+                                    })
+                                    .await;
+                                // FIXME: send msg on bridge event portal created instead of here
+                                let msg = if accepted {
+                                    "portal successfully created!"
+                                } else {
+                                    "portal request denied"
+                                };
+                                let _ = self
+                                    .client
+                                    .http()
+                                    .message_create(
+                                        message.channel_id,
+                                        &MessageCreate {
+                                            content: Some(msg.to_string()),
+                                            ..Default::default()
+                                        },
+                                    )
+                                    .await;
+                                return Ok(());
+                            }
+                            _ => {}
+                        },
+                        _ => {}
+                    }
+
                     // PERF: cache this
                     let user = self
                         .client
@@ -159,11 +218,11 @@ impl Lamprey {
 
                     self.route_portal_event(
                         &message.channel_id,
-                        PortalEvent::MessageCreate(bridge::MessageData::Lamprey {
+                        PortalEvent::MessageCreate(bridge_old::MessageData::Lamprey {
                             message: Box::new(message.clone()),
                             user: Box::new(user.inner),
                             room_member: None,
-                            info: Box::new(bridge::LampreyInfo {
+                            info: Box::new(bridge_old::LampreyInfo {
                                 cdn_url: self.client.http().cdn_url().clone(),
                             }),
                         }),
@@ -215,30 +274,58 @@ impl Lamprey {
 
     fn handle_bridge_event(&mut self, event: &BridgeEvent) {
         match event {
-            BridgeEvent::PortalInit(id, portal, handle) => {
-                let channel_id = if let Some(lamprey) = &portal.lamprey {
-                    self.portal_lookup.insert(lamprey.channel_id, *id);
-                    lamprey.channel_id
-                } else {
-                    // we aren't part of this bridge
-                    return;
-                };
-                self.portal_handles.insert(*id, handle.clone());
-                self.portal_tasks.spawn(spawn_portal(
-                    *id,
-                    portal.clone(),
-                    handle.clone(),
-                    self.client.http(),
-                    channel_id,
-                ));
+            BridgeEvent::PortalInit(portal, handle) => {
+                self.init_portal(portal, handle);
+            }
+            BridgeEvent::PortalCreated(portal) => {
+                let handle = self.bridge.create_portal_handle(portal.id);
+                self.init_portal(portal, &handle);
             }
             BridgeEvent::PortalEvent(id, event) => {
                 if let Some(handle) = self.portal_handles.get(id) {
                     let _ = handle.events.send(Arc::new(event.clone()));
                 }
             }
-            _ => {} // TODO: handle more events
+            BridgeEvent::LinkRequest { lamprey_channel_id } => {
+                let channel_id = *lamprey_channel_id;
+                let http = self.client.http().clone();
+                tokio::spawn(async move {
+                    let _ = http.message_create_with_options(
+                        sdk::http::MessageCreateOptions {
+                            channel_id,
+                            body: MessageCreate {
+                                // TODO: say which guild/channel is requesting to link
+                                content: Some("A discord channel is requesting to link with this channel. Reply with !accept or !reject".to_string()),
+                                ..Default::default()
+                            },
+                            nonce: None,
+                            timestamp: None,
+                        }
+                    ).await;
+                });
+            }
+            _ => {
+                // TODO: handle more events
+            }
         }
+    }
+
+    fn init_portal(&mut self, portal: &Portal, handle: &PortalHandle) {
+        let channel_id = if let Some(lamprey) = &portal.lamprey {
+            self.portal_lookup.insert(lamprey.channel_id, portal.id);
+            lamprey.channel_id
+        } else {
+            // we aren't part of this bridge
+            return;
+        };
+        self.portal_handles.insert(portal.id, handle.clone());
+        self.portal_tasks.spawn(spawn_portal(
+            portal.id,
+            portal.clone(),
+            handle.clone(),
+            self.client.http(),
+            channel_id,
+        ));
     }
 }
 
@@ -287,7 +374,7 @@ async fn spawn_portal_inner(
         let event = match events.recv().await {
             Ok(e) => e,
             Err(broadcast::error::RecvError::Lagged(n)) => {
-                warn!(portal_id, n, "portal event receiver lagged, skipping");
+                warn!(%portal_id, n, "portal event receiver lagged, skipping");
                 continue;
             }
             Err(broadcast::error::RecvError::Closed) => break,
@@ -297,11 +384,11 @@ async fn spawn_portal_inner(
             PortalEvent::Typing(_) => todo!(),
             PortalEvent::MessageCreate(data) => {
                 let dm = match data {
-                    bridge::MessageData::Lamprey { .. } => {
+                    bridge_old::MessageData::Lamprey { .. } => {
                         // don't send messages from lamprey back to lamprey
                         continue;
                     }
-                    bridge::MessageData::Discord { message } => {
+                    bridge_old::MessageData::Discord { message } => {
                         // TODO: filter out messages on the discord side
                         // message.webhook_id == Some(webhook_id)
                         message
@@ -339,6 +426,15 @@ async fn spawn_portal_inner(
                     }
                 }
 
+                // FIXME: ensure member is added to room
+                // ly.http
+                //     .room_member_add(
+                //         room_id,
+                //         puppet.id,
+                //         &common::v1::types::RoomMemberPut::default(),
+                //     )
+                //     .await?;
+
                 let sent_message = ly
                     .http
                     .for_puppet(puppet.id)?
@@ -346,7 +442,13 @@ async fn spawn_portal_inner(
                         channel_id: portal.lamprey.as_ref().unwrap().channel_id,
                         body: create,
                         nonce: None,
-                        timestamp: None, // FIXME: timestamp massaging
+                        timestamp: Some(
+                            OffsetDateTime::from_unix_timestamp_nanos(
+                                dm.timestamp.timestamp_nanos_opt().unwrap() as i128,
+                            )
+                            .unwrap()
+                            .into(),
+                        ),
                     })
                     .await?;
 
@@ -356,7 +458,7 @@ async fn spawn_portal_inner(
                     .db
                     .message_create(
                         portal_id,
-                        bridge::Message {
+                        bridge_old::Message {
                             source_platform: Platform::Lamprey,
                             attachments: vec![], // FIXME: populate from sent_message
                             portal_id,

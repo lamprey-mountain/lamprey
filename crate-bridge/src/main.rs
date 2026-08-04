@@ -4,10 +4,11 @@ use figment::{
     providers::{Env, Format, Toml},
 };
 use lamprey_bridge::{
-    bridge::{BridgeEvent, BridgeHandle},
+    actor::bridge::BridgeActor,
+    bridge_old::{BridgeEvent, BridgeHandle},
     config::{Config, ConfigPlatform},
     database::SqliteDatabase,
-    discord, lamprey,
+    platform::{discord, lamprey},
 };
 use opentelemetry_otlp::WithExportConfig;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
@@ -62,10 +63,17 @@ async fn main() -> Result<()> {
     sqlx::migrate!("./migrations").run(&pool).await?;
     let db = SqliteDatabase::new(pool);
 
+    // create bridge actor
+    let db = Arc::new(db);
+    let (bridge_cmd_tx, bridge_cmd_rx) = tokio::sync::mpsc::channel(1024);
+    let bridge = BridgeHandle::new(db.clone(), bridge_cmd_tx);
+
+    let bridge_actor = BridgeActor::new(bridge_cmd_rx, bridge.events.clone(), db);
+    tokio::spawn(bridge_actor.run());
+
     // spawn connections to platforms
     let mut readys = vec![];
     let mut tasks = vec![];
-    let bridge = BridgeHandle::new(Arc::new(db));
 
     for (_name, s) in &config.platform {
         let p = match s {
@@ -85,13 +93,13 @@ async fn main() -> Result<()> {
     let realms = bridge.db.realm_list().await?;
     let portals = bridge.db.portal_list().await?;
 
-    for (id, realm) in realms {
+    for realm in realms {
         // TODO: create realms
     }
 
-    for (id, portal) in portals {
-        let handle = bridge.create_portal_handle(id);
-        let event = BridgeEvent::PortalInit(id, portal, handle);
+    for portal in portals {
+        let handle = bridge.create_portal_handle(portal.id);
+        let event = BridgeEvent::PortalInit(portal, handle);
         bridge
             .events
             .send(Arc::new(event))

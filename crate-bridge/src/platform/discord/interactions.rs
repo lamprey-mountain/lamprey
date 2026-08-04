@@ -1,6 +1,6 @@
 use serenity::all::{
     ChannelId, CommandDataOptionValue, CommandInteraction, CommandOptionType, CreateCommand,
-    CreateCommandOption, InteractionContext, Permissions,
+    CreateCommandOption, GuildId, InteractionContext, Permissions,
 };
 
 use crate::prelude::*;
@@ -15,6 +15,12 @@ pub struct SlashCommand {
 impl SlashCommand {
     pub fn channel_id(&self) -> ChannelId {
         self.interaction.channel_id
+    }
+
+    pub fn guild_id(&self) -> GuildId {
+        self.interaction
+            .guild_id
+            .expect("bridge slash commands are only allowed in guilds")
     }
 }
 

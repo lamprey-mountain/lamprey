@@ -1,5 +1,5 @@
-use crate::bridge::{BridgeHandle, PortalHandle};
-use crate::lamprey::ChannelId;
+use crate::bridge_old::{BridgeHandle, PortalHandle};
+use crate::platform::lamprey::ChannelId;
 use crate::prelude::*;
 use common::util::Diff;
 use common::v1::types::misc::{ApplicationIdReq, UserIdReq};
@@ -150,8 +150,8 @@ impl LampreyClient {
             patch.avatar = avatar;
             patch.banner = banner;
 
-            bridge::User {
-                source_platform: bridge::Platform::Discord,
+            bridge_old::User {
+                source_platform: bridge_old::Platform::Discord,
                 lamprey_id: puppet.id,
                 discord_id: message.author.id,
                 discord_avatar_url: message.author.avatar_url(),

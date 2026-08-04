@@ -13,7 +13,7 @@ impl ParsedMentions {
         todo!()
     }
 
-    pub fn from_message(_message: &bridge::MessageData) -> Self {
+    pub fn from_message(_message: &bridge_old::MessageData) -> Self {
         todo!()
     }
 

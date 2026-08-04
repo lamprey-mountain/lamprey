@@ -2,18 +2,19 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use serenity::all::{
-    CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage, ExecuteWebhook,
-    GatewayIntents, Mentionable,
+    CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage, CreateWebhook,
+    ExecuteWebhook, GatewayIntents, Mentionable,
 };
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinSet;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 
-use crate::bridge::{MessageData, PlatformHandle, Portal, PortalHandle, PortalId};
-use crate::discord::events::DiscordEvent;
+use crate::actor::bridge::BridgeCommand;
+use crate::bridge_old::{MessageData, PlatformHandle, Portal, PortalHandle, PortalId};
+use crate::platform::discord::events::DiscordEvent;
 use crate::prelude::*;
 use crate::{
-    bridge::{BridgeEvent, BridgeHandle, PortalEvent},
+    bridge_old::{BridgeEvent, BridgeHandle, PortalEvent},
     config::DiscordConfig,
 };
 
@@ -96,7 +97,7 @@ impl Discord {
         loop {
             tokio::select! {
                 Ok(event) = bridge_events.recv() => {
-                    self.handle_bridge_event(&event);
+                    self.handle_bridge_event(&event).await;
                 }
                 Some(event) = self.rx.recv() => {
                     self.handle_discord_event(event);
@@ -143,10 +144,126 @@ impl Discord {
                 interactions::SlashCommandType::LinkChannel {
                     discord_channel_id,
                     lamprey_channel_id,
-                    backfill,
+                    backfill: _,
+                } => {
+                    // TODO: better error handling
+                    // TODO: better task supervision
+                    // TODO: handle backfill: true
+                    let http = self.http.clone();
+                    let bridge = self.bridge.clone();
+
+                    // check if channel is already linked
+                    if self.portal_lookup.contains_key(&discord_channel_id) {
+                        tokio::spawn(async move {
+                            let _ = command
+                                .interaction
+                                .create_response(
+                                    &http,
+                                    CreateInteractionResponse::Message(
+                                        CreateInteractionResponseMessage::new()
+                                            .ephemeral(true)
+                                            .content("this channel is already linked"),
+                                    ),
+                                )
+                                .await;
+                        });
+                        return;
+                    }
+
+                    tokio::spawn(async move {
+                        // create webhook
+                        let webhook =
+                            match http.get_channel(discord_channel_id).await.and_then(|ch| {
+                                ch.guild()
+                                    .ok_or(serenity::Error::Other("not a guild channel"))
+                            }) {
+                                Ok(channel) => {
+                                    match channel
+                                        .create_webhook(&http, CreateWebhook::new("bridge"))
+                                        .await
+                                    {
+                                        Ok(wh) => wh,
+                                        Err(e) => {
+                                            error!(?e, "failed to create webhook");
+                                            let _ = command
+                                                .interaction
+                                                .create_response(
+                                                    &http,
+                                                    CreateInteractionResponse::Message(
+                                                        CreateInteractionResponseMessage::new()
+                                                            .ephemeral(true)
+                                                            .content("failed to create webhook"),
+                                                    ),
+                                                )
+                                                .await;
+                                            return;
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    // TODO: send error response message
+                                    error!(?e, "failed to get channel");
+                                    return;
+                                }
+                            };
+
+                        let webhook_url: url::Url = webhook
+                            .url()
+                            .expect("webhook url")
+                            .parse()
+                            .expect("invalid webhook url");
+
+                        // send command to bridge actor
+                        let _ = bridge
+                            .commands
+                            .send(BridgeCommand::LinkRequest {
+                                discord_guild_id: command.guild_id(),
+                                discord_channel_id,
+                                lamprey_channel_id,
+                                webhook_url,
+                            })
+                            .await;
+
+                        // respond to user
+                        let _ = command
+                            .interaction
+                            .create_response(
+                                &http,
+                                CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new()
+                                        .ephemeral(true)
+                                        .content("please send !accept from the lamprey side"),
+                                ),
+                            )
+                            .await;
+                    });
+                }
+                interactions::SlashCommandType::UnlinkGuild {
+                    discord_guild_id: _,
                 } => todo!(),
-                interactions::SlashCommandType::UnlinkGuild { discord_guild_id } => todo!(),
-                interactions::SlashCommandType::UnlinkChannel { discord_channel_id } => todo!(),
+                interactions::SlashCommandType::UnlinkChannel { discord_channel_id } => {
+                    let http = self.http.clone();
+                    let bridge = self.bridge.clone();
+
+                    tokio::spawn(async move {
+                        let _ = bridge
+                            .commands
+                            .send(BridgeCommand::PortalUnlink { discord_channel_id })
+                            .await;
+
+                        let _ = command
+                            .interaction
+                            .create_response(
+                                &http,
+                                CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new()
+                                        .ephemeral(true)
+                                        .content("channel unlinked"),
+                                ),
+                            )
+                            .await;
+                    });
+                }
             },
         }
     }
@@ -160,28 +277,58 @@ impl Discord {
         }
     }
 
-    fn handle_bridge_event(&mut self, event: &BridgeEvent) {
+    async fn handle_bridge_event(&mut self, event: &BridgeEvent) {
         match event {
-            BridgeEvent::PortalInit(id, portal, handle) => {
-                if let Some(discord) = &portal.discord {
-                    self.portal_lookup.insert(discord.channel_id, *id);
-                }
-                self.portal_handles.insert(*id, handle.clone());
-                self.portal_tasks.spawn(spawn_portal(
-                    *id,
-                    portal.clone(),
-                    handle.clone(),
-                    self.http.clone(),
-                    self.cache.clone(),
-                ));
+            BridgeEvent::PortalInit(portal, handle) => {
+                self.init_portal(portal, handle);
+            }
+            BridgeEvent::PortalCreated(portal) => {
+                let handle = self.bridge.create_portal_handle(portal.id);
+                self.init_portal(portal, &handle);
             }
             BridgeEvent::PortalEvent(id, event) => {
                 if let Some(handle) = self.portal_handles.get(id) {
                     let _ = handle.events.send(Arc::new(event.clone()));
                 }
             }
-            _ => {} // TODO: handle more events
+            BridgeEvent::PortalDeleted(id) => {
+                self.portal_lookup.retain(|_, v| v != id);
+                self.portal_handles.remove(id);
+                // TODO: make sure portal tasks exit when their PortalHandle is dropped
+            }
+            BridgeEvent::LinkResponse {
+                discord_channel_id,
+                accepted,
+            } => {
+                let msg = if *accepted {
+                    "portal successfully created!"
+                } else {
+                    "portal request was declined (or maybe something else went wrong)"
+                };
+                let http = self.http.clone();
+                let channel_id = *discord_channel_id;
+                tokio::spawn(async move {
+                    let _ = http
+                        .send_message(channel_id, vec![], &CreateMessage::new().content(msg))
+                        .await;
+                });
+            }
+            _ => {} // other events not relevant to Discord platform
         }
+    }
+
+    fn init_portal(&mut self, portal: &Portal, handle: &PortalHandle) {
+        if let Some(discord) = &portal.discord {
+            self.portal_lookup.insert(discord.channel_id, portal.id);
+        }
+        self.portal_handles.insert(portal.id, handle.clone());
+        self.portal_tasks.spawn(spawn_portal(
+            portal.id,
+            portal.clone(),
+            handle.clone(),
+            self.http.clone(),
+            self.cache.clone(),
+        ));
     }
 }
 
@@ -211,7 +358,7 @@ async fn spawn_portal_inner(
         let event = match events.recv().await {
             Ok(e) => e,
             Err(broadcast::error::RecvError::Lagged(n)) => {
-                warn!(portal_id, n, "portal event receiver lagged, skipping");
+                warn!(%portal_id, n, "portal event receiver lagged, skipping");
                 continue;
             }
             Err(broadcast::error::RecvError::Closed) => break,

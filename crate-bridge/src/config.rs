@@ -1,3 +1,5 @@
+//! configuration for the bridge
+
 use std::collections::HashMap;
 
 use serde::Deserialize;
