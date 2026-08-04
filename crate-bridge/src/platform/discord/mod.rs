@@ -13,6 +13,7 @@ use crate::actor::bridge::BridgeCommand;
 use crate::bridge_old::{MessageData, PlatformHandle, Portal, PortalHandle, PortalId};
 use crate::platform::discord::events::DiscordEvent;
 use crate::prelude::*;
+use crate::types::Platform;
 use crate::{
     bridge_old::{BridgeEvent, BridgeHandle, PortalEvent},
     config::DiscordConfig,
@@ -524,9 +525,34 @@ async fn spawn_portal_inner(
                 // .components(components)
                 // .allowed_mentions(allowed_mentions);
 
-                webhook.execute(&http, false, builder).await?;
+                let sent_message = webhook.execute(&http, true, builder).await?;
 
-                // FIXME: update database?
+                if let Some(msg) = sent_message {
+                    if let MessageData::Lamprey { message, .. } = data {
+                        let mut attachments = vec![];
+                        for (i, attachment) in msg_inner.attachments.iter().enumerate() {
+                            let common::v1::types::MessageAttachmentType::Media { media } =
+                                &attachment.ty;
+                            if let Some(discord_att) = msg.attachments.get(i) {
+                                attachments.push((media.id, discord_att.id));
+                            }
+                        }
+
+                        let updated_message = crate::bridge_old::Message {
+                            portal_id,
+                            source_platform: Platform::Lamprey,
+                            lamprey_message_id: Some(message.id),
+                            discord_message_id: Some(msg.id),
+                            attachments,
+                        };
+
+                        let _ = handle
+                            .bridge
+                            .db
+                            .message_update(portal_id, updated_message)
+                            .await;
+                    }
+                }
             }
             PortalEvent::MessageUpdate(data) => {
                 let (msg, _user, _room_member, info) = match data {

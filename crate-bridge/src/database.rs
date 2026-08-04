@@ -31,6 +31,7 @@ pub trait Database: fmt::Debug + Send + Sync {
     ) -> Result<Option<Portal>>;
 
     async fn message_create(&self, portal_id: PortalId, message: Message) -> Result<()>;
+    async fn message_update(&self, portal_id: PortalId, message: Message) -> Result<()>;
     async fn message_delete_by_discord(
         &self,
         portal_id: PortalId,
@@ -298,6 +299,60 @@ impl Database for SqliteDatabase {
             source_platform,
             lamprey_message_id,
             discord_message_id
+        )
+        .execute(&mut *txn)
+        .await?;
+
+        for (lamprey_media_id, discord_attachment_id) in message.attachments {
+            let lamprey_media_str = lamprey_media_id.to_string();
+            let discord_attachment_str = discord_attachment_id.to_string();
+            query!(
+                "INSERT INTO message_attachment (message_id, lamprey_media_id, discord_attachment_id) VALUES (?, ?, ?)",
+                message_id_str,
+                lamprey_media_str,
+                discord_attachment_str
+            )
+            .execute(&mut *txn)
+            .await?;
+        }
+
+        txn.commit().await?;
+        Ok(())
+    }
+
+    async fn message_update(&self, portal_id: PortalId, message: Message) -> Result<()> {
+        let portal_id_str = portal_id.to_string();
+        let lamprey_message_id = message.lamprey_message_id.map(|id| id.to_string());
+        let discord_message_id = message.discord_message_id.map(|id| id.to_string());
+
+        let row = query!(
+            "SELECT id FROM message WHERE portal_id = ? AND (lamprey_message_id = ? OR discord_message_id = ?)",
+            portal_id_str,
+            lamprey_message_id,
+            discord_message_id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let Some(row) = row else {
+            return Err(anyhow::anyhow!("message not found"));
+        };
+        let message_id_str = row.id;
+
+        let mut txn = self.pool.begin().await?;
+
+        query!(
+            "UPDATE message SET lamprey_message_id = ?, discord_message_id = ? WHERE id = ?",
+            lamprey_message_id,
+            discord_message_id,
+            message_id_str
+        )
+        .execute(&mut *txn)
+        .await?;
+
+        query!(
+            "DELETE FROM message_attachment WHERE message_id = ?",
+            message_id_str
         )
         .execute(&mut *txn)
         .await?;

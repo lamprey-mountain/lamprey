@@ -611,11 +611,37 @@ async fn spawn_portal_inner(
                             attachments: Some(attachments),
                             ..Default::default()
                         };
-                        ly.http
+
+                        let edited = ly
+                            .http
                             .message_edit(channel_id, lamprey_message_id, &patch)
                             .await?;
 
-                        // FIXME: update database?
+                        let mut new_attachments = Vec::new();
+                        if let MessageType::DefaultMarkdown(m) = &edited.latest_version.message_type
+                        {
+                            for (i, attachment) in m.attachments.iter().enumerate() {
+                                let common::v1::types::MessageAttachmentType::Media { media } =
+                                    &attachment.ty;
+                                if let Some(discord_att) = dm.attachments.get(i) {
+                                    new_attachments.push((media.id, discord_att.id));
+                                }
+                            }
+                        }
+
+                        let updated_message = crate::bridge_old::Message {
+                            portal_id,
+                            source_platform: msg.source_platform,
+                            lamprey_message_id: msg.lamprey_message_id,
+                            discord_message_id: msg.discord_message_id,
+                            attachments: new_attachments,
+                        };
+
+                        handle
+                            .bridge
+                            .db
+                            .message_update(portal_id, updated_message)
+                            .await?;
                     }
                 }
             }
