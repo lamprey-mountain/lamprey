@@ -140,9 +140,9 @@
             };
         });
 
-        bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" ];
+        bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" "crate-backend-core" "crate-script" ];
         voice = mkCrate "lamprey-voice" [ "crate-voice" ];
-        media = mkCrate "lamprey-media" [ "crate-media" "crate-backend-core" ];
+        media = mkCrate "lamprey-media" [ "crate-media" "crate-backend-core" "crate-script" ];
         scanner-malware = mkCrate "scanner-malware" [ "scanner-malware" ];
 
         wasm-cargo-artifacts = craneLib.buildDepsOnly (common // {
