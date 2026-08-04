@@ -196,41 +196,42 @@ impl Discord {
                     }
 
                     tokio::spawn(async move {
-                        // create webhook
-                        let webhook =
+                        // get channel
+                        let discord_channel =
                             match http.get_channel(discord_channel_id).await.and_then(|ch| {
                                 ch.guild()
                                     .ok_or(serenity::Error::Other("not a guild channel"))
                             }) {
-                                Ok(channel) => {
-                                    match channel
-                                        .create_webhook(&http, CreateWebhook::new("bridge"))
-                                        .await
-                                    {
-                                        Ok(wh) => wh,
-                                        Err(e) => {
-                                            error!(?e, "failed to create webhook");
-                                            let _ = command
-                                                .interaction
-                                                .create_response(
-                                                    &http,
-                                                    CreateInteractionResponse::Message(
-                                                        CreateInteractionResponseMessage::new()
-                                                            .ephemeral(true)
-                                                            .content("failed to create webhook"),
-                                                    ),
-                                                )
-                                                .await;
-                                            return;
-                                        }
-                                    }
-                                }
+                                Ok(ch) => ch,
                                 Err(e) => {
-                                    // TODO: send error response message
                                     error!(?e, "failed to get channel");
                                     return;
                                 }
                             };
+                        let discord_last_id = discord_channel.last_message_id.unwrap_or_default();
+
+                        // create webhook
+                        let webhook = match discord_channel
+                            .create_webhook(&http, CreateWebhook::new("bridge"))
+                            .await
+                        {
+                            Ok(wh) => wh,
+                            Err(e) => {
+                                error!(?e, "failed to create webhook");
+                                let _ = command
+                                    .interaction
+                                    .create_response(
+                                        &http,
+                                        CreateInteractionResponse::Message(
+                                            CreateInteractionResponseMessage::new()
+                                                .ephemeral(true)
+                                                .content("failed to create webhook"),
+                                        ),
+                                    )
+                                    .await;
+                                return;
+                            }
+                        };
 
                         let webhook_url: url::Url = webhook
                             .url()
@@ -247,6 +248,7 @@ impl Discord {
                                 lamprey_channel_id,
                                 webhook_url,
                                 webhook_id: webhook.id,
+                                discord_last_id,
                             })
                             .await;
 
@@ -382,6 +384,8 @@ async fn spawn_portal_inner(
     cache: Arc<serenity::all::Cache>,
 ) -> Result<()> {
     let mut events = handle.events.subscribe();
+
+    // TODO: backfill missed messages
 
     loop {
         let event = match events.recv().await {

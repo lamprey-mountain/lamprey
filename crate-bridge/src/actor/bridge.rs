@@ -21,6 +21,7 @@ pub enum BridgeCommand {
         lamprey_channel_id: lamprey::ChannelId,
         webhook_url: Url,
         webhook_id: discord::WebhookId,
+        discord_last_id: discord::MessageId,
     },
 
     /// Lamprey received !accept or !reject
@@ -28,6 +29,7 @@ pub enum BridgeCommand {
         lamprey_channel_id: lamprey::ChannelId,
         lamprey_room_id: lamprey::RoomId,
         accepted: bool,
+        lamprey_last_id: lamprey::MessageId,
     },
 
     /// Discord requests unlink
@@ -133,6 +135,7 @@ impl BridgeActor {
                 lamprey_channel_id,
                 webhook_url,
                 webhook_id,
+                discord_last_id,
             } => {
                 // 1. Check DB for existing link (both sides)
                 if let Ok(Some(_)) = self
@@ -180,6 +183,7 @@ impl BridgeActor {
                         webhook_url,
                         webhook_id,
                         confirmation_message_id: None,
+                        discord_last_id,
                     },
                 );
 
@@ -193,6 +197,7 @@ impl BridgeActor {
                 lamprey_channel_id,
                 lamprey_room_id,
                 accepted,
+                lamprey_last_id,
             } => {
                 // 1. Remove from pending_links
                 if let Some(pending) = self.pending_links.remove(&lamprey_channel_id) {
@@ -205,8 +210,7 @@ impl BridgeActor {
                             lamprey: Some(PortalLamprey {
                                 channel_id: pending.lamprey_channel_id,
                                 room_id: lamprey_room_id,
-                                // FIXME: populate last_id
-                                last_id: lamprey::MessageId::new(),
+                                last_id: lamprey_last_id,
                             }),
                             discord: Some(PortalDiscord {
                                 guild_id: pending.discord_guild_id,
@@ -214,8 +218,7 @@ impl BridgeActor {
                                 channel_id: pending.discord_channel_id,
                                 webhook_url: pending.webhook_url,
                                 webhook_id: Some(pending.webhook_id),
-                                // FIXME: populate last_id
-                                last_id: discord::MessageId::default(),
+                                last_id: pending.discord_last_id,
                             }),
                         };
 

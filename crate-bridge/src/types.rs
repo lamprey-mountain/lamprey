@@ -43,6 +43,7 @@ pub struct PendingLink {
     pub webhook_url: Url,
     pub webhook_id: discord::WebhookId,
     pub confirmation_message_id: Option<lamprey::MessageId>,
+    pub discord_last_id: discord::MessageId,
 }
 
 /// a known/supported platform

@@ -196,6 +196,9 @@ impl Lamprey {
                                         lamprey_room_id: room_id,
                                         lamprey_channel_id: message.channel_id,
                                         accepted,
+                                        lamprey_last_id: channel
+                                            .last_message_id
+                                            .unwrap_or_default(),
                                     })
                                     .await;
                                 // FIXME: send msg on bridge event portal created instead of here
@@ -421,6 +424,8 @@ async fn spawn_portal_inner(
             }
             Err(broadcast::error::RecvError::Closed) => break,
         };
+
+        debug!("lamprey portal recv event: {event:?}");
 
         match &*event {
             PortalEvent::Typing(_) => todo!(),
