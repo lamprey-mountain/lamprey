@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO document_update (document_id, branch_id, snapshot_id, seq, data, author_id, stat_added, stat_removed)\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Bytea",
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "60e314bd58e99d211f87d41dc97fba0969b07aa670e5384129275c6c63c35c67"
+}

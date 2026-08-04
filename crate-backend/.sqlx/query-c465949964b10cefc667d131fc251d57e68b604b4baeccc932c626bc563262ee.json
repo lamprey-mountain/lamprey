@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE audit_log SET deleted_at = $1 WHERE extract_timestamp_from_uuid_v7(id) < $2 AND deleted_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamp",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c465949964b10cefc667d131fc251d57e68b604b4baeccc932c626bc563262ee"
+}

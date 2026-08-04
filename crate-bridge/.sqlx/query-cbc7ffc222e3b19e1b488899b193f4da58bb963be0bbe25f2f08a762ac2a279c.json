@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT lamprey_media_id, discord_attachment_id FROM message_attachment WHERE message_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "lamprey_media_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_attachment_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "cbc7ffc222e3b19e1b488899b193f4da58bb963be0bbe25f2f08a762ac2a279c"
+}

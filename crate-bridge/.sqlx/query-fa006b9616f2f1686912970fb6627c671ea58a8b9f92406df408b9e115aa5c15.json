@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE realm SET continuous = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "fa006b9616f2f1686912970fb6627c671ea58a8b9f92406df408b9e115aa5c15"
+}

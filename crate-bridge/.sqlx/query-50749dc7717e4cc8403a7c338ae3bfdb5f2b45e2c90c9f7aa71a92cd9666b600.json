@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO portal (id, realm_id, lamprey_channel_id, lamprey_room_id, lamprey_last_id, discord_guild_id, discord_parent_id, discord_channel_id, discord_webhook_url, discord_webhook_id, discord_last_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 11
+    },
+    "nullable": []
+  },
+  "hash": "50749dc7717e4cc8403a7c338ae3bfdb5f2b45e2c90c9f7aa71a92cd9666b600"
+}

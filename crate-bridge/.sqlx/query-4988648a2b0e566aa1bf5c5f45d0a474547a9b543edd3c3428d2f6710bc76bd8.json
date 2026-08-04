@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO \"user\" (source_platform, lamprey_id, discord_id, discord_avatar_url, discord_banner_url) VALUES (?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "4988648a2b0e566aa1bf5c5f45d0a474547a9b543edd3c3428d2f6710bc76bd8"
+}

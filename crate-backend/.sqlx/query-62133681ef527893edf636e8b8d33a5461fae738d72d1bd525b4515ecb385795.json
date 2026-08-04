@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE room_member\n        \tSET override_name = $3, override_description = $4, mute = $5, deaf = $6, timeout_until = $7\n            WHERE room_id = $1 AND user_id = $2 AND membership = 'Join'\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Bool",
+        "Bool",
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "62133681ef527893edf636e8b8d33a5461fae738d72d1bd525b4515ecb385795"
+}

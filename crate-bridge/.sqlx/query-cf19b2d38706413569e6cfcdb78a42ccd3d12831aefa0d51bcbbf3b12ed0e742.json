@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO message (id, portal_id, source_platform, lamprey_message_id, discord_message_id) VALUES (?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "cf19b2d38706413569e6cfcdb78a42ccd3d12831aefa0d51bcbbf3b12ed0e742"
+}

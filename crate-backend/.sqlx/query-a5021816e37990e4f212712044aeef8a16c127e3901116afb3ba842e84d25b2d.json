@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select password_hash, password_salt from usr where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "password_hash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 1,
+        "name": "password_salt",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      true
+    ]
+  },
+  "hash": "a5021816e37990e4f212712044aeef8a16c127e3901116afb3ba842e84d25b2d"
+}

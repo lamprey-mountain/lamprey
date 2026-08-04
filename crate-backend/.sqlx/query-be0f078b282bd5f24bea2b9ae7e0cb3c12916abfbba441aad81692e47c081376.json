@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO document_snapshot (id, document_id, branch_id, snapshot, seq)\n            VALUES ($1, $2, $3, $4, 0)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "be0f078b282bd5f24bea2b9ae7e0cb3c12916abfbba441aad81692e47c081376"
+}

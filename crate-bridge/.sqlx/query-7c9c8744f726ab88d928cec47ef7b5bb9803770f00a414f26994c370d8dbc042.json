@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO realm (id, continuous) VALUES (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "7c9c8744f726ab88d928cec47ef7b5bb9803770f00a414f26994c370d8dbc042"
+}

@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT room_id, config FROM preferences_room WHERE user_id = $1 AND room_id = ANY($2)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "config",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "2743970609ddd8a7c418bffe9dda8aef3b76d662e2feb6ed0bc0a3a682a25bb5"
+}

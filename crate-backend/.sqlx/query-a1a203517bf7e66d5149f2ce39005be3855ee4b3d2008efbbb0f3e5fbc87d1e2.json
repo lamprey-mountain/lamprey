@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FROM usr u LEFT JOIN puppet p ON u.id = p.id WHERE u.bot = false AND p.id IS NULL AND u.system = false",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a1a203517bf7e66d5149f2ce39005be3855ee4b3d2008efbbb0f3e5fbc87d1e2"
+}

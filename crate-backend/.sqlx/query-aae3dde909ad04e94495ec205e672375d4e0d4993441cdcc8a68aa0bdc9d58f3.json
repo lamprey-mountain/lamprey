@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE redex_version SET status = $2 WHERE version_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "aae3dde909ad04e94495ec205e672375d4e0d4993441cdcc8a68aa0bdc9d58f3"
+}
