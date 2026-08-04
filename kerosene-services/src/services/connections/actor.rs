@@ -120,7 +120,6 @@ impl Connection {
                         Tfe::Recv(Some(Ok(event))) => {
                             if let Err(err) = self.handle_client(event).await {
                                 error!("handle_client error: {err}");
-                                // TODO: don't break on any error
                                 break;
                             }
                         }
@@ -128,14 +127,14 @@ impl Connection {
                             // TODO: handle Err
                         }
                         Tfe::Recv(None) => {
-                            // TODO: handle None (transport closed)
+                            // unexpected disconnect, disconnect transport
+                            self.transport = None;
                         }
                         Tfe::Timeout => {
                             if let Err(err) = self.handle_timeout().await {
                                 error!("handle_timeout error: {err}");
                                 break;
                             }
-                            // TODO: handle Timeout::Close
                         }
                     }
                 }
@@ -300,7 +299,7 @@ impl Connection {
                     let _ = t.send.close().await;
                 }
 
-                // TODO: invalidate/remove this connection
+                self.teardown().await;
             }
         }
 
@@ -310,45 +309,52 @@ impl Connection {
     async fn handle_client(&mut self, event: TransportEvent) -> Result<()> {
         match event {
             TransportEvent::Message(msg) => {
-                match self.handle_message_client_inner(msg).await {
-                    Ok(_) => {}
-                    Err(err) => {
-                        let t = self.transport.as_mut().ok_or_else(|| {
-                            Error::BadStatic("transport lost during error handling")
-                        })?;
+                if let Err(err) = self.handle_message_client_inner(msg).await {
+                    let t = self
+                        .transport
+                        .as_mut()
+                        .ok_or_else(|| Error::BadStatic("transport lost during error handling"))?;
 
-                        let code = match &err {
-                            Error::SyncError(c) => Some(c.clone()),
-                            _ => None,
-                        };
+                    let code = match &err {
+                        Error::SyncError(c) => Some(c.clone()),
+                        _ => None,
+                    };
+                    t.send
+                        .send(MessageEnvelope {
+                            payload: MessagePayload::Error {
+                                error: err.to_string(),
+                                code,
+                            },
+                        })
+                        .await?;
+
+                    let sev = severity(&err);
+                    if matches!(
+                        sev,
+                        ConnectionErrorSeverity::Reconnect | ConnectionErrorSeverity::Fatal
+                    ) {
                         t.send
                             .send(MessageEnvelope {
-                                payload: MessagePayload::Error {
-                                    error: err.to_string(),
-                                    code,
+                                payload: MessagePayload::Reconnect {
+                                    can_resume: sev == ConnectionErrorSeverity::Reconnect,
                                 },
                             })
                             .await?;
-
-                        let sev = severity(&err);
-                        if matches!(
-                            sev,
-                            ConnectionErrorSeverity::Reconnect | ConnectionErrorSeverity::Fatal
-                        ) {
-                            t.send
-                                .send(MessageEnvelope {
-                                    payload: MessagePayload::Reconnect {
-                                        can_resume: sev == ConnectionErrorSeverity::Reconnect,
-                                    },
-                                })
-                                .await?;
-                        }
                     }
                 }
-                Ok(())
             }
-            TransportEvent::Closed(clean) => self.handle_close(clean).await,
+            TransportEvent::Closed(clean) => {
+                if clean {
+                    self.teardown().await;
+                } else {
+                    // TODO: timer to invalidate connection after some amount of time
+                    // maybe use DelayQueue in connections service?
+                    self.transport = None;
+                }
+            }
         }
+
+        Ok(())
     }
 
     async fn handle_message_client_inner(&mut self, msg: MessageClient) -> Result<()> {
@@ -665,34 +671,34 @@ impl Connection {
                 t.timeout = Timeout::for_close();
             }
             Timeout::Close(_) => {
-                t.send.close().await?;
-                // TODO: handle close, emit detach event
+                let _ = t.send.close().await;
+                self.teardown().await;
             }
         };
+
         Ok(())
     }
 
-    async fn handle_close(&mut self, clean: bool) -> Result<()> {
-        if clean {
-            // set presence to offline
-            if let Some(user_id) = self.session.user_id() {
-                let srv = self.globals.services();
-                if let Err(err) = srv.presence.set(user_id, Presence::offline()).await {
-                    warn!("failed to set user {user_id} as offline: {err}");
-                }
-            }
-
-            // clean up subscriptions
-            // NOTE: does this clear document presence?
-            if let Some(user_id) = self.session.user_id() {
-                self.subscriptions.disconnect(user_id).await;
+    /// this connection has been cleanly shutdown
+    ///
+    /// mark the user as offline, disconnect from subscriptions, etc
+    async fn teardown(&mut self) {
+        // set presence to offline
+        if let Some(user_id) = self.session.user_id() {
+            let srv = self.globals.services();
+            if let Err(err) = srv.presence.set(user_id, Presence::offline()).await {
+                warn!("failed to set user {user_id} as offline: {err}");
             }
         }
 
-        // TODO: timer to invalidate connection after some amount of time
+        // clean up subscriptions
+        if let Some(user_id) = self.session.user_id() {
+            self.subscriptions.disconnect(user_id).await;
+        }
 
         self.transport = None;
-        Ok(())
+
+        // TODO: immediately invalidate/remove this connection, prevent reconnects
     }
 }
 
