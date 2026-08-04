@@ -413,11 +413,9 @@ impl<'a> ParseContext<'a> {
     ///
     /// returns true if a list was successfully parsed
     fn parse_list(&mut self) -> bool {
-        // skip over leading whitespace
-        self.tokenizer.consume_whitespace();
-
         // find out what kind of list this is
         let mut probe = self.tokenizer.clone();
+        probe.consume_whitespace();
         let kind = match probe.peek_kind() {
             Some(TokenKind::Number) => ListKind::Ordered,
             Some(TokenKind::Asterisk1) => ListKind::Unordered,
