@@ -42,6 +42,7 @@ type Draft = {
 	userLimit: number;
 	bitrate: number;
 	icon: string | null;
+	url: string;
 };
 
 const toDraft = (c: Channel): Draft => ({
@@ -53,6 +54,7 @@ const toDraft = (c: Channel): Draft => ({
 	userLimit: c.user_limit ?? 0,
 	bitrate: c.bitrate ?? 65535,
 	icon: c.icon ?? null,
+	url: c.url ?? "",
 });
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
@@ -76,6 +78,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	});
 
 	const isGdm = () => props.channel.type === "Gdm";
+	const isInfo = () => props.channel.type === "Info";
 
 	const setIconFile = async (f: File) => {
 		await createUpload({
@@ -130,6 +133,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				bitrate: draft.bitrate,
 			}),
 			...(isGdm() && { icon: draft.icon }),
+			...(isInfo() && { url: draft.url || null }),
 		});
 		setSaving(false);
 		// TODO: reset draft once saved
@@ -332,23 +336,40 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					</div>
 				</label>
 			</Show>
-			<div>
-				<CheckboxOption
-					id={`channel-${props.channel.id}-nsfw`}
-					checked={draft.nsfw ?? false}
-					onChange={(v) => setDraft("nsfw", v)}
-					seed={`channel-${props.channel.id}-nsfw`}
-				>
-					<Checkbox
+			<Show when={!isInfo() /* TODO: hasNsfw() */}>
+				<div>
+					<CheckboxOption
+						id={`channel-${props.channel.id}-nsfw`}
 						checked={draft.nsfw ?? false}
+						onChange={(v) => setDraft("nsfw", v)}
 						seed={`channel-${props.channel.id}-nsfw`}
-					/>
-					<div>
-						<b>nsfw</b>
-						<div>mark this channel as not safe for work</div>
-					</div>
-				</CheckboxOption>
-			</div>
+					>
+						<Checkbox
+							checked={draft.nsfw ?? false}
+							seed={`channel-${props.channel.id}-nsfw`}
+						/>
+						<div>
+							<b>nsfw</b>
+							<div>mark this channel as not safe for work</div>
+						</div>
+					</CheckboxOption>
+				</div>
+			</Show>
+			<Show when={isInfo()}>
+				<div>
+					<label style="display:flex;flex-direction:column">
+						<h3 class="dim" style="margin:0 4px">
+							url
+						</h3>
+						<input
+							value={draft.url}
+							type="url"
+							class="name-input"
+							onInput={(e) => setDraft("url", e.target.value)}
+						/>
+					</label>
+				</div>
+			</Show>
 			{/* TODO: add/remove tags from thread channels */}
 			{/* TODO: archive all threads in this channel (text, forum) */}
 			<Savebar

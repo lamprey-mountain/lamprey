@@ -4,6 +4,7 @@ import icChanCalendar1 from "@/assets/channel-calendar-1.png";
 import icChanDocument1 from "@/assets/channel-document-1.png";
 import icChanForum1 from "@/assets/channel-forum-1.png";
 import icChanForum2 from "@/assets/channel-forum2.png";
+import icChanInfo1 from "@/assets/channel-info-1.png";
 import icChanNsfw from "@/assets/channel-nsfw.png";
 import icChanScripts1 from "@/assets/channel-scripts-1.png";
 import icChanText1 from "@/assets/channel-text-1.png";
@@ -16,7 +17,7 @@ import icChanTicket1 from "@/assets/channel-ticket-1.png";
 import icChanVoice1 from "@/assets/channel-voice-1.png";
 import icChanVoice2 from "@/assets/channel-voice-2.png";
 import icChanWiki1 from "@/assets/channel-wiki-1.png";
-import icChanCategory from "@/assets/folder-1.png";
+import icChanCategory1 from "@/assets/folder-1.png";
 import icChanUnknown from "@/assets/question.png";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { getColor } from "@/lib/colors";
@@ -52,7 +53,9 @@ export const channelIcon = (channelType: ChannelType, seed: string) => {
 		case "Scripts":
 			return rnd([icChanScripts1]);
 		case "Category":
-			return rnd([icChanCategory]);
+			return rnd([icChanCategory1]);
+		case "Info":
+			return rnd([icChanInfo1]);
 		case "Text":
 			return rnd([icChanText1, icChanText2, icChanText3, icChanText4]);
 		default:
@@ -101,6 +104,7 @@ export const ChannelIcon = (props: {
 						"ThreadForum2",
 						"Forum2",
 						"Ticket",
+						"Info",
 					] as ChannelType[]
 				).includes(props.channel.type)}
 			>

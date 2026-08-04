@@ -762,78 +762,165 @@ export const ItemChannel = (props: {
 	const isDm = () =>
 		props.channel.type === "Dm" || props.channel.type === "Gdm";
 
+	const href = () => {
+		if (props.channel.type === "Info") {
+			return props.channel.url ?? null;
+		}
+		return `/channel/${props.channel.id}`;
+	};
+
 	const params = useParams();
 
+	// TODO: dedupe copy pasted code
 	return (
-		<A
-			href={`/channel/${props.channel.id}`}
-			class="menu-channel channel-link"
-			classList={{ active: props.channel.id === params.channel_id }}
-			data-unread={
-				CHANNEL_TYPES_HAS_UNREAD.has(props.channel.type) &&
-				props.channel.last_read_id !== props.channel.last_message_id
-			}
-			data-muted={isMuted() ? "true" : undefined}
-			data-channel-id={props.channel.id}
-			onClick={handleClick}
-			onMouseEnter={() => setHovered(true)}
-			onMouseLeave={() => setHovered(false)}
-			tabIndex={-1} // TODO: move tab index here?
-		>
-			<Show when={props.icon}>
-				<ChannelIcon channel={props.channel} animate={hovered()} />
-			</Show>
-
-			<div class="channel-details">
-				<span class="channel-name">{name()}</span>
-				<Show
-					when={
-						otherUser()?.presence.activities.find((a) => a.type === "Custom")
-							?.text
+		<Show
+			when={href()}
+			fallback={
+				<div
+					class="menu-channel channel-link"
+					classList={{ active: props.channel.id === params.channel_id }}
+					data-unread={
+						CHANNEL_TYPES_HAS_UNREAD.has(props.channel.type) &&
+						props.channel.last_read_id !== props.channel.last_message_id
 					}
+					data-muted={isMuted() ? "true" : undefined}
+					data-channel-id={props.channel.id}
+					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
+					tabIndex={-1} // TODO: move tab index here?
 				>
-					{(t) => <span class="channel-status dim">{t()}</span>}
-				</Show>
-			</div>
-			<Show when={props.channel.mention_count}>
-				<div class="mentions">{props.channel.mention_count}</div>
-			</Show>
-
-			<Show when={!isDm()}>
-				<div class="channel-actions">
-					<Show when={canInvite()}>
-						<button
-							type="button"
-							class="action-button button"
-							title="Create Invite"
-							onClick={(e) => {
-								e.preventDefault();
-								e.stopPropagation();
-								modalCtl.open({
-									type: "invite_create",
-									room_id: props.room_id,
-									channel_id: props.channel.id,
-								});
-							}}
-						>
-							<Icon src={icMemberAdd} color={colors.fg500} />
-						</button>
+					<Show when={props.icon}>
+						<ChannelIcon channel={props.channel} animate={hovered()} />
 					</Show>
 
-					<button
-						type="button"
-						class="action-button button"
-						title="Channel Settings"
-						onClick={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							nav(`/channel/${props.channel.id}/settings`);
-						}}
-					>
-						<Icon src={icSettings} color={colors.fg500} />
-					</button>
+					<div class="channel-details">
+						<span class="channel-name">{name()}</span>
+						<Show
+							when={
+								otherUser()?.presence.activities.find(
+									(a) => a.type === "Custom",
+								)?.text
+							}
+						>
+							{(t) => <span class="channel-status dim">{t()}</span>}
+						</Show>
+					</div>
+					<Show when={props.channel.mention_count}>
+						<div class="mentions">{props.channel.mention_count}</div>
+					</Show>
+
+					<Show when={!isDm()}>
+						<div class="channel-actions">
+							<Show when={canInvite()}>
+								<button
+									type="button"
+									class="action-button button"
+									title="Create Invite"
+									onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										modalCtl.open({
+											type: "invite_create",
+											room_id: props.room_id,
+											channel_id: props.channel.id,
+										});
+									}}
+								>
+									<Icon src={icMemberAdd} color={colors.fg500} />
+								</button>
+							</Show>
+
+							<button
+								type="button"
+								class="action-button button"
+								title="Channel Settings"
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									nav(`/channel/${props.channel.id}/settings`);
+								}}
+							>
+								<Icon src={icSettings} color={colors.fg500} />
+							</button>
+						</div>
+					</Show>
 				</div>
-			</Show>
-		</A>
+			}
+		>
+			{(href) => (
+				<A
+					href={href()}
+					class="menu-channel channel-link"
+					classList={{ active: props.channel.id === params.channel_id }}
+					data-unread={
+						CHANNEL_TYPES_HAS_UNREAD.has(props.channel.type) &&
+						props.channel.last_read_id !== props.channel.last_message_id
+					}
+					data-muted={isMuted() ? "true" : undefined}
+					data-channel-id={props.channel.id}
+					onClick={handleClick}
+					onMouseEnter={() => setHovered(true)}
+					onMouseLeave={() => setHovered(false)}
+					tabIndex={-1} // TODO: move tab index here?
+				>
+					<Show when={props.icon}>
+						<ChannelIcon channel={props.channel} animate={hovered()} />
+					</Show>
+
+					<div class="channel-details">
+						<span class="channel-name">{name()}</span>
+						<Show
+							when={
+								otherUser()?.presence.activities.find(
+									(a) => a.type === "Custom",
+								)?.text
+							}
+						>
+							{(t) => <span class="channel-status dim">{t()}</span>}
+						</Show>
+					</div>
+					<Show when={props.channel.mention_count}>
+						<div class="mentions">{props.channel.mention_count}</div>
+					</Show>
+
+					<Show when={!isDm()}>
+						<div class="channel-actions">
+							<Show when={canInvite()}>
+								<button
+									type="button"
+									class="action-button button"
+									title="Create Invite"
+									onClick={(e) => {
+										e.preventDefault();
+										e.stopPropagation();
+										modalCtl.open({
+											type: "invite_create",
+											room_id: props.room_id,
+											channel_id: props.channel.id,
+										});
+									}}
+								>
+									<Icon src={icMemberAdd} color={colors.fg500} />
+								</button>
+							</Show>
+
+							<button
+								type="button"
+								class="action-button button"
+								title="Channel Settings"
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									nav(`/channel/${props.channel.id}/settings`);
+								}}
+							>
+								<Icon src={icSettings} color={colors.fg500} />
+							</button>
+						</div>
+					</Show>
+				</A>
+			)}
+		</Show>
 	);
 };

@@ -138,6 +138,16 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 							},
 						]
 					: []),
+				...(flags.has("channel_info")
+					? [
+							{
+								label: "info channel",
+								type: "Info",
+								description:
+									"informational channel (for status, motd, link, etc...)",
+							},
+						]
+					: []),
 			] as { label: string; type: ChannelType; description: string }[],
 	);
 

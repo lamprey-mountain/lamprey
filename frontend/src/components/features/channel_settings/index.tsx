@@ -1,5 +1,5 @@
 import { A } from "@solidjs/router";
-import type { Channel } from "sdk";
+import type { Channel, ChannelType } from "sdk";
 import { type Component, For, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useApi } from "@/api";
@@ -24,13 +24,14 @@ const tabs: Array<{
 	action?: "remove";
 	style?: string;
 	permissionCheck?: PermissionCheck;
-	channelTypes?: string[];
+	channelTypes?: ChannelType[];
 }> = [
 	{ name: "info", path: "", component: Info },
 	{
 		name: "invites",
 		path: "invites",
 		component: Invites,
+		// TODO: what channelTypes are sensible here?
 		permissionCheck: (p) => p.has("InviteManage"),
 	},
 	{
@@ -52,6 +53,12 @@ const tabs: Array<{
 		name: "webhooks",
 		path: "webhooks",
 		component: Webhooks,
+		channelTypes: ["Text", "Announcement"],
+		// TODO: do i allow webhooks in forums? ["Forum", "Forum2", "Ticket"]
+		// TODO: do i allow webhooks in voice channels (that have text)? ["Voice", "Broadcast"]
+		// TODO: do i allow webhooks in threads? ["ThreadPublic", "ThreadPrivate", "ThreadForum2"]
+		// i'll probably require webhooks to be created on top level channels, use ?thread_id or similar (copied from disccord) to send messages in threads
+		// TODO: do i allow webhooks in gdms? ["Gdm"]
 		permissionCheck: (p) => p.has("IntegrationsManage"),
 	},
 	{
