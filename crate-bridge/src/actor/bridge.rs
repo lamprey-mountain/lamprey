@@ -20,6 +20,7 @@ pub enum BridgeCommand {
         discord_channel_id: discord::ChannelId,
         lamprey_channel_id: lamprey::ChannelId,
         webhook_url: Url,
+        webhook_id: discord::WebhookId,
     },
 
     /// Lamprey received !accept or !reject
@@ -130,6 +131,7 @@ impl BridgeActor {
                 discord_channel_id,
                 lamprey_channel_id,
                 webhook_url,
+                webhook_id,
             } => {
                 // 1. Check DB for existing link (both sides)
                 if let Ok(Some(_)) = self
@@ -175,6 +177,7 @@ impl BridgeActor {
                         discord_channel_id,
                         lamprey_channel_id,
                         webhook_url,
+                        webhook_id,
                         confirmation_message_id: None,
                     },
                 );
@@ -208,7 +211,8 @@ impl BridgeActor {
                                 parent_id: None,
                                 channel_id: pending.discord_channel_id,
                                 webhook_url: pending.webhook_url,
-                                // FIXME: populate this field
+                                webhook_id: Some(pending.webhook_id),
+                                // FIXME: populate last_id
                                 last_id: discord::MessageId::default(),
                             }),
                         };

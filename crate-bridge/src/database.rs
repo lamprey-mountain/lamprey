@@ -136,8 +136,11 @@ impl Database for SqliteDatabase {
         let discord_webhook_url = discord.map(|d| d.webhook_url.to_string());
         let discord_last_id = discord.map(|d| d.last_id.to_string());
 
+        let discord_webhook_id =
+            discord.and_then(|d| d.webhook_id.as_ref().map(|id| id.to_string()));
+
         query!(
-            "INSERT INTO portal (id, realm_id, lamprey_channel_id, lamprey_room_id, lamprey_last_id, discord_guild_id, discord_parent_id, discord_channel_id, discord_webhook_url, discord_last_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO portal (id, realm_id, lamprey_channel_id, lamprey_room_id, lamprey_last_id, discord_guild_id, discord_parent_id, discord_channel_id, discord_webhook_url, discord_webhook_id, discord_last_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             portal_id,
             realm_id_str,
             lamprey_channel_id,
@@ -147,6 +150,7 @@ impl Database for SqliteDatabase {
             discord_parent_id,
             discord_channel_id,
             discord_webhook_url,
+            discord_webhook_id,
             discord_last_id
         )
         .execute(&self.pool)
@@ -169,8 +173,11 @@ impl Database for SqliteDatabase {
         let discord_webhook_url = discord.map(|d| d.webhook_url.to_string());
         let discord_last_id = discord.map(|d| d.last_id.to_string());
 
+        let discord_webhook_id =
+            discord.and_then(|d| d.webhook_id.as_ref().map(|id| id.to_string()));
+
         query!(
-            "UPDATE portal SET realm_id = ?, lamprey_channel_id = ?, lamprey_room_id = ?, lamprey_last_id = ?, discord_guild_id = ?, discord_parent_id = ?, discord_channel_id = ?, discord_webhook_url = ?, discord_last_id = ? WHERE id = ?",
+            "UPDATE portal SET realm_id = ?, lamprey_channel_id = ?, lamprey_room_id = ?, lamprey_last_id = ?, discord_guild_id = ?, discord_parent_id = ?, discord_channel_id = ?, discord_webhook_url = ?, discord_webhook_id = ?, discord_last_id = ? WHERE id = ?",
             realm_id_str,
             lamprey_channel_id,
             lamprey_room_id,
@@ -179,6 +186,7 @@ impl Database for SqliteDatabase {
             discord_parent_id,
             discord_channel_id,
             discord_webhook_url,
+            discord_webhook_id,
             discord_last_id,
             portal_id
         )
@@ -196,7 +204,7 @@ impl Database for SqliteDatabase {
     }
 
     async fn portal_list(&self) -> Result<Vec<Portal>> {
-        let rows = query!("SELECT id, realm_id, lamprey_channel_id, lamprey_room_id, lamprey_last_id, discord_guild_id, discord_parent_id, discord_channel_id, discord_webhook_url, discord_last_id FROM portal")
+        let rows = query!("SELECT id, realm_id, lamprey_channel_id, lamprey_room_id, lamprey_last_id, discord_guild_id, discord_parent_id, discord_channel_id, discord_webhook_url, discord_webhook_id, discord_last_id FROM portal")
             .fetch_all(&self.pool)
             .await?;
         Ok(rows
@@ -214,6 +222,7 @@ impl Database for SqliteDatabase {
                     parent_id: r.discord_parent_id.as_ref().map(|id| id.parse().unwrap()),
                     channel_id: channel_id.parse().unwrap(),
                     webhook_url: r.discord_webhook_url.as_ref().unwrap().parse().unwrap(),
+                    webhook_id: r.discord_webhook_id.as_ref().map(|id| id.parse().unwrap()),
                     last_id: r.discord_last_id.as_ref().unwrap().parse().unwrap(),
                 }),
             })
@@ -224,7 +233,7 @@ impl Database for SqliteDatabase {
         &self,
         discord_channel_id: String,
     ) -> Result<Option<Portal>> {
-        let r = query!("SELECT id, realm_id, lamprey_channel_id, lamprey_room_id, lamprey_last_id, discord_guild_id, discord_parent_id, discord_channel_id, discord_webhook_url, discord_last_id FROM portal WHERE discord_channel_id = ?", discord_channel_id)
+        let r = query!("SELECT id, realm_id, lamprey_channel_id, lamprey_room_id, lamprey_last_id, discord_guild_id, discord_parent_id, discord_channel_id, discord_webhook_url, discord_webhook_id, discord_last_id FROM portal WHERE discord_channel_id = ?", discord_channel_id)
             .fetch_optional(&self.pool)
             .await?;
 
@@ -241,6 +250,7 @@ impl Database for SqliteDatabase {
                 parent_id: r.discord_parent_id.as_ref().map(|id| id.parse().unwrap()),
                 channel_id: channel_id.parse().unwrap(),
                 webhook_url: r.discord_webhook_url.as_ref().unwrap().parse().unwrap(),
+                webhook_id: r.discord_webhook_id.as_ref().map(|id| id.parse().unwrap()),
                 last_id: r.discord_last_id.as_ref().unwrap().parse().unwrap(),
             }),
         }))
@@ -250,7 +260,7 @@ impl Database for SqliteDatabase {
         &self,
         lamprey_channel_id: String,
     ) -> Result<Option<Portal>> {
-        let r = query!("SELECT id, realm_id, lamprey_channel_id, lamprey_room_id, lamprey_last_id, discord_guild_id, discord_parent_id, discord_channel_id, discord_webhook_url, discord_last_id FROM portal WHERE lamprey_channel_id = ?", lamprey_channel_id)
+        let r = query!("SELECT id, realm_id, lamprey_channel_id, lamprey_room_id, lamprey_last_id, discord_guild_id, discord_parent_id, discord_channel_id, discord_webhook_url, discord_webhook_id, discord_last_id FROM portal WHERE lamprey_channel_id = ?", lamprey_channel_id)
             .fetch_optional(&self.pool)
             .await?;
 
@@ -267,6 +277,7 @@ impl Database for SqliteDatabase {
                 parent_id: r.discord_parent_id.as_ref().map(|id| id.parse().unwrap()),
                 channel_id: channel_id.parse().unwrap(),
                 webhook_url: r.discord_webhook_url.as_ref().unwrap().parse().unwrap(),
+                webhook_id: r.discord_webhook_id.as_ref().map(|id| id.parse().unwrap()),
                 last_id: r.discord_last_id.as_ref().unwrap().parse().unwrap(),
             }),
         }))

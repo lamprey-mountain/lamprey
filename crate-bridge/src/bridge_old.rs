@@ -45,6 +45,7 @@ pub struct PortalDiscord {
     pub parent_id: Option<discord::ChannelId>, // for threads
     pub channel_id: discord::ChannelId,
     pub webhook_url: Url,
+    pub webhook_id: Option<discord::WebhookId>,
     pub last_id: discord::MessageId,
 }
 

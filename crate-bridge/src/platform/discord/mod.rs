@@ -24,7 +24,7 @@ mod interactions;
 // re export discord (serenity) types
 pub use serenity::all::{
     Attachment, AttachmentId, ChannelId, CreateAllowedMentions, CreateEmbed, Embed, GuildId,
-    Message, MessageId, User, UserId,
+    Message, MessageId, User, UserId, WebhookId,
 };
 
 pub fn spawn(bridge: BridgeHandle, config: DiscordConfig) -> PlatformHandle {
@@ -43,6 +43,7 @@ struct Discord {
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
     portal_handles: HashMap<PortalId, PortalHandle>,
     portal_lookup: HashMap<ChannelId, PortalId>,
+    webhook_lookup: HashMap<serenity::all::WebhookId, PortalId>,
     http: Arc<serenity::all::Http>,
     cache: Arc<serenity::all::Cache>,
 }
@@ -72,6 +73,7 @@ impl Discord {
             portal_tasks: JoinSet::new(),
             portal_handles: HashMap::new(),
             portal_lookup: HashMap::new(),
+            webhook_lookup: HashMap::new(),
             http,
             cache,
         };
@@ -109,7 +111,12 @@ impl Discord {
     fn handle_discord_event(&self, event: DiscordEvent) {
         match event {
             DiscordEvent::MessageCreate(message) => {
-                // FIXME: don't send portal event if this came from the bridge's webhook
+                if let Some(webhook_id) = message.webhook_id {
+                    if self.webhook_lookup.contains_key(&webhook_id) {
+                        return;
+                    }
+                }
+
                 self.route_portal_event(
                     message.channel_id,
                     PortalEvent::MessageCreate(MessageData::Discord {
@@ -120,6 +127,12 @@ impl Discord {
             DiscordEvent::MessageUpdate(event, new) => {
                 // TODO: handle message updates without new (fetch from discord's api?)
                 if let Some(new_message) = new {
+                    if let Some(webhook_id) = new_message.webhook_id {
+                        if self.webhook_lookup.contains_key(&webhook_id) {
+                            return;
+                        }
+                    }
+
                     self.route_portal_event(
                         event.channel_id,
                         PortalEvent::MessageUpdate(MessageData::Discord {
@@ -233,6 +246,7 @@ impl Discord {
                                 discord_channel_id,
                                 lamprey_channel_id,
                                 webhook_url,
+                                webhook_id: webhook.id,
                             })
                             .await;
 
@@ -332,6 +346,9 @@ impl Discord {
     fn init_portal(&mut self, portal: &Portal, handle: &PortalHandle) {
         if let Some(discord) = &portal.discord {
             self.portal_lookup.insert(discord.channel_id, portal.id);
+            if let Some(webhook_id) = discord.webhook_id {
+                self.webhook_lookup.insert(webhook_id, portal.id);
+            }
         }
         self.portal_handles.insert(portal.id, handle.clone());
         self.portal_tasks.spawn(spawn_portal(

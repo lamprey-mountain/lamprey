@@ -41,6 +41,7 @@ pub struct PendingLink {
     pub discord_channel_id: discord::ChannelId,
     pub lamprey_channel_id: lamprey::ChannelId,
     pub webhook_url: Url,
+    pub webhook_id: discord::WebhookId,
     pub confirmation_message_id: Option<lamprey::MessageId>,
 }
 
