@@ -455,16 +455,22 @@ async fn spawn_portal_inner(
                 // see mentions::convert_discord_mentions_to_lamprey
 
                 // populate reply_id
-                // ...
                 if let Some(reference) = &dm.message_reference {
-                    // match reference.kind {
-                    //     serenity::all::MessageReferenceKind::Default => {},
-                    //     serenity::all::MessageReferenceKind::Forward => {},
-                    //     _ => {},
-                    // }
-                    if let Some(referenced_message) = &dm.referenced_message {
-                        // TODO: need a way to look up the bridged message id for the reference
-                        // handle.bridge.db.message_get_by_discord_id(...)
+                    if dm.kind == serenity::all::MessageType::InlineReply
+                        && reference.kind == serenity::all::MessageReferenceKind::Default
+                    {
+                        if let Some(discord_reply_id) = reference.message_id {
+                            if let Some(msg) = handle
+                                .bridge
+                                .db
+                                .message_get_by_discord_id(portal_id, discord_reply_id)
+                                .await?
+                            {
+                                if let Some(lamprey_reply_id) = msg.lamprey_message_id {
+                                    create.reply_id = Some(lamprey_reply_id);
+                                }
+                            }
+                        }
                     }
                 }
 
