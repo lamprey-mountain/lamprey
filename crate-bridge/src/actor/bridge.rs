@@ -26,6 +26,7 @@ pub enum BridgeCommand {
     /// Lamprey received !accept or !reject
     LinkResponse {
         lamprey_channel_id: lamprey::ChannelId,
+        lamprey_room_id: lamprey::RoomId,
         accepted: bool,
     },
 
@@ -190,6 +191,7 @@ impl BridgeActor {
 
             BridgeCommand::LinkResponse {
                 lamprey_channel_id,
+                lamprey_room_id,
                 accepted,
             } => {
                 // 1. Remove from pending_links
@@ -202,8 +204,8 @@ impl BridgeActor {
                             realm_id: None,
                             lamprey: Some(PortalLamprey {
                                 channel_id: pending.lamprey_channel_id,
-                                // FIXME: populate these fields
-                                room_id: lamprey::RoomId::new(),
+                                room_id: lamprey_room_id,
+                                // FIXME: populate last_id
                                 last_id: lamprey::MessageId::new(),
                             }),
                             discord: Some(PortalDiscord {

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::presence::{Activity, Presence, Status};
-use common::v1::types::{MessageSync, MessageType};
+use common::v1::types::{MessageSync, MessageType, RoomMemberPut};
 use futures::StreamExt;
 use sdk::http::{Http, MessageCreateOptions};
 use sdk::syncer::SyncerEvent;
@@ -170,10 +170,30 @@ impl Lamprey {
                         MessageType::DefaultMarkdown(m) => match m.content.as_deref() {
                             Some(c @ "!accept" | c @ "!reject") => {
                                 let accepted = c == "!accept";
+                                let channel =
+                                    self.client.http().channel_get(message.channel_id).await?;
+                                let Some(room_id) = channel.room_id else {
+                                    let _ = self
+                                        .client
+                                        .http()
+                                        .message_create(
+                                            message.channel_id,
+                                            &MessageCreate {
+                                                content: Some(
+                                                    "Only channels in rooms can be bridged"
+                                                        .to_string(),
+                                                ),
+                                                ..Default::default()
+                                            },
+                                        )
+                                        .await;
+                                    return Ok(());
+                                };
                                 let _ = self
                                     .bridge
                                     .commands
                                     .send(BridgeCommand::LinkResponse {
+                                        lamprey_room_id: room_id,
                                         lamprey_channel_id: message.channel_id,
                                         accepted,
                                     })
@@ -448,14 +468,17 @@ async fn spawn_portal_inner(
                     }
                 }
 
-                // FIXME: ensure member is added to room
-                // ly.http
-                //     .room_member_add(
-                //         room_id,
-                //         puppet.id,
-                //         &common::v1::types::RoomMemberPut::default(),
-                //     )
-                //     .await?;
+                // make sure the puppet is a room member, otherwise it won't be able to send any messages
+                // PERF: don't send this request for every message, cache this
+                if let Some(lamprey_cfg) = &portal.lamprey {
+                    ly.http
+                        .room_member_add(
+                            lamprey_cfg.room_id,
+                            UserIdReq::UserId(puppet.id),
+                            &RoomMemberPut::default(),
+                        )
+                        .await?;
+                }
 
                 let sent_message = ly
                     .http
