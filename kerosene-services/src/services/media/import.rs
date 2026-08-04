@@ -138,6 +138,7 @@ impl ServiceMedia {
         {
             let mut up = self.upload_get(media_id).await.unwrap();
             up.write(&bytes).await?;
+            drop(up);
             self.upload_done(media_id).await?;
         }
 
@@ -196,7 +197,7 @@ impl ServiceMedia {
                 let chunk = chunk?;
                 up.write(&chunk).await?;
             }
-
+            drop(up);
             self.upload_done(media_id).await?;
         }
 
