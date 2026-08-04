@@ -247,6 +247,7 @@ pub struct MessageCreate {
 }
 
 #[record]
+#[derive(Default)]
 pub struct MessagePatch {
     /// the new message content in markdown
     #[schema(min_length = 1, max_length = 8192)]
