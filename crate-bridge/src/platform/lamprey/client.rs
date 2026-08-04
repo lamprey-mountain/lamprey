@@ -161,7 +161,8 @@ impl LampreyClient {
 
         if patch.changes(&puppet) {
             self.http
-                .user_update(UserIdReq::UserId(puppet.id), &patch)
+                .for_puppet(puppet.id)?
+                .user_update(UserIdReq::UserSelf, &patch)
                 .await?;
             self.bridge.db.puppet_create(puppet_db).await?;
             puppet = patch.apply(puppet);

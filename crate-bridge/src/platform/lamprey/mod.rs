@@ -129,13 +129,13 @@ impl Lamprey {
             SyncerEvent::Message(_) => {}
             SyncerEvent::Sync(sync) => match &**sync {
                 // events relevant to realms
-                MessageSync::RoomUpdate { room } => todo!(),
-                MessageSync::ChannelCreate { channel } => todo!(),
-                MessageSync::ChannelUpdate { channel } => todo!(),
-                MessageSync::UserUpdate { user } => todo!(),
-                MessageSync::RoomMemberCreate { member, user } => todo!(),
-                MessageSync::RoomMemberUpdate { member, user } => todo!(),
-                MessageSync::RoomMemberDelete { room_id, user_id } => todo!(),
+                // MessageSync::RoomUpdate { room } => todo!(),
+                // MessageSync::ChannelCreate { channel } => todo!(),
+                // MessageSync::ChannelUpdate { channel } => todo!(),
+                // MessageSync::UserUpdate { user } => todo!(), // ignore updates for your own puppets
+                // MessageSync::RoomMemberCreate { member, user } => todo!(),
+                // MessageSync::RoomMemberUpdate { member, user } => todo!(),
+                // MessageSync::RoomMemberDelete { room_id, user_id } => todo!(),
 
                 // events relevant to portals
                 MessageSync::ChannelTyping {
