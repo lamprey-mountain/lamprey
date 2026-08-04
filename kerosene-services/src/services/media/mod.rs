@@ -182,9 +182,17 @@ impl ServiceMedia {
                 ))),
             }
         } else {
-            Err(Error::ApiError(ApiError::from_code(
-                ErrorCode::UnknownMedia,
-            )))
+            let media = self
+                .state
+                .begin_read()
+                .await?
+                .media_select(media_id)
+                .await?;
+
+            let writer = MediaItem::from_media(self.state.clone(), media);
+            let item = writer.reader();
+            self.cache.insert(media_id, item.clone()).await;
+            Ok(item)
         }
     }
 
