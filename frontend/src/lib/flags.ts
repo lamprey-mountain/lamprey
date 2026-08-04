@@ -92,7 +92,6 @@ const flagsProd: Flag[] = [
 	"two_tier_nav",
 	"message_search",
 	"nav_header",
-	"auto_redirect_last_channel",
 	"msgpack",
 	"sync_deflate",
 ];
