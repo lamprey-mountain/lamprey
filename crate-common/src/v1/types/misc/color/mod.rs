@@ -1,3 +1,4 @@
+use core::fmt;
 use std::ops::Deref;
 use strum::{Display, EnumString};
 
@@ -13,7 +14,7 @@ mod parse;
 /// - rgb: `rgb(r, g, b)`. with alpha `rgba(r, g, b, a)` (css compatible)
 /// - oklch: `oklch(l% c h)`. with alpha `oklch(l% c h / a)` (css compatible)
 /// - named: `name`, `name-variant`. with alpha `name:.5`, `name-variant:0.6` (css compatible)
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum Color {
     /// sRGB (not linear) compatible with css
     ///
@@ -252,6 +253,12 @@ impl Color {
     /// returns whether this color contains an alpha component
     pub fn has_alpha(&self) -> bool {
         self.alpha().is_some()
+    }
+}
+
+impl fmt::Debug for Color {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
     }
 }
 
