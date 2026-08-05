@@ -78,7 +78,7 @@ async fn main() -> Result<()> {
     for (_name, s) in &config.platform {
         let p = match s {
             ConfigPlatform::Lamprey(c) => lamprey::spawn(bridge.clone(), c.clone()),
-            ConfigPlatform::Discord(c) => discord::spawn(bridge.clone(), c.clone()),
+            ConfigPlatform::Discord(c) => discord::spawn(bridge.clone(), config.clone(), c.clone()),
         };
 
         readys.push(p.ready);

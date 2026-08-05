@@ -11,6 +11,7 @@ use tracing::{debug, error, info, warn};
 
 use crate::actor::bridge::BridgeCommand;
 use crate::bridge_old::{MessageData, PlatformHandle, Portal, PortalHandle, PortalId};
+use crate::config::Config;
 use crate::platform::discord::events::DiscordEvent;
 use crate::prelude::*;
 use crate::types::Platform;
@@ -28,9 +29,9 @@ pub use serenity::all::{
     Message, MessageId, User, UserId, WebhookId,
 };
 
-pub fn spawn(bridge: BridgeHandle, config: DiscordConfig) -> PlatformHandle {
+pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -> PlatformHandle {
     let (tx, rx) = oneshot::channel();
-    let task = tokio::spawn(Discord::connect(bridge, config, tx));
+    let task = tokio::spawn(Discord::connect(bridge, config_full, config, tx));
     PlatformHandle {
         name: "discord",
         ready: rx,
@@ -53,11 +54,15 @@ struct Discord {
 impl Discord {
     async fn connect(
         bridge: BridgeHandle,
+        config_full: Config,
         config: DiscordConfig,
         ready_tx: oneshot::Sender<()>,
     ) -> Result<()> {
         let (tx, rx) = mpsc::channel(1024);
-        let handler = events::Handler { tx };
+        let handler = events::Handler {
+            tx,
+            config: config_full,
+        };
         let client = serenity::Client::builder(
             &config.token.load().expect("failed to load token"),
             GatewayIntents::all(),

@@ -3,7 +3,7 @@ use serenity::all::{
     CreateCommandOption, GuildId, InteractionContext, Permissions,
 };
 
-use crate::prelude::*;
+use crate::{config::Config, prelude::*};
 
 /// a slash command from discord
 #[derive(Debug)]
@@ -53,62 +53,66 @@ pub enum SlashCommandType {
 }
 
 /// get discord slash commands
-pub fn get_commands() -> Vec<CreateCommand> {
-    let ping = CreateCommand::new("ping")
-        .description("check if the bridge is alive")
-        .default_member_permissions(Permissions::from_bits_truncate(536870944));
+pub fn get_commands(config: &Config) -> Vec<CreateCommand> {
+    let mut ping = CreateCommand::new("ping").description("check if the bridge is alive");
 
-    let link = CreateCommand::new("link")
-            .description("link something to lamprey")
-            .default_member_permissions(Permissions::from_bits_truncate(536870944))
-            .contexts(vec![InteractionContext::Guild])
-            .add_option(
-                CreateCommandOption::new(CommandOptionType::SubCommand, "guild", "link this guild (server)")
-                    .add_sub_option(
-                        CreateCommandOption::new(
-                            CommandOptionType::String,
-                            "room_id",
-                            "the uuid of the room to link to",
-                        )
-                        .required(true),
-                    )
-                    .add_sub_option(
-                        CreateCommandOption::new(
-                            CommandOptionType::Boolean,
-                            "backfill",
-                            "whether to clone the full history of every channel",
-                        )
-                    )
-                    .add_sub_option(
-                        CreateCommandOption::new(
-                            CommandOptionType::Boolean,
-                            "continuous",
-                            "whether to create new portals as channels and threads are created (this is bidirectional)",
-                        )
-                    ),
-            )
-            .add_option(
-                CreateCommandOption::new(CommandOptionType::SubCommand, "channel", "link this channel")
-                    .add_sub_option(
-                        CreateCommandOption::new(
-                            CommandOptionType::String,
-                            "channel_id",
-                            "the uuid of the channel to link to",
-                        )
-                        .required(true),
-                    )
-                    .add_sub_option(
-                        CreateCommandOption::new(
-                            CommandOptionType::Boolean,
-                            "backfill",
-                            "whether to clone the full history of this channel",
-                        )
-                    )
-            );
+    if !config.disable_discord_slash_command_permission_checks {
+        ping = ping.default_member_permissions(Permissions::from_bits_truncate(536870944));
+    }
 
-    let unlink = CreateCommand::new("unlink")
+    let mut link = CreateCommand::new("link")
+        .description("link something to lamprey")
+        .contexts(vec![InteractionContext::Guild])
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::SubCommand, "guild", "link this guild (server)")
+                .add_sub_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::String,
+                        "room_id",
+                        "the uuid of the room to link to",
+                    )
+                    .required(true),
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::Boolean,
+                        "backfill",
+                        "whether to clone the full history of every channel",
+                    )
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::Boolean,
+                        "continuous",
+                        "whether to create new portals as channels and threads are created (this is bidirectional)",
+                    )
+                ),
+        )
+        .add_option(
+            CreateCommandOption::new(CommandOptionType::SubCommand, "channel", "link this channel")
+                .add_sub_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::String,
+                        "channel_id",
+                        "the uuid of the channel to link to",
+                    )
+                    .required(true),
+                )
+                .add_sub_option(
+                    CreateCommandOption::new(
+                        CommandOptionType::Boolean,
+                        "backfill",
+                        "whether to clone the full history of this channel",
+                    )
+                )
+        );
+
+    if !config.disable_discord_slash_command_permission_checks {
+        link = link.default_member_permissions(Permissions::from_bits_truncate(536870944));
+    }
+
+    let mut unlink = CreateCommand::new("unlink")
         .description("unlink something from lamprey")
-        .default_member_permissions(Permissions::from_bits_truncate(536870944))
         .contexts(vec![InteractionContext::Guild])
         .add_option(CreateCommandOption::new(
             CommandOptionType::SubCommand,
@@ -120,6 +124,10 @@ pub fn get_commands() -> Vec<CreateCommand> {
             "channel",
             "unlink this channel",
         ));
+
+    if !config.disable_discord_slash_command_permission_checks {
+        unlink = unlink.default_member_permissions(Permissions::from_bits_truncate(536870944));
+    }
 
     // TODO: command(s) to edit an existing realm/portal
     // TODO: command(s) to moderate (kick, ban, timeout) users on other platforms

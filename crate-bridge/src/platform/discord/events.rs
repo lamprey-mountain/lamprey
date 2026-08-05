@@ -7,10 +7,14 @@ use serenity::all::{
 use tokio::sync::mpsc;
 use tracing::{error, info, trace};
 
-use crate::platform::discord::interactions::{SlashCommand, get_commands, parse_interaction};
+use crate::{
+    config::Config,
+    platform::discord::interactions::{SlashCommand, get_commands, parse_interaction},
+};
 
 pub struct Handler {
     pub tx: mpsc::Sender<DiscordEvent>,
+    pub config: Config,
 }
 
 pub enum DiscordEvent {
@@ -26,7 +30,11 @@ impl EventHandler for Handler {
     async fn ready(&self, ctx: Context, ready: Ready) {
         info!("discord ready {}", ready.user.name);
 
-        if let Err(err) = ctx.http.create_global_commands(&get_commands()).await {
+        if let Err(err) = ctx
+            .http
+            .create_global_commands(&get_commands(&self.config))
+            .await
+        {
             error!("error while registering commands: {err:?}")
         }
     }

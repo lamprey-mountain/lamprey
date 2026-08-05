@@ -15,6 +15,10 @@ pub struct Config {
     ///
     /// the key is the name. don't change it once set.
     pub platform: HashMap<String, ConfigPlatform>,
+
+    // TEMP
+    #[serde(default)]
+    pub disable_discord_slash_command_permission_checks: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
