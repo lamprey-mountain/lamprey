@@ -95,6 +95,7 @@ pub struct BridgeHandle {
     pub db: Arc<dyn Database>,
 }
 
+// TODO: allow getting Portal data from PortalHandle
 #[derive(Debug, Clone)]
 pub struct PortalHandle {
     pub id: PortalId,

@@ -44,6 +44,7 @@ struct Discord {
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
     portal_handles: HashMap<PortalId, PortalHandle>,
     portal_lookup: HashMap<ChannelId, PortalId>,
+    portal_data: HashMap<PortalId, Portal>,
     webhook_lookup: HashMap<serenity::all::WebhookId, PortalId>,
     http: Arc<serenity::all::Http>,
     cache: Arc<serenity::all::Cache>,
@@ -74,6 +75,7 @@ impl Discord {
             portal_tasks: JoinSet::new(),
             portal_handles: HashMap::new(),
             portal_lookup: HashMap::new(),
+            portal_data: HashMap::new(),
             webhook_lookup: HashMap::new(),
             http,
             cache,
@@ -81,6 +83,18 @@ impl Discord {
         me.start(client, ready_tx).await?;
 
         Ok(())
+    }
+
+    fn spawn_portal_task(&mut self, portal_id: PortalId) {
+        let portal = self.portal_data.get(&portal_id).unwrap().clone();
+        let handle = self.portal_handles.get(&portal_id).unwrap().clone();
+        self.portal_tasks.spawn(spawn_portal(
+            portal_id,
+            portal,
+            handle,
+            self.http.clone(),
+            self.cache.clone(),
+        ));
     }
 
     async fn start(
@@ -105,6 +119,24 @@ impl Discord {
                 Some(event) = self.rx.recv() => {
                     self.handle_discord_event(event).await;
                 }
+                Some(result) = self.portal_tasks.join_next() => {
+                    match result {
+                        Ok((portal_id, Err(e))) => {
+                            warn!(%portal_id, "discord portal task failed: {e:?}");
+                            self.spawn_portal_task(portal_id);
+                        }
+                        Ok((portal_id, Ok(()))) => {
+                            debug!(%portal_id, "discord portal task exited cleanly");
+                            self.portal_handles.remove(&portal_id);
+                            self.portal_data.remove(&portal_id);
+                            self.portal_lookup.retain(|_, v| *v != portal_id);
+                            self.webhook_lookup.retain(|_, v| *v != portal_id);
+                        }
+                        Err(e) => {
+                            warn!("discord portal task join error: {e:?}");
+                        }
+                    }
+                },
             }
         }
     }
@@ -374,13 +406,8 @@ impl Discord {
             }
         }
         self.portal_handles.insert(portal.id, handle.clone());
-        self.portal_tasks.spawn(spawn_portal(
-            portal.id,
-            portal.clone(),
-            handle.clone(),
-            self.http.clone(),
-            self.cache.clone(),
-        ));
+        self.portal_data.insert(portal.id, portal.clone());
+        self.spawn_portal_task(portal.id);
     }
 }
 

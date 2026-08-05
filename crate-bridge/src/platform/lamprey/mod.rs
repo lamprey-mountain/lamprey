@@ -48,6 +48,7 @@ struct Lamprey {
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
     portal_handles: HashMap<PortalId, PortalHandle>,
     portal_lookup: HashMap<ChannelId, PortalId>,
+    portal_data: HashMap<PortalId, Portal>,
 }
 
 impl Lamprey {
@@ -79,10 +80,23 @@ impl Lamprey {
             portal_tasks: JoinSet::new(),
             portal_handles: HashMap::new(),
             portal_lookup: HashMap::new(),
+            portal_data: HashMap::new(),
         };
         me.start(ready_tx).await;
 
         Ok(())
+    }
+
+    fn spawn_portal_task(&mut self, portal_id: PortalId, channel_id: ChannelId) {
+        let portal = self.portal_data.get(&portal_id).unwrap().clone();
+        let handle = self.portal_handles.get(&portal_id).unwrap().clone();
+        self.portal_tasks.spawn(spawn_portal(
+            portal_id,
+            portal,
+            handle,
+            self.client.http(),
+            channel_id,
+        ));
     }
 
     async fn start(mut self, ready_tx: oneshot::Sender<()>) {
@@ -103,15 +117,21 @@ impl Lamprey {
                     match result {
                         Ok((portal_id, Err(e))) => {
                             warn!(%portal_id, "portal task failed: {e:?}");
-                            // TODO: try to restart portal task on failure
-                            if let Some(_handle) = self.portal_handles.remove(&portal_id) {
-                                // Potentially notify bridge/portal that it's dead?
+                            // try to restart portal task on failure
+                            if let Some(&channel_id) = self
+                                .portal_lookup
+                                .iter()
+                                .find(|(_, v)| v == &&portal_id)
+                                .map(|(k, _)| k)
+                            {
+                                // TODO: exponential backoff? (same in discord)
+                                self.spawn_portal_task(portal_id, channel_id);
                             }
-                            self.portal_lookup.retain(|_, v| *v != portal_id);
                         }
                         Ok((portal_id, Ok(()))) => {
                             debug!(%portal_id, "portal task exited cleanly");
                             self.portal_handles.remove(&portal_id);
+                            self.portal_data.remove(&portal_id);
                             self.portal_lookup.retain(|_, v| *v != portal_id);
                         }
                         Err(e) => {
@@ -368,13 +388,8 @@ impl Lamprey {
             return;
         };
         self.portal_handles.insert(portal.id, handle.clone());
-        self.portal_tasks.spawn(spawn_portal(
-            portal.id,
-            portal.clone(),
-            handle.clone(),
-            self.client.http(),
-            channel_id,
-        ));
+        self.portal_data.insert(portal.id, portal.clone());
+        self.spawn_portal_task(portal.id, channel_id);
     }
 }
 
