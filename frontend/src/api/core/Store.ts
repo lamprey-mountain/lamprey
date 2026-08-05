@@ -433,6 +433,23 @@ export class RootStore {
 				this.flumes.handleCreate(m.channel_id, m);
 			}
 
+			// Clear typing indicator for the author
+			const timeoutKey = `${m.channel_id}:${m.author_id}`;
+			if (this.typingTimeouts.has(timeoutKey)) {
+				clearTimeout(this.typingTimeouts.get(timeoutKey));
+				this.typingTimeouts.delete(timeoutKey);
+			}
+			const currentTypingUsers = this.typing.get(m.channel_id);
+			if (currentTypingUsers) {
+				const nextTypingUsers = new Set(currentTypingUsers);
+				nextTypingUsers.delete(m.author_id);
+				if (nextTypingUsers.size === 0) {
+					this.typing.delete(m.channel_id);
+				} else {
+					this.typing.set(m.channel_id, nextTypingUsers);
+				}
+			}
+
 			const session = this.session();
 			const sessionUserId =
 				session?.status === "Unauthorized" ? undefined : session?.user_id;
