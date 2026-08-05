@@ -566,7 +566,8 @@ async fn spawn_portal_inner(
                     .content(content)
                     .embeds(embeds)
                     .username(username)
-                    .add_files(files);
+                    .add_files(files)
+                    .allowed_mentions(CreateAllowedMentions::new());
 
                 if let Some(avatar_url) = avatar_url {
                     builder = builder.avatar_url(avatar_url);
@@ -692,7 +693,8 @@ async fn spawn_portal_inner(
                         message_id,
                         serenity::all::EditWebhookMessage::new()
                             .content(content)
-                            .attachments(attachments),
+                            .attachments(attachments)
+                            .allowed_mentions(CreateAllowedMentions::new()),
                     )
                     .await?;
 

@@ -476,6 +476,12 @@ async fn spawn_portal_inner(
                     } else {
                         Some(dm.content.clone())
                     },
+                    // TODO: move fully restrictive ParseMentions into ParseMentions::nothing()
+                    mentions: ParseMentions {
+                        users: Some(vec![]),
+                        roles: Some(vec![]),
+                        everyone: false,
+                    },
                     ..Default::default()
                 };
 
