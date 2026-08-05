@@ -194,12 +194,12 @@ export const MemberList = (props: MemberListProps) => {
 
 						const matchesGroup = () => {
 							const r = row();
-							if (r.type === "group") return r.group;
+							if (r?.type === "group") return r.group;
 						};
 
 						const matchesMember = () => {
 							const r = row();
-							if (r.type === "member") return r.item;
+							if (r?.type === "member") return r.item;
 						};
 
 						// FIXME: measure element when row changes
