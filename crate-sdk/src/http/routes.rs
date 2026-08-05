@@ -223,8 +223,6 @@ macro_rules! route {
                 let url = self.api_url().join(&format!($url))?;
                 let res = self.client
                     .$method(url.clone())
-                    .header("content-type", "application/json")
-                    .json(&json!({}))
                     .send()
                     .await?;
                 let status = res.status();
@@ -274,8 +272,6 @@ macro_rules! route {
                 let url = self.api_url().join(&format!($url))?;
                 let res = self.client
                     .$method(url)
-                    .header("content-type", "application/json")
-                    .json(&json!({}))
                     .send()
                     .await?;
                 if let Err(e) = res.error_for_status_ref() {

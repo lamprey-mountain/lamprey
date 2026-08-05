@@ -169,6 +169,10 @@ impl Lamprey {
                         .puppet_get_by_lamprey_id(user_id.to_string())
                         .await?
                     {
+                        if user.source_platform != Platform::Lamprey {
+                            return Ok(());
+                        }
+
                         self.route_portal_event(channel_id, PortalEvent::Typing(user));
                     }
                 }
