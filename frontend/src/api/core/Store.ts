@@ -110,6 +110,8 @@ export class RootStore {
 	scriptLogs: ScriptLogsService;
 	voiceStates: ReactiveMap<string, VoiceState>;
 	typing: ReactiveMap<string, Set<string>>;
+	private typingTimeouts: Map<string, ReturnType<typeof setTimeout>> =
+		new Map();
 
 	session: Accessor<Session | null>;
 	setSession: (s: Session | null) => void;
@@ -521,6 +523,39 @@ export class RootStore {
 			this.relationships.upsert(msg.target_user_id, msg.relationship);
 		} else if (msg.type === "RelationshipDelete") {
 			this.relationships.delete(msg.target_user_id);
+		} else if (msg.type === "ChannelTyping") {
+			const { channel_id, user_id, until } = msg as any;
+			const untilDate = new Date(until);
+			const now = new Date();
+			const delay = untilDate.getTime() - now.getTime();
+
+			if (delay <= 0) return;
+
+			const typingUsers = this.typing.get(channel_id) ?? new Set();
+			const nextTypingUsers = new Set(typingUsers);
+			nextTypingUsers.add(user_id);
+			this.typing.set(channel_id, nextTypingUsers);
+
+			const timeoutKey = `${channel_id}:${user_id}`;
+			if (this.typingTimeouts.has(timeoutKey)) {
+				clearTimeout(this.typingTimeouts.get(timeoutKey));
+			}
+
+			const timeout = setTimeout(() => {
+				const currentTypingUsers = this.typing.get(channel_id);
+				if (currentTypingUsers) {
+					const nextTypingUsers = new Set(currentTypingUsers);
+					nextTypingUsers.delete(user_id);
+					if (nextTypingUsers.size === 0) {
+						this.typing.delete(channel_id);
+					} else {
+						this.typing.set(channel_id, nextTypingUsers);
+					}
+				}
+				this.typingTimeouts.delete(timeoutKey);
+			}, delay);
+
+			this.typingTimeouts.set(timeoutKey, timeout);
 		}
 	}
 
@@ -558,6 +593,10 @@ export class RootStore {
 			s.clear();
 		}
 		this.typing.clear();
+		for (const timeout of this.typingTimeouts.values()) {
+			clearTimeout(timeout);
+		}
+		this.typingTimeouts.clear();
 
 		// clear indexeddb caches
 		const db = this.getDb?.();
