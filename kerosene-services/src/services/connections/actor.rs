@@ -41,11 +41,18 @@ pub struct ConnectionTransport {
     timeout: Timeout,
 }
 
-// TODO: impl Debug
 #[derive(Clone)]
 pub struct ConnectionHandle {
     tx: mpsc::Sender<Command>,
     id: ConnectionId,
+}
+
+impl std::fmt::Debug for ConnectionHandle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConnectionHandle")
+            .field("id", &self.id)
+            .finish()
+    }
 }
 
 /// a command for controlling a connection actor
@@ -86,6 +93,7 @@ impl Connection {
         handle
     }
 
+    // TODO: supervise connections in ServiceConnections, warn on unclean exit
     async fn spawn(&mut self) {
         let mut sushi = self.globals.messaging().subscribe().await.unwrap();
 
@@ -293,6 +301,7 @@ impl Connection {
                     timeout: Timeout::for_ping(),
                 });
                 self.queue.rewind(seq)?;
+                self.globals.services().connections.cancel_cleanup(self.id);
             }
             Command::Shutdown => {
                 if let Some(mut t) = self.transport.take() {
@@ -347,8 +356,10 @@ impl Connection {
                 if clean {
                     self.teardown().await;
                 } else {
-                    // TODO: timer to invalidate connection after some amount of time
-                    // maybe use DelayQueue in connections service?
+                    self.globals
+                        .services()
+                        .connections
+                        .schedule_cleanup(self.id);
                     self.transport = None;
                 }
             }
@@ -683,6 +694,13 @@ impl Connection {
     ///
     /// mark the user as offline, disconnect from subscriptions, etc
     async fn teardown(&mut self) {
+        // remove this connection
+        self.globals
+            .services()
+            .connections
+            .connections
+            .remove(&self.id);
+
         // set presence to offline
         if let Some(user_id) = self.session.user_id() {
             let srv = self.globals.services();
@@ -694,9 +712,8 @@ impl Connection {
             self.subscriptions.disconnect(user_id).await;
         }
 
+        // just to be safe
         self.transport = None;
-
-        // TODO: immediately invalidate/remove this connection, prevent reconnects
     }
 }
 
