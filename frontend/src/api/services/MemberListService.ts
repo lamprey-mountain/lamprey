@@ -170,10 +170,13 @@ export class MemberListService {
 				total_groups: groups.length,
 			});
 
-			this.lists.set(id, {
-				groups: groups,
-				items: newItems,
-			});
+			this.lists.set(
+				id,
+				structuredClone({
+					groups,
+					items: newItems,
+				}),
+			);
 		}
 	}
 

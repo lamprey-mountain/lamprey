@@ -1,7 +1,7 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import type { MemberListGroup, RoomMember, User } from "sdk";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
 import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
 import type { MemberListItem } from "@/api/services/MemberListService";
 import { AvatarWithStatus } from "@/components/shared/User";
@@ -190,7 +190,20 @@ export const MemberList = (props: MemberListProps) => {
 			>
 				<For each={rowVirtualizer.getVirtualItems()}>
 					{(virtualRow) => {
-						const row = rows()[virtualRow.index];
+						const row = () => rows()[virtualRow.index];
+
+						const matchesGroup = () => {
+							const r = row();
+							if (r.type === "group") return r.group;
+						};
+
+						const matchesMember = () => {
+							const r = row();
+							if (r.type === "member") return r.item;
+						};
+
+						// FIXME: measure element when row changes
+
 						return (
 							<div
 								style={{
@@ -200,77 +213,86 @@ export const MemberList = (props: MemberListProps) => {
 									width: "100%",
 									transform: `translateY(${virtualRow.start}px)`,
 								}}
+								ref={rowVirtualizer.measureElement}
+								data-index={virtualRow.index}
 							>
-								{row.type === "group" ? (
-									<button
-										type="button"
-										class="member-group"
-										onClick={() => toggleGroup(row.group)}
-										onKeyDown={(e) => handleGroupKeyDown(e, row.group)}
-									>
-										{getGroupName(row.group)} — {row.group.count}
-									</button>
-								) : (
-									(() => {
-										const item = row.item;
-										const user = () =>
-											users2.cache.get(item.user.id) ?? item.user;
-										const room_member = () =>
-											props.roomId
-												? (roomMembers2.cache.get(
-														`${props.roomId}:${item.user.id}`,
-													) ?? item.room_member)
-												: item.room_member;
-										const isOffline = () =>
-											user()?.presence.status === "Offline";
-
-										const [hovered, setHovered] = createSignal(false);
-
-										function name() {
-											let name: string | undefined | null = null;
-											const rm = room_member();
-											if (rm) {
-												name ??= rm.override_name;
-											}
-											name ??= user()?.name;
-											return name;
-										}
-
-										// TODO: apply .active after clicking a user, while the user popout is open
-										// probably will only apply it when the user popout is opened from the member list
-
-										return (
+								<Switch>
+									<Match when={matchesGroup()}>
+										{(group) => (
 											<button
 												type="button"
-												class="menu-user"
-												data-user-id={item.user.id}
-												classList={{ active: false, offline: isOffline() }}
-												onClick={(e) => handleUserClick(e, user())}
-												onKeyDown={(e) =>
-													handleUserKeyDown(e, user(), room_member())
-												}
-												onMouseEnter={[setHovered, true]}
-												onMouseLeave={[setHovered, false]}
+												class="member-group"
+												onClick={() => toggleGroup(group())}
+												onKeyDown={(e) => handleGroupKeyDown(e, group())}
 											>
-												<div class="inner">
-													<AvatarWithStatus user={user()} animate={hovered()} />
-													<span class="text">
-														<div class="name">{name()}</div>
-														<Show
-															when={
-																user()?.presence.activities.find(
-																	(a) => a.type === "Custom",
-																)?.text
-															}
-														>
-															{(t) => <div class="status-message">{t()}</div>}
-														</Show>
-													</span>
-												</div>
+												{getGroupName(group())} — {group().count}
 											</button>
-										);
-									})()
-								)}
+										)}
+									</Match>
+									<Match when={matchesMember()}>
+										{(item) => {
+											const user = () =>
+												users2.cache.get(item().user.id) ?? item().user;
+											const room_member = () =>
+												props.roomId
+													? (roomMembers2.cache.get(
+															`${props.roomId}:${item().user.id}`,
+														) ?? item().room_member)
+													: item().room_member;
+											const isOffline = () =>
+												user()?.presence.status === "Offline";
+
+											const [hovered, setHovered] = createSignal(false);
+
+											function name() {
+												let name: string | undefined | null = null;
+												const rm = room_member();
+												if (rm) {
+													name ??= rm.override_name;
+												}
+												name ??= user()?.name;
+												return name;
+											}
+
+											// TODO: apply .active after clicking a user, while the user popout is open
+											// probably will only apply it when the user popout is opened from the member list
+
+											return (
+												<button
+													type="button"
+													class="menu-user"
+													data-user-id={item().user.id}
+													classList={{ active: false, offline: isOffline() }}
+													onClick={(e) => handleUserClick(e, user())}
+													onKeyDown={(e) =>
+														handleUserKeyDown(e, user(), room_member())
+													}
+													onMouseEnter={[setHovered, true]}
+													onMouseLeave={[setHovered, false]}
+												>
+													<div class="inner">
+														<AvatarWithStatus
+															user={user()}
+															animate={hovered()}
+														/>
+														<span class="text">
+															<div class="name">{name()}</div>
+															<Show
+																when={
+																	user()?.presence.activities.find(
+																		(a) => a.type === "Custom",
+																	)?.text
+																}
+															>
+																{(t) => <div class="status-message">{t()}</div>}
+															</Show>
+														</span>
+													</div>
+												</button>
+											);
+										}}
+									</Match>
+								</Switch>
 							</div>
 						);
 					}}
