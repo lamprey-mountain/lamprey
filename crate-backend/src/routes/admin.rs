@@ -3,13 +3,14 @@ use std::sync::Arc;
 use axum::extract::{Path, Query};
 use axum::{Json, extract::State, response::IntoResponse};
 use common::v1::routes;
-use common::v1::types::search::AuditLogSearchRequest;
+use common::v1::types::search::{AuditLogSearchRequest, EverythingSearchRequest};
 use common::v1::types::{
     AuditLogEntryType, MessageSync, Permission, SERVER_ROOM_ID, SERVER_USER_ID, SearchDlqId,
     util::{Changes, Time},
 };
 use common::v1::types::{PaginationQuery, PaginationResponse};
 use http::StatusCode;
+use kerosene_services::services::search::SearchAuditLogVisibility;
 use lamprey_backend_core::Error;
 use lamprey_backend_core::types::admin::{
     AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache, AdminPurgeCacheResponse,
@@ -582,12 +583,11 @@ async fn admin_search_dlq_retry(
 async fn admin_search_audit_logs(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    Json(_req): Json<AuditLogSearchRequest>,
+    Json(req): Json<AuditLogSearchRequest>,
 ) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let _d = s.data();
 
     srv.perms
         .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
@@ -596,7 +596,39 @@ async fn admin_search_audit_logs(
         .needs(Permission::Admin)
         .check()?;
 
-    Ok(Error::Unimplemented)
+    let res = srv
+        .search
+        .search_audit_log(SearchAuditLogVisibility::Everything, req)
+        .await?;
+
+    Ok(Json(res))
+}
+
+/// Admin search everything
+#[utoipa::path(
+    post,
+    path = "/admin/search/everything",
+    tags = ["admin", "badge.admin_only", "badge.server-perm.Admin"],
+)]
+async fn admin_search_everything(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(req): Json<EverythingSearchRequest>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let srv = s.services();
+
+    srv.perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::Admin)
+        .check()?;
+
+    let res = srv.search.search_everything(req).await?;
+
+    Ok(Json(res))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
@@ -616,4 +648,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(admin_search_dlq_delete))
         .routes(routes!(admin_search_dlq_retry))
         .routes(routes!(admin_search_audit_logs))
+        .routes(routes!(admin_search_everything))
 }

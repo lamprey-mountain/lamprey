@@ -1,8 +1,5 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
+use uuid::Uuid;
 
 use crate::{
     v1::types::{
@@ -12,9 +9,7 @@ use crate::{
     v2::types::media::Media,
 };
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageSearch {
     /// the ids of the matched messages
     pub results: Vec<MessageId>,
@@ -47,9 +42,7 @@ pub struct MessageSearch {
     pub cursor: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ChannelSearch {
     /// the ids of the matched channels
     pub results: Vec<ChannelId>,
@@ -67,9 +60,7 @@ pub struct ChannelSearch {
     pub cursor: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct UserSearch {
     /// the ids of the matched users
     pub results: Vec<UserId>,
@@ -87,9 +78,7 @@ pub struct UserSearch {
     pub cursor: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RoomSearch {
     /// the ids of the matched rooms
     pub results: Vec<RoomId>,
@@ -107,9 +96,7 @@ pub struct RoomSearch {
     pub cursor: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MediaSearch {
     /// the ids of the matched media
     pub results: Vec<MediaId>,
@@ -130,9 +117,7 @@ pub struct MediaSearch {
     pub cursor: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct AuditLogSearch {
     /// the ids of the matched audit log entries
     pub results: Vec<AuditLogEntryId>,
@@ -149,4 +134,28 @@ pub struct AuditLogSearch {
 
     /// current page cursor
     pub cursor: Option<String>,
+}
+
+#[record]
+pub struct EverythingSearch {
+    pub results: Vec<Uuid>,
+    pub items: Vec<EverythingSearchItem>,
+
+    /// whether there are more threads
+    pub has_more: bool,
+
+    /// approximate count of total results that match this query
+    pub total: u64,
+
+    /// current page cursor
+    pub cursor: Option<String>,
+}
+
+#[record]
+pub struct EverythingSearchItem {
+    pub id: Uuid,
+
+    // TODO: use Doctype here
+    #[serde(rename = "type")]
+    pub doctype: String,
 }

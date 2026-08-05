@@ -1,15 +1,9 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{ChannelId, MessageId, RoomId};
 
 /// Overall search index statistics
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SearchIndexStats {
     /// total number of documents in this index
     pub count_documents: u64,
@@ -26,9 +20,7 @@ pub struct SearchIndexStats {
 }
 
 /// Search index statistics for a channel
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SearchIndexStatsChannel {
     pub channel_id: ChannelId,
 
@@ -40,9 +32,7 @@ pub struct SearchIndexStatsChannel {
 }
 
 /// Search index statistics for a room
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SearchIndexStatsRoom {
     pub room_id: RoomId,
 

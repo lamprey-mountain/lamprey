@@ -14,7 +14,10 @@ mod service;
 mod tokenizer;
 mod util;
 
-pub use util::visibility::{SearchMediaVisibility, SearchRoomsVisibility};
+// TODO: move to crate-search
+pub use util::visibility::{
+    SearchAuditLogVisibility, SearchMediaVisibility, SearchRoomsVisibility,
+};
 
 pub struct ServiceSearch {
     state: Globals,

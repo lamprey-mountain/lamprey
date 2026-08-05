@@ -1,8 +1,6 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use lamprey_macros::record;
 
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+// TODO: group types by resource type rather than request/response
 
 pub mod request;
 pub mod response;
@@ -12,15 +10,14 @@ pub use request::*;
 pub use response::*;
 
 /// what order to return search results in
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, Copy, PartialEq, Eq)]
 pub enum Order {
     #[default]
-    #[cfg_attr(feature = "serde", serde(rename = "asc"))]
+    #[serde(rename = "asc")]
     Ascending,
 
-    #[cfg_attr(feature = "serde", serde(rename = "desc"))]
+    #[serde(rename = "desc")]
     Descending,
 }
 

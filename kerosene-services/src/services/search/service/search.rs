@@ -7,9 +7,9 @@ use tracing::trace;
 
 use common::v1::types::message::MessageType;
 use common::v1::types::search::{
-    AuditLogSearch, AuditLogSearchRequest, ChannelSearch, ChannelSearchRequest, MediaSearch,
-    MediaSearchRequest, MessageSearch, MessageSearchRequest, RoomSearch, RoomSearchRequest,
-    UserSearch, UserSearchRequest,
+    AuditLogSearch, AuditLogSearchRequest, ChannelSearch, ChannelSearchRequest, EverythingSearch,
+    EverythingSearchItem, EverythingSearchRequest, MediaSearch, MediaSearchRequest, MessageSearch,
+    MessageSearchRequest, RoomSearch, RoomSearchRequest, UserSearch, UserSearchRequest,
 };
 use common::v1::types::{
     AuditLogEntryId, ChannelId, MediaId, MessageId, PaginationQuery, RoomId, UserId,
@@ -18,13 +18,15 @@ use common::v1::types::{
 use crate::Result;
 use crate::services::search::ServiceSearch;
 use crate::services::search::index::searcher::{
-    ContentSearcher, TantivySearchAuditLogEntries, TantivySearchChannels, TantivySearchMedia,
-    TantivySearchMessages, TantivySearchRooms, TantivySearchUsers,
+    ContentSearcher, TantivySearchAuditLogEntries, TantivySearchChannels, TantivySearchEverything,
+    TantivySearchMedia, TantivySearchMessages, TantivySearchRooms, TantivySearchUsers,
 };
 use crate::services::search::util::visibility::{
     SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
     SearchMessagesVisibility, SearchRoomsVisibility,
 };
+
+// TODO: implement cursor fields (or remove them?)
 
 impl ServiceSearch {
     pub async fn search_messages(
@@ -392,6 +394,39 @@ impl ServiceSearch {
         Ok(AuditLogSearch {
             results,
             entries,
+            has_more,
+            total: raw_result.total,
+            cursor: None,
+        })
+    }
+
+    pub async fn search_everything(
+        &self,
+        req: EverythingSearchRequest,
+    ) -> Result<EverythingSearch> {
+        let index = self.get_index().await?;
+        let searcher = index.searcher().await?;
+        let cs = ContentSearcher::new(searcher);
+
+        let raw_result = cs
+            .search_everything(TantivySearchEverything { req: req.clone() })
+            .await?;
+
+        let results: Vec<uuid::Uuid> = raw_result.items.iter().map(|i| i.id).collect();
+        let items: Vec<EverythingSearchItem> = raw_result
+            .items
+            .into_iter()
+            .map(|i| EverythingSearchItem {
+                id: i.id,
+                doctype: i.doctype.to_string(),
+            })
+            .collect();
+
+        let has_more = (req.inner.offset as u64 + results.len() as u64) < raw_result.total;
+
+        Ok(EverythingSearch {
+            results,
+            items,
             has_more,
             total: raw_result.total,
             cursor: None,

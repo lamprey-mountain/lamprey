@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use lamprey_backend_core::types::search::Doctype;
 use tantivy::{
     DocAddress, Score,
@@ -7,15 +9,16 @@ use tantivy::{
 
 use common::v1::types::search::{
     AuditLogSearchOrderField, AuditLogSearchRequest, ChannelSearchOrderField, ChannelSearchRequest,
-    MediaSearchOrderField, MediaSearchRequest, MessageSearchOrderField, MessageSearchRequest,
-    RoomSearchOrderField, RoomSearchRequest, UserSearchOrderField, UserSearchRequest,
+    EverythingSearchRequest, MediaSearchOrderField, MediaSearchRequest, MessageSearchOrderField,
+    MessageSearchRequest, RoomSearchOrderField, RoomSearchRequest, UserSearchOrderField,
+    UserSearchRequest,
 };
 
-use crate::services::search::util::SCHEMA;
 use crate::services::search::util::visibility::{
     SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
     SearchMessagesVisibility, SearchRoomsVisibility, TantivyVisibility,
 };
+use crate::services::search::{index::glue::TantivyEverythingItem, util::SCHEMA};
 use crate::services::search::{
     index::glue::{TantivyAuditLogEntry, TantivyChannel, TantivyMedia, TantivyRoom, TantivyUser},
     util::BqBuilder,
@@ -60,6 +63,10 @@ pub struct TantivySearchAuditLogEntries {
     pub visibility: SearchAuditLogVisibility,
 }
 
+pub struct TantivySearchEverything {
+    pub req: EverythingSearchRequest,
+}
+
 pub struct TantivyMessages {
     pub items: Vec<TantivyMessage>,
     pub total: u64,
@@ -87,6 +94,11 @@ pub struct TantivyMediaItems {
 
 pub struct TantivyAuditLogEntries {
     pub items: Vec<TantivyAuditLogEntry>,
+    pub total: u64,
+}
+
+pub struct TantivyEverythingItems {
+    pub items: Vec<TantivyEverythingItem>,
     pub total: u64,
 }
 
@@ -564,6 +576,51 @@ impl ContentSearcher {
         }
 
         Ok(TantivyAuditLogEntries {
+            items,
+            total: count as u64,
+        })
+    }
+
+    pub async fn search_everything(
+        &self,
+        msg: TantivySearchEverything,
+    ) -> Result<TantivyEverythingItems> {
+        let mut q = BqBuilder::new();
+
+        if let Some(q_str) = &msg.req.inner.query {
+            if !q_str.is_empty() {
+                let query_parser = QueryParser::for_index(
+                    self.searcher.index(),
+                    vec![SCHEMA.id, SCHEMA.name, SCHEMA.content],
+                );
+
+                let parsed_query = query_parser
+                    .parse_query(q_str)
+                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
+
+                q.must(parsed_query);
+            }
+        }
+
+        let query = q.build();
+
+        let limit = msg.req.inner.limit as usize;
+        let cursor = msg.req.inner.offset as usize;
+
+        let top_docs = TopDocs::with_limit(limit)
+            .and_offset(cursor)
+            .order_by_score();
+
+        let (docs, count): (Vec<(Score, DocAddress)>, usize) =
+            self.searcher.search(&query, &(top_docs, Count)).await?;
+
+        let mut items = Vec::with_capacity(docs.len());
+        for (_, doc_address) in docs {
+            let doc: TantivyEverythingItem = self.searcher.doc(doc_address).await?;
+            items.push(doc);
+        }
+
+        Ok(TantivyEverythingItems {
             items,
             total: count as u64,
         })

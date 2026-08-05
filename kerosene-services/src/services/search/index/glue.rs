@@ -1,6 +1,9 @@
+use std::str::FromStr;
+
 use common::v1::types::{
     AuditLogEntryId, ChannelId, MediaId, MessageId, RoomId, UserId, util::Time,
 };
+use kerosene_core::types::search::Doctype;
 use lamprey_backend_core::Error;
 use tantivy::schema::{
     OwnedValue,
@@ -10,7 +13,7 @@ use time::OffsetDateTime;
 
 use crate::services::search::util::SCHEMA;
 
-// TODO: maybe use macros for these
+// TODO: maybe use macros for implementing DocumentDeserialize?
 //
 // #[derive(DocumentDeserialize)]
 // pub struct TantivyMessage {
@@ -78,6 +81,11 @@ struct TantivyRoomPartial {
 struct TantivyAuditLogEntryPartial {
     id: Option<AuditLogEntryId>,
     room_id: Option<RoomId>,
+}
+
+pub struct TantivyEverythingItem {
+    pub id: uuid::Uuid,
+    pub doctype: Doctype,
 }
 
 impl DocumentDeserialize for TantivyMessage {
@@ -279,6 +287,47 @@ impl DocumentDeserialize for TantivyAuditLogEntry {
         }
 
         entry.try_into().map_err(DeserializeError::custom)
+    }
+}
+
+impl DocumentDeserialize for TantivyEverythingItem {
+    fn deserialize<'de, D>(mut deserializer: D) -> Result<Self, DeserializeError>
+    where
+        D: DocumentDeserializer<'de>,
+    {
+        let mut id = None;
+        let mut doctype = None;
+
+        while let Some((field, v)) = deserializer.next_field::<OwnedValue>()? {
+            match SCHEMA.schema.get_field_name(field) {
+                "id" => {
+                    let id_str = match v {
+                        OwnedValue::Str(s) => s,
+                        _ => return Err(DeserializeError::custom("missing id")),
+                    };
+                    id = Some(
+                        id_str
+                            .parse()
+                            .map_err(|_| DeserializeError::custom("invalid uuid"))?,
+                    );
+                }
+                "doctype" => {
+                    let doctype_str = match v {
+                        OwnedValue::Str(s) => s,
+                        _ => return Err(DeserializeError::custom("missing doctype")),
+                    };
+                    doctype = Some(Doctype::from_str(&doctype_str).map_err(|_| {
+                        DeserializeError::custom(format!("invalid doctype: {doctype_str}"))
+                    })?);
+                }
+                _ => {}
+            }
+        }
+
+        Ok(TantivyEverythingItem {
+            id: id.ok_or_else(|| DeserializeError::custom("missing id"))?,
+            doctype: doctype.ok_or_else(|| DeserializeError::custom("missing doctype"))?,
+        })
     }
 }
 

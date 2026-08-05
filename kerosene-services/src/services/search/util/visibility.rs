@@ -83,7 +83,6 @@ pub enum SearchMediaVisibility {
 
 // TODO: how would SearchUserVisibility work?
 
-// TODO: impl tantivy visibility
 #[derive(Debug, Clone)]
 pub enum SearchAuditLogVisibility {
     /// all media
