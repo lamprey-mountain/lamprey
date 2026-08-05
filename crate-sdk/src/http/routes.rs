@@ -115,6 +115,52 @@ impl Http {
 // impl_endpoint!(Http, common::v1::routes::foo_bar);
 // use common::v1::routes::channel_create_room;
 macro_rules! route {
+    (delete $url:expr => $name:ident($($param:ident: $param_type:ty),*) -> $res:ty) => {
+        impl Http {
+            pub async fn $name(
+                &self,
+                $($param: $param_type),*,
+            ) -> Result<$res> {
+                let url = self.api_url().join(&format!($url))?;
+                let res = self.client
+                    .delete(url.clone())
+                    .send()
+                    .await?;
+                let status = res.status();
+                let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
+                if !status.is_success() {
+                    error!(name = stringify!($name), status = %status, response_body = %text, url = %url, "request failed");
+                    return Err(anyhow::anyhow!("request failed with status {}: {}", status, text));
+                }
+                serde_json::from_str(&text).with_context(|| {
+                    error!(response_body = %text, "failed to decode response body");
+                    format!("failed to decode response body for {}", stringify!($name))
+                })
+            }
+        }
+    };
+
+    (delete $url:expr => $name:ident($($param:ident: $param_type:ty),*)) => {
+        impl Http {
+            pub async fn $name(
+                &self,
+                $($param: $param_type),*,
+            ) -> Result<()> {
+                let url = self.api_url().join(&format!($url))?;
+                let res = self.client
+                    .delete(url)
+                    .send()
+                    .await?;
+                if let Err(e) = res.error_for_status_ref() {
+                    let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
+                    error!(name = stringify!($name), status = %e.status().unwrap(), response_body = %text, "request failed");
+                    return Err(anyhow::anyhow!(e).context(text));
+                }
+                Ok(())
+            }
+        }
+    };
+
     ($method: ident $url:expr => $name:ident($($param:ident: $param_type:ty),*) -> $res:ty, $req:ty) => {
         impl Http {
             pub async fn $name(
