@@ -177,18 +177,18 @@ impl Services {
     }
 
     pub async fn start_background_tasks(&self) {
-        self.email.start_background_tasks();
         self.admin.start_background_tasks();
+        self.cache.start_background_tasks();
         self.channels.start_background_tasks();
         self.documents.start_background_tasks();
-        self.federation.start_background_tasks();
-        self.notifications.start_background_tasks();
+        self.email.start_background_tasks();
         self.embed.start_workers().await;
-        self.room_analytics.spawn_snapshot_task();
-        self.cache.start_background_tasks();
-        self.member_lists.start_background_tasks();
-        self.search.start_background_tasks();
+        self.federation.start_background_tasks();
         self.harvest.start_background_tasks();
+        self.member_lists.start_background_tasks();
+        self.notifications.start_background_tasks();
+        self.room_analytics.spawn_snapshot_task();
+        self.search.start_background_tasks();
     }
 
     // TODO: cleanly shutdown

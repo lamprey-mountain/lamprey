@@ -73,7 +73,7 @@ tantivy = "0.26.1"
 time = { version = "0.3.47", features = ["serde"] }
 tokio = { version = "1.50.0", features = ["macros", "process", "rt-multi-thread"] }
 tokio-stream = { version = "0.1.18", features = ["sync"] }
-tokio-util = { version = "0.7.18", features = ["compat"] }
+tokio-util = { version = "0.7.18", features = ["compat", "time"] }
 totp-rs = "5.7.1"
 tower-http = { version = "0.6.8", features = ["catch-panic", "cors", "limit", "propagate-header", "sensitive-headers", "trace"] }
 tracing = "0.1.41"

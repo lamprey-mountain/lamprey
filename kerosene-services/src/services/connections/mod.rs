@@ -44,6 +44,9 @@ impl ServiceConnections {
         let srv = self.globals.services();
         let session = srv.sessions.get_by_token(hello.token).await?;
 
+        let handle = Connection::create(self.globals.clone(), (*session).clone());
+        self.connections.insert(handle.id(), handle.clone());
+
         if let (presence, Some(user_id)) = (hello.presence, session.user_id()) {
             let user = srv.users.get(user_id, Some(user_id)).await?;
             if !user.is_suspended() {
@@ -51,12 +54,10 @@ impl ServiceConnections {
                     status: Status::Online,
                     activities: vec![],
                 });
-                srv.presence.set(user_id, presence).await?;
+                srv.presence.set(handle.id(), user_id, presence);
             }
         }
 
-        let handle = Connection::create(self.globals.clone(), (*session).clone());
-        self.connections.insert(handle.id(), handle.clone());
         Ok(handle)
     }
 

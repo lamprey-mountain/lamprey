@@ -484,9 +484,7 @@ async fn user_presence_set(
     }
 
     let srv = s.services();
-    srv.presence
-        .set_manual(target_user_id, req.presence)
-        .await?;
+    srv.presence.set_manually(target_user_id, req.presence);
 
     Ok(StatusCode::NO_CONTENT)
 }

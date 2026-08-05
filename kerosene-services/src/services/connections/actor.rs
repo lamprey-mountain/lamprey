@@ -373,12 +373,12 @@ impl Connection {
                 let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
                 let user = srv.users.get(user_id, None).await?;
                 user.ensure_unsuspended()?;
-                srv.presence.set(user_id, presence).await?;
+                srv.presence.set(self.id, user_id, presence);
             }
             MessageClient::Pong => {
                 let srv = self.globals.services();
                 if let Some(user_id) = self.session.user_id() {
-                    srv.presence.ping(user_id).await?;
+                    srv.presence.ping(self.id, user_id);
                 }
                 *timeout = Timeout::Ping(tokio::time::Instant::now() + HEARTBEAT_TIME);
             }
@@ -686,9 +686,7 @@ impl Connection {
         // set presence to offline
         if let Some(user_id) = self.session.user_id() {
             let srv = self.globals.services();
-            if let Err(err) = srv.presence.set(user_id, Presence::offline()).await {
-                warn!("failed to set user {user_id} as offline: {err}");
-            }
+            srv.presence.disconnect(self.id, user_id);
         }
 
         // clean up subscriptions

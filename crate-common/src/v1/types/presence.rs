@@ -15,17 +15,17 @@ pub struct Presence {
 
 // NOTE: do i want to rename away/busy to idle/dnd? (or away -> afk?)
 #[record]
-#[derive(Default, Copy, PartialEq, Eq)]
+#[derive(Default, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Status {
     /// offline or explicitly invisible
     #[default]
     Offline,
 
-    /// connected to the service, no special status
-    Online,
-
     /// connected but not currently active (ie. away from keyboard)
     Away,
+
+    /// connected to the service, no special status
+    Online,
 
     /// currently unavailable to chat (ie. do not disturb)
     Busy,
