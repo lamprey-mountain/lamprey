@@ -149,6 +149,19 @@ impl Discord {
                     self.route_portal_event(event.channel_id, PortalEvent::Typing(user));
                 }
             }
+            DiscordEvent::MessageDelete(channel_id, message_id) => {
+                if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                    if let Ok(Some(msg)) = self
+                        .bridge
+                        .db
+                        .message_get_by_discord_id(*portal_id, message_id)
+                        .await
+                    {
+                        self.route_portal_event(channel_id, PortalEvent::MessageDelete(msg.id));
+                    }
+                }
+            }
+
             DiscordEvent::InteractionCreate(command) => match command.inner {
                 interactions::SlashCommandType::Ping => {
                     // TODO: better error handling
@@ -539,6 +552,7 @@ async fn spawn_portal_inner(
                         }
 
                         let updated_message = crate::bridge_old::Message {
+                            id: crate::types::MessageId::new(),
                             portal_id,
                             source_platform: Platform::Lamprey,
                             lamprey_message_id: Some(message.id),
@@ -549,7 +563,7 @@ async fn spawn_portal_inner(
                         let _ = handle
                             .bridge
                             .db
-                            .message_update(portal_id, updated_message)
+                            .message_create(portal_id, updated_message)
                             .await;
                     }
                 }
@@ -576,6 +590,10 @@ async fn spawn_portal_inner(
                     .message_get_by_lamprey_id(portal_id, msg.id)
                     .await?
                 else {
+                    continue;
+                };
+
+                let Some(message_id) = portal_msg.discord_message_id else {
                     continue;
                 };
 
@@ -627,21 +645,54 @@ async fn spawn_portal_inner(
                     }
                 }
 
-                if let Some(message_id) = portal_msg.discord_message_id {
-                    webhook
-                        .edit_message(
-                            &http,
-                            message_id,
-                            serenity::all::EditWebhookMessage::new()
-                                .content(content)
-                                .attachments(attachments),
-                        )
-                        .await?;
+                let edited = webhook
+                    .edit_message(
+                        &http,
+                        message_id,
+                        serenity::all::EditWebhookMessage::new()
+                            .content(content)
+                            .attachments(attachments),
+                    )
+                    .await?;
+
+                let mut new_attachments = vec![];
+                for (i, attachment) in msg_inner.attachments.iter().enumerate() {
+                    let common::v1::types::MessageAttachmentType::Media { media } = &attachment.ty;
+                    if let Some(discord_att) = edited.attachments.get(i) {
+                        new_attachments.push((media.id, discord_att.id));
+                    }
                 }
 
-                // FIXME: update database?
+                let updated_message = crate::bridge_old::Message {
+                    attachments: new_attachments,
+                    ..portal_msg
+                };
+
+                // WARNING: if the bridge ever has more than two endpoints, i need to handle race conditions/conflicts/overwriting here
+                let _ = handle
+                    .bridge
+                    .db
+                    .message_update(portal_id, updated_message)
+                    .await;
             }
-            PortalEvent::MessageDelete(_) => todo!(),
+            PortalEvent::MessageDelete(message_id) => {
+                if let Some(discord_cfg) = portal.discord.as_ref() {
+                    if let Some(msg) = handle.bridge.db.message_get(*message_id).await? {
+                        if let (Some(lamprey_msg_id), Some(discord_message_id)) =
+                            (msg.lamprey_message_id, msg.discord_message_id)
+                        {
+                            let _ = http
+                                .delete_message(discord_cfg.channel_id, discord_message_id, None)
+                                .await;
+                            let _ = handle
+                                .bridge
+                                .db
+                                .message_delete_by_lamprey(portal_id, lamprey_msg_id)
+                                .await;
+                        }
+                    }
+                }
+            }
             PortalEvent::ReactionCreate(_, _, _) => todo!(),
             PortalEvent::ReactionDelete(_, _, _) => todo!(),
             PortalEvent::ReactionDeleteEmoji(_, _) => todo!(),

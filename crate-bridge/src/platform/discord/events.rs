@@ -16,6 +16,7 @@ pub struct Handler {
 pub enum DiscordEvent {
     MessageCreate(Message),
     MessageUpdate(MessageUpdateEvent, Option<Message>),
+    MessageDelete(ChannelId, MessageId),
     InteractionCreate(SlashCommand),
     TypingStart(TypingStartEvent),
 }
@@ -58,7 +59,10 @@ impl EventHandler for Handler {
         _guild_id: Option<GuildId>,
     ) {
         info!("discord message delete: {:?}", deleted_message_id);
-        // TODO: Map to BridgeEvent/PortalEvent
+        let _ = self
+            .tx
+            .send(DiscordEvent::MessageDelete(channel_id, deleted_message_id))
+            .await;
     }
 
     async fn message_delete_bulk(

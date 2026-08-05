@@ -32,6 +32,7 @@ pub trait Database: fmt::Debug + Send + Sync {
 
     async fn message_create(&self, portal_id: PortalId, message: Message) -> Result<()>;
     async fn message_update(&self, portal_id: PortalId, message: Message) -> Result<()>;
+    async fn message_get(&self, message_id: MessageId) -> Result<Option<Message>>;
     async fn message_delete_by_discord(
         &self,
         portal_id: PortalId,
@@ -289,9 +290,9 @@ impl Database for SqliteDatabase {
         let lamprey_message_id = message.lamprey_message_id.map(|id| id.to_string());
         let discord_message_id = message.discord_message_id.map(|id| id.to_string());
         let portal_id_str = portal_id.to_string();
+        let message_id_str = message.id.to_string();
 
         let mut txn = self.pool.begin().await?;
-        let message_id_str = uuid::Uuid::now_v7().to_string();
         query!(
             "INSERT INTO message (id, portal_id, source_platform, lamprey_message_id, discord_message_id) VALUES (?, ?, ?, ?, ?)",
             message_id_str,
@@ -374,6 +375,44 @@ impl Database for SqliteDatabase {
         Ok(())
     }
 
+    async fn message_get(&self, message_id: MessageId) -> Result<Option<Message>> {
+        let message_id_str = message_id.to_string();
+        let row = query!(
+            "SELECT portal_id, source_platform, lamprey_message_id, discord_message_id FROM message WHERE id = ?",
+            message_id_str
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if let Some(row) = row {
+            let attachments = query!(
+                "SELECT lamprey_media_id, discord_attachment_id FROM message_attachment WHERE message_id = ?",
+                message_id_str
+            )
+            .fetch_all(&self.pool)
+            .await?;
+
+            Ok(Some(Message {
+                id: message_id,
+                portal_id: row.portal_id.parse::<Uuid>().unwrap().into(),
+                source_platform: row.source_platform.parse().unwrap(),
+                lamprey_message_id: row.lamprey_message_id.map(|id| id.parse().unwrap()),
+                discord_message_id: row.discord_message_id.map(|id| id.parse().unwrap()),
+                attachments: attachments
+                    .into_iter()
+                    .map(|a| {
+                        (
+                            a.lamprey_media_id.parse().unwrap(),
+                            a.discord_attachment_id.parse().unwrap(),
+                        )
+                    })
+                    .collect(),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
     async fn message_delete_by_discord(
         &self,
         portal_id: PortalId,
@@ -446,7 +485,7 @@ impl Database for SqliteDatabase {
         let lamprey_message_id_str = lamprey_message_id.to_string();
         let portal_id_str = portal_id.to_string();
         let row = query!(
-            "SELECT id, source_platform, lamprey_message_id, discord_message_id FROM message WHERE portal_id = ? AND lamprey_message_id = ?",
+            "SELECT id, portal_id, source_platform, lamprey_message_id, discord_message_id FROM message WHERE portal_id = ? AND lamprey_message_id = ?",
             portal_id_str,
             lamprey_message_id_str
         )
@@ -454,17 +493,16 @@ impl Database for SqliteDatabase {
         .await?;
 
         if let Some(row) = row {
-            let message_id = row.id;
-
             let attachments = query!(
                 "SELECT lamprey_media_id, discord_attachment_id FROM message_attachment WHERE message_id = ?",
-                message_id
+                row.id,
             )
             .fetch_all(&self.pool)
             .await?;
 
             Ok(Some(Message {
-                portal_id,
+                id: row.id.unwrap().parse::<Uuid>().unwrap().into(),
+                portal_id: row.portal_id.parse::<Uuid>().unwrap().into(),
                 source_platform: row.source_platform.parse().unwrap(),
                 lamprey_message_id: row.lamprey_message_id.map(|id| id.parse().unwrap()),
                 discord_message_id: row.discord_message_id.map(|id| id.parse().unwrap()),
@@ -499,16 +537,15 @@ impl Database for SqliteDatabase {
         .await?;
 
         if let Some(row) = row {
-            let message_id = row.id;
-
             let attachments = query!(
                 "SELECT lamprey_media_id, discord_attachment_id FROM message_attachment WHERE message_id = ?",
-                message_id
+                row.id,
             )
             .fetch_all(&self.pool)
             .await?;
 
             Ok(Some(Message {
+                id: row.id.unwrap().parse::<Uuid>().unwrap().into(),
                 portal_id,
                 source_platform: row.source_platform.parse().unwrap(),
                 lamprey_message_id: row.lamprey_message_id.map(|id| id.parse().unwrap()),

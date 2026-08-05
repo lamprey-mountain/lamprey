@@ -114,6 +114,7 @@ pub mod may_redesign {
     /// metadata for a single logical message
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct Message {
+        pub id: MessageId,
         pub portal_id: PortalId,
         pub source_platform: Platform,
 

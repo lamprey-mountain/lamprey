@@ -282,17 +282,21 @@ impl Lamprey {
                         }),
                     );
                 }
-                // MessageSync::MessageDelete {
-                //     channel_id,
-                //     message_id,
-                // } => {
-                //     self.route_portal_event(
-                //         channel_id,
-                //         PortalEvent::MessageDelete {
-                //             source_message_id: message_id.to_string(),
-                //         },
-                //     );
-                // }
+                MessageSync::MessageDelete {
+                    channel_id,
+                    message_id,
+                } => {
+                    if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                        if let Ok(Some(msg)) = self
+                            .bridge
+                            .db
+                            .message_get_by_lamprey_id(*portal_id, *message_id)
+                            .await
+                        {
+                            self.route_portal_event(channel_id, PortalEvent::MessageDelete(msg.id));
+                        }
+                    }
+                }
                 // MessageSync::ReactionCreate { channel_id, .. } => {
                 //     self.route_portal_event(channel_id, PortalEvent::ReactionCreate);
                 // }
@@ -533,6 +537,7 @@ async fn spawn_portal_inner(
                     .message_create(
                         portal_id,
                         bridge_old::Message {
+                            id: crate::types::MessageId::new(),
                             source_platform: Platform::Lamprey,
                             attachments: vec![], // FIXME: populate from sent_message
                             portal_id,
@@ -553,17 +558,17 @@ async fn spawn_portal_inner(
 
                 let puppet = ly.sync_puppet_discord(dm).await?;
 
-                if let Some(msg) = handle
+                if let Some(portal_msg) = handle
                     .bridge
                     .db
                     .message_get_by_discord_id(portal_id, dm.id)
                     .await?
                 {
-                    if let Some(lamprey_message_id) = msg.lamprey_message_id {
+                    if let Some(lamprey_message_id) = portal_msg.lamprey_message_id {
                         let mut attachments = vec![];
                         for att in &dm.attachments {
                             // Check if this attachment was already imported
-                            if let Some(existing_media_id) = msg
+                            if let Some(existing_media_id) = portal_msg
                                 .attachments
                                 .iter()
                                 .find(|(_, d_id)| d_id == &att.id)
@@ -630,13 +635,11 @@ async fn spawn_portal_inner(
                         }
 
                         let updated_message = crate::bridge_old::Message {
-                            portal_id,
-                            source_platform: msg.source_platform,
-                            lamprey_message_id: msg.lamprey_message_id,
-                            discord_message_id: msg.discord_message_id,
                             attachments: new_attachments,
+                            ..portal_msg
                         };
 
+                        // WARNING: if the bridge ever has more than two endpoints, i need to handle race conditions/conflicts/overwriting here
                         handle
                             .bridge
                             .db
@@ -645,7 +648,20 @@ async fn spawn_portal_inner(
                     }
                 }
             }
-            PortalEvent::MessageDelete(_) => todo!(),
+            PortalEvent::MessageDelete(message_id) => {
+                if let Some(msg) = handle.bridge.db.message_get(*message_id).await? {
+                    if let (Some(lamprey_message_id), Some(discord_message_id)) =
+                        (msg.lamprey_message_id, msg.discord_message_id)
+                    {
+                        let _ = ly.http.message_delete(channel_id, lamprey_message_id).await;
+                        let _ = handle
+                            .bridge
+                            .db
+                            .message_delete_by_discord(portal_id, discord_message_id)
+                            .await;
+                    }
+                }
+            }
             PortalEvent::ReactionCreate(_, _, _) => todo!(),
             PortalEvent::ReactionDelete(_, _, _) => todo!(),
             PortalEvent::ReactionDeleteEmoji(_, _) => todo!(),
