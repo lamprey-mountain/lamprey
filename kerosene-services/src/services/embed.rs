@@ -178,11 +178,11 @@ impl ServiceEmbed {
             return Ok(());
         }
 
-        self.state
-            .begin()
-            .await?
-            .url_embed_queue_insert(message_ref, user_id, url.to_string())
+        let mut txn = self.state.begin().await?;
+        txn.url_embed_queue_insert(message_ref, user_id, url.to_string())
             .await?;
+        txn.commit().await?;
+
         Ok(())
     }
 
