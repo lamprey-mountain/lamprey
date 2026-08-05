@@ -825,9 +825,6 @@ impl Components<Thin> {
         resolve_media: impl Fn(MediaReference) -> Result<MediaId, ApiError>,
     ) -> Result<(), ApiError> {
         let mut id_allocator = IdAllocator::new();
-        for c in &self.inner {
-            c.visit_ids_fallible(&mut |id| id_allocator.mark_used2(id.0))?;
-        }
 
         // 0. process init (replace entire tree)
         if let Some(init_components) = delta.init {
