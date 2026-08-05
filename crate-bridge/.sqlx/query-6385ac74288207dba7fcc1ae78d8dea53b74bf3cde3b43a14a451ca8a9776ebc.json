@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id FROM message WHERE portal_id = ? AND (lamprey_message_id = ? OR discord_message_id = ?)",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "6385ac74288207dba7fcc1ae78d8dea53b74bf3cde3b43a14a451ca8a9776ebc"
+}

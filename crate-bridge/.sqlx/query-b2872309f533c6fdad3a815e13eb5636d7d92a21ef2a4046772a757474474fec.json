@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE message SET lamprey_message_id = ?, discord_message_id = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "b2872309f533c6fdad3a815e13eb5636d7d92a21ef2a4046772a757474474fec"
+}

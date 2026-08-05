@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, portal_id, source_platform, lamprey_message_id, discord_message_id FROM message WHERE portal_id = ? AND lamprey_message_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "portal_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "source_platform",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "lamprey_message_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_message_id",
+        "ordinal": 4,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "21bce7c760f33651042d8a91d67fda89961827e8bc0e0abac112f9c5420d1e5e"
+}
