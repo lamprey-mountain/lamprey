@@ -213,12 +213,6 @@ impl Discord {
                             .await;
                     });
                 }
-                interactions::SlashCommandType::LinkGuild {
-                    discord_guild_id,
-                    lamprey_room_id,
-                    backfill,
-                    continuous,
-                } => todo!(),
                 interactions::SlashCommandType::LinkChannel {
                     discord_channel_id,
                     lamprey_channel_id,
@@ -319,9 +313,6 @@ impl Discord {
                             .await;
                     });
                 }
-                interactions::SlashCommandType::UnlinkGuild {
-                    discord_guild_id: _,
-                } => todo!(),
                 interactions::SlashCommandType::UnlinkChannel { discord_channel_id } => {
                     let http = self.http.clone();
                     let bridge = self.bridge.clone();
@@ -340,6 +331,24 @@ impl Discord {
                                     CreateInteractionResponseMessage::new()
                                         .ephemeral(true)
                                         .content("channel unlinked"),
+                                ),
+                            )
+                            .await;
+                    });
+                }
+                _ => {
+                    // TODO: implement link guild
+                    // TODO: implement unlink guild
+                    let http = self.http.clone();
+                    tokio::spawn(async move {
+                        let _ = command
+                            .interaction
+                            .create_response(
+                                &http,
+                                CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new()
+                                        .ephemeral(true)
+                                        .content("command not yet implemented"),
                                 ),
                             )
                             .await;
@@ -433,9 +442,9 @@ async fn spawn_portal_inner(
 ) -> Result<()> {
     let mut events = handle.events.subscribe();
     let http_client = reqwest::Client::new();
+    // TODO: set user-agent header for http_client?
 
     // TODO: backfill missed messages
-    // TODO: reuse http_client, add user-agent header?
 
     loop {
         let event = match events.recv().await {
@@ -720,10 +729,12 @@ async fn spawn_portal_inner(
                     }
                 }
             }
-            PortalEvent::ReactionCreate(_, _, _) => todo!(),
-            PortalEvent::ReactionDelete(_, _, _) => todo!(),
-            PortalEvent::ReactionDeleteEmoji(_, _) => todo!(),
-            PortalEvent::ReactionDeleteAll(_, _) => todo!(),
+            // TODO: implement
+            // PortalEvent::ReactionCreate(_, _, _) => todo!(),
+            // PortalEvent::ReactionDelete(_, _, _) => todo!(),
+            // PortalEvent::ReactionDeleteEmoji(_, _) => todo!(),
+            // PortalEvent::ReactionDeleteAll(_, _) => todo!(),
+            _ => {}
         }
     }
 

@@ -677,14 +677,15 @@ async fn spawn_portal_inner(
                     }
                 }
             }
-            PortalEvent::ReactionCreate(_, _, _) => todo!(),
-            PortalEvent::ReactionDelete(_, _, _) => todo!(),
-            PortalEvent::ReactionDeleteEmoji(_, _) => todo!(),
-            PortalEvent::ReactionDeleteAll(_, _) => todo!(),
+
+            // TODO: implement
+            // PortalEvent::ReactionCreate(_, _, _) => todo!(),
+            // PortalEvent::ReactionDelete(_, _, _) => todo!(),
+            // PortalEvent::ReactionDeleteEmoji(_, _) => todo!(),
+            // PortalEvent::ReactionDeleteAll(_, _) => todo!(),
+            _ => {}
         }
     }
-
-    // log (warn?) on exit?
 
     Ok(())
 }
