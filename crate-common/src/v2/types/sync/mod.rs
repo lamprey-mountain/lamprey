@@ -3,12 +3,6 @@
 use lamprey_macros::record;
 use url::Url;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
-
 use crate::{
     v1::types::{
         ChannelId, ConnectionId, DocumentBranchId, Session, SessionId, SessionToken, User, UserId,
@@ -49,22 +43,20 @@ pub mod webhook;
 pub use crate::v1::types::{SyncCompression, SyncFormat as SyncEncoding, SyncVersion};
 
 /// query parameters when establishing a websocket sync connection
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct WebsocketSyncParams {
     pub version: SyncVersion,
 
     pub compression: Option<SyncCompression>,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub encoding: SyncEncoding,
 }
 
 /// a command from the client to the sync worker
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "op"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "op")]
 pub enum SyncCommand {
     /// start a new sync connection
     Identify(SyncIdentify),
@@ -169,9 +161,8 @@ pub struct SyncProperties {
 }
 
 /// an event from the sync worker to the client
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "op"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "op")]
 pub enum SyncEventEnvelope {
     /// heartbeat
     Ping,
@@ -193,7 +184,7 @@ pub enum SyncEventEnvelope {
         ///
         /// - this is in response to a http request with the `Idempotency-Key` header set
         /// - this is in response to a `SyncCommand` with an associated nonce
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[serde(skip_serializing_if = "Option::is_none")]
         nonce: Option<String>,
     },
 
@@ -210,9 +201,8 @@ pub enum SyncEventEnvelope {
 /// an event from the sync worker to a webhook
 ///
 /// the webhook must respond with a 2xx status code within 3 seconds
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "op"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "op")]
 pub enum SyncEventEnvelopeWebsocket {
     /// heartbeat
     ///
@@ -247,9 +237,8 @@ pub enum SyncEventEnvelopeWebsocket {
 }
 
 /// something happened
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum Dispatch {
     /// successfully connected
     Ready {

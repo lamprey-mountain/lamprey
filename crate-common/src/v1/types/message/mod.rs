@@ -972,7 +972,8 @@ pub struct MessageList {
 // TODO: use for message context route
 // TODO: use for thread list routes
 #[record]
-#[derive(Default, utoipa::IntoParams)]
+#[derive(Default)]
+#[cfg_attr(feature = "utoipa", derive(IntoParams))]
 pub struct WithMembersQuery {
     /// whether to include members in response
     ///

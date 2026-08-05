@@ -1,15 +1,9 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{Channel, ChannelId, ChannelSeq, Message};
 
 /// something happened in a channel
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DispatchChannel {
     pub channel_id: ChannelId,
 
@@ -24,9 +18,8 @@ pub struct DispatchChannel {
     pub inner: DispatchChannelInner,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum DispatchChannelInner {
     /// a channel was created
     ChannelCreate { channel: Box<Channel> },

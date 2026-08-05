@@ -1,15 +1,9 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{Channel, Role, RoleId, RoleReorderItem, Room, RoomId, RoomMember};
 
 /// something happened in a room
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DispatchRoom {
     pub room_id: RoomId,
 
@@ -19,9 +13,8 @@ pub struct DispatchRoom {
     pub inner: DispatchRoomInner,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum DispatchRoomInner {
     /// a room was created and/or you joined a room
     RoomCreate {

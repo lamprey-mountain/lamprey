@@ -1,15 +1,9 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{Invite, InviteCode, InviteTargetId, RoomId};
 
 /// something happened with an invite
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DispatchInvite {
     pub invite_code: InviteCode,
 
@@ -25,9 +19,8 @@ pub struct DispatchInvite {
     pub inner: DispatchInviteInner,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum DispatchInviteInner {
     /// an invite was created
     InviteCreate { invite: Box<Invite> },

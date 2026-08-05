@@ -1,17 +1,15 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use lamprey_macros::record;
 use std::convert::TryFrom;
 
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "validator")]
 use validator::{Validate, ValidationErrors};
 
 /// An email address
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde", serde(transparent))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(transparent))]
 pub struct EmailAddr(String);
 
 #[cfg(feature = "utoipa")]
@@ -57,12 +55,10 @@ mod v {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct EmailInfo {
-    #[cfg_attr(feature = "validator", validate(nested))]
+    #[validate(nested)]
     /// the email address itself
     pub email: EmailAddr,
 
@@ -77,10 +73,8 @@ pub struct EmailInfo {
     // pub trust: EmailTrust,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct EmailInfoPatch {
     // /// can see by everyone
     // pub is_public: Option<bool>,
@@ -93,9 +87,8 @@ pub struct EmailInfoPatch {
     // pub trust: Option<EmailTrust>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 /// what someone can do with this email address
 pub enum EmailTrust {
     /// can't be used for any auth
@@ -116,6 +109,8 @@ impl EmailAddr {
     }
 }
 
+// TODO: impl tryfrom without validator
+#[cfg(feature = "validator")]
 impl TryFrom<String> for EmailAddr {
     type Error = ValidationErrors;
 
@@ -131,3 +126,5 @@ impl AsRef<str> for EmailAddr {
         &self.0
     }
 }
+
+// TODO: impl deref?

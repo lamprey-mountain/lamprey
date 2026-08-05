@@ -26,6 +26,8 @@ use crate::v1::types::error::{ApiResult, ErrorCode};
 use crate::v1::types::federation::Hostname;
 use crate::v1::types::{MediaId, MessageId};
 
+// TODO: rename FooIdReq to FooRef(?)
+
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(Deserialize), serde(untagged))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -112,82 +114,91 @@ pub enum InteractionMessageReq {
 }
 
 #[cfg(feature = "serde")]
-fn deserialize_server_name<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s = String::deserialize(deserializer)?;
-    if is_valid_hostname(&s) {
-        Ok(s)
-    } else {
-        Err(serde::de::Error::custom(format!("invalid hostname: {}", s)))
-    }
-}
+mod serde_helpers {
+    use serde::Deserialize;
 
-fn const_self<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    enum Helper {
-        #[cfg_attr(feature = "serde", serde(rename = "@self"))]
-        Variant,
+    use crate::util::is_valid_hostname;
+
+    pub fn deserialize_server_name<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        if is_valid_hostname(&s) {
+            Ok(s)
+        } else {
+            Err(serde::de::Error::custom(format!("invalid hostname: {}", s)))
+        }
     }
 
-    Helper::deserialize(deserializer).map(|_| ())
-}
+    pub fn const_self<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        enum Helper {
+            #[serde(rename = "@self")]
+            Variant,
+        }
 
-fn const_original<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    enum Helper {
-        #[cfg_attr(feature = "serde", serde(rename = "@original"))]
-        Variant,
+        Helper::deserialize(deserializer).map(|_| ())
     }
 
-    Helper::deserialize(deserializer).map(|_| ())
-}
+    pub fn const_original<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        enum Helper {
+            #[serde(rename = "@original")]
+            Variant,
+        }
 
-fn const_host<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    enum Helper {
-        #[cfg_attr(feature = "serde", serde(rename = "@host"))]
-        Variant,
+        Helper::deserialize(deserializer).map(|_| ())
     }
 
-    Helper::deserialize(deserializer).map(|_| ())
-}
+    pub fn const_host<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        enum Helper {
+            #[serde(rename = "@host")]
+            Variant,
+        }
 
-fn const_client<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    enum Helper {
-        #[cfg_attr(feature = "serde", serde(rename = "@client"))]
-        Variant,
+        Helper::deserialize(deserializer).map(|_| ())
     }
 
-    Helper::deserialize(deserializer).map(|_| ())
+    pub fn const_client<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        enum Helper {
+            #[cfg_attr(feature = "serde", serde(rename = "@client"))]
+            Variant,
+        }
+
+        Helper::deserialize(deserializer).map(|_| ())
+    }
+
+    // fn const_all<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
+    // where
+    //     D: serde::Deserializer<'de>,
+    // {
+    //     #[derive(Deserialize)]
+    //     enum Helper {
+    //         #[serde(rename = "@all")]
+    //         Variant,
+    //     }
+    //
+    //     Helper::deserialize(deserializer).map(|_| ())
+    // }
 }
 
-// fn const_all<'de, D>(deserializer: D) -> std::result::Result<(), D::Error>
-// where
-//     D: serde::Deserializer<'de>,
-// {
-//     #[derive(Deserialize)]
-//     enum Helper {
-//         #[cfg_attr(feature = "serde", serde(rename = "@all"))]
-//         Variant,
-//     }
-
-//     Helper::deserialize(deserializer).map(|_| ())
-// }
+#[cfg(feature = "serde")]
+use serde_helpers::*;
 
 impl UserIdReq {
     /// retrieve the user id, falling back to self_id if this is UserSelf

@@ -1421,7 +1421,8 @@ impl ChannelType {
 }
 
 /// Query parameters for channel list removed
-#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
 #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct ChannelListRemovedQuery {

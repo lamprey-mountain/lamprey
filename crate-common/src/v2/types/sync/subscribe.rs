@@ -1,11 +1,4 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
+use lamprey_macros::record;
 
 use crate::v1::types::{
     ChannelId, ConnectionId, DocumentBranchId, InviteCode, RedexId, RoleId, RoomId, RoomMember,
@@ -13,9 +6,8 @@ use crate::v1::types::{
 };
 
 /// update what the client is subscribed to
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum SyncSubscriptionsUpdate {
     /// replace subscriptions
     Replace(SyncSubscriptionsReplace),
@@ -36,42 +28,37 @@ pub enum SyncSubscriptionsUpdate {
 /// replace a client's subscriptions
 ///
 /// leaving a field as None will skip updating. set it to an empty vec to clear.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct SyncSubscriptionsReplace {
     /// the member lists to subscribe to
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub member_lists: Option<Vec<SyncSubscribeMemberList>>,
 
     /// the scripts to subscribe to
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub scripts: Option<Vec<SyncSubscribeScript>>,
 
     /// the user profiles to subscribe to
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
     pub users: Option<Vec<UserId>>,
 
     /// the invite to subscribe to
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
     pub invites: Option<Vec<InviteCode>>,
 
     /// the rooms to subscribe to (lurking)
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
     pub rooms: Option<Vec<RoomId>>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SyncSubscriptionsState {
     pub member_lists: Vec<SyncSubscribeMemberList>,
     pub documents: Vec<SyncSubscriptionsStateDocument>,
@@ -81,17 +68,13 @@ pub struct SyncSubscriptionsState {
     pub rooms: Vec<RoomId>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SyncSubscriptionsStateDocument {
     pub channel_id: ChannelId,
     pub branch_id: DocumentBranchId,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DispatchSubscriptions {
     pub connection_id: ConnectionId,
 
@@ -99,9 +82,8 @@ pub struct DispatchSubscriptions {
     pub inner: DispatchSubscriptionsInner,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum DispatchSubscriptionsInner {
     /// these are your current subscriptions
     Subscriptions { state: SyncSubscriptionsState },
@@ -120,9 +102,7 @@ pub enum DispatchSubscriptionsInner {
     MemberListDispatch(MemberListDispatch),
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SyncSubscribeMemberList {
     /// the list to subscribe to
     pub target: MemberListTarget,
@@ -131,21 +111,15 @@ pub struct SyncSubscribeMemberList {
     pub ranges: Vec<MemberListRange>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SyncSubscribeScript {
     pub channel_id: ChannelId,
     pub redex_id: RedexId,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(tag = "type", rename_all = "lowercase")
-)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[serde(tag = "type", rename_all = "lowercase")]
 pub enum MemberListTarget {
     /// subscribe to a room's member list
     Room { room_id: RoomId },
@@ -161,16 +135,15 @@ pub enum MemberListTarget {
     },
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
+#[record]
+#[serde(untagged)]
 pub enum MemberListRange {
     /// a static range of items
     Static {
         /// the range of items to subscribe to
         ///
         /// start is inclusive, end is exclusive
-        #[cfg_attr(feature = "serde", serde(rename = "static"))]
+        #[serde(rename = "static")]
         static_range: (u64, u64),
     },
 
@@ -180,10 +153,8 @@ pub enum MemberListRange {
 }
 
 // TODO: skip sending room_members/thread_members/users if the client already has them
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(tag = "type"))]
+#[record]
+#[serde(tag = "type")]
 pub enum MemberListOperation {
     /// replace a range of members
     ///
@@ -212,9 +183,7 @@ pub enum MemberListOperation {
 }
 
 /// metadata about a group in the member list
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MemberListGroup {
     pub id: MemberListGroupId,
 
@@ -230,9 +199,8 @@ pub struct MemberListGroup {
 /// - role (by position)
 /// - online
 /// - offline
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Copy, PartialEq, Eq)]
 pub enum MemberListGroupId {
     /// online members
     ///
@@ -251,14 +219,12 @@ pub enum MemberListGroupId {
     Connected,
 
     /// hoisted roles
-    #[cfg_attr(feature = "serde", serde(untagged))]
+    #[serde(untagged)]
     Role(RoleId),
 }
 
 /// an update to a member list
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MemberListDispatch {
     /// which user this sync is for
     pub user_id: UserId,
@@ -276,23 +242,14 @@ pub struct MemberListDispatch {
     pub groups: Vec<MemberListGroup>,
 
     /// relevant room members. the server shouldn't send room members the client already has.
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub room_members: Vec<RoomMember>,
 
     /// relevant thread members. the server shouldn't send thread members the client already has.
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub thread_members: Vec<ThreadMember>,
 
     /// relevant users. the server shouldn't send users the client already has.
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub users: Vec<User>,
 }

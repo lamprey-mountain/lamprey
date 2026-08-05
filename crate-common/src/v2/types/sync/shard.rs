@@ -1,9 +1,5 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
+use lamprey_macros::record;
 use url::Url;
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
 
 use crate::{
     v1::types::{SyncCompression, SyncVersion, misc::Time},
@@ -13,9 +9,8 @@ use crate::{
 use super::SyncEncoding;
 
 /// how events should be/are being received
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum Transport {
     /// using a websocket
     Websocket,
@@ -52,9 +47,8 @@ pub enum Transport {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum SyncWebhookStatus {
     /// server is validating webhook
     Pending,
@@ -85,9 +79,7 @@ impl SyncWebhookStatus {
 }
 
 /// a logical session/connection to the service
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Syncer {
     /// the unique identifier of a sync connection
     // TODO: use this instead of ConnectionId?
@@ -100,17 +92,13 @@ pub struct Syncer {
     pub shard: Vec<Shard>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SyncerCreate {
     // TODO
 }
 
 /// a stream of events
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Shard {
     /// the unique identifier of this shard
     pub id: ShardId,
@@ -118,36 +106,33 @@ pub struct Shard {
     /// override the transport for this shard
     pub transport: Option<Transport>,
 
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[serde(rename = "type")]
     pub ty: ShardKind,
 
     /// whether this shard is currently connected to
     pub active: bool,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ShardCreate {
     // TODO
 }
 
 /// the kind of events that are received
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum ShardKind {
     /// master event bus
     Dispatch {
         /// the numeric index of this shard
-        #[cfg_attr(feature = "serde", serde(default))]
+        #[serde(default)]
         shard: u16,
 
         /// the total number of shards to split events across
-        #[cfg_attr(feature = "serde", serde(default))]
+        #[serde(default)]
         total_shards: u16,
 
-        #[cfg_attr(feature = "serde", serde(default))]
+        #[serde(default)]
         filter: DispatchFilter,
     },
 
@@ -163,9 +148,8 @@ pub enum ShardKind {
 }
 
 /// limits and configuration for a sync session
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct SyncLimits {
     /// the recommended number of shards to use when connecting
     pub shards_recommended: u64,
@@ -181,14 +165,13 @@ pub struct SyncLimits {
 }
 
 /// query parameters when establishing a websocket (or webtransport) sync connection
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct WebsocketSyncParams {
     pub version: SyncVersion,
 
     pub compression: Option<SyncCompression>,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub encoding: SyncEncoding,
 }

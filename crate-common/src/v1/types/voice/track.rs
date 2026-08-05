@@ -138,7 +138,7 @@ pub enum TrackKey {
     Screen,
 
     /// an unknown track type
-    #[serde(untagged)]
+    #[cfg_attr(feature = "serde", serde(untagged))]
     Other(String),
 }
 

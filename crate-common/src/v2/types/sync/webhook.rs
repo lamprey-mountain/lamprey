@@ -1,16 +1,10 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::webhook::Webhook;
 use crate::v1::types::{ChannelId, RoomId, WebhookId};
 
 /// something happened with a webhook
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DispatchWebhook {
     pub webhook_id: WebhookId,
 
@@ -24,9 +18,8 @@ pub struct DispatchWebhook {
     pub inner: DispatchWebhookInner,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum DispatchWebhookInner {
     /// a webhook was created
     WebhookCreate { webhook: Box<Webhook> },

@@ -1,14 +1,8 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{UserId, harvest::Harvest, preferences::PreferencesGlobal};
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DispatchUser {
     pub user_id: UserId,
 
@@ -21,9 +15,8 @@ pub struct DispatchUser {
     pub inner: DispatchUserInner,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum DispatchUserInner {
     /// a user's harvest state was updated
     HarvestUpdate { harvest: Box<Harvest> },

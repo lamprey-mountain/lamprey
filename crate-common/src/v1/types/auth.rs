@@ -1,43 +1,31 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
+use lamprey_macros::record;
 use uuid::Uuid;
 
 use crate::v1::types::{UserId, email::EmailAddr, util::Time};
 
-#[cfg(feature = "validator")]
-use validator::Validate;
-
 /// response to a totp init request
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct TotpInit {
     pub secret: String,
 }
 
 /// request body for totp_validate or totp_exec
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct TotpVerificationRequest {
     /// the totp code or recovery code
     pub code: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct TotpRecoveryCodes {
     pub codes: Vec<TotpRecoveryCode>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct TotpRecoveryCode {
     pub code: String,
 
@@ -46,24 +34,21 @@ pub struct TotpRecoveryCode {
 }
 
 /// Request body for email authentication completion
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AuthEmailComplete {
     pub code: String,
 }
 
 // TODO(#267): look into zeroing out/erasing passwords after handling
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct PasswordSet {
     pub password: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct PasswordExec {
     pub password: String,
 
@@ -72,40 +57,35 @@ pub struct PasswordExec {
 }
 
 /// who's logging in
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum PasswordExecIdent {
     UserId { user_id: UserId },
     Email { email: EmailAddr },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct CaptchaChallenge {
     pub code: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct CaptchaResponse {
     pub code: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct WebauthnChallenge {
     /// public key credentials request as stringified json
     pub challenge: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct WebauthnFinish {
     /// if this authenticator should be registered if it doesn't exist yet
     pub register: bool,
@@ -114,25 +94,22 @@ pub struct WebauthnFinish {
     pub credential: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct WebauthnAuthenticator {
     pub id: Uuid,
     pub name: String,
     pub created_at: Time,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct WebauthnPatch {
     pub name: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AuthState {
     /// if there is at least one verified and primary email address
     ///
@@ -170,9 +147,8 @@ impl AuthState {
 }
 
 /// Query parameters for oauth redirect callback
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct AuthOauthRedirectParams {
     pub state: String,
     pub code: String,

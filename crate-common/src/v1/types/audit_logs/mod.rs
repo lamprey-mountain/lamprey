@@ -1,13 +1,6 @@
+use lamprey_macros::record;
 use std::time::Duration;
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde")]
-use serde_json::Value;
 use uuid::Uuid;
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
 
 use crate::v1::types::{
     ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId, Channel, ChannelId,
@@ -20,9 +13,7 @@ use crate::v1::types::{
 pub mod resolve;
 
 // FIXME(#981): bridge events should be logged as the bridge, not puppet
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct AuditLogEntry {
     /// Unique id idenfitying this entry
     pub id: AuditLogEntryId,
@@ -41,7 +32,7 @@ pub struct AuditLogEntry {
     pub reason: Option<String>,
 
     /// type and metadata for this audit log entry
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: AuditLogEntryType,
 
     /// the status of the request
@@ -67,9 +58,10 @@ pub struct AuditLogEntry {
     pub application_id: Option<ApplicationId>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// FIXME: don't require serde_json
+use serde_json::Value;
+
+#[record]
 pub struct AuditLogChange {
     pub new: Value,
     pub old: Value,
@@ -79,13 +71,8 @@ pub struct AuditLogChange {
 // NOTE: maybe i want to also have Channel{Remove,Restore}?
 // NOTE: maybe i want to also have Thread{Create,Update,Etc}?
 // NOTE: maybe i should hoist changes to the top level...?
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(tag = "type", content = "metadata")
-)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type", content = "metadata")]
 pub enum AuditLogEntryType {
     RoomCreate {
         changes: Vec<AuditLogChange>,
@@ -644,30 +631,29 @@ pub enum AuditLogEntryType {
     },
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[derive(Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct AuditLogFilter {
     /// only return audit log entries from these users
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub user_id: Vec<UserId>,
 
     /// only return audit log entries with these types
-    #[cfg_attr(feature = "serde", serde(default, rename = "type"))]
+    #[serde(default, rename = "type")]
     pub ty: Vec<String>,
 
     // TODO: implement
     /// only return audit log entries with these statuses
     ///
     /// defaults to only `Success`
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub status: Vec<AuditLogEntryStatus>,
 }
 
 /// the status of an audit log event
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum AuditLogEntryStatus {
     /// the operation was successful
     Success,
@@ -680,9 +666,7 @@ pub enum AuditLogEntryStatus {
 }
 
 // TODO: use this instead of PaginationResponse<AuditLogEntry>
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct AuditLogPaginationResponse {
     /// the audit log entries themselves
     pub audit_log_entries: Vec<AuditLogEntry>,
