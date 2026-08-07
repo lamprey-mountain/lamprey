@@ -97,6 +97,7 @@ components(schemas(
     // automod types
     common::v1::types::automod::AutomodRule,
     common::v1::types::automod::AutomodRuleCreate,
+    common::v1::types::automod::AutomodRuleUpdate,
     common::v1::types::automod::AutomodTrigger,
     common::v1::types::automod::AutomodAction,
     common::v1::types::automod::AutomodTarget,
