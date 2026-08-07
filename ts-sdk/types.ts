@@ -87,6 +87,7 @@ export type PushCreate = components["schemas"]["PushCreate"];
 export type PushInfo = components["schemas"]["PushInfo"];
 export type AutomodRule = components["schemas"]["AutomodRule"];
 export type AutomodRuleCreate = components["schemas"]["AutomodRuleCreate"];
+export type AutomodRuleUpdate = components["schemas"]["AutomodRuleUpdate"];
 export type Attachment = components["schemas"]["MessageAttachment"];
 export type AttachmentCreate = components["schemas"]["MessageAttachmentCreate"];
 export type ReactionKey = components["schemas"]["ReactionKey"];

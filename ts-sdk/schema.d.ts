@@ -23,31 +23,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** Format: uri */
-							authorization_endpoint: string;
-							grant_types_supported: string[];
-							/** Format: uri */
-							issuer: string;
-							response_types_supported: string[];
-							scopes_supported: string[];
-							subject_types_supported: string[];
-							/** Format: uri */
-							token_endpoint: string;
-							token_endpoint_auth_methods_supported: string[];
-							/** Format: uri */
-							userinfo_endpoint: string;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -66,10 +42,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Ack bulk
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Ack bulk */
 		post: {
 			parameters: {
 				query?: never;
@@ -77,22 +50,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						acks: components["schemas"]["AckBulkItem"][];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -109,12 +68,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Admin broadcast
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AdminBroadcast</div>
-		 */
+		/** Admin broadcast */
 		post: {
 			parameters: {
 				query?: never;
@@ -122,22 +76,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						message: components["schemas"]["MessageCreate"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				202: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -154,9 +94,7 @@ export interface paths {
 		};
 		/**
 		 * Admin channel search index stats
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *
-		 *     Get search index statistics for a channel
+		 * @description Get search index statistics for a channel
 		 */
 		get: operations["admin_channel_search_index_stats"];
 		put?: never;
@@ -176,10 +114,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Admin collect garbage
-		 * @description <div class="markdown-alert-permission-required">Admin</div>
-		 */
+		/** Admin collect garbage */
 		post: operations["admin_collect_garbage"];
 		delete?: never;
 		options?: never;
@@ -196,10 +131,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Admin purge cache
-		 * @description <div class="markdown-alert-permission-required">Admin</div>
-		 */
+		/** Admin purge cache */
 		post: operations["admin_purge_cache"];
 		delete?: never;
 		options?: never;
@@ -216,12 +148,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Admin register user
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserRegistered</div>
-		 */
+		/** Admin register user */
 		post: {
 			parameters: {
 				query?: never;
@@ -229,22 +156,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						user_id: components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description User registered */
-				202: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -263,10 +176,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Admin reindex channel
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelReindex</div>
-		 *
-		 *     Queue a channel to be reindexed for search
+		 * @description Queue a channel to be reindexed for search
 		 */
 		post: operations["admin_reindex_channel"];
 		delete?: never;
@@ -286,10 +196,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Admin reindex everything
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ReindexEverything</div>
-		 *
-		 *     Queue all channels to be reindexed for search. This deletes all existing search index data first.
+		 * @description Queue all channels to be reindexed for search. This deletes all existing search index data first.
 		 */
 		post: operations["admin_reindex_everything"];
 		delete?: never;
@@ -309,10 +216,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Admin reindex room
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomReindex</div>
-		 *
-		 *     Queue all channels in a room to be reindexed for search
+		 * @description Queue all channels in a room to be reindexed for search
 		 */
 		post: operations["admin_reindex_room"];
 		delete?: never;
@@ -330,9 +234,7 @@ export interface paths {
 		};
 		/**
 		 * Admin room search index stats
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *
-		 *     Get search index statistics for a room
+		 * @description Get search index statistics for a room
 		 */
 		get: operations["admin_room_search_index_stats"];
 		put?: never;
@@ -352,10 +254,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Admin search audit logs
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 */
+		/** Admin search audit logs */
 		post: operations["admin_search_audit_logs"];
 		delete?: never;
 		options?: never;
@@ -370,10 +269,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Admin search DLQ list
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 */
+		/** Admin search DLQ list */
 		get: operations["admin_search_dlq_list"];
 		put?: never;
 		post?: never;
@@ -393,10 +289,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		post?: never;
-		/**
-		 * Admin search DLQ delete
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 */
+		/** Admin search DLQ delete */
 		delete: operations["admin_search_dlq_delete"];
 		options?: never;
 		head?: never;
@@ -412,11 +305,25 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Admin search DLQ retry
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 */
+		/** Admin search DLQ retry */
 		post: operations["admin_search_dlq_retry"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/admin/search/everything": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Admin search everything */
+		post: operations["admin_search_everything"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -430,10 +337,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Admin search stats
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 */
+		/** Admin search stats */
 		get: operations["admin_search_stats"];
 		put?: never;
 		post?: never;
@@ -452,12 +356,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Admin whisper
-		 * @description <div class="markdown-alert-server-permission-required">server:Admin</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AdminWhisper</div>
-		 */
+		/** Admin whisper */
 		post: {
 			parameters: {
 				query?: never;
@@ -465,23 +364,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						message: components["schemas"]["MessageCreate"];
-						user_id: components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				202: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -496,47 +380,19 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * App list
-		 * @description
-		 */
+		/** App list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Application"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * App create
-		 * @description <div class="markdown-alert-permission-required">ApplicationCreate</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationCreate</div>
-		 */
+		/** App create */
 		post: {
 			parameters: {
 				query?: never;
@@ -544,43 +400,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						bridge?: null | components["schemas"]["Bridge"];
-						description?: string | null;
-						name: string;
-						oauth_confidential?: boolean | null;
-						oauth_redirect_uris?: string[];
-						/** @description if anyone can use this */
-						public?: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							bridge?: null | components["schemas"]["Bridge"];
-							description?: string | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							/** @description oauth whether this client can keep secrets confidential */
-							oauth_confidential: boolean;
-							oauth_redirect_uris?: string[];
-							/** @description only returned on oauth token rotate endpoint */
-							oauth_secret?: string | null;
-							owner_id: components["schemas"]["Id"];
-							/** @description if anyone can use this */
-							public: boolean;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -595,123 +416,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * App get
-		 * @description
-		 */
+		/** App get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					app_id: null | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							bridge?: null | components["schemas"]["Bridge"];
-							description?: string | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							/** @description oauth whether this client can keep secrets confidential */
-							oauth_confidential: boolean;
-							oauth_redirect_uris?: string[];
-							/** @description only returned on oauth token rotate endpoint */
-							oauth_secret?: string | null;
-							owner_id: components["schemas"]["Id"];
-							/** @description if anyone can use this */
-							public: boolean;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * App delete
-		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationDelete</div>
-		 */
+		/** App delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					app_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * App patch
-		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationUpdate</div>
-		 */
+		/** App patch */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					app_id: null | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						bridge?: null | components["schemas"]["Bridge"];
-						description?: string | null;
-						name?: string | null;
-						oauth_confidential?: boolean | null;
-						oauth_redirect_uris?: string[] | null;
-						/** @description if anyone can use this */
-						public?: boolean | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							bridge?: null | components["schemas"]["Bridge"];
-							description?: string | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							/** @description oauth whether this client can keep secrets confidential */
-							oauth_confidential: boolean;
-							oauth_redirect_uris?: string[];
-							/** @description only returned on oauth token rotate endpoint */
-							oauth_secret?: string | null;
-							owner_id: components["schemas"]["Id"];
-							/** @description if anyone can use this */
-							public: boolean;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -726,34 +466,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * App invite bot
-		 * @description <div class="markdown-alert-permission-required">IntegrationsManage</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: BotAdd</div>
-		 *
-		 *     Add a bot to a room
+		 * @description Add a bot to a room
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					app_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": string;
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -769,106 +492,16 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Puppet ensure
-		 * @description
-		 */
+		/** Puppet ensure */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					app_id: null | components["schemas"]["Id"];
-					puppet_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description if this is a remote bot */
-						bot: boolean;
-						/** @description about/bio */
-						description?: string | null;
-						/** @description display name */
-						name: string;
-						/** @description if this is for the service itself. usually paired with bot: true */
-						system: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							avatar?: null | components["schemas"]["Id"];
-							banner?: null | components["schemas"]["Id"];
-							/** @description whether this user is a bot */
-							bot: boolean;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							emails?: components["schemas"]["EmailInfo"][] | null;
-							/**
-							 * @description whether this user is considered to have mutifactor authentication enabled on their account
-							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
-							 */
-							has_mfa?: boolean | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							preferences?: null | components["schemas"]["PreferencesUser"];
-							presence: components["schemas"]["Presence"];
-							puppet?: null | components["schemas"]["Puppet"];
-							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote_Id"];
-							suspended?: null | components["schemas"]["Suspended"];
-							/** @description whether this user is an official system user */
-							system: boolean;
-							version_id: components["schemas"]["Id"];
-							webhook?: null | components["schemas"]["UserWebhook"];
-						};
-					};
-				};
-				/** @description created */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							avatar?: null | components["schemas"]["Id"];
-							banner?: null | components["schemas"]["Id"];
-							/** @description whether this user is a bot */
-							bot: boolean;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							emails?: components["schemas"]["EmailInfo"][] | null;
-							/**
-							 * @description whether this user is considered to have mutifactor authentication enabled on their account
-							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
-							 */
-							has_mfa?: boolean | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							preferences?: null | components["schemas"]["PreferencesUser"];
-							presence: components["schemas"]["Presence"];
-							puppet?: null | components["schemas"]["Puppet"];
-							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote_Id"];
-							suspended?: null | components["schemas"]["Suspended"];
-							/** @description whether this user is an official system user */
-							system: boolean;
-							version_id: components["schemas"]["Id"];
-							webhook?: null | components["schemas"]["UserWebhook"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -886,44 +519,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * App rotate oauth secret
-		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ApplicationUpdate</div>
-		 */
+		/** App rotate oauth secret */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					app_id: null | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							bridge?: null | components["schemas"]["Bridge"];
-							description?: string | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							/** @description oauth whether this client can keep secrets confidential */
-							oauth_confidential: boolean;
-							oauth_redirect_uris?: string[];
-							/** @description only returned on oauth token rotate endpoint */
-							oauth_secret?: string | null;
-							owner_id: components["schemas"]["Id"];
-							/** @description if anyone can use this */
-							public: boolean;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -940,39 +545,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * App create session
-		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: SessionLogin</div>
-		 */
+		/** App create session */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					app_id: null | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						name?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["Session"] & {
-							token: components["schemas"]["SessionToken"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -987,10 +569,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Auth captcha challenge
-		 * @description
-		 */
+		/** Auth captcha challenge */
 		get: {
 			parameters: {
 				query?: never;
@@ -999,19 +578,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							code: string;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -1030,10 +597,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Auth captcha init
-		 * @description
-		 */
+		/** Auth captcha init */
 		post: {
 			parameters: {
 				query?: never;
@@ -1042,15 +606,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1067,10 +623,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Auth captcha submit
-		 * @description
-		 */
+		/** Auth captcha submit */
 		post: {
 			parameters: {
 				query?: never;
@@ -1079,15 +632,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1112,21 +657,11 @@ export interface paths {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					addr: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				202: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1151,27 +686,11 @@ export interface paths {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					addr: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						code: string;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1196,21 +715,11 @@ export interface paths {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					addr: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				202: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1227,60 +736,30 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Auth oauth init
-		 * @description
-		 */
+		/** Auth oauth init */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					provider: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ready */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** Format: uri */
-							url: string;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		/**
 		 * Auth oauth delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Remove an oauth provider
+		 * @description Remove an oauth provider
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					provider: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -1294,32 +773,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Auth oauth redirect
-		 * @description
-		 */
+		/** Auth oauth redirect */
 		get: {
 			parameters: {
-				query: {
-					state: string;
-					code: string;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					provider: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success; responds with html + javascript */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -1337,11 +800,7 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Auth password set
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 */
+		/** Auth password set */
 		put: {
 			parameters: {
 				query?: never;
@@ -1349,28 +808,10 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						password: string;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
-		/**
-		 * Auth password exec
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 */
+		/** Auth password exec */
 		post: {
 			parameters: {
 				query?: never;
@@ -1378,29 +819,12 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["PasswordExecIdent"] & {
-						password: string;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		/**
 		 * Auth password delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 *
-		 *     Remove password authentication
+		 * @description Remove password authentication
 		 */
 		delete: {
 			parameters: {
@@ -1410,15 +834,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -1434,9 +850,7 @@ export interface paths {
 		};
 		/**
 		 * Auth state
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get the available auth methods for this user
+		 * @description Get the available auth methods for this user
 		 */
 		get: {
 			parameters: {
@@ -1446,32 +860,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description registered webauthn authenticators */
-							authenticators: components["schemas"]["WebauthnAuthenticator"][];
-							/**
-							 * @description if there is at least one verified and primary email address
-							 *
-							 *     this is used for magic links and password resets
-							 */
-							has_email: boolean;
-							/** @description if a password has been set */
-							has_password: boolean;
-							/** @description if the user has registered a totp provider */
-							has_totp: boolean;
-							/** @description the oauth providers this user has authenticated with */
-							oauth_providers: string[];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -1491,10 +880,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		post?: never;
-		/**
-		 * Auth sudo delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Auth sudo delete */
 		delete: {
 			parameters: {
 				query?: never;
@@ -1503,15 +889,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -1529,10 +907,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Auth sudo upgrade (TEMP)
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthSudo</div>
-		 *
-		 *     Immediately upgrade a session to sudo mode. For debugging, will be removed later.
+		 * @description Immediately upgrade a session to sudo mode. For debugging, will be removed later.
 		 */
 		post: {
 			parameters: {
@@ -1542,15 +917,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1569,9 +936,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Auth totp exec
-		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: SessionLogin</div>
-		 *
-		 *     Execute totp authentication
+		 * @description Execute totp authentication
 		 */
 		post: {
 			parameters: {
@@ -1580,47 +945,12 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description the totp code or recovery code */
-						code: string;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description registered webauthn authenticators */
-							authenticators: components["schemas"]["WebauthnAuthenticator"][];
-							/**
-							 * @description if there is at least one verified and primary email address
-							 *
-							 *     this is used for magic links and password resets
-							 */
-							has_email: boolean;
-							/** @description if a password has been set */
-							has_password: boolean;
-							/** @description if the user has registered a totp provider */
-							has_totp: boolean;
-							/** @description the oauth providers this user has authenticated with */
-							oauth_providers: string[];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		/**
 		 * Auth totp delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 *
-		 *     Delete totp configuration
+		 * @description Delete totp configuration
 		 */
 		delete: {
 			parameters: {
@@ -1630,32 +960,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description registered webauthn authenticators */
-							authenticators: components["schemas"]["WebauthnAuthenticator"][];
-							/**
-							 * @description if there is at least one verified and primary email address
-							 *
-							 *     this is used for magic links and password resets
-							 */
-							has_email: boolean;
-							/** @description if a password has been set */
-							has_password: boolean;
-							/** @description if the user has registered a totp provider */
-							has_totp: boolean;
-							/** @description the oauth providers this user has authenticated with */
-							oauth_providers: string[];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -1671,11 +976,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Auth totp enable
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 */
+		/** Auth totp enable */
 		post: {
 			parameters: {
 				query?: never;
@@ -1683,23 +984,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description the totp code or recovery code */
-						code: string;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1716,10 +1002,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Auth totp init
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Auth totp init */
 		post: {
 			parameters: {
 				query?: never;
@@ -1728,19 +1011,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							secret: string;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1759,9 +1030,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Auth totp recovery exec
-		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: SessionLogin</div>
-		 *
-		 *     Use a recovery code
+		 * @description Use a recovery code
 		 */
 		post: {
 			parameters: {
@@ -1770,40 +1039,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description the totp code or recovery code */
-						code: string;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description registered webauthn authenticators */
-							authenticators: components["schemas"]["WebauthnAuthenticator"][];
-							/**
-							 * @description if there is at least one verified and primary email address
-							 *
-							 *     this is used for magic links and password resets
-							 */
-							has_email: boolean;
-							/** @description if a password has been set */
-							has_password: boolean;
-							/** @description if the user has registered a totp provider */
-							has_totp: boolean;
-							/** @description the oauth providers this user has authenticated with */
-							oauth_providers: string[];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1820,9 +1057,7 @@ export interface paths {
 		};
 		/**
 		 * Auth totp recovery codes get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     View existing recovery codes (does not invalidate them)
+		 * @description View existing recovery codes (does not invalidate them)
 		 */
 		get: {
 			parameters: {
@@ -1832,27 +1067,12 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							codes: components["schemas"]["TotpRecoveryCode"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		/**
 		 * Auth totp recovery codes rotate
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 *
-		 *     Generate new recovery codes (invalidates old ones)
+		 * @description Generate new recovery codes (invalidates old ones)
 		 */
 		post: {
 			parameters: {
@@ -1862,19 +1082,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							codes: components["schemas"]["TotpRecoveryCode"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1892,11 +1100,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		post?: never;
-		/**
-		 * Auth webauthn delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 */
+		/** Auth webauthn delete */
 		delete: {
 			parameters: {
 				query?: never;
@@ -1905,23 +1109,11 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Auth webauthn patch
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 */
+		/** Auth webauthn patch */
 		patch: {
 			parameters: {
 				query?: never;
@@ -1930,15 +1122,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -1951,10 +1135,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Auth webauthn exec
-		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: SessionLogin</div>
-		 */
+		/** Auth webauthn exec */
 		post: {
 			parameters: {
 				query?: never;
@@ -1963,15 +1144,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -1988,11 +1161,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Auth webauthn init
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AuthUpdate</div>
-		 */
+		/** Auth webauthn init */
 		post: {
 			parameters: {
 				query?: never;
@@ -2001,15 +1170,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -2026,34 +1187,17 @@ export interface paths {
 		};
 		/**
 		 * Calendar event list user
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List all events the current user can see
+		 * @description List all events the current user can see
 		 */
 		get: {
 			parameters: {
-				query?: {
-					limit?: number | null;
-					from?: null | components["schemas"]["Id"];
-					to?: null | components["schemas"]["Id"];
-					dir?: null | components["schemas"]["PaginationDirection"];
-					from_time?: null | components["schemas"]["Time"];
-					to_time?: null | components["schemas"]["Time"];
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -2070,108 +1214,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Calendar event list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Calendar event list */
 		get: {
 			parameters: {
-				query?: {
-					limit?: number | null;
-					from?: null | components["schemas"]["Id"];
-					to?: null | components["schemas"]["Id"];
-					dir?: null | components["schemas"]["PaginationDirection"];
-					from_time?: null | components["schemas"]["Time"];
-					to_time?: null | components["schemas"]["Time"];
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							channel_id: components["schemas"]["Id"];
-							creator_id?: null | components["schemas"]["Id"];
-							description?: string | null;
-							ends_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							location?: string | null;
-							recurrence?: null | components["schemas"]["Recurrence"];
-							starts_at: components["schemas"]["Time"];
-							timezone?: null | components["schemas"]["Timezone"];
-							title: string;
-							/** Format: uri */
-							url?: string | null;
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Calendar event create
-		 * @description <div class="markdown-alert-permission-required">CalendarEventCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarEventCreate</div>
-		 */
+		/** Calendar event create */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						description?: string | null;
-						ends_at?: null | components["schemas"]["Time"];
-						location?: string | null;
-						recurrence?: null | components["schemas"]["Recurrence"];
-						starts_at: components["schemas"]["Time"];
-						timezone?: null | components["schemas"]["Timezone"];
-						title: string;
-						/** Format: uri */
-						url?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Create calendar event success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							channel_id: components["schemas"]["Id"];
-							creator_id?: null | components["schemas"]["Id"];
-							description?: string | null;
-							ends_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							location?: string | null;
-							recurrence?: null | components["schemas"]["Recurrence"];
-							starts_at: components["schemas"]["Time"];
-							timezone?: null | components["schemas"]["Timezone"];
-							title: string;
-							/** Format: uri */
-							url?: string | null;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -2186,131 +1250,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Calendar event get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Calendar event get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							channel_id: components["schemas"]["Id"];
-							creator_id?: null | components["schemas"]["Id"];
-							description?: string | null;
-							ends_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							location?: string | null;
-							recurrence?: null | components["schemas"]["Recurrence"];
-							starts_at: components["schemas"]["Time"];
-							timezone?: null | components["schemas"]["Timezone"];
-							title: string;
-							/** Format: uri */
-							url?: string | null;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Calendar event delete
-		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarEventDelete</div>
-		 */
+		/** Calendar event delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Delete calendar event success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Calendar event update
-		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarEventUpdate</div>
-		 */
+		/** Calendar event update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						description?: string | null;
-						ends_at?: null | components["schemas"]["Time"];
-						location?: string | null;
-						starts_at?: null | components["schemas"]["Time"];
-						title?: string | null;
-						/** Format: uri */
-						url?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Update calendar event success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							channel_id: components["schemas"]["Id"];
-							creator_id?: null | components["schemas"]["Id"];
-							description?: string | null;
-							ends_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							location?: string | null;
-							recurrence?: null | components["schemas"]["Recurrence"];
-							starts_at: components["schemas"]["Time"];
-							timezone?: null | components["schemas"]["Timezone"];
-							title: string;
-							/** Format: uri */
-							url?: string | null;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -2321,50 +1296,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Calendar overwrite list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Calendar overwrite list */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List calendar overwrites success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description if this event is cancelled */
-							cancelled: boolean;
-							ends_at?: null | components["schemas"]["Time"];
-							event_id: components["schemas"]["Id"];
-							/** @description shown before the description */
-							extra_description?: string | null;
-							location?: string | null;
-							/**
-							 * Format: int64
-							 * @description the sequence number of this instance
-							 */
-							seq: number;
-							starts_at?: null | components["schemas"]["Time"];
-							title?: string | null;
-							/** Format: uri */
-							url?: string | null;
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -2381,145 +1322,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Calendar overwrite get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Calendar overwrite get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-					seq: number;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get calendar overwrite success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description if this event is cancelled */
-							cancelled: boolean;
-							ends_at?: null | components["schemas"]["Time"];
-							event_id: components["schemas"]["Id"];
-							/** @description shown before the description */
-							extra_description?: string | null;
-							location?: string | null;
-							/**
-							 * Format: int64
-							 * @description the sequence number of this instance
-							 */
-							seq: number;
-							starts_at?: null | components["schemas"]["Time"];
-							title?: string | null;
-							/** Format: uri */
-							url?: string | null;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Calendar overwrite delete
-		 * @description <div class="markdown-alert-permission-required">CalendarEventManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarOverwriteDelete</div>
-		 */
+		/** Calendar overwrite delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-					seq: number;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Delete calendar overwrite success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Calendar overwrite update
-		 * @description <div class="markdown-alert-permission-required">CalendarEventManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarOverwriteUpdate</div>
-		 */
+		/** Calendar overwrite update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-					seq: number;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description if this event is cancelled */
-						cancelled?: boolean | null;
-						ends_at?: null | components["schemas"]["Time"];
-						/** @description shown before the description */
-						extra_description?: string | null;
-						location?: string | null;
-						starts_at?: null | components["schemas"]["Time"];
-						title?: string | null;
-						/** Format: uri */
-						url?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Update calendar overwrite success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description if this event is cancelled */
-							cancelled: boolean;
-							ends_at?: null | components["schemas"]["Time"];
-							event_id: components["schemas"]["Id"];
-							/** @description shown before the description */
-							extra_description?: string | null;
-							location?: string | null;
-							/**
-							 * Format: int64
-							 * @description the sequence number of this instance
-							 */
-							seq: number;
-							starts_at?: null | components["schemas"]["Time"];
-							title?: string | null;
-							/** Format: uri */
-							url?: string | null;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -2530,42 +1368,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Calendar overwrite RSVP list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Calendar overwrite RSVP list */
 		get: {
 			parameters: {
-				query?: {
-					/** @description whether to include user and member */
-					include_member?: boolean;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-					seq: number;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							member?: null | components["schemas"]["RoomMember"];
-							status: components["schemas"]["CalendarRsvpStatus"];
-							user?: null | components["schemas"]["User"];
-							user_id: components["schemas"]["Id"];
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -2583,70 +1395,28 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Calendar overwrite RSVP put
-		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
-		 */
+		/** Calendar overwrite RSVP put */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-					seq: number;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						status: components["schemas"]["CalendarRsvpStatus"];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
-		/**
-		 * Calendar overwrite RSVP delete
-		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
-		 */
+		/** Calendar overwrite RSVP delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-					seq: number;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Delete calendar overwrite RSVP success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -2660,41 +1430,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Calendar event RSVP list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Calendar event RSVP list */
 		get: {
 			parameters: {
-				query?: {
-					/** @description whether to include user and member */
-					include_member?: boolean;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							member?: null | components["schemas"]["RoomMember"];
-							status: components["schemas"]["CalendarRsvpStatus"];
-							user?: null | components["schemas"]["User"];
-							user_id: components["schemas"]["Id"];
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -2711,102 +1456,39 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Calendar event RSVP get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Calendar event RSVP get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							member?: null | components["schemas"]["RoomMember"];
-							status: components["schemas"]["CalendarRsvpStatus"];
-							user?: null | components["schemas"]["User"];
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * Calendar event RSVP put
-		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
-		 */
+		/** Calendar event RSVP put */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						status: components["schemas"]["CalendarRsvpStatus"];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
-		/**
-		 * Calendar event RSVP delete
-		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: CalendarRsvpDelete</div>
-		 */
+		/** Calendar event RSVP delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					event_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Delete calendar event RSVP success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -2824,313 +1506,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Channel create dm
-		 * @description <div class="markdown-alert-permission-required">DmCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelCreate</div>
-		 *
-		 *     Create a dm or group dm thread (outside of a room)
+		 * @description Create a dm or group dm thread (outside of a room)
 		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-				};
+				header?: never;
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** Format: int64 */
-						auto_archive_duration?: number | null;
-						/** Format: int64 */
-						bitrate?: number | null;
-						/** Format: int64 */
-						default_auto_archive_duration?: number | null;
-						/** Format: int64 */
-						default_slowmode_message?: number | null;
-						description?: string | null;
-						icon?: null | components["schemas"]["Id"];
-						/** @description whether users without ThreadManage can add other members to this thread */
-						invitable?: boolean;
-						name: string;
-						/** @description not safe for work */
-						nsfw?: boolean;
-						parent_id?: null | components["schemas"]["Id"];
-						permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
-						/** @description the recipient(s) for this dm/gdm */
-						recipients?: components["schemas"]["Id"][] | null;
-						/** Format: int64 */
-						slowmode_message?: number | null;
-						/** Format: int64 */
-						slowmode_thread?: number | null;
-						starter_message?: null | components["schemas"]["MessageCreate"];
-						/** @description tags to apply to this thread (overwrite, not append) */
-						tags?: components["schemas"]["Id"][] | null;
-						/** @description The type of this channel */
-						type?: components["schemas"]["ChannelType"];
-						/** Format: uri */
-						url?: string | null;
-						/** Format: int64 */
-						user_limit?: number | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Dm already exists */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-				/** @description Created channel */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -3145,463 +1531,32 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Channel get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Channel get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get thread success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
-		/**
-		 * Channel update
-		 * @description <div class="markdown-alert-permission-optional">ChannelEdit</div>
-		 *     <div class="markdown-alert-permission-optional">ThreadEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
-		 */
+		/** Channel update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						archived?: boolean | null;
-						/** Format: int64 */
-						auto_archive_duration?: number | null;
-						/** Format: int64 */
-						bitrate?: number | null;
-						calendar?: null | components["schemas"]["CalendarPatch"];
-						/** Format: int64 */
-						default_auto_archive_duration?: number | null;
-						/** Format: int64 */
-						default_slowmode_message?: number | null;
-						description?: string | null;
-						document?: null | components["schemas"]["DocumentPatch"];
-						icon?: null | components["schemas"]["Id"];
-						invitable?: boolean | null;
-						locked?: null | components["schemas"]["Locked"];
-						name?: string | null;
-						/** @description not safe for work */
-						nsfw?: boolean | null;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
-						/** Format: int64 */
-						slowmode_message?: number | null;
-						/** Format: int64 */
-						slowmode_thread?: number | null;
-						/** @description tags to apply to this thread (overwrite, not append) */
-						tags?: components["schemas"]["Id"][] | null;
-						ty?: null | components["schemas"]["ChannelType"];
-						/** Format: uri */
-						url?: string | null;
-						/** Format: int64 */
-						user_limit?: number | null;
-						wiki?: null | components["schemas"]["WikiPatch"];
-					};
-				};
-			};
-			responses: {
-				/** @description edit message success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-				/** @description no change */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -3615,46 +1570,17 @@ export interface paths {
 		get?: never;
 		/**
 		 * Channel ack
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Mark a channel as read (or unread).
+		 * @description Mark a channel as read (or unread).
 		 */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/**
-						 * Format: int64
-						 * @description The new mention count. Defaults to 0.
-						 */
-						mention_count?: number;
-						message_id?: null | components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["AckType"] & {
-							/** @description whether this is considered unread */
-							unread: boolean;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -3670,41 +1596,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Thread activity
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 */
+		/** Thread activity */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List activity success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							messages: components["schemas"]["Message"][];
-							room_members?: components["schemas"]["RoomMember"][];
-							thread_members?: components["schemas"]["ThreadMember"][];
-							users?: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -3723,42 +1624,17 @@ export interface paths {
 		};
 		/**
 		 * Message context
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     More efficient than calling List messages twice
+		 * @description More efficient than calling List messages twice
 		 */
 		get: {
 			parameters: {
-				query?: {
-					to_start?: null | components["schemas"]["Id"];
-					to_end?: null | components["schemas"]["Id"];
-					limit?: number | null;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List thread messages success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							has_after: boolean;
-							has_before: boolean;
-							items: components["schemas"]["Message"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -3779,75 +1655,18 @@ export interface paths {
 		put?: never;
 		/**
 		 * Flume create
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-permission-optional">MessageAttachments</div>
-		 *     <div class="markdown-alert-permission-optional">MessageEmbeds</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Create a live-updating message in a channel. Flumes allow real-time
+		 * @description Create a live-updating message in a channel. Flumes allow real-time
 		 *     content updates until committed.
 		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-					"x-timestamp"?: number;
-				};
-				path: {
-					channel_id: string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description initial components */
-						components: components["schemas"]["Components_Create"];
-						/**
-						 * @description mentions to parse from initial components
-						 *
-						 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification
-						 */
-						mentions?: components["schemas"]["ParseMentions"];
-						metadata?: null | components["schemas"]["Metadata"];
-						reply_id?: null | components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description Flume created successfully */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the id of who sent this message */
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							/** @description when this message was created */
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/**
-							 * @description whether this message is ephemeral
-							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
-							 */
-							ephemeral?: boolean;
-							flume?: null | components["schemas"]["MessageFlume"];
-							id: components["schemas"]["Id"];
-							interaction?: null | components["schemas"]["MessageInteraction"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -3865,56 +1684,18 @@ export interface paths {
 		get?: never;
 		/**
 		 * Flume commit
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Commit the flume content, creating a final message version. After commit,
+		 * @description Commit the flume content, creating a final message version. After commit,
 		 *     no further updates can be applied to this flume.
 		 */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Flume committed successfully */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the id of who sent this message */
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							/** @description when this message was created */
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/**
-							 * @description whether this message is ephemeral
-							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
-							 */
-							ephemeral?: boolean;
-							flume?: null | components["schemas"]["MessageFlume"];
-							id: components["schemas"]["Id"];
-							interaction?: null | components["schemas"]["MessageInteraction"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -3938,57 +1719,18 @@ export interface paths {
 		head?: never;
 		/**
 		 * Flume update
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Apply a patch to the flume's components. This can append, replace, update,
+		 * @description Apply a patch to the flume's components. This can append, replace, update,
 		 *     or delete components. The flume must be in the Live state.
 		 */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description append components to an existing component */
-						append?: components["schemas"]["FlumeAppend"][];
-						/** @description delete some components */
-						delete?: components["schemas"]["ComponentId"][];
-						init?: null | components["schemas"]["Components_Canonical"];
-						/**
-						 * @description replace a component with one or more components
-						 *
-						 *     - replacing a component with children will delete the children
-						 *     - replacing a component with a single component will always work
-						 *     - replacing a component with multiple components will work if the parent has children (Root, Details, Container, Section)
-						 */
-						replace?: components["schemas"]["FlumeReplace"][];
-					};
-				};
-			};
-			responses: {
-				/** @description Delta applied successfully */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				/** @description Delta did not cause any change */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -4003,32 +1745,18 @@ export interface paths {
 		put?: never;
 		/**
 		 * Flume ping
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Keep a flume alive by resetting its autocommit timer. If no ping is
+		 * @description Keep a flume alive by resetting its autocommit timer. If no ping is
 		 *     received within the autocommit window, the flume will be autocommitted.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Flume pinged successfully */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -4043,104 +1771,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Invite list channel
-		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Invite list channel */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Invite"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Invite channel create
-		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteCreate</div>
-		 */
+		/** Invite channel create */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description a description for this invite */
-						description?: string | null;
-						expires_at?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description the maximum number of times this invite can be used
-						 *     be sure to account for existing `uses` and `max_uses` when patching
-						 */
-						max_uses?: number | null;
-						/** @description which roles to apply when accepting the invite */
-						role_ids?: components["schemas"]["Id"][] | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the invite code for this invite */
-							code: components["schemas"]["InviteCode"];
-							/** @description the time when this invite was created */
-							created_at: components["schemas"]["Time"];
-							/** @description the user who created this invite */
-							creator: components["schemas"]["User"];
-							/** @description the id of the user who created this invite */
-							creator_id: components["schemas"]["Id"];
-							/** @description a description for this invite */
-							description?: string | null;
-							expires_at?: null | components["schemas"]["Time"];
-							/** @description if this invite's code is custom (instead of random) */
-							is_vanity: boolean;
-							/** @description where this invite leads */
-							target: components["schemas"]["InviteTarget"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -4157,45 +1809,17 @@ export interface paths {
 		};
 		/**
 		 * Channel member search
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *
-		 *     If this is a thread, search thread members. Otherwise, search all room members who can view this thread.
+		 * @description If this is a thread, search thread members. Otherwise, search all room members who can view this thread.
 		 */
 		get: {
 			parameters: {
-				query: {
-					query: string;
-					limit?: number | null;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description a room member for each returned user */
-							room_members: components["schemas"]["RoomMember"][];
-							/**
-							 * @description a thread member for each returned user
-							 *
-							 *     will only be populated if this is a thread
-							 */
-							thread_members: components["schemas"]["ThreadMember"][];
-							/** @description the resulting users */
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -4214,161 +1838,49 @@ export interface paths {
 		};
 		/**
 		 * Messages list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Paginate messages in a thread
+		 * @description Paginate messages in a thread
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List thread messages success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							messages: components["schemas"]["Message"][];
-							room_members?: components["schemas"]["RoomMember"][];
-							thread_members?: components["schemas"]["ThreadMember"][];
-							users?: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		/**
 		 * Message create
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-permission-optional">MessageAttachments</div>
-		 *     <div class="markdown-alert-permission-optional">MessageEmbeds</div>
-		 *     <div class="markdown-alert-permission-optional">IntegrationsBridge</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Send a message to a channel
+		 * @description Send a message to a channel
 		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-					"x-timestamp"?: number;
-				};
-				path: {
-					channel_id: string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description message attachments */
-						attachments?: components["schemas"]["MessageAttachmentCreate"][];
-						components?: null | components["schemas"]["Components_Create"];
-						/** @description the message's content in markdown */
-						content?: string | null;
-						embeds?: components["schemas"]["EmbedCreate"][];
-						/** @description whether to make this message ephemeral */
-						ephemeral?: boolean;
-						mentions?: components["schemas"]["ParseMentions"];
-						metadata?: null | components["schemas"]["Metadata"];
-						reply_id?: null | components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description Create message success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the id of who sent this message */
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							/** @description when this message was created */
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/**
-							 * @description whether this message is ephemeral
-							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
-							 */
-							ephemeral?: boolean;
-							flume?: null | components["schemas"]["MessageFlume"];
-							id: components["schemas"]["Id"];
-							interaction?: null | components["schemas"]["MessageInteraction"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
 		head?: never;
 		/**
 		 * Message moderate
-		 * @description <div class="markdown-alert-permission-optional">MessageDelete</div>
-		 *     <div class="markdown-alert-permission-optional">MessageRemove</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageDeleteBulk</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageRemove</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageRestore</div>
-		 *
-		 *     Bulk remove, restore, or delete messages
+		 * @description Bulk remove, restore, or delete messages
 		 */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description which messages to delete */
-						delete?: components["schemas"]["Id"][];
-						/** @description which messages to remove */
-						remove?: components["schemas"]["Id"][];
-						/** @description which messages to restore */
-						restore?: components["schemas"]["Id"][];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -4381,29 +1893,17 @@ export interface paths {
 		};
 		/**
 		 * Message list atom/rss
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get an atom or rss feed of messages for this channel
+		 * @description Get an atom or rss feed of messages for this channel
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -4422,43 +1922,17 @@ export interface paths {
 		};
 		/**
 		 * Message list deleted
-		 * @description <div class="markdown-alert-permission-required">MessageDelete</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Paginate deleted messages in a thread
+		 * @description Paginate deleted messages in a thread
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Message"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -4477,43 +1951,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Message move
-		 * @description <div class="markdown-alert-permission-required">MessageMove</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Message move */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description which messages to move */
-						message_ids?: components["schemas"]["Id"][];
-						/**
-						 * @description the channel to move the messages to
-						 *
-						 *     must be in same room (for now...)
-						 */
-						target_channel_id: components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -4530,42 +1977,17 @@ export interface paths {
 		};
 		/**
 		 * Message list removed
-		 * @description <div class="markdown-alert-permission-required">MessageRemove</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Paginate removed messages in a thread
+		 * @description Paginate removed messages in a thread
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							messages: components["schemas"]["Message"][];
-							room_members?: components["schemas"]["RoomMember"][];
-							thread_members?: components["schemas"]["ThreadMember"][];
-							users?: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -4582,161 +2004,45 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Message get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Message get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get message success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the id of who sent this message */
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							/** @description when this message was created */
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/**
-							 * @description whether this message is ephemeral
-							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
-							 */
-							ephemeral?: boolean;
-							flume?: null | components["schemas"]["MessageFlume"];
-							id: components["schemas"]["Id"];
-							interaction?: null | components["schemas"]["MessageInteraction"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
 		/**
 		 * Message delete
-		 * @description <div class="markdown-alert-permission-optional">MessageDelete</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageDelete</div>
-		 *
-		 *     Note that this endpoint allows deleting your own messages
+		 * @description Note that this endpoint allows deleting your own messages
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description delete message success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Message edit
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Message edit */
 		patch: {
 			parameters: {
 				query?: never;
-				header?: {
-					"X-Timestamp"?: number;
-				};
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description message attachments */
-						attachments?:
-							| components["schemas"]["MessageAttachmentCreate"][]
-							| null;
-						components?: null | components["schemas"]["Components_Create"];
-						/** @description the new message content in markdown */
-						content?: string | null;
-						embeds?: components["schemas"]["EmbedCreate"][] | null;
-						metadata?: null | components["schemas"]["Metadata"];
-						reply_id?: null | components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description edit message success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the id of who sent this message */
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							/** @description when this message was created */
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/**
-							 * @description whether this message is ephemeral
-							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
-							 */
-							ephemeral?: boolean;
-							flume?: null | components["schemas"]["MessageFlume"];
-							id: components["schemas"]["Id"];
-							interaction?: null | components["schemas"]["MessageInteraction"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-				/** @description no change */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -4752,32 +2058,17 @@ export interface paths {
 		post?: never;
 		/**
 		 * Reaction remove all
-		 * @description <div class="markdown-alert-permission-required">ReactionManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ReactionDeleteAll</div>
-		 *
-		 *     Remove all reactions from a message.
+		 * @description Remove all reactions from a message.
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -4793,77 +2084,33 @@ export interface paths {
 		};
 		/**
 		 * Reaction list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List message reactions for a specific emoji.
+		 * @description List message reactions for a specific emoji.
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-					reaction_key: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["ReactionListItem"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
 		/**
 		 * Reaction remove emoji
-		 * @description <div class="markdown-alert-permission-required">ReactionManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ReactionDeleteKey</div>
-		 *
-		 *     Remove all reactions of a specific emoji from a message.
+		 * @description Remove all reactions of a specific emoji from a message.
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-					reaction_key: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -4880,72 +2127,32 @@ export interface paths {
 		get?: never;
 		/**
 		 * Reaction add
-		 * @description <div class="markdown-alert-permission-required">ReactionAdd</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Add a reaction to a message.
+		 * @description Add a reaction to a message.
 		 */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-					reaction_key: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description already exists */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				/** @description new reaction created */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		post?: never;
 		/**
 		 * Reaction remove
-		 * @description <div class="markdown-alert-permission-optional">ReactionManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ReactionDeleteUser</div>
-		 *
-		 *     Remove a user's reaction from a message.
+		 * @description Remove a user's reaction from a message.
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-					reaction_key: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -4961,193 +2168,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Thread create from message
-		 * @description <div class="markdown-alert-permission-required">ThreadCreatePublic</div>
-		 */
+		/** Thread create from message */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** Format: int64 */
-						auto_archive_duration?: number | null;
-						/** Format: int64 */
-						bitrate?: number | null;
-						/** Format: int64 */
-						default_auto_archive_duration?: number | null;
-						/** Format: int64 */
-						default_slowmode_message?: number | null;
-						description?: string | null;
-						icon?: null | components["schemas"]["Id"];
-						/** @description whether users without ThreadManage can add other members to this thread */
-						invitable?: boolean;
-						name: string;
-						/** @description not safe for work */
-						nsfw?: boolean;
-						parent_id?: null | components["schemas"]["Id"];
-						permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
-						/** @description the recipient(s) for this dm/gdm */
-						recipients?: components["schemas"]["Id"][] | null;
-						/** Format: int64 */
-						slowmode_message?: number | null;
-						/** Format: int64 */
-						slowmode_thread?: number | null;
-						starter_message?: null | components["schemas"]["MessageCreate"];
-						/** @description tags to apply to this thread (overwrite, not append) */
-						tags?: components["schemas"]["Id"][] | null;
-						/** @description The type of this channel */
-						type?: components["schemas"]["ChannelType"];
-						/** Format: uri */
-						url?: string | null;
-						/** Format: int64 */
-						user_limit?: number | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Create thread success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-				/** @description A thread for this message already exists */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -5162,44 +2192,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Message version list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Message version list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["MessageVersion"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -5216,86 +2218,29 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Message version get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Message version get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-					version_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the id of who sent this message */
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							/** @description when this message was created */
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/**
-							 * @description whether this message is ephemeral
-							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
-							 */
-							ephemeral?: boolean;
-							flume?: null | components["schemas"]["MessageFlume"];
-							id: components["schemas"]["Id"];
-							interaction?: null | components["schemas"]["MessageInteraction"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Message version delete
-		 * @description <div class="markdown-alert-permission-optional">MessageDelete</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageVersionDelete</div>
-		 */
+		/** Message version delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-					version_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description delete message version success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -5311,47 +2256,18 @@ export interface paths {
 		};
 		/**
 		 * Channel mirror
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get incremental sync events for a channel since a given sequence number.
+		 * @description Get incremental sync events for a channel since a given sequence number.
 		 *     Use this to catch up when reconnecting or after being offline.
 		 */
 		get: {
 			parameters: {
-				query: {
-					/** @description the sequence number to sync from (exclusive). use 0 to get all events. */
-					since: components["schemas"]["ChannelSeq"];
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description channel sync success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description sync events to apply to local state */
-							events: components["schemas"]["MessageSync"][];
-							/** @description not all events were returned. call this endpoint again with the new `seq` */
-							partial: boolean;
-							/** @description the new latest sequence number you have */
-							seq: components["schemas"]["ChannelSeq"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -5372,56 +2288,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Nudge
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Nudge a user. Can only be used in dms or gdms. Can only be called once every 5 minutes per user.
+		 * @description Nudge a user. Can only be used in dms or gdms. Can only be called once every 5 minutes per user.
 		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-					"x-timestamp"?: number;
-				};
-				path: {
-					channel_id: string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the id of who sent this message */
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							/** @description when this message was created */
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/**
-							 * @description whether this message is ephemeral
-							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
-							 */
-							ephemeral?: boolean;
-							flume?: null | components["schemas"]["MessageFlume"];
-							id: components["schemas"]["Id"];
-							interaction?: null | components["schemas"]["MessageInteraction"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -5437,72 +2314,28 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Permission overwrite
-		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: PermissionOverwriteCreate</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: PermissionOverwriteUpdate</div>
-		 */
+		/** Permission overwrite */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					overwrite_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description extra permissions allowed here */
-						allow: components["schemas"]["Permission"][];
-						/** @description permissions denied here */
-						deny: components["schemas"]["Permission"][];
-						/** @description whether this is for a user or role */
-						type: components["schemas"]["PermissionOverwriteType"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
-		/**
-		 * Permission delete
-		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: PermissionOverwriteDelete</div>
-		 */
+		/** Permission delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					overwrite_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -5516,81 +2349,32 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Message pins list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Message pins list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["MessagePin"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
-		/**
-		 * Message pins reorder
-		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessagePinReorder</div>
-		 */
+		/** Message pins reorder */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description the messages to reorder */
-						messages?: components["schemas"]["PinsReorderItem"][];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -5602,60 +2386,28 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Message pin
-		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessagePin</div>
-		 */
+		/** Message pin */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		post?: never;
-		/**
-		 * Message unpin
-		 * @description <div class="markdown-alert-permission-required">MessagePin</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MessageUnpin</div>
-		 */
+		/** Message unpin */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -5674,34 +2426,18 @@ export interface paths {
 		post?: never;
 		/**
 		 * Ratelimit delete all
-		 * @description <div class="markdown-alert-permission-optional">ChannelManage</div>
-		 *     <div class="markdown-alert-permission-optional">ThreadManage</div>
-		 *     <div class="markdown-alert-permission-optional">MemberTimeout</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RatelimitDeleteAll</div>
-		 *
-		 *     Immediately expires a slowmode ratelimit for all users, allowing all users to send messages again
+		 * @description Immediately expires a slowmode ratelimit for all users, allowing all users to send messages again
 		 *     Requires either ChannelManage, ThreadManage, or MemberTimeout
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Rate limit expired */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -5718,75 +2454,34 @@ export interface paths {
 		get?: never;
 		/**
 		 * Ratelimit update
-		 * @description <div class="markdown-alert-permission-optional">ChannelManage</div>
-		 *     <div class="markdown-alert-permission-optional">ThreadManage</div>
-		 *     <div class="markdown-alert-permission-optional">MemberTimeout</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RatelimitUpdate</div>
-		 *
-		 *     Immediately creates a slowmode ratelimit
+		 * @description Immediately creates a slowmode ratelimit
 		 *     Requires either ChannelManage or ThreadManage, or MemberTimeout
 		 */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					user_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-					};
-				};
-			};
-			responses: {
-				/** @description Rate limit updated */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		/**
 		 * Ratelimit delete
-		 * @description <div class="markdown-alert-permission-optional">ChannelManage</div>
-		 *     <div class="markdown-alert-permission-optional">ThreadManage</div>
-		 *     <div class="markdown-alert-permission-optional">MemberTimeout</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RatelimitDelete</div>
-		 *
-		 *     Immediately expires a slowmode ratelimit, allowing the target user to send a message again
+		 * @description Immediately expires a slowmode ratelimit, allowing the target user to send a message again
 		 *     Requires either ChannelManage, ThreadManage, or MemberTimeout
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					user_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Rate limit expired */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -5802,92 +2497,32 @@ export interface paths {
 		};
 		/**
 		 * Redex list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List scripts in a channel
+		 * @description List scripts in a channel
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List scripts success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Redex"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		/**
 		 * Redex create
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Create a new redex in a channel
+		 * @description Create a new redex in a channel
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						format: components["schemas"]["RedexFormat"];
-						location: components["schemas"]["RedexLocationUpdate"];
-					};
-				};
-			};
-			responses: {
-				/** @description Create redex success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							channel_id: components["schemas"]["Id"];
-							created_at: components["schemas"]["Time"];
-							creator_id: components["schemas"]["Id"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/** @description detected inputs for this script */
-							handlers: components["schemas"]["RedexHandler"][];
-							id: components["schemas"]["Id"];
-							latest_version: components["schemas"]["RedexVersion"];
-							/** @description the capabilities that were granted to this redex */
-							permissions: components["schemas"]["RedexPermission"][];
-							status: components["schemas"]["RedexStatus"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -5904,76 +2539,33 @@ export interface paths {
 		};
 		/**
 		 * Redex get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get a redex by ID
+		 * @description Get a redex by ID
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get redex success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							channel_id: components["schemas"]["Id"];
-							created_at: components["schemas"]["Time"];
-							creator_id: components["schemas"]["Id"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/** @description detected inputs for this script */
-							handlers: components["schemas"]["RedexHandler"][];
-							id: components["schemas"]["Id"];
-							latest_version: components["schemas"]["RedexVersion"];
-							/** @description the capabilities that were granted to this redex */
-							permissions: components["schemas"]["RedexPermission"][];
-							status: components["schemas"]["RedexStatus"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
 		/**
 		 * Redex delete
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ScriptDelete</div>
-		 *
-		 *     Delete a redex
+		 * @description Delete a redex
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Delete redex success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -5990,48 +2582,17 @@ export interface paths {
 		get?: never;
 		/**
 		 * Redex content update
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Update the content of a redex (creates a new version)
+		 * @description Update the content of a redex (creates a new version)
 		 */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						format: components["schemas"]["RedexFormat"];
-						location: components["schemas"]["RedexLocationUpdate"];
-					};
-				};
-			};
-			responses: {
-				/** @description Update redex content success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							format: components["schemas"]["RedexFormat"];
-							location: components["schemas"]["RedexLocation"];
-							metadata: components["schemas"]["RedexMetadata"];
-							status: components["schemas"]["RedexVersionStatus"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -6049,38 +2610,17 @@ export interface paths {
 		};
 		/**
 		 * Redex dependency graph
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get the dependency graph for a redex
+		 * @description Get the dependency graph for a redex
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get redex dependencies success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description all dependencies of this redex, including transitive ones */
-							dependencies: components["schemas"]["RedexDependency"][];
-							/** @description what depends on what */
-							links: components["schemas"]["RedexDependencyLink"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -6101,45 +2641,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Redex dependency update
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Update redex dependencies, creates a new version
+		 * @description Update redex dependencies, creates a new version
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": Record<string, never>;
-				};
-			};
-			responses: {
-				/** @description Update redex dependencies success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							format: components["schemas"]["RedexFormat"];
-							location: components["schemas"]["RedexLocation"];
-							metadata: components["schemas"]["RedexMetadata"];
-							status: components["schemas"]["RedexVersionStatus"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -6156,44 +2668,17 @@ export interface paths {
 		};
 		/**
 		 * Redex eval list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List evals for a redex
+		 * @description List evals for a redex
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List redex evals success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Eval"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -6212,42 +2697,17 @@ export interface paths {
 		};
 		/**
 		 * Redex eval get
-		 * @description <div class="markdown-alert-permission-required">ScriptInspect</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get a specific eval
+		 * @description Get a specific eval
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-					eval_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get redex eval success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							input: components["schemas"]["EvalInputSummary"];
-							redex_id: components["schemas"]["Id"];
-							redex_version_id: components["schemas"]["Id"];
-							status: components["schemas"]["EvalStatus"];
-							stopped_at?: null | components["schemas"]["Time"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -6266,50 +2726,17 @@ export interface paths {
 		};
 		/**
 		 * Redex eval log
-		 * @description <div class="markdown-alert-permission-required">ScriptInspect</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get logs from a redex eval
+		 * @description Get logs from a redex eval
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-					eval_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get redex eval logs success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description arbitrary metadata associated with this log line */
-							attributes?: components["schemas"]["Metadata"];
-							/** @description arbitrary content for this log line */
-							content: string;
-							created_at: components["schemas"]["Time"];
-							/** Format: int64 */
-							id: number;
-							level: components["schemas"]["EvalLogLevel"];
-							/** @description where this log line came from */
-							source: components["schemas"]["EvalLogSource"];
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -6330,32 +2757,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Redex eval stop
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Stop a evalning redex
+		 * @description Stop a evalning redex
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-					eval_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Stop redex eval success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -6374,59 +2786,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Redex trigger
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Run a redex with a trigger input
+		 * @description Run a redex with a trigger input
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/**
-						 * @description start in the background
-						 *
-						 *     returns 202 accepted instead of blocking until it can return 200 ok
-						 */
-						async: boolean;
-						/**
-						 * @description whether only one instance should be running at a time
-						 *
-						 *     will stop other runs of this script if true
-						 */
-						exclusive: boolean;
-						/** @description the id of the input that triggered this run */
-						trigger_id: string;
-					};
-				};
-			};
-			responses: {
-				/** @description Start redex run success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							input: components["schemas"]["EvalInputSummary"];
-							redex_id: components["schemas"]["Id"];
-							redex_version_id: components["schemas"]["Id"];
-							status: components["schemas"]["EvalStatus"];
-							stopped_at?: null | components["schemas"]["Time"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -6443,44 +2813,17 @@ export interface paths {
 		};
 		/**
 		 * Redex version list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get version history for a redex
+		 * @description Get version history for a redex
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List redex versions success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["RedexVersion"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -6499,74 +2842,33 @@ export interface paths {
 		};
 		/**
 		 * Redex version get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get a specific redex version
+		 * @description Get a specific redex version
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-					version_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get redex version success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							format: components["schemas"]["RedexFormat"];
-							location: components["schemas"]["RedexLocation"];
-							metadata: components["schemas"]["RedexMetadata"];
-							status: components["schemas"]["RedexVersionStatus"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
 		/**
 		 * Redex version delete
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RedexVersionDelete</div>
-		 *
-		 *     Delete a specific redex version
+		 * @description Delete a specific redex version
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-					version_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Delete redex version success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -6584,42 +2886,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Redex version restore
-		 * @description <div class="markdown-alert-permission-required">ScriptManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Restore a deleted redex version
+		 * @description Restore a deleted redex version
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					redex_id: string;
-					version_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Restore redex version success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							format: components["schemas"]["RedexFormat"];
-							location: components["schemas"]["RedexLocation"];
-							metadata: components["schemas"]["RedexMetadata"];
-							status: components["schemas"]["RedexVersionStatus"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -6635,60 +2912,28 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Channel remove
-		 * @description <div class="markdown-alert-permission-required">ThreadManage</div>
-		 *     <div class="markdown-alert-permission-optional">ChannelManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
-		 */
+		/** Channel remove */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		post?: never;
-		/**
-		 * Channel restore
-		 * @description <div class="markdown-alert-permission-required">ThreadManage</div>
-		 *     <div class="markdown-alert-permission-optional">ChannelManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
-		 */
+		/** Channel restore */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -6702,43 +2947,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Message reply roots
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Message reply roots */
 		get: {
 			parameters: {
-				query?: {
-					/** @description how deeply to fetch replies */
-					depth?: number;
-					/** @description how many replies to fetch per branch */
-					breadth?: number | null;
-					/** @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on. */
-					context?: number | null;
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["RepliesChildren"];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -6755,44 +2973,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Message reply list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Message reply list */
 		get: {
 			parameters: {
-				query?: {
-					/** @description how deeply to fetch replies */
-					depth?: number;
-					/** @description how many replies to fetch per branch */
-					breadth?: number | null;
-					/** @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on. */
-					context?: number | null;
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					message_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["RepliesChildren"];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -6809,115 +2999,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Tag list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Tag list */
 		get: {
 			parameters: {
-				query?: {
-					/**
-					 * @description deny, allow, require tag to be archived
-					 *
-					 *     default: deny
-					 */
-					archived?: boolean | null;
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List tags success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Tag"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Tag create
-		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: TagCreate</div>
-		 */
+		/** Tag create */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-				};
-				path: {
-					channel_id: string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						color?: null | components["schemas"]["Color"];
-						description?: string | null;
-						name: string;
-						restricted?: boolean;
-						spoiler?: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description Create tag success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/**
-							 * Format: int64
-							 * @description total number of threads with this tag (excluding archived threads)
-							 */
-							active_thread_count: number;
-							/**
-							 * @description whether this tag is archived
-							 *
-							 *     archived tags cant be applied to any new threads and won't appear in the tag picker.
-							 */
-							archived: boolean;
-							channel_id: components["schemas"]["Id"];
-							color?: null | components["schemas"]["Color"];
-							description?: string | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							/** @description only members with ThreadEdit or ThreadManage can apply this tag */
-							restricted: boolean;
-							/** @description if this tag should be considered a spoiler */
-							spoiler: boolean;
-							/**
-							 * Format: int64
-							 * @description total number of threads with this tag (including archived threads)
-							 */
-							total_thread_count: number;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -6932,49 +3035,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Tag search
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Tag search */
 		get: {
 			parameters: {
-				query: {
-					query: string;
-					/**
-					 * @description deny, allow, require tag to be archived
-					 *
-					 *     default: deny
-					 */
-					archived?: boolean | null;
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Search tags success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Tag"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -6991,157 +3061,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Tag get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Tag get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					tag_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get tag success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/**
-							 * Format: int64
-							 * @description total number of threads with this tag (excluding archived threads)
-							 */
-							active_thread_count: number;
-							/**
-							 * @description whether this tag is archived
-							 *
-							 *     archived tags cant be applied to any new threads and won't appear in the tag picker.
-							 */
-							archived: boolean;
-							channel_id: components["schemas"]["Id"];
-							color?: null | components["schemas"]["Color"];
-							description?: string | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							/** @description only members with ThreadEdit or ThreadManage can apply this tag */
-							restricted: boolean;
-							/** @description if this tag should be considered a spoiler */
-							spoiler: boolean;
-							/**
-							 * Format: int64
-							 * @description total number of threads with this tag (including archived threads)
-							 */
-							total_thread_count: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Tag delete
-		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: TagDelete</div>
-		 */
+		/** Tag delete */
 		delete: {
 			parameters: {
-				query?: {
-					force?: boolean;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					tag_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Delete tag success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Tag update
-		 * @description <div class="markdown-alert-permission-required">ChannelEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: TagUpdate</div>
-		 */
+		/** Tag update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					tag_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						archived?: boolean | null;
-						color?: null | components["schemas"]["Color"];
-						description?: string | null;
-						name?: string | null;
-						restricted?: boolean | null;
-						spoiler?: boolean | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Update tag success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/**
-							 * Format: int64
-							 * @description total number of threads with this tag (excluding archived threads)
-							 */
-							active_thread_count: number;
-							/**
-							 * @description whether this tag is archived
-							 *
-							 *     archived tags cant be applied to any new threads and won't appear in the tag picker.
-							 */
-							archived: boolean;
-							channel_id: components["schemas"]["Id"];
-							color?: null | components["schemas"]["Color"];
-							description?: string | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							/** @description only members with ThreadEdit or ThreadManage can apply this tag */
-							restricted: boolean;
-							/** @description if this tag should be considered a spoiler */
-							spoiler: boolean;
-							/**
-							 * Format: int64
-							 * @description total number of threads with this tag (including archived threads)
-							 */
-							total_thread_count: number;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -7152,227 +3107,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Thread list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 */
+		/** Thread list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List channel threads success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							/** @description room members for each thread member in preview_members */
-							room_members: components["schemas"]["RoomMember"][];
-							threads: components["schemas"]["Channel"][];
-							/** Format: int64 */
-							total: number;
-							/** @description users for each thread member in preview_members */
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Thread create
-		 * @description <div class="markdown-alert-permission-optional">ThreadCreatePublic</div>
-		 *     <div class="markdown-alert-permission-optional">ThreadCreatePrivate</div>
-		 */
+		/** Thread create */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** Format: int64 */
-						auto_archive_duration?: number | null;
-						/** Format: int64 */
-						bitrate?: number | null;
-						/** Format: int64 */
-						default_auto_archive_duration?: number | null;
-						/** Format: int64 */
-						default_slowmode_message?: number | null;
-						description?: string | null;
-						icon?: null | components["schemas"]["Id"];
-						/** @description whether users without ThreadManage can add other members to this thread */
-						invitable?: boolean;
-						name: string;
-						/** @description not safe for work */
-						nsfw?: boolean;
-						parent_id?: null | components["schemas"]["Id"];
-						permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
-						/** @description the recipient(s) for this dm/gdm */
-						recipients?: components["schemas"]["Id"][] | null;
-						/** Format: int64 */
-						slowmode_message?: number | null;
-						/** Format: int64 */
-						slowmode_thread?: number | null;
-						starter_message?: null | components["schemas"]["MessageCreate"];
-						/** @description tags to apply to this thread (overwrite, not append) */
-						tags?: components["schemas"]["Id"][] | null;
-						/** @description The type of this channel */
-						type?: components["schemas"]["ChannelType"];
-						/** Format: uri */
-						url?: string | null;
-						/** Format: int64 */
-						user_limit?: number | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Create thread success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -7393,28 +3149,13 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -7431,45 +3172,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Thread list archived
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 */
+		/** Thread list archived */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List archived threads success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							/** @description room members for each thread member in preview_members */
-							room_members: components["schemas"]["RoomMember"][];
-							threads: components["schemas"]["Channel"][];
-							/** Format: int64 */
-							total: number;
-							/** @description users for each thread member in preview_members */
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -7486,45 +3198,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Thread list removed
-		 * @description <div class="markdown-alert-permission-required">ThreadManage</div>
-		 */
+		/** Thread list removed */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List removed threads success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							/** @description room members for each thread member in preview_members */
-							room_members: components["schemas"]["RoomMember"][];
-							threads: components["schemas"]["Channel"][];
-							/** Format: int64 */
-							total: number;
-							/** @description users for each thread member in preview_members */
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -7543,153 +3226,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Channel transfer ownership
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
-		 */
+		/** Channel transfer ownership */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": string;
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -7708,30 +3254,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Channel typing
-		 * @description <div class="markdown-alert-permission-required">MessageCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Send a typing notification to a thread
+		 * @description Send a typing notification to a thread
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -7750,86 +3283,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Channel upgrade
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelUpdate</div>
-		 *
-		 *     Convert a group dm thread into a full room. Only the gdm creator can upgrade the thread.
+		 * @description Convert a group dm thread into a full room. Only the gdm creator can upgrade the thread.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							afk_channel_id?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-							 */
-							afk_channel_timeout: number;
-							archived_at?: null | components["schemas"]["Time"];
-							banner?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of active channels
-							 */
-							channel_count: number;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							/**
-							 * Format: int64
-							 * @description number of emojis in room
-							 */
-							emoji_count: number;
-							/** @description features enabled for this room */
-							features: components["schemas"]["RoomFeatures"];
-							icon?: null | components["schemas"]["Id"];
-							/** @description A unique identifier for this room */
-							id: components["schemas"]["Id"];
-							invites_paused_until?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							preferences?: null | components["schemas"]["PreferencesRoom"];
-							/** @description anyone can view and join */
-							public: boolean;
-							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
-							quarantined: boolean;
-							remote?: null | components["schemas"]["Remote_Id"];
-							/** @description security configuration for this room */
-							security: components["schemas"]["RoomSecurity"];
-							type: components["schemas"]["RoomType"];
-							/**
-							 * Format: uuid
-							 * @description A monotonically increasing id that is updated every time this room is modified.
-							 */
-							version_id: string;
-							welcome_channel_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -7844,17 +3308,10 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Webhook list thread
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
+		/** Webhook list thread */
 		get: operations["webhook_list_channel"];
 		put?: never;
-		/**
-		 * Webhook create
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: WebhookCreate</div>
-		 */
+		/** Webhook create */
 		post: operations["webhook_create"];
 		delete?: never;
 		options?: never;
@@ -7889,10 +3346,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Trigger a panic
-		 * @description
-		 */
+		/** Trigger a panic */
 		get: operations["debug_panic"];
 		put?: never;
 		post?: never;
@@ -7913,9 +3367,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Test permissions
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 *
-		 *     Get the resolved set of permissions for a user
+		 * @description Get the resolved set of permissions for a user
 		 */
 		post: operations["debug_test_permissions"];
 		delete?: never;
@@ -7931,10 +3383,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Get server version
-		 * @description
-		 */
+		/** Get server version */
 		get: operations["debug_version"];
 		put?: never;
 		post?: never;
@@ -7953,9 +3402,7 @@ export interface paths {
 		};
 		/**
 		 * Check doctor
-		 * @description <div class="markdown-alert-scope-required">auth</div>
-		 *
-		 *     what's wrong with this server and how do i fix it?
+		 * @description what's wrong with this server and how do i fix it?
 		 */
 		get: operations["debug_doctor"];
 		put?: never;
@@ -7973,49 +3420,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Document branch list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document branch list */
 		get: {
 			parameters: {
-				query?: {
-					/**
-					 * @description only include branches with these states
-					 *
-					 *     defaults to only Active
-					 */
-					state?: components["schemas"]["DocumentBranchState"][];
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["DocumentBranch"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -8032,122 +3446,32 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Document branch get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document branch get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					branch_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description when this branch was created */
-							created_at: components["schemas"]["Time"];
-							/** @description the user who created this branch */
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * @description Whether this is the default branch.
-							 *
-							 *     The default branch cannot be deleted and has the same id as the document
-							 */
-							default: boolean;
-							document_id: components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description the name of this branch */
-							name?: string | null;
-							parent_id?: null | components["schemas"]["DocumentRevisionId"];
-							/**
-							 * @description Whether this is a private branch.
-							 *
-							 *     Private branches are only visible to the user who created this branch, similar to draft documents.
-							 */
-							private: boolean;
-							/** @description the current state of this branch */
-							state: components["schemas"]["DocumentBranchState"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
-		/**
-		 * Document branch update
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document branch update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					branch_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						name?: string | null;
-						/** @description once public, branches cannot be made private again */
-						private?: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description when this branch was created */
-							created_at: components["schemas"]["Time"];
-							/** @description the user who created this branch */
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * @description Whether this is the default branch.
-							 *
-							 *     The default branch cannot be deleted and has the same id as the document
-							 */
-							default: boolean;
-							document_id: components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description the name of this branch */
-							name?: string | null;
-							parent_id?: null | components["schemas"]["DocumentRevisionId"];
-							/**
-							 * @description Whether this is a private branch.
-							 *
-							 *     Private branches are only visible to the user who created this branch, similar to draft documents.
-							 */
-							private: boolean;
-							/** @description the current state of this branch */
-							state: components["schemas"]["DocumentBranchState"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -8160,57 +3484,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Document branch close
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document branch close */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					branch_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description when this branch was created */
-							created_at: components["schemas"]["Time"];
-							/** @description the user who created this branch */
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * @description Whether this is the default branch.
-							 *
-							 *     The default branch cannot be deleted and has the same id as the document
-							 */
-							default: boolean;
-							document_id: components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description the name of this branch */
-							name?: string | null;
-							parent_id?: null | components["schemas"]["DocumentRevisionId"];
-							/**
-							 * @description Whether this is a private branch.
-							 *
-							 *     Private branches are only visible to the user who created this branch, similar to draft documents.
-							 */
-							private: boolean;
-							/** @description the current state of this branch */
-							state: components["schemas"]["DocumentBranchState"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -8228,37 +3511,17 @@ export interface paths {
 		get?: never;
 		/**
 		 * Document content put
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Replace a document with serialized content. Creates a new revision.
+		 * @description Replace a document with serialized content. Creates a new revision.
 		 */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					branch_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						components: components["schemas"]["Component"][];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -8274,33 +3537,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Document CRDT diff
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document CRDT diff */
 		get: {
 			parameters: {
-				query?: {
-					sv?: null | components["schemas"]["DocumentStateVector"];
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					branch_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -8309,35 +3555,17 @@ export interface paths {
 		head?: never;
 		/**
 		 * Document CRDT apply
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Note: Uses base64-encoded update in JSON body since raw binary isn't supported
+		 * @description Note: Uses base64-encoded update in JSON body since raw binary isn't supported
 		 */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					branch_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/octet-stream": string;
-				};
-			};
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -8350,57 +3578,17 @@ export interface paths {
 		};
 		/**
 		 * Document history
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Query edit history for a document
+		 * @description Query edit history for a document
 		 */
 		get: {
 			parameters: {
-				query?: {
-					/** @description split group whenever author changes */
-					by_author?: boolean | null;
-					/** @description split group whenever a tag is created */
-					by_tag?: boolean | null;
-					/** @description every n seconds */
-					by_time?: number | null;
-					/** @description every n changes */
-					by_changes?: number | null;
-					/** @description continue listing history from here */
-					cursor?: string | null;
-					/** @description the maximum number of items to return. */
-					limit?: number | null;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					branch_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the resulting changesets, ordered oldest to newest */
-							changesets: components["schemas"]["Changeset"][];
-							/** @description document tags that are part of the range */
-							document_tags: components["schemas"]["DocumentTag"][];
-							/** @description a room member object for every referenced user_id */
-							room_members: components["schemas"]["RoomMember"][];
-							/** @description a thread member object for every referenced user_id */
-							thread_members: components["schemas"]["ThreadMember"][];
-							/** @description a user object for every referenced user_id */
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -8419,37 +3607,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Document branch merge
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document branch merge */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					branch_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						target_branch_id?: null | components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -8466,37 +3633,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Document branch sync
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document branch sync */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					branch_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						sync_from_branch_id?: null | components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -8513,64 +3659,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Document branch fork
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document branch fork */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					parent_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						name?: string | null;
-						private?: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description when this branch was created */
-							created_at: components["schemas"]["Time"];
-							/** @description the user who created this branch */
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * @description Whether this is the default branch.
-							 *
-							 *     The default branch cannot be deleted and has the same id as the document
-							 */
-							default: boolean;
-							document_id: components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description the name of this branch */
-							name?: string | null;
-							parent_id?: null | components["schemas"]["DocumentRevisionId"];
-							/**
-							 * @description Whether this is a private branch.
-							 *
-							 *     Private branches are only visible to the user who created this branch, similar to draft documents.
-							 */
-							private: boolean;
-							/** @description the current state of this branch */
-							state: components["schemas"]["DocumentBranchState"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -8589,10 +3687,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Document media attach
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Attach a piece of media to a document. This **MUST** be called when uploading media to a document, otherwise the media may be garbage collected.
+		 * @description Attach a piece of media to a document. This **MUST** be called when uploading media to a document, otherwise the media may be garbage collected.
 		 *
 		 *     Note that the current system is very dumb, and will only garbage collect media when the document is deleted.
 		 *
@@ -8602,27 +3697,11 @@ export interface paths {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						media_id: components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description successfully linked */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -8639,35 +3718,17 @@ export interface paths {
 		};
 		/**
 		 * Document content get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get serialized document content
+		 * @description Get serialized document content
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					revision_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							components: components["schemas"]["Component"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -8684,83 +3745,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Document tag list
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document tag list */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							branch_id: components["schemas"]["Id"];
-							/** @description when this tag was created */
-							created_at: components["schemas"]["Time"];
-							creator_id?: null | components["schemas"]["Id"];
-							/** @description optional more detailed description */
-							description?: string | null;
-							/** @description the unique identifier for this tag */
-							id: components["schemas"]["Id"];
-							/** Format: int64 */
-							revision_seq: number;
-							/** @description one line description */
-							summary: string;
-							/** @description when this tag was last updated */
-							updated_at: components["schemas"]["Time"];
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Document tag create
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document tag create */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description optional more detailed description */
-						description?: string | null;
-						revision: components["schemas"]["DocumentRevisionRef"];
-						/** @description one line description */
-						summary: string;
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -8775,130 +3781,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Document tag get
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document tag get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					tag_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							branch_id: components["schemas"]["Id"];
-							/** @description when this tag was created */
-							created_at: components["schemas"]["Time"];
-							creator_id?: null | components["schemas"]["Id"];
-							/** @description optional more detailed description */
-							description?: string | null;
-							/** @description the unique identifier for this tag */
-							id: components["schemas"]["Id"];
-							/** Format: int64 */
-							revision_seq: number;
-							/** @description one line description */
-							summary: string;
-							/** @description when this tag was last updated */
-							updated_at: components["schemas"]["Time"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Document tag delete
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document tag delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					tag_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Document tag update
-		 * @description <div class="markdown-alert-permission-required">DocumentEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Document tag update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					tag_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description optional more detailed description */
-						description?: string | null;
-						/** @description one line description */
-						summary?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							branch_id: components["schemas"]["Id"];
-							/** @description when this tag was created */
-							created_at: components["schemas"]["Time"];
-							creator_id?: null | components["schemas"]["Id"];
-							/** @description optional more detailed description */
-							description?: string | null;
-							/** @description the unique identifier for this tag */
-							id: components["schemas"]["Id"];
-							/** Format: int64 */
-							revision_seq: number;
-							/** @description one line description */
-							summary: string;
-							/** @description when this tag was last updated */
-							updated_at: components["schemas"]["Time"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -8911,41 +3829,17 @@ export interface paths {
 		};
 		/**
 		 * Emoji search
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Search for custom emoji.
+		 * @description Search for custom emoji.
 		 */
 		get: {
 			parameters: {
-				query: {
-					query: string;
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["EmojiCustom"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -8964,39 +3858,17 @@ export interface paths {
 		};
 		/**
 		 * Emoji lookup
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get info about an emoji.
+		 * @description Get info about an emoji.
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					emoji_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description whether this emoji is animated */
-							animated: boolean;
-							creator_id?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							media_id: components["schemas"]["Id"];
-							name: string;
-							owner?: null | components["schemas"]["EmojiOwner"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -9030,51 +3902,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						description?: string | null;
-						name: string;
-					};
-				};
-			};
-			responses: {
-				/** @description guest account created */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							avatar?: null | components["schemas"]["Id"];
-							banner?: null | components["schemas"]["Id"];
-							/** @description whether this user is a bot */
-							bot: boolean;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							emails?: components["schemas"]["EmailInfo"][] | null;
-							/**
-							 * @description whether this user is considered to have mutifactor authentication enabled on their account
-							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
-							 */
-							has_mfa?: boolean | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							preferences?: null | components["schemas"]["PreferencesUser"];
-							presence: components["schemas"]["Presence"];
-							puppet?: null | components["schemas"]["Puppet"];
-							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote_Id"];
-							suspended?: null | components["schemas"]["Suspended"];
-							/** @description whether this user is an official system user */
-							system: boolean;
-							version_id: components["schemas"]["Id"];
-							webhook?: null | components["schemas"]["UserWebhook"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -9111,56 +3940,22 @@ export interface paths {
 		};
 		/**
 		 * Inbox get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List notifications
+		 * @description List notifications
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-					/** @description only include notifications from these rooms */
-					room_id?: components["schemas"]["Id"][];
-					/** @description only include notifications from these channels */
-					channel_id?: components["schemas"]["Id"][];
-					/** @description include messages marked as read too */
-					include_read?: boolean;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							channels: components["schemas"]["Channel"][];
-							cursor?: string | null;
-							has_more: boolean;
-							messages: components["schemas"]["Message"][];
-							notifications: components["schemas"]["Notification"][];
-							rooms: components["schemas"]["Room"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		/**
 		 * Inbox post
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Create a reminder for later
+		 * @description Create a reminder for later
 		 */
 		post: {
 			parameters: {
@@ -9169,35 +3964,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						added_at?: null | components["schemas"]["Time"];
-						/** @description the channel this message was sent in */
-						channel_id: components["schemas"]["Id"];
-						/** @description the id of the message that was sent */
-						message_id: components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["NotificationType"] & {
-							/** @description when this was added to the inbox */
-							added_at: components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							/** @description user defined note for this notification */
-							note?: string | null;
-							read_at?: null | components["schemas"]["Time"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -9216,9 +3984,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Inbox flush
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Deletes read notifications from the inbox
+		 * @description Deletes read notifications from the inbox
 		 */
 		post: {
 			parameters: {
@@ -9227,31 +3993,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						after?: null | components["schemas"]["Id"];
-						before?: null | components["schemas"]["Id"];
-						/** @description restrict to just these channels */
-						channel_ids?: components["schemas"]["Id"][] | null;
-						/** @description also include unread notifications */
-						include_unread?: boolean;
-						/** @description restrict to just these messages */
-						message_ids?: components["schemas"]["Id"][] | null;
-						/** @description restrict to just these rooms */
-						room_ids?: components["schemas"]["Id"][] | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -9268,10 +4011,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Inbox mark read
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Inbox mark read */
 		post: {
 			parameters: {
 				query?: never;
@@ -9279,29 +4019,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description mark everything in these threads as read */
-						channel_ids?: components["schemas"]["Id"][];
-						/** @description mark everything as read */
-						everything?: boolean;
-						/** @description mark these messages as read */
-						message_ids?: components["schemas"]["Id"][];
-						/** @description mark everything in these rooms as read */
-						room_ids?: components["schemas"]["Id"][];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -9318,10 +4037,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Inbox mark unread
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Inbox mark unread */
 		post: {
 			parameters: {
 				query?: never;
@@ -9329,29 +4045,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description mark everything in these threads as read */
-						channel_ids?: components["schemas"]["Id"][];
-						/** @description mark everything as read */
-						everything?: boolean;
-						/** @description mark these messages as read */
-						message_ids?: components["schemas"]["Id"][];
-						/** @description mark everything in these rooms as read */
-						room_ids?: components["schemas"]["Id"][];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -9368,51 +4063,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Interaction create
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Interaction create */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-				};
+				header?: never;
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["InteractionCreateType"] & {
-						application_id: components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description Interaction created successfully */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["InteractionType"] & {
-							application_id: components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/**
-							 * @description unique token for responding to this interaction
-							 *
-							 *     this exists so you don't need to give your token to an http server for http based interactions. only is set for bots.
-							 */
-							token?: string | null;
-							/**
-							 * Format: int32
-							 * @description always 1 currently
-							 */
-							version: number;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -9435,40 +4095,13 @@ export interface paths {
 		 */
 		post: {
 			parameters: {
-				query: {
-					/** @description whether to immediately return with 202 accepted or wait to return an `InteractionResponse` */
-					wait: boolean;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					interaction_id: string;
-					token: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["InteractionResponseCreateType"];
-				};
-			};
-			responses: {
-				/** @description Interaction response accepted */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": Record<string, never>;
-					};
-				};
-				/** @description Interaction response accepted */
-				202: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -9487,72 +4120,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Interaction message create
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Send another message (aka followup message)
+		 * @description Send another message (aka followup message)
 		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-				};
-				path: {
-					interaction_id: string;
-					token: string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description message attachments */
-						attachments?: components["schemas"]["MessageAttachmentCreate"][];
-						components?: null | components["schemas"]["Components_Create"];
-						/** @description the message's content in markdown */
-						content?: string | null;
-						embeds?: components["schemas"]["EmbedCreate"][];
-						/** @description whether to make this message ephemeral */
-						ephemeral?: boolean;
-						mentions?: components["schemas"]["ParseMentions"];
-						metadata?: null | components["schemas"]["Metadata"];
-						reply_id?: null | components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description Interaction message created successfully */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the id of who sent this message */
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							/** @description when this message was created */
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/**
-							 * @description whether this message is ephemeral
-							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
-							 */
-							ephemeral?: boolean;
-							flume?: null | components["schemas"]["MessageFlume"];
-							id: components["schemas"]["Id"];
-							interaction?: null | components["schemas"]["MessageInteraction"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -9569,163 +4147,49 @@ export interface paths {
 		};
 		/**
 		 * Interaction message get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get a message from an interaction
+		 * @description Get a message from an interaction
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					interaction_id: string;
-					token: string;
-					message_id: null | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get interaction message success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the id of who sent this message */
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							/** @description when this message was created */
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/**
-							 * @description whether this message is ephemeral
-							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
-							 */
-							ephemeral?: boolean;
-							flume?: null | components["schemas"]["MessageFlume"];
-							id: components["schemas"]["Id"];
-							interaction?: null | components["schemas"]["MessageInteraction"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
 		/**
 		 * Interaction message delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Delete a message from an interaction
+		 * @description Delete a message from an interaction
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					interaction_id: string;
-					token: string;
-					message_id: null | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Delete interaction message success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
 		/**
 		 * Interaction message edit
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Edit a message from an interaction
+		 * @description Edit a message from an interaction
 		 */
 		patch: {
 			parameters: {
 				query?: never;
-				header?: {
-					"X-Timestamp"?: number;
-				};
-				path: {
-					interaction_id: string;
-					token: string;
-					message_id: null | components["schemas"]["Id"];
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description message attachments */
-						attachments?:
-							| components["schemas"]["MessageAttachmentCreate"][]
-							| null;
-						components?: null | components["schemas"]["Components_Create"];
-						/** @description the new message content in markdown */
-						content?: string | null;
-						embeds?: components["schemas"]["EmbedCreate"][] | null;
-						metadata?: null | components["schemas"]["Metadata"];
-						reply_id?: null | components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description Edit interaction message success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the id of who sent this message */
-							author_id: components["schemas"]["Id"];
-							channel_id: components["schemas"]["Id"];
-							/** @description when this message was created */
-							created_at: components["schemas"]["Time"];
-							deleted_at?: null | components["schemas"]["Time"];
-							/**
-							 * @description whether this message is ephemeral
-							 *
-							 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
-							 */
-							ephemeral?: boolean;
-							flume?: null | components["schemas"]["MessageFlume"];
-							id: components["schemas"]["Id"];
-							interaction?: null | components["schemas"]["MessageInteraction"];
-							latest_version: components["schemas"]["MessageVersion"];
-							pinned?: null | components["schemas"]["Pinned"];
-							reactions?: components["schemas"]["ReactionCounts"];
-							removed_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							thread?: null | components["schemas"]["Channel"];
-						};
-					};
-				};
-				/** @description no change */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -9736,30 +4200,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Harvest download
-		 * @description
-		 */
+		/** Harvest download */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					harvest_id: string;
-					token: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -9776,10 +4226,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Internal rpc
-		 * @description
-		 */
+		/** Internal rpc */
 		get: operations["internal_rpc"];
 		put?: never;
 		post?: never;
@@ -9796,154 +4243,52 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Invite resolve
-		 * @description
-		 */
+		/** Invite resolve */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					invite_code: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success with metadata */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["Invite"] & {
-							/**
-							 * Format: int32
-							 * @description the maximum number of times this invite can be used
-							 */
-							max_uses?: number | null;
-							/**
-							 * Format: int64
-							 * @description the number of time this invite has been used
-							 */
-							uses: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Invite use
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Invite use */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					invite_code: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * Invite delete
-		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteDelete</div>
-		 */
+		/** Invite delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					invite_code: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Invite update
-		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteUpdate</div>
-		 */
+		/** Invite update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					invite_code: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description a description for this invite */
-						description?: string | null;
-						expires_at?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description the maximum number of times this invite can be used
-						 *     be sure to account for existing `uses` and `max_uses` when patching
-						 */
-						max_uses?: number | null;
-						role_ids?: components["schemas"]["Id"][] | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the invite code for this invite */
-							code: components["schemas"]["InviteCode"];
-							/** @description the time when this invite was created */
-							created_at: components["schemas"]["Time"];
-							/** @description the user who created this invite */
-							creator: components["schemas"]["User"];
-							/** @description the id of the user who created this invite */
-							creator_id: components["schemas"]["Id"];
-							/** @description a description for this invite */
-							description?: string | null;
-							expires_at?: null | components["schemas"]["Time"];
-							/** @description if this invite's code is custom (instead of random) */
-							is_vanity: boolean;
-							/** @description where this invite leads */
-							target: components["schemas"]["InviteTarget"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -9956,10 +4301,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Media create
-		 * @description
-		 */
+		/** Media create */
 		post: {
 			parameters: {
 				query?: never;
@@ -9967,39 +4309,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["MediaCreateSource"] & {
-						/** @description Descriptive alt text, not entirely unlike a caption */
-						alt?: string | null;
-						/**
-						 * @description Whether to strip sensitive exif info, like location or camera make and model.
-						 *
-						 *     Once strip_exif is set to true, cannot be set to false.
-						 */
-						strip_exif?: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description Media create success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description The id of the media that has been created */
-							media_id: components["schemas"]["Id"];
-							/**
-							 * Format: uri
-							 * @description A url to upload your media to. Is `None` if you used `MediaCreateSource::Download`.
-							 */
-							upload_url?: string | null;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -10016,10 +4327,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Media search
-		 * @description
-		 */
+		/** Media search */
 		post: {
 			parameters: {
 				query?: never;
@@ -10027,40 +4335,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["SearchRequest"] & {
-						sort_field?: components["schemas"]["MediaSearchOrderField"];
-					};
-				};
-			};
-			responses: {
-				/** @description Media search success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description current page cursor */
-							cursor?: string | null;
-							/** @description whether there are more threads */
-							has_more: boolean;
-							/** @description the media */
-							media: components["schemas"]["Media"][];
-							/** @description the ids of the matched media */
-							results: components["schemas"]["Id"][];
-							/**
-							 * Format: int64
-							 * @description approximate count of total results that match this query
-							 */
-							total: number;
-							/** @description the media creators/uploaders */
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -10075,194 +4351,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Media get
-		 * @description
-		 */
+		/** Media get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					media_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Media get success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description Descriptive alt text. */
-							alt?: string | null;
-							channel_id?: null | components["schemas"]["Id"];
-							/** @description The mime type of this piece of media. */
-							content_type: components["schemas"]["Mime"];
-							deleted_at?: null | components["schemas"]["Time"];
-							filename: string;
-							/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
-							has_gifv: boolean;
-							/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
-							has_thumbnail: boolean;
-							/** @description the hashes of this file */
-							hashes?: components["schemas"]["Hashes"];
-							id: components["schemas"]["Id"];
-							/** @description what this piece of media is linked to (admin only) */
-							links?: components["schemas"]["MediaLinkType"][];
-							/** @description Additional filetype-specific metadata for the file */
-							metadata: components["schemas"]["MediaMetadata"];
-							quarantine?: null | components["schemas"]["MediaQuarantine"];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** @description The results of automated scans. */
-							scans?: components["schemas"]["MediaScan"][];
-							/**
-							 * Format: int64
-							 * @description The underlying blob's length in bytes.
-							 */
-							size: number;
-							/**
-							 * Format: uri
-							 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
-							 */
-							source_url?: string | null;
-							status: components["schemas"]["MediaStatus"];
-							/**
-							 * @description Whether sensitive exif info has been stripped from this media.
-							 *
-							 *     Once set to `true`, this cannot be unset.
-							 */
-							strip_exif?: boolean;
-							user_id?: null | components["schemas"]["Id"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Media delete
-		 * @description
-		 */
+		/** Media delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					media_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Media delete success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				/** @description Media linked to another resource */
-				409: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Media patch
-		 * @description
-		 */
+		/** Media patch */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					media_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description Descriptive alt text, not entirely unlike a caption */
-						alt?: string | null;
-						/** @description The filename for this piece of media */
-						filename?: string | null;
-						/**
-						 * @description Whether to strip sensitive exif info, like location or camera make and model.
-						 *
-						 *     This can only be changed if the media status is not `Consumed`. Once
-						 *     strip_exif is set to true, cannot be set to false.
-						 */
-						strip_exif?: boolean | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Media patch success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description Descriptive alt text. */
-							alt?: string | null;
-							channel_id?: null | components["schemas"]["Id"];
-							/** @description The mime type of this piece of media. */
-							content_type: components["schemas"]["Mime"];
-							deleted_at?: null | components["schemas"]["Time"];
-							filename: string;
-							/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
-							has_gifv: boolean;
-							/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
-							has_thumbnail: boolean;
-							/** @description the hashes of this file */
-							hashes?: components["schemas"]["Hashes"];
-							id: components["schemas"]["Id"];
-							/** @description what this piece of media is linked to (admin only) */
-							links?: components["schemas"]["MediaLinkType"][];
-							/** @description Additional filetype-specific metadata for the file */
-							metadata: components["schemas"]["MediaMetadata"];
-							quarantine?: null | components["schemas"]["MediaQuarantine"];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** @description The results of automated scans. */
-							scans?: components["schemas"]["MediaScan"][];
-							/**
-							 * Format: int64
-							 * @description The underlying blob's length in bytes.
-							 */
-							size: number;
-							/**
-							 * Format: uri
-							 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
-							 */
-							source_url?: string | null;
-							status: components["schemas"]["MediaStatus"];
-							/**
-							 * @description Whether sensitive exif info has been stripped from this media.
-							 *
-							 *     Once set to `true`, this cannot be unset.
-							 */
-							strip_exif?: boolean;
-							user_id?: null | components["schemas"]["Id"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -10275,83 +4399,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Media clone
-		 * @description
-		 */
+		/** Media clone */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					media_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description Descriptive alt text, not entirely unlike a caption */
-						alt?: string | null;
-						/** @description Set to override the filename */
-						filename?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Media clone success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description Descriptive alt text. */
-							alt?: string | null;
-							channel_id?: null | components["schemas"]["Id"];
-							/** @description The mime type of this piece of media. */
-							content_type: components["schemas"]["Mime"];
-							deleted_at?: null | components["schemas"]["Time"];
-							filename: string;
-							/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
-							has_gifv: boolean;
-							/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
-							has_thumbnail: boolean;
-							/** @description the hashes of this file */
-							hashes?: components["schemas"]["Hashes"];
-							id: components["schemas"]["Id"];
-							/** @description what this piece of media is linked to (admin only) */
-							links?: components["schemas"]["MediaLinkType"][];
-							/** @description Additional filetype-specific metadata for the file */
-							metadata: components["schemas"]["MediaMetadata"];
-							quarantine?: null | components["schemas"]["MediaQuarantine"];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** @description The results of automated scans. */
-							scans?: components["schemas"]["MediaScan"][];
-							/**
-							 * Format: int64
-							 * @description The underlying blob's length in bytes.
-							 */
-							size: number;
-							/**
-							 * Format: uri
-							 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
-							 */
-							source_url?: string | null;
-							status: components["schemas"]["MediaStatus"];
-							/**
-							 * @description Whether sensitive exif info has been stripped from this media.
-							 *
-							 *     Once set to `true`, this cannot be unset.
-							 */
-							strip_exif?: boolean;
-							user_id?: null | components["schemas"]["Id"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -10367,92 +4424,16 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Media done
-		 * @description
-		 */
+		/** Media done */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					media_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/**
-						 * @description Whether to process this media asynchronously.
-						 *
-						 *     If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing.
-						 */
-						async?: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description Media processing finished */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description Descriptive alt text. */
-							alt?: string | null;
-							channel_id?: null | components["schemas"]["Id"];
-							/** @description The mime type of this piece of media. */
-							content_type: components["schemas"]["Mime"];
-							deleted_at?: null | components["schemas"]["Time"];
-							filename: string;
-							/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
-							has_gifv: boolean;
-							/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
-							has_thumbnail: boolean;
-							/** @description the hashes of this file */
-							hashes?: components["schemas"]["Hashes"];
-							id: components["schemas"]["Id"];
-							/** @description what this piece of media is linked to (admin only) */
-							links?: components["schemas"]["MediaLinkType"][];
-							/** @description Additional filetype-specific metadata for the file */
-							metadata: components["schemas"]["MediaMetadata"];
-							quarantine?: null | components["schemas"]["MediaQuarantine"];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** @description The results of automated scans. */
-							scans?: components["schemas"]["MediaScan"][];
-							/**
-							 * Format: int64
-							 * @description The underlying blob's length in bytes.
-							 */
-							size: number;
-							/**
-							 * Format: uri
-							 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
-							 */
-							source_url?: string | null;
-							status: components["schemas"]["MediaStatus"];
-							/**
-							 * @description Whether sensitive exif info has been stripped from this media.
-							 *
-							 *     Once set to `true`, this cannot be unset.
-							 */
-							strip_exif?: boolean;
-							user_id?: null | components["schemas"]["Id"];
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-				/** @description Media processing in background */
-				202: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -10470,86 +4451,32 @@ export interface paths {
 		};
 		/**
 		 * Oauth info
-		 * @description <div class="markdown-alert-scope-required">Identify</div>
-		 *
-		 *     Fetch information about an OAuth application before authorization.
+		 * @description Fetch information about an OAuth application before authorization.
 		 */
 		get: {
 			parameters: {
-				query: {
-					response_type: string;
-					client_id: components["schemas"]["Id"];
-					scope: string;
-					state?: string | null;
-					redirect_uri?: string | null;
-					prompt?: string | null;
-					code_challenge?: string | null;
-					code_challenge_method?: string | null;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the application itself */
-							application: components["schemas"]["Application"];
-							/** @description the user who requested this info */
-							auth_user: components["schemas"]["User"];
-							/** @description whether this application is already authorized */
-							authorized: boolean;
-							/** @description if the application is a bot, this is the bot user */
-							bot_user: components["schemas"]["User"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		/**
 		 * Oauth authorize
-		 * @description <div class="markdown-alert-scope-required">Identify</div>
-		 *
-		 *     Grant an application access to some resources.
+		 * @description Grant an application access to some resources.
 		 */
 		post: {
 			parameters: {
-				query: {
-					response_type: string;
-					client_id: components["schemas"]["Id"];
-					scope: string;
-					state?: string | null;
-					redirect_uri?: string | null;
-					prompt?: string | null;
-					code_challenge?: string | null;
-					code_challenge_method?: string | null;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** Format: uri */
-							redirect_uri: string;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -10577,35 +4504,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/x-www-form-urlencoded": {
-						token: string;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							active: boolean;
-							client_id: components["schemas"]["Id"];
-							/** Format: int64 */
-							exp?: number | null;
-							scopes: components["schemas"]["Scopes"];
-							/**
-							 * @description this is specified to be "human readable", but in practice it would be
-							 *     simpler and more useful to return the unique id of the user
-							 */
-							username: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -10633,22 +4533,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/x-www-form-urlencoded": {
-						token: string;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -10676,38 +4562,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/x-www-form-urlencoded": {
-						client_id?: null | components["schemas"]["Id"];
-						client_secret?: string | null;
-						code?: string | null;
-						code_verifier?: string | null;
-						grant_type: string;
-						/** Format: uri */
-						redirect_uri?: string | null;
-						refresh_token?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							access_token: string;
-							/** Format: int64 */
-							expires_in: number;
-							refresh_token?: string | null;
-							scope: string;
-							token_type: string;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -10724,9 +4580,7 @@ export interface paths {
 		};
 		/**
 		 * Oauth userinfo
-		 * @description <div class="markdown-alert-scope-required">Identify</div>
-		 *
-		 *     Retrieve profile information about the user currently authorized by an access token.
+		 * @description Retrieve profile information about the user currently authorized by an access token.
 		 */
 		get: {
 			parameters: {
@@ -10736,42 +4590,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							email?: null | components["schemas"]["EmailAddr"];
-							/** @description if the provided email has been verified or not */
-							email_verified: boolean;
-							/**
-							 * Format: uri
-							 * @description oauth issuer
-							 */
-							iss: string;
-							/** @description user's name */
-							name: string;
-							/**
-							 * Format: uri
-							 * @description link to the user's avatar. returns the full size image, not a thumbnail.
-							 */
-							picture?: string | null;
-							/** @description html url to the user's profile page */
-							profile: string;
-							/** @description user's uuid */
-							sub: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description calculated from version_id
-							 */
-							updated_at: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -10788,10 +4607,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Preferences global get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Preferences global get */
 		get: {
 			parameters: {
 				query?: never;
@@ -10800,29 +4616,9 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description config specific to frontend */
-							frontend: components["schemas"]["PreferencesGlobalFrontend"];
-							/** @description global notification config */
-							notifs: components["schemas"]["NotifsGlobal"];
-							/** @description global privacy settings */
-							privacy: components["schemas"]["PreferencesGlobalPrivacy"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * Preferences global put
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Preferences global put */
 		put: {
 			parameters: {
 				query?: never;
@@ -10830,36 +4626,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description config specific to frontend */
-						frontend: components["schemas"]["PreferencesGlobalFrontend"];
-						/** @description global notification config */
-						notifs: components["schemas"]["NotifsGlobal"];
-						/** @description global privacy settings */
-						privacy: components["schemas"]["PreferencesGlobalPrivacy"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description config specific to frontend */
-							frontend: components["schemas"]["PreferencesGlobalFrontend"];
-							/** @description global notification config */
-							notifs: components["schemas"]["NotifsGlobal"];
-							/** @description global privacy settings */
-							privacy: components["schemas"]["PreferencesGlobalPrivacy"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -10875,82 +4643,27 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Preferences channel get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Preferences channel get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description config specific to frontend */
-							frontend: {
-								[key: string]: unknown;
-							};
-							/** @description thread notification config */
-							notifs: components["schemas"]["NotifsChannel"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * Preferences channel put
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Preferences channel put */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description config specific to frontend */
-						frontend: {
-							[key: string]: unknown;
-						};
-						/** @description thread notification config */
-						notifs: components["schemas"]["NotifsChannel"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description config specific to frontend */
-							frontend: {
-								[key: string]: unknown;
-							};
-							/** @description thread notification config */
-							notifs: components["schemas"]["NotifsChannel"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -10966,88 +4679,27 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Preferences room get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Preferences room get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description config specific to frontend */
-							frontend: {
-								[key: string]: unknown;
-							};
-							/** @description room notification config */
-							notifs: components["schemas"]["NotifsRoom"];
-							/** @description room privacy settings */
-							privacy: components["schemas"]["PreferencesRoomPrivacy"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * Preferences room put
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Preferences room put */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description config specific to frontend */
-						frontend: {
-							[key: string]: unknown;
-						};
-						/** @description room notification config */
-						notifs: components["schemas"]["NotifsRoom"];
-						/** @description room privacy settings */
-						privacy: components["schemas"]["PreferencesRoomPrivacy"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description config specific to frontend */
-							frontend: {
-								[key: string]: unknown;
-							};
-							/** @description room notification config */
-							notifs: components["schemas"]["NotifsRoom"];
-							/** @description room privacy settings */
-							privacy: components["schemas"]["PreferencesRoomPrivacy"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -11063,82 +4715,27 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Preferences user get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Preferences user get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description config specific to frontend */
-							frontend: {
-								[key: string]: unknown;
-							};
-							/** @description config in voice threads */
-							voice: components["schemas"]["VoiceConfig"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * Preferences user put
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Preferences user put */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description config specific to frontend */
-						frontend: {
-							[key: string]: unknown;
-						};
-						/** @description config in voice threads */
-						voice: components["schemas"]["VoiceConfig"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description config specific to frontend */
-							frontend: {
-								[key: string]: unknown;
-							};
-							/** @description config in voice threads */
-							voice: components["schemas"]["VoiceConfig"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -11154,10 +4751,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Public channels list (TODO)
-		 * @description
-		 */
+		/** Public channels list (TODO) */
 		get: operations["public_channels"];
 		put?: never;
 		post?: never;
@@ -11174,10 +4768,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Public rooms list (TODO)
-		 * @description
-		 */
+		/** Public rooms list (TODO) */
 		get: operations["public_rooms"];
 		put?: never;
 		post?: never;
@@ -11196,9 +4787,7 @@ export interface paths {
 		};
 		/**
 		 * Push get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get web push subscription for this session
+		 * @description Get web push subscription for this session
 		 */
 		get: {
 			parameters: {
@@ -11208,29 +4797,12 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the endpoint that web push payloads are sent to */
-							endpoint: string;
-							/** @description the server's vapid key */
-							server_key: string;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		/**
 		 * Push register
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Register web push for this session
+		 * @description Register web push for this session
 		 */
 		post: {
 			parameters: {
@@ -11239,36 +4811,12 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						endpoint: string;
-						keys: components["schemas"]["PushCreateKeys"];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the endpoint that web push payloads are sent to */
-							endpoint: string;
-							/** @description the server's vapid key */
-							server_key: string;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		/**
 		 * Push delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Remove web push for this session
+		 * @description Remove web push for this session
 		 */
 		delete: {
 			parameters: {
@@ -11278,15 +4826,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -11302,9 +4842,7 @@ export interface paths {
 		};
 		/**
 		 * Check ready
-		 * @description <div class="markdown-alert-scope-required">auth</div>
-		 *
-		 *     is this server ready to accept requests?
+		 * @description is this server ready to accept requests?
 		 */
 		get: operations["debug_ready"];
 		put?: never;
@@ -11324,134 +4862,29 @@ export interface paths {
 		};
 		/**
 		 * Room list
-		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
-		 *     <div class="markdown-alert-scope-required">Rooms</div>
-		 *
-		 *     Lists all rooms on the server.
+		 * @description Lists all rooms on the server.
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Paginate room success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Room"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Room create
-		 * @description <div class="markdown-alert-permission-required">RoomCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomCreate</div>
-		 */
+		/** Room create */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-				};
+				header?: never;
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						banner?: null | components["schemas"]["Id"];
-						description?: string | null;
-						icon?: null | components["schemas"]["Id"];
-						name: string;
-						public?: boolean | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							afk_channel_id?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-							 */
-							afk_channel_timeout: number;
-							archived_at?: null | components["schemas"]["Time"];
-							banner?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of active channels
-							 */
-							channel_count: number;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							/**
-							 * Format: int64
-							 * @description number of emojis in room
-							 */
-							emoji_count: number;
-							/** @description features enabled for this room */
-							features: components["schemas"]["RoomFeatures"];
-							icon?: null | components["schemas"]["Id"];
-							/** @description A unique identifier for this room */
-							id: components["schemas"]["Id"];
-							invites_paused_until?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							preferences?: null | components["schemas"]["PreferencesRoom"];
-							/** @description anyone can view and join */
-							public: boolean;
-							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
-							quarantined: boolean;
-							remote?: null | components["schemas"]["Remote_Id"];
-							/** @description security configuration for this room */
-							security: components["schemas"]["RoomSecurity"];
-							type: components["schemas"]["RoomType"];
-							/**
-							 * Format: uuid
-							 * @description A monotonically increasing id that is updated every time this room is modified.
-							 */
-							version_id: string;
-							welcome_channel_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -11466,46 +4899,19 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room template list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room template list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Paginate templates */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["RoomTemplate"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Room template create
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room template create */
 		post: {
 			parameters: {
 				query?: never;
@@ -11513,41 +4919,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						description: string;
-						name: string;
-						room_id: components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description Template created */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description unique identifier for this template */
-							code: components["schemas"]["RoomTemplateCode"];
-							created_at: components["schemas"]["Time"];
-							/** @description user who created this template */
-							creator: components["schemas"]["User"];
-							description: string;
-							/** @description if the source room and the template have diverged */
-							dirty?: boolean | null;
-							/** @description name for this template */
-							name: string;
-							snapshot: components["schemas"]["RoomTemplateSnapshot"];
-							source_room_id?: null | components["schemas"]["Id"];
-							/** @description updated whenever template is edited or synced */
-							updated_at: components["schemas"]["Time"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -11562,122 +4935,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room template get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room template get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					code: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get template success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description unique identifier for this template */
-							code: components["schemas"]["RoomTemplateCode"];
-							created_at: components["schemas"]["Time"];
-							/** @description user who created this template */
-							creator: components["schemas"]["User"];
-							description: string;
-							/** @description if the source room and the template have diverged */
-							dirty?: boolean | null;
-							/** @description name for this template */
-							name: string;
-							snapshot: components["schemas"]["RoomTemplateSnapshot"];
-							source_room_id?: null | components["schemas"]["Id"];
-							/** @description updated whenever template is edited or synced */
-							updated_at: components["schemas"]["Time"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Room template delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room template delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					code: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Delete template success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Room template edit
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room template edit */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					code: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						description?: string | null;
-						name?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Edit template success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description unique identifier for this template */
-							code: components["schemas"]["RoomTemplateCode"];
-							created_at: components["schemas"]["Time"];
-							/** @description user who created this template */
-							creator: components["schemas"]["User"];
-							description: string;
-							/** @description if the source room and the template have diverged */
-							dirty?: boolean | null;
-							/** @description name for this template */
-							name: string;
-							snapshot: components["schemas"]["RoomTemplateSnapshot"];
-							source_room_id?: null | components["schemas"]["Id"];
-							/** @description updated whenever template is edited or synced */
-							updated_at: components["schemas"]["Time"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -11690,46 +4983,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Room template sync
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room template sync */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					code: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Sync template success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description unique identifier for this template */
-							code: components["schemas"]["RoomTemplateCode"];
-							created_at: components["schemas"]["Time"];
-							/** @description user who created this template */
-							creator: components["schemas"]["User"];
-							description: string;
-							/** @description if the source room and the template have diverged */
-							dirty?: boolean | null;
-							/** @description name for this template */
-							name: string;
-							snapshot: components["schemas"]["RoomTemplateSnapshot"];
-							source_room_id?: null | components["schemas"]["Id"];
-							/** @description updated whenever template is edited or synced */
-							updated_at: components["schemas"]["Time"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -11746,11 +5009,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Room search
-		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room search */
 		post: {
 			parameters: {
 				query?: never;
@@ -11758,25 +5017,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["SearchRequest"] & {
-						/** @description what order to return results in */
-						order?: components["schemas"]["RoomSearchOrderField"];
-						/** @description field to sort by */
-						sort_field?: components["schemas"]["RoomSearchOrderField"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -11791,230 +5033,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room get
-		 * @description <div class="markdown-alert-scope-required">Rooms</div>
-		 */
+		/** Room get */
 		get: {
 			parameters: {
 				query?: never;
-				header?: {
-					"if-none-match"?: string;
-				};
-				path: {
-					room_id: string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get room success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							afk_channel_id?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-							 */
-							afk_channel_timeout: number;
-							archived_at?: null | components["schemas"]["Time"];
-							banner?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of active channels
-							 */
-							channel_count: number;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							/**
-							 * Format: int64
-							 * @description number of emojis in room
-							 */
-							emoji_count: number;
-							/** @description features enabled for this room */
-							features: components["schemas"]["RoomFeatures"];
-							icon?: null | components["schemas"]["Id"];
-							/** @description A unique identifier for this room */
-							id: components["schemas"]["Id"];
-							invites_paused_until?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							preferences?: null | components["schemas"]["PreferencesRoom"];
-							/** @description anyone can view and join */
-							public: boolean;
-							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
-							quarantined: boolean;
-							remote?: null | components["schemas"]["Remote_Id"];
-							/** @description security configuration for this room */
-							security: components["schemas"]["RoomSecurity"];
-							type: components["schemas"]["RoomType"];
-							/**
-							 * Format: uuid
-							 * @description A monotonically increasing id that is updated every time this room is modified.
-							 */
-							version_id: string;
-							welcome_channel_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-				/** @description Not modified */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Room delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomDelete</div>
-		 */
+		/** Room delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Room edit
-		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomUpdate</div>
-		 */
+		/** Room edit */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
-						/**
-						 * Format: int64
-						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-						 */
-						afk_channel_timeout?: number | null;
-						banner?: null | components["schemas"]["Id"];
-						description?: string | null;
-						icon?: null | components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
-						name?: string | null;
-						public?: boolean | null;
-						welcome_channel_id?: null | components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description edit success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							afk_channel_id?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-							 */
-							afk_channel_timeout: number;
-							archived_at?: null | components["schemas"]["Time"];
-							banner?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of active channels
-							 */
-							channel_count: number;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							/**
-							 * Format: int64
-							 * @description number of emojis in room
-							 */
-							emoji_count: number;
-							/** @description features enabled for this room */
-							features: components["schemas"]["RoomFeatures"];
-							icon?: null | components["schemas"]["Id"];
-							/** @description A unique identifier for this room */
-							id: components["schemas"]["Id"];
-							invites_paused_until?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							preferences?: null | components["schemas"]["PreferencesRoom"];
-							/** @description anyone can view and join */
-							public: boolean;
-							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
-							quarantined: boolean;
-							remote?: null | components["schemas"]["Remote_Id"];
-							/** @description security configuration for this room */
-							security: components["schemas"]["RoomSecurity"];
-							type: components["schemas"]["RoomType"];
-							/**
-							 * Format: uuid
-							 * @description A monotonically increasing id that is updated every time this room is modified.
-							 */
-							version_id: string;
-							welcome_channel_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-				/** @description no change */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -12028,29 +5082,17 @@ export interface paths {
 		get?: never;
 		/**
 		 * Room ack
-		 * @description <div class="markdown-alert-scope-required">Rooms</div>
-		 *
-		 *     Mark all channels in a room as read.
+		 * @description Mark all channels in a room as read.
 		 */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -12066,50 +5108,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room analytics channels
-		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room analytics channels */
 		get: {
 			parameters: {
-				query: {
-					start?: null | components["schemas"]["Time"];
-					end?: null | components["schemas"]["Time"];
-					aggregate: components["schemas"]["Aggregation"];
-					/** @description limit between 1..1024, default to 10 */
-					limit?: number | null;
-					/** @description return only analytics for this channel, otherwise return data points for everything */
-					channel_id?: null | components["schemas"]["Id"];
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description The bucket for this data point. */
-							bucket: components["schemas"]["Time"];
-							channel_id: components["schemas"]["Id"];
-							/** Format: int64 */
-							media_count: number;
-							/** Format: int64 */
-							media_size: number;
-							/** Format: int64 */
-							message_count: number;
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -12126,48 +5134,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room analytics invites
-		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room analytics invites */
 		get: {
 			parameters: {
-				query: {
-					start?: null | components["schemas"]["Time"];
-					end?: null | components["schemas"]["Time"];
-					aggregate: components["schemas"]["Aggregation"];
-					/** @description limit between 1..1024, default to 10 */
-					limit?: number | null;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description The bucket for this data point. */
-							bucket: components["schemas"]["Time"];
-							/** @description where this member came from */
-							origin: components["schemas"]["AnalyticsInvitesOrigin"];
-							/**
-							 * Format: int64
-							 * @description number of times this invite was used
-							 */
-							uses: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -12184,46 +5160,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room analytics members count
-		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room analytics members count */
 		get: {
 			parameters: {
-				query: {
-					start?: null | components["schemas"]["Time"];
-					end?: null | components["schemas"]["Time"];
-					aggregate: components["schemas"]["Aggregation"];
-					/** @description limit between 1..1024, default to 10 */
-					limit?: number | null;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description The bucket for this data point. */
-							bucket: components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description Total number of members in this room.
-							 */
-							count: number;
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -12240,46 +5186,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room analytics members join
-		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room analytics members join */
 		get: {
 			parameters: {
-				query: {
-					start?: null | components["schemas"]["Time"];
-					end?: null | components["schemas"]["Time"];
-					aggregate: components["schemas"]["Aggregation"];
-					/** @description limit between 1..1024, default to 10 */
-					limit?: number | null;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description The bucket for this data point. */
-							bucket: components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description Total number of members who joined this room.
-							 */
-							count: number;
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -12296,46 +5212,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room analytics members leave
-		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room analytics members leave */
 		get: {
 			parameters: {
-				query: {
-					start?: null | components["schemas"]["Time"];
-					end?: null | components["schemas"]["Time"];
-					aggregate: components["schemas"]["Aggregation"];
-					/** @description limit between 1..1024, default to 10 */
-					limit?: number | null;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description The bucket for this data point. */
-							bucket: components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description Total number of members who left this room.
-							 */
-							count: number;
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -12354,56 +5240,17 @@ export interface paths {
 		};
 		/**
 		 * Room analytics overview
-		 * @description <div class="markdown-alert-permission-required">AnalyticsView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Aggregate all stats from all channels
+		 * @description Aggregate all stats from all channels
 		 */
 		get: {
 			parameters: {
-				query: {
-					start?: null | components["schemas"]["Time"];
-					end?: null | components["schemas"]["Time"];
-					aggregate: components["schemas"]["Aggregation"];
-					/** @description limit between 1..1024, default to 10 */
-					limit?: number | null;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description The bucket for this data point. */
-							bucket: components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of files sent
-							 */
-							media_count: number;
-							/**
-							 * Format: int64
-							 * @description number of files sent
-							 */
-							media_size: number;
-							/**
-							 * Format: int64
-							 * @description number of messages sent
-							 */
-							message_count: number;
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -12420,72 +5267,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room audit logs
-		 * @description <div class="markdown-alert-permission-required">AuditLogView</div>
-		 *     <div class="markdown-alert-scope-required">Rooms</div>
-		 */
+		/** Room audit logs */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-					/** @description only return audit log entries from these users */
-					user_id?: components["schemas"]["Id"][];
-					/** @description only return audit log entries with these types */
-					type?: string[];
-					/**
-					 * @description only return audit log entries with these statuses
-					 *
-					 *     defaults to only `Success`
-					 */
-					status?: components["schemas"]["AuditLogEntryStatus"][];
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description fetch audit logs success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the audit log entries themselves */
-							audit_log_entries: components["schemas"]["AuditLogEntry"][];
-							/** @description pagination cursor */
-							cursor?: string | null;
-							/** @description whether there are more audit log events that can be fetched */
-							has_more: boolean;
-							/**
-							 * @description room members referenced in the audit log entries
-							 *
-							 *     this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions)
-							 */
-							room_members: components["schemas"]["RoomMember"][];
-							/** @description tags referenced in the audit log entries */
-							tags: components["schemas"]["Tag"][];
-							/** @description threads referenced in the audit log entries */
-							threads: components["schemas"]["Channel"][];
-							/**
-							 * @description users referenced in the audit log entries
-							 *
-							 *     this includes actors (ie. users who did actions) and targets (ie. users who were affected by actions)
-							 */
-							users: components["schemas"]["User"][];
-							/** @description webhooks referenced in the audit log entries */
-							webhooks: components["schemas"]["Webhook"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -12502,108 +5293,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Automod rule list
-		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Automod rule list */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List automod rules success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description when executed, do ALL of these actions */
-							actions: components["schemas"]["AutomodAction"][];
-							enabled: boolean;
-							/** @description what channels should be exempt from this rule. */
-							except_channels: components["schemas"]["Id"][];
-							/** @description if nsfw channels should be exempt from this rule. */
-							except_nsfw: boolean;
-							/** @description what roles should be exempt from this rule. users with RoomManage are always exempt. */
-							except_roles: components["schemas"]["Id"][];
-							id: components["schemas"]["Id"];
-							/** @description whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out) */
-							include_everyone: boolean;
-							name: string;
-							room_id: components["schemas"]["Id"];
-							target: components["schemas"]["AutomodTarget"];
-							trigger: components["schemas"]["AutomodTrigger"];
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Automod rule create
-		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AutomodRuleCreate</div>
-		 */
+		/** Automod rule create */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						actions: components["schemas"]["AutomodAction"][];
-						except_channels?: components["schemas"]["Id"][];
-						except_nsfw?: boolean;
-						except_roles?: components["schemas"]["Id"][];
-						include_everyone?: boolean;
-						name: string;
-						target: components["schemas"]["AutomodTarget"];
-						trigger: components["schemas"]["AutomodTrigger"];
-					};
-				};
-			};
-			responses: {
-				/** @description Create automod rule success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description when executed, do ALL of these actions */
-							actions: components["schemas"]["AutomodAction"][];
-							enabled: boolean;
-							/** @description what channels should be exempt from this rule. */
-							except_channels: components["schemas"]["Id"][];
-							/** @description if nsfw channels should be exempt from this rule. */
-							except_nsfw: boolean;
-							/** @description what roles should be exempt from this rule. users with RoomManage are always exempt. */
-							except_roles: components["schemas"]["Id"][];
-							id: components["schemas"]["Id"];
-							/** @description whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out) */
-							include_everyone: boolean;
-							name: string;
-							room_id: components["schemas"]["Id"];
-							target: components["schemas"]["AutomodTarget"];
-							trigger: components["schemas"]["AutomodTrigger"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -12620,52 +5331,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Automod rule test
-		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Automod rule test */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description the target to test this as */
-						target: components["schemas"]["AutomodTarget"];
-						/** @description the text to attempt to scan */
-						text: string;
-					};
-				};
-			};
-			responses: {
-				/** @description Test automod rule success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/**
-							 * @description deduplicated list of all of the actions that would be taken
-							 *
-							 *     eg. if one rule times a user out for 60 seconds and another times out for 120 seconds, there would be one action that times out for 120 seconds
-							 */
-							actions: components["schemas"]["AutomodAction"][];
-							/** @description the content that was matched */
-							matches: components["schemas"]["AutomodMatches"][];
-							/** @description the rules that matched the text */
-							rules: components["schemas"]["AutomodRule"][];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -12680,141 +5355,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Automod rule get
-		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Automod rule get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					rule_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get automod rule success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description when executed, do ALL of these actions */
-							actions: components["schemas"]["AutomodAction"][];
-							enabled: boolean;
-							/** @description what channels should be exempt from this rule. */
-							except_channels: components["schemas"]["Id"][];
-							/** @description if nsfw channels should be exempt from this rule. */
-							except_nsfw: boolean;
-							/** @description what roles should be exempt from this rule. users with RoomManage are always exempt. */
-							except_roles: components["schemas"]["Id"][];
-							id: components["schemas"]["Id"];
-							/** @description whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out) */
-							include_everyone: boolean;
-							name: string;
-							room_id: components["schemas"]["Id"];
-							target: components["schemas"]["AutomodTarget"];
-							trigger: components["schemas"]["AutomodTrigger"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Automod rule delete
-		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AutomodRuleDelete</div>
-		 */
+		/** Automod rule delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					rule_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Delete automod rule success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Automod rule update
-		 * @description <div class="markdown-alert-permission-required">RoomEdit</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: AutomodRuleUpdate</div>
-		 */
+		/** Automod rule update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					rule_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						actions?: components["schemas"]["AutomodAction"][] | null;
-						enabled?: boolean | null;
-						except_channels?: components["schemas"]["Id"][] | null;
-						except_nsfw?: boolean | null;
-						except_roles?: components["schemas"]["Id"][] | null;
-						include_everyone?: boolean | null;
-						name?: string | null;
-						target?: null | components["schemas"]["AutomodTarget"];
-						trigger?: null | components["schemas"]["AutomodTrigger"];
-					};
-				};
-			};
-			responses: {
-				/** @description Update automod rule success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description when executed, do ALL of these actions */
-							actions: components["schemas"]["AutomodAction"][];
-							enabled: boolean;
-							/** @description what channels should be exempt from this rule. */
-							except_channels: components["schemas"]["Id"][];
-							/** @description if nsfw channels should be exempt from this rule. */
-							except_nsfw: boolean;
-							/** @description what roles should be exempt from this rule. users with RoomManage are always exempt. */
-							except_roles: components["schemas"]["Id"][];
-							id: components["schemas"]["Id"];
-							/** @description whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out) */
-							include_everyone: boolean;
-							name: string;
-							room_id: components["schemas"]["Id"];
-							target: components["schemas"]["AutomodTarget"];
-							trigger: components["schemas"]["AutomodTrigger"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -12825,43 +5401,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room ban list
-		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room ban list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["RoomBan"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -12880,38 +5429,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Room ban bulk create
-		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room ban bulk create */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						expires_at?: null | components["schemas"]["Time"];
-						/** @description who to ban */
-						target_ids?: components["schemas"]["Id"][];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -12926,102 +5453,39 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room ban get
-		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room ban get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description when the ban was created */
-							created_at: components["schemas"]["Time"];
-							expires_at?: null | components["schemas"]["Time"];
-							/** @description the supplied reason why this user should be banned */
-							reason?: string | null;
-							/** @description the user who is banned */
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * Room ban create
-		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberBan</div>
-		 */
+		/** Room ban create */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						expires_at?: null | components["schemas"]["Time"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
-		/**
-		 * Room ban delete
-		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberUnban</div>
-		 */
+		/** Room ban delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -13035,269 +5499,48 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room channel list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room channel list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List room channels success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Channel"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		/**
 		 * Channel create room
-		 * @description <div class="markdown-alert-permission-optional">ChannelManage</div>
-		 *     <div class="markdown-alert-permission-optional">ThreadCreatePublic</div>
-		 *     <div class="markdown-alert-permission-optional">ThreadCreatePrivate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelCreate</div>
-		 *
-		 *     Create a channel in a room
+		 * @description Create a channel in a room
 		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-				};
-				path: {
-					room_id: string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** Format: int64 */
-						auto_archive_duration?: number | null;
-						/** Format: int64 */
-						bitrate?: number | null;
-						/** Format: int64 */
-						default_auto_archive_duration?: number | null;
-						/** Format: int64 */
-						default_slowmode_message?: number | null;
-						description?: string | null;
-						icon?: null | components["schemas"]["Id"];
-						/** @description whether users without ThreadManage can add other members to this thread */
-						invitable?: boolean;
-						name: string;
-						/** @description not safe for work */
-						nsfw?: boolean;
-						parent_id?: null | components["schemas"]["Id"];
-						permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
-						/** @description the recipient(s) for this dm/gdm */
-						recipients?: components["schemas"]["Id"][] | null;
-						/** Format: int64 */
-						slowmode_message?: number | null;
-						/** Format: int64 */
-						slowmode_thread?: number | null;
-						starter_message?: null | components["schemas"]["MessageCreate"];
-						/** @description tags to apply to this thread (overwrite, not append) */
-						tags?: components["schemas"]["Id"][] | null;
-						/** @description The type of this channel */
-						type?: components["schemas"]["ChannelType"];
-						/** Format: uri */
-						url?: string | null;
-						/** Format: int64 */
-						user_limit?: number | null;
-					};
-				};
-			};
-			responses: {
-				/** @description Create thread success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
 		head?: never;
 		/**
 		 * Room channel reorder
-		 * @description <div class="markdown-alert-permission-required">ChannelManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ChannelReorder</div>
-		 *
-		 *     Reorder the channels in a room. Requires the `ChannelManage` permission.
+		 * @description Reorder the channels in a room. Requires the `ChannelManage` permission.
 		 */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description the channels to reorder */
-						channels?: components["schemas"]["ChannelReorderItem"][];
-					};
-				};
-			};
-			responses: {
-				/** @description Reorder channels success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -13310,44 +5553,17 @@ export interface paths {
 		};
 		/**
 		 * Room channel list removed
-		 * @description <div class="markdown-alert-permission-required">ChannelManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List removed channels in a room. Requires the `ChannelManage` permission.
+		 * @description List removed channels in a room. Requires the `ChannelManage` permission.
 		 */
 		get: {
 			parameters: {
-				query?: {
-					parent_id?: null | components["schemas"]["Id"];
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List removed room channels success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Channel"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -13366,91 +5582,32 @@ export interface paths {
 		};
 		/**
 		 * Emoji list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List custom emoji in a room.
+		 * @description List custom emoji in a room.
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["EmojiCustom"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		/**
 		 * Emoji create
-		 * @description <div class="markdown-alert-permission-required">EmojiManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmojiCreate</div>
-		 *
-		 *     Create a custom emoji.
+		 * @description Create a custom emoji.
 		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-				};
-				path: {
-					room_id: string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						animated: boolean;
-						media_id: components["schemas"]["Id"];
-						name: string;
-					};
-				};
-			};
-			responses: {
-				/** @description new emoji created */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description whether this emoji is animated */
-							animated: boolean;
-							creator_id?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							media_id: components["schemas"]["Id"];
-							name: string;
-							owner?: null | components["schemas"]["EmojiOwner"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -13467,118 +5624,49 @@ export interface paths {
 		};
 		/**
 		 * Emoji get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get a custom emoji.
+		 * @description Get a custom emoji.
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					emoji_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description whether this emoji is animated */
-							animated: boolean;
-							creator_id?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							media_id: components["schemas"]["Id"];
-							name: string;
-							owner?: null | components["schemas"]["EmojiOwner"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
 		/**
 		 * Emoji delete
-		 * @description <div class="markdown-alert-permission-required">EmojiManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmojiDelete</div>
-		 *
-		 *     Delete a custom emoji.
+		 * @description Delete a custom emoji.
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					emoji_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
 		/**
 		 * Emoji update
-		 * @description <div class="markdown-alert-permission-required">EmojiManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmojiUpdate</div>
-		 *
-		 *     Edit a custom emoji.
+		 * @description Edit a custom emoji.
 		 */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					emoji_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						name?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description whether this emoji is animated */
-							animated: boolean;
-							creator_id?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							media_id: components["schemas"]["Id"];
-							name: string;
-							owner?: null | components["schemas"]["EmojiOwner"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -13590,168 +5678,28 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Room feature enable
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room feature enable */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					feature: "Scripts" | "Automod" | "Documents" | "Vanity" | "Llm";
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							afk_channel_id?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-							 */
-							afk_channel_timeout: number;
-							archived_at?: null | components["schemas"]["Time"];
-							banner?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of active channels
-							 */
-							channel_count: number;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							/**
-							 * Format: int64
-							 * @description number of emojis in room
-							 */
-							emoji_count: number;
-							/** @description features enabled for this room */
-							features: components["schemas"]["RoomFeatures"];
-							icon?: null | components["schemas"]["Id"];
-							/** @description A unique identifier for this room */
-							id: components["schemas"]["Id"];
-							invites_paused_until?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							preferences?: null | components["schemas"]["PreferencesRoom"];
-							/** @description anyone can view and join */
-							public: boolean;
-							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
-							quarantined: boolean;
-							remote?: null | components["schemas"]["Remote_Id"];
-							/** @description security configuration for this room */
-							security: components["schemas"]["RoomSecurity"];
-							type: components["schemas"]["RoomType"];
-							/**
-							 * Format: uuid
-							 * @description A monotonically increasing id that is updated every time this room is modified.
-							 */
-							version_id: string;
-							welcome_channel_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		post?: never;
-		/**
-		 * Room feature disable
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room feature disable */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					feature: "Scripts" | "Automod" | "Documents" | "Vanity" | "Llm";
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							afk_channel_id?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-							 */
-							afk_channel_timeout: number;
-							archived_at?: null | components["schemas"]["Time"];
-							banner?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of active channels
-							 */
-							channel_count: number;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							/**
-							 * Format: int64
-							 * @description number of emojis in room
-							 */
-							emoji_count: number;
-							/** @description features enabled for this room */
-							features: components["schemas"]["RoomFeatures"];
-							icon?: null | components["schemas"]["Id"];
-							/** @description A unique identifier for this room */
-							id: components["schemas"]["Id"];
-							invites_paused_until?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							preferences?: null | components["schemas"]["PreferencesRoom"];
-							/** @description anyone can view and join */
-							public: boolean;
-							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
-							quarantined: boolean;
-							remote?: null | components["schemas"]["Remote_Id"];
-							/** @description security configuration for this room */
-							security: components["schemas"]["RoomSecurity"];
-							type: components["schemas"]["RoomType"];
-							/**
-							 * Format: uuid
-							 * @description A monotonically increasing id that is updated every time this room is modified.
-							 */
-							version_id: string;
-							welcome_channel_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -13767,42 +5715,17 @@ export interface paths {
 		};
 		/**
 		 * Room integration list
-		 * @description <div class="markdown-alert-scope-required">Rooms</div>
-		 *
-		 *     list bots in a room
+		 * @description list bots in a room
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Integration"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -13819,104 +5742,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Invite list room
-		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Invite list room */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Invite"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Invite create
-		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: InviteCreate</div>
-		 */
+		/** Invite create */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description a description for this invite */
-						description?: string | null;
-						expires_at?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description the maximum number of times this invite can be used
-						 *     be sure to account for existing `uses` and `max_uses` when patching
-						 */
-						max_uses?: number | null;
-						/** @description which roles to apply when accepting the invite */
-						role_ids?: components["schemas"]["Id"][] | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the invite code for this invite */
-							code: components["schemas"]["InviteCode"];
-							/** @description the time when this invite was created */
-							created_at: components["schemas"]["Time"];
-							/** @description the user who created this invite */
-							creator: components["schemas"]["User"];
-							/** @description the id of the user who created this invite */
-							creator_id: components["schemas"]["Id"];
-							/** @description a description for this invite */
-							description?: string | null;
-							expires_at?: null | components["schemas"]["Time"];
-							/** @description if this invite's code is custom (instead of random) */
-							is_vanity: boolean;
-							/** @description where this invite leads */
-							target: components["schemas"]["InviteTarget"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -13931,42 +5778,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room member list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room member list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["RoomMember"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -13983,37 +5804,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room member search
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room member search */
 		get: {
 			parameters: {
-				query: {
-					query: string;
-					limit?: number | null;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							room_members: components["schemas"]["RoomMember"][];
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -14032,63 +5832,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Room member search advanced
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room member search advanced */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						create_after?: null | components["schemas"]["Time"];
-						create_before?: null | components["schemas"]["Time"];
-						/** @description return members who are/aren't room deafened */
-						deaf?: boolean | null;
-						/** @description return members who are/aren't server guests */
-						guest?: boolean | null;
-						invite?: null | components["schemas"]["InviteCode"];
-						join_after?: null | components["schemas"]["Time"];
-						join_before?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description maximum number of results to return
-						 */
-						limit?: number | null;
-						/** @description return members who are/aren't room muted */
-						mute?: boolean | null;
-						/** @description return members who do/don't have a custom nickname */
-						nickname?: boolean | null;
-						/** @description user name, override_name, or id */
-						query?: string | null;
-						/** @description has all of these roles */
-						roles?: components["schemas"]["Id"][];
-						/** @description return members who are/aren't timed out */
-						timeout?: boolean | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							room_members: components["schemas"]["RoomMember"][];
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -14103,230 +5856,52 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Room member get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room member get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description whether this user is deafened by a moderator */
-							deaf: boolean;
-							/** @description When this member joined the room */
-							joined_at: components["schemas"]["Time"];
-							/** @description whether this user is muted by a moderator */
-							mute: boolean;
-							origin?: null | components["schemas"]["RoomMemberOrigin"];
-							/** @description like nickname, but for your description/bio/about */
-							override_description?: string | null;
-							/** @description aka nickname */
-							override_name?: string | null;
-							/** @description whether this user is quarantined by automod */
-							quarantined: boolean;
-							/** @description the roles that this member has */
-							roles: components["schemas"]["Id"][];
-							room_id: components["schemas"]["Id"];
-							timeout_until?: null | components["schemas"]["Time"];
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * Room member add
-		 * @description <div class="markdown-alert-permission-optional">IntegrationsBridge</div>
-		 *     <div class="markdown-alert-permission-optional">VoiceMute</div>
-		 *     <div class="markdown-alert-permission-optional">VoiceDeafen</div>
-		 *     <div class="markdown-alert-permission-optional">MemberKick</div>
-		 *     <div class="markdown-alert-permission-optional">RoleApply</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room member add */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description whether this user is deafened by a moderator */
-						deaf?: boolean | null;
-						/** @description whether this user is muted by a moderator */
-						mute?: boolean | null;
-						override_description?: string | null;
-						override_name?: string | null;
-						/** @description the roles that this member has */
-						roles?: components["schemas"]["Id"][] | null;
-						timeout_until?: null | components["schemas"]["Time"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description whether this user is deafened by a moderator */
-							deaf: boolean;
-							/** @description When this member joined the room */
-							joined_at: components["schemas"]["Time"];
-							/** @description whether this user is muted by a moderator */
-							mute: boolean;
-							origin?: null | components["schemas"]["RoomMemberOrigin"];
-							/** @description like nickname, but for your description/bio/about */
-							override_description?: string | null;
-							/** @description aka nickname */
-							override_name?: string | null;
-							/** @description whether this user is quarantined by automod */
-							quarantined: boolean;
-							/** @description the roles that this member has */
-							roles: components["schemas"]["Id"][];
-							room_id: components["schemas"]["Id"];
-							timeout_until?: null | components["schemas"]["Time"];
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-				/** @description not modified */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
-		};
-		post?: never;
-		/**
-		 * Room member delete
-		 * @description <div class="markdown-alert-permission-optional">MemberKick</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberKick</div>
-		 */
-		delete: {
-			parameters: {
-				query: {
-					soft: boolean;
-				};
-				header?: never;
-				path: {
-					room_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
+			responses: never;
+		};
+		post?: never;
+		/** Room member delete */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
 			};
+			requestBody?: never;
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Room member update
-		 * @description <div class="markdown-alert-permission-optional">VoiceMute</div>
-		 *     <div class="markdown-alert-permission-optional">VoiceDeafen</div>
-		 *     <div class="markdown-alert-permission-optional">MemberKick</div>
-		 *     <div class="markdown-alert-permission-optional">RoleApply</div>
-		 *     <div class="markdown-alert-permission-optional">MemberTimeout</div>
-		 *     <div class="markdown-alert-permission-optional">MemberNickname</div>
-		 *     <div class="markdown-alert-permission-optional">MemberNicknameManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberUpdate</div>
-		 */
+		/** Room member update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description whether this user is deafened by a moderator */
-						deaf?: boolean | null;
-						/** @description whether this user is muted by a moderator */
-						mute?: boolean | null;
-						override_description?: string | null;
-						override_name?: string | null;
-						/** @description the roles that this member has */
-						roles?: components["schemas"]["Id"][] | null;
-						timeout_until?: null | components["schemas"]["Time"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description whether this user is deafened by a moderator */
-							deaf: boolean;
-							/** @description When this member joined the room */
-							joined_at: components["schemas"]["Time"];
-							/** @description whether this user is muted by a moderator */
-							mute: boolean;
-							origin?: null | components["schemas"]["RoomMemberOrigin"];
-							/** @description like nickname, but for your description/bio/about */
-							override_description?: string | null;
-							/** @description aka nickname */
-							override_name?: string | null;
-							/** @description whether this user is quarantined by automod */
-							quarantined: boolean;
-							/** @description the roles that this member has */
-							roles: components["schemas"]["Id"][];
-							room_id: components["schemas"]["Id"];
-							timeout_until?: null | components["schemas"]["Time"];
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-				/** @description not modified */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -14339,55 +5914,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Room prune begin
-		 * @description <div class="markdown-alert-permission-required">MemberKick</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberPrune</div>
-		 */
+		/** Room prune begin */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description whether to return the number of pruned users in the response */
-						calculate_total?: boolean;
-						/**
-						 * Format: int32
-						 * @description prune users inactive for this many days
-						 */
-						days: number;
-						/** @description whether to actually prune or to */
-						dry_run?: boolean;
-						/** @description include users with these roles */
-						include_roles?: components["schemas"]["Id"][];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/**
-							 * Format: int64
-							 * @description number of pruned users
-							 */
-							pruned: number;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -14404,169 +5940,27 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Room quarantine
-		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomQuarantine</div>
-		 */
+		/** Room quarantine */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							afk_channel_id?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-							 */
-							afk_channel_timeout: number;
-							archived_at?: null | components["schemas"]["Time"];
-							banner?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of active channels
-							 */
-							channel_count: number;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							/**
-							 * Format: int64
-							 * @description number of emojis in room
-							 */
-							emoji_count: number;
-							/** @description features enabled for this room */
-							features: components["schemas"]["RoomFeatures"];
-							icon?: null | components["schemas"]["Id"];
-							/** @description A unique identifier for this room */
-							id: components["schemas"]["Id"];
-							invites_paused_until?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							preferences?: null | components["schemas"]["PreferencesRoom"];
-							/** @description anyone can view and join */
-							public: boolean;
-							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
-							quarantined: boolean;
-							remote?: null | components["schemas"]["Remote_Id"];
-							/** @description security configuration for this room */
-							security: components["schemas"]["RoomSecurity"];
-							type: components["schemas"]["RoomType"];
-							/**
-							 * Format: uuid
-							 * @description A monotonically increasing id that is updated every time this room is modified.
-							 */
-							version_id: string;
-							welcome_channel_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * Room unquarantine
-		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomUnquarantine</div>
-		 */
+		/** Room unquarantine */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							afk_channel_id?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-							 */
-							afk_channel_timeout: number;
-							archived_at?: null | components["schemas"]["Time"];
-							banner?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of active channels
-							 */
-							channel_count: number;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							/**
-							 * Format: int64
-							 * @description number of emojis in room
-							 */
-							emoji_count: number;
-							/** @description features enabled for this room */
-							features: components["schemas"]["RoomFeatures"];
-							icon?: null | components["schemas"]["Id"];
-							/** @description A unique identifier for this room */
-							id: components["schemas"]["Id"];
-							invites_paused_until?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							preferences?: null | components["schemas"]["PreferencesRoom"];
-							/** @description anyone can view and join */
-							public: boolean;
-							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
-							quarantined: boolean;
-							remote?: null | components["schemas"]["Remote_Id"];
-							/** @description security configuration for this room */
-							security: components["schemas"]["RoomSecurity"];
-							type: components["schemas"]["RoomType"];
-							/**
-							 * Format: uuid
-							 * @description A monotonically increasing id that is updated every time this room is modified.
-							 */
-							version_id: string;
-							welcome_channel_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -14584,52 +5978,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Report create room
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Create and send a report to the room admins/moderators
+		 * @description Create and send a report to the room admins/moderators
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description user supplied note */
-						note?: string | null;
-						/** @description built in reason */
-						reason: components["schemas"]["ReportReason"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description where the report is being sent to */
-							destination: components["schemas"]["ReportDestination"];
-							id: components["schemas"]["Id"];
-							/** @description user supplied note */
-							note?: string | null;
-							/** @description built in reason */
-							reason: components["schemas"]["ReportReason"];
-							/** @description user id of who reported this */
-							reporter_id: components["schemas"]["Id"];
-							/** @description the associated thread id of this report. every report has a thread created for it. */
-							thread_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -14644,146 +6003,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Role list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Role list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Role"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Role create
-		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleCreate</div>
-		 */
+		/** Role create */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-				};
-				path: {
-					room_id: string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						allow?: components["schemas"]["Permission"][];
-						deny?: components["schemas"]["Permission"][];
-						description?: string | null;
-						hoist?: boolean;
-						/** @description if this role can be mentioned by members */
-						is_mentionable?: boolean;
-						is_self_applicable?: boolean;
-						name: string;
-						sticky?: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the permissions to grant for this role */
-							allow: components["schemas"]["Permission"][];
-							/** @description the permissions to deny for this role */
-							deny?: components["schemas"]["Permission"][];
-							description?: string | null;
-							/** @description whether members with this role should be displayed separately */
-							hoist: boolean;
-							id: components["schemas"]["Id"];
-							is_mentionable: boolean;
-							is_self_applicable: boolean;
-							/** Format: int64 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description tiebroken by id
-							 */
-							position: number;
-							room_id: components["schemas"]["Id"];
-							/** @description whether this role should be retained after a user leaves and rejoins the room */
-							sticky: boolean;
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
 		head?: never;
-		/**
-		 * Role reorder
-		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleReorder</div>
-		 */
+		/** Role reorder */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description the roles to reorder */
-						roles?: components["schemas"]["RoleReorderItem"][];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -14794,160 +6049,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Role get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Role get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					role_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the permissions to grant for this role */
-							allow: components["schemas"]["Permission"][];
-							/** @description the permissions to deny for this role */
-							deny?: components["schemas"]["Permission"][];
-							description?: string | null;
-							/** @description whether members with this role should be displayed separately */
-							hoist: boolean;
-							id: components["schemas"]["Id"];
-							is_mentionable: boolean;
-							is_self_applicable: boolean;
-							/** Format: int64 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description tiebroken by id
-							 */
-							position: number;
-							room_id: components["schemas"]["Id"];
-							/** @description whether this role should be retained after a user leaves and rejoins the room */
-							sticky: boolean;
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Role delete
-		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleDelete</div>
-		 */
+		/** Role delete */
 		delete: {
 			parameters: {
-				query?: {
-					fallback_role_id?: null | components["schemas"]["Id"];
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					role_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Role update
-		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleUpdate</div>
-		 */
+		/** Role update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					role_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						allow?: components["schemas"]["Permission"][] | null;
-						deny?: components["schemas"]["Permission"][] | null;
-						description?: string | null;
-						hoist?: boolean | null;
-						is_mentionable?: boolean | null;
-						is_self_applicable?: boolean | null;
-						name?: string | null;
-						sticky?: boolean | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the permissions to grant for this role */
-							allow: components["schemas"]["Permission"][];
-							/** @description the permissions to deny for this role */
-							deny?: components["schemas"]["Permission"][];
-							description?: string | null;
-							/** @description whether members with this role should be displayed separately */
-							hoist: boolean;
-							id: components["schemas"]["Id"];
-							is_mentionable: boolean;
-							is_self_applicable: boolean;
-							/** Format: int64 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description tiebroken by id
-							 */
-							position: number;
-							room_id: components["schemas"]["Id"];
-							/** @description whether this role should be retained after a user leaves and rejoins the room */
-							sticky: boolean;
-							version_id: components["schemas"]["Id"];
-						};
-					};
-				};
-				/** @description success */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -14958,83 +6095,32 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Role member list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Role member list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					role_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["RoomMember"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
-		/**
-		 * Role member bulk patch
-		 * @description <div class="markdown-alert-permission-required">RoleManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Role member bulk patch */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					role_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description add this role to these users */
-						apply?: components["schemas"]["Id"][];
-						/** @description remove this role from these users */
-						remove?: components["schemas"]["Id"][];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -15046,83 +6132,28 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Role member add
-		 * @description <div class="markdown-alert-permission-required">RoleApply</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleApply</div>
-		 */
+		/** Role member add */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					role_id: string;
-					user_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description whether this user is deafened by a moderator */
-							deaf: boolean;
-							/** @description When this member joined the room */
-							joined_at: components["schemas"]["Time"];
-							/** @description whether this user is muted by a moderator */
-							mute: boolean;
-							origin?: null | components["schemas"]["RoomMemberOrigin"];
-							/** @description like nickname, but for your description/bio/about */
-							override_description?: string | null;
-							/** @description aka nickname */
-							override_name?: string | null;
-							/** @description whether this user is quarantined by automod */
-							quarantined: boolean;
-							/** @description the roles that this member has */
-							roles: components["schemas"]["Id"][];
-							room_id: components["schemas"]["Id"];
-							timeout_until?: null | components["schemas"]["Time"];
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		post?: never;
-		/**
-		 * Role member remove
-		 * @description <div class="markdown-alert-permission-required">RoleApply</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoleUnapply</div>
-		 */
+		/** Role member remove */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-					role_id: string;
-					user_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -15137,92 +6168,16 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Room security set
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room security set */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						require_mfa?: boolean | null;
-						require_sudo?: boolean | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							afk_channel_id?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-							 */
-							afk_channel_timeout: number;
-							archived_at?: null | components["schemas"]["Time"];
-							banner?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of active channels
-							 */
-							channel_count: number;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							/**
-							 * Format: int64
-							 * @description number of emojis in room
-							 */
-							emoji_count: number;
-							/** @description features enabled for this room */
-							features: components["schemas"]["RoomFeatures"];
-							icon?: null | components["schemas"]["Id"];
-							/** @description A unique identifier for this room */
-							id: components["schemas"]["Id"];
-							invites_paused_until?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							preferences?: null | components["schemas"]["PreferencesRoom"];
-							/** @description anyone can view and join */
-							public: boolean;
-							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
-							quarantined: boolean;
-							remote?: null | components["schemas"]["Remote_Id"];
-							/** @description security configuration for this room */
-							security: components["schemas"]["RoomSecurity"];
-							type: components["schemas"]["RoomType"];
-							/**
-							 * Format: uuid
-							 * @description A monotonically increasing id that is updated every time this room is modified.
-							 */
-							version_id: string;
-							welcome_channel_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -15246,32 +6201,11 @@ export interface paths {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List room threads success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							/** @description room members for each thread member in preview_members */
-							room_members: components["schemas"]["RoomMember"][];
-							threads: components["schemas"]["Channel"][];
-							/** Format: int64 */
-							total: number;
-							/** @description users for each thread member in preview_members */
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -15290,91 +6224,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Room transfer ownership
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Room transfer ownership */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						owner_id: components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							afk_channel_id?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description how long to wait before moving idle people to the afk channel, in milliseconds
-							 */
-							afk_channel_timeout: number;
-							archived_at?: null | components["schemas"]["Time"];
-							banner?: null | components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of active channels
-							 */
-							channel_count: number;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							/**
-							 * Format: int64
-							 * @description number of emojis in room
-							 */
-							emoji_count: number;
-							/** @description features enabled for this room */
-							features: components["schemas"]["RoomFeatures"];
-							icon?: null | components["schemas"]["Id"];
-							/** @description A unique identifier for this room */
-							id: components["schemas"]["Id"];
-							invites_paused_until?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							name: string;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							preferences?: null | components["schemas"]["PreferencesRoom"];
-							/** @description anyone can view and join */
-							public: boolean;
-							/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
-							quarantined: boolean;
-							remote?: null | components["schemas"]["Remote_Id"];
-							/** @description security configuration for this room */
-							security: components["schemas"]["RoomSecurity"];
-							type: components["schemas"]["RoomType"];
-							/**
-							 * Format: uuid
-							 * @description A monotonically increasing id that is updated every time this room is modified.
-							 */
-							version_id: string;
-							welcome_channel_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -15391,31 +6250,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Room undelete
-		 * @description <div class="markdown-alert-permission-required">RoomManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: RoomUndelete</div>
-		 */
+		/** Room undelete */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					room_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -15430,10 +6274,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Webhook list room
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
+		/** Webhook list room */
 		get: operations["webhook_list_room"];
 		put?: never;
 		post?: never;
@@ -15452,10 +6293,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Search channels
-		 * @description
-		 */
+		/** Search channels */
 		post: {
 			parameters: {
 				query?: never;
@@ -15463,40 +6301,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["SearchRequest"] &
-						components["schemas"]["ChannelSearchOrderField"] & {
-							/** @description whether to include nsfw channels */
-							include_nsfw?: boolean | null;
-						};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the channels */
-							channels: components["schemas"]["Channel"][];
-							/** @description current page cursor */
-							cursor?: string | null;
-							/** @description whether there are more threads */
-							has_more: boolean;
-							/** @description the ids of the matched channels */
-							results: components["schemas"]["Id"][];
-							/**
-							 * Format: int64
-							 * @description approximate count of total results that match this query
-							 */
-							total: number;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -15513,10 +6319,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Search messages
-		 * @description
-		 */
+		/** Search messages */
 		post: {
 			parameters: {
 				query?: never;
@@ -15524,54 +6327,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["SearchRequest"] & {
-						/** @description whether to include results from nsfw channels */
-						include_nsfw?: boolean | null;
-						/** @description field to sort by */
-						sort_field?: components["schemas"]["MessageSearchOrderField"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description current page cursor */
-							cursor?: string | null;
-							/** @description whether there are more threads */
-							has_more: boolean;
-							/** @description all relevant messages (eg. messages that a result replied to) */
-							messages: components["schemas"]["Message"][];
-							/** @description the ids of the matched messages */
-							results: components["schemas"]["Id"][];
-							/** @description room members objects for each author, if they exist */
-							room_members: components["schemas"]["RoomMember"][];
-							/**
-							 * @description relevant thread member objects
-							 *
-							 *     - one for each (message author, thread) tuple
-							 *     - one for each thread the requesting user is a member of
-							 */
-							thread_members: components["schemas"]["ThreadMember"][];
-							/** @description threads the messages are in */
-							threads: components["schemas"]["Channel"][];
-							/**
-							 * Format: int64
-							 * @description approximate count of total results that match this query
-							 */
-							total: number;
-							/** @description the authors of the messages */
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -15588,49 +6345,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Search rooms
-		 * @description
-		 */
+		/** Search rooms */
 		post: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["SearchRequest"] & {
-						/** @description what order to return results in */
-						order?: components["schemas"]["RoomSearchOrderField"];
-						/** @description field to sort by */
-						sort_field?: components["schemas"]["RoomSearchOrderField"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Room"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -15645,10 +6369,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Server information
-		 * @description
-		 */
+		/** Server information */
 		get: {
 			parameters: {
 				query?: never;
@@ -15657,40 +6378,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get server info success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/**
-							 * Format: uri
-							 * @description the rest/http api base url
-							 */
-							api_url: string;
-							/**
-							 * Format: uri
-							 * @description the cdn base url
-							 */
-							cdn_url: string;
-							features: components["schemas"]["ServerFeatures"];
-							/**
-							 * Format: uri
-							 * @description the html web ui base url
-							 */
-							html_url: string;
-							/**
-							 * Format: uri
-							 * @description the websocket sync url
-							 */
-							sync_url: string;
-							version: components["schemas"]["ServerVersion"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -15707,10 +6395,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Server moderation
-		 * @description
-		 */
+		/** Server moderation */
 		get: {
 			parameters: {
 				query?: never;
@@ -15719,20 +6404,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get server moderation capabilities success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							automod_lists: components["schemas"]["ServerAutomodList"][];
-							media_scanners: components["schemas"]["ServerMediaScanner"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -15749,11 +6421,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Server voice
-		 * @description <div class="markdown-alert-permission-required">Admin</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Server voice */
 		get: {
 			parameters: {
 				query?: never;
@@ -15762,48 +6430,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description Get server voice sfus success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the ip address of this sfu */
-							address: string;
-							/**
-							 * Format: int64
-							 * @description total available bandwidth in bits per second
-							 */
-							bandwidth_total: number;
-							/**
-							 * Format: int64
-							 * @description bandwidth that is being used in bits per second
-							 */
-							bandwidth_used: number;
-							/** @description when this sfu connected to the server */
-							connected_at: components["schemas"]["Time"];
-							/** @description the hostname of this sfu */
-							hostname: string;
-							/** @description a (temporary?) unique identifier for this sfu */
-							id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description number of tracks this sfu is selectively forwarding
-							 */
-							stat_tracks: number;
-							/**
-							 * Format: int64
-							 * @description number of users who are connected
-							 */
-							stat_users: number;
-							/** @description the zone of this sfu (aka region, datacenter, etc) */
-							zone: string;
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -15820,48 +6447,19 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Invite server list
-		 * @description <div class="markdown-alert-permission-optional">InviteManage</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Invite server list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Invite"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Invite server create
-		 * @description <div class="markdown-alert-permission-optional">InviteCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Invite server create */
 		post: {
 			parameters: {
 				query?: never;
@@ -15869,50 +6467,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description a description for this invite */
-						description?: string | null;
-						expires_at?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description the maximum number of times this invite can be used
-						 *     be sure to account for existing `uses` and `max_uses` when patching
-						 */
-						max_uses?: number | null;
-						/** @description which roles to apply when accepting the invite */
-						role_ids?: components["schemas"]["Id"][] | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the invite code for this invite */
-							code: components["schemas"]["InviteCode"];
-							/** @description the time when this invite was created */
-							created_at: components["schemas"]["Time"];
-							/** @description the user who created this invite */
-							creator: components["schemas"]["User"];
-							/** @description the id of the user who created this invite */
-							creator_id: components["schemas"]["Id"];
-							/** @description a description for this invite */
-							description?: string | null;
-							expires_at?: null | components["schemas"]["Time"];
-							/** @description if this invite's code is custom (instead of random) */
-							is_vanity: boolean;
-							/** @description where this invite leads */
-							target: components["schemas"]["InviteTarget"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -15931,9 +6487,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Report create server
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Create and send a report to the server operators
+		 * @description Create and send a report to the server operators
 		 */
 		post: {
 			parameters: {
@@ -15942,39 +6496,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description user supplied note */
-						note?: string | null;
-						/** @description built in reason */
-						reason: components["schemas"]["ReportReason"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description where the report is being sent to */
-							destination: components["schemas"]["ReportDestination"];
-							id: components["schemas"]["Id"];
-							/** @description user supplied note */
-							note?: string | null;
-							/** @description built in reason */
-							reason: components["schemas"]["ReportReason"];
-							/** @description user id of who reported this */
-							reporter_id: components["schemas"]["Id"];
-							/** @description the associated thread id of this report. every report has a thread created for it. */
-							thread_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -15993,9 +6516,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Server connect
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Start receiving sync events from a remote server.
+		 * @description Start receiving sync events from a remote server.
 		 *
 		 *     Servers should send attempt to reconnect on startup, since remote servers may stop sending events to unreachable servers.
 		 */
@@ -16003,23 +6524,11 @@ export interface paths {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					hostname: null | string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description connected */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": Record<string, never>;
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -16036,36 +6545,17 @@ export interface paths {
 		};
 		/**
 		 * Server keys get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get the signing keys of a server
+		 * @description Get the signing keys of a server
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					hostname: null | string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description The hostname these keys belong to */
-							hostname: string;
-							/** @description The list of keys for this hostname */
-							keys: components["schemas"]["ServerKey"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -16086,34 +6576,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Server ping
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Check if a server is alive.
+		 * @description Check if a server is alive.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					hostname: null | string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description whether this is in response to a server authenticated request */
-							federated: boolean;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -16132,47 +6605,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Server sync handle
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Handle MessageSync events. Used to proxy events to connected clients.
+		 * @description Handle MessageSync events. Used to proxy events to connected clients.
 		 */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					"idempotency-key"?: string;
-				};
-				path: {
-					hostname: null | string;
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description the events for this sync event */
-						events?: components["schemas"]["MessageSync"][];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				202: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/**
-							 * @description the current epoch the requesting server is on
-							 *
-							 *     is incremented if the sender is too lagged
-							 */
-							epoch: components["schemas"]["FederationEpoch"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -16187,46 +6630,19 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Session list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Session list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description List session success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Session"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Session create
-		 * @description
-		 */
+		/** Session create */
 		post: {
 			parameters: {
 				query?: never;
@@ -16234,26 +6650,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						name?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["Session"] & {
-							token: components["schemas"]["SessionToken"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -16271,11 +6669,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		post?: never;
-		/**
-		 * Session delete all
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: SessionDeleteAll</div>
-		 */
+		/** Session delete all */
 		delete: {
 			parameters: {
 				query?: never;
@@ -16284,15 +6678,7 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -16306,135 +6692,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Session get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Session get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					session_id: null | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["SessionStatus"] & {
-							app_id?: null | components["schemas"]["Id"];
-							authorized_at?: null | components["schemas"]["Time"];
-							deauthorized_at?: null | components["schemas"]["Time"];
-							expires_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							/** @description session imprint metadata */
-							imprint: components["schemas"]["SessionImprint"];
-							/** @description a human readable name for this session */
-							name?: string | null;
-							type: components["schemas"]["SessionType"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Session delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: SessionDelete</div>
-		 */
+		/** Session delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					session_id: null | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Session update
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: SessionUpdate</div>
-		 */
+		/** Session update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					session_id: null | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						name?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["SessionStatus"] & {
-							app_id?: null | components["schemas"]["Id"];
-							authorized_at?: null | components["schemas"]["Time"];
-							deauthorized_at?: null | components["schemas"]["Time"];
-							expires_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							/** @description session imprint metadata */
-							imprint: components["schemas"]["SessionImprint"];
-							/** @description a human readable name for this session */
-							name?: string | null;
-							type: components["schemas"]["SessionType"];
-						};
-					};
-				};
-				/** @description not modified */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["SessionStatus"] & {
-							app_id?: null | components["schemas"]["Id"];
-							authorized_at?: null | components["schemas"]["Time"];
-							deauthorized_at?: null | components["schemas"]["Time"];
-							expires_at?: null | components["schemas"]["Time"];
-							id: components["schemas"]["Id"];
-							/** @description session imprint metadata */
-							imprint: components["schemas"]["SessionImprint"];
-							/** @description a human readable name for this session */
-							name?: string | null;
-							type: components["schemas"]["SessionType"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -16445,42 +6738,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Thread member list
-		 * @description
-		 */
+		/** Thread member list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					thread_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["ThreadMember"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -16497,108 +6764,39 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Thread member get
-		 * @description
-		 */
+		/** Thread member get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					thread_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description When this member joined the thread */
-							joined_at: components["schemas"]["Time"];
-							thread_id: components["schemas"]["Id"];
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * Thread member add
-		 * @description <div class="markdown-alert-permission-optional">MemberKick</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ThreadMemberAdd</div>
-		 */
+		/** Thread member add */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					thread_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": Record<string, never>;
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description When this member joined the thread */
-							joined_at: components["schemas"]["Time"];
-							thread_id: components["schemas"]["Id"];
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-				/** @description not modified */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
-		/**
-		 * Thread member delete
-		 * @description <div class="markdown-alert-permission-optional">MemberKick</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: ThreadMemberRemove</div>
-		 */
+		/** Thread member delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					thread_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -16614,10 +6812,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Unfurler debug
-		 * @description
-		 */
+		/** Unfurler debug */
 		post: operations["unfurler_debug"];
 		delete?: never;
 		options?: never;
@@ -16634,10 +6829,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Unfurl multiple urls
-		 * @description
-		 */
+		/** Unfurl multiple urls */
 		post: operations["unfurler_unfurl"];
 		delete?: never;
 		options?: never;
@@ -16654,38 +6846,17 @@ export interface paths {
 		};
 		/**
 		 * User list
-		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
-		 *
-		 *     Admin only. List all users on this server.
+		 * @description Admin only. List all users on this server.
 		 */
 		get: {
 			parameters: {
-				query: {
-					pagination: components["schemas"]["PaginationQuery_Id"];
-					filter?: null | components["schemas"]["UserListFilter"];
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["User"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -16702,67 +6873,27 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * User connection metadata get
-		 * @description
-		 */
+		/** User connection metadata get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					app_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							[key: string]: components["schemas"]["ConnectionValue"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
-		/**
-		 * User connection metadata put
-		 * @description
-		 */
+		/** User connection metadata put */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					app_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						[key: string]: components["schemas"]["ConnectionValue"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							[key: string]: components["schemas"]["ConnectionValue"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		delete?: never;
@@ -16780,40 +6911,17 @@ export interface paths {
 		};
 		/**
 		 * Block list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List blocked users.
+		 * @description List blocked users.
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["RelationshipWithUserId"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -16833,58 +6941,32 @@ export interface paths {
 		get?: never;
 		/**
 		 * Block add
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: BlockCreate</div>
-		 *
-		 *     Block a user.
+		 * @description Block a user.
 		 */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					target_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		post?: never;
 		/**
 		 * Block remove
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: BlockDelete</div>
-		 *
-		 *     Unblock a user.
+		 * @description Unblock a user.
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					target_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -16900,421 +6982,33 @@ export interface paths {
 		};
 		/**
 		 * Dm get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get a direct message room.
+		 * @description Get a direct message room.
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					target_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		/**
 		 * Dm initialize
-		 * @description <div class="markdown-alert-permission-required">DmCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Get or create a direct message thread.
+		 * @description Get or create a direct message thread.
+		 *     use channel_create_dm
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					target_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description already exists */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-				/** @description new dm created */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							archived_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description when to automatically archive this thread due to inactivity, in seconds
-							 */
-							auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
-							 */
-							bitrate?: number | null;
-							calendar?: null | components["schemas"]["Calendar"];
-							creator_id: components["schemas"]["Id"];
-							/**
-							 * Format: int64
-							 * @description the default auto archive duration in seconds to copy to threads created in this channel
-							 */
-							default_auto_archive_duration?: number | null;
-							/**
-							 * Format: int64
-							 * @description default slowmode_message for new threads
-							 *
-							 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							default_slowmode_message?: number | null;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							document?: null | components["schemas"]["Document"];
-							icon?: null | components["schemas"]["Id"];
-							id: components["schemas"]["Id"];
-							/** @description whether users without ThreadManage can add other members to this thread */
-							invitable?: boolean;
-							is_unread?: boolean | null;
-							last_message_id?: null | components["schemas"]["Id"];
-							last_pin_timestamp?: null | components["schemas"]["Time"];
-							last_read_id?: null | components["schemas"]["Id"];
-							last_version_id?: null | components["schemas"]["Id"];
-							/**
-							 * @description monotonic sync sequence number, incremented on every action.
-							 *     used for incremental channel sync.
-							 */
-							latest_seq?: components["schemas"]["ChannelSeq"];
-							locked?: null | components["schemas"]["Locked"];
-							/**
-							 * Format: int64
-							 * @description number of people in this room
-							 */
-							member_count: number;
-							/** Format: int64 */
-							mention_count?: number | null;
-							/** Format: int64 */
-							message_count?: number | null;
-							name: string;
-							/** @description not safe for work */
-							nsfw?: boolean;
-							/**
-							 * Format: int64
-							 * @description number of people who are online in this room
-							 */
-							online_count: number;
-							owner_id?: null | components["schemas"]["Id"];
-							parent_id?: null | components["schemas"]["Id"];
-							/** @description permission overwrites for this channel */
-							permission_overwrites: components["schemas"]["PermissionOverwrite"][];
-							/**
-							 * Format: int32
-							 * @description the position of this channel in the navbar
-							 *
-							 *     - lower numbers come first (0 is the first channel)
-							 *     - channels with the same position are tiebroken by id
-							 *     - channels without a position come last, ordered by newest first
-							 */
-							position?: number | null;
-							preferences?: null | components["schemas"]["PreferencesChannel"];
-							/** @description for dm and gdm channels, this is who the dm is with */
-							recipients?: components["schemas"]["User"][];
-							remote?: null | components["schemas"]["Remote_Id"];
-							room_id?: null | components["schemas"]["Id"];
-							/** Format: int64 */
-							root_message_count?: number | null;
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new messages
-							 *
-							 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
-							 */
-							slowmode_message?: number | null;
-							slowmode_message_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description minimum delay in seconds between creating new threads
-							 *
-							 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
-							 */
-							slowmode_thread?: number | null;
-							slowmode_thread_expire_at?: null | components["schemas"]["Time"];
-							/**
-							 * Format: int64
-							 * @description number of tags in this Forum, Forum2, or Ticket channel
-							 */
-							tag_count?: number;
-							/** @description tags that are applied to this thread */
-							tags?: components["schemas"]["Id"][] | null;
-							thread_member?: null | components["schemas"]["ThreadMember"];
-							/** @description type specific data for this channel */
-							type: components["schemas"]["ChannelType"];
-							/** @description url that this info channel should link to */
-							url?: string | null;
-							/**
-							 * Format: int64
-							 * @description maximum number of users who can be in this voice channel
-							 */
-							user_limit?: number | null;
-							/** @description only updates when the channel itself is updated, not the stuff in the channel */
-							version_id: components["schemas"]["Id"];
-							wiki?: null | components["schemas"]["Wiki"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -17331,40 +7025,17 @@ export interface paths {
 		};
 		/**
 		 * Friend list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List (mutual) friends.
+		 * @description List (mutual) friends.
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["RelationshipWithUserId"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -17383,40 +7054,17 @@ export interface paths {
 		};
 		/**
 		 * Friend list pending
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List pending friend requests (both incoming and outgoing).
+		 * @description List pending friend requests (both incoming and outgoing).
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["RelationshipWithUserId"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -17436,59 +7084,32 @@ export interface paths {
 		get?: never;
 		/**
 		 * Friend add
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: FriendRequest</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: FriendAccept</div>
-		 *
-		 *     Send or accept a friend request.
+		 * @description Send or accept a friend request.
 		 */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					target_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		post?: never;
 		/**
 		 * Friend remove
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: FriendDelete</div>
-		 *
-		 *     Remove a friend.
+		 * @description Remove a friend.
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					target_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -17502,10 +7123,7 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Harvest get
-		 * @description
-		 */
+		/** Harvest get */
 		get: {
 			parameters: {
 				query?: never;
@@ -17514,37 +7132,10 @@ export interface paths {
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["HarvestStatus"] &
-							components["schemas"]["HarvestType"] & {
-								id: components["schemas"]["Id"];
-								/** @description when this archive was created */
-								queued_at: components["schemas"]["Time"];
-								/** @description user who requested this harvest to be generated */
-								requester_id: components["schemas"]["Id"];
-							};
-					};
-				};
-				/** @description no harvest found */
-				404: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Harvest create
-		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: HarvestCreate</div>
-		 */
+		/** Harvest create */
 		post: {
 			parameters: {
 				query?: never;
@@ -17552,25 +7143,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description include all messages you have sent */
-						include_messages: boolean;
-						/** @description include all reactions you have sent */
-						include_reactions: boolean;
-					};
-				};
-			};
-			responses: {
-				/** @description harvest has been queued */
-				202: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -17587,40 +7161,17 @@ export interface paths {
 		};
 		/**
 		 * Ignore list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List ignored users.
+		 * @description List ignored users.
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
 				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["RelationshipWithUserId"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -17640,64 +7191,32 @@ export interface paths {
 		get?: never;
 		/**
 		 * Ignore add
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: IgnoreAdd</div>
-		 *
-		 *     Ignore a user's messages.
+		 * @description Ignore a user's messages.
 		 */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					target_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						until?: null | components["schemas"]["Time"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		post?: never;
 		/**
 		 * Ignore remove
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: IgnoreRemove</div>
-		 *
-		 *     Stop ignoring a user.
+		 * @description Stop ignoring a user.
 		 */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					target_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -17713,10 +7232,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * User search
-		 * @description <div class="markdown-alert-permission-required">Admin</div>
-		 */
+		/** User search */
 		post: {
 			parameters: {
 				query?: never;
@@ -17724,63 +7240,8 @@ export interface paths {
 				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": components["schemas"]["SearchRequest"] & {
-						sort_field?: components["schemas"]["UserSearchOrderField"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/**
-							 * @description whether to only return bots or only return non-bots.
-							 *
-							 *     defaults to allowing both.
-							 */
-							bot?: boolean | null;
-							/**
-							 * @description whether to only return deleted users or only return non-deleted users.
-							 *
-							 *     defaults to only non deleted users.
-							 */
-							deleted?: boolean | null;
-							/**
-							 * @description whether to only return guests (non registered users) or only return non-guests.
-							 *
-							 *     defaults to allowing both.
-							 */
-							guests?: boolean | null;
-							/** @description include users who are members of these rooms */
-							member_of_room_id: components["schemas"]["Id"][];
-							/**
-							 * @description whether to only return puppets or only return non-puppets.
-							 *
-							 *     defaults to allowing both.
-							 */
-							puppet?: boolean | null;
-							/** @description filter by user name, description, and id */
-							query?: string | null;
-							/** @description include users who have these roles in the server room */
-							server_role_id: components["schemas"]["Id"][];
-							sort_field: components["schemas"]["UserSearchSortField"];
-							sort_order: components["schemas"]["Order"];
-							/**
-							 * @description whether to only return suspended users or only return non-suspended users.
-							 *
-							 *     defaults to allowing both.
-							 */
-							suspended?: boolean | null;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -17797,134 +7258,43 @@ export interface paths {
 		};
 		/**
 		 * User get
-		 * @description <div class="markdown-alert-scope-required">Identify</div>
-		 *
-		 *     Get another user, including your relationship
+		 * @description Get another user, including your relationship
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["User"] & {
-							relationship: components["schemas"]["Relationship"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * User delete
-		 * @description <div class="markdown-alert-permission-required">UserManage</div>
-		 *     <div class="markdown-alert-permission-optional">UserManageSelf</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserDelete</div>
-		 */
+		/** User delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * User update
-		 * @description <div class="markdown-alert-permission-required">UserManage</div>
-		 *     <div class="markdown-alert-permission-optional">UserProfileSelf</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserUpdate</div>
-		 */
+		/** User update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						avatar?: null | components["schemas"]["Id"];
-						banner?: null | components["schemas"]["Id"];
-						description?: string | null;
-						name?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							avatar?: null | components["schemas"]["Id"];
-							banner?: null | components["schemas"]["Id"];
-							/** @description whether this user is a bot */
-							bot: boolean;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							emails?: components["schemas"]["EmailInfo"][] | null;
-							/**
-							 * @description whether this user is considered to have mutifactor authentication enabled on their account
-							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
-							 */
-							has_mfa?: boolean | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							preferences?: null | components["schemas"]["PreferencesUser"];
-							presence: components["schemas"]["Presence"];
-							puppet?: null | components["schemas"]["Puppet"];
-							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote_Id"];
-							suspended?: null | components["schemas"]["Suspended"];
-							/** @description whether this user is an official system user */
-							system: boolean;
-							version_id: components["schemas"]["Id"];
-							webhook?: null | components["schemas"]["UserWebhook"];
-						};
-					};
-				};
-				/** @description not modified */
-				304: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -17935,71 +7305,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * User audit logs
-		 * @description
-		 */
+		/** User audit logs */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-					/** @description only return audit log entries from these users */
-					user_id?: components["schemas"]["Id"][];
-					/** @description only return audit log entries with these types */
-					type?: string[];
-					/**
-					 * @description only return audit log entries with these statuses
-					 *
-					 *     defaults to only `Success`
-					 */
-					status?: components["schemas"]["AuditLogEntryStatus"][];
-				};
+				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the audit log entries themselves */
-							audit_log_entries: components["schemas"]["AuditLogEntry"][];
-							/** @description pagination cursor */
-							cursor?: string | null;
-							/** @description whether there are more audit log events that can be fetched */
-							has_more: boolean;
-							/**
-							 * @description room members referenced in the audit log entries
-							 *
-							 *     this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions)
-							 */
-							room_members: components["schemas"]["RoomMember"][];
-							/** @description tags referenced in the audit log entries */
-							tags: components["schemas"]["Tag"][];
-							/** @description threads referenced in the audit log entries */
-							threads: components["schemas"]["Channel"][];
-							/**
-							 * @description users referenced in the audit log entries
-							 *
-							 *     this includes actors (ie. users who did actions) and targets (ie. users who were affected by actions)
-							 */
-							users: components["schemas"]["User"][];
-							/** @description webhooks referenced in the audit log entries */
-							webhooks: components["schemas"]["Webhook"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -18016,42 +7331,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * User connection list
-		 * @description
-		 */
+		/** User connection list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Connection"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -18071,69 +7360,29 @@ export interface paths {
 		get?: never;
 		put?: never;
 		post?: never;
-		/**
-		 * User connection delete
-		 * @description <div class="markdown-alert-audit-log">creates audit log entry of type: ConnectionDelete</div>
-		 */
+		/** User connection delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-					app_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * User connection update
-		 * @description
-		 */
+		/** User connection update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-					app_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						visibility: components["schemas"]["ConnectionVisibility"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							application: components["schemas"]["Application"];
-							created_at: components["schemas"]["Time"];
-							scopes: components["schemas"]["Scopes"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -18146,42 +7395,17 @@ export interface paths {
 		};
 		/**
 		 * Dm list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     List direct message channels.
+		 * @description List direct message channels.
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Channel"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -18198,38 +7422,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Email list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Email list */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the email address itself */
-							email: components["schemas"]["EmailAddr"];
-							/** @description whether this is the user's primary email address */
-							is_primary: boolean;
-							/** @description user verified they have access to the email address */
-							is_verified: boolean;
-						}[];
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -18247,114 +7449,41 @@ export interface paths {
 			cookie?: never;
 		};
 		get?: never;
-		/**
-		 * Email add
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmailCreate</div>
-		 */
+		/** Email add */
 		put: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-					addr: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description already exists */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		post?: never;
-		/**
-		 * Email delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmailDelete</div>
-		 */
+		/** Email delete */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-					addr: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Email update
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: EmailUpdate</div>
-		 */
+		/** Email update */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-					addr: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/**
-						 * @description whether this is the user's primary email address
-						 *
-						 *     - there can only be one primary email address
-						 *     - the primary address has EmailTrust::Full
-						 */
-						is_primary?: boolean | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the email address itself */
-							email: components["schemas"]["EmailAddr"];
-							/** @description whether this is the user's primary email address */
-							is_primary: boolean;
-							/** @description user verified they have access to the email address */
-							is_verified: boolean;
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -18367,30 +7496,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Email verification resend
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Email verification resend */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-					addr: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -18407,31 +7522,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Email verify
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Email verify */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-					addr: string;
-					code: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -18446,102 +7546,28 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Invite user list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Invite user list */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Invite"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Invite user create
-		 * @description <div class="markdown-alert-permission-optional">InviteCreate</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Invite user create */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description a description for this invite */
-						description?: string | null;
-						expires_at?: null | components["schemas"]["Time"];
-						/**
-						 * Format: int32
-						 * @description the maximum number of times this invite can be used
-						 *     be sure to account for existing `uses` and `max_uses` when patching
-						 */
-						max_uses?: number | null;
-						/** @description which roles to apply when accepting the invite */
-						role_ids?: components["schemas"]["Id"][] | null;
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the invite code for this invite */
-							code: components["schemas"]["InviteCode"];
-							/** @description the time when this invite was created */
-							created_at: components["schemas"]["Time"];
-							/** @description the user who created this invite */
-							creator: components["schemas"]["User"];
-							/** @description the id of the user who created this invite */
-							creator_id: components["schemas"]["Id"];
-							/** @description a description for this invite */
-							description?: string | null;
-							expires_at?: null | components["schemas"]["Time"];
-							/** @description if this invite's code is custom (instead of random) */
-							is_vanity: boolean;
-							/** @description where this invite leads */
-							target: components["schemas"]["InviteTarget"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -18566,28 +7592,11 @@ export interface paths {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						activities: components["schemas"]["Activity"][];
-						status: components["schemas"]["Status"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -18608,36 +7617,13 @@ export interface paths {
 		 */
 		get: {
 			parameters: {
-				query?: {
-					from?: string;
-					to?: string;
-					dir?: "b" | "f";
-					limit?: number;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["Room"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -18656,119 +7642,27 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * User suspend
-		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserSuspend</div>
-		 */
+		/** User suspend */
 		post: {
 			parameters: {
 				query?: never;
-				header?: {
-					reason?: string;
-				};
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				header?: never;
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						expires_at?: null | components["schemas"]["Time"];
-					};
-				};
-			};
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							avatar?: null | components["schemas"]["Id"];
-							banner?: null | components["schemas"]["Id"];
-							/** @description whether this user is a bot */
-							bot: boolean;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							emails?: components["schemas"]["EmailInfo"][] | null;
-							/**
-							 * @description whether this user is considered to have mutifactor authentication enabled on their account
-							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
-							 */
-							has_mfa?: boolean | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							preferences?: null | components["schemas"]["PreferencesUser"];
-							presence: components["schemas"]["Presence"];
-							puppet?: null | components["schemas"]["Puppet"];
-							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote_Id"];
-							suspended?: null | components["schemas"]["Suspended"];
-							/** @description whether this user is an official system user */
-							system: boolean;
-							version_id: components["schemas"]["Id"];
-							webhook?: null | components["schemas"]["UserWebhook"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
-		/**
-		 * User unsuspend
-		 * @description <div class="markdown-alert-permission-required">MemberBan</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserUnsuspend</div>
-		 */
+		/** User unsuspend */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							avatar?: null | components["schemas"]["Id"];
-							banner?: null | components["schemas"]["Id"];
-							/** @description whether this user is a bot */
-							bot: boolean;
-							deleted_at?: null | components["schemas"]["Time"];
-							description?: string | null;
-							emails?: components["schemas"]["EmailInfo"][] | null;
-							/**
-							 * @description whether this user is considered to have mutifactor authentication enabled on their account
-							 *
-							 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
-							 */
-							has_mfa?: boolean | null;
-							id: components["schemas"]["Id"];
-							name: string;
-							preferences?: null | components["schemas"]["PreferencesUser"];
-							presence: components["schemas"]["Presence"];
-							puppet?: null | components["schemas"]["Puppet"];
-							registered_at?: null | components["schemas"]["Time"];
-							remote?: null | components["schemas"]["Remote_Id"];
-							suspended?: null | components["schemas"]["Suspended"];
-							/** @description whether this user is an official system user */
-							system: boolean;
-							version_id: components["schemas"]["Id"];
-							webhook?: null | components["schemas"]["UserWebhook"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -18786,30 +7680,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * User undelete
-		 * @description <div class="markdown-alert-permission-required">UserManage</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: UserUndelete</div>
-		 *
-		 *     Allows undeleting a user provided they haven't been garbage collected yet
+		 * @description Allows undeleting a user provided they haven't been garbage collected yet
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description success */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -18824,148 +7705,52 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Voice call get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Voice call get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["CallMetadata"] & {
-							channel_id: components["schemas"]["Id"];
-							room_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
-		/**
-		 * Voice call create
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Voice call create */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
-				cookie?: never;
-			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/**
-						 * @description call topic
-						 *
-						 *     must have VoiceMute permission in target channel to set
-						 */
-						topic?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				201: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["CallMetadata"] & {
-							channel_id: components["schemas"]["Id"];
-							room_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
-		};
-		/**
-		 * Voice call delete
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
-		delete: {
-			parameters: {
-				query?: {
-					/**
-					 * @description if people are still connected to this channel, try to forcibly disconnect them
-					 *
-					 *     requires VoiceDisconnect permission
-					 */
-					force?: boolean;
-				};
-				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
+			responses: never;
+		};
+		/** Voice call delete */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
 			};
+			requestBody?: never;
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Voice call patch
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Voice call patch */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/**
-						 * @description the current call topic
-						 *
-						 *     only unsuppressed users can change the call topic
-						 */
-						topic?: string | null;
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": components["schemas"]["CallMetadata"] & {
-							channel_id: components["schemas"]["Id"];
-							room_id?: null | components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -18978,65 +7763,30 @@ export interface paths {
 		};
 		/**
 		 * Voice state list
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     list all voice states in this channel
+		 * @description list all voice states in this channel
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							cursor?: string | null;
-							has_more: boolean;
-							items: components["schemas"]["VoiceState"][];
-							/** Format: int64 */
-							total: number;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Voice state disconnect all
-		 * @description <div class="markdown-alert-permission-optional">VoiceMove</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberDisconnectAll</div>
-		 */
+		/** Voice state disconnect all */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
@@ -19050,163 +7800,42 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Voice state get
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Voice state get */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the channel this user is connected to */
-							channel_id: components["schemas"]["Id"];
-							connection_id?: null | components["schemas"]["Id"];
-							/** @description whether this user is deafened by a moderator */
-							deaf: boolean;
-							/** @description when this user joined the call */
-							joined_at: components["schemas"]["Time"];
-							/** @description whether this user is muted by a moderator */
-							mute: boolean;
-							requested_to_speak_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							screenshare?:
-								| null
-								| components["schemas"]["VoiceStateScreenshare"];
-							/** @description whether this user has deafened themselves */
-							self_deaf: boolean;
-							/** @description whether this user has muted themselves */
-							self_mute: boolean;
-							/** @description whether this user has enabled their camera */
-							self_video: boolean;
-							session_id?: null | components["schemas"]["Id"];
-							/** @description whether this user is suppressed, similar to a transient `mute: true` */
-							suppress: boolean;
-							/** @description the user this state belongs to */
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
-		/**
-		 * Voice state disconnect
-		 * @description <div class="markdown-alert-permission-optional">VoiceMove</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: MemberDisconnect</div>
-		 */
+		/** Voice state disconnect */
 		delete: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			responses: never;
 		};
 		options?: never;
 		head?: never;
-		/**
-		 * Voice state patch
-		 * @description <div class="markdown-alert-permission-optional">VoiceMute</div>
-		 *     <div class="markdown-alert-permission-optional">VoiceDeafen</div>
-		 *     <div class="markdown-alert-permission-optional">VoiceRequest</div>
-		 *     <div class="markdown-alert-permission-optional">VoiceMove</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Voice state patch */
 		patch: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						channel_id?: null | components["schemas"]["Id"];
-						/** @description same as room member deaf */
-						deaf?: boolean | null;
-						/** @description same as room member mute */
-						mute?: boolean | null;
-						requested_to_speak_at?: null | components["schemas"]["Time"];
-						/**
-						 * @description allow this user to speak in the current channel
-						 *
-						 *     requires VoiceMute permission
-						 */
-						suppress?: boolean | null;
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the channel this user is connected to */
-							channel_id: components["schemas"]["Id"];
-							connection_id?: null | components["schemas"]["Id"];
-							/** @description whether this user is deafened by a moderator */
-							deaf: boolean;
-							/** @description when this user joined the call */
-							joined_at: components["schemas"]["Time"];
-							/** @description whether this user is muted by a moderator */
-							mute: boolean;
-							requested_to_speak_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							screenshare?:
-								| null
-								| components["schemas"]["VoiceStateScreenshare"];
-							/** @description whether this user has deafened themselves */
-							self_deaf: boolean;
-							/** @description whether this user has muted themselves */
-							self_mute: boolean;
-							/** @description whether this user has enabled their camera */
-							self_video: boolean;
-							session_id?: null | components["schemas"]["Id"];
-							/** @description whether this user is suppressed, similar to a transient `mute: true` */
-							suppress: boolean;
-							/** @description the user this state belongs to */
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		trace?: never;
 	};
@@ -19219,65 +7848,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Voice state move
-		 * @description <div class="markdown-alert-permission-required">VoiceMove</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Voice state move */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-					user_id: null | Record<string, never>[] | components["schemas"]["Id"];
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						target_id: components["schemas"]["Id"];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the channel this user is connected to */
-							channel_id: components["schemas"]["Id"];
-							connection_id?: null | components["schemas"]["Id"];
-							/** @description whether this user is deafened by a moderator */
-							deaf: boolean;
-							/** @description when this user joined the call */
-							joined_at: components["schemas"]["Time"];
-							/** @description whether this user is muted by a moderator */
-							mute: boolean;
-							requested_to_speak_at?: null | components["schemas"]["Time"];
-							room_id?: null | components["schemas"]["Id"];
-							screenshare?:
-								| null
-								| components["schemas"]["VoiceStateScreenshare"];
-							/** @description whether this user has deafened themselves */
-							self_deaf: boolean;
-							/** @description whether this user has muted themselves */
-							self_mute: boolean;
-							/** @description whether this user has enabled their camera */
-							self_video: boolean;
-							session_id?: null | components["schemas"]["Id"];
-							/** @description whether this user is suppressed, similar to a transient `mute: true` */
-							suppress: boolean;
-							/** @description the user this state belongs to */
-							user_id: components["schemas"]["Id"];
-						};
-					};
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -19294,39 +7874,16 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Voice state move bulk
-		 * @description <div class="markdown-alert-permission-required">VoiceMove</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 */
+		/** Voice state move bulk */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						/** @description target channel id */
-						channel_id: components["schemas"]["Id"];
-						/** @description set to None to move everyone */
-						user_ids?: components["schemas"]["Id"][] | null;
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -19345,35 +7902,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Voice ring start
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Notifies people in a dm/gdm that there's a call. There must be an active call.
+		 * @description Notifies people in a dm/gdm that there's a call. There must be an active call.
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						user_ids: components["schemas"]["Id"][];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -19390,38 +7929,17 @@ export interface paths {
 		};
 		/**
 		 * Voice ring eligibility
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     check if this channel can be rung
+		 * @description check if this channel can be rung
 		 */
 		get: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/**
-							 * @description whether ring endpoints can be used
-							 *
-							 *     true in dms and gdms, false otherwise
-							 */
-							ringable: boolean;
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -19442,35 +7960,17 @@ export interface paths {
 		put?: never;
 		/**
 		 * Voice ring stop
-		 * @description <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     stop ringing channel participants
+		 * @description stop ringing channel participants
 		 */
 		post: {
 			parameters: {
 				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
-			requestBody: {
-				content: {
-					"application/json": {
-						user_ids: components["schemas"]["Id"][];
-					};
-				};
-			};
-			responses: {
-				/** @description ok */
-				204: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content?: never;
-				};
-			};
+			requestBody?: never;
+			responses: never;
 		};
 		delete?: never;
 		options?: never;
@@ -19485,26 +7985,15 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Webhook get
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 */
+		/** Webhook get */
 		get: operations["webhook_get"];
 		put?: never;
 		post?: never;
-		/**
-		 * Webhook delete
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: WebhookDelete</div>
-		 */
+		/** Webhook delete */
 		delete: operations["webhook_delete"];
 		options?: never;
 		head?: never;
-		/**
-		 * Webhook update
-		 * @description <div class="markdown-alert-scope-required">full</div>
-		 *     <div class="markdown-alert-audit-log">creates audit log entry of type: WebhookUpdate</div>
-		 */
+		/** Webhook update */
 		patch: operations["webhook_update"];
 		trace?: never;
 	};
@@ -19515,28 +8004,16 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Webhook get with token
-		 * @description
-		 */
+		/** Webhook get with token */
 		get: operations["webhook_get_with_token"];
 		put?: never;
-		/**
-		 * Webhook execute (TODO)
-		 * @description
-		 */
+		/** Webhook execute (TODO) */
 		post: operations["webhook_execute"];
-		/**
-		 * Webhook delete with token
-		 * @description
-		 */
+		/** Webhook delete with token */
 		delete: operations["webhook_delete_with_token"];
 		options?: never;
 		head?: never;
-		/**
-		 * Webhook update with token
-		 * @description
-		 */
+		/** Webhook update with token */
 		patch: operations["webhook_update_with_token"];
 		trace?: never;
 	};
@@ -19549,10 +8026,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Webhook execute discord (TODO)
-		 * @description
-		 */
+		/** Webhook execute discord (TODO) */
 		post: operations["webhook_execute_discord"];
 		delete?: never;
 		options?: never;
@@ -19569,10 +8043,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Webhook execute github (TODO)
-		 * @description
-		 */
+		/** Webhook execute github (TODO) */
 		post: operations["webhook_execute_github"];
 		delete?: never;
 		options?: never;
@@ -19587,24 +8058,15 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * Webhook get message
-		 * @description
-		 */
+		/** Webhook get message */
 		get: operations["webhook_message_get"];
 		put?: never;
 		post?: never;
-		/**
-		 * Webhook delete message
-		 * @description
-		 */
+		/** Webhook delete message */
 		delete: operations["webhook_message_delete"];
 		options?: never;
 		head?: never;
-		/**
-		 * Webhook edit message (TODO)
-		 * @description
-		 */
+		/** Webhook edit message (TODO) */
 		patch: operations["webhook_message_edit"];
 		trace?: never;
 	};
@@ -19617,10 +8079,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/**
-		 * Webhook execute slack (TODO)
-		 * @description
-		 */
+		/** Webhook execute slack (TODO) */
 		post: operations["webhook_execute_slack"];
 		delete?: never;
 		options?: never;
@@ -19637,56 +8096,17 @@ export interface paths {
 		};
 		/**
 		 * Wiki history
-		 * @description <div class="markdown-alert-permission-required">ChannelView</div>
-		 *     <div class="markdown-alert-scope-required">Full</div>
-		 *
-		 *     Query edit history for all documents in this wiki
+		 * @description Query edit history for all documents in this wiki
 		 */
 		get: {
 			parameters: {
-				query?: {
-					/** @description split group whenever author changes */
-					by_author?: boolean | null;
-					/** @description split group whenever a tag is created */
-					by_tag?: boolean | null;
-					/** @description every n seconds */
-					by_time?: number | null;
-					/** @description every n changes */
-					by_changes?: number | null;
-					/** @description continue listing history from here */
-					cursor?: string | null;
-					/** @description the maximum number of items to return. */
-					limit?: number | null;
-				};
+				query?: never;
 				header?: never;
-				path: {
-					channel_id: string;
-				};
+				path?: never;
 				cookie?: never;
 			};
 			requestBody?: never;
-			responses: {
-				/** @description ok */
-				200: {
-					headers: {
-						[name: string]: unknown;
-					};
-					content: {
-						"application/json": {
-							/** @description the resulting changesets, ordered oldest to newest */
-							changesets: components["schemas"]["Changeset"][];
-							/** @description document tags that are part of the range */
-							document_tags: components["schemas"]["DocumentTag"][];
-							/** @description a room member object for every referenced user_id */
-							room_members: components["schemas"]["RoomMember"][];
-							/** @description a thread member object for every referenced user_id */
-							thread_members: components["schemas"]["ThreadMember"][];
-							/** @description a user object for every referenced user_id */
-							users: components["schemas"]["User"][];
-						};
-					};
-				};
-			};
+			responses: never;
 		};
 		put?: never;
 		post?: never;
@@ -20034,6 +8454,7 @@ export interface components {
 			| {
 					metadata: {
 						changes: components["schemas"]["AuditLogChange"][];
+						role_id?: null | components["schemas"]["Id"];
 					};
 					/** @enum {string} */
 					type: "RoleCreate";
@@ -20041,6 +8462,7 @@ export interface components {
 			| {
 					metadata: {
 						changes: components["schemas"]["AuditLogChange"][];
+						role_id?: null | components["schemas"]["Id"];
 					};
 					/** @enum {string} */
 					type: "RoleUpdate";
@@ -20885,6 +9307,17 @@ export interface components {
 			name: string;
 			target: components["schemas"]["AutomodTarget"];
 		};
+		AutomodRuleUpdate: {
+			actions?: components["schemas"]["AutomodAction"][] | null;
+			enabled?: boolean | null;
+			except_channels?: components["schemas"]["Id"][] | null;
+			except_nsfw?: boolean | null;
+			except_roles?: components["schemas"]["Id"][] | null;
+			include_everyone?: boolean | null;
+			name?: string | null;
+			target?: null | components["schemas"]["AutomodTarget"];
+			trigger?: null | components["schemas"]["AutomodTrigger"];
+		};
 		/**
 		 * @description what this rule should be evaluated on
 		 * @enum {string}
@@ -21356,6 +9789,7 @@ export interface components {
 			| "Ticket"
 			| "Document"
 			| "DocumentComment"
+			| "DocumentBranch"
 			| "Wiki"
 			| "Scripts";
 		/**
@@ -22172,6 +10606,11 @@ export interface components {
 			| "Borked"
 			| "Crashed"
 			| "Stopped";
+		/** @enum {string} */
+		EverythingSearchOrderField: "Id";
+		EverythingSearchRequest: components["schemas"]["SearchRequest"] & {
+			sort_field?: components["schemas"]["EverythingSearchOrderField"];
+		};
 		Experiments: Record<string, never>;
 		/**
 		 * @description Failure codes for fatal failures.
@@ -23118,11 +11557,15 @@ export interface components {
 			name_new: string;
 			name_old: string;
 		};
+		/** @description Information about a thread's tags being changed */
+		MessageChannelTagged: {
+			/** @description the tags that were added to this thread */
+			tags_added: components["schemas"]["Id"][];
+			/** @description the tags that were removed from this thread */
+			tags_removed: components["schemas"]["Id"][];
+		};
 		MessageClient:
-			| ((null | components["schemas"]["SyncResume"]) & {
-					presence?: null | components["schemas"]["Presence"];
-					token: components["schemas"]["SessionToken"];
-			  } & {
+			| (components["schemas"]["MessageHello"] & {
 					/** @enum {string} */
 					type: "Hello";
 			  })
@@ -23214,10 +11657,31 @@ export interface components {
 			metadata?: null | components["schemas"]["Metadata"];
 			reply_id?: null | components["schemas"]["Id"];
 		};
+		MessageDocumentEdits: {
+			/** @description the last revision included in this summary */
+			revision_end: components["schemas"]["DocumentRevisionId"];
+			/** @description the first revision included in this summary */
+			revision_start: components["schemas"]["DocumentRevisionId"];
+			/** @description summary of recent edits */
+			summary: string;
+		};
+		MessageDocumentMerged: {
+			/** @description the id of the branch that was merged into this branch */
+			branch_id: components["schemas"]["Id"];
+		};
+		MessageDocumentTag: {
+			/** @description the tag that was created */
+			tag: components["schemas"]["DocumentTag"];
+		};
 		/** @description flume metadata for a message */
 		MessageFlume: {
 			/** @description current state of the flume */
 			state: components["schemas"]["FlumeState"];
+		};
+		MessageHello: {
+			presence?: null | components["schemas"]["Presence"];
+			resume?: null | components["schemas"]["SyncResume"];
+			token: components["schemas"]["SessionToken"];
 		};
 		/** @description the interaction that caused this message to be sent */
 		MessageInteraction: {
@@ -24000,6 +12464,10 @@ export interface components {
 					/** @enum {string} */
 					type: "ChannelMoved";
 			  })
+			| (components["schemas"]["MessageChannelTagged"] & {
+					/** @enum {string} */
+					type: "ChannelTagged";
+			  })
 			| (components["schemas"]["MessageChannelIcon"] & {
 					/** @enum {string} */
 					type: "ChannelIcon";
@@ -24011,6 +12479,22 @@ export interface components {
 			| (components["schemas"]["MessageAutomodExecution"] & {
 					/** @enum {string} */
 					type: "AutomodExecution";
+			  })
+			| {
+					/** @enum {string} */
+					type: "Nudge";
+			  }
+			| (components["schemas"]["MessageDocumentTag"] & {
+					/** @enum {string} */
+					type: "DocumentTag";
+			  })
+			| (components["schemas"]["MessageDocumentEdits"] & {
+					/** @enum {string} */
+					type: "DocumentEdits";
+			  })
+			| (components["schemas"]["MessageDocumentMerged"] & {
+					/** @enum {string} */
+					type: "DocumentMerged";
 			  });
 		/** @description a message's content at a point in time */
 		MessageVersion: components["schemas"]["MessageType"] & {
@@ -24020,7 +12504,6 @@ export interface components {
 			deleted_at?: null | components["schemas"]["Time"];
 			/** @description who this message mentioned */
 			mentions?: components["schemas"]["Mentions"];
-			reply_id?: null | components["schemas"]["Id"];
 			version_id: components["schemas"]["Id"];
 		};
 		/**
@@ -24408,11 +12891,8 @@ export interface components {
 			allow: components["schemas"]["Permission"][];
 			/** @description permissions denied here */
 			deny: components["schemas"]["Permission"][];
-			/**
-			 * Format: uuid
-			 * @description id of role or user
-			 */
-			id: string;
+			/** @description id of role or user */
+			id: components["schemas"]["Id"];
 			/** @description whether this is for a user or role */
 			type: components["schemas"]["PermissionOverwriteType"];
 		};
@@ -25471,7 +13951,7 @@ export interface components {
 					type: "Error";
 			  };
 		/** @enum {string} */
-		Status: "Offline" | "Online" | "Away" | "Busy" | "Available";
+		Status: "Offline" | "Away" | "Online" | "Busy" | "Available";
 		/**
 		 * @description an update to the list of subscribed tracks
 		 *
@@ -25624,17 +14104,12 @@ export interface components {
 		 */
 		TrackId: string;
 		/**
-		 * @description which stream this track is associated with
-		 *
-		 *     generally there will be one video track and one audio track per stream.
+		 * String
+		 * @description which stream a track is associated with
+		 * @example user
+		 * @example screen
 		 */
-		TrackKey:
-			| "user"
-			| "screen"
-			| {
-					/** @description an unknown track type */
-					other: string;
-			  };
+		TrackKey: string;
 		/**
 		 * @description mapping from a track id to local mid
 		 *
@@ -25768,14 +14243,10 @@ export interface components {
 			uncategorized_channels: components["schemas"]["ViewChannel"][];
 		};
 		ViewCategory:
+			| components["schemas"]["ViewChannel"]
 			| {
-					Inline: components["schemas"]["ViewChannel"];
-			  }
-			| {
-					Custom: {
-						channels: components["schemas"]["ViewChannel"][];
-						name: string;
-					};
+					channels: components["schemas"]["ViewChannel"][];
+					name: string;
 			  };
 		ViewChannel: {
 			id: components["schemas"]["Id"];
@@ -26135,6 +14606,20 @@ export interface operations {
 				content?: never;
 			};
 		};
+	};
+	admin_search_everything: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["EverythingSearchRequest"];
+			};
+		};
+		responses: never;
 	};
 	admin_search_stats: {
 		parameters: {
