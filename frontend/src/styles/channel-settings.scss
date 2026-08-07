@@ -1,0 +1,71 @@
+@use "./util.scss" as *;
+
+.channel-settings-info {
+	& > .channel-profile {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 8px;
+
+		& > .name-description {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+
+			& > .name > .name-input {
+				width: 100%;
+			}
+
+			& > .description {}
+		}
+
+		& > .channel-icon {
+			& > .dim {
+				margin: 0 4px;
+			}
+		}
+	}
+}
+
+.channel-settings-permissions {
+	height: 100%;
+	overflow: hidden;
+
+	.wrapper {
+		display: flex;
+		height: 100%;
+	}
+
+	.main,
+	.edit {
+		padding: 8px;
+		overflow-y: auto;
+	}
+
+	.main {
+		flex: 1;
+	}
+
+	.edit {
+		background: $bg-100;
+	}
+
+	.savebar-sizer {
+		margin: 0 16px;
+	}
+
+	.savebar {
+		left: 8px;
+	}
+
+	.permissions-header {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+		margin-bottom: 1rem;
+
+		.editing-title {
+			flex: 1;
+		}
+	}
+}
