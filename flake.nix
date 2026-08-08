@@ -140,7 +140,7 @@
             };
         });
 
-        bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" "crate-backend-core" "crate-script" ];
+        bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" "crate-backend-core" "crate-script" "crate-markdown" ];
         voice = mkCrate "lamprey-voice" [ "crate-voice" ];
         media = mkCrate "lamprey-media" [ "crate-media" "crate-backend-core" "crate-script" ];
         scanner-malware = mkCrate "scanner-malware" [ "scanner-malware" ];
