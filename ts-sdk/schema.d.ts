@@ -9243,23 +9243,41 @@ export interface components {
 					type: "SendAlert";
 			  };
 		/** @description matches found in a piece of text */
-		AutomodMatches: {
-			/** @description the keywords in the automod rule that matched */
-			keywords: string[];
+		AutomodMatch: {
+			/** @description each individual match */
+			fragments: components["schemas"]["AutomodMatchFragment"][];
 			/** @description where this piece of text was found */
 			location: components["schemas"]["AutomodTextLocation"];
-			/** @description the substrings in the input text that matched */
-			matches: string[];
-			/** @description the regexes in the automod rule that matched */
-			regexes: string[];
 			/** @description the sanitized text that was matched against */
 			sanitized_text: string;
 			/** @description the original text */
 			text: string;
 		};
+		/** @description a fragment of text that matched */
+		AutomodMatchFragment: components["schemas"]["AutomodMatchKind"] & {
+			end: number;
+			/** @description the substring in the sanitized input text that matched */
+			sanitized_text: string;
+			start: number;
+			/** @description the substring in the input text that matched */
+			text: string;
+		};
+		AutomodMatchKind:
+			| {
+					keywords: string;
+					/** @enum {string} */
+					matcher: "Keyword";
+			  }
+			| {
+					/** @enum {string} */
+					matcher: "Regex";
+					regex: string;
+			  };
+		/** @description an auto moderation rule for a room */
 		AutomodRule: {
 			/** @description when executed, do ALL of these actions */
 			actions: components["schemas"]["AutomodAction"][];
+			/** @description whether any actions occur when this rule is triggered */
 			enabled: boolean;
 			/** @description what channels should be exempt from this rule. */
 			except_channels: components["schemas"]["Id"][];
@@ -9270,6 +9288,7 @@ export interface components {
 			id: components["schemas"]["Id"];
 			/** @description whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out) */
 			include_everyone: boolean;
+			/** @description a human readable label for this rule */
 			name: string;
 			room_id: components["schemas"]["Id"];
 			target: components["schemas"]["AutomodTarget"];
@@ -9277,6 +9296,7 @@ export interface components {
 		};
 		AutomodRuleCreate: {
 			actions: components["schemas"]["AutomodAction"][];
+			enabled?: boolean;
 			except_channels?: components["schemas"]["Id"][];
 			except_nsfw?: boolean;
 			except_roles?: components["schemas"]["Id"][];
@@ -9292,7 +9312,7 @@ export interface components {
 			alert_message_id: components["schemas"]["Id"][];
 			channel_id?: null | components["schemas"]["Id"];
 			/** @description the content that was matched */
-			matches: components["schemas"]["AutomodMatches"][];
+			matches: components["schemas"]["AutomodMatch"];
 			message_id?: null | components["schemas"]["Id"];
 			/** @description the id of the room that this execution happened in */
 			room_id: components["schemas"]["Id"];
@@ -9303,9 +9323,29 @@ export interface components {
 		};
 		/** @description minimal version of AutomodRule to prevent leaking the rule trigger */
 		AutomodRuleStripped: {
+			enabled: boolean;
 			id: components["schemas"]["Id"];
 			name: string;
 			target: components["schemas"]["AutomodTarget"];
+		};
+		/** @description response body for an automod test request */
+		AutomodRuleTest: {
+			/**
+			 * @description deduplicated list of all of the actions that would be taken
+			 *
+			 *     eg. if one rule times a user out for 60 seconds and another times out for 120 seconds, there would be one action that times out for 120 seconds
+			 */
+			actions: components["schemas"]["AutomodAction"][];
+			matches?: null | components["schemas"]["AutomodMatch"];
+			/** @description the rules that matched the text */
+			rules: components["schemas"]["AutomodRule"][];
+		};
+		/** @description request body for an automod test request */
+		AutomodRuleTestRequest: {
+			/** @description the target to test this as */
+			target: components["schemas"]["AutomodTarget"];
+			/** @description the text to attempt to scan */
+			text: string;
 		};
 		AutomodRuleUpdate: {
 			actions?: components["schemas"]["AutomodAction"][] | null;
@@ -9323,60 +9363,24 @@ export interface components {
 		 * @enum {string}
 		 */
 		AutomodTarget: "Content" | "Member";
-		/** @description where a piece of text was found */
+		/**
+		 * @description where a piece of text was found
+		 * @enum {string}
+		 */
 		AutomodTextLocation:
-			| {
-					/** @enum {string} */
-					type: "UserName";
-			  }
-			| {
-					/** @enum {string} */
-					type: "UserBio";
-			  }
-			| {
-					/** @enum {string} */
-					type: "MemberNickname";
-			  }
-			| {
-					/** @enum {string} */
-					type: "MemberDescription";
-			  }
-			| {
-					/** @enum {string} */
-					type: "MessageContent";
-			  }
-			| {
-					/** @enum {string} */
-					type: "ThreadTitle";
-			  }
-			| {
-					/** @enum {string} */
-					type: "ThreadTopic";
-			  }
-			| {
-					/** @enum {string} */
-					type: "EmbedTitle";
-			  }
-			| {
-					/** @enum {string} */
-					type: "EmbedDescription";
-			  }
-			| {
-					/** @enum {string} */
-					type: "EmbedAuthorName";
-			  }
-			| {
-					/** @enum {string} */
-					type: "EmbedAuthorUrl";
-			  }
-			| {
-					/** @enum {string} */
-					type: "EmbedUrl";
-			  }
-			| {
-					/** @enum {string} */
-					type: "Test";
-			  };
+			| "UserName"
+			| "UserBio"
+			| "MemberNickname"
+			| "MemberDescription"
+			| "MessageContent"
+			| "ThreadTitle"
+			| "ThreadTopic"
+			| "EmbedTitle"
+			| "EmbedDescription"
+			| "EmbedAuthorName"
+			| "EmbedAuthorUrl"
+			| "EmbedUrl"
+			| "Test";
 		AutomodTrigger:
 			| {
 					/** @description allow content that matches any of these regexes. overrides deny. */
@@ -11524,8 +11528,7 @@ export interface components {
 			actions: components["schemas"]["AutomodAction"][];
 			channel_id?: null | components["schemas"]["Id"];
 			flagged_message_id?: null | components["schemas"]["Id"];
-			/** @description the content that was matched */
-			matches: components["schemas"]["AutomodMatches"][];
+			matches?: null | components["schemas"]["AutomodMatch"];
 			/** @description the rules that were triggered */
 			rules: components["schemas"]["AutomodRuleStripped"][];
 			/** @description the user who triggered this execution */
@@ -12789,13 +12792,25 @@ export interface components {
 			/** Format: int64 */
 			total: number;
 		};
-		/** @description what mentions to parse from the message content. mentions will only be parsed if the message content actually contains a mention pattern. */
+		/**
+		 * @description what mentions to parse from the message content
+		 *
+		 *     mentions will only be parsed if the message content actually contains a mention pattern.
+		 */
 		ParseMentions: {
 			/** @description whether to parse @everyone mentions from the content */
 			everyone?: boolean;
-			/** @description only parse mentions for these roles. an empty vec disables all mentions, while None allows all mentions. */
+			/**
+			 * @description only parse mentions for these roles.
+			 *
+			 *     an empty vec disables all mentions, while None allows all mentions.
+			 */
 			roles?: components["schemas"]["Id"][] | null;
-			/** @description only parse mentions for these users. an empty vec disables all mentions, while None allows all mentions. */
+			/**
+			 * @description only parse mentions for these users.
+			 *
+			 *     an empty vec disables all mentions, while None allows all mentions.
+			 */
 			users?: components["schemas"]["Id"][] | null;
 		};
 		PasswordExec: components["schemas"]["PasswordExecIdent"] & {
