@@ -326,13 +326,22 @@
           backend-oci = pkgs.dockerTools.streamLayeredImage {
             name = "backend";
             tag = "latest";
-            contents =
-              [ pkgs.dockerTools.caCertificates pkgs.ffmpeg-headless pkgs.file ];
+            contents = [
+              pkgs.dockerTools.caCertificates
+              pkgs.ffmpeg-headless
+              pkgs.file
+              pkgs.curl
+            ];
             config = {
               Entrypoint =
                 [ "${pkgs.tini}/bin/tini" "--" "${backend}/bin/lamprey" ];
               Healthcheck = {
-                Test = [ "CMD-SHELL" "curl -f http://localhost:4000/api/v1/health || exit 1" ];
+                Test = [
+                  "CMD"
+                  "${pkgs.curl}/bin/curl"
+                  "-f"
+                  "http://localhost:4000/api/v1/health"
+                ];
                 Interval = 30000000000; # 30s
                 Timeout = 10000000000; # 10s
                 Retries = 3;
