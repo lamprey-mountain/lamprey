@@ -2,6 +2,9 @@ import type { Media } from "sdk";
 import type { ParentProps, VoidProps } from "solid-js";
 import { useConfig } from "@/lib/config";
 
+export const NSFW_KEY = "nsfw";
+export const NSFW_THRESHOLD = 0.5;
+
 export type MediaProps = VoidProps<{ media: Media }>;
 
 export function formatTime(time: number): string {

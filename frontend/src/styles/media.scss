@@ -7,7 +7,7 @@
 	aspect-ratio: var(--aspect-ratio);
 }
 
-.image {
+.media.image {
 	display: contents;
 
 	& > .download,
@@ -52,9 +52,54 @@
 	&:hover > .download {
 		opacity: 1;
 	}
+
+	&.blurred > img {
+		scale: 1.2;
+		transform-origin: center;
+		filter: blur(16px);
+	}
 }
 
-.image > img {
+.media.image {
+	& > .nsfw-warning {
+		// center inside .image
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		translate: -50% -50%;
+
+		// center content
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+
+		// make it inert
+		pointer-events: none;
+		user-select: none;
+
+		// styling
+		height: 32px;
+		width: max-content;
+		border-radius: 16px;
+		padding: 0 8px;
+		background-color: oklch(from $bg-150 l c h / 0.2);
+		color: $bg-300;
+
+		& > .icon2 {
+			background-color: $bg-300;
+			height: 1em;
+			width: 1em;
+		}
+	}
+
+	&:hover > .nsfw-warning,
+	&:focus-visible > .nsfw-warning {
+		background-color: oklch(from $bg-150 l c h / 0.3);
+	}
+}
+
+.media.image > img {
 	display: block;
 	max-height: 100%;
 	max-width: 100%;

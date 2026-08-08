@@ -1,13 +1,17 @@
-import { createSignal } from "solid-js";
+import { createEffect, createMemo, createSignal, on, Show } from "solid-js";
 import iconDownload from "@/assets/download.png";
 import { Icon } from "@/atoms/Icon";
 import { useModals } from "@/contexts/modal";
+import { flags } from "@/lib/flags.ts";
+import { icWarning } from "@/utils/icons.ts";
 import {
 	formatBytes,
 	getThumb,
 	getUrl,
 	Loader,
 	type MediaProps,
+	NSFW_KEY,
+	NSFW_THRESHOLD,
 	Resize,
 } from "./util.tsx";
 
@@ -15,6 +19,8 @@ type ImageViewProps = MediaProps & {
 	thumb_width?: number;
 	thumb_height?: number;
 };
+
+// TODO: blur spoiler images
 
 export const ImageView = (props: ImageViewProps) => {
 	const [, modalctl] = useModals();
@@ -37,13 +43,36 @@ export const ImageView = (props: ImageViewProps) => {
 		return 0;
 	};
 
+	const [blurred, setBlurred] = createSignal(false);
+	const blurred2 = () => blurred() && flags.has("nsfw_blur"); // TEMP
+
+	const isNsfw = createMemo(() => {
+		const scan = props.media.scans?.find((i) => i.key === NSFW_KEY);
+		const score = scan?.result ?? 0;
+		return score > NSFW_THRESHOLD;
+	});
+
+	createEffect(
+		on(
+			() => props.media.id,
+			(id, prev) => {
+				if (id !== prev) setBlurred(isNsfw());
+			},
+		),
+	);
+
 	return (
 		<Resize height={height()} width={width()} ratio={width() / height()}>
 			<article
 				class="media image"
+				classList={{ blurred: blurred2() }}
 				onClick={(e) => {
 					e.stopPropagation();
-					modalctl.open({ type: "media", media: props.media });
+					if (blurred2()) {
+						setBlurred(false);
+					} else {
+						modalctl.open({ type: "media", media: props.media });
+					}
 				}}
 			>
 				<Loader loaded={loaded()} />
@@ -58,6 +87,12 @@ export const ImageView = (props: ImageViewProps) => {
 					onLoad={() => setLoaded(true)}
 					onEmptied={() => setLoaded(false)}
 				/>
+				<Show when={blurred2()}>
+					<div class="nsfw-warning">
+						<Icon src={icWarning} />
+						nsfw
+					</div>
+				</Show>
 				<a
 					class="download"
 					download={props.media.filename}

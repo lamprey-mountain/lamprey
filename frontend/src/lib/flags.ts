@@ -52,6 +52,7 @@ export const allFlags = [
 	{ id: "channel_info" },
 	{ id: "media_three" },
 	{ id: "code_color_preview" },
+	{ id: "nsfw_blur" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -83,6 +84,7 @@ const flagsDev: Flag[] = [
 	"media_three",
 	"code_color_preview",
 	"channel_info",
+	"nsfw_blur",
 ];
 
 const flagsProd: Flag[] = [
@@ -94,6 +96,7 @@ const flagsProd: Flag[] = [
 	"nav_header",
 	"msgpack",
 	"sync_deflate",
+	"nsfw_blur",
 ];
 
 export const flags = new ReactiveSet(
