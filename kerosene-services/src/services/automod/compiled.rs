@@ -2,12 +2,12 @@
 
 use common::{
     v1::types::automod::{
-        AutomodMatch, AutomodMatchFragment, AutomodMediaLocation, AutomodRule, AutomodTarget,
-        AutomodTextLocation, AutomodTrigger,
+        AutomodMatch, AutomodMatchFragment, AutomodMatchKind, AutomodMediaLocation, AutomodRule,
+        AutomodTarget, AutomodTextLocation, AutomodTrigger,
     },
     v2::types::{AutomodRuleId, media::Media},
 };
-use regex::RegexSet;
+use regex::{Regex, RegexSet};
 use tracing::warn;
 
 use crate::services::automod::util::AutomodScan;
@@ -25,6 +25,9 @@ struct RegexMapping {
     rule_idx: usize,
     keyword_idx: usize,
     allowed: bool,
+    pattern: regex::Regex,
+    kind_is_keyword: bool,
+    original_pattern: String,
 }
 
 #[derive(Default, Clone)]
@@ -39,45 +42,46 @@ impl Compiled {
         let mut regex_map = vec![];
         let mut link_rules = vec![];
 
+        let mut add_pattern = |rule_idx: usize,
+                               keyword_idx: usize,
+                               pat: &str,
+                               allowed: bool,
+                               kind_is_keyword: bool| {
+            let re_pat = if kind_is_keyword {
+                regex::escape(pat)
+            } else {
+                pat.to_string()
+            };
+            let pattern = match Regex::new(&re_pat) {
+                Ok(pat) => pat,
+                Err(_err) => {
+                    // TODO: do something with this error? i dont think logging would work well here?
+                    return;
+                }
+            };
+            regexes.push(re_pat.clone());
+            regex_map.push(RegexMapping {
+                rule_idx,
+                keyword_idx,
+                allowed,
+                pattern,
+                kind_is_keyword,
+                original_pattern: pat.to_string(),
+            });
+        };
+
         // TODO: validate regexes
         for (rule_idx, rule) in rules.iter().enumerate() {
             match &rule.trigger {
-                AutomodTrigger::TextRegex { deny, allow } => {
+                AutomodTrigger::TextRegex { deny, allow }
+                | AutomodTrigger::TextKeywords { deny, allow } => {
+                    let kind_is_keyword =
+                        matches!(rule.trigger, AutomodTrigger::TextKeywords { .. });
                     for (keyword_idx, pat) in deny.iter().enumerate() {
-                        regexes.push(pat.to_string());
-                        regex_map.push(RegexMapping {
-                            rule_idx,
-                            keyword_idx,
-                            allowed: false,
-                        });
+                        add_pattern(rule_idx, keyword_idx, pat, false, kind_is_keyword);
                     }
                     for (keyword_idx, pat) in allow.iter().enumerate() {
-                        regexes.push(pat.to_string());
-                        regex_map.push(RegexMapping {
-                            rule_idx,
-                            keyword_idx,
-                            allowed: true,
-                        });
-                    }
-                }
-                AutomodTrigger::TextKeywords { deny, allow } => {
-                    for (keyword_idx, pat) in deny.iter().enumerate() {
-                        let pat = regex::escape(pat.as_str());
-                        regexes.push(pat);
-                        regex_map.push(RegexMapping {
-                            rule_idx,
-                            keyword_idx,
-                            allowed: false,
-                        });
-                    }
-                    for (keyword_idx, pat) in allow.iter().enumerate() {
-                        let pat = regex::escape(pat.as_str());
-                        regexes.push(pat);
-                        regex_map.push(RegexMapping {
-                            rule_idx,
-                            keyword_idx,
-                            allowed: true,
-                        });
+                        add_pattern(rule_idx, keyword_idx, pat, true, kind_is_keyword);
                     }
                 }
                 AutomodTrigger::TextLinks { .. } => {
@@ -91,9 +95,7 @@ impl Compiled {
 
         let regex_set = RegexSet::new(regexes).expect("better error handling");
         // TODO: better error handling
-        // } else {
-        //     warn!("Invalid regex pattern in rule {}: {}", rule.id, pat);
-        // }
+        // warn!("Invalid regex pattern in rule {}: {}", rule.id, pat);
 
         Self {
             rules,
@@ -139,51 +141,63 @@ impl Compiled {
             }
         };
 
-        // 1. scan raw text
         let mut rule_states = vec![RuleState::default(); self.rules.len()];
 
-        // scan raw text
-        for regex_idx in self.regex_set.matches(&text).iter() {
-            let meta = &self.regex_map[regex_idx];
-            let rule = &self.rules[meta.rule_idx];
+        let mut scan_string = |scanned_text: &str, is_raw: bool| {
+            for regex_idx in self.regex_set.matches(scanned_text).iter() {
+                let meta = &self.regex_map[regex_idx];
+                let rule = &self.rules[meta.rule_idx];
 
-            if rule.target != target || !relevant_rule_ids.contains(&rule.id) {
-                continue;
+                if rule.target != target || !relevant_rule_ids.contains(&rule.id) {
+                    continue;
+                }
+
+                let rs = &mut rule_states[meta.rule_idx];
+                rs.allowed = match (rs.allowed, meta.allowed) {
+                    (None, a) => Some(a),
+                    (Some(false), false) => Some(false),
+                    (Some(_), _) => Some(true),
+                };
+
+                for m in meta.pattern.find_iter(scanned_text) {
+                    rs.fragments.push(AutomodMatchFragment {
+                        // TODO: include both text and sanitized_text for every fragment
+                        // FIXME: deduplicate matches on raw and decancered strings
+                        // if decancering doesn't change the string, this will generaet two separate fragments (one with text, one with sanitized_text)
+                        text: if is_raw {
+                            m.as_str().to_string()
+                        } else {
+                            String::new()
+                        },
+                        sanitized_text: if is_raw {
+                            String::new()
+                        } else {
+                            m.as_str().to_string()
+                        },
+                        start: m.start(),
+                        end: m.end(),
+                        kind: if meta.kind_is_keyword {
+                            AutomodMatchKind::Keyword {
+                                keywords: meta.original_pattern.clone(),
+                            }
+                        } else {
+                            AutomodMatchKind::Regex {
+                                regex: meta.original_pattern.clone(),
+                            }
+                        },
+                    });
+                }
             }
+        };
 
-            let rs = &mut rule_states[meta.rule_idx];
-            rs.allowed = match (rs.allowed, meta.allowed) {
-                (None, a) => Some(a),
-                (Some(false), false) => Some(false),
-                (Some(_), _) => Some(true),
-            };
-
-            // FIXME: keep track of matches/fragments
-            // rs.fragments.push();
-        }
+        // scan raw text
+        scan_string(text, true);
 
         // scan decancered text
-        for regex_idx in self.regex_set.matches(&cured_text).iter() {
-            let meta = &self.regex_map[regex_idx];
-            let rule = &self.rules[meta.rule_idx];
-
-            if rule.target != target || !relevant_rule_ids.contains(&rule.id) {
-                continue;
-            }
-
-            let rs = &mut rule_states[meta.rule_idx];
-            rs.allowed = match (rs.allowed, meta.allowed) {
-                (None, a) => Some(a),
-                (Some(false), false) => Some(false),
-                (Some(_), _) => Some(true),
-            };
-
-            // FIXME: keep track of matches/fragments
-            // rs.fragments.push();
-        }
+        scan_string(&cured_text, false);
 
         // scan links
-        // TODO: populate matches/fragments from link rules
+        // TODO: populate matches/fragments from link rules (this may need an api change first)
         if !self.link_rules.is_empty() {
             let extracted_links = links::extract_links(text);
 
@@ -256,7 +270,6 @@ impl Compiled {
         }
 
         scan.matches = Some(text_matches);
-
         scan
     }
 
