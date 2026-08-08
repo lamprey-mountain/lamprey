@@ -5,7 +5,7 @@ use axum::extract::ws::WebSocket;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::voice::SfuStats;
 use common::v1::types::voice::messages::{SfuEvent, SignallingEvent};
-use common::v1::types::{ChannelId, MessageSync, SfuId, UserId};
+use common::v1::types::{ChannelId, MessageSync, SfuId, UserId, util::Time};
 use lamprey_backend_core::Error;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -14,6 +14,7 @@ use tracing::{debug, error, info, warn};
 
 pub struct SfuHandleInner {
     pub id: SfuId,
+    pub connected_at: Time,
     pub stats: RwLock<SfuStats>,
     pub tx: mpsc::UnboundedSender<SfuCommand>,
 }
@@ -21,9 +22,10 @@ pub struct SfuHandleInner {
 pub type SfuHandle = Arc<SfuHandleInner>;
 
 impl SfuHandleInner {
-    pub fn new(id: SfuId, tx: mpsc::UnboundedSender<SfuCommand>) -> Self {
+    pub fn new(id: SfuId, connected_at: Time, tx: mpsc::UnboundedSender<SfuCommand>) -> Self {
         SfuHandleInner {
             id,
+            connected_at,
             stats: RwLock::new(SfuStats::default()),
             tx,
         }
@@ -102,7 +104,7 @@ impl ServiceVoice {
     pub async fn sfu_handle_connect(&self, mut socket: WebSocket) -> Result<SfuHandle> {
         let (tx, mut rx) = mpsc::unbounded_channel::<SfuCommand>();
         let sfu_id = SfuId::new();
-        let handle = Arc::new(SfuHandleInner::new(sfu_id, tx));
+        let handle = Arc::new(SfuHandleInner::new(sfu_id, Time::now_utc(), tx));
         handle.send(SfuCommand::Init { sfu_id });
 
         self.sfus.insert(sfu_id, Arc::clone(&handle));

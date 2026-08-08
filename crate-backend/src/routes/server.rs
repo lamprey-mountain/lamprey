@@ -7,7 +7,8 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::server::{
     ServerAuth, ServerAuthOauth, ServerFeatures, ServerInfo, ServerMedia, ServerModeration,
-    ServerRegistration, ServerVersion, ServerVoice, ServerVoiceSfu, ServerWebPush,
+    ServerRegistration, ServerVersion, ServerVoice, ServerVoiceHealth, ServerVoiceHealthSfu,
+    ServerWebPush,
 };
 use common::v1::types::{Permission, SERVER_ROOM_ID};
 use lamprey_macros::handler;
@@ -121,7 +122,26 @@ async fn server_voice(
     perms.needs(Permission::Admin);
     perms.check()?;
 
-    Ok(Json(vec![] as Vec<ServerVoiceSfu>))
+    let mut sfus = vec![];
+    for sfu in srv.voice.sfus.iter() {
+        // PERF: read stats in parallel?
+        let stats = sfu.stats.read().await;
+        sfus.push(ServerVoiceHealthSfu {
+            id: sfu.id,
+            connected_at: sfu.connected_at,
+            bandwidth_usage: stats.bandwidth_usage,
+            bandwidth_max: stats.bandwidth_max,
+            count_peer: stats.peer_count,
+
+            // FIXME: populate
+            count_users: 0,
+            count_tracks: 0,
+        });
+    }
+
+    let res = ServerVoiceHealth { sfus };
+
+    Ok(Json(res))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

@@ -1,43 +1,30 @@
 use std::collections::HashMap;
 
+use lamprey_macros::record;
 use url::Url;
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
 
 use crate::v1::types::{SfuId, misc::Time};
 
 /// public moderation capabilities for a server
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerModeration {
     pub automod_lists: Vec<ServerAutomodList>,
     pub media_scanners: Vec<ServerMediaScanner>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerAutomodList {
     pub name: String,
     pub description: String,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerMediaScanner {
     pub name: String,
     pub description: String,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerInfo {
     /// the rest/http api base url
     pub api_url: Url,
@@ -56,9 +43,7 @@ pub struct ServerInfo {
 }
 
 /// features that this server supports
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerFeatures {
     /// if present, indicates that this server is letting new users register
     pub registration: Option<ServerRegistration>,
@@ -77,9 +62,7 @@ pub struct ServerFeatures {
     // TODO: add automod, calendar, documents, federation(?), search
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerRegistration {
     /// whether new people can register at all
     pub enabled: bool,
@@ -97,25 +80,19 @@ pub struct ServerRegistration {
     // invite_required: bool,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerMedia {
     pub max_file_size: u64,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerAuth {
     pub supports_totp: bool,
     pub supports_webauthn: bool,
     pub oauth_providers: Vec<ServerAuthOauth>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerAuthOauth {
     /// friendly name
     pub name: String,
@@ -127,24 +104,18 @@ pub struct ServerAuthOauth {
     // pub application_id: ApplicationId,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerVoice {
     // currently empty
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerWebPush {
     pub vapid_public_key: String,
 }
 
 // NOTE: maybe i should include supported api versions for federation (and expose supported versions on a top level endpoint)
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ServerVersion {
     /// the implementation thats being used
     pub implementation: String,
@@ -158,36 +129,45 @@ pub struct ServerVersion {
     pub extra: HashMap<String, String>,
 }
 
+/// voice (calls) service status for admins
+#[record]
+pub struct ServerVoiceHealth {
+    /// sfu stats
+    pub sfus: Vec<ServerVoiceHealthSfu>,
+    // TODO: calls, voice states, issues?
+}
+
 /// sfu metadata for admins
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ServerVoiceSfu {
-    /// a (temporary?) unique identifier for this sfu
+#[record]
+pub struct ServerVoiceHealthSfu {
+    /// an (ephemeral?) unique identifier for this sfu
     pub id: SfuId,
 
     /// when this sfu connected to the server
     pub connected_at: Time,
 
-    /// the hostname of this sfu
-    pub hostname: String,
-
-    /// the ip address of this sfu
-    pub address: String,
-
-    /// the zone of this sfu (aka region, datacenter, etc)
-    pub zone: String,
+    /// bandwidth that is being used in bits per second
+    pub bandwidth_usage: u64,
 
     /// total available bandwidth in bits per second
-    pub bandwidth_total: u64,
+    pub bandwidth_max: u64,
 
-    /// bandwidth that is being used in bits per second
-    pub bandwidth_used: u64,
+    /// number of total rtc connections
+    pub count_peer: u64,
 
     /// number of users who are connected
-    pub stat_users: u64,
+    pub count_users: u64,
 
     /// number of tracks this sfu is selectively forwarding
-    pub stat_tracks: u64,
+    pub count_tracks: u64,
     // TODO: add version
+
+    // /// the hostname of this sfu
+    // pub hostname: String,
+
+    // /// the ip address of this sfu
+    // pub address: String,
+
+    // /// the zone of this sfu (aka region, datacenter, etc)
+    // pub zone: String,
 }

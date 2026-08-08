@@ -45,15 +45,15 @@ pub mod server_moderation {
     tags = ["server"],
     scopes = [Full],
     permissions = [Admin],
-    response(OK, body = Vec<ServerVoiceSfu>, description = "Get server voice sfus success"),
+    response(OK, body = ServerVoiceHealth, description = "Get server voice success"),
 )]
 pub mod server_voice {
-    use crate::v1::types::server::ServerVoiceSfu;
+    use crate::v1::types::server::ServerVoiceHealth;
 
     pub struct Request {}
 
     pub struct Response {
         #[json]
-        pub voice: Vec<ServerVoiceSfu>,
+        pub body: ServerVoiceHealth,
     }
 }
