@@ -43,6 +43,29 @@ export type MessageMutator = {
 	channel_id: string;
 };
 
+// additional fields messages can have
+// TODO: use this?
+export type MessageExt = {
+	is_local?: boolean;
+	automodded?: {
+		message: string;
+	};
+};
+
+type AutomodError = {
+	code: "Automod";
+	message: string;
+	automod_message: string;
+};
+
+const isAutomodError = (err: unknown): err is AutomodError => {
+	if (typeof err !== "object") return false;
+	if (!err) return false;
+	if (!("code" in err)) return false;
+	if (err.code !== "Automod") return false;
+	return true;
+};
+
 export class MessagesService extends BaseService<Message> {
 	protected cacheName = "message";
 
@@ -651,29 +674,44 @@ export class MessagesService extends BaseService<Message> {
 			}
 		});
 
-		const data = await this.retryWithBackoff<Message>(() =>
-			this.client.http.POST("/api/v1/channel/{channel_id}/message", {
-				params: { path: { channel_id } },
-				body: {
-					...body,
-					attachments: body.attachments.map(
-						(a: { media_id?: string; id?: string; spoiler?: boolean }) => ({
-							type: "Media" as const,
-							media_id: a.media_id ?? a.id ?? "",
-							spoiler: a.spoiler ?? false,
-						}),
-					),
+		try {
+			const data = await this.retryWithBackoff<Message>(() =>
+				this.client.http.POST("/api/v1/channel/{channel_id}/message", {
+					params: { path: { channel_id } },
+					body: {
+						...body,
+						attachments: body.attachments.map(
+							(a: { media_id?: string; id?: string; spoiler?: boolean }) => ({
+								type: "Media" as const,
+								media_id: a.media_id ?? a.id ?? "",
+								spoiler: a.spoiler ?? false,
+							}),
+						),
+					},
+					headers: { "Idempotency-Key": id },
+				}),
+			);
+			const m = data as Message;
+			m.nonce = id;
+
+			// replace local echo
+			this.handleMessageCreate(m);
+
+			return m;
+		} catch (err: unknown) {
+			if (!isAutomodError(err)) throw err;
+
+			const message = err.automod_message || "Message blocked by automod";
+			const updatedLocal = {
+				...local,
+				is_local: false,
+				automodded: {
+					message,
 				},
-				headers: { "Idempotency-Key": id },
-			}),
-		);
-		const m = data as Message;
-		m.nonce = id;
+			} as unknown as Message;
 
-		// replace local echo
-		this.handleMessageCreate(m);
-
-		return m;
+			this.handleMessageCreate(updatedLocal);
+		}
 	}
 
 	async edit(

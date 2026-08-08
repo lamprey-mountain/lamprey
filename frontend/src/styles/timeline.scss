@@ -139,6 +139,13 @@
 			box-shadow: 4px 0 0 -1px inset $link-500;
 			background-color: oklch(var(--color-link-500) / 0.1);
 		}
+
+		&.automodded {
+			background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h /
+				.15);
+			box-shadow: 4px 0 0 -1px inset oklch(from $color-red calc(l - 0.2) calc(c
+				+ .0) h);
+		}
 	}
 }
 
@@ -429,6 +436,49 @@
 			font-size: 0.7rem;
 			cursor: pointer;
 			margin-left: 4px;
+		}
+	}
+
+	& > .automodded,
+	& > .ephemeral {
+		display: flex;
+		gap: 4px;
+		font-size: .8em;
+	}
+
+	& > .automodded {
+		& > .icon2 {
+			background-color: oklch(from $color-red calc(l - 0.1) calc(c + .0) h);
+			/* background-color: $color-red; */
+			height: 32px;
+			width: 32px;
+		}
+
+		.automodded-blocked {
+			font-style: italic;
+			color: $fg-400;
+		}
+
+		.automodded-message {
+			color: $fg-200;
+		}
+
+		.automodded-ephemeral {
+			color: $fg-500;
+			/* display:flex;gap:4px; */
+
+			.dismiss {
+				display: inline-block;
+			}
+		}
+	}
+
+	& > .ephemeral {
+		color: $fg-400;
+		align-items: center;
+
+		& > .icon2 {
+			background-color: $fg-500;
 		}
 	}
 }

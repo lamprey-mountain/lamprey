@@ -440,6 +440,8 @@ export const TimelineItem2 = (props: {
 				"reply-target":
 					props.item.type === "message" &&
 					props.item.message.id === ch.reply_id,
+				automodded:
+					props.item.type === "message" && !!props.item.message.automodded,
 			}}
 		>
 			<Switch>

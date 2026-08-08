@@ -77,6 +77,7 @@ import {
 	icFileImage,
 	icFileText,
 	icFileVideo,
+	icInfo,
 	icSword,
 } from "@/utils/icons.ts";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
@@ -804,6 +805,7 @@ function DefaultMessage(
 		diff?: boolean;
 	},
 ) {
+	const api = useApi();
 	const flumes = useFlumes();
 	const toolbar = useMessageToolbar();
 	const version = () =>
@@ -831,6 +833,10 @@ function DefaultMessage(
 				source: "message",
 			});
 		}
+	};
+
+	const dismissMessage = () => {
+		api.messages.handleMessageDelete(props.message.channel_id, props.message.id);
 	};
 
 	return (
@@ -917,6 +923,41 @@ function DefaultMessage(
 				>
 					<MessageTextMarkdown message={props.message} diff={props.diff} />
 				</Show>
+				<Switch>
+					<Match when={props.message.automodded}>
+						{(am) => (
+							<div class="automodded">
+								<Icon src={icSword} />
+								<div>
+									<div>
+										<span class="automodded-blocked">Blocked by automod: </span>
+										<span class="automodded-message">{am().message}</span>
+									</div>
+									<div class="automodded-ephemeral">
+										<span>This message may be viewed by moderators</span>
+										<span class="bull"> &bull; </span>
+										<button
+											class="button link dismiss"
+											onClick={dismissMessage}
+										>
+											dismiss message
+										</button>
+									</div>
+								</div>
+							</div>
+						)}
+					</Match>
+					<Match when={props.message.ephemeral}>
+						<div class="ephemeral">
+							<Icon src={icInfo} />
+							<span>only you can see this</span>
+							<span class="bull">&bull;</span>
+							<button class="button link dismiss" onClick={dismissMessage}>
+								dismiss message
+							</button>
+						</div>
+					</Match>
+				</Switch>
 			</div>
 
 			<div class="accessories">

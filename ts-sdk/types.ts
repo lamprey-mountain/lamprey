@@ -11,6 +11,7 @@ export type User = components["schemas"]["User"] & {
 	/** @description relationship with current user (for UserWithRelationship endpoints) */
 	relationship?: components["schemas"]["Relationship"];
 };
+// HACK: add local fields to schema
 export type Message = components["schemas"]["Message"] & {
 	/** @description mentions parsed from message content */
 	mentions?: components["schemas"]["Mentions"];
@@ -20,6 +21,8 @@ export type Message = components["schemas"]["Message"] & {
 	nonce?: string;
 	/** @description lamprey components (for flumes) */
 	components?: LampreyComponent[];
+	/** @description blocked by automod */
+	automodded?: { message: string };
 };
 export type MessageVersion = components["schemas"]["MessageVersion"];
 export type Role = components["schemas"]["Role"];
