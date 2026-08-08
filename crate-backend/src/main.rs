@@ -46,6 +46,7 @@ async fn main() -> Result<()> {
 
     match &args.command {
         cli::Command::Serve {} => server.serve().await?,
+        cli::Command::Config {} => println!("{:#?}", globals.config()),
         cli::Command::GcMedia {} => gc(globals, &[AdminCollectGarbageTarget::Media]).await?,
         cli::Command::GcMessages {} => gc(globals, &[AdminCollectGarbageTarget::Messages]).await?,
         cli::Command::GcSession {} => gc(globals, &[AdminCollectGarbageTarget::Session]).await?,

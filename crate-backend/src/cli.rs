@@ -24,6 +24,9 @@ pub enum Command {
     /// start the main server
     Serve {},
 
+    /// print the parsed configuration
+    Config {},
+
     // TODO: deprecate gc commands, tell people to use http api or admin ui instead
     /// garbage collect media deleted over a week ago
     GcMedia {},
