@@ -1,5 +1,6 @@
 import type { AutomodTrigger } from "sdk";
 import { createEffect, createSignal, For, Match, Switch } from "solid-js";
+import { Dropdown } from "@/atoms/Dropdown";
 
 export interface TriggerEditorProps {
 	trigger: AutomodTrigger;
@@ -191,44 +192,39 @@ function MediaScanFields(props: {
 // --- 2. The Main Trigger Editor ---
 
 export function TriggerEditor(props: TriggerEditorProps) {
-	const types: AutomodTrigger["type"][] = [
-		"TextKeywords",
-		"TextRegex",
-		"TextLinks",
-		"TextBuiltin",
-		"MediaScan",
-	];
-
 	return (
 		<div
 			class="trigger-editor"
 			style={{ display: "flex", "flex-direction": "column", gap: "10px" }}
 		>
 			<label>
-				<strong>Trigger Type</strong>
-				<select
-					value={props.trigger.type}
-					onChange={(e) =>
-						props.updateTriggerType(
-							e.currentTarget.value as AutomodTrigger["type"],
-						)
-					}
-				>
-					<For each={types}>{(t) => <option value={t}>{t}</option>}</For>
-				</select>
+				<h3 style="font-size:.9rem" class="dim">
+					Trigger Type
+				</h3>
+				<Dropdown
+					options={[
+						{ item: "TextKeywords", label: "Text keywords" },
+						{ item: "TextRegex", label: "Text regex" },
+						{ item: "TextLinks", label: "Text links" },
+						{ item: "TextBuiltin", label: "Builtin list" },
+						{ item: "MediaScan", label: "Media scanner" },
+					]}
+					onSelect={(item) => {
+						props.updateTriggerType(item as AutomodTrigger["type"]);
+					}}
+					selected={props.trigger.type}
+				/>
 			</label>
 
 			<div class="trigger-specific-settings">
 				<Switch>
-					<Match when={props.trigger.type === "TextKeywords"}>
-						<TextKeywordsFields
-							trigger={
-								props.trigger as AutomodTrigger & {
-									type: "TextKeywords";
-								}
-							}
-							update={props.updateTriggerValue}
-						/>
+					<Match when={props.trigger.type === "TextKeywords" && props.trigger}>
+						{(trigger) => (
+							<TextKeywordsFields
+								trigger={trigger()}
+								update={props.updateTriggerValue}
+							/>
+						)}
 					</Match>
 					<Match when={props.trigger.type === "TextRegex"}>
 						<TextRegexFields

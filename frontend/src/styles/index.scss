@@ -2242,7 +2242,7 @@ button.big {
 }
 
 .savebar {
-	position: absolute;
+	position: fixed;
 	bottom: 0;
 	padding-bottom: 8px;
 	background-image: linear-gradient(to top, $bg-200 25%, transparent);

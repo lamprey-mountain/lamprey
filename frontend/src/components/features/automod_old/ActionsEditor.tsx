@@ -214,7 +214,7 @@ export function ActionsEditor(props: ActionsEditorProps) {
 				}}
 			>
 				<h4>Actions</h4>
-				<button type="button" class="small" onClick={props.addAction}>
+				<button type="button" class="button small" onClick={props.addAction}>
 					+ Add Action
 				</button>
 			</header>

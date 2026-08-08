@@ -547,6 +547,7 @@ export type DropdownProps<T> = {
 	placement?: Placement;
 };
 
+// TODO: typescript, onSelect should be T instead of T | null if required is true
 export function Dropdown<T>(props: VoidProps<DropdownProps<T>>) {
 	const dropdown = createDropdown<T>({
 		get selected() {

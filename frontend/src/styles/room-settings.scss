@@ -482,33 +482,129 @@
 	}
 }
 
+// TODO: border-image for more control over dashed border
 .room-settings-automod {
-	.automod-rules-list {
+	& > .header {
+		display: flex;
+		gap: 8px;
+		margin-bottom: 8px;
+
+		& > .search {
+			flex: 1;
+		}
+	}
+
+	& > .automod-rule {
+		margin-bottom: 8px;
+
+		&.create {
+			width: 100%;
+			padding: 16px;
+			border-color: $sep-500;
+			border-style: dashed;
+			text-align: center;
+			color: $fg-600;
+			cursor: pointer;
+			background: none;
+
+			&:hover,
+			&:focus-visible {
+				background: $bg-300;
+				color: $fg-100;
+			}
+		}
+	}
+}
+
+.automod-rule {
+	background: $bg-150;
+	border: solid $sep-300 1px;
+
+	& > .header {
+		padding: 8px;
+		background: $bg-100;
+
+		& > .name {
+			width: 100%;
+			font-size: 1.2em;
+		}
+	}
+
+	& > .trigger {
+		padding: 8px;
+	}
+
+	& > .actions {
 		display: flex;
 		flex-direction: column;
 		gap: 8px;
-	}
-
-	.automod-rule {
-		background: $bg-150;
-		border: solid $sep-300 1px;
 		padding: 8px;
 
-		&.draft-rule {
-			/* border-style: dashed; */
-		}
+		& > .action {
+			padding: 8px;
+			border: solid $sep-300 1px;
+			background: $bg-200;
 
-		h3 {
-			font-size: 1.2rem;
+			&.create {
+				border-style: dashed;
+				text-align: center;
+				color: $fg-600;
+				cursor: pointer;
+				background: none;
+
+				&:hover,
+				&:focus-visible {
+					background: $bg-300;
+					color: $fg-100;
+				}
+			}
 		}
 	}
 
-	textarea {
+	& > .exceptions {
+		padding: 8px;
+	}
+
+	.editable {
+		border: solid 1px transparent;
+		padding: 2px 4px;
+		cursor: text;
+		border-radius: 2px;
+		transition: border-color 0.2s;
+		font-size: 1em;
+
+		&:hover,
+		&:focus-within {
+			color: $fg-100;
+			background-color: $bg-150;
+			border-color: $sep-300;
+		}
+
+		&.editing {
+			border-color: $link-500;
+		}
+	}
+
+	.textarea {
 		border: solid $sep-300 1px;
 		background: $bg-100;
 		padding: 2px 4px;
+		white-space: pre;
+		color: $fg-300;
+
+		&:focus-visible {
+			color: $fg-100;
+			border-color: $link-500;
+		}
 	}
 
+	&[data-draft-state="create"] {}
+	&[data-draft-state="update"] {}
+	&[data-draft-state="delete"] {}
+	&[data-draft-state="clean"] {}
+}
+
+.room-settings-automod {
 	/* .rule-body { */
 	/* padding: 1rem; */
 	/* border: 1px solid var(--border-color); */
