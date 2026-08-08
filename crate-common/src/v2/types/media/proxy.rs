@@ -1,14 +1,13 @@
 //! types used in the media proxy
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use lamprey_macros::record;
 
 #[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
+use utoipa::IntoParams;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(IntoParams))]
 pub struct MediaQuery {
     /// if this media is still being uploaded, downloaded, or processed, block
     /// until its complete.
@@ -16,18 +15,19 @@ pub struct MediaQuery {
     /// otherwise, immediately return a 409 status code. (409 is used so that
     /// its possible to differentiate between "media doesnt exist" and "media is
     /// still being processed")
-    #[cfg_attr(feature = "serde", serde(default = "default_true"))]
+    #[serde(default = "default_true")]
     pub wait: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(IntoParams))]
 pub struct ThumbQuery {
     /// if None, fetch the original thumbnail (eg. a video may have an embedded thumbnail)
     pub size: Option<u32>,
+
     /// whether to allow animated thumbnails
-    #[cfg_attr(feature = "serde", serde(default = "default_true"))]
+    #[serde(default = "default_true")]
     pub animate: bool,
 }
 
@@ -37,9 +37,9 @@ fn default_true() -> bool {
 }
 
 // NOTE: theres probably a better way to define this struct
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(IntoParams))]
 pub struct TrickplayQuery {
     /// number of thumbnails on the y axis
     pub height: Option<u32>,
@@ -54,9 +54,9 @@ pub struct TrickplayQuery {
     pub thumb_width: Option<u32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(IntoParams))]
 pub struct StreamQuery {
     /// segment index
     pub n: usize,
@@ -66,9 +66,8 @@ pub struct StreamQuery {
 }
 
 /// an available stream format
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct StreamFormat {
     pub id: u64,
 
@@ -83,9 +82,8 @@ pub struct StreamFormat {
     pub channels: Option<u64>, // audio only
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum StreamKind {
     Video,
     Audio,

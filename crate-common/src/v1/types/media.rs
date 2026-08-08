@@ -1,13 +1,5 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
-
 use crate::v1::types::{MediaId, UserId, util::Time};
+use lamprey_macros::record;
 
 mod mime;
 mod track;
@@ -15,25 +7,19 @@ mod track;
 pub use mime::Mime;
 pub use track::*;
 
-// TODO: remove
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct MediaV0 {
     pub id: MediaId,
 
     /// The original filename
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[schema(min_length = 1, max_length = 256)]
+    #[validate(length(min = 1, max = 256))]
     pub filename: String,
 
     /// Descriptive alt text, not entirely unlike a caption
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub alt: Option<String>,
 
     /// The source (Uploaded, Downloaded)
@@ -41,12 +27,10 @@ pub struct MediaV0 {
 }
 
 /// media with extra metadata for admins
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct MediaV0WithAdmin {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub inner: MediaV0,
 
     /// the user who uploaded this media

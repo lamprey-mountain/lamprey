@@ -1,14 +1,11 @@
 use std::str::FromStr;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 use url::Url;
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
+
+use lamprey_macros::{Diff, record};
 
 use crate::v1::types::{
     ChannelId, EmbedId, MediaId, MediaVerId, MessageId, MessageVerId, Mime, RedexId, RedexVerId,
@@ -20,9 +17,9 @@ pub mod scanner;
 
 /// A reference to a piece of media to be used.
 // TODO: use this in more FooCreate and FooPatch structs
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq, Hash)]
+#[serde(untagged)]
 pub enum MediaReference {
     /// Use this piece of uploaded media. Prefer using this whenever possible.
     Media { media_id: MediaId },
@@ -35,22 +32,20 @@ pub enum MediaReference {
 }
 
 /// request body for `media_done`
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct MediaDoneParams {
     /// Whether to process this media asynchronously.
     ///
     /// If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing.
-    #[cfg_attr(feature = "serde", serde(default, rename = "async"))]
+    #[serde(default, rename = "async")]
     pub process_async: bool,
 }
 
 // TODO: remove
 /// request body for `media_upload_direct`
-#[derive(Debug, Clone, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct MediaDirectParams {
     /// Descriptive alt text, not entirely unlike a caption
     pub alt: Option<String>,
@@ -59,18 +54,17 @@ pub struct MediaDirectParams {
     pub filename: Option<String>,
 
     /// Whether to strip sensitive exif info, like location or camera make and model.
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub strip_exif: bool,
 
     /// Whether to process this media asynchronously.
-    #[cfg_attr(feature = "serde", serde(default, rename = "async"))]
+    #[serde(default, rename = "async")]
     pub process_async: bool,
 }
 
 /// The status for this media
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum MediaStatus {
     /// Newly created and is waiting for either
     ///
@@ -95,26 +89,21 @@ pub enum MediaStatus {
 }
 
 /// A piece of media.
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq)]
 pub struct Media {
     pub id: MediaId,
     pub version_id: MediaVerId,
     pub status: MediaStatus,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[schema(min_length = 1, max_length = 256)]
+    #[validate(length(min = 1, max = 256))]
     pub filename: String,
 
     /// Descriptive alt text.
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub alt: Option<String>,
 
     /// The underlying blob's length in bytes.
@@ -124,29 +113,26 @@ pub struct Media {
     pub content_type: Mime,
 
     /// Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_url: Option<Url>,
 
     /// Additional filetype-specific metadata for the file
     pub metadata: MediaMetadata,
 
     /// The user who uploaded this media. Only exists for admins or if you uploaded this media
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<UserId>,
 
     /// If this media was deleted, when it was deleted. Only exists for admins.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<Time>,
 
     /// If this media is quarantined, this contains information about the quarantine. Only exists for admins.
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub quarantine: Option<MediaQuarantine>,
 
     /// The results of automated scans.
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub scans: Vec<MediaScan>,
     // pub ratings: ContentRatings,
     /// Whether this media can be fetched through the `/thumb/{media_id}` cdn route.
@@ -156,47 +142,39 @@ pub struct Media {
     pub has_gifv: bool,
 
     /// what this piece of media is linked to (admin only)
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub links: Vec<MediaLinkType>,
 
     // TODO: merge into links?
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub room_id: Option<RoomId>,
 
     // TODO: merge into links?
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub channel_id: Option<ChannelId>,
 
     /// the hashes of this file
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Hashes::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Hashes::is_empty")]
     pub hashes: Hashes,
 
     // TODO: don't return this in the actual Media struct, just store and handle it internally
     /// Whether sensitive exif info has been stripped from this media.
     ///
     /// Once set to `true`, this cannot be unset.
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub strip_exif: bool,
 
     /// if this media exists on a remote server
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub remote: Option<Remote<MediaId>>,
     // TODO: add
     // /// If this media will expire, data about its expiry.
-    // #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    // #[serde(skip_serializing_if = "Option::is_none")]
     // pub expiry: Option<MediaExpiry>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq)]
 pub struct MediaExpiry {
     /// when this media expires at
     pub expires_at: Time,
@@ -215,9 +193,8 @@ pub struct MediaExpiry {
 //     pub height: u64,
 // }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum MediaErrorReason {
     /// this piece of media was not found
     NotFound,
@@ -226,10 +203,8 @@ pub enum MediaErrorReason {
     Corrupted,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq)]
 pub struct MediaQuarantine {
     /// when this media was quarantined
     pub time: Time,
@@ -239,10 +214,8 @@ pub struct MediaQuarantine {
 }
 
 /// An automated scan result
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq)]
 pub struct MediaScan {
     /// The name of the media scanner (eg. `nsfw`, `malware`)
     pub key: String,
@@ -256,9 +229,10 @@ pub struct MediaScan {
 
 /// Filetype-specific metadata
 // TODO: consider using NonZeroU64 if i am sure its valid, eg. double check no image format allows image height/width zero.
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// NOTE: can i derive Eq here safely? i *may* want to include f64s in the future?
+#[record]
+#[derive(PartialEq)]
+#[serde(tag = "type")]
 pub enum MediaMetadata {
     /// An image file
     Image {
@@ -323,90 +297,69 @@ impl MediaMetadata {
 }
 
 /// An update to a piece of media
-#[derive(Debug, Clone, PartialEq, Eq, lamprey_macros::Diff)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq, Diff)]
 pub struct MediaPatch {
     /// Descriptive alt text, not entirely unlike a caption
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub alt: Option<Option<String>>,
 
     /// The filename for this piece of media
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 256)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[schema(required = false, min_length = 1, max_length = 256)]
+    #[validate(length(min = 1, max = 256))]
     pub filename: Option<String>,
 
     /// Whether to strip sensitive exif info, like location or camera make and model.
     ///
     /// This can only be changed if the media status is not `Consumed`. Once
     /// strip_exif is set to true, cannot be set to false.
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub strip_exif: Option<bool>,
 }
 
 /// a request body for `media_create`
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct MediaCreate {
     /// Whether to strip sensitive exif info, like location or camera make and model.
     ///
     /// Once strip_exif is set to true, cannot be set to false.
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub strip_exif: bool,
 
     /// Descriptive alt text, not entirely unlike a caption
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub alt: Option<String>,
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
-    #[cfg_attr(feature = "validator", validate(nested))]
+    #[serde(flatten)]
+    #[validate(nested)]
     pub source: MediaCreateSource,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct MediaClone {
     /// Set to override the filename
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 256)
-    )]
+    #[schema(required = false, min_length = 1, max_length = 256)]
     pub filename: Option<String>,
 
     /// Descriptive alt text, not entirely unlike a caption
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub alt: Option<String>,
 }
 
 /// What to create this media from
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(untagged))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[serde(untagged)]
 pub enum MediaCreateSource {
     /// create this file by downloading it
     Download {
         /// The filename of the downloaded file; automatically detect if None
-        #[cfg_attr(
-            feature = "utoipa",
-            schema(required = false, min_length = 1, max_length = 256)
-        )]
+        #[schema(required = false, min_length = 1, max_length = 256)]
         filename: Option<String>,
 
         /// The size (in bytes). HIGHLY recommended, as this lets lamprey reject oversized files earlier.
@@ -419,10 +372,7 @@ pub enum MediaCreateSource {
     /// create this file by uploading it
     Upload {
         /// The filename of this file to use
-        #[cfg_attr(
-            feature = "utoipa",
-            schema(required = false, min_length = 1, max_length = 256)
-        )]
+        #[schema(required = false, min_length = 1, max_length = 256)]
         filename: String,
 
         /// The size of this file (in bytes). HIGHLY recommended, as this lets lamprey reject oversized files earlier.
@@ -431,9 +381,8 @@ pub enum MediaCreateSource {
 }
 
 /// response body for `media_create`
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct MediaCreated {
     /// The id of the media that has been created
     pub media_id: MediaId,
@@ -446,9 +395,9 @@ pub struct MediaCreated {
 ///
 /// objects can be linked to multiple objects; for example, media linked to
 /// `Message`s also have links to each `MessageVersion` they're referenced in.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[serde(tag = "type")]
 pub enum MediaLinkType {
     /// this piece of media is linked to a message
     // NOTE: auth checks copy MessageUpdate
