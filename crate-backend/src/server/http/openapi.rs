@@ -101,6 +101,8 @@ components(schemas(
     common::v1::types::automod::AutomodTrigger,
     common::v1::types::automod::AutomodAction,
     common::v1::types::automod::AutomodTarget,
+    common::v1::types::automod::AutomodRuleTest,
+    common::v1::types::automod::AutomodRuleTestRequest,
     // tag types
     common::v1::types::tag::Tag,
     common::v1::types::tag::TagCreate,
