@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Cursor, sync::Arc};
+use std::{collections::HashMap, io::Cursor, sync::Arc, time::Duration};
 
 use async_tempfile::TempFile;
 use bytes::BytesMut;
@@ -409,7 +409,21 @@ impl MediaPipeline {
             None => return Ok(vec![]),
         };
 
-        let client = &self.s.services().http.client;
+        // TODO: use ServiceHttp
+        // note that ServiceHttp's client won't work here since it requires https
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(15))
+            .connect_timeout(Duration::from_secs(5))
+            .redirect(reqwest::redirect::Policy::limited(10))
+            .user_agent(
+                self.s
+                    .config()
+                    .user_agent_header_value()
+                    .expect("should always be valid user agent"),
+            )
+            .build()
+            .expect("failed to build http client");
+
         let mut futs = FuturesUnordered::new();
 
         for scanner in scanners {
@@ -436,7 +450,7 @@ impl MediaPipeline {
         let mut scans = Vec::new();
         while let Some(result) = futs.next().await {
             if let Some(scan) = result {
-                // TODO: debug!
+                debug!("got scan: {:?}", scan);
                 scans.push(scan);
             }
         }
