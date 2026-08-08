@@ -180,6 +180,16 @@ impl ServiceAutomod {
         for action in &scan.actions.inner {
             match action {
                 AutomodAction::Timeout { duration } => {
+                    let room = srv.rooms.get(ctx.room_id, None).await?;
+                    let perms = srv.perms.for_room(ctx.user_id, ctx.room_id).await?;
+                    if room.owner_id == Some(ctx.user_id)
+                        || perms.has(Permission::Admin)
+                        || perms.has(Permission::RoomEdit)
+                    {
+                        // members who are able to edit automod rules don't get timed out
+                        continue;
+                    }
+
                     let timeout_until =
                         Time::now_utc() + std::time::Duration::from_millis(*duration);
                     let mut txn = self.globals.begin().await?;
@@ -197,18 +207,18 @@ impl ServiceAutomod {
                     srv.perms
                         .update_timeout_task(ctx.user_id, ctx.room_id, Some(timeout_until))
                         .await;
-                    // FIXME: dont timeout admins or owner
-                    // FIXME: broadcast after updating member
-                    // self.globals
-                    //     .messaging()
-                    //     .broadcast_room(
-                    //         room_id,
-                    //         MessageSync::RoomMemberUpdate {
-                    //             member: todo!(),
-                    //             user: todo!(),
-                    //         },
-                    //     )
-                    //     .await?;
+
+                    let member = self
+                        .globals
+                        .begin_read()
+                        .await?
+                        .room_member_get(ctx.room_id, ctx.user_id)
+                        .await?;
+                    let user = srv.users.get(ctx.user_id, None).await?;
+                    self.globals
+                        .messaging()
+                        .broadcast_room(ctx.room_id, MessageSync::RoomMemberUpdate { member, user })
+                        .await?;
                 }
                 AutomodAction::SendAlert { channel_id } => {
                     let rules: Vec<AutomodRuleStripped> = self
