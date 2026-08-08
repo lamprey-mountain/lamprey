@@ -33,10 +33,9 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 	return (
 		<>
 			<h2>invites</h2>
-			<button type="button" class="big primary" onClick={createInvite}>
+			<button type="button" class="button big primary" onClick={createInvite}>
 				create invite
 			</button>
-			<br />
 			<br />
 			<div class="invites">
 				<Show when={invites()} fallback="loading...">
@@ -60,7 +59,7 @@ export function Invites(props: VoidProps<{ room: RoomT }>) {
 									return rm?.override_name || user?.name || "unknown";
 								};
 								return (
-									<li class="invite">
+									<li class="invites-invite">
 										<div class="code">
 											<Copyable>{i.code}</Copyable>
 										</div>

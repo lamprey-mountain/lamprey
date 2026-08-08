@@ -32,10 +32,9 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 	return (
 		<>
 			<h2>invites</h2>
-			<button type="button" class="big primary" onClick={createInvite}>
+			<button type="button" class="button big primary" onClick={createInvite}>
 				create invite
 			</button>
-			<br />
 			<br />
 			<div class="invites">
 				<Show when={!invites.loading} fallback="loading...">
@@ -53,7 +52,7 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 								const user = users2.use(() => i.creator_id);
 								const creatorName = () => user()?.name || "unknown";
 								return (
-									<li class="invite">
+									<li class="invites-invite">
 										<div class="code">
 											<Copyable>{i.code}</Copyable>
 										</div>
