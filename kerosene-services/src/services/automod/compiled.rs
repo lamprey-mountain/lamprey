@@ -1,12 +1,15 @@
 //! compiling all automod rules in a room into one scanner
 
+use std::collections::HashMap;
+
 use common::{
     v1::types::automod::{
         AutomodMatch, AutomodMatchFragment, AutomodMatchKind, AutomodMediaLocation, AutomodRule,
         AutomodTarget, AutomodTextLocation, AutomodTrigger,
     },
-    v2::types::{AutomodRuleId, media::Media},
+    v2::types::{AutomodRuleId, MediaId, media::Media},
 };
+use kerosene_core::config::Config;
 use regex::{Regex, RegexSet};
 use tracing::warn;
 
@@ -19,6 +22,7 @@ pub struct Compiled {
     regex_set: RegexSet,
     regex_map: Vec<RegexMapping>,
     link_rules: Vec<usize>,
+    media_thresholds: HashMap<String, f32>,
 }
 
 struct RegexMapping {
@@ -37,7 +41,14 @@ struct RuleState {
 }
 
 impl Compiled {
-    pub fn new(rules: Vec<AutomodRule>) -> Self {
+    pub fn new(rules: Vec<AutomodRule>, config: &Config) -> Self {
+        let media_thresholds = config
+            .moderation
+            .automod_media
+            .iter()
+            .map(|m| (m.key.clone(), m.threshold))
+            .collect();
+
         let mut regexes = vec![];
         let mut regex_map = vec![];
         let mut link_rules = vec![];
@@ -102,29 +113,11 @@ impl Compiled {
             regex_set,
             regex_map,
             link_rules,
+            media_thresholds,
         }
     }
 
-    /// Scans a scannable item against the compiled rules, only including relevant rule ids.
-    pub fn scan<S: Scannable>(&self, item: &S, relevant_rule_ids: &[AutomodRuleId]) -> AutomodScan {
-        let mut set = ScannableSet {
-            target: item.target(),
-            text: vec![],
-            media: vec![],
-        };
-        item.scan(&mut set);
-
-        let mut scan = AutomodScan::default();
-
-        for (text, loc) in set.text {
-            let s = self.scan_text(text, set.target, loc, relevant_rule_ids);
-            scan.merge(s);
-        }
-
-        scan
-    }
-
-    fn scan_text(
+    pub(super) fn scan_text(
         &self,
         text: &str,
         target: AutomodTarget,
@@ -273,13 +266,36 @@ impl Compiled {
         scan
     }
 
-    fn scan_media(
+    pub(super) fn scan_media(
         &self,
-        _media: &Media,
-        _target: AutomodTarget,
-        _location: AutomodMediaLocation,
+        media: &Media,
+        target: AutomodTarget,
+        location: AutomodMediaLocation,
+        relevant_rule_ids: &[AutomodRuleId],
     ) -> AutomodScan {
-        todo!()
+        let mut scan = AutomodScan::default();
+
+        for (idx, rule) in self.rules.iter().enumerate() {
+            if rule.target != target || !relevant_rule_ids.contains(&rule.id) {
+                continue;
+            }
+
+            if let AutomodTrigger::MediaScan { scanner } = &rule.trigger {
+                if let Some(threshold) = self.media_thresholds.get(scanner) {
+                    // PERF: maybe i should store scans as a HashMap instead of a Vec?
+                    if let Some(result) = media.scans.iter().find(|s| &s.key == scanner) {
+                        if result.result >= *threshold {
+                            scan.rule_ids.push(rule.id);
+                            for action in &rule.actions {
+                                scan.actions.add(action);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        scan
     }
 }
 
@@ -299,14 +315,14 @@ pub trait Scanner<'a> {
     fn visit_text(&mut self, text: &'a str, location: AutomodTextLocation);
 
     /// Handles a media component.
-    fn visit_media(&mut self, media: &'a Media, location: AutomodMediaLocation);
+    fn visit_media(&mut self, media: MediaId, location: AutomodMediaLocation);
 }
 
 /// utility to collect all scannable text from a Scannable
-struct ScannableSet<'a> {
-    target: AutomodTarget,
-    text: Vec<(&'a str, AutomodTextLocation)>,
-    media: Vec<(&'a Media, AutomodMediaLocation)>,
+pub(super) struct ScannableSet<'a> {
+    pub target: AutomodTarget,
+    pub text: Vec<(&'a str, AutomodTextLocation)>,
+    pub media: Vec<(MediaId, AutomodMediaLocation)>,
 }
 
 impl<'a> Scanner<'a> for ScannableSet<'a> {
@@ -314,7 +330,7 @@ impl<'a> Scanner<'a> for ScannableSet<'a> {
         self.text.push((text, location));
     }
 
-    fn visit_media(&mut self, media: &'a Media, location: AutomodMediaLocation) {
+    fn visit_media(&mut self, media: MediaId, location: AutomodMediaLocation) {
         self.media.push((media, location));
     }
 }

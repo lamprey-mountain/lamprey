@@ -113,6 +113,9 @@ pub struct Config {
 
     #[serde(default)]
     pub limits: Limits,
+
+    #[serde(default)]
+    pub moderation: ConfigModeration,
 }
 
 fn default_require_server_invite() -> bool {
@@ -532,6 +535,23 @@ pub struct ConfigMediaScanner {
     pub version: u16,
 }
 
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct ConfigModeration {
+    // TODO: add automod_lists
+    // pub automod_lists: Vec<ConfigModerationSomething>,
+    #[serde(default)]
+    pub automod_media: Vec<ConfigModerationMediaScanner>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfigModerationMediaScanner {
+    /// which media scanner to use
+    pub key: String,
+
+    /// how high the score must be in order to count as a trigger
+    pub threshold: f32,
+}
+
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 impl Config {
@@ -579,6 +599,24 @@ impl Config {
                     .detail("Webmasters should be able to contact you if there are any issues.")
                     .suggestion("Set this field to your email or something."),
             );
+        }
+
+        let scanner_keys: HashSet<&str> =
+            self.media.scanners.iter().map(|s| s.key.as_str()).collect();
+        for scanner in &self.moderation.automod_media {
+            if !scanner_keys.contains(scanner.key.as_str()) {
+                issues.push(
+                    HealthcheckIssue::error(
+                        "config",
+                        format!("media scanner `{}` not found", scanner.key),
+                    )
+                    .detail(format!(
+                        "The moderation scanner `{}` is referenced in `moderation.automod_media` but not defined in `media.scanners`.",
+                        scanner.key
+                    ))
+                    .suggestion("Add the scanner to `media.scanners` or fix the key in `moderation.automod_media`."),
+                );
+            }
         }
 
         // TODO: more validation

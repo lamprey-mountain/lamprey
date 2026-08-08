@@ -39,7 +39,33 @@ impl AutomodCalculator {
     // TODO: make sure to call srv.automod.enforce() after calc.scan(), check all call sites
     pub async fn scan<S: Scannable>(&self, item: &S, ctx: &AutomodContext) -> AutomodScan {
         let relevant = self.relevant_rules(ctx).await;
-        self.compiled.scan(item, &relevant)
+
+        let mut set = compiled::ScannableSet {
+            target: item.target(),
+            text: vec![],
+            media: vec![],
+        };
+        item.scan(&mut set);
+
+        let mut scan = AutomodScan::default();
+
+        for (text, loc) in set.text {
+            let s = self.compiled.scan_text(text, set.target, loc, &relevant);
+            scan.merge(s);
+        }
+
+        if !set.media.is_empty() {
+            if let Ok(mut txn) = self.globals.begin_read().await {
+                for (media_id, loc) in set.media {
+                    if let Ok(media) = txn.media_select(media_id).await {
+                        let s = self.compiled.scan_media(&media, set.target, loc, &relevant);
+                        scan.merge(s);
+                    }
+                }
+            }
+        }
+
+        scan
     }
 
     /// get which rules affect this user
@@ -113,7 +139,21 @@ impl AutomodCalculator {
 
     pub fn test(&self, query: &AutomodRuleTestRequest) -> AutomodRuleTest {
         let relevant_rules: Vec<_> = self.compiled.rules.iter().map(|r| r.id).collect();
-        let scan = self.compiled.scan(query, &relevant_rules);
+        let mut set = compiled::ScannableSet {
+            target: query.target(),
+            text: vec![],
+            media: vec![],
+        };
+        query.scan(&mut set);
+
+        let mut scan = AutomodScan::default();
+        for (text, loc) in set.text {
+            let s = self
+                .compiled
+                .scan_text(text, set.target, loc, &relevant_rules);
+            scan.merge(s);
+        }
+
         AutomodRuleTest {
             rules: self
                 .compiled
@@ -152,7 +192,8 @@ impl ServiceAutomod {
             .await?
             .automod_rule_list(room_id)
             .await?;
-        let compiled = Arc::new(Compiled::new(rules));
+
+        let compiled = Arc::new(Compiled::new(rules, self.globals.config()));
         self.compiled.insert(room_id, compiled.clone());
         Ok(AutomodCalculator {
             room_id,

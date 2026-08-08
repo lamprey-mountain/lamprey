@@ -1,6 +1,7 @@
 use common::v1::types::{
     ChannelCreate, ChannelPatch, MessageCreate, MessagePatch, RoomMember, User,
-    automod::{AutomodRuleTestRequest, AutomodTarget, AutomodTextLocation},
+    automod::{AutomodMediaLocation, AutomodRuleTestRequest, AutomodTarget, AutomodTextLocation},
+    message::MessageAttachmentCreateType,
 };
 
 use crate::services::automod::compiled::Scannable;
@@ -17,10 +18,13 @@ impl Scannable for MessageCreate {
             visitor.visit_text(t, AutomodTextLocation::MessageContent);
         }
 
-        // TODO: scanning media (i should have full Media objects at this point?)
-        // for att in &self.attachments {
-        //     visitor.visit_media(_, AutomodMediaLocation::MessageAttachment);
-        // }
+        for att in &self.attachments {
+            if let MessageAttachmentCreateType::Media { media, .. } = &att.ty {
+                if let Some(media_id) = media.media_id() {
+                    visitor.visit_media(media_id, AutomodMediaLocation::MessageAttachment);
+                }
+            }
+        }
 
         for emb in &self.embeds {
             if let Some(t) = &emb.title {
@@ -39,6 +43,10 @@ impl Scannable for MessageCreate {
                 visitor.visit_text(t.as_str(), AutomodTextLocation::EmbedUrl);
             }
         }
+
+        // TODO: scan embed media
+        // TODO: scan components
+        // same for MessagePatch
     }
 }
 
@@ -50,6 +58,16 @@ impl Scannable for MessagePatch {
     fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
         if let Some(Some(s)) = self.content.as_ref() {
             visitor.visit_text(s, AutomodTextLocation::MessageContent);
+        }
+
+        if let Some(attachments) = &self.attachments {
+            for att in attachments {
+                if let MessageAttachmentCreateType::Media { media, .. } = &att.ty {
+                    if let Some(media_id) = media.media_id() {
+                        visitor.visit_media(media_id, AutomodMediaLocation::MessageAttachment);
+                    }
+                }
+            }
         }
 
         if let Some(embeds) = &self.embeds {

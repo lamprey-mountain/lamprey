@@ -224,8 +224,8 @@ export const TriggerMediaScan = (props: {
 			</h3>
 			<Dropdown
 				options={[
-					{ item: "Nsfw", label: "NSFW Detection" },
-					{ item: "Malware", label: "Malware / Links" },
+					{ item: "nsfw", label: "NSFW Detection" },
+					{ item: "malware", label: "Malware / Links" },
 				]}
 				onSelect={(item) => updateTrigger("scanner", item!)}
 				selected={props.trigger.scanner}
