@@ -453,13 +453,15 @@ export function RenderUploadItem(props: {
 			? props.att.media.filename
 			: (props.att.filename ?? props.att.file.name);
 
+	// TODO: draw icons for these instead of using emoji
+
 	return (
 		<div class="upload-item">
 			<div
 				class="thumb"
 				style={{ "background-image": `url(${thumbUrl})` }}
 			></div>
-			<div class="info">
+			<div class="info" style="overflow:hidden">
 				<svg
 					aria-hidden="true"
 					class="progress"
