@@ -18,6 +18,7 @@ import {
 type ImageViewProps = MediaProps & {
 	thumb_width?: number;
 	thumb_height?: number;
+	spoiler?: boolean;
 };
 
 // TODO: blur spoiler images
@@ -43,23 +44,27 @@ export const ImageView = (props: ImageViewProps) => {
 		return 0;
 	};
 
-	const [blurred, setBlurred] = createSignal(false);
-	const blurred2 = () => blurred() && flags.has("nsfw_blur"); // TEMP
-
 	const isNsfw = createMemo(() => {
 		const scan = props.media.scans?.find((i) => i.key === NSFW_KEY);
 		const score = scan?.result ?? 0;
 		return score > NSFW_THRESHOLD;
 	});
+	const isSpoiler = () => props.spoiler ?? false;
+
+	const [blurred, setBlurred] = createSignal(isNsfw() || isSpoiler());
+	const blurred2 = () => blurred() && (flags.has("nsfw_blur") || isSpoiler());
 
 	createEffect(
 		on(
 			() => props.media.id,
 			(id, prev) => {
-				if (id !== prev) setBlurred(isNsfw());
+				if (id !== prev) setBlurred(isNsfw() || isSpoiler());
 			},
 		),
 	);
+
+	// FIXME: media overlay text sometimes has very low contrast
+	// i should make it swap between light/dark text depending on the background?
 
 	return (
 		<Resize height={height()} width={width()} ratio={width() / height()}>
@@ -88,9 +93,9 @@ export const ImageView = (props: ImageViewProps) => {
 					onEmptied={() => setLoaded(false)}
 				/>
 				<Show when={blurred2()}>
-					<div class="nsfw-warning">
+					<div class="media-overlay">
 						<Icon src={icWarning} />
-						nsfw
+						{isNsfw() ? "nsfw" : "spoiler"}
 					</div>
 				</Show>
 				<a

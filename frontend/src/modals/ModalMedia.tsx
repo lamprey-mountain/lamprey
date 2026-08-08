@@ -19,7 +19,7 @@ export const ModalMedia = (props: { media: Media }) => {
 				<div class="base"></div>
 				<div class="inner" role="dialog" aria-modal>
 					<Resize height={height()} width={width()}>
-						<div class="image full">
+						<div class="media image full">
 							<div class="media-loader" classList={{ loaded: loaded() }}>
 								loading
 							</div>

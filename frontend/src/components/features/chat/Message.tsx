@@ -558,6 +558,7 @@ export function AttachmentView(props: { att: Attachment }) {
 
 	// TODO: better mime type parsing/matching for application/json
 	// TODO: split out media to MediaView
+	// TODO: support spoilers for other attachment types
 
 	return (
 		<Switch>
@@ -565,7 +566,7 @@ export function AttachmentView(props: { att: Attachment }) {
 				{(media) => (
 					<Switch>
 						<Match when={mainCt() === "image"}>
-							<ImageView media={media()} />
+							<ImageView media={media()} spoiler={props.att.spoiler} />
 						</Match>
 						<Match when={mainCt() === "video"}>
 							<VideoView media={media()} />

@@ -61,7 +61,7 @@
 }
 
 .media.image {
-	& > .nsfw-warning {
+	& > .media-overlay {
 		// center inside .image
 		position: absolute;
 		top: 50%;
@@ -93,8 +93,8 @@
 		}
 	}
 
-	&:hover > .nsfw-warning,
-	&:focus-visible > .nsfw-warning {
+	&:hover > .media-overlay,
+	&:focus-visible > .media-overlay {
 		background-color: oklch(from $bg-150 l c h / 0.3);
 	}
 }
