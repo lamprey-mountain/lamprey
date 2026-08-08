@@ -9,7 +9,7 @@ use common::v1::types::{
     Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, RoomType,
     ThreadMemberPut, UserId,
 };
-use common::v2::types::{SERVER_ROOM_ID, SERVER_USER_ID};
+use common::v2::types::{AUTOMOD_USER_ID, SERVER_ROOM_ID, SERVER_USER_ID};
 use dashmap::{DashMap, DashSet};
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use lamprey_backend_data_postgres::DbUserCreate;
@@ -73,6 +73,19 @@ impl ServiceRooms {
                 id: Some(SERVER_USER_ID),
                 parent_id: None,
                 name: "root".to_string(),
+                description: None,
+                puppet: None,
+                registered_at: Some(Time::now_utc()),
+                system: true,
+                remote: None,
+            })
+            .await?;
+        }
+        if txn.user_get(AUTOMOD_USER_ID).await.is_err() {
+            txn.user_create(DbUserCreate {
+                id: Some(AUTOMOD_USER_ID),
+                parent_id: None,
+                name: "automod".to_string(),
                 description: None,
                 puppet: None,
                 registered_at: Some(Time::now_utc()),
