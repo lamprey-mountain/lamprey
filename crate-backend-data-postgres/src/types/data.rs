@@ -512,11 +512,17 @@ pub struct DbRoleCreate {
     pub sticky: bool,
 }
 
+#[derive(Debug, Clone)]
+pub struct DbMessageAttachment {
+    pub media_id: MediaId,
+    pub spoiler: bool,
+}
+
 /// for message_create
 pub struct DbMessageCreate {
     pub id: Option<MessageId>,
     pub channel_id: ChannelId,
-    pub attachment_ids: Vec<MediaId>,
+    pub attachments: Vec<DbMessageAttachment>,
     pub author_id: UserId,
     pub embeds: Vec<Embed>,
     pub components: Vec<ComponentThin>,
@@ -531,7 +537,7 @@ pub struct DbMessageCreate {
 
 /// for message_update, message_update_in_place
 pub struct DbMessageUpdate {
-    pub attachment_ids: Vec<MediaId>,
+    pub attachments: Vec<DbMessageAttachment>,
     pub author_id: UserId,
     pub embeds: Vec<Embed>,
     pub components: Vec<ComponentThin>,

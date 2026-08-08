@@ -132,7 +132,7 @@ impl ServiceMessages {
         txn.message_create(DbMessageCreate {
             id: Some(message_id),
             channel_id,
-            attachment_ids: vec![],
+            attachments: vec![],
             author_id: user_id,
             embeds: vec![],
             components: components_inner,
@@ -333,7 +333,7 @@ impl ServiceMessages {
             channel_id,
             version_id,
             crate::types::DbMessageUpdate {
-                attachment_ids: vec![],
+                attachments: vec![],
                 author_id,
                 embeds: vec![],
                 components: flume.content.components.inner,

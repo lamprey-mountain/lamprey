@@ -682,7 +682,7 @@ impl ServiceRooms {
                 .message_create(DbMessageCreate {
                     id: None,
                     channel_id: wti,
-                    attachment_ids: vec![],
+                    attachments: vec![],
                     author_id: user_id,
                     embeds: vec![],
                     components: vec![],

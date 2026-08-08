@@ -683,7 +683,7 @@ impl ServiceChannels {
                     .message_create(DbMessageCreate {
                         id: None,
                         channel_id: parent_id,
-                        attachment_ids: vec![],
+                        attachments: vec![],
                         author_id: user_id,
                         embeds: vec![],
                         components: vec![],
@@ -834,7 +834,7 @@ impl ServiceChannels {
                 .message_create(DbMessageCreate {
                     id: None,
                     channel_id: parent_channel_id,
-                    attachment_ids: vec![],
+                    attachments: vec![],
                     author_id: user.id,
                     embeds: vec![],
                     components: vec![],
@@ -1309,7 +1309,7 @@ impl ServiceChannels {
                 .message_create(DbMessageCreate {
                     id: None,
                     channel_id: thread_id,
-                    attachment_ids: vec![],
+                    attachments: vec![],
                     author_id: user_id,
                     embeds: vec![],
                     components: vec![],
@@ -1347,7 +1347,7 @@ impl ServiceChannels {
                 .message_create(DbMessageCreate {
                     id: None,
                     channel_id: thread_id,
-                    attachment_ids: vec![],
+                    attachments: vec![],
                     author_id: user_id,
                     embeds: vec![],
                     components: vec![],
@@ -1404,7 +1404,7 @@ impl ServiceChannels {
                 .message_create(DbMessageCreate {
                     id: None,
                     channel_id: thread_id,
-                    attachment_ids: vec![],
+                    attachments: vec![],
                     author_id: user_id,
                     embeds: vec![],
                     components: vec![],
@@ -1437,7 +1437,7 @@ impl ServiceChannels {
                 .message_create(DbMessageCreate {
                     id: None,
                     channel_id: thread_id,
-                    attachment_ids: vec![],
+                    attachments: vec![],
                     author_id: user_id,
                     embeds: vec![],
                     components: vec![],

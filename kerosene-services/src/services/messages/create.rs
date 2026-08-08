@@ -21,7 +21,7 @@ use crate::globals::messaging::Broadcast;
 use crate::services::automod::AutomodContext;
 use crate::services::messages::util::MediaRegistry;
 use crate::services::messages::{links, markdown};
-use crate::types::MediaLinkType;
+use crate::types::{DbMessageAttachment, MediaLinkType};
 use crate::{Error, Result, services::messages::ServiceMessages};
 
 struct MessageOperation<'a, S> {
@@ -194,38 +194,50 @@ impl MessageOperationKind {
         }
     }
 
-    pub fn attachment_ids(&self) -> Vec<MediaId> {
+    pub fn attachments(&self) -> Vec<DbMessageAttachment> {
         match &self {
-            Self::MessageCreate(o) => {
-                let mut ids = Vec::new();
-                for attachment in &o.json.attachments {
+            Self::MessageCreate(o) => o
+                .json
+                .attachments
+                .iter()
+                .filter_map(|attachment| {
                     let MessageAttachmentCreateType::Media { media, .. } = &attachment.ty;
-                    if let Some(media_id) = media.media_id() {
-                        ids.push(media_id);
-                    }
-                }
-                ids
-            }
+                    media.media_id().map(|media_id| DbMessageAttachment {
+                        media_id,
+                        spoiler: attachment.spoiler,
+                    })
+                })
+                .collect(),
             Self::MessageEdit(o) => {
-                let mut ids = Vec::new();
                 if let Some(attachments) = &o.json.attachments {
-                    for attachment in attachments {
-                        let MessageAttachmentCreateType::Media { media, .. } = &attachment.ty;
-                        if let Some(media_id) = media.media_id() {
-                            ids.push(media_id);
-                        }
-                    }
+                    attachments
+                        .iter()
+                        .filter_map(|attachment| {
+                            let MessageAttachmentCreateType::Media { media, .. } = &attachment.ty;
+                            media.media_id().map(|media_id| DbMessageAttachment {
+                                media_id,
+                                spoiler: attachment.spoiler,
+                            })
+                        })
+                        .collect()
                 } else {
                     match &o.original.latest_version.message_type {
-                        MessageType::DefaultMarkdown(m) => {
-                            ids.extend(m.attachments.iter().filter_map(|a| match &a.ty {
-                                MessageAttachmentType::Media { media } => Some(media.id),
-                            }))
-                        }
-                        _ => {}
+                        MessageType::DefaultMarkdown(m) => m
+                            .attachments
+                            .iter()
+                            .filter_map(|a| match &a.ty {
+                                MessageAttachmentType::Media { media } => {
+                                    Some(DbMessageAttachment {
+                                        media_id: media.id,
+                                        spoiler: a.spoiler,
+                                    })
+                                }
+                                _ => None,
+                            })
+                            .collect(),
+                        _ => vec![],
                     }
                 }
-                ids
             }
         }
     }
@@ -964,7 +976,7 @@ impl ServiceMessages {
         let mut txn = self.globals.begin().await?;
         let user_id = op.author_id();
 
-        let attachment_ids = op.kind.attachment_ids();
+        let attachments = op.kind.attachments();
 
         // NOTE: logic for constructing the MessageType payload should be shared
         let payload =
@@ -1006,7 +1018,7 @@ impl ServiceMessages {
                 txn.message_create(crate::types::DbMessageCreate {
                     id: Some(op.message_id),
                     channel_id: op.channel.id,
-                    attachment_ids,
+                    attachments,
                     author_id: user_id,
                     embeds: op.stage.embeds.clone(),
                     components: op.stage.components.clone(),
@@ -1029,7 +1041,7 @@ impl ServiceMessages {
                     op.channel.id,
                     op.message_id,
                     crate::types::DbMessageUpdate {
-                        attachment_ids,
+                        attachments,
                         author_id: user_id,
                         embeds: op.stage.embeds.clone(),
                         components: op.stage.components.clone(),

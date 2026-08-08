@@ -129,6 +129,12 @@ impl From<DbMessage> for MessageWithCounts {
     }
 }
 
+#[derive(serde::Deserialize)]
+struct DbAttachmentJson {
+    media: DbMediaData,
+    spoiler: bool,
+}
+
 impl From<DbMessageVersion> for MessageVersion {
     fn from(row: DbMessageVersion) -> Self {
         MessageVersion {
@@ -136,25 +142,23 @@ impl From<DbMessageVersion> for MessageVersion {
             author_id: Some(row.author_id.into()),
             message_type: match row.message_type {
                 DbMessageType::DefaultMarkdown => {
-                    let attachments: Vec<serde_json::Value> =
-                        serde_json::from_value(row.attachments).unwrap_or_default();
                     let embeds: Vec<Embed> = row
                         .embeds
                         .and_then(|e| serde_json::from_value(e).ok())
                         .unwrap_or_default();
+
+                    let attachments_data: Vec<DbAttachmentJson> =
+                        serde_json::from_value(row.attachments).unwrap_or_default();
+
                     MessageType::DefaultMarkdown(MessageDefaultMarkdown {
                         content: row.content,
-                        attachments: attachments
+                        attachments: attachments_data
                             .into_iter()
-                            .map(|v| {
-                                let media: DbMediaData = serde_json::from_value(v)
-                                    .unwrap_or_else(|_| panic!("invalid attachment"));
-                                MessageAttachment {
-                                    ty: MessageAttachmentType::Media {
-                                        media: media.into(),
-                                    },
-                                    spoiler: false,
-                                }
+                            .map(|att| MessageAttachment {
+                                ty: MessageAttachmentType::Media {
+                                    media: att.media.into(),
+                                },
+                                spoiler: att.spoiler,
                             })
                             .collect(),
                         metadata: row.metadata.and_then(|m| serde_json::from_value(m).ok()),
@@ -350,15 +354,16 @@ impl DataMessage for Postgres {
         .execute(tx.ext())
         .await?;
 
-        for (ord, att) in create.attachment_ids.iter().enumerate() {
+        for (ord, att) in create.attachments.iter().enumerate() {
             query!(
                 r#"
-                INSERT INTO message_attachment (version_id, media_id, ordering)
-                VALUES ($1, $2, $3)
+                INSERT INTO message_attachment (version_id, media_id, ordering, spoiler)
+                VALUES ($1, $2, $3, $4)
                 "#,
                 version_id,
-                att.into_inner(),
-                ord as i32
+                att.media_id.into_inner(),
+                ord as i32,
+                att.spoiler
             )
             .execute(tx.ext())
             .await?;
@@ -427,15 +432,16 @@ impl DataMessage for Postgres {
         .execute(tx.ext())
         .await?;
 
-        for (ord, att) in update.attachment_ids.iter().enumerate() {
+        for (ord, att) in update.attachments.iter().enumerate() {
             query!(
                 r#"
-                INSERT INTO message_attachment (version_id, media_id, ordering)
-                VALUES ($1, $2, $3)
+                INSERT INTO message_attachment (version_id, media_id, ordering, spoiler)
+                VALUES ($1, $2, $3, $4)
                 "#,
                 ver_id,
-                att.into_inner(),
-                ord as i32
+                att.media_id.into_inner(),
+                ord as i32,
+                att.spoiler
             )
             .execute(tx.ext())
             .await?;

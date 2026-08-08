@@ -311,7 +311,13 @@ impl ServiceEmbed {
                     m.attachments
                         .iter()
                         .filter_map(|a| match &a.ty {
-                            MessageAttachmentType::Media { media } => Some(media.id),
+                            MessageAttachmentType::Media { media } => {
+                                Some(crate::types::DbMessageAttachment {
+                                    media_id: media.id,
+                                    spoiler: a.spoiler,
+                                })
+                            }
+                            _ => None,
                         })
                         .collect(),
                     m.components.clone(),
@@ -324,7 +330,7 @@ impl ServiceEmbed {
             mref.thread_id,
             mref.version_id,
             DbMessageUpdate {
-                attachment_ids: attachments,
+                attachments: attachments,
                 author_id: message.author_id,
                 embeds: embeds.into_iter().map(|e| e.into()).collect(),
                 components: components.into_thin().inner,

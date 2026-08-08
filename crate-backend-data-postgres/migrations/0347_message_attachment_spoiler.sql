@@ -1,0 +1,1 @@
+ALTER TABLE message_attachment ADD COLUMN spoiler BOOLEAN NOT NULL DEFAULT FALSE;

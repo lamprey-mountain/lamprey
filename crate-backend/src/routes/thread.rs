@@ -126,7 +126,7 @@ async fn thread_member_add(
             .message_create(crate::types::DbMessageCreate {
                 id: None,
                 channel_id: req.thread_id,
-                attachment_ids: vec![],
+                attachments: vec![],
                 author_id: user.id,
                 embeds: vec![],
                 components: vec![],
@@ -227,7 +227,7 @@ async fn thread_member_delete(
             .message_create(crate::types::DbMessageCreate {
                 id: None,
                 channel_id: req.thread_id,
-                attachment_ids: vec![],
+                attachments: vec![],
                 author_id: auth.user.id,
                 embeds: vec![],
                 components: vec![],

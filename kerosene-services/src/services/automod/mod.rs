@@ -36,6 +36,7 @@ pub struct AutomodCalculator {
 
 impl AutomodCalculator {
     // NOTE: should i make this return Result or should it always succeed?
+    // TODO: make sure to call srv.automod.enforce() after calc.scan(), check all call sites
     pub async fn scan<S: Scannable>(&self, item: &S, ctx: &AutomodContext) -> AutomodScan {
         let relevant = self.relevant_rules(ctx).await;
         self.compiled.scan(item, &relevant)
@@ -258,7 +259,7 @@ impl ServiceAutomod {
                     let message_create = DbMessageCreate {
                         id: None,
                         channel_id: *channel_id,
-                        attachment_ids: vec![],
+                        attachments: vec![],
                         author_id: AUTOMOD_USER_ID,
                         embeds: vec![],
                         components: vec![],

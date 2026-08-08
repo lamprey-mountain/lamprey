@@ -625,7 +625,7 @@ async fn message_pin(
         .message_create(DbMessageCreate {
             id: None,
             channel_id: req.channel_id,
-            attachment_ids: vec![],
+            attachments: vec![],
             author_id: auth.user.id,
             embeds: vec![],
             components: vec![],
