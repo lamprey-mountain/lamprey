@@ -2840,6 +2840,8 @@ button.link {
 .radio {
 	height: 24px;
 	width: 24px;
+	min-height: 24px;
+	min-width: 24px;
 	color: $fg-600;
 }
 

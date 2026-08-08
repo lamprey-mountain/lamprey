@@ -33,7 +33,7 @@ export const AutomodRuleEditor = (props: AutomodRuleProps) => {
 	const am = useAutomod();
 	const api = useApi();
 
-	const open = () => props.open ?? true;
+	const open = () => (props.open ?? true) && props.draft.state !== "delete";
 
 	// TODO: refactor/deduplicate these functions?
 
@@ -201,24 +201,34 @@ export const AutomodRuleEditor = (props: AutomodRuleProps) => {
 	return (
 		<div class="automod-rule" data-draft-state={props.draft.state}>
 			<div class="header">
-				<Editable
-					wrapper="h2"
-					value={name()}
-					onSave={(name) => {
-						am.updateRule(props.draft, "name", name);
-					}}
-					blur="save"
-					class="name"
-					autoselect
-				/>
+				<Show
+					when={props.draft.state !== "delete"}
+					fallback={<h2 class="name">{name()}</h2>}
+				>
+					<Editable
+						wrapper="h2"
+						value={name()}
+						onSave={(name) => {
+							am.updateRule(props.draft, "name", name);
+						}}
+						blur="save"
+						class="name"
+						autoselect
+					/>
 
-				<CheckboxOptionWithLabel
-					id={`enabled-${ruleId()}`}
-					seed={`enabled-${ruleId()}`}
-					checked={enabled()}
-					label="Enabled"
-					onChange={(checked) => am.updateRule(props.draft, "enabled", checked)}
-				/>
+					<CheckboxOptionWithLabel
+						id={`enabled-${ruleId()}`}
+						seed={`enabled-${ruleId()}`}
+						checked={enabled()}
+						label="Enabled"
+						onChange={(checked) =>
+							am.updateRule(props.draft, "enabled", checked)
+						}
+					/>
+					<button class="button danger" onClick={() => am.remove(ruleId())}>
+						Delete
+					</button>
+				</Show>
 			</div>
 			<Show when={open()}>
 				<div class="trigger">

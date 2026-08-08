@@ -674,10 +674,33 @@
 		}
 	}
 
-	&[data-draft-state="create"] {}
-	&[data-draft-state="update"] {}
-	&[data-draft-state="delete"] {}
-	&[data-draft-state="clean"] {}
+	&[data-draft-state="create"],
+	&[data-draft-state="update"] {
+		border-style: dashed;
+		border-color: $sep-500;
+
+		& > .header > .name {
+			color: $color-green;
+
+			&::after {
+				content: "*";
+			}
+		}
+	}
+
+	&[data-draft-state="update"] {
+		& > .header > .name {
+			color: $color-blue;
+		}
+	}
+
+	&[data-draft-state="delete"] {
+		& > .header > .name {
+			text-decoration: line-through;
+			color: $color-red;
+			padding: 2px 4px;
+		}
+	}
 }
 
 .room-settings-automod {
