@@ -3769,19 +3769,21 @@ button.round {
 	}
 
 	& > .topic {
-		display: flex;
+		display: block;
 		flex: 1 1 0%;
 		margin-right: 8px;
 		cursor: pointer;
 		color: $fg-400;
-		@include truncate;
+		overflow: hidden;
 
 		&:hover {
 			color: $fg-100;
 		}
 
-		& > * {
-			@include truncate;
+		& > .markdown > * {
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 
 		// shrink the spacer so that topic can expand
