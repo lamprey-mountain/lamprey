@@ -1,13 +1,13 @@
 import { useNavigate } from "@solidjs/router";
 import type { InviteTarget } from "sdk";
-import { createEffect, onMount, Show } from "solid-js";
+import { createEffect, Match, Show, Switch } from "solid-js";
 import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
-import { getThumbFromId } from "@/media/util";
-import { RoomIcon } from "./User";
+import { Avatar, ChannelIconGdm, RoomIcon } from "./User";
+import { Status } from "./UserProfileEdit";
 
 const Title = (props: { title?: string }) => {
 	createEffect(() => {
@@ -145,9 +145,25 @@ export const RouteInviteInner = (props: { code: string }) => {
 
 	const target = () => invite()?.target;
 	const room = () => target() && getRoomFromTarget(target());
-	const roomDescription = () => room()?.description ?? "";
-	const roomMemberCount = () => room()?.member_count ?? 0;
-	const roomOnlineCount = () => room()?.online_count ?? 0;
+	const gdm = () => (isGdmTarget(target()!) ? target()!.channel : undefined);
+	const description = () =>
+		isRoomTarget(target()!)
+			? room()?.description
+			: isGdmTarget(target()!)
+				? gdm()?.description
+				: "";
+	const memberCount = () =>
+		isRoomTarget(target()!)
+			? room()?.member_count
+			: isGdmTarget(target()!)
+				? gdm()?.member_count
+				: 0;
+	const onlineCount = () =>
+		isRoomTarget(target()!)
+			? room()?.online_count
+			: isGdmTarget(target()!)
+				? gdm()?.online_count
+				: 0;
 
 	const getMe = useCurrentUser();
 
@@ -200,18 +216,22 @@ export const RouteInviteInner = (props: { code: string }) => {
 						</h3>
 						<div class="invite">
 							<div class="header">
-								<Show when={room()}>
-									{(room) => <RoomIcon room={room()} />}
-								</Show>
+								<InviteAvatar target={invite()?.target!} />
 
 								<div class="info">
 									<div style="font-size: 1.3rem;font-weight: bold">
 										{name()}
 									</div>
-									<Show when={target()?.type === "Room"}>
-										<Markdown content={roomDescription()} class="markdown" />
+									<Show
+										when={target()?.type === "Room" || target()?.type === "Gdm"}
+									>
+										<Markdown content={description() ?? ""} class="markdown" />
 										<div class="dim">
-											{roomMemberCount()} members, {roomOnlineCount()} online
+											{/*
+												TODO: icons for member/online count
+												<Status status="Offline" /> {memberCount()} members, <Status status="Online" /> {onlineCount()} online
+											*/}
+											{memberCount()} members, {onlineCount()} online
 										</div>
 									</Show>
 								</div>
@@ -260,5 +280,25 @@ export const RouteInviteInner = (props: { code: string }) => {
 				</div>
 			</Show>
 		</>
+	);
+};
+
+export const InviteAvatar = (props: { target: InviteTarget }) => {
+	// FIXME: make typescript happy
+	return (
+		<Switch>
+			<Match when={isRoomTarget(props.target)}>
+				<RoomIcon room={props.target.room} />
+			</Match>
+			<Match when={isGdmTarget(props.target)}>
+				<ChannelIconGdm
+					id={props.target.channel.id}
+					icon={props.target.channel.icon}
+				/>
+			</Match>
+			<Match when={isUserTarget(props.target)}>
+				<Avatar user={props.target.user} />
+			</Match>
+		</Switch>
 	);
 };

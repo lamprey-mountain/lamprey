@@ -336,7 +336,8 @@ export function UserProfileEdit(props: UserProps) {
 	);
 }
 
-const Status = (props: { status: UserStatus }) => {
+// TODO: reorganize this
+export const Status = (props: { status: UserStatus }) => {
 	return (
 		<svg
 			aria-hidden="true"
