@@ -147,7 +147,7 @@ function Spoiler(props: { children: SerializedInline[] }) {
 	);
 }
 
-function CodeBlock(props: { text: string; lang?: string | null }) {
+export function CodeBlock(props: { text: string; lang?: string | null }) {
 	let ref!: HTMLElement;
 
 	const [copied, setCopied] = createSignal(false);

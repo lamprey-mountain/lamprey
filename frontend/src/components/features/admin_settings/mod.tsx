@@ -6,3 +6,4 @@ export * from "./Search.tsx";
 export * from "./ServerInfo.tsx";
 export * from "./Todo.tsx";
 export * from "./Users.tsx";
+export * from "./Voice.tsx";
