@@ -1,32 +1,33 @@
 use crate::v1::types::{AutomodRuleId, ChannelId, MessageId, RoleId, RoomId, UserId};
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 #[cfg(feature = "validator")]
 use validator::Validate;
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+// TODO: better doc comments
+
+/// an auto moderation rule for a room
+// TODO(?): maybe allow multiple triggers per rule
+// "execute this rule when ANY of these triggers match"
+#[record]
 pub struct AutomodRule {
     pub id: AutomodRuleId,
     pub room_id: RoomId,
-    #[cfg_attr(feature = "utoipa", schema(max_length = 64))]
+
+    /// a human readable label for this rule
+    #[schema(max_length = 64)]
     pub name: String,
+
+    /// whether any actions occur when this rule is triggered
     pub enabled: bool,
 
-    // TODO: support multiple triggers?
     pub trigger: AutomodTrigger,
-    // /// execute this rule when ANY of these triggers match
-    // #[cfg_attr(feature = "utoipa", schema(max_items = 8))]
-    // pub triggers: Vec<AutomodTrigger>,
+
+    pub target: AutomodTarget,
+
     /// when executed, do ALL of these actions
-    #[cfg_attr(feature = "utoipa", schema(max_items = 8))]
+    #[schema(max_items = 8)]
     pub actions: Vec<AutomodAction>,
 
     /// what roles should be exempt from this rule. users with RoomManage are always exempt.
@@ -34,67 +35,80 @@ pub struct AutomodRule {
 
     /// what channels should be exempt from this rule.
     pub except_channels: Vec<ChannelId>,
+
     /// if nsfw channels should be exempt from this rule.
     pub except_nsfw: bool,
 
     /// whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out)
     pub include_everyone: bool,
-
-    pub target: AutomodTarget,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[cfg(feature = "serde")]
+fn true_fn() -> bool {
+    true
+}
+
+#[record]
 pub struct AutomodRuleCreate {
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
-    #[cfg_attr(feature = "validator", validate(nested))]
-    pub trigger: AutomodTrigger,
-    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
-    // pub triggers: Vec<AutomodTrigger>,
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8), nested))]
-    pub actions: Vec<AutomodAction>,
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub except_roles: Vec<RoleId>,
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub except_channels: Vec<ChannelId>,
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub except_nsfw: bool,
-    #[cfg_attr(feature = "serde", serde(default))]
-    pub include_everyone: bool,
+
+    // FIXME: support this
+    #[serde(default = "true_fn")]
+    pub enabled: bool,
+
     pub target: AutomodTarget,
+
+    #[validate(nested)]
+    pub trigger: AutomodTrigger,
+
+    #[schema(max_items = 8)]
+    #[validate(length(min = 1, max = 8), nested)]
+    pub actions: Vec<AutomodAction>,
+
+    #[serde(default)]
+    pub except_roles: Vec<RoleId>,
+
+    #[serde(default)]
+    pub except_channels: Vec<ChannelId>,
+
+    #[serde(default)]
+    pub except_nsfw: bool,
+
+    #[serde(default)]
+    pub include_everyone: bool,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct AutomodRuleUpdate {
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: Option<String>,
+
     pub enabled: Option<bool>,
-    #[cfg_attr(feature = "validator", validate(nested))]
+
+    pub target: Option<AutomodTarget>,
+
+    #[validate(nested)]
     pub trigger: Option<AutomodTrigger>,
-    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8)))]
-    // pub triggers: Option<Vec<AutomodTrigger>>,
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8), nested))]
+
+    #[schema(max_items = 8)]
+    #[validate(length(min = 1, max = 8), nested)]
     pub actions: Option<Vec<AutomodAction>>,
+
     pub except_roles: Option<Vec<RoleId>>,
     pub except_channels: Option<Vec<ChannelId>>,
     pub except_nsfw: Option<bool>,
     pub include_everyone: Option<bool>,
-    pub target: Option<AutomodTarget>,
 }
 
 /// minimal version of AutomodRule to prevent leaking the rule trigger
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct AutomodRuleStripped {
     pub id: AutomodRuleId,
     pub name: String,
+    pub enabled: bool,
     pub target: AutomodTarget,
 }
 
@@ -103,15 +117,15 @@ impl From<AutomodRule> for AutomodRuleStripped {
         Self {
             id: rule.id,
             name: rule.name,
+            enabled: rule.enabled,
             target: rule.target,
         }
     }
 }
 
 /// what this rule should be evaluated on
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Copy, PartialEq, Eq)]
 pub enum AutomodTarget {
     /// messages, threads, voice statuses
     Content,
@@ -121,9 +135,7 @@ pub enum AutomodTarget {
 }
 
 // NOTE: may be fired multiple times for a piece of content, if there are multiple rules which target it
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct AutomodRuleExecution {
     /// the id of the room that this execution happened in
     pub room_id: RoomId,
@@ -144,17 +156,14 @@ pub struct AutomodRuleExecution {
     pub alert_message_id: Vec<MessageId>,
 
     /// the content that was matched
-    pub matches: Vec<AutomodMatches>,
+    pub matches: AutomodMatch,
 
     /// deduplicated list of all of the actions that were taken
     pub actions: Vec<AutomodAction>,
 }
 
 /// request body for an automod test request
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct AutomodRuleTestRequest {
     /// the text to attempt to scan
     pub text: String,
@@ -164,15 +173,13 @@ pub struct AutomodRuleTestRequest {
 }
 
 /// response body for an automod test request
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct AutomodRuleTest {
     /// the rules that matched the text
     pub rules: Vec<AutomodRule>,
 
     /// the content that was matched
-    pub matches: Vec<AutomodMatches>,
+    pub matches: Option<AutomodMatch>,
 
     /// deduplicated list of all of the actions that would be taken
     ///
@@ -181,10 +188,8 @@ pub struct AutomodRuleTest {
 }
 
 /// matches found in a piece of text
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct AutomodMatches {
+#[record]
+pub struct AutomodMatch {
     /// the original text
     pub text: String,
 
@@ -192,23 +197,40 @@ pub struct AutomodMatches {
     // NOTE: lamprey uses the decancer crate internally
     pub sanitized_text: String,
 
-    /// the substrings in the input text that matched
-    pub matches: Vec<String>,
-
-    /// the keywords in the automod rule that matched
-    pub keywords: Vec<String>,
-
-    /// the regexes in the automod rule that matched
-    pub regexes: Vec<String>,
+    /// each individual match
+    pub fragments: Vec<AutomodMatchFragment>,
 
     /// where this piece of text was found
     pub location: AutomodTextLocation,
 }
 
+/// a fragment of text that matched
+#[record]
+pub struct AutomodMatchFragment {
+    /// the substring in the input text that matched
+    pub text: String,
+
+    /// the substring in the sanitized input text that matched
+    pub sanitized_text: String,
+
+    pub start: usize,
+    pub end: usize,
+
+    #[serde(flatten)]
+    pub kind: AutomodMatchKind,
+}
+
+#[record]
+#[serde(tag = "matcher")]
+pub enum AutomodMatchKind {
+    Keyword { keywords: String },
+    Regex { regex: String },
+}
+
 /// where a piece of text was found
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq, Hash)]
+// #[serde(tag = "type")]
 pub enum AutomodTextLocation {
     /// the user's name
     UserName,
@@ -250,9 +272,29 @@ pub enum AutomodTextLocation {
     Test,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+/// where a piece of media was found
+#[record]
+#[derive(PartialEq, Eq, Hash)]
+pub enum AutomodMediaLocation {
+    /// the user's avatar
+    UserAvatar,
+
+    /// the user's banner
+    UserBanner,
+
+    /// the user's bio (description)
+    UserBio,
+
+    /// a message's attachment
+    MessageAttachment,
+
+    // TODO: varients for embed media fields
+    /// a test scan
+    Test,
+}
+
+#[record]
+#[serde(tag = "type")]
 pub enum AutomodTrigger {
     /// scan text based on regex. regexes are case insensitive.
     TextRegex {
@@ -273,8 +315,9 @@ pub enum AutomodTrigger {
     /// scan text based on its keywords. automatically adds word boundaries and decancers the string (ie. properly handles unicode lookalikes).
     TextKeywords {
         // max length 32
-        // TODO: rename to deny
-        keywords: Vec<String>,
+        // TODO: rename to deny in api
+        #[serde(rename = "keywords")]
+        deny: Vec<String>,
 
         // max length 32
         // probably not useful?
@@ -290,6 +333,20 @@ pub enum AutomodTrigger {
         whitelist: bool,
     },
 
+    // TODO: redo TextLinks
+    // /// target text containing links
+    // ///
+    // /// - `example.com` blocks the domain `example.com` as well as every subdomain recursively (eg. `foo.example.com`, `bar.foo.example.com`)
+    // /// - `*.example.com` blocks subdomains but not `example.com` itself
+    // /// - allows always override denies
+    // /// - use single `*` to match everything. this is useful in `deny` to use this as a whitelist/allowlist
+    // TextLinks {
+    //     /// which hostnames to deny
+    //     deny: Vec<String>,
+    //
+    //     /// which hostnames to allow
+    //     allow: Vec<String>,
+    // },
     /// a builtin server defined list
     TextBuiltin {
         /// the name of the server defined list
@@ -307,9 +364,10 @@ pub enum AutomodTrigger {
     },
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+// TODO: split apart Block -> Quarantine for members?
+// TODO: separate SendAlert for members? make each action correspond with exactly one target?
+#[record]
+#[serde(tag = "type")]
 pub enum AutomodAction {
     /// block the message from being sent
     Block {

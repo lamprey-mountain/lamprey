@@ -48,6 +48,9 @@ async fn automod_rule_create(
     auth.ensure_scopes(&[Scope::Full])?;
     req.rule.validate()?;
 
+    // TODO: validate that trigger regexes are valid
+    // TODO: validate that action SendAlert channel_id is a text channel that isnt removed or archived
+
     let srv = s.services();
     srv.perms
         .for_room3(Some(auth.user.id), req.room_id)
@@ -238,10 +241,8 @@ async fn automod_rule_test(
         .needs(Permission::RoomEdit)
         .check()?;
 
-    let result = srv
-        .automod
-        .test_rules(req.room_id, &req.test.text, req.test.target)
-        .await?;
+    let automod = srv.automod.load(req.room_id).await?;
+    let result = automod.test(&req.test);
 
     Ok(Json(result))
 }

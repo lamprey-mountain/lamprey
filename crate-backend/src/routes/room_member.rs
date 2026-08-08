@@ -16,6 +16,7 @@ use common::v1::types::{
 };
 use common::v1::types::{RoleId, RoomMemberOrigin, SERVER_ROOM_ID};
 use http::StatusCode;
+use kerosene_services::services::automod::AutomodContext;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
@@ -238,12 +239,9 @@ async fn room_member_add(
 
             // scan member with automod
             let automod = srv.automod.load(req.room_id).await?;
-            let scan = automod.scan_member(&res, &auth.user);
-
-            let has_block_action = scan
-                .actions()
-                .iter()
-                .any(|action| matches!(action, AutomodAction::Block { .. }));
+            let automod_ctx = AutomodContext::new(room.id, auth.user.id);
+            let scan = automod.scan(&(&res, &auth.user), &automod_ctx).await;
+            let has_block_action = scan.should_block();
 
             if has_block_action {
                 d.room_member_set_quarantined(req.room_id, target_user_id, true)
@@ -413,12 +411,9 @@ async fn room_member_add(
 
     // scan member with automod
     let automod = srv.automod.load(req.room_id).await?;
-    let scan = automod.scan_member(&res, &auth.user);
-
-    let has_block_action = scan
-        .actions()
-        .iter()
-        .any(|action| matches!(action, AutomodAction::Block { .. }));
+    let automod_ctx = AutomodContext::new(room.id, auth.user.id);
+    let scan = automod.scan(&(&res, &auth.user), &automod_ctx).await;
+    let has_block_action = scan.should_block();
 
     if has_block_action {
         d.room_member_set_quarantined(req.room_id, target_user_id, true)
@@ -631,12 +626,9 @@ async fn room_member_update(
 
     // scan member with automod
     let automod = srv.automod.load(req.room_id).await?;
-    let scan = automod.scan_member(&res, &auth.user);
-
-    let has_block_action = scan
-        .actions()
-        .iter()
-        .any(|action| matches!(action, AutomodAction::Block { .. }));
+    let automod_ctx = AutomodContext::new(room.id, auth.user.id);
+    let scan = automod.scan(&(&res, &auth.user), &automod_ctx).await;
+    let has_block_action = scan.should_block();
 
     if has_block_action {
         d.room_member_set_quarantined(req.room_id, target_user_id, true)

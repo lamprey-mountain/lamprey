@@ -10,7 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
 
-use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleStripped};
+use crate::v1::types::automod::{AutomodAction, AutomodMatch, AutomodRuleStripped};
 use crate::v1::types::components::{self, Components};
 use crate::v1::types::document::{DocumentRevisionId, DocumentTag};
 use crate::v1::types::e2ee::MlsEpoch;
@@ -189,28 +189,6 @@ pub struct PinsReorderItem {
         skip_serializing_if = "Option::is_none"
     )]
     pub position: Option<Option<u16>>,
-}
-
-fn true_fn() -> bool {
-    true
-}
-
-/// what mentions to parse from the message content. mentions will only be parsed if the message content actually contains a mention pattern.
-#[record]
-#[derive(Default)]
-// TODO: validate
-pub struct ParseMentions {
-    /// only parse mentions for these users. an empty vec disables all mentions, while None allows all mentions.
-    #[schema(min_length = 0, max_length = 128)]
-    pub users: Option<Vec<UserId>>,
-
-    /// only parse mentions for these roles. an empty vec disables all mentions, while None allows all mentions.
-    #[schema(min_length = 0, max_length = 128)]
-    pub roles: Option<Vec<RoleId>>,
-
-    /// whether to parse @everyone mentions from the content
-    #[serde(default = "true_fn")]
-    pub everyone: bool,
 }
 
 #[record]
@@ -409,8 +387,7 @@ pub struct MessageAutomodExecution {
     pub actions: Vec<AutomodAction>,
 
     /// the content that was matched
-    #[schema(min_length = 0, max_length = 32)]
-    pub matches: Vec<AutomodMatches>,
+    pub matches: Option<AutomodMatch>,
 
     /// the user who triggered this execution
     pub user_id: UserId,

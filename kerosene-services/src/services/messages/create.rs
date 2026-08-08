@@ -18,6 +18,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::globals::messaging::Broadcast;
+use crate::services::automod::AutomodContext;
 use crate::services::messages::util::MediaRegistry;
 use crate::services::messages::{links, markdown};
 use crate::types::MediaLinkType;
@@ -799,19 +800,21 @@ impl ServiceMessages {
         let srv = self.globals.services();
         let automod = srv.automod.load(room_id).await?;
 
+        let ctx = AutomodContext {
+            room_id,
+            user_id,
+            channel_id: Some(op.channel.id),
+            message_id: Some(op.message_id),
+        };
+
         let scan = match &op.kind {
-            MessageOperationKind::MessageCreate(o) => automod.scan_message_create(&o.json),
-            MessageOperationKind::MessageEdit(o) => {
-                automod.scan_message_update(&o.original, &o.json)
-            }
+            MessageOperationKind::MessageCreate(o) => automod.scan(&o.json, &ctx).await,
+            MessageOperationKind::MessageEdit(o) => automod.scan(&o.json, &ctx).await,
         };
 
         if scan.is_triggered() {
-            let removed = srv
-                .automod
-                .enforce_message_create(room_id, op.channel.id, op.message_id, user_id, &scan)
-                .await?;
-            if removed {
+            srv.automod.enforce(&scan, &ctx).await?;
+            if scan.should_remove() {
                 return Ok(Some(Time::now_utc()));
             }
         }

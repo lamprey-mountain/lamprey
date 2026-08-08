@@ -2,6 +2,9 @@ use lamprey_macros::record;
 
 use crate::v1::types::{ChannelId, ChannelType, EmojiId, RoleId, RoomId, UserId};
 
+// TODO: make most fields Option<T>, only populate them when returning via api
+// user.resolved_name, role.name, channel.name, channel.ty, channel.room_id
+
 /// who/what this message notified on send
 #[record]
 #[derive(Default)]
@@ -88,6 +91,35 @@ pub struct MentionsEmoji {
     pub animated: bool,
 }
 
+fn true_fn() -> bool {
+    true
+}
+
+/// what mentions to parse from the message content
+///
+/// mentions will only be parsed if the message content actually contains a mention pattern.
+#[record]
+#[derive(Default)]
+pub struct ParseMentions {
+    /// only parse mentions for these users.
+    ///
+    /// an empty vec disables all mentions, while None allows all mentions.
+    #[schema(min_length = 0, max_length = 128)]
+    #[validate(length(min = 1, max = 128))]
+    pub users: Option<Vec<UserId>>,
+
+    /// only parse mentions for these roles.
+    ///
+    /// an empty vec disables all mentions, while None allows all mentions.
+    #[schema(min_length = 0, max_length = 128)]
+    #[validate(length(min = 1, max = 128))]
+    pub roles: Option<Vec<RoleId>>,
+
+    /// whether to parse @everyone mentions from the content
+    #[serde(default = "true_fn")]
+    pub everyone: bool,
+}
+
 impl Mentions {
     pub fn is_empty(&self) -> bool {
         self.users.is_empty()
@@ -95,5 +127,16 @@ impl Mentions {
             && self.channels.is_empty()
             && self.emojis.is_empty()
             && !self.everyone
+    }
+}
+
+impl ParseMentions {
+    /// deny all mentions
+    pub fn nothing() -> Self {
+        ParseMentions {
+            users: Some(vec![]),
+            roles: Some(vec![]),
+            everyone: false,
+        }
     }
 }

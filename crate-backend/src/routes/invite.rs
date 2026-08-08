@@ -5,7 +5,6 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::automod::AutomodAction;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
@@ -14,6 +13,7 @@ use common::v1::types::{
     RelationshipType, RoomMemberOrigin, RoomMemberPut, SERVER_ROOM_ID,
 };
 use http::StatusCode;
+use kerosene_services::services::automod::AutomodContext;
 use lamprey_macros::handler;
 use nanoid::nanoid;
 use serde::Serialize;
@@ -293,12 +293,10 @@ async fn invite_use(
 
             // scan member with automod
             let automod = srv.automod.load(room.id).await?;
-            let scan = automod.scan_member(&member, &auth.user);
+            let automod_ctx = AutomodContext::new(room.id, auth.user.id);
+            let scan = automod.scan(&(&member, &auth.user), &automod_ctx).await;
 
-            let has_block_action = scan
-                .actions()
-                .iter()
-                .any(|action| matches!(action, AutomodAction::Block { .. }));
+            let has_block_action = scan.should_block();
 
             if has_block_action {
                 d.room_member_set_quarantined(room.id, auth.user.id, true)

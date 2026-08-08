@@ -19,6 +19,7 @@ pub mod automod_rule_list {
     }
 
     pub struct Response {
+        // TODO: better response format
         #[json]
         pub rules: Vec<AutomodRule>,
     }
