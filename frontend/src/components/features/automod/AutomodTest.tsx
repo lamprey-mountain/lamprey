@@ -8,7 +8,7 @@ import {
 	Suspense,
 	Switch,
 } from "solid-js";
-import type { AutomodAction, AutomodMatches, AutomodRule } from "ts-sdk";
+import type { AutomodAction, AutomodMatch, AutomodRule } from "ts-sdk";
 import { useApi } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown";
 import { Duration } from "@/atoms/Duration";
@@ -16,7 +16,7 @@ import { useAutomod } from "./context";
 
 type AutomodTest = {
 	rules: AutomodRule[];
-	matches: AutomodMatches[];
+	matches: AutomodMatch | null;
 	actions: AutomodAction[];
 };
 
@@ -119,31 +119,25 @@ export const AutomodTest = () => {
 							</div>
 						)}
 					</For>
-					<Show when={scan()?.matches.length}>
-						<h3 class="section dim">matched text</h3>
-						<For each={scan()?.matches ?? []}>
-							{(a) => (
+					<Show when={scan()?.matches}>
+						{(m) => (
+							<>
+								<h3 class="section dim">matched text</h3>
 								<div class="card">
-									{/* TODO: highlight slice of text that matched (may need api changes?) */}
+									{/* TODO: highlight slice of text that matched */}
+									{/* TODO: show matcher pattern (eg. regex, keywords) */}
 									<ul class="clauses">
-										<For each={a.keywords}>
+										<For each={m().fragments ?? []}>
 											{(i) => (
 												<li>
-													<span class="dim">keyword:</span> {i}
-												</li>
-											)}
-										</For>
-										<For each={a.regexes}>
-											{(i) => (
-												<li>
-													<span class="dim">regex:</span> {i}
+													<span class="dim">match ({i.matcher}):</span> {i.text}
 												</li>
 											)}
 										</For>
 									</ul>
 								</div>
-							)}
-						</For>
+							</>
+						)}
 					</Show>
 					<Show when={scan()?.rules.length}>
 						<h3 class="section dim">actions that would be executed</h3>

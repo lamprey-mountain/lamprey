@@ -89,7 +89,9 @@ export type ChannelCreate = components["schemas"]["ChannelCreate"];
 export type PushCreate = components["schemas"]["PushCreate"];
 export type PushInfo = components["schemas"]["PushInfo"];
 export type AutomodRule = components["schemas"]["AutomodRule"];
-export type AutomodMatches = components["schemas"]["AutomodMatches"];
+export type AutomodMatch = components["schemas"]["AutomodMatch"];
+export type AutomodMatchFragment =
+	components["schemas"]["AutomodMatchFragment"];
 export type AutomodRuleCreate = components["schemas"]["AutomodRuleCreate"];
 export type AutomodRuleUpdate = components["schemas"]["AutomodRuleUpdate"];
 export type Attachment = components["schemas"]["MessageAttachment"];
