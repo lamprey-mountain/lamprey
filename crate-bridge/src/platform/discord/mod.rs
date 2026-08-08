@@ -15,6 +15,7 @@ use crate::config::Config;
 use crate::platform::discord::events::DiscordEvent;
 use crate::prelude::*;
 use crate::types::Platform;
+use crate::util::mentions::MessageTransformer;
 use crate::{
     bridge_old::{BridgeEvent, BridgeHandle, PortalEvent},
     config::DiscordConfig,
@@ -26,7 +27,7 @@ mod interactions;
 // re export discord (serenity) types
 pub use serenity::all::{
     Attachment, AttachmentId, ChannelId, CreateAllowedMentions, CreateEmbed, Embed, GuildId,
-    Message, MessageId, User, UserId, WebhookId,
+    Message, MessageId, RoleId, User, UserId, WebhookId,
 };
 
 pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -> PlatformHandle {
@@ -467,6 +468,9 @@ async fn spawn_portal_inner(
                 // NOTE: maybe i could send typing notifs through the bridge bot if anyone is typing on lamprey?
             }
             PortalEvent::MessageCreate(data) => {
+                // PERF: parse after checking MessageData::Discord
+                let transformer = MessageTransformer::parse(&data);
+
                 let (msg, user, room_member, info) = match data {
                     MessageData::Lamprey {
                         message,
@@ -559,26 +563,42 @@ async fn spawn_portal_inner(
                     }
                 }
 
-                // TODO: handle attachments
-                // TODO: handle mentions
+                let (parsed_content, allowed_mentions) = match transformer {
+                    Some(t) => {
+                        let mut user_mappings = HashMap::new();
+                        for id in t.mentioned_users() {
+                            if let Ok(Some(u)) = handle
+                                .bridge
+                                .db
+                                .puppet_get_by_lamprey_id(id.to_string())
+                                .await
+                            {
+                                user_mappings.insert(id.to_string(), u.discord_id);
+                            }
+                        }
+
+                        // TODO: handle role and channel mappings
+
+                        let (parsed, mentions) =
+                            t.to_discord(&user_mappings, &HashMap::new(), &HashMap::new());
+                        (parsed, mentions)
+                    }
+                    None => (content, CreateAllowedMentions::new()),
+                };
 
                 let mut builder = ExecuteWebhook::new()
-                    .content(content)
+                    .content(parsed_content)
                     .embeds(embeds)
                     .username(username)
                     .add_files(files)
-                    .allowed_mentions(CreateAllowedMentions::new());
+                    .allowed_mentions(allowed_mentions);
 
                 if let Some(avatar_url) = avatar_url {
                     builder = builder.avatar_url(avatar_url);
                 }
 
-                // // TODO: handle threads
-                // .in_thread(thread_id)
-                // // TODO: handle other stuff
-                // .files(files)
-                // .components(components)
-                // .allowed_mentions(allowed_mentions);
+                // TODO: handle threads (builder.in_thread(thread_id))
+                // TODO: handle components (builder.components(components))
 
                 let sent_message = webhook.execute(&http, true, builder).await?;
 

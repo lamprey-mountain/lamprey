@@ -57,6 +57,7 @@ pub trait Database: fmt::Debug + Send + Sync {
     ) -> Result<Option<Message>>;
 
     // TODO: rename to user_foo
+    // PERF: make puppet_get_by_foo_id take &str instead of String
     async fn puppet_create(&self, puppet: User) -> Result<()>;
     async fn puppet_get_by_lamprey_id(&self, lamprey_id: String) -> Result<Option<User>>;
     async fn puppet_get_by_discord_id(&self, discord_id: String) -> Result<Option<User>>;

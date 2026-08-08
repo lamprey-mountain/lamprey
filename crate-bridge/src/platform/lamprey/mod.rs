@@ -19,12 +19,13 @@ use crate::bridge_old::{
 use crate::config::LampreyConfig;
 use crate::platform::lamprey::client::{ImportUrl, LampreyClient};
 use crate::prelude::*;
+use crate::util::mentions::MessageTransformer;
 
 // re export lamprey types
 pub use common::v1::types::{
     ChannelId, MediaId, Mentions, Message, MessageAttachment, MessageAttachmentCreate,
-    MessageAttachmentCreateType, MessageCreate, MessageId, ParseMentions, RoomId, RoomMember, User,
-    UserId,
+    MessageAttachmentCreateType, MessageCreate, MessageId, ParseMentions, RoleId, RoomId,
+    RoomMember, User, UserId,
     embed::{Embed, EmbedCreate, EmbedType},
 };
 pub use common::v2::types::media::{Media, MediaCreate, MediaCreateSource};
@@ -459,6 +460,9 @@ async fn spawn_portal_inner(
                     .await;
             }
             PortalEvent::MessageCreate(data) => {
+                // PERF: parse after checking MessageData::Lamprey
+                let transformer = MessageTransformer::parse(&data);
+
                 let dm = match data {
                     bridge_old::MessageData::Lamprey { .. } => {
                         // don't send messages from lamprey back to lamprey
@@ -469,24 +473,41 @@ async fn spawn_portal_inner(
 
                 let puppet = ly.sync_puppet_discord(dm).await?;
 
-                // TODO: ly -> async fn process_discord_message(&self, ...) -> Result<MessageCreate>
-                let mut create = MessageCreate {
-                    content: if dm.content.is_empty() {
-                        None
-                    } else {
-                        Some(dm.content.clone())
-                    },
-                    // TODO: move fully restrictive ParseMentions into ParseMentions::nothing()
-                    mentions: ParseMentions {
-                        users: Some(vec![]),
-                        roles: Some(vec![]),
-                        everyone: false,
-                    },
-                    ..Default::default()
+                let (parsed_content, allowed_mentions) = match transformer {
+                    Some(t) => {
+                        // PERF: fetch users concurrently (though, this might not be a good idea with sqlite?)
+                        let mut user_mappings = HashMap::new();
+                        for uid in t.mentioned_users() {
+                            if let Ok(Some(u)) = handle
+                                .bridge
+                                .db
+                                .puppet_get_by_discord_id(uid.to_string())
+                                .await
+                            {
+                                user_mappings.insert(uid.to_string(), u.lamprey_id);
+                            }
+                        }
+
+                        // TODO: handle role and channel mappings
+
+                        let (parsed, mentions) =
+                            t.to_lamprey(&user_mappings, &HashMap::new(), &HashMap::new());
+                        let parsed = if parsed.is_empty() {
+                            None
+                        } else {
+                            Some(parsed)
+                        };
+                        (parsed, Some(mentions))
+                    }
+                    None => (None, None),
                 };
 
-                // TODO: reformat text (mentions, mostly)
-                // see mentions::convert_discord_mentions_to_lamprey
+                // TODO: ly -> async fn process_discord_message(&self, ...) -> Result<MessageCreate>
+                let mut create = MessageCreate {
+                    content: parsed_content,
+                    mentions: allowed_mentions.unwrap_or_else(ParseMentions::nothing),
+                    ..Default::default()
+                };
 
                 // populate reply_id
                 if let Some(reference) = &dm.message_reference {

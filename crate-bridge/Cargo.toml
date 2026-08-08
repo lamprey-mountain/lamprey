@@ -11,31 +11,32 @@ name = "bridge"
 path = "src/main.rs"
 
 [dependencies]
+anyhow = "1.0.102"
 async-trait = "0.1.89"
+common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
 dashmap = "6.1.0"
 dotenvy = "0.15.7"
+figment = { version = "0.10.19", features = ["env", "toml"] }
 futures = "0.3"
+kameo = "0.19"
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+lamprey-markdown = { version = "0.1", path = "../crate-markdown" }
+once_cell = "1.21"
+opentelemetry = "0.30.0"
+opentelemetry-otlp = { version = "0.30.0", features = ["grpc-tonic", "logs", "metrics", "reqwest", "tokio", "tracing", "trace"], default-features = false }
+opentelemetry_sdk = { version = "0.30.0", features = ["rt-tokio", "tokio"] }
+regex = "1.11"
 reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots", "json"] }
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
+sdk = { package = "lamprey-sdk", version = "0.1.0", path = "../crate-sdk" }
 serde = "1.0.228"
 serenity = "0.12.5"
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "uuid"] }
+strum = { version = "0.28.0", features = ["derive"] }
+time = { version = "0.3", features = ["serde-human-readable", "macros"] }
 tokio = { version = "1.50.0", features = ["rt-multi-thread"] }
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
-common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
-uuid = "1.22.0"
-sdk = { package = "lamprey-sdk", version = "0.1.0", path = "../crate-sdk" }
-time = { version = "0.3", features = ["serde-human-readable", "macros"] }
-anyhow = "1.0.102"
-figment = { version = "0.10.19", features = ["env", "toml"] }
-opentelemetry-otlp = { version = "0.30.0", features = ["grpc-tonic", "logs", "metrics", "reqwest", "tokio", "tracing", "trace"], default-features = false }
-opentelemetry = "0.30.0"
-opentelemetry_sdk = { version = "0.30.0", features = ["rt-tokio", "tokio"] }
 tracing-opentelemetry = "0.31.0"
-lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
-kameo = "0.19"
-regex = "1.11"
-once_cell = "1.21"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
 url = "2.5.8"
-strum = { version = "0.28.0", features = ["derive"] }
+uuid = "1.22.0"

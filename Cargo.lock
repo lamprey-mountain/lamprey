@@ -4505,6 +4505,7 @@ dependencies = [
  "kameo",
  "lamprey-common",
  "lamprey-hakari",
+ "lamprey-markdown",
  "lamprey-sdk",
  "once_cell",
  "opentelemetry 0.30.0",
