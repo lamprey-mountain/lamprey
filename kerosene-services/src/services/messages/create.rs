@@ -814,10 +814,12 @@ impl ServiceMessages {
 
         if scan.is_triggered() {
             srv.automod.enforce(&scan, &ctx).await?;
+            scan.ensure_unblocked()?;
             if scan.should_remove() {
                 return Ok(Some(Time::now_utc()));
             }
         }
+
         Ok(None)
     }
 
