@@ -1,10 +1,11 @@
 import { useNavigate } from "@solidjs/router";
 import type { InviteTarget } from "sdk";
 import { createEffect, onMount, Show } from "solid-js";
-import { useApi, useInvites } from "@/api";
+import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { useCurrentUser } from "@/contexts/currentUser";
+import { useModals } from "@/contexts/modal";
 import { getThumbFromId } from "@/media/util";
 import { RoomIcon } from "./User";
 
@@ -46,11 +47,11 @@ function getRoomFromTarget(target: InviteTarget | undefined) {
 }
 
 export const RouteInviteInner = (props: { code: string }) => {
-	const invites2 = useInvites();
 	const ctx = useCtx();
 	const api = useApi();
 	const nav = useNavigate();
-	const invite = invites2.use(() => props.code);
+	const invite = api.invites.use(() => props.code);
+	const currentUser = useCurrentUser();
 
 	const name = () => {
 		const i = invite();
@@ -126,6 +127,22 @@ export const RouteInviteInner = (props: { code: string }) => {
 		nav("/");
 	};
 
+	// TODO: better ui/smoother flow (turn invite component into a form -> name, etc?)
+	const [, modalctl] = useModals();
+	const joinWithGuest = async () => {
+		modalctl.prompt("name?", async (name) => {
+			if (!name) return;
+			// FIXME: race condition: page reloads after guest is created, possibly before join() is called
+			await api.users.createGuest(name);
+			await join();
+		});
+	};
+
+	// TODO: implement login button (use Authenticate?)
+	const login = async () => {
+		modalctl.alert("todo!");
+	};
+
 	const target = () => invite()?.target;
 	const room = () => target() && getRoomFromTarget(target());
 	const roomDescription = () => room()?.description ?? "";
@@ -176,16 +193,17 @@ export const RouteInviteInner = (props: { code: string }) => {
 		<>
 			<Title title={invite.loading ? "invite" : titleText()} />
 			<Show when={invite()} fallback="loading...">
-				<div class="invite" style="padding:8px">
+				<div class="invite-wrapper">
 					<div>
 						<h3 class="dim" style="margin-left:12px;margin-bottom:4px">
 							you have been invited to
 						</h3>
-						<div class="box">
-							<div style="display:flex;">
+						<div class="invite">
+							<div class="header">
 								<Show when={room()}>
 									{(room) => <RoomIcon room={room()} />}
 								</Show>
+
 								<div class="info">
 									<div style="font-size: 1.3rem;font-weight: bold">
 										{name()}
@@ -196,31 +214,48 @@ export const RouteInviteInner = (props: { code: string }) => {
 											{roomMemberCount()} members, {roomOnlineCount()} online
 										</div>
 									</Show>
-									<div style="display:flex;justify-content:end;gap:4px">
-										<button type="button" class="link" onClick={reject}>
-											cancel
-										</button>
-										<button type="button" class="button primary" onClick={join}>
-											{joinName()}
-										</button>
-									</div>
 								</div>
 							</div>
+
+							<menu class="menu">
+								<Show when={currentUser()}>
+									<button type="button" class="button link" onClick={reject}>
+										cancel
+									</button>
+									<button type="button" class="button primary" onClick={join}>
+										{joinName()}
+									</button>
+								</Show>
+								<Show when={!currentUser()}>
+									<button type="button" class="button link" onClick={login}>
+										login
+									</button>
+									<button
+										type="button"
+										class="button primary"
+										onClick={joinWithGuest}
+									>
+										join
+									</button>
+								</Show>
+							</menu>
+
+							{/* TODO: show warning if user is missing auth method */}
+							<Show when={invite()?.target.type === "Server" && false}>
+								<div class="warning">
+									<div>you need to add an authentication method first!</div>
+									<button type="button" class="button">
+										add email
+									</button>
+									<button type="button" class="button">
+										add password
+									</button>
+									<button type="button" class="button">
+										login with oauth
+									</button>
+								</div>
+							</Show>
 						</div>
-						<Show when={invite()?.target.type === "Server" && false}>
-							<div class="warning">
-								<div>you need to add an authentication method first!</div>
-								<button type="button" class="button">
-									add email
-								</button>
-								<button type="button" class="button">
-									add password
-								</button>
-								<button type="button" class="button">
-									login with oauth
-								</button>
-							</div>
-						</Show>
 					</div>
 				</div>
 			</Show>
