@@ -7,25 +7,25 @@ pub struct PermissionBits(u128);
 
 /// permissions that affect one's ability to view something
 pub const VIEW_PERMS: PermissionBits = PermissionBits(
-    (1u128 << 39) | // ChannelView
-    (1u128 << 40) | // AuditLogView
-    (1u128 << 41), // AnalyticsView
+    (1u128 << 36) | // ChannelView
+    (1u128 << 37) | // AuditLogView
+    (1u128 << 38), // AnalyticsView
 );
 
 /// permissions for lurkers in broadcast channels
 pub const BROADCAST_LURKER_PERMS: PermissionBits = PermissionBits(
-    (1u128 << 39) | // ChannelView
-    (1u128 << 40) | // AuditLogView
-    (1u128 << 41) | // AnalyticsView
-    (1u128 << 51) | // VoiceRequest
-    (1u128 << 50), // VoiceVad
+    (1u128 << 36) | // ChannelView
+    (1u128 << 37) | // AuditLogView
+    (1u128 << 38) | // AnalyticsView
+    (1u128 << 46) | // VoiceRequest
+    (1u128 << 45), // VoiceVad
 );
 
 /// permissions for quarantined users (view + nickname)
 pub const QUARANTINE_PERMS: PermissionBits = PermissionBits(
-    (1u128 << 39) | // ChannelView
-    (1u128 << 40) | // AuditLogView
-    (1u128 << 41) | // AnalyticsView
+    (1u128 << 36) | // ChannelView
+    (1u128 << 37) | // AuditLogView
+    (1u128 << 38) | // AnalyticsView
     (1u128 << 10), // MemberNickname
 );
 
