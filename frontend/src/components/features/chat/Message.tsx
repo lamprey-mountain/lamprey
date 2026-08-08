@@ -836,7 +836,10 @@ function DefaultMessage(
 	};
 
 	const dismissMessage = () => {
-		api.messages.handleMessageDelete(props.message.channel_id, props.message.id);
+		api.messages.handleMessageDelete(
+			props.message.channel_id,
+			props.message.id,
+		);
 	};
 
 	return (

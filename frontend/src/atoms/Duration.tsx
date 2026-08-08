@@ -8,7 +8,7 @@ const secs = (ms: number) =>
 
 export const Duration = (props: VoidProps<{ ms: number | null }>) => {
 	return (
-		<span class="dim">
+		<span class="duration dim">
 			<Show when={props.ms} fallback="--:--">
 				{(ms) => (
 					<>

@@ -484,6 +484,71 @@
 
 // TODO: border-image for more control over dashed border
 .room-settings-automod {
+	display: flex;
+	justify-content: space-between;
+	height: 100%;
+}
+
+.room-settings-automod .automod-test {
+	background: oklch(from $bg-150 l c h / .5);
+	overflow-y: auto;
+	width: 100%;
+
+	& > .header {
+		padding: 0.5rem;
+		background: $bg-150;
+		border-bottom: solid $sep-300 1px;
+	}
+
+	& > .results {
+		padding: 0.5rem;
+		padding-top: 0;
+	}
+
+	.textarea {
+		border: solid $sep-300 1px;
+		background: $bg-100;
+		padding: 2px 4px;
+		white-space: pre;
+		color: $fg-300;
+
+		&:focus-visible {
+			color: $fg-100;
+			border-color: $link-500;
+		}
+	}
+
+	.card {
+		padding: 0.5rem;
+		background: $bg-150;
+		border: solid $bg-200 1px;
+		margin: 4px 0;
+		border-radius: 4px;
+	}
+
+	.section {
+		margin-top: 16px;
+	}
+
+	.clauses {
+		.duration {
+			font-size: 1em;
+			color: $fg-200;
+		}
+	}
+}
+
+.room-settings-automod.testing > .automod-main {
+	max-width: 60ch;
+	padding-right: .5rem;
+}
+
+.room-settings-automod > .automod-main {
+	flex: 1;
+	padding: 0.5rem;
+	padding-right: calc(100% - 60ch);
+	overflow-y: auto;
+
 	& > .header {
 		display: flex;
 		gap: 8px;
@@ -513,6 +578,11 @@
 				color: $fg-100;
 			}
 		}
+	}
+
+	.button.link.danger {
+		color: $color-red;
+		background: none;
 	}
 }
 
@@ -557,6 +627,12 @@
 					background: $bg-300;
 					color: $fg-100;
 				}
+			}
+
+			& > .top {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
 			}
 		}
 	}

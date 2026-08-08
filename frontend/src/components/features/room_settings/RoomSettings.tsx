@@ -104,6 +104,7 @@ const tabs: TabItem[] = [
 	{
 		name: "automod",
 		path: "automod",
+		noPad: true,
 		component: Automod,
 		permissionCheck: (p) => p.has("RoomManage") && flags.has("automod"),
 	},
@@ -175,7 +176,7 @@ const adminTabs: TabItem[] = [
 	{
 		name: "voice",
 		path: "voice",
-		component: todo("list and manage voice sfus/servers"),
+		component: Admin.Voice,
 	},
 	{
 		name: "search",

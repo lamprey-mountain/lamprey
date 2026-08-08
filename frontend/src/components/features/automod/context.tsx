@@ -26,6 +26,7 @@ export type AutomodState = {
 		key: string,
 		value: any,
 	) => void;
+	removeAction: (draft: AutomodRuleDraft, index: number) => void;
 
 	create(): void;
 	remove(id: string): void;
@@ -199,6 +200,37 @@ export const AutomodProvider = (props: AutomodProviderProps) => {
 		}
 	};
 
+	const removeAction = (draft: AutomodRuleDraft, actionIndex: number) => {
+		const ruleIndex = rules.findIndex((r) =>
+			r.state === "create" && draft.state === "create"
+				? r.nonce === draft.nonce
+				: r.state !== "create" && draft.state !== "create"
+					? r.rule.id === draft.rule.id
+					: false,
+		);
+		if (ruleIndex === -1) return;
+
+		const targetDraft = rules[ruleIndex];
+		const currentActions =
+			targetDraft.state === "create"
+				? targetDraft.create.actions
+				: targetDraft.state === "update"
+					? (targetDraft.update.actions ?? targetDraft.rule.actions)
+					: targetDraft.rule.actions;
+		const newActions = currentActions.filter((_, i) => i !== actionIndex);
+
+		if (targetDraft.state === "create") {
+			update(ruleIndex, "create", "actions", newActions);
+		} else if (targetDraft.state === "clean") {
+			update(ruleIndex, {
+				state: "update",
+				update: { actions: newActions },
+			});
+		} else if (targetDraft.state === "update") {
+			update(ruleIndex, "update", "actions", newActions);
+		}
+	};
+
 	createEffect(() => {
 		refetch();
 	});
@@ -208,6 +240,7 @@ export const AutomodProvider = (props: AutomodProviderProps) => {
 		update,
 		updateRule,
 		updateAction,
+		removeAction,
 
 		create,
 		remove,

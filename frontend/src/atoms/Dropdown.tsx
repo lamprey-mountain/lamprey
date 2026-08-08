@@ -543,7 +543,7 @@ export type DropdownProps<T> = {
 	mount?: Element | DocumentFragment | null;
 	ignoreMissingLabel?: boolean;
 	placeholder?: string;
-	enableWheel?: boolean;
+	enableWheel?: boolean; // FIXME: this causes a lot of issues and accidental retriggerings
 	placement?: Placement;
 };
 

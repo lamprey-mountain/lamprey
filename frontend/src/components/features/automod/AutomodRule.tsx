@@ -29,7 +29,7 @@ export type AutomodRuleProps = {
 // TODO: dropdown icons for action types
 // TODO: collapseable rules (like details/summary)
 
-export const AutomodRule2 = (props: AutomodRuleProps) => {
+export const AutomodRuleEditor = (props: AutomodRuleProps) => {
 	const am = useAutomod();
 	const api = useApi();
 
@@ -294,25 +294,35 @@ export const AutomodRule2 = (props: AutomodRuleProps) => {
 
 							return (
 								<div class="action">
-									<Dropdown
-										// TODO: make typescript happy
-										// TODO: move labels to i18n
-										options={[
-											{ item: "Block", label: "Block Message" },
-											{ item: "Timeout", label: "Timeout Sender" },
-											{ item: "Remove", label: "Remove Message" },
-											{ item: "SendAlert", label: "Send Alert" },
-										].filter((i) => isActionAllowed(i.item))}
-										selected={action.type}
-										onSelect={(type) => {
-											const currentActions = actions();
-											const newActions = [...currentActions];
-											newActions[index()] = structuredClone(
-												actionDefaults[type],
-											);
-											am.updateRule(props.draft, "actions", newActions);
-										}}
-									/>
+									<div class="top">
+										<Dropdown
+											// TODO: make typescript happy
+											// TODO: move labels to i18n
+											options={[
+												{ item: "Block", label: "Block Message" },
+												{ item: "Timeout", label: "Timeout Sender" },
+												{ item: "Remove", label: "Remove Message" },
+												{ item: "SendAlert", label: "Send Alert" },
+											].filter((i) => isActionAllowed(i.item))}
+											selected={action.type}
+											onSelect={(type) => {
+												const currentActions = actions();
+												const newActions = [...currentActions];
+												newActions[index()] = structuredClone(
+													actionDefaults[type],
+												);
+												am.updateRule(props.draft, "actions", newActions);
+											}}
+										/>
+										<button
+											class="button link danger"
+											onClick={() => {
+												am.removeAction(props.draft, index());
+											}}
+										>
+											remove
+										</button>
+									</div>
 									<Switch>
 										<Match when={matchesAction("Block")}>
 											{(action) => (
