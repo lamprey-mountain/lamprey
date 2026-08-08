@@ -127,7 +127,7 @@ export const AutomodTest = () => {
 									{/* TODO: highlight slice of text that matched */}
 									{/* TODO: show matcher pattern (eg. regex, keywords) */}
 									<ul class="clauses">
-										<For each={m().fragments ?? []}>
+										<For each={m().fragments.filter((i) => i.text)}>
 											{(i) => (
 												<li>
 													<span class="dim">match ({i.matcher}):</span> {i.text}

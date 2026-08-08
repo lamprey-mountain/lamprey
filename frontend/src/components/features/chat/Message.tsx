@@ -1,6 +1,7 @@
 import { useNavigate } from "@solidjs/router";
 import {
 	type Attachment,
+	type AutomodAction,
 	type Channel as ChannelT,
 	getTimestampFromUUID,
 	Media,
@@ -42,6 +43,7 @@ import icReactionAdd from "@/assets/reaction-add.png";
 import icReply from "@/assets/reply.png";
 import icThread from "@/assets/threads.png";
 import { Components } from "@/atoms/Components.tsx";
+import { Duration } from "@/atoms/Duration.tsx";
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { Time } from "@/atoms/Time";
@@ -1457,11 +1459,31 @@ function SystemMessageChannelMoved(props: SystemMessageProps) {
 function SystemMessageAutomodExecution(props: SystemMessageProps) {
 	const { t } = useCtx();
 
-	// const m = () => props.message.latest_version as MessageVersionT & { type: "AutomodExecution" };
-	// m().actions;
-	// m().flagged_message_id;
-	// m().matches;
-	// m().rules;
+	const m = () =>
+		props.message.latest_version as MessageVersionT & {
+			type: "AutomodExecution";
+		};
+
+	// TODO: fix timestamp position
+	// TODO: if automod acted on a message, render pseudo message and highlight phrases that triggered the action
+	// TODO: if its not a message, still highlight matches? (how would the ui look in this case?)
+
+	// m().matches.fragments[0].text
+
+	const renderAction = (action: AutomodAction) => {
+		switch (action.type) {
+			case "Block":
+				return <>Blocked</>;
+			// TODO: better styling for Timeout duration
+			// case "Timeout": return <>Timed out <Duration ms={action.duration} /></>
+			case "Timeout":
+				return <>Timed out</>;
+			case "Remove":
+				return <>Message removed</>;
+			case "SendAlert":
+				return null; // redundant
+		}
+	};
 
 	return (
 		<SystemMessage
@@ -1478,12 +1500,29 @@ function SystemMessageAutomodExecution(props: SystemMessageProps) {
 						"message_content.automod_execution",
 						<span class="author">
 							<UserDisplayName
-								user_id={props.message.author_id}
+								user_id={m().user_id}
 								room_id={props.room_id}
 								onClick
 							/>
 						</span>,
 					)}
+					<div class="automod-execution-details">
+						<div class="rules">
+							<strong>Rules: </strong>
+							{m()
+								.rules.map((i) => i.name)
+								.join(", ")}
+						</div>
+						<div class="actions">
+							<strong>Actions: </strong>
+							{m()
+								.actions.map(renderAction)
+								.filter((i) => i)
+								.flatMap((action, i, arr) =>
+									i < arr.length - 1 ? [action, ", "] : [action],
+								)}
+						</div>
+					</div>
 				</div>
 			}
 		/>
