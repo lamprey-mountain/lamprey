@@ -19,7 +19,7 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::ServerState;
+use crate::{ServerState, routes::util::auth::Auth4};
 use crate::{
     error::{Error, Result},
     routes2,
@@ -136,7 +136,7 @@ async fn media_done(
 
 #[handler(routes::media_get)]
 async fn media_get(
-    auth: Auth,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::media_get::Request,
 ) -> Result<impl IntoResponse> {
@@ -144,10 +144,11 @@ async fn media_get(
     let media = item.media();
 
     if media.deleted_at.is_some() {
+        let user = auth.ensure_user()?;
         let perms = s
             .services()
             .perms
-            .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+            .for_room3(Some(user.id), SERVER_ROOM_ID)
             .await?;
         if !perms.has(Permission::Admin) {
             return Err(Error::ApiError(ApiError::from_code(
