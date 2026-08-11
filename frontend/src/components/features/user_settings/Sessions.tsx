@@ -120,15 +120,15 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 									</menu>
 								</div>
 								<div class="meta">
-									<Time date={new Date(s.last_seen_at)} />
+									<Time date={new Date(s.imprint.last_seen_at)} />
 									<span class="bullet"></span>
-									{s.user_agent ? (
-										parseUA(s.user_agent).label
+									{s.imprint.user_agent ? (
+										parseUA(s.imprint.user_agent).label
 									) : (
 										<span class="unknown">unknown ua</span>
 									)}
 									<span class="bullet"></span>
-									{s.ip_addr ?? <span class="unknown">unknown ip</span>}
+									{s.imprint.ip_addr ?? <span class="unknown">unknown ip</span>}
 								</div>
 								<div class="dim">
 									<Copyable>{s.id}</Copyable>
