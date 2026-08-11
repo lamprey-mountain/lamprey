@@ -179,10 +179,37 @@ export const useModals = (): ModalsContextType => {
 	return context;
 };
 
-// export type ModalsContext2Type = ModalsController & {
-// 	modals: Modal[];
-// };
+export type ModalsContext2Type = {
+	open: (modal: Modal) => void;
+	alert: (text: string) => void;
+	prompt: (text: string) => Promise<string | null>;
+	confirm: (text: string) => Promise<boolean>;
+	modals: Modal[];
+};
 
-// export const useModals2 = (): ModalsContext2Type  => {
-// 	// TODO
-// };
+export const useModals2 = (): ModalsContext2Type => {
+	const context = useContext(ModalsContext);
+	if (!context) {
+		throw new Error("useModals2 must be used within a ModalsProvider");
+	}
+
+	return {
+		...context[1],
+		get modals() {
+			return context[0];
+		},
+		alert(text: string) {
+			context[1].alert(text);
+		},
+		prompt(text: string): Promise<string | null> {
+			return new Promise((resolve) => {
+				context[1].prompt(text, resolve);
+			});
+		},
+		confirm(text: string): Promise<boolean> {
+			return new Promise((resolve) => {
+				context[1].confirm(text, resolve);
+			});
+		},
+	};
+};
