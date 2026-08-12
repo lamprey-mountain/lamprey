@@ -10,7 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::{Validate, ValidateLength, ValidationError, ValidationErrors};
 
-use crate::v1::types::automod::{AutomodAction, AutomodMatch, AutomodRuleStripped};
+use crate::v1::types::automod::{AutomodAction, AutomodMatches, AutomodRuleSummary};
 use crate::v1::types::components::{self, Components};
 use crate::v1::types::document::{DocumentRevisionId, DocumentTag};
 use crate::v1::types::e2ee::MlsEpoch;
@@ -380,14 +380,14 @@ pub struct MessagePin {
 pub struct MessageAutomodExecution {
     /// the rules that were triggered
     #[schema(min_length = 0, max_length = 32)]
-    pub rules: Vec<AutomodRuleStripped>,
+    pub rules: Vec<AutomodRuleSummary>,
 
     /// the actions that were executed
     #[schema(min_length = 0, max_length = 32)]
     pub actions: Vec<AutomodAction>,
 
     /// the content that was matched
-    pub matches: Option<AutomodMatch>,
+    pub matches: Option<AutomodMatches>,
 
     /// the user who triggered this execution
     pub user_id: UserId,

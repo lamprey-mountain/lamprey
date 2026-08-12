@@ -105,14 +105,14 @@ pub struct AutomodRuleUpdate {
 
 /// minimal version of AutomodRule to prevent leaking the rule trigger
 #[record]
-pub struct AutomodRuleStripped {
+pub struct AutomodRuleSummary {
     pub id: AutomodRuleId,
     pub name: String,
     pub enabled: bool,
     pub target: AutomodTarget,
 }
 
-impl From<AutomodRule> for AutomodRuleStripped {
+impl From<AutomodRule> for AutomodRuleSummary {
     fn from(rule: AutomodRule) -> Self {
         Self {
             id: rule.id,
@@ -134,14 +134,17 @@ pub enum AutomodTarget {
     Member,
 }
 
-// NOTE: may be fired multiple times for a piece of content, if there are multiple rules which target it
+/// represents an automod rule that was triggered
+///
+/// multiple `AutomodRuleExecution`s may be fired for a piece of content, if
+/// there are multiple rules which matched it
 #[record]
 pub struct AutomodRuleExecution {
     /// the id of the room that this execution happened in
     pub room_id: RoomId,
 
     /// the rule that was executed
-    pub rule: AutomodRule,
+    pub rule: AutomodRuleSummary,
 
     /// the user who triggered this execution
     pub user_id: UserId,
@@ -156,7 +159,7 @@ pub struct AutomodRuleExecution {
     pub alert_message_id: Vec<MessageId>,
 
     /// the content that was matched
-    pub matches: AutomodMatch,
+    pub matches: Option<AutomodMatches>,
 
     /// deduplicated list of all of the actions that were taken
     pub actions: Vec<AutomodAction>,
@@ -179,7 +182,7 @@ pub struct AutomodRuleTest {
     pub rules: Vec<AutomodRule>,
 
     /// the content that was matched
-    pub matches: Option<AutomodMatch>,
+    pub matches: Option<AutomodMatches>,
 
     /// deduplicated list of all of the actions that would be taken
     ///
@@ -189,7 +192,7 @@ pub struct AutomodRuleTest {
 
 /// matches found in a piece of text
 #[record]
-pub struct AutomodMatch {
+pub struct AutomodMatches {
     /// the original text
     pub text: String,
 

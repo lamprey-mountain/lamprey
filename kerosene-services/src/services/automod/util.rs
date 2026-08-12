@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use common::{
-    v1::types::automod::{AutomodAction, AutomodMatch},
+    v1::types::automod::{AutomodAction, AutomodMatches},
     v2::types::{AutomodRuleId, ChannelId, MessageId, RoomId, UserId},
 };
 use kerosene_core::error::{ApiError, ErrorCode};
@@ -16,7 +16,7 @@ pub struct AutomodScan {
     pub(super) actions: AutomodResultActions,
 
     /// what was matched
-    pub(super) matches: Option<AutomodMatch>,
+    pub(super) matches: Option<AutomodMatches>,
     // probably add room_id, channel_id, user_id
     // maybe add message_id, but how would i populate it?
 }

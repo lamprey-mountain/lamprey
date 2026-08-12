@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use common::{
     v1::types::automod::{
-        AutomodMatch, AutomodMatchFragment, AutomodMatchKind, AutomodMediaLocation, AutomodRule,
+        AutomodMatchFragment, AutomodMatchKind, AutomodMatches, AutomodMediaLocation, AutomodRule,
         AutomodTarget, AutomodTextLocation, AutomodTrigger,
     },
     v2::types::{AutomodRuleId, MediaId, media::Media},
@@ -240,7 +240,7 @@ impl Compiled {
         }
 
         // collect rules, actions, matches
-        let mut text_matches = AutomodMatch {
+        let mut text_matches = AutomodMatches {
             text: text.to_string(),
             sanitized_text: cured_text.clone(),
             fragments: vec![],

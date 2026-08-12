@@ -2,7 +2,10 @@ use common::{
     v1::types::{
         Mentions, MentionsUser, MessageAutomodExecution, MessageSync, MessageType, Permission,
         RoomId, RoomMemberPatch,
-        automod::{AutomodAction, AutomodRuleStripped, AutomodRuleTest, AutomodRuleTestRequest},
+        automod::{
+            AutomodAction, AutomodRuleExecution, AutomodRuleSummary, AutomodRuleTest,
+            AutomodRuleTestRequest,
+        },
         ids::AUTOMOD_USER_ID,
         util::Time,
     },
@@ -211,6 +214,10 @@ impl ServiceAutomod {
     ///
     /// some actions must be enforced by the caller, namely `Block` and `Remove`
     pub async fn enforce(&self, scan: &AutomodScan, ctx: &AutomodContext) -> Result<()> {
+        if scan.rule_ids.is_empty() {
+            return Ok(());
+        }
+
         let srv = self.globals.services();
 
         let is_blocked = scan
@@ -218,6 +225,8 @@ impl ServiceAutomod {
             .inner
             .iter()
             .any(|a| matches!(a, AutomodAction::Block { .. }));
+
+        let mut alert_message_ids = Vec::new();
 
         for action in &scan.actions.inner {
             match action {
@@ -262,8 +271,9 @@ impl ServiceAutomod {
                         .broadcast_room(ctx.room_id, MessageSync::RoomMemberUpdate { member, user })
                         .await?;
                 }
+                // TODO: move some of this logic to ServiceMessages
                 AutomodAction::SendAlert { channel_id } => {
-                    let rules: Vec<AutomodRuleStripped> = self
+                    let rules: Vec<AutomodRuleSummary> = self
                         .compiled
                         .get(&ctx.room_id)
                         .map(|c| {
@@ -316,6 +326,7 @@ impl ServiceAutomod {
                     let mut txn = self.globals.begin().await?;
                     let msg_id = txn.message_create(message_create).await?;
                     txn.commit().await?;
+                    alert_message_ids.push(msg_id);
 
                     let message = self
                         .globals
@@ -333,6 +344,34 @@ impl ServiceAutomod {
                     // not handled by this method
                 }
             }
+        }
+
+        // broadcast a AutomodRuleExecute event for every rule that was activated
+        for rule_id in &scan.rule_ids {
+            // TODO: only include the matches/actions that were caused by this automod rule
+
+            let rule = self
+                .compiled
+                .get(&ctx.room_id)
+                .and_then(|c| c.rules.iter().find(|r| &r.id == rule_id).cloned())
+                .map(AutomodRuleSummary::from)
+                .expect("rule must exist");
+
+            let execution = AutomodRuleExecution {
+                room_id: ctx.room_id,
+                rule,
+                user_id: ctx.user_id,
+                channel_id: ctx.channel_id,
+                message_id: ctx.message_id,
+                alert_message_id: alert_message_ids.clone(),
+                matches: scan.matches.clone(),
+                actions: scan.actions.inner.clone(),
+            };
+
+            self.globals
+                .messaging()
+                .broadcast_room(ctx.room_id, MessageSync::AutomodRuleExecute { execution })
+                .await?;
         }
 
         Ok(())
