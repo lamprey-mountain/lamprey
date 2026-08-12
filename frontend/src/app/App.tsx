@@ -15,7 +15,6 @@ import { UserSettings } from "@/components/features/user_settings/index";
 import { useVoice, VoiceProvider } from "@/components/features/voice/context";
 import { VoiceStreams } from "@/components/features/voice/VoiceStreams";
 import { CalendarPopupProvider } from "@/components/shared/Calendar";
-import { Debug } from "@/components/shared/Debug";
 import { RouteVerifyEmail } from "@/components/shared/VerifyEmail";
 import {
 	CurrentUserProvider,
@@ -93,7 +92,6 @@ const App: Component = () => {
 				path="/thread/:channel_id/settings/:page?"
 				component={RouteChannelSettings}
 			/>
-			<Route path="/debug" component={Debug} />
 			<Route path="/verify-email" component={RouteVerifyEmail} />
 			<Route path="/authorize" component={RouteAuthorize} />
 			<Route path="*404" component={RouteNotFound} />

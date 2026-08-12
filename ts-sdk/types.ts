@@ -366,3 +366,5 @@ export type ApiError = {
 	code: string;
 	message: string;
 };
+
+export type UnfurlerLogEntry = components["schemas"]["LogEntry"];

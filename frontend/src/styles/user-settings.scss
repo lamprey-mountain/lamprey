@@ -680,3 +680,45 @@
 		}
 	}
 }
+
+.debug-colors > li > div {
+	display: inline-block;
+	height: 32px;
+	width: 32px;
+	margin-block: 4px;
+	vertical-align: middle;
+
+	&.colored {
+		&.red {
+			background: $color-red;
+		}
+
+		&.yellow {
+			background: $color-yellow;
+		}
+
+		&.green {
+			background: $color-green;
+		}
+
+		&.magenta {
+			background: $color-magenta;
+		}
+
+		&.blue {
+			background: $color-blue;
+		}
+
+		&.cyan {
+			background: $color-cyan;
+		}
+
+		&.orange {
+			background: $color-orange;
+		}
+
+		&.teal {
+			background: $color-teal;
+		}
+	}
+}

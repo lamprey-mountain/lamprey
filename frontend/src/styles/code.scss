@@ -104,9 +104,16 @@
 			}
 		}
 
-		.lang {
-			text-transform: lowercase;
+		.metadata {
 			color: oklch(var(--color-fg5));
+
+			.lang {
+				text-transform: lowercase;
+			}
+
+			.name {
+				color: oklch(var(--color-fg3));
+			}
 		}
 
 		.actions {

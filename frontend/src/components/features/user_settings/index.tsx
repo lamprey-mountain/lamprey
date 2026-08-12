@@ -8,9 +8,11 @@ import {
 	AuditLog,
 	Authentication,
 	Blocked,
+	BuildInfo,
 	Chat,
 	Connections,
 	Data,
+	EmbedDebugger,
 	Keybinds,
 	Language,
 	Notifications,
@@ -72,6 +74,16 @@ const tabs: TabItem[] = [
 		path: "applications",
 		component: Applications,
 		noPad: true,
+	},
+	{
+		name: "embed debugger",
+		path: "embeds",
+		component: EmbedDebugger,
+	},
+	{
+		name: "build info",
+		path: "metadata",
+		component: BuildInfo,
 	},
 ];
 

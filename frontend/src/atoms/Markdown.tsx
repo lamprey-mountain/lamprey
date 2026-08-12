@@ -147,7 +147,11 @@ function Spoiler(props: { children: SerializedInline[] }) {
 	);
 }
 
-export function CodeBlock(props: { text: string; lang?: string | null }) {
+export function CodeBlock(props: {
+	text: string;
+	lang?: string | null;
+	name?: string;
+}) {
 	let ref!: HTMLElement;
 
 	const [copied, setCopied] = createSignal(false);
@@ -198,7 +202,17 @@ export function CodeBlock(props: { text: string; lang?: string | null }) {
 		>
 			<div class="code-block-container">
 				<div class="code-block-header">
-					<span class="lang">{props.lang ?? "text"}</span>
+					<div class="metadata">
+						<span class="lang">{props.lang ?? "text"}</span>
+						<Show when={props.name}>
+							{(name) => (
+								<>
+									{" "}
+									&bull; <span class="name">{name()}</span>
+								</>
+							)}
+						</Show>
+					</div>
 					<div class="actions">
 						<Show when={isHtml() && flags.has("markdown_html_preview")}>
 							<button
