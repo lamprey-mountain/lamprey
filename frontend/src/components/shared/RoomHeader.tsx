@@ -32,7 +32,12 @@ export const RoomHeader = (props: RoomHeaderProps) => {
 			<div class="spacer"></div>
 			<SearchInput room={props.room} />
 			<menu class="menu">
-				<button type="button" onClick={toggleMembers} title="Show members">
+				<button
+					type="button"
+					class="button icon-button"
+					onClick={toggleMembers}
+					title="Show members"
+				>
 					<Icon src={icMembers} alt="Members" />
 				</button>
 			</menu>
