@@ -96,7 +96,7 @@ impl ServiceMedia {
             Mime::from_str("application/octet-stream").unwrap(),
             MediaMetadata::File,
         );
-        let writer = MediaItem::from_media(self.state.clone(), media);
+        let writer = MediaItem::new_writer(self.state.clone(), media);
         let item = writer.reader();
 
         let temp_file = TempFile::new().await.expect("failed to create temp file!");

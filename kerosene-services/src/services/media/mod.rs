@@ -53,26 +53,30 @@ impl ServiceMedia {
             .await?
             .media_select(media_id)
             .await?;
-        let writer = MediaItem::from_media(self.state.clone(), media);
-        let item = writer.reader();
+        let item = MediaItem::new_ready(self.state.clone(), media)?;
         self.cache.insert(media_id, item.clone()).await;
         Ok(item)
     }
 
-    pub async fn get_remote(&self, _remote: &RemoteReq<MediaId>) -> Result<MediaItem> {
-        // let media = self
-        //     .state
-        //     .data()
-        //     .media_select_by_remote(&remote.hostname, remote.origin_id)
-        //     .await?;
-        // if let Some(item) = self.cache.get(&media).await {
-        //     return Ok(item);
-        // }
+    pub async fn get_remote(&self, remote: &RemoteReq<MediaId>) -> Result<MediaItem> {
+        // PERF: cache Remote -> MediaId?
+        let media = self
+            .state
+            .begin_read()
+            .await?
+            .media_select_by_remote(&remote.hostname, *remote.origin_id)
+            .await?
+            .ok_or_else(|| ApiError::from_code(ErrorCode::UnknownMedia))?;
 
-        // let item = MediaItem::from_media(media);
-        // self.cache.insert(media_id, item.clone()).await;
-        // Ok(item)
-        todo!()
+        // PERF: is this even worth it?
+        if let Some(item) = self.cache.get(&media.id).await {
+            return Ok(item);
+        }
+
+        let media_id = media.id;
+        let item = MediaItem::new_ready(self.state.clone(), media)?;
+        self.cache.insert(media_id, item.clone()).await;
+        Ok(item)
     }
 
     pub async fn get_many(&self, media_ids: &[MediaId]) -> Result<Vec<MediaItem>> {
@@ -189,7 +193,7 @@ impl ServiceMedia {
                 .media_select(media_id)
                 .await?;
 
-            let writer = MediaItem::from_media(self.state.clone(), media);
+            let writer = MediaItem::new_writer(self.state.clone(), media);
             let item = writer.reader();
             self.cache.insert(media_id, item.clone()).await;
             Ok(item)

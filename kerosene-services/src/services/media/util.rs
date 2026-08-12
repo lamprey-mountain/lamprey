@@ -99,8 +99,8 @@ impl From<MediaItemState> for MediaStatus {
 }
 
 impl MediaItem {
-    /// create a new `MediaItem` from `Media`
-    pub fn from_media(s: Globals, media: Media) -> MediaItemWriter {
+    /// create a new `MediaItemWriter` from `Media`
+    pub fn new_writer(s: Globals, media: Media) -> MediaItemWriter {
         let state = match media.status {
             MediaStatus::Transferring => MediaItemState::Transferring {
                 import: Import::from(media.clone()),
@@ -132,6 +132,32 @@ impl MediaItem {
             inner: Arc::new(inner),
         };
         writer
+    }
+
+    /// create a new ready `MediaItem` from `Media`
+    pub fn new_ready(s: Globals, media: Media) -> Result<MediaItem> {
+        let state = match media.status {
+            MediaStatus::Uploaded | MediaStatus::Consumed => MediaItemState::Ready,
+            // TODO: better error
+            status => return Err(Error::BadStatic("wrong media status")),
+        };
+
+        let (tm, rm) = watch::channel(Arc::new(media));
+        let (ts, rs) = watch::channel(state);
+        let (tr, rr) = watch::channel(true);
+
+        let inner = MediaItemInner {
+            media: rm,
+            state: rs,
+            bytes: OnceCell::new(),
+            tempfile: OnceCell::new(),
+            s,
+        };
+
+        Ok(MediaItem {
+            inner: Arc::new(inner),
+            ready: rr,
+        })
     }
 
     /// get the piece of media so far
