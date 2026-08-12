@@ -5,6 +5,7 @@ import type { Api } from "@/api";
 import type { ChannelsService } from "@/api/services/ChannelsService.ts";
 import type { ChannelContextT } from "@/contexts/channel";
 import type { Data } from "@/types/chat";
+import { useCurrentUser } from "./currentUser";
 
 // TODO: rename to AckContext
 
@@ -43,6 +44,7 @@ export function createReadTrackingProvider(
 	channel_contexts: ReactiveMap<string, ChannelContextT>,
 	dataUpdate: SetStoreFunction<Data>,
 ) {
+	const getMe = useCurrentUser();
 	const pendingAcks = new Map<string, ReturnType<typeof setTimeout>>();
 
 	const markThreadRead = async (
@@ -51,6 +53,8 @@ export function createReadTrackingProvider(
 		also_local: boolean,
 		delay = false,
 	) => {
+		if (!getMe()) return;
+
 		let _ackGraceTimeout: ReturnType<typeof setTimeout> | undefined;
 		let _ackDebounceTimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -88,6 +92,8 @@ export function createReadTrackingProvider(
 	};
 
 	const markCategoryRead = async (category_id: string) => {
+		if (!getMe()) return;
+
 		const category = channels2.cache.get(category_id);
 		if (!category || category.type !== "Category") {
 			console.warn("not a category");
@@ -125,6 +131,8 @@ export function createReadTrackingProvider(
 		also_local: boolean,
 		delay: boolean,
 	) => {
+		if (!getMe()) return;
+
 		if (delay) {
 			setTimeout(() => {
 				markChannelRead(channel_id, version_id, also_local, false);
@@ -161,6 +169,8 @@ export function createReadTrackingProvider(
 		also_local: boolean,
 		delay: boolean,
 	) => {
+		if (!getMe()) return;
+
 		if (delay) {
 			const existing = pendingAcks.get(channel_id);
 			if (existing) clearTimeout(existing);
