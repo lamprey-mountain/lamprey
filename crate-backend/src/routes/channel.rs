@@ -235,7 +235,7 @@ async fn channel_list(
     req: routes::channel_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let mut data = globals.data();
+    let mut data = globals.begin_read().await?;
     let srv = globals.services();
 
     srv.perms
@@ -741,6 +741,7 @@ async fn channel_upgrade(
                 id: None,
                 ty: RoomType::Default,
                 welcome_channel_id: Some(req.channel_id),
+                remote: None,
             },
             None,
         )

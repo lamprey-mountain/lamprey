@@ -237,7 +237,7 @@ async fn user_get(
         UserIdReq::RemoteUser(user_id, hostname) => {
             // TODO: get local user, get server info, check if user remote epoch == server sync epoch
             // NOTE: do i put epoch checks in users service, federation service, somewhere else...?
-            srv.federation.load_remote_user(user_id, &hostname).await?
+            srv.federation.import_user(user_id, &hostname).await?
         }
     };
     let target_user_id = user.id;

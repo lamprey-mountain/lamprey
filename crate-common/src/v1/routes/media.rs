@@ -35,11 +35,11 @@ pub mod media_create {
     response(OK, body = Media, description = "Media get success"),
 )]
 pub mod media_get {
-    use crate::{v1::types::MediaId, v2::types::media::Media};
+    use crate::{v1::types::misc::MediaIdReq, v2::types::media::Media};
 
     pub struct Request {
         #[path]
-        pub media_id: MediaId,
+        pub media_id: MediaIdReq,
     }
 
     pub struct Response {

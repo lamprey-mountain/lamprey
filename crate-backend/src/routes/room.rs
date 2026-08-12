@@ -99,6 +99,7 @@ async fn room_create(
         id: None,
         ty: RoomType::Default,
         welcome_channel_id: None,
+        remote: None,
     };
     let room = srv
         .rooms

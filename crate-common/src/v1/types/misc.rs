@@ -344,6 +344,39 @@ impl From<UserId> for UserIdReq {
     }
 }
 
+impl Display for MediaIdReq {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MediaIdReq::MediaRemote(media_id, host) => write!(f, "{media_id}:{host}"),
+            MediaIdReq::MediaId(media_id) => write!(f, "{media_id}"),
+        }
+    }
+}
+
+impl PathParam for MediaIdReq {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
+        if let Some((uuid_str, host_str)) = s.split_once(':') {
+            let media_id = MediaId::from_str(uuid_str).map_err(|_| {
+                PathParamError(format!("invalid remote media id uuid: {}", uuid_str))
+            })?;
+            if !is_valid_hostname(host_str) {
+                return Err(PathParamError(format!(
+                    "invalid hostname in remote media id: {}",
+                    host_str
+                )));
+            }
+            Ok(MediaIdReq::MediaRemote(
+                media_id,
+                Hostname(host_str.to_string()),
+            ))
+        } else {
+            MediaId::from_str(s)
+                .map(MediaIdReq::MediaId)
+                .map_err(|_| PathParamError(format!("invalid media id: {}", s)))
+        }
+    }
+}
+
 impl From<MediaId> for MediaIdReq {
     fn from(id: MediaId) -> Self {
         Self::MediaId(id)

@@ -108,6 +108,7 @@ impl ServiceRooms {
                     id: Some(SERVER_ROOM_ID),
                     ty: RoomType::Server,
                     welcome_channel_id: None,
+                    remote: None,
                 },
             )
             .await?;

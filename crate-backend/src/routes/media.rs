@@ -8,7 +8,10 @@ use axum::{
     response::IntoResponse,
     routing,
 };
-use common::v1::routes;
+use common::v1::{
+    routes,
+    types::{federation::RemoteReq, misc::MediaIdReq},
+};
 use common::v2::types::media::{MediaCreateSource, MediaCreated};
 use common::{
     v1::types::error::{ApiError, ErrorCode},
@@ -20,10 +23,7 @@ use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
 use crate::{ServerState, routes::util::auth::Auth4};
-use crate::{
-    error::{Error, Result},
-    routes2,
-};
+use crate::{prelude::*, routes2};
 use common::v1::types::MediaId;
 use kerosene_services::services::{media::Import, search::SearchMediaVisibility};
 
@@ -137,15 +137,25 @@ async fn media_done(
 #[handler(routes::media_get)]
 async fn media_get(
     auth: Auth4,
-    State(s): State<Arc<ServerState>>,
+    State(globals): State<Globals>,
     req: routes::media_get::Request,
 ) -> Result<impl IntoResponse> {
-    let item = s.services().media.get(req.media_id).await?;
-    let media = item.media();
+    let srv = globals.services();
+    let mut media = match req.media_id {
+        MediaIdReq::MediaId(media_id) => srv.media.get(media_id).await?.media(),
+        MediaIdReq::MediaRemote(origin_id, hostname) => {
+            srv.federation
+                .import_media(RemoteReq {
+                    origin_id,
+                    hostname,
+                })
+                .await?
+        }
+    };
 
     if media.deleted_at.is_some() {
         let user = auth.ensure_user()?;
-        let perms = s
+        let perms = globals
             .services()
             .perms
             .for_room3(Some(user.id), SERVER_ROOM_ID)
