@@ -7,9 +7,9 @@ use futures::StreamExt;
 use sdk::http::{Http, MessageCreateOptions};
 use sdk::syncer::SyncerEvent;
 use time::OffsetDateTime;
-use tokio::sync::{broadcast, oneshot};
+use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinSet;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, trace, warn};
 
 use crate::actor::bridge::BridgeCommand;
 use crate::bridge_old::{
@@ -18,6 +18,7 @@ use crate::bridge_old::{
 };
 use crate::config::LampreyConfig;
 use crate::platform::lamprey::client::{ImportUrl, LampreyClient};
+use crate::platform::lamprey::presence::{PresenceEvent, PresenceRefreshActor};
 use crate::prelude::*;
 use crate::util::mentions::MessageTransformer;
 
@@ -32,6 +33,7 @@ pub use common::v2::types::media::{Media, MediaCreate, MediaCreateSource};
 
 mod client;
 mod interactions;
+mod presence;
 
 pub fn spawn(bridge: BridgeHandle, config: LampreyConfig) -> PlatformHandle {
     let (tx, rx) = oneshot::channel();
@@ -47,6 +49,7 @@ struct Lamprey {
     bridge: BridgeHandle,
     client: sdk::Client,
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
+    presence_tx: mpsc::UnboundedSender<PresenceEvent>,
     portal_handles: HashMap<PortalId, PortalHandle>,
     portal_lookup: HashMap<ChannelId, PortalId>,
     portal_data: HashMap<PortalId, Portal>,
@@ -75,10 +78,13 @@ impl Lamprey {
             .build()
             .await?;
 
+        let presence_tx = PresenceRefreshActor::spawn(client.http());
+
         let me = Self {
             bridge,
             client,
             portal_tasks: JoinSet::new(),
+            presence_tx,
             portal_handles: HashMap::new(),
             portal_lookup: HashMap::new(),
             portal_data: HashMap::new(),
@@ -310,6 +316,7 @@ impl Lamprey {
                 MessageSync::MessageDelete {
                     channel_id,
                     message_id,
+                    room_id: _,
                 } => {
                     if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
                         if let Ok(Some(msg)) = self
@@ -376,6 +383,52 @@ impl Lamprey {
                             timestamp: None,
                         }
                     ).await;
+                });
+            }
+            BridgeEvent::PresenceUpdate(presence) => {
+                let bridge = self.bridge.clone();
+                let presence = presence.clone();
+                let presence_tx = self.presence_tx.clone();
+
+                // TODO: warn!() on err
+                tokio::spawn(async move {
+                    let discord_id = presence.user.id.to_string();
+                    let Some(puppet) = bridge
+                        .db
+                        .puppet_get_by_discord_id(discord_id.clone())
+                        .await?
+                    else {
+                        trace!(user_id=%presence.user.id, "no puppet found for discord user");
+                        return Ok(());
+                    };
+
+                    let user_id = puppet.lamprey_id;
+                    let status = match presence.status {
+                        discord::OnlineStatus::Online => Status::Online,
+                        discord::OnlineStatus::Idle => Status::Away,
+                        discord::OnlineStatus::DoNotDisturb => Status::Busy,
+                        discord::OnlineStatus::Invisible | discord::OnlineStatus::Offline => {
+                            Status::Offline
+                        }
+                        _ => Status::Online,
+                    };
+
+                    let activities = presence
+                        .activities
+                        .iter()
+                        .filter(|a| a.kind == discord::ActivityType::Custom)
+                        .filter_map(|a| a.state.clone())
+                        .map(|text| Activity::Custom {
+                            text,
+                            clear_at: None,
+                        })
+                        .collect();
+
+                    let ly_presence = Presence { status, activities };
+
+                    let _ = presence_tx.send(PresenceEvent::Update(user_id, ly_presence));
+
+                    Result::Ok(())
                 });
             }
             _ => {

@@ -23,6 +23,7 @@ pub enum DiscordEvent {
     MessageDelete(ChannelId, MessageId),
     InteractionCreate(SlashCommand),
     TypingStart(TypingStartEvent),
+    PresenceUpdate(Presence),
 }
 
 #[async_trait]
@@ -134,7 +135,7 @@ impl EventHandler for Handler {
 
     async fn presence_update(&self, _ctx: Context, presence: Presence) {
         trace!("discord presence update for user {}", presence.user.id);
-        // TODO: Map to BridgeEvent/PortalEvent
+        let _ = self.tx.send(DiscordEvent::PresenceUpdate(presence)).await;
     }
 
     // TODO: handle user_update

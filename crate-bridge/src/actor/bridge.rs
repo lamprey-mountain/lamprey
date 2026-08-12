@@ -74,6 +74,8 @@ pub enum BridgeEvent {
         discord_channel_id: discord::ChannelId,
         accepted: bool,
     },
+
+    PresenceUpdate(serenity::all::Presence),
     // TODO: more events
     // PortalUpdate,
     // UserUpdate,

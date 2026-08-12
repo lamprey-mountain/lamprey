@@ -26,8 +26,9 @@ mod interactions;
 
 // re export discord (serenity) types
 pub use serenity::all::{
-    Attachment, AttachmentId, ChannelId, CreateAllowedMentions, CreateEmbed, Embed, GuildId,
-    Message, MessageId, RoleId, User, UserId, WebhookId,
+    Activity, ActivityType, Attachment, AttachmentId, ChannelId, CreateAllowedMentions,
+    CreateEmbed, Embed, GuildId, Message, MessageId, OnlineStatus, Presence, RoleId, User, UserId,
+    WebhookId,
 };
 
 pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -> PlatformHandle {
@@ -200,6 +201,12 @@ impl Discord {
                 }
             }
 
+            DiscordEvent::PresenceUpdate(presence) => {
+                let _ = self
+                    .bridge
+                    .events
+                    .send(Arc::new(BridgeEvent::PresenceUpdate(presence)));
+            }
             DiscordEvent::InteractionCreate(command) => match command.inner {
                 interactions::SlashCommandType::Ping => {
                     // TODO: better error handling
