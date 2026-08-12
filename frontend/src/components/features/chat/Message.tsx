@@ -511,7 +511,7 @@ export function ReplyView(props: {
 	const scrollToReply = () => {
 		if (!chUpdate) return;
 		chUpdate("reply_jump_source", props.source_id);
-		ch.timeline.jumpToMessage(props.reply_id, true, true);
+		ch.timelineState.controller.jumpToMessage(props.reply_id, true, true);
 	};
 
 	const author = users.use(() => reply()?.author_id);

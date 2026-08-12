@@ -340,14 +340,14 @@ export function Input(props: InputProps) {
 	};
 
 	const jumpToLatest = () => {
-		ch.timeline.jumpToBottom();
+		ch.timelineState.controller.jumpToBottom();
 		// TODO: mark as read (including local marker)
 	};
 
 	const jumpToReplySource = () => {
 		const source = ch.reply_jump_source;
 		if (source) {
-			ch.timeline.jumpToMessage(source, true);
+			ch.timelineState.controller.jumpToMessage(source, true);
 			chUpdate("reply_jump_source", undefined);
 		}
 	};
