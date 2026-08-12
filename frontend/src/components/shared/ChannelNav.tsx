@@ -97,6 +97,13 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		nav(`/channel/${lastChannelId}`, { replace: true });
 	});
 
+	// make sure we have the room's channels (handle invite joins and room previewing)
+	createEffect(() => {
+		const rid = props.room_id;
+		if (!rid) return;
+		api2.channels.fetchRoomList(rid);
+	});
+
 	// track collapsed categories
 	// TODO: persist in user preferences
 	const [collapsedCategories, setCollapsedCategories] = createSignal<
@@ -105,8 +112,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 	// load dms
 	createEffect(() => {
-		currentUserId(); // retrigger useList on load
-		dms2.useList();
+		const uid = currentUserId(); // retrigger useList on load
+		if (uid) dms2.useList();
 	});
 
 	const room = rooms2.use(() => props.room_id);
@@ -769,6 +776,12 @@ export const ItemChannel = (props: {
 		return `/channel/${props.channel.id}`;
 	};
 
+	const isUnread = (chan: Channel) => {
+		if (!CHANNEL_TYPES_HAS_UNREAD.has(props.channel.type)) return false;
+		if (!props.channel.last_read_id) return false;
+		return props.channel.last_read_id !== props.channel.last_message_id;
+	};
+
 	const params = useParams();
 
 	// TODO: dedupe copy pasted code
@@ -779,10 +792,7 @@ export const ItemChannel = (props: {
 				<div
 					class="menu-channel channel-link"
 					classList={{ active: props.channel.id === params.channel_id }}
-					data-unread={
-						CHANNEL_TYPES_HAS_UNREAD.has(props.channel.type) &&
-						props.channel.last_read_id !== props.channel.last_message_id
-					}
+					data-unread={isUnread(props.channel)}
 					data-muted={isMuted() ? "true" : undefined}
 					data-channel-id={props.channel.id}
 					onClick={handleClick}
@@ -853,10 +863,7 @@ export const ItemChannel = (props: {
 					href={href()}
 					class="menu-channel channel-link"
 					classList={{ active: props.channel.id === params.channel_id }}
-					data-unread={
-						CHANNEL_TYPES_HAS_UNREAD.has(props.channel.type) &&
-						props.channel.last_read_id !== props.channel.last_message_id
-					}
+					data-unread={isUnread(props.channel)}
 					data-muted={isMuted() ? "true" : undefined}
 					data-channel-id={props.channel.id}
 					onClick={handleClick}

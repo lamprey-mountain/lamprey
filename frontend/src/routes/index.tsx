@@ -133,8 +133,8 @@ const RoomSidebar = (props: { room: RoomT }) => {
 export const RouteRoom = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	const { t } = useCtx();
 	const ctx = useCtx();
-	const rooms = useRooms();
-	const room = rooms.use(() => p.params.room_id);
+	const api = useApi();
+	const room = api.rooms.use(() => p.params.room_id);
 
 	const getOrCreateRoomContext = () => {
 		const roomId = p.params.room_id;
@@ -336,10 +336,9 @@ export const RouteChannel = (
 ): JSX.Element => {
 	const { t } = useCtx();
 	const ctx = useCtx();
-	const rooms = useRooms();
-	const channels2 = useChannels();
-	const channel = channels2.use(() => p.params.channel_id);
-	const room = rooms.use(() => channel()?.room_id!);
+	const api = useApi();
+	const channel = api.channels.use(() => p.params.channel_id);
+	const room = api.rooms.use(() => channel()?.room_id!);
 
 	const getOrCreateChannelContext = () => {
 		const channelId = p.params.channel_id;

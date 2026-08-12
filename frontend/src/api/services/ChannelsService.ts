@@ -76,6 +76,20 @@ export class ChannelsService extends BaseService<Channel> {
 		);
 	}
 
+	async fetchRoomList(room_id: string): Promise<Channel[]> {
+		if (this.channelsByRoom.has(room_id)) {
+			return this.listByRoom(room_id);
+		}
+
+		const channels = await this.retryWithBackoff(() =>
+			this.client.http.GET("/api/v1/room/{room_id}/channel", {
+				params: { path: { room_id } },
+			}),
+		);
+		this.upsertBulk(channels.items);
+		return channels.items;
+	}
+
 	async create(room_id: string, body: ChannelCreate): Promise<Channel> {
 		const data = await this.retryWithBackoff<Channel>(() =>
 			this.client.http.POST("/api/v1/room/{room_id}/channel", {
