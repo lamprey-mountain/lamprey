@@ -46,7 +46,7 @@ export class InboxService extends BaseService<Notification> {
 		const [resource, { refetch }] = createResource(
 			() => [params(), this.store.session()] as const,
 			async ([p, session]) => {
-				if (session?.status !== "Authorized") {
+				if (session?.status !== "Authorized" && session?.status !== "Sudo") {
 					return undefined;
 				}
 
