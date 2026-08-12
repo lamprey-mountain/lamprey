@@ -1,6 +1,6 @@
 export const MemberListSkeleton = () => {
 	return (
-		<div class="member-list skeleton">
+		<>
 			<div class="member-group">
 				<div class="ghost text" style="width: 30%" />
 			</div>
@@ -29,6 +29,6 @@ export const MemberListSkeleton = () => {
 					</div>
 				</div>
 			))}
-		</div>
+		</>
 	);
 };
