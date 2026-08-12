@@ -1,11 +1,10 @@
 import { A } from "@solidjs/router";
 import { Show } from "solid-js";
 import { useApi } from "@/api";
-import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
+import { AnimatedText } from "@/atoms/AnimatedText";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
-import { Authenticate } from "./Authenticate";
 
 export const Home = () => {
 	const api = useApi();
@@ -29,6 +28,14 @@ export const Home = () => {
 			<h2>home</h2>
 			<p>welcome to lamprey mountain, the internet's finest asylum</p>
 			<p>work in progress. expect bugs and missing polish.</p>
+			<p>
+				<AnimatedText>we're in schrodinger's toaster right now</AnimatedText>
+			</p>
+			<p>
+				<AnimatedText animation="wave">
+					this is a new category of entertainment, we haven't invented yet
+				</AnimatedText>
+			</p>
 
 			<Show when={isAuthorized()}>
 				<button type="button" class="button" onClick={logout}>

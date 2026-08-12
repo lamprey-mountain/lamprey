@@ -39,6 +39,7 @@ import { UserProfileEdit } from "@/components/shared/UserProfileEdit.tsx";
 import {
 	ChannelMenu,
 	ChannelNavMenu,
+	ColorPickerOptions,
 	FolderMenu,
 	InviteApplicationMenu,
 	MessageMenu,
@@ -386,6 +387,11 @@ export function OverlayProvider(props: ParentProps) {
 			}
 			case "invite_application": {
 				return <InviteApplicationMenu app={menu.app} />;
+			}
+			case "color_picker_options": {
+				return (
+					<ColorPickerOptions onColorSpaceChange={menu.onColorSpaceChange} />
+				);
 			}
 		}
 	}

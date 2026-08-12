@@ -39,6 +39,10 @@ export type Menu = {
 			onDelete?: () => void;
 	  }
 	| { type: "channel_nav"; room_id: string }
+	| {
+			type: "color_picker_options";
+			onColorSpaceChange: (space: "oklch" | "srgb") => void;
+	  }
 );
 
 export type MenuContextT = {

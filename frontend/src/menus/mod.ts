@@ -1,6 +1,7 @@
 export * from "./CalendarEvent.tsx";
 export * from "./Channel.tsx";
 export * from "./ChannelNav.tsx";
+export * from "./ColorPickerOptions.tsx";
 export * from "./Folder.tsx";
 export * from "./InviteApplication.tsx";
 export * from "./Message.tsx";

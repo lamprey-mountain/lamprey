@@ -2,7 +2,7 @@ import type { Tag, TagCreate } from "sdk";
 import { createSignal } from "solid-js";
 import { useChannels } from "@/api";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
-import { Colorpicker } from "@/atoms/Colorpicker";
+import { ColorPicker } from "@/atoms/ColorPicker";
 import { Checkbox } from "@/atoms/icons";
 import { useModals } from "@/contexts/modal";
 import { Modal } from "./mod";
@@ -98,7 +98,7 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 
 				<div class="option-block">
 					<label for="tagColor">Color</label>
-					<Colorpicker
+					<ColorPicker
 						value={color() ?? "#000000"}
 						onInput={(newColor) => setColor(newColor)}
 					/>

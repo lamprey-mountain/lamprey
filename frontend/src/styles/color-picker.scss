@@ -1,0 +1,68 @@
+@use "./util.scss" as *;
+
+.color-picker {
+	border: solid red 1px;
+	/* border: solid $sep-500 1px; */
+	/* box-shadow: 4px 4px 8px #1114; */
+	width: 300px;
+
+	display: flex;
+	flex-direction: column;
+	background: $bg-100;
+
+	& > .canvas {
+		cursor: crosshair;
+		border-bottom: solid $sep-300 1px;
+	}
+
+	.range {
+		cursor: pointer;
+		position: relative;
+		height: 16px;
+
+		& > .reticle {
+			position: absolute;
+			top: -2px;
+			bottom: -2px;
+			width: 4px;
+			background: $fg-100;
+			box-shadow: 0 0 4px #1114;
+			pointer-events: none;
+		}
+	}
+
+	.range-label {
+		margin-inline: 8px;
+		margin-top: 8px;
+		margin-bottom: 4px;
+	}
+
+	.hue-map {
+		background: linear-gradient(
+			to right in var(--colorspace) longer hue,
+			oklch(var(--luminance) var(--chroma) 0),
+			oklch(var(--luminance) var(--chroma) 0)
+		);
+
+		& > .reticle {
+			left: calc(var(--hue) / 360 * 100%);
+		}
+	}
+
+	.alpha-map {
+		background: linear-gradient(
+			to right in var(--colorspace) longer hue,
+			oklch(var(--luminance) var(--chroma) 0),
+			oklch(var(--luminance) var(--chroma) 0)
+		);
+
+		& > .reticle {
+			left: calc(var(--alpha) / 360 * 100%);
+		}
+	}
+
+	.text-input {
+		margin: 8px;
+		background: $bg-200;
+	}
+}
