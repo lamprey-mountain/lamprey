@@ -1,0 +1,41 @@
+[package]
+name = "lamprey-crypto"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+aes-gcm = "0.11.0"
+ed25519-dalek = "2.2.0"
+getrandom = { version = "0.2.17" }
+# TODO: common refuses to compile without a random mishmash of features, i should clean up that code
+lamprey = { package = "lamprey-common", version = "0.1.1", path = "../crate-common", default-features = false, features = ["validator", "serde", "utoipa", "ptr_box", "feat_e2ee" ] }
+openmls = { version = "0.8.1", features = ["openmls_rust_crypto"] }
+openmls_basic_credential = "0.5.0"
+openmls_rust_crypto = "0.5.1"
+postcard = { version = "1.1.3", features = ["use-std"] }
+rand = "0.10.2"
+serde = { version = "1.0.228", features = ["derive"] }
+serde-wasm-bindgen = { version = "0.6.5", optional = true }
+serde_json = "1.0.151"
+thiserror = "2.0.18"
+tsify = { version = "0.5.6", optional = true }
+wasm-bindgen = { version = "0.2.117", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+uuid = { version = "1.22.0", features = ["serde", "v7", "js"] }
+getrandom = { version = "0.2.17", features = ["js"] }
+openmls = { version = "0.8.1", features = ["js"] }
+
+[features]
+wasm = ["dep:wasm-bindgen", "dep:serde-wasm-bindgen", "dep:tsify"]
+std = [] # TODO: no_std support
+default = ["std", "wasm"]
+sync = []

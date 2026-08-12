@@ -1,0 +1,13 @@
+{
+  "name": "@lamprey/crypto",
+  "type": "module",
+  "description": "cryptography algorithms",
+  "license": "MIT OR Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://git.celery.eu.org/lamprey/lamprey"
+  },
+  "main": "lamprey_crypto.js",
+  "types": "lamprey_crypto.d.ts"
+}
+

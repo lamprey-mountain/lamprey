@@ -1,0 +1,5 @@
+{
+  "name": "@lamprey/crypto",
+  "license": "MIT",
+  "exports": "./lamprey_crypto.js"
+}
