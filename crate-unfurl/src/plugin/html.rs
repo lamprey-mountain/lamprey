@@ -130,21 +130,27 @@ impl UnfurlPlugin for HtmlStreamPlugin {
 
         // TODO: parse mime types from url? likely unnecessary if the media importer system autodetects mime anyways
         if is_media && !data.videos.is_empty() {
-            tmpl.ty = EmbedType::Media;
-            if let Ok(v_url) = url.join(&data.videos[0]) {
-                tmpl.media = Some(
-                    EmbedMediaPending::new(v_url)
-                        .mime_guess("video/mp4".parse().unwrap())
-                        .into(),
-                );
+            let video_type = data.video_types.first().and_then(|t| t.as_ref());
+            if video_type.map(|s| s.as_str()) == Some("text/html") {
+                // html videos (iframes) aren't allowed
+                tmpl.ty = EmbedType::Link;
+            } else {
+                tmpl.ty = EmbedType::Media;
+                if let Ok(v_url) = url.join(&data.videos[0]) {
+                    tmpl.media = Some(
+                        EmbedMediaPending::new(v_url)
+                            .mime_guess("video/mp4".parse().unwrap())
+                            .into(),
+                    );
 
-                if let Some(img) = data.images.first() {
-                    if let Ok(i_url) = url.join(img) {
-                        tmpl.thumbnail = Some(
-                            EmbedMediaPending::new(i_url)
-                                .mime_guess("image/jpeg".parse().unwrap())
-                                .into(),
-                        );
+                    if let Some(img) = data.images.first() {
+                        if let Ok(i_url) = url.join(img) {
+                            tmpl.thumbnail = Some(
+                                EmbedMediaPending::new(i_url)
+                                    .mime_guess("image/jpeg".parse().unwrap())
+                                    .into(),
+                            );
+                        }
                     }
                 }
             }
@@ -299,6 +305,7 @@ struct ExtractedData {
     og_type: Option<String>,
     images: Vec<String>,
     videos: Vec<String>,
+    video_types: Vec<Option<String>>,
 
     feeds: Vec<String>,
     rel_me: Vec<String>,
@@ -316,13 +323,16 @@ pub enum RobotsImagePreview {
 }
 
 struct MetaSink {
+    // PERF: use Cell, if possible?
     data: Rc<RefCell<ExtractedData>>,
 }
+
+// TODO: parse microdata (<anything itemprop="foo">)
+// TODO: parse linked json (<script type="application/ld+json">)
 
 impl TokenSink for MetaSink {
     type Handle = ();
 
-    // Changed `&mut self` to `&self` to match your trait requirements
     fn process_token(&self, token: Token, _line_number: u64) -> TokenSinkResult<()> {
         match token {
             Token::TagToken(tag) => {
@@ -385,7 +395,13 @@ impl TokenSink for MetaSink {
 
                                     "og:image" | "twitter:image" => data.images.push(content),
                                     "og:video" | "og:video:url" | "og:video:secure_url" => {
-                                        data.videos.push(content)
+                                        data.videos.push(content);
+                                        data.video_types.push(None);
+                                    }
+                                    "og:video:type" => {
+                                        if let Some(last_video_type) = data.video_types.last_mut() {
+                                            *last_video_type = Some(content);
+                                        }
                                     }
                                     _ => {}
                                 }
