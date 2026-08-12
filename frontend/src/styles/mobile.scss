@@ -62,4 +62,10 @@
 			max-width: 100vw;
 		}
 	}
+
+	#overlay.root .authenticate {
+		flex-direction: column;
+		max-width: unset;
+		width: calc(100vw - 16px);
+	}
 }

@@ -1,4 +1,5 @@
 import { createContext, useContext } from "solid-js";
+import type { ChatCtx } from "@/types/chat";
 
 // Re-export context types
 export type { Menu } from "@/contexts/menu.tsx";
@@ -20,8 +21,8 @@ export type {
 } from "@/types/chat";
 
 // Runtime context creation
-export const chatctx = createContext<import("@/types/chat").ChatCtx>();
-export const useCtx = (): import("@/types/chat").ChatCtx => {
+export const chatctx = createContext<ChatCtx>();
+export const useCtx = (): ChatCtx => {
 	const ctx = useContext(chatctx);
 	if (!ctx) {
 		throw new Error("useCtx must be used within a ChatCtx provider");

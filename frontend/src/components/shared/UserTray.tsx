@@ -104,14 +104,21 @@ export const UserTray = () => {
 
 	// TODO: color .connection-state depending on "stopped" | "connecting" | "connected" | "ready" | undefined
 
-	const [, modalctl] = useModals();
+	let trayRef!: HTMLDivElement;
 	const loginOrRegister = () => {
-		// TODO: login or register flow (either with modal or page)
-		modalctl.alert("not yet implemented");
+		if (ctx.popout()) {
+			ctx.setPopout(null);
+		} else {
+			ctx.setPopout({
+				id: "authenticate",
+				ref: trayRef,
+				placement: "top-start",
+			});
+		}
 	};
 
 	return (
-		<div class="user-tray">
+		<div class="user-tray" ref={trayRef}>
 			<Show when={state() !== "ready"}>
 				<div class="row connection-state">{state()}</div>
 			</Show>
@@ -226,8 +233,8 @@ export const UserTray = () => {
 							<div class="avatar logged-out"></div>
 
 							<div class="info">
-								<div class="name">anonymous</div>
-								<div class="user-activity">login or register</div>
+								<div class="name">Anonymous</div>
+								<div class="user-activity">Click here to login!</div>
 							</div>
 						</div>
 					}

@@ -361,3 +361,8 @@ export type InteractionCreateType =
 export type InteractionErrorCode =
 	components["schemas"]["InteractionErrorCode"];
 export type InteractionAllow = components["schemas"]["Allow"];
+
+export type ApiError = {
+	code: string;
+	message: string;
+};

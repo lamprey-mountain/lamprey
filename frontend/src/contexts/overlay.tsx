@@ -29,6 +29,7 @@ import { Autocomplete } from "@/atoms/Autocomplete.tsx";
 import { EmojiPicker } from "@/atoms/EmojiPicker.tsx";
 import { ThreadPopout } from "@/components/features/chat/ThreadPopout.tsx";
 import { ThreadActivity } from "@/components/features/forum/ThreadActivity.tsx";
+import { Authenticate } from "@/components/shared/Authenticate.tsx";
 import {
 	PopupEventEditor,
 	useCalendarPopup,
@@ -278,6 +279,37 @@ export function OverlayProvider(props: ParentProps) {
 	});
 
 	createEffect(() => {
+		const popout = ctx.popout();
+		if (!popout || popout.id !== "authenticate") return;
+
+		const handleMouseDown = (e: MouseEvent) => {
+			const target = e.target as HTMLElement;
+			const floating = popoutRef();
+			const reference = popout.ref;
+
+			if (
+				(floating && floating.contains(target)) ||
+				(reference && reference.contains(target))
+			) {
+				return;
+			}
+
+			ctx.setPopout(null);
+		};
+
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.code === "Escape") ctx.setPopout(null);
+		};
+
+		document.addEventListener("mousedown", handleMouseDown);
+		document.addEventListener("keydown", handleKeyDown);
+		onCleanup(() => {
+			document.removeEventListener("mousedown", handleMouseDown);
+			document.removeEventListener("keydown", handleKeyDown);
+		});
+	});
+
+	createEffect(() => {
 		menu();
 
 		setMenuParentRef({
@@ -408,6 +440,20 @@ export function OverlayProvider(props: ParentProps) {
 								selected: (value: string | null, shiftKey: boolean) => void;
 							})}
 						/>
+					</div>
+				</Show>
+				<Show when={ctx.popout()?.id === "authenticate" && ctx.popout()?.ref}>
+					<div
+						ref={setPopoutRef}
+						style={{
+							position: popoutFloating.strategy,
+							top: "0px",
+							left: "0px",
+							translate: `${popoutFloating.x}px ${popoutFloating.y}px`,
+							"z-index": 100,
+						}}
+					>
+						<Authenticate />
 					</div>
 				</Show>
 				<Show when={ctx.threadsView()}>

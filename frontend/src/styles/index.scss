@@ -1768,6 +1768,7 @@ body.resizing {
 .user-tray {
 	border-top: solid $bg-300 1px;
 	grid-area: tray;
+	user-select: none;
 
 	& > .row {
 		display: flex;
@@ -1787,15 +1788,23 @@ body.resizing {
 			line-height: 1.2;
 			cursor: pointer;
 			border-radius: 4px;
+			overflow: hidden;
+
+			& .info {
+				overflow: hidden;
+			}
 
 			& .user-activity {
 				font-size: 0.8rem;
 				color: $fg-500;
+				@include truncate;
 			}
 
 			& .avatar {
 				height: 32px;
 				width: 32px;
+				min-height: 32px;
+				min-width: 32px;
 				margin: 0;
 				margin-right: 8px;
 
@@ -2140,10 +2149,12 @@ body.resizing {
 	max-width: 512px;
 	border: solid $sep-300 1px;
 	background-color: $bg-150;
+	animation: slide-down ease-out 150ms forwards;
 
 	& > .section-email-password {
 		flex: 1;
 		padding: 8px;
+		overflow-y: auto;
 
 		& > .form {
 			display: flex;
@@ -2158,8 +2169,12 @@ body.resizing {
 
 		.button.submit {
 			align-self: end;
-
 			padding: 4px;
+		}
+
+		label {
+			display: flex;
+			flex-direction: column;
 		}
 	}
 
@@ -2168,6 +2183,7 @@ body.resizing {
 		padding: 8px;
 		display: flex;
 		flex-direction: column;
+		overflow-y: auto;
 		gap: 4px;
 		background: $bg-100;
 
@@ -2186,6 +2202,27 @@ body.resizing {
 			}
 		}
 	}
+
+	& .error {
+		align-self: start;
+		transform-origin: center;
+		animation: scale-in cubic-bezier(0.14, 0.98, 0.43, 1.55) 200ms forwards;
+		color: $color-red;
+	}
+}
+
+#overlay .authenticate {
+	width: max-content;
+
+	// TODO: is there a better way of doing this?
+	--shadow-size: 8px;
+	--offset: 4px; // TODO: keep this in sync with overlay.tsx
+	margin-bottom: calc(var(--shadow-size) - var(--offset));
+	box-shadow:
+		var(--shadow-size) var(--shadow-size) $bg-100,
+		var(--shadow-size) calc(var(--shadow-size) * -1) $bg-100,
+		calc(var(--shadow-size) * -1) var(--shadow-size) $bg-100,
+		calc(var(--shadow-size) * -1) calc(var(--shadow-size) * -1) $bg-100,;
 }
 
 .blocked-users-list {

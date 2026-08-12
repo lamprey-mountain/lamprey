@@ -22,8 +22,6 @@ export const Home = () => {
 		await api.logout();
 	}
 
-	const isUnauthorized = () =>
-		api.session() === null || api.session()?.status === "Unauthorized";
 	const isAuthorized = () => api.session()?.status === "Authorized";
 
 	return (
@@ -31,10 +29,6 @@ export const Home = () => {
 			<h2>home</h2>
 			<p>welcome to lamprey mountain, the internet's finest asylum</p>
 			<p>work in progress. expect bugs and missing polish.</p>
-			<UnicodeEmoji hex="1F345" />
-			<Show when={isUnauthorized()}>
-				<Authenticate />
-			</Show>
 
 			<Show when={isAuthorized()}>
 				<button type="button" class="button" onClick={logout}>

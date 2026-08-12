@@ -97,3 +97,21 @@
 		background-position: -200% 0;
 	}
 }
+
+@keyframes scale-in {
+	from {
+		scale: 0.8;
+	}
+	to {
+		scale: 1;
+	}
+}
+
+@keyframes slide-down {
+	from {
+		translate: 0 -8px;
+	}
+	to {
+		translate: 0 0;
+	}
+}
