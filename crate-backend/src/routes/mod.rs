@@ -17,6 +17,7 @@ mod channel;
 mod debug;
 mod dm;
 mod document;
+#[cfg(feature = "e2ee")]
 mod e2ee;
 mod emoji;
 mod federation;
@@ -57,7 +58,7 @@ pub mod metrics;
 pub mod util;
 
 fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
-    OpenApiRouter::new()
+    let mut router = OpenApiRouter::new()
         .merge(ack::routes())
         .merge(admin::routes())
         .merge(application::routes())
@@ -68,7 +69,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(debug::routes())
         .merge(dm::routes())
         .merge(document::routes())
-        .merge(e2ee::routes())
         .merge(emoji::routes())
         .merge(federation::routes(Arc::clone(&s)))
         .merge(flume::routes())
@@ -102,7 +102,14 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(user_connection::routes())
         .merge(user_email::routes())
         .merge(voice::routes())
-        .merge(webhook::routes())
+        .merge(webhook::routes());
+
+    #[cfg(feature = "e2ee")]
+    {
+        router = router.merge(e2ee::routes());
+    }
+
+    router
 }
 
 /// Get well known
