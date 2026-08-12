@@ -9,7 +9,7 @@ use validator::Validate;
 
 use crate::v1::types::ack::AckState;
 #[cfg(feature = "feat_e2ee")]
-use crate::v1::types::e2ee::{CrossSigningBundle, KeyshareRequest, KeyshareResponse};
+use crate::v1::types::e2ee::E2EEDispatch;
 use crate::v1::types::error::SyncErrorCode;
 
 use crate::v1::types::interactions::{Interaction, InteractionErrorCode};
@@ -961,7 +961,7 @@ pub enum MessageSync {
     EncryptionDispatch {
         /// who to send this dispatch to
         user_id: UserId,
-        payload: E2EEMessage,
+        payload: E2EEDispatch,
     },
 
     /// streaming message response

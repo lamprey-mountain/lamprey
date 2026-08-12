@@ -42,6 +42,9 @@ pub mod webhook;
 
 pub use crate::v1::types::{SyncCompression, SyncFormat as SyncEncoding, SyncVersion};
 
+#[cfg(feature = "feat_e2ee")]
+pub use crate::v1::types::e2ee::E2EEDispatch;
+
 /// query parameters when establishing a websocket sync connection
 #[record]
 #[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
@@ -347,7 +350,7 @@ pub enum Dispatch {
     EncryptionDispatch {
         /// who to send this dispatch to
         user_id: UserId,
-        payload: E2EEMessage,
+        payload: E2EEDispatch,
     },
 
     // TODO: add

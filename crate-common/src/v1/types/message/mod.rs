@@ -22,8 +22,8 @@ use crate::v1::types::moderation::Report;
 use crate::v1::types::reaction::ReactionCounts;
 use crate::v1::types::util::{Diff, Time};
 use crate::v1::types::{
-    ApplicationId, AuditLogEntry, DocumentBranchId, Embed, InteractionId, RoleId, RoomMember,
-    TagId, ThreadMember, User, UserId,
+    ApplicationId, AuditLogEntry, DocumentBranchId, Embed, InteractionId, RoomMember, TagId,
+    ThreadMember, User, UserId,
 };
 use crate::v1::types::{MediaId, RoomId};
 
@@ -546,6 +546,8 @@ pub struct MessageDefaultMarkdown {
 /// an encrypted message
 #[record]
 pub struct MessageEncrypted {
+    pub epoch: MlsEpoch,
+
     // TODO: find an appropriate size limit for this (how much overhead does mls cause?)
     /// encrypted content of the message
     ///
@@ -559,9 +561,8 @@ pub struct MessageEncrypted {
     pub nonce: Binary<256>,
 
     /// the media this message is attached to, for garbage collection
-    pub media: Vec<Media>,
-
-    pub epoch: MlsEpoch,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub media_ids: Vec<MediaId>,
 }
 
 /// a basic message, written using markdown. for use with e2ee.

@@ -73,6 +73,8 @@ impl Dispatch {
             Dispatch::DocumentPresence { .. } => todo!(),
             Dispatch::MediaProcessed { session_id, .. } => DispatchVisibility::Session(*session_id),
             Dispatch::MediaUpdate { .. } => todo!(),
+            #[cfg(feature = "feat_e2ee")]
+            Dispatch::EncryptionDispatch { .. } => todo!(),
             Dispatch::Room(d) => match &d.inner {
                 // DispatchRoomInner::AuditLogEntryCreate { .. } => todo!(),
                 _ => DispatchVisibility::Room(d.room_id),

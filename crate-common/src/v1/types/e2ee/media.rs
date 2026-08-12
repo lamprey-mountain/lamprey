@@ -1,12 +1,5 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
+use lamprey_macros::record;
 use url::Url;
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
 
 use crate::{
     v1::types::{
@@ -17,33 +10,34 @@ use crate::{
 };
 
 /// encrypted data for media
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct EncryptedMedia {
     /// the id of the media
     pub id: MediaId,
 
     /// media struct for decrypted content
-    pub media: EncryptedMediaInfo,
+    pub info: EncryptedMediaInfo,
 
     /// the algorithm used for encryption
-    pub alg: MediaEncryptionAlg,
-
-    /// the key used for encryption
-    // TODO: verify length is correct
-    pub key: Binary<256>,
-
-    /// initialization vector
-    // TODO: verify length is correct
-    pub iv: Binary<256>,
+    pub params: EncryptedMediaParams,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+/// parameters used to encrypt a piece of media
+#[record]
+#[serde(tag = "alg")]
+pub enum EncryptedMediaParams {
+    /// aes 256-bit in gcm
+    #[serde(rename = "A256GCM")]
+    Aes256GCM {
+        /// the key used for encryption (32 bytes)
+        key: Binary<256>,
+
+        /// initialization vector (12 bytes)
+        iv: Binary<96>,
+    },
+}
+
+#[record]
 pub struct EncryptedMediaInfo {
     pub filename: String,
     pub alt: Option<String>,
@@ -63,11 +57,20 @@ pub struct EncryptedMediaInfo {
 }
 
 /// the algorithm used to encrypt a piece of media
-#[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum MediaEncryptionAlg {
+#[record]
+#[derive(PartialEq, Eq, Copy)]
+pub enum EncryptedMediaAlgorithm {
     /// aes 256-bit in gcm
-    #[cfg_attr(feature = "serde", serde(rename = "A256GCM"))]
+    #[serde(rename = "A256GCM")]
     Aes256GCM,
 }
+
+impl PartialEq for EncryptedMedia {
+    fn eq(&self, other: &Self) -> bool {
+        // WARN: should i only check id here?
+        // self.id == other.id && self.info == other.info && self.params == other.params
+        self.id == other.id
+    }
+}
+
+impl Eq for EncryptedMedia {}

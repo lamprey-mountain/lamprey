@@ -1,142 +1,224 @@
+use crate::v1::types::{
+    ChannelId,
+    e2ee::{
+        cross_signing::{
+            CrossSigningBundle, CrossSigningQuery, CrossSigningQueryRequest, CrossSigningSignatures,
+        },
+        keysharing::{KeyshareRequest, KeyshareRespond, SessionKeyUploadRequest},
+        mls::{
+            MlsCommitCreate, MlsEpochCreate, MlsKeyPackageClaim, MlsKeyPackageUpload,
+            MlsMessageCreate, MlsWelcomeCreate,
+        },
+    },
+};
 use lamprey_macros::endpoint;
 
-/// Upload keys
-///
-/// Upload MLS key packages
+/// e2ee upload cross signing keys
 #[endpoint(
     post,
-    path = "/key/mls/upload",
+    path = "/keys/upload-csk",
     tags = ["e2ee"],
     scopes = [Full],
     response(NO_CONTENT, description = "success"),
 )]
-pub mod e2ee_mls_key_upload {
-    use bytes::Bytes;
-
-    pub struct Request {
-        #[body]
-        pub package: Bytes,
-    }
-
-    pub struct Response {}
-}
-
-/// Query keys
-#[endpoint(
-    post,
-    path = "/key/mls/query",
-    tags = ["e2ee"],
-    scopes = [Full],
-    response(NO_CONTENT, description = "success"),
-)]
-pub mod e2ee_mls_key_query {
-    use bytes::Bytes;
-
-    pub struct Request {
-        #[body]
-        pub package: Bytes,
-    }
-
-    pub struct Response {}
-}
-
-/// Claim keys
-#[endpoint(
-    post,
-    path = "/key/mls/claim",
-    tags = ["e2ee"],
-    scopes = [Full],
-    response(NO_CONTENT, description = "success"),
-)]
-pub mod e2ee_mls_key_claim {
-    use bytes::Bytes;
-
-    pub struct Request {
-        #[body]
-        pub package: Bytes,
-    }
-
-    pub struct Response {}
-}
-
-/// Upload cross signing keys
-#[endpoint(
-    post,
-    path = "/key/cs/keys",
-    tags = ["e2ee"],
-    scopes = [Full],
-    response(NO_CONTENT, description = "success"),
-)]
-pub mod e2ee_cs_key_upload {
-    use crate::v1::types::e2ee::CrossSigningBundle;
-
+pub mod e2ee_upload_cross_signing_keys {
     pub struct Request {
         #[json]
-        pub bundle: CrossSigningBundle,
+        pub body: CrossSigningBundle,
     }
-
     pub struct Response {}
 }
 
-/// Upload cross signing signatures
+/// e2ee upload session key
 #[endpoint(
     post,
-    path = "/key/cs/signatures",
+    path = "/keys/upload-session",
     tags = ["e2ee"],
     scopes = [Full],
     response(NO_CONTENT, description = "success"),
 )]
-pub mod e2ee_cs_signature_publish {
-    use crate::v1::types::e2ee::CrossSigningSignature;
-
+pub mod e2ee_upload_session_key {
     pub struct Request {
         #[json]
-        pub signature: CrossSigningSignature,
+        pub body: SessionKeyUploadRequest,
     }
-
     pub struct Response {}
 }
 
-/// Encryption channel commit
+/// e2ee upload mls key packages
 #[endpoint(
     post,
-    path = "/channel/{channel_id}/e2ee/commit",
+    path = "/keys/upload-mls",
     tags = ["e2ee"],
     scopes = [Full],
     response(NO_CONTENT, description = "success"),
 )]
-pub mod e2ee_channel_commit {
-    use crate::v1::types::{ChannelId, e2ee::MlsCommitCreate};
+pub mod e2ee_upload_mls_key_packages {
+    pub struct Request {
+        #[json]
+        pub body: MlsKeyPackageUpload,
+    }
+    pub struct Response {}
+}
 
+/// e2ee upload cross signing signatures
+#[endpoint(
+    post,
+    path = "/keys/upload-csk-signatures",
+    tags = ["e2ee"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod e2ee_upload_cross_signing_signatures {
+    pub struct Request {
+        #[json]
+        pub body: CrossSigningSignatures,
+    }
+    pub struct Response {}
+}
+
+/// e2ee query cross signing keys
+#[endpoint(
+    post,
+    path = "/keys/query-csk",
+    tags = ["e2ee"],
+    scopes = [Full],
+    response(OK, description = "success"),
+)]
+pub mod e2ee_query_cross_signing_keys {
+    pub struct Request {
+        #[json]
+        pub body: CrossSigningQueryRequest,
+    }
+    pub struct Response {
+        #[json]
+        pub body: CrossSigningQuery,
+    }
+}
+
+/// e2ee claim mls key packages
+#[endpoint(
+    post,
+    path = "/keys/claim-mls",
+    tags = ["e2ee"],
+    scopes = [Full],
+    response(OK, description = "success"),
+)]
+pub mod e2ee_claim_mls_key_packages {
+    pub struct Request {
+        #[json]
+        pub body: MlsKeyPackageClaim,
+    }
+    pub struct Response {
+        #[json]
+        pub body: (), // TODO: define response type
+    }
+}
+
+/// e2ee channel welcome
+#[endpoint(
+    post,
+    path = "/channel/{channel_id}/mls/welcome",
+    tags = ["e2ee"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod e2ee_mls_welcome {
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
-
-        #[json]
-        pub query: MlsCommitCreate,
-    }
-
-    pub struct Response {}
-}
-
-/// Encryption channel welcome
-#[endpoint(
-    post,
-    path = "/channel/{channel_id}/e2ee/welcome",
-    tags = ["e2ee"],
-    scopes = [Full],
-    response(NO_CONTENT, description = "success"),
-)]
-pub mod e2ee_channel_welcome {
-    use crate::v1::types::{ChannelId, e2ee::MlsWelcomeCreate};
-
-    pub struct Request {
-        #[path]
-        pub channel_id: ChannelId,
-
         #[json]
         pub body: MlsWelcomeCreate,
     }
+    pub struct Response {}
+}
 
+/// e2ee channel commit
+#[endpoint(
+    post,
+    path = "/channel/{channel_id}/mls/commit",
+    tags = ["e2ee"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod e2ee_mls_commit {
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+        #[json]
+        pub body: MlsCommitCreate,
+    }
+    pub struct Response {}
+}
+
+/// e2ee channel message
+#[endpoint(
+    post,
+    path = "/channel/{channel_id}/mls/message",
+    tags = ["e2ee"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod e2ee_mls_message {
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+        #[json]
+        pub body: MlsMessageCreate,
+    }
+    pub struct Response {}
+}
+
+/// e2ee channel epoch
+#[endpoint(
+    post,
+    path = "/channel/{channel_id}/mls/epoch",
+    tags = ["e2ee"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod e2ee_mls_epoch {
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+        #[json]
+        pub body: MlsEpochCreate,
+    }
+    pub struct Response {}
+}
+
+/// e2ee keyshare request
+#[endpoint(
+    post,
+    path = "/channel/{channel_id}/keyshare-request",
+    tags = ["e2ee"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod e2ee_keyshare_request {
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+        #[json]
+        pub body: KeyshareRequest,
+    }
+    pub struct Response {}
+}
+
+/// e2ee keyshare respond
+#[endpoint(
+    post,
+    path = "/channel/{channel_id}/keyshare-respond",
+    tags = ["e2ee"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod e2ee_keyshare_respond {
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+        #[json]
+        pub body: KeyshareRespond,
+    }
     pub struct Response {}
 }
