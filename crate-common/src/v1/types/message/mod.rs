@@ -558,7 +558,7 @@ pub struct MessageEncrypted {
     // TODO: pub alg: EncryptionAlgorithm,
     // TODO: find an appropriate size limit for this (how much overhead does mls cause?)
     /// the nonce for the ciphertext
-    pub nonce: Binary<256>,
+    pub nonce: Binary<12>,
 
     /// the media this message is attached to, for garbage collection
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

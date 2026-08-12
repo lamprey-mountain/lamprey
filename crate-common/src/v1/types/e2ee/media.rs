@@ -30,10 +30,10 @@ pub enum EncryptedMediaParams {
     #[serde(rename = "A256GCM")]
     Aes256GCM {
         /// the key used for encryption (32 bytes)
-        key: Binary<256>,
+        key: Binary<32>,
 
         /// initialization vector (12 bytes)
-        iv: Binary<96>,
+        iv: Binary<12>,
     },
 }
 
