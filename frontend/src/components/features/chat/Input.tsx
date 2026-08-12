@@ -242,10 +242,37 @@ export function Input(props: InputProps) {
 	);
 
 	const locked = () => {
-		return (
+		return !!(
 			!perms.has("MessageCreate") ||
 			(props.channel.locked && !perms.has("ThreadManage"))
 		);
+	};
+
+	const fullChannelName = (chan: Channel) => {
+		const uid = currentUser()?.id;
+		switch (chan.type) {
+			case "Dm": {
+				return `@${chan.recipients?.find((i) => i.id !== uid)?.name ?? "unknown"}`;
+			}
+			case "Gdm": {
+				return `${
+					chan.recipients
+						?.filter((i) => i.id !== uid)
+						?.map((i) => i.name)
+						.join(", ") ?? "unknown"
+				}`;
+			}
+			default: {
+				return `#${chan.name}`;
+			}
+		}
+	};
+
+	const editorPlaceholder = () => {
+		const name = fullChannelName(props.channel);
+		if (!currentUser()) return `Log in to message ${name}`;
+		if (locked()) return `You do not have permission to message ${name}`;
+		return `Message ${name}`;
 	};
 
 	const bypassSlowmode = (): boolean =>
@@ -367,11 +394,7 @@ export function Input(props: InputProps) {
 					onChange={onChange}
 					onUpload={handleUpload}
 					channelId={props.channel.id}
-					placeholder={
-						(locked() ?? false)
-							? "you cannot send messages here"
-							: `send a message...`
-					}
+					placeholder={editorPlaceholder()}
 					disabled={locked() ?? false}
 				/>
 				<EmojiButton picked={onEmojiPick} />
