@@ -1,12 +1,6 @@
 import type { EditorState } from "prosemirror-state";
 import { createUpload, type User } from "sdk";
-import {
-	createMemo,
-	createSignal,
-	onMount,
-	Show,
-	type VoidProps,
-} from "solid-js";
+import { createSignal, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { Savebar } from "@/atoms/Savebar";
@@ -18,8 +12,6 @@ import { getThumbFromId } from "@/media/util";
 import { Copyable } from "@/utils/general";
 import { createEditor } from "../editor/Editor";
 import { serializeToMarkdown } from "../editor/serializer";
-
-// TODO(#753): allow uploading banner
 
 export function Profile(props: VoidProps<{ user: User }>) {
 	const api2 = useApi();

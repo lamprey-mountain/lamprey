@@ -1,3 +1,4 @@
+import type { Application } from "sdk";
 import {
 	type Accessor,
 	createContext,
@@ -29,6 +30,7 @@ export type Menu = {
 	| { type: "folder"; folder_id: string }
 	| { type: "topic"; channel_id: string }
 	| { type: "voice"; channel_id: string }
+	| { type: "invite_application"; app: Application }
 	| {
 			type: "permission_overwrite";
 			channel_id: string;

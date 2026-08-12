@@ -62,6 +62,8 @@ export type PreferencesGlobal = components["schemas"]["PreferencesGlobal"];
 export type PreferencesUser = components["schemas"]["PreferencesUser"];
 export type PreferencesRoom = components["schemas"]["PreferencesRoom"];
 export type PreferencesChannel = components["schemas"]["PreferencesChannel"];
+export type ApplicationCreate = components["schemas"]["ApplicationCreate"];
+export type ApplicationUpdate = components["schemas"]["ApplicationUpdate"];
 export type Application = components["schemas"]["Application"] & {
 	/** @description application avatar (not in canonical schema but used in frontend) */
 	avatar?: components["schemas"]["Id"];

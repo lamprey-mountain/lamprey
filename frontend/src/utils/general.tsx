@@ -1,5 +1,10 @@
+import { debounce } from "@solid-primitives/scheduled";
 import type { Message } from "sdk";
+import { createSignal } from "solid-js";
+import { Icon } from "@/atoms/Icon";
+import { createTooltip } from "@/atoms/Tooltip";
 import { useModals } from "@/contexts/modal";
+import { icCheck, icCopy } from "./icons";
 
 export function createWeaklyMemoized<T extends object, U>(
 	fn: (_: T) => U,
@@ -34,8 +39,6 @@ export function getMessageContent(message: Message | undefined) {
 	return undefined;
 }
 
-// TODO: inline version of copyable that shows "copied!" as tooltip or inline text instead of modal
-// TODO: split into separate component
 export const Copyable = (props: { children: string }) => {
 	const [, modalctl] = useModals();
 	const copy = (e: MouseEvent) => {
@@ -48,5 +51,37 @@ export const Copyable = (props: { children: string }) => {
 		<code class="copyable" onClick={copy}>
 			{props.children}
 		</code>
+	);
+};
+
+export const Copyable2 = (props: { children: string; name: string }) => {
+	const [copied, setCopied] = createSignal(false);
+	const clearCopied = debounce(() => setCopied(false), 2000);
+
+	const tip = createTooltip({
+		tip: () => (
+			<div class="copyable2-tip" classList={{ copied: copied() }}>
+				<Icon src={copied() ? icCheck : icCopy} color={null} />{" "}
+				{copied() ? `${props.name} copied!` : `copy ${props.name}`}
+			</div>
+		),
+	});
+
+	const copy = (e: MouseEvent) => {
+		e.stopPropagation();
+		navigator.clipboard.writeText(props.children);
+		setCopied(true);
+		clearCopied();
+	};
+
+	return (
+		<div
+			class="copyable2"
+			classList={{ copied: copied() }}
+			onClick={copy}
+			ref={tip.content}
+		>
+			{props.children}
+		</div>
 	);
 };

@@ -1,35 +1,30 @@
-export function deepEqual(obj1: unknown, obj2: unknown): boolean {
-	if (obj1 === obj2) {
+export function deepEqual(a: unknown, b: unknown): boolean {
+	if (a === b) {
 		return true;
 	}
 
 	if (
-		typeof obj1 !== "object" ||
-		obj1 === null ||
-		typeof obj2 !== "object" ||
-		obj2 === null
+		typeof a === "object" &&
+		a !== null &&
+		typeof b === "object" &&
+		b !== null
 	) {
-		return false;
-	}
-
-	const keys1 = Object.keys(obj1);
-	const keys2 = Object.keys(obj2);
-
-	if (keys1.length !== keys2.length) {
-		return false;
-	}
-
-	for (const key of keys1) {
-		if (
-			!keys2.includes(key) ||
-			!deepEqual(
-				(obj1 as Record<string, unknown>)[key],
-				(obj2 as Record<string, unknown>)[key],
-			)
-		) {
-			return false;
+		if (Array.isArray(a) && Array.isArray(b)) {
+			if (a.length !== b.length) return false;
+			for (let i = 0; i < a.length; i++) {
+				if (!deepEqual(a[i], b[i])) return false;
+			}
+			return true;
+		}
+		if (!Array.isArray(a) && !Array.isArray(b)) {
+			const keysA = Object.keys(a);
+			const keysB = Object.keys(b);
+			if (keysA.length !== keysB.length) return false;
+			for (const key of keysA) {
+				if (!deepEqual(a[key], b[key])) return false;
+			}
+			return true;
 		}
 	}
-
-	return true;
+	return false;
 }

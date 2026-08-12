@@ -1,56 +1,6 @@
 @use "./util.scss" as *;
 
 .user-settings-info {
-	.profile {
-		display: grid;
-		grid-template-rows: auto 1fr;
-		grid-template-columns: auto 1fr;
-		grid-template-areas: "avatar name" "avatar description";
-		gap: 4px;
-
-		& > .name {
-			grid-area: name;
-
-			& > .label {
-				margin: 0 4px;
-			}
-
-			& > input {
-				width: 100%;
-				max-width: 320px;
-			}
-		}
-
-		& > .description {
-			grid-area: description;
-			max-width: 320px;
-			margin-top: 8px;
-
-			& > .label {
-				margin: 0 4px;
-			}
-
-			.editor {
-				background: $bg-150;
-				border: solid 1px $sep-300;
-				padding: 2px 4px;
-				border-radius: 2px;
-
-				&:focus-within {
-					border: solid 1px $link-500;
-				}
-
-				& > .ProseMirror {
-					min-height: 3lh;
-				}
-			}
-		}
-
-		& > .avatar-uploader {
-			grid-area: avatar;
-		}
-	}
-
 	.banner-uploader {
 		margin-top: 8px;
 
@@ -106,6 +56,57 @@
 			background: rgba(0, 0, 0, 0.8);
 			display: inline-block;
 		}
+	}
+}
+
+.user-settings-info > .profile,
+.user-settings-profile {
+	display: grid;
+	grid-template-rows: auto 1fr;
+	grid-template-columns: auto 1fr;
+	grid-template-areas: "avatar name" "avatar description";
+	gap: 4px;
+
+	& > .name {
+		grid-area: name;
+
+		& > .label {
+			margin: 0 4px;
+		}
+
+		& > input {
+			width: 100%;
+			max-width: 320px;
+		}
+	}
+
+	& > .description {
+		grid-area: description;
+		max-width: 320px;
+		margin-top: 8px;
+
+		& > .label {
+			margin: 0 4px;
+		}
+
+		.editor {
+			background: $bg-150;
+			border: solid 1px $sep-300;
+			padding: 2px 4px;
+			border-radius: 2px;
+
+			&:focus-within {
+				border: solid 1px $link-500;
+			}
+
+			& > .ProseMirror {
+				min-height: 3lh;
+			}
+		}
+	}
+
+	& > .avatar-uploader {
+		grid-area: avatar;
 	}
 }
 
@@ -410,16 +411,8 @@
 		gap: 8px;
 		margin: 8px 0 16px;
 
-		input {
+		& > .search {
 			flex: 1;
-			padding: 4px 8px;
-			background: $bg-150;
-			border: solid $sep-300 1px;
-			border-radius: 4px;
-
-			&:focus {
-				border: solid $link-500 1px;
-			}
 		}
 	}
 
@@ -438,6 +431,34 @@
 
 			&:hover {
 				background: $bg-100;
+			}
+
+			&[data-draft-state="create"],
+			&[data-draft-state="update"] {
+				border-style: dashed;
+				border-color: $sep-500;
+
+				& > .info .name {
+					color: $color-green;
+
+					&::after {
+						content: "*";
+					}
+				}
+			}
+
+			&[data-draft-state="update"] {
+				& > .info .name {
+					color: $color-blue;
+				}
+			}
+
+			&[data-draft-state="delete"] {
+				& > .info .name {
+					text-decoration: line-through;
+					color: $color-red;
+					padding: 2px 4px;
+				}
 			}
 		}
 
@@ -479,11 +500,183 @@
 	}
 }
 
-.appplication-edit .avatar-uploader .remove {
-	border: none;
-	background: none;
+.application-edit {
+	background: $bg-150;
+	width: 100%;
+	overflow-y: auto;
 
-	&:hover {
+	.savebar {
+		padding: 8px;
+	}
+
+	& > .tabs {
+		position: absolute;
+		top: 0;
+		width: 100%;
+		z-index: 1;
+		height: 32px;
+		display: flex;
+		gap: 4px;
+		padding: 4px;
+		background: $bg-100;
+		/* box-shadow: 2px 2px 8px #1114; */
+		border-bottom: solid $sep-300 1px;
+
+		& > .tab {
+			border: none;
+			background: none;
+			cursor: pointer;
+
+			&.active {
+				background: $bg-400;
+			}
+		}
+	}
+
+	& > .main {
+		padding: 8px;
+		margin-top: 32px;
+
+		& .editor {
+			background: $bg-200;
+			border-color: $sep-300;
+
+			.placeholder {
+				color: $fg-600;
+			}
+		}
+	}
+
+	input[type="text"] {
+		background: $bg-200;
+	}
+
+	.option {
+		background: $bg-150;
+	}
+
+	.bridge-details {
+		padding-left: 32px;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+
+		& > .top {
+			font-size: 1em;
+		}
+	}
+
+	.redirect-uris {
+		& .empty {
+			font-style: italic;
+			color: $fg-500;
+		}
+
+		& > .redirect-uri {
+			display: flex;
+			margin: 4px 0;
+		}
+	}
+
+	.rotate-secret {
+		position: relative;
+		border: solid $color-red 1px;
+		background-color: oklch(from $color-red l c h / .1);
+		padding: 8px;
+		padding-top: 16px;
+		border-radius: 4px;
+
+		& > .label {
+			position: absolute;
+			top: 0;
+			translate: 0 -50%;
+			font-size: 1em;
+			border: solid $color-red 1px;
+			background-color: color-mix($color-red 30%, $bg-150 70%);
+			padding: 0 4px;
+			border-radius: 2px;
+		}
+
+		& > .secret {
+			margin: 4px -8px;
+			padding: 4px 8px;
+			background-color: oklch(from $color-red l c h / .1);
+		}
+	}
+
+	.sessions-list .session {
+		background: $bg-200;
+		margin: 4px 0;
+		padding: 4px 8px;
+		line-height: 1;
+
+		& > .info {
+			padding-bottom: 0;
+		}
+
+		& > .meta {
+			color: $fg-600;
+		}
+	}
+
+	.avatar-uploader .remove {
+		border: none;
 		background: none;
+
+		&:hover {
+			background: none;
+		}
+	}
+}
+
+.user-settings-sessions,
+.application-edit {
+	.session {
+		display: flex;
+		flex-direction: column;
+		margin: 4px 0;
+		padding: 8px;
+		/* border-radius: 4px; */
+		background: $bg-150;
+		border: solid $sep-300 1px;
+
+		.info {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+
+			menu {
+				display: flex;
+				gap: 4px;
+			}
+		}
+
+		.meta {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin: 4px 0;
+
+			.bullet {
+				display: inline-block;
+				width: 4px;
+				height: 4px;
+				border-radius: 50%;
+				background: $fg-500;
+			}
+
+			.unknown {
+				color: $fg-500;
+				font-style: italic;
+			}
+		}
+
+		&.current {
+			border: solid $link-500 1px;
+		}
+
+		&.sudo {
+			border: solid $color-red 1px;
+		}
 	}
 }

@@ -39,6 +39,7 @@ import {
 	ChannelMenu,
 	ChannelNavMenu,
 	FolderMenu,
+	InviteApplicationMenu,
 	MessageMenu,
 	PermissionOverwriteMenu,
 	RoomMenu,
@@ -350,6 +351,9 @@ export function OverlayProvider(props: ParentProps) {
 			}
 			case "channel_nav": {
 				return <ChannelNavMenu room_id={menu.room_id} />;
+			}
+			case "invite_application": {
+				return <InviteApplicationMenu app={menu.app} />;
 			}
 		}
 	}

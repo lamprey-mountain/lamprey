@@ -426,6 +426,7 @@
 }
 
 .editor {
+	position: relative;
 	background-color: $bg-300;
 	flex: 1;
 	border: solid 1px $sep-500;
@@ -2326,6 +2327,7 @@ button.big {
 	& > .inner {
 		display: flex;
 		background: $bg-100;
+		border: solid $sep-300 1px;
 		border-radius: 4px;
 		padding: 8px;
 		display: flex;
@@ -2448,24 +2450,6 @@ button.big {
 		font-weight: bold;
 		font-size: 0.9rem;
 		color: $fg-500;
-	}
-}
-
-.invite-app {
-	position: fixed;
-	top: 0;
-	left: 0;
-	background-color: $bg-300;
-	border: solid 1px $sep-500;
-	box-shadow: 2px 2px 8px $bg-100;
-	min-width: 128px;
-	max-width: 256px;
-
-	display: flex;
-	flex-direction: column;
-
-	button {
-		border: none;
 	}
 }
 
@@ -3549,57 +3533,6 @@ input[type="search"].tags-search {
 	}
 }
 
-.user-settings-sessions {
-	.session {
-		display: flex;
-		flex-direction: column;
-		margin: 4px 0;
-		padding: 8px;
-		/* border-radius: 4px; */
-		background: $bg-150;
-		border: solid $sep-300 1px;
-
-		.info {
-			display: flex;
-			justify-content: space-between;
-			align-items: center;
-
-			menu {
-				display: flex;
-				gap: 4px;
-			}
-		}
-
-		.meta {
-			display: flex;
-			align-items: center;
-			gap: 8px;
-			margin: 4px 0;
-
-			.bullet {
-				display: inline-block;
-				width: 4px;
-				height: 4px;
-				border-radius: 50%;
-				background: $fg-500;
-			}
-
-			.unknown {
-				color: $fg-500;
-				font-style: italic;
-			}
-		}
-
-		&.current {
-			border: solid $link-500 1px;
-		}
-
-		&.sudo {
-			border: solid $color-red 1px;
-		}
-	}
-}
-
 img.emoji,
 img.custom-emoji {
 	height: 1em;
@@ -3666,6 +3599,10 @@ img.custom-emoji {
 
 	&:focus-within {
 		border: solid 1px $link-500;
+
+		& > .icon2 {
+			--icon-color: oklch(var(--color-fg2));
+		}
 	}
 }
 
@@ -3861,5 +3798,35 @@ button.round {
 
 	.chip .button {
 		border: 0;
+	}
+}
+
+.copyable2 {
+	display: inline-block;
+	margin: -2px -4px;
+	padding: 2px 4px;
+	border-radius: 2px;
+	cursor: pointer;
+
+	&:hover {
+		background: oklch(var(--color-fg6) / 0.2);
+	}
+}
+
+.copyable2-tip {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+
+	& > .icon2 {
+		background-color: $fg-400;
+	}
+
+	&.copied {
+		color: $color-green;
+
+		& > .icon2 {
+			background-color: $color-green;
+		}
 	}
 }
