@@ -415,6 +415,15 @@
                 pkgs.clamav
                 scannerMalwareConfig
               ];
+              fakeRootCommands = ''
+                mkdir -p /tmp /etc
+                chmod 1777 /tmp
+                echo "clamav:x:100:100::/var/lib/clamav:/bin/false" >> /etc/passwd
+                echo "clamav:x:100:" >> /etc/group
+                mkdir -p /var/log/clamav /var/run/clamav /run/clamav
+                chown clamav -R /var/log/clamav /var/run/clamav /run/clamav
+              '';
+              enableFakechroot = true;
               config = {
                 WorkingDir = "/";
                 Entrypoint = [
@@ -424,6 +433,7 @@
                   "--config"
                   "/etc/scanner-malware.toml"
                 ];
+                User = "clamav";
                 Healthcheck = {
                   Test = [ "CMD-SHELL" "curl -f http://localhost:4101/health || exit 1" ];
                   Interval = 30000000000; # 30s
@@ -431,10 +441,9 @@
                   Retries = 3;
                   StartPeriod = 5000000000; # 5s
                 };
-                # FIXME: the scanner errors if this is enabled?
-                # Volumes = {
-                #   "/var/run/clamav" = {};
-                # };
+                Volumes = {
+                  "/var/run/clamav" = {};
+                };
               };
             };
 
