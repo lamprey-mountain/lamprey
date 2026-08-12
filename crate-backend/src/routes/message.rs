@@ -255,6 +255,7 @@ async fn message_delete(
         MessageSync::MessageDelete {
             channel_id: req.channel_id,
             message_id: req.message_id,
+            room_id: thread.room_id,
         },
     )
     .await?;
@@ -391,6 +392,7 @@ async fn message_version_delete(
             channel_id: req.channel_id,
             message_id: req.message_id,
             version_id: req.version_id,
+            room_id: thread.room_id,
         },
     )
     .await?;
@@ -501,6 +503,7 @@ async fn message_moderate(
             MessageSync::MessageDeleteBulk {
                 channel_id: req.channel_id,
                 message_ids: req.moderate.delete.clone(),
+                room_id: thread.room_id,
             },
         )
         .await?;
@@ -525,6 +528,7 @@ async fn message_moderate(
             MessageSync::MessageRemove {
                 channel_id: req.channel_id,
                 message_ids: req.moderate.remove.clone(),
+                room_id: thread.room_id,
             },
         )
         .await?;
@@ -550,6 +554,7 @@ async fn message_moderate(
             MessageSync::MessageRestore {
                 channel_id: req.channel_id,
                 message_ids: req.moderate.restore.clone(),
+                room_id: thread.room_id,
             },
         )
         .await?;

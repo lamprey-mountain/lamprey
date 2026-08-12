@@ -580,6 +580,7 @@ async fn webhook_message_delete(
         MessageSync::MessageDelete {
             channel_id,
             message_id,
+            room_id: chan.room_id,
         },
     )
     .await?;

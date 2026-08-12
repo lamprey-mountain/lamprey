@@ -691,6 +691,7 @@ async fn channel_typing(
             channel_id: req.channel_id,
             user_id: auth.user.id,
             until: until_time,
+            room_id: thread.room_id,
         },
     )
     .await?;

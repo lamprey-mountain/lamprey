@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::{Json, extract::State, response::IntoResponse};
 use common::v1::routes;
 use common::v1::types::application::Scope;
@@ -11,7 +9,7 @@ use lamprey_macros::handler;
 
 use super::util::Auth;
 use crate::ServerState;
-use crate::error::Result;
+use crate::prelude::*;
 use crate::routes2;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -103,6 +101,7 @@ async fn reaction_add(
             user_id,
             message_id: req.message_id,
             key: reaction_key,
+            room_id: thread.room_id,
         },
     )
     .await?;
@@ -182,6 +181,7 @@ async fn reaction_remove(
             user_id,
             message_id: req.message_id,
             key: reaction_key_for_sync,
+            room_id: chan.room_id,
         },
     )
     .await?;
@@ -243,6 +243,7 @@ async fn reaction_remove_emoji(
             channel_id: req.channel_id,
             message_id: req.message_id,
             key: reaction_key_for_sync,
+            room_id: chan.room_id,
         },
     )
     .await?;
@@ -294,6 +295,7 @@ async fn reaction_remove_all(
         MessageSync::ReactionDeleteAll {
             channel_id: req.channel_id,
             message_id: req.message_id,
+            room_id: thread.room_id,
         },
     )
     .await?;

@@ -233,8 +233,10 @@ impl Connection {
             for (channel_id, typing_user_id, until) in typing_states {
                 if let Ok(perms) = srv.perms.for_channel(uid, channel_id).await {
                     if perms.has(Permission::ChannelView) {
+                        let channel = srv.channels.get(channel_id, None).await?;
                         self.queue.push_sync(
                             MessageSync::ChannelTyping {
+                                room_id: channel.room_id,
                                 channel_id,
                                 user_id: typing_user_id,
                                 until: until.into(),

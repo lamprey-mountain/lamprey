@@ -13,6 +13,7 @@ use common::v1::types::mirror::ChannelSync;
 use common::v1::types::reaction::{ReactionCounts, ReactionKey};
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelSeq, ChannelType, Mentions, UserId};
+use common::v2::types::RoomId;
 use common::v2::types::embed::Embed;
 use sqlx::{query, query_as, query_file_as, query_file_scalar, query_scalar};
 use tracing::info;
@@ -1220,14 +1221,16 @@ impl DataMessage for Postgres {
         let p: Pagination<_> = pagination.try_into()?;
         let limit = p.limit;
 
-        // Snapshot the channel's current latest_seq upfront to avoid a race
+        // Snapshot the channel's current latest_seq and room_id upfront to avoid a race
         // where the trailing read observes a seq that events were not returned for.
-        let channel_latest_seq: i64 = query_scalar!(
-            r#"SELECT latest_seq as "latest_seq!" FROM channel WHERE id = $1"#,
+        let channel_info = query!(
+            r#"SELECT latest_seq as "latest_seq!", room_id FROM channel WHERE id = $1"#,
             *channel_id
         )
         .fetch_one(conn.ext())
         .await?;
+        let channel_latest_seq = channel_info.latest_seq;
+        let room_id: Option<RoomId> = channel_info.room_id.map(|id| id.into());
 
         // Bound by the exact number of allowed distinctive `seq` sequences. (Prevents row limitations
         // from splitting bulk events that all share the exact same sequence integer)
@@ -1513,6 +1516,7 @@ impl DataMessage for Postgres {
                 all_events.push(InternalEvent {
                     seq,
                     event: MessageSync::MessageDelete {
+                        room_id,
                         channel_id,
                         message_id: message_ids[0],
                     },
@@ -1521,6 +1525,7 @@ impl DataMessage for Postgres {
                 all_events.push(InternalEvent {
                     seq,
                     event: MessageSync::MessageDeleteBulk {
+                        room_id,
                         channel_id,
                         message_ids,
                     },
@@ -1532,6 +1537,7 @@ impl DataMessage for Postgres {
             all_events.push(InternalEvent {
                 seq,
                 event: MessageSync::MessageRemove {
+                    room_id,
                     channel_id,
                     message_ids,
                 },
@@ -1542,6 +1548,7 @@ impl DataMessage for Postgres {
             all_events.push(InternalEvent {
                 seq,
                 event: MessageSync::MessageRestore {
+                    room_id,
                     channel_id,
                     message_ids,
                 },
@@ -1554,6 +1561,7 @@ impl DataMessage for Postgres {
                 all_events.push(InternalEvent {
                     seq: ver.created_seq,
                     event: MessageSync::MessageVersionDelete {
+                        room_id,
                         channel_id,
                         message_id: ver.message_id.into(),
                         version_id: ver.version_id.into(),
@@ -1581,6 +1589,7 @@ impl DataMessage for Postgres {
                 all_events.push(InternalEvent {
                     seq: r.seq,
                     event: MessageSync::ReactionCreate {
+                        room_id,
                         user_id: r.user_id.into(),
                         channel_id,
                         message_id: r.message_id.into(),
@@ -1602,6 +1611,7 @@ impl DataMessage for Postgres {
                 all_events.push(InternalEvent {
                     seq: r.seq,
                     event: MessageSync::ReactionDelete {
+                        room_id,
                         user_id: r.user_id.into(),
                         channel_id,
                         message_id: r.message_id.into(),

@@ -385,23 +385,28 @@ async fn spawn_sync_task(syncer: SyncerHandle, inner: Arc<RwLock<MessagesInner>>
                     MessageSync::MessageDelete {
                         channel_id,
                         message_id,
+                        room_id,
                     } => todo!(),
                     MessageSync::MessageDeleteBulk {
                         channel_id,
                         message_ids,
+                        room_id,
                     } => todo!(),
                     MessageSync::MessageVersionDelete {
                         channel_id,
                         message_id,
                         version_id,
+                        room_id,
                     } => todo!(),
                     MessageSync::MessageRemove {
                         channel_id,
                         message_ids,
+                        room_id,
                     } => todo!(),
                     MessageSync::MessageRestore {
                         channel_id,
                         message_ids,
+                        room_id,
                     } => todo!(),
                     _ => {}
                 },

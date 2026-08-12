@@ -299,9 +299,8 @@ pub enum MessagePayload {
 
 // WARNING: this enum is getting VERY big. it's caused a few stack overflow issues by now.
 // i might require it to be in a Box/Arc everywhere, or redo the enum
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum MessageSync {
     // TODO: move Ready here
     // /// successfully connected
@@ -402,6 +401,9 @@ pub enum MessageSync {
         channel_id: ChannelId,
         user_id: UserId,
         until: Time,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        room_id: Option<RoomId>,
     },
 
     /// passive update for a user's acks
@@ -471,11 +473,17 @@ pub enum MessageSync {
     },
 
     MessageDelete {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        room_id: Option<RoomId>,
+
         channel_id: ChannelId,
         message_id: MessageId,
     },
 
     MessageVersionDelete {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        room_id: Option<RoomId>,
+
         channel_id: ChannelId,
         message_id: MessageId,
         version_id: MessageVerId,
@@ -483,16 +491,25 @@ pub enum MessageSync {
 
     /// delete multiple messages at once
     MessageDeleteBulk {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        room_id: Option<RoomId>,
+
         channel_id: ChannelId,
         message_ids: Vec<MessageId>,
     },
 
     MessageRemove {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        room_id: Option<RoomId>,
+
         channel_id: ChannelId,
         message_ids: Vec<MessageId>,
     },
 
     MessageRestore {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        room_id: Option<RoomId>,
+
         channel_id: ChannelId,
 
         // TODO: remove `message_ids`
@@ -570,6 +587,9 @@ pub enum MessageSync {
         channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        room_id: Option<RoomId>,
     },
 
     /// remove one specific emoji on a message
@@ -578,6 +598,9 @@ pub enum MessageSync {
         channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        room_id: Option<RoomId>,
     },
 
     /// remove all reactions for a reaction key on a message
@@ -585,12 +608,18 @@ pub enum MessageSync {
         channel_id: ChannelId,
         message_id: MessageId,
         key: ReactionKey,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        room_id: Option<RoomId>,
     },
 
     /// remove all reactions on a message
     ReactionDeleteAll {
         channel_id: ChannelId,
         message_id: MessageId,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        room_id: Option<RoomId>,
     },
 
     EmojiCreate {
@@ -639,7 +668,7 @@ pub enum MessageSync {
         state: Option<VoiceState>,
 
         // HACK: make it possible to use this for auth checks
-        #[cfg_attr(feature = "serde", serde(skip))]
+        #[serde(skip)]
         old_state: Option<VoiceState>,
     },
 
@@ -768,19 +797,19 @@ pub enum MessageSync {
 
     InboxMarkRead {
         user_id: UserId,
-        #[cfg_attr(feature = "serde", serde(flatten))]
+        #[serde(flatten)]
         params: NotificationMarkRead,
     },
 
     InboxMarkUnread {
         user_id: UserId,
-        #[cfg_attr(feature = "serde", serde(flatten))]
+        #[serde(flatten)]
         params: NotificationMarkRead,
     },
 
     InboxFlush {
         user_id: UserId,
-        #[cfg_attr(feature = "serde", serde(flatten))]
+        #[serde(flatten)]
         params: NotificationFlush,
     },
 
