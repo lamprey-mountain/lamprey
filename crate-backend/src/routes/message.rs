@@ -11,16 +11,17 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Time;
 use common::v1::types::{AuditLogEntryType, MessagePin, MessageType, ThreadMemberPut};
 use common::v2::types::MessageId;
+use kerosene_services::globals::server_state::ServerState;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
+use crate::prelude::*;
 use crate::routes::util::auth::Auth4;
 use crate::routes::util::extract::UniversalExtractor;
 use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
 use crate::routes2;
 use crate::types::{DbMessageCreate, MessageSync, Permission};
-use crate::{Error, ServerState, error::Result};
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 /// Message create
@@ -85,12 +86,12 @@ async fn message_create(
 /// Message context
 #[handler(routes::message_context)]
 async fn message_context(
-    auth: Auth3,
-    State(s): State<Arc<ServerState>>,
+    auth: Auth4,
+    State(globals): State<Globals>,
     req: routes::message_context::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let srv = s.services();
+    let srv = globals.services();
 
     srv.perms
         .for_channel3(auth.user_id(), req.channel_id)
@@ -107,12 +108,12 @@ async fn message_context(
 /// Messages list
 #[handler(routes::message_list)]
 async fn message_list(
-    auth: Auth3,
-    State(s): State<Arc<ServerState>>,
+    auth: Auth4,
+    State(globals): State<Globals>,
     req: routes::message_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let srv = s.services();
+    let srv = globals.services();
 
     srv.perms
         .for_channel3(auth.user_id(), req.channel_id)
@@ -129,12 +130,12 @@ async fn message_list(
 /// Message get
 #[handler(routes::message_get)]
 async fn message_get(
-    auth: Auth3,
-    State(s): State<Arc<ServerState>>,
+    auth: Auth4,
+    State(globals): State<Globals>,
     req: routes::message_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let srv = s.services();
+    let srv = globals.services();
 
     srv.perms
         .for_channel3(auth.user_id(), req.channel_id)

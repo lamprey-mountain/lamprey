@@ -211,47 +211,41 @@ async fn channel_create_dm(
 /// Channel get
 #[handler(routes::channel_get)]
 async fn channel_get(
-    auth: Auth3,
-    State(s): State<Arc<ServerState>>,
+    auth: Auth4,
+    State(globals): State<Globals>,
     req: routes::channel_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
 
-    s.services()
-        .perms
+    let srv = globals.services();
+    srv.perms
         .for_channel3(auth.user_id(), req.channel_id)
         .await?
         .ensure_view()?
         .check()?;
-    let channel = s
-        .services()
-        .channels
-        .get(req.channel_id, auth.user_id())
-        .await?;
+    let channel = srv.channels.get(req.channel_id, auth.user_id()).await?;
     Ok(Json(channel))
 }
 
 /// Room channel list
 #[handler(routes::channel_list)]
 async fn channel_list(
-    auth: AuthRelaxed2,
-    State(s): State<Arc<ServerState>>,
+    auth: Auth4,
+    State(globals): State<Globals>,
     req: routes::channel_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let mut data = s.data();
-    let srv = s.services();
-
-    let user_id = auth.user.as_ref().map(|u| u.id);
+    let mut data = globals.data();
+    let srv = globals.services();
 
     srv.perms
-        .for_room3(user_id, req.room_id)
+        .for_room3(auth.user_id(), req.room_id)
         .await?
         .ensure_view()?
         .check()?;
     let channels = data.channel_list(req.room_id).await?;
     let ids: Vec<_> = channels.iter().map(|t| t.id).collect();
-    let channels = srv.channels.get_many(&ids, user_id).await?;
+    let channels = srv.channels.get_many(&ids, auth.user_id()).await?;
     let mut channels_map: HashMap<_, _> = channels.into_iter().map(|c| (c.id, c)).collect();
     let channels: Vec<_> = ids
         .into_iter()

@@ -21,6 +21,7 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::error::Result;
 use crate::routes::auth::fetch_auth_state;
+use crate::routes::util::auth::Auth4;
 use crate::{Error, ServerState, routes2};
 
 use super::util::{Auth, Auth3};
@@ -172,18 +173,22 @@ async fn invite_delete(
 /// Invite resolve
 #[handler(routes::invite_resolve)]
 async fn invite_resolve(
-    auth: Auth3,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::invite_resolve::Request,
 ) -> Result<impl IntoResponse> {
     let mut d = s.data();
     let s = s.services();
     let invite = d.invite_select(req.invite_code).await?;
-    if let Ok(user) = auth.user() {
+
+    // invite creators can view their own invites
+    if let Some(user) = auth.user() {
         if invite.invite.creator_id == user.id {
             return Ok(Json(invite).into_response());
         }
     }
+
+    // check if metadata should be stripped
     let should_strip = match &invite.invite.target {
         InviteTarget::Room { room, .. } => s
             .perms

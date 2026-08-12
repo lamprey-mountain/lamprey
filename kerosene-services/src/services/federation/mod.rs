@@ -1,5 +1,3 @@
-#![allow(unused)] // TEMP: suppress warnings here for now
-
 use std::time::Duration;
 
 use common::v1::types::federation::Hostname;

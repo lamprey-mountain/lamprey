@@ -116,7 +116,7 @@ async fn room_create(
 /// Room get
 #[handler(routes::room_get)]
 async fn room_get(
-    auth: Auth3,
+    auth: Auth4,
     State(s): State<Arc<ServerState>>,
     req: routes::room_get::Request,
 ) -> Result<impl IntoResponse> {
@@ -125,6 +125,7 @@ async fn room_get(
 
     let room = srv.rooms.get(req.room_id, auth.user_id()).await?;
     if room.is_removed() {
+        // TODO: allow admins with Permission::RoomManage to view room
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)));
     }
 

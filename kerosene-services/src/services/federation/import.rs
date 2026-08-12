@@ -8,7 +8,7 @@ use common::v1::types::error::ErrorCode;
 use common::v1::types::federation::signing::OutgoingRequest;
 use common::v1::types::federation::{FederationEpoch, Hostname, Remote, RemoteReq};
 use common::v1::types::{
-    Channel, ChannelId, Invite, MediaId, Room, RoomId, User, UserId, UserPatch,
+    Channel, ChannelId, Invite, InviteCode, MediaId, Room, RoomId, User, UserId, UserPatch,
 };
 use common::v2::types::SERVER_USER_ID;
 use common::v2::types::media::Media;
@@ -182,8 +182,19 @@ impl ServiceFederation {
                 // NOTE: i would need to bump epoch later?
                 return Ok(existing.media());
             } else {
-                // update local data.media stuff
-                todo!()
+                let new_media = Arc::new(Media {
+                    version_id: media.version_id,
+                    filename: media.filename,
+                    alt: media.alt,
+                    // TODO: handle strip_exif somehow?
+                    // TODO: maybe handle updating other fields?
+                    ..(*existing.media()).clone()
+                });
+
+                let mut txn = self.state.begin().await?;
+                txn.media_replace((*new_media).clone()).await?;
+                txn.commit().await?;
+                return Ok(new_media);
             }
         }
 
@@ -214,7 +225,47 @@ impl ServiceFederation {
 
     /// Load an invite from a remote server, fetching and caching it locally.
     // TODO: i can't use RemoteReq<InviteCode>, i'll have to manually pass hostname/invite code?
-    pub async fn load_remote_invite(&self, remote: ()) -> Result<Invite> {
+    pub async fn load_remote_invite(
+        &self,
+        hostname: &Hostname,
+        code: &InviteCode,
+    ) -> Result<Invite> {
+        let info = self.fetch_server_info(&hostname).await?;
+        let url = info.api_url.join(&format!("/api/v1/invite/{}", code))?;
+
+        let key = self
+            .get_local_keys()
+            .await
+            .into_iter()
+            .next()
+            .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
+
+        let req = OutgoingRequest {
+            origin: &self.state.config().hostname2()?,
+            host: &hostname,
+            method: "GET",
+            path: url.path(),
+            body: &[],
+        };
+
+        let res = self
+            .state
+            .services()
+            .http
+            .client
+            .get(url.clone())
+            .headers(req.sign(&key)?)
+            .send()
+            .await?;
+
+        if !res.status().is_success() {
+            return Err(Error::BadStatic("request failed"));
+        }
+
+        let invite: Invite = res.json().await?;
+
+        // TODO: import invite similarly to load_remote_room
+
         todo!()
     }
 
@@ -251,7 +302,7 @@ impl ServiceFederation {
             .services()
             .http
             .client
-            .post(url.clone())
+            .get(url.clone())
             .headers(req.sign(&key)?)
             .send()
             .await?;

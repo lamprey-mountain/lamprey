@@ -58,13 +58,15 @@ impl ServiceHttp {
     // federation: send sync/ping
     // federation: get resource
 
-    // TODO: fix and add this
-    // /// send an http request
-    // pub async fn send<E: Endpoint>(
-    //     &self,
-    //     req: E::Request,
-    // ) -> ::core::result::Result<E::Response, Error> {
+    // TODO: fix and add these methods:
+    // /// send an http request. does not sign the request.
+    // pub async fn send_unsigned<E: Endpoint>(&self, req: E::Request) -> Result<E::Response> {
     //     let res = self.client.execute(req.encode()).await?;
     //     Ok(E::Response::extract(res).unwrap())
+    // }
+
+    // /// send an http request. signs the request for federation.
+    // pub async fn send_signed<E: Endpoint>(&self, req: E::Request) -> Result<E::Response> {
+    //     todo!()
     // }
 }

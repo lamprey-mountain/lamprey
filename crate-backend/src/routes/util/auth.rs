@@ -77,6 +77,11 @@ impl Auth4 {
         }
     }
 
+    /// get the scopes that this session can access
+    ///
+    /// `Some([])` means the session has no allowed scopes, while `None`
+    /// means that all scopes are allowed (ie. scopes are irrelevant for this
+    /// session.)
     pub fn scopes(&self) -> Option<&Scopes> {
         match &self.identity {
             Identity::User { scopes, .. } => Some(scopes),
@@ -108,7 +113,10 @@ impl Auth4 {
     }
 
     pub fn ensure_scopes(&self, scopes: &[Scope]) -> Result<()> {
-        let self_scopes = self.scopes().ok_or(Error::MissingAuth)?;
+        let Some(self_scopes) = self.scopes() else {
+            return Ok(());
+        };
+
         self_scopes.ensure_all(scopes).map_err(Into::into)
     }
 
