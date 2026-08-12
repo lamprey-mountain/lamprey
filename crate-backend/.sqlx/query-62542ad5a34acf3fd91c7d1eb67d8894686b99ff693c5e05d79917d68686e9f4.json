@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT security_require_mfa, security_require_sudo\n            FROM room\n            WHERE id = $1\n            FOR UPDATE\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "security_require_mfa",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 1,
+        "name": "security_require_sudo",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "62542ad5a34acf3fd91c7d1eb67d8894686b99ff693c5e05d79917d68686e9f4"
+}

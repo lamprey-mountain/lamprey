@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            insert into connection (user_id, application_id, scopes, created_at)\n            values ($1, $2, $3, now())\n            on conflict (user_id, application_id) do update set\n                scopes = excluded.scopes\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6ed990a834baa083549ec41691844d0bb963cbf1477dbb81f8a7b4cfcfd46823"
+}

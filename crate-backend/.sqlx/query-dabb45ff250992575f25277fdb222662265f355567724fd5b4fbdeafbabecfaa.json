@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE room_templates\n            SET snapshot = $1, updated_at = NOW(), dirty = false\n            WHERE code = $2 AND source_room_id IS NOT NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dabb45ff250992575f25277fdb222662265f355567724fd5b4fbdeafbabecfaa"
+}

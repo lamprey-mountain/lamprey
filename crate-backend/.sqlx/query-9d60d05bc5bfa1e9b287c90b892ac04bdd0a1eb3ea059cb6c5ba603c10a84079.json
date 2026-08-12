@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update media set deleted_at = now()\nwhere id not in (select media_id from media_link)\nand extract_timestamp_from_uuid_v7(id) < now() - interval '7 day';\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "9d60d05bc5bfa1e9b287c90b892ac04bdd0a1eb3ea059cb6c5ba603c10a84079"
+}
