@@ -65,6 +65,7 @@ pub mod channel;
 pub mod config;
 pub mod connections;
 pub mod documents;
+pub mod e2ee;
 pub mod email;
 pub mod embed;
 pub mod emoji;

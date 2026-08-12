@@ -17,6 +17,7 @@ mod channel;
 mod debug;
 mod dm;
 mod document;
+mod e2ee;
 mod emoji;
 mod federation;
 mod flume;
@@ -67,6 +68,7 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(debug::routes())
         .merge(dm::routes())
         .merge(document::routes())
+        .merge(e2ee::routes())
         .merge(emoji::routes())
         .merge(federation::routes(Arc::clone(&s)))
         .merge(flume::routes())
