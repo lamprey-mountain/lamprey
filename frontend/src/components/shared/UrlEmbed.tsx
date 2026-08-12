@@ -1,7 +1,8 @@
 import sanitizeHtml from "sanitize-html";
 import type { Embed } from "sdk";
-import { Show, type VoidProps } from "solid-js";
+import { Match, Show, Switch, type VoidProps } from "solid-js";
 import { parserResource } from "@/lib/markdown";
+import { MediaView } from "@/media/Media";
 import { ImageView } from "@/media/mod";
 
 type EmbedProps = {
@@ -15,6 +16,19 @@ const sanitizeHtmlOptions: sanitizeHtml.IOptions = {
 };
 
 export const EmbedView = (props: VoidProps<EmbedProps>) => {
+	return (
+		<Switch>
+			<Match when={props.embed.type === "Media"}>
+				<MediaView media={props.embed.media!} />
+			</Match>
+			<Match when={true}>
+				<EmbedViewUrl embed={props.embed} />
+			</Match>
+		</Switch>
+	);
+};
+
+export const EmbedViewUrl = (props: VoidProps<EmbedProps>) => {
 	// TODO: attempt to autodetect if this is html or markdown
 	const description = () => {
 		const md = parserResource();

@@ -62,6 +62,7 @@ import { useReadTracking } from "@/contexts/read-tracking.tsx";
 import { colors } from "@/lib/colors.ts";
 import { flags } from "@/lib/flags.ts";
 import { countEmojiOnly } from "@/lib/markdown";
+import { MediaView } from "@/media/Media.tsx";
 import {
 	AudioView,
 	FileView,
@@ -553,43 +554,10 @@ export function ReplyView(props: {
 }
 
 export function AttachmentView(props: { att: Attachment }) {
-	const contentType = createMemo(() => props.att.media?.content_type);
-	const mainCt = createMemo(() => contentType()?.split("/")[0]);
-
-	// TODO: better mime type parsing/matching for application/json
-	// TODO: split out media to MediaView
-	// TODO: support spoilers for other attachment types
-
 	return (
 		<Switch>
 			<Match when={props.att.type === "Media" && props.att.media}>
-				{(media) => (
-					<Switch>
-						<Match when={mainCt() === "image"}>
-							<ImageView media={media()} spoiler={props.att.spoiler} />
-						</Match>
-						<Match when={mainCt() === "video"}>
-							<VideoView media={media()} />
-						</Match>
-						<Match when={mainCt() === "audio"}>
-							<AudioView media={media()} />
-						</Match>
-						<Match
-							when={
-								mainCt() === "text" ||
-								/^application\/json\b/.test(contentType())
-							}
-						>
-							<TextView media={media()} />
-						</Match>
-						<Match when={flags.has("media_three") && is3D(media())}>
-							<ThreeView media={media()} />
-						</Match>
-						<Match when={true}>
-							<FileView media={media()} />
-						</Match>
-					</Switch>
-				)}
+				{(media) => <MediaView media={media()} attachment={props.att} />}
 			</Match>
 		</Switch>
 	);
@@ -845,6 +813,14 @@ function DefaultMessage(
 		);
 	};
 
+	const isMediaEmbed = () => {
+		const v = version();
+		if (!v) return false;
+		const e = v.embeds[0];
+		if (!e) return false;
+		return e.type === "Media" && v.content === e.url;
+	};
+
 	return (
 		<article
 			ref={props.messageArticleRef}
@@ -923,11 +899,13 @@ function DefaultMessage(
 					/>
 				</h3>
 
-				<Show
-					when={!props.isEditing}
-					fallback={<MessageEditor message={props.message} />}
-				>
-					<MessageTextMarkdown message={props.message} diff={props.diff} />
+				<Show when={!isMediaEmbed()}>
+					<Show
+						when={!props.isEditing}
+						fallback={<MessageEditor message={props.message} />}
+					>
+						<MessageTextMarkdown message={props.message} diff={props.diff} />
+					</Show>
 				</Show>
 				<Switch>
 					<Match when={props.message.automodded}>
