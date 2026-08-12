@@ -22,7 +22,6 @@ import {
 	useCurrentUser,
 } from "@/contexts/currentUser.tsx";
 import { DisplayProvider } from "@/contexts/display.tsx";
-import { MemberListProvider } from "@/contexts/memberlist.tsx";
 import {
 	AutocompleteProvider,
 	FormattingToolbarProvider,
@@ -154,27 +153,25 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
 							channel_contexts={ctx.channel_contexts}
 							dataUpdate={ctx.dataUpdate}
 						>
-							<MemberListProvider>
-								<ModalsProvider>
-									<UploadsProvider ctx={ctx}>
-										<VoiceProvider>
-											<SlashCommandsProvider value={ctx.slashCommands}>
-												<MenuProvider>
-													<AutocompleteProvider>
-														<FormattingToolbarProvider>
-															<UserPopoutProvider>
-																<CalendarPopupProvider>
-																	<AppShell>{props.children}</AppShell>
-																</CalendarPopupProvider>
-															</UserPopoutProvider>
-														</FormattingToolbarProvider>
-													</AutocompleteProvider>
-												</MenuProvider>
-											</SlashCommandsProvider>
-										</VoiceProvider>
-									</UploadsProvider>
-								</ModalsProvider>
-							</MemberListProvider>
+							<ModalsProvider>
+								<UploadsProvider ctx={ctx}>
+									<VoiceProvider>
+										<SlashCommandsProvider value={ctx.slashCommands}>
+											<MenuProvider>
+												<AutocompleteProvider>
+													<FormattingToolbarProvider>
+														<UserPopoutProvider>
+															<CalendarPopupProvider>
+																<AppShell>{props.children}</AppShell>
+															</CalendarPopupProvider>
+														</UserPopoutProvider>
+													</FormattingToolbarProvider>
+												</AutocompleteProvider>
+											</MenuProvider>
+										</SlashCommandsProvider>
+									</VoiceProvider>
+								</UploadsProvider>
+							</ModalsProvider>
 						</ReadTrackingProvider>
 					</chatctx.Provider>
 				</DisplayProvider>

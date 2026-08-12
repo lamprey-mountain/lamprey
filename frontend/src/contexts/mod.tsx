@@ -4,7 +4,6 @@ export * from "./autocomplete.tsx";
 export * from "./channel.tsx";
 export * from "./display.tsx";
 export * from "./formatting-toolbar.tsx";
-export * from "./memberlist.tsx";
 export * from "./menu.tsx";
 export * from "./modal.tsx";
 export * from "./slash-commands.tsx";

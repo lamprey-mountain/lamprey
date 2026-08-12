@@ -6,17 +6,19 @@ import {
 	createMemo,
 	createSignal,
 	For,
+	from,
 	Match,
-	on,
 	Show,
 	Switch,
 } from "solid-js";
-import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
+import { useApi } from "@/api";
 import type { MemberListItem } from "@/api/services/MemberListService";
 import { AvatarWithStatus } from "@/components/shared/User";
-import { useMemberListContext } from "@/contexts/memberlist.tsx";
 import { useUserPopout } from "@/contexts/mod";
+import { logger } from "@/utils/logger";
 import { MemberListSkeleton } from "./MemberListSkeleton";
+
+const memberListLog = logger.for("member_list");
 
 type MemberListProps =
 	| {
@@ -32,31 +34,60 @@ type MemberListProps =
 			threadId: string;
 	  };
 
+type Row =
+	| { type: "group"; group: MemberListGroup }
+	| { type: "member"; item: MemberListItem };
+
 export const MemberList = (props: MemberListProps) => {
-	const roles2 = useRoles();
-	const roomMembers2 = useRoomMembers();
-	const users2 = useUsers();
-	const channels2 = useChannels();
-	const memberLists = useMemberListContext();
-	const list = () => memberLists.get(props.id);
+	const api = useApi();
+	const clientState = from(api.client.state);
+
+	let lastSub: string | null = null;
+	createEffect(() => {
+		if (clientState() !== "ready") return;
+
+		const id = props.type === "room" ? props.roomId : props.threadId;
+		const ranges: [number, number][] = [[0, 199]];
+
+		// TODO: theres probably a better way to do this
+		const subKey = `${props.type}:${id}:${JSON.stringify(ranges)}`;
+
+		if (lastSub === subKey) return;
+
+		if (props.type === "room") {
+			memberListLog.info("subscribing to room member list", {
+				room_id: id,
+				ranges,
+			});
+			api.roomMembers.subscribeList(id, ranges);
+		} else {
+			const channel = api.channels.cache.get(id);
+			if (channel && channel.type !== "Dm" && channel.type !== "Gdm") {
+				memberListLog.info("subscribing to thread member list", {
+					thread_id: id,
+					ranges,
+				});
+				api.threadMembers.subscribeList(id, ranges);
+			}
+		}
+		lastSub = subKey;
+	});
+
+	const list = () => api.memberLists.lists.get(props.id);
 	const [collapsedGroups, setCollapsedGroups] = createSignal(
 		new ReactiveMap<string, boolean>(),
 	);
 
-	type Row =
-		| { type: "group"; group: MemberListGroup }
-		| { type: "member"; item: MemberListItem };
-
 	const rows = createMemo(() => {
 		if (props.type === "thread") {
-			const channel = channels2.cache.get(props.threadId);
+			const channel = api.channels.cache.get(props.threadId);
 			if (channel) {
 				const isDm = channel.type === "Dm" || channel.type === "Gdm";
 				if (isDm && channel.recipients) {
 					const onlineItems: MemberListItem[] = [];
 					const offlineItems: MemberListItem[] = [];
 					for (const u of channel.recipients) {
-						const user = users2.cache.get(u.id) ?? u;
+						const user = api.users.cache.get(u.id) ?? u;
 						const item: MemberListItem = {
 							user,
 							room_member: null,
@@ -111,12 +142,12 @@ export const MemberList = (props: MemberListProps) => {
 
 	const getGroupName = (group: MemberListGroup) => {
 		if (typeof group.id === "string") {
-			const role = roles2.cache.get(group.id);
+			const role = api.roles.cache.get(group.id);
 			return role?.name ?? group.id;
 		}
 		// Handle role-based group id
 		const roleId = Object.values(group.id)[0];
-		const role = roles2.cache.get(roleId);
+		const role = api.roles.cache.get(roleId);
 		return role?.name ?? roleId;
 	};
 
@@ -250,10 +281,10 @@ export const MemberList = (props: MemberListProps) => {
 										<Match when={matchesMember()}>
 											{(item) => {
 												const user = () =>
-													users2.cache.get(item().user.id) ?? item().user;
+													api.users.cache.get(item().user.id) ?? item().user;
 												const room_member = () =>
 													props.roomId
-														? (roomMembers2.cache.get(
+														? (api.roomMembers.cache.get(
 																`${props.roomId}:${item().user.id}`,
 															) ?? item().room_member)
 														: item().room_member;
