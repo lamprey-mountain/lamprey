@@ -25,9 +25,9 @@ impl DataSession for Postgres {
         let session = query_as!(
             DbSession,
             r#"
-            INSERT INTO session (id, user_id, token, status, name, expires_at, type, application_id, last_seen_at, ip_addr, user_agent, country_code, country_name, city_name)
-            VALUES ($1, NULL, $2, 'Unauthorized', $3, $4, $5, $6, now(), $7::text::inet, $8, NULL, NULL, NULL)
-            RETURNING id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at"#,
+            INSERT INTO session (id, user_id, token, status, name, expires_at, type, application_id, last_seen_at, ip_addr, user_agent, country_code, country_name, city_name, sudo_expires_at)
+            VALUES ($1, NULL, $2, 'Unauthorized', $3, $4, $5, $6, now(), $7::text::inet, $8, NULL, NULL, NULL, NULL)
+            RETURNING id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at, sudo_expires_at"#,
             session_id,
             create.token.0,
             create.name,
@@ -47,7 +47,7 @@ impl DataSession for Postgres {
         tracing::debug!("session_get: {:?}", id);
         let session = query_as!(
             DbSession,
-            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at FROM session WHERE id = $1"#,
+            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at, sudo_expires_at FROM session WHERE id = $1"#,
             *id,
         )
         .fetch_one(conn.ext())
@@ -69,7 +69,7 @@ impl DataSession for Postgres {
         tracing::debug!("session_get_by_token: {:?}", token);
         let session = query_as!(
             DbSession,
-            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at FROM session WHERE token = $1"#,
+            r#"SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at, sudo_expires_at FROM session WHERE token = $1"#,
             token.0
         )
             .fetch_one(conn.ext())
@@ -93,6 +93,7 @@ impl DataSession for Postgres {
     ) -> Result<()> {
         let mut conn = self.acquire().await?;
         let user_id = status.user_id().map(|i| *i);
+        let sudo_expires_at = status.sudo_expires_at().map(PrimitiveDateTime::from);
         let is_authorized = matches!(
             status,
             SessionStatus::Authorized { .. } | SessionStatus::Sudo { .. }
@@ -103,12 +104,14 @@ impl DataSession for Postgres {
             status = $2,
             user_id = $3,
             authorized_at = (CASE WHEN $4 THEN COALESCE(authorized_at, now()) ELSE authorized_at END),
-            deauthorized_at = (CASE WHEN $4 THEN NULL ELSE COALESCE(deauthorized_at, now()) END)
+            deauthorized_at = (CASE WHEN $4 THEN NULL ELSE COALESCE(deauthorized_at, now()) END),
+            sudo_expires_at = $5
             WHERE id = $1"#,
             *session_id,
             status_db as _,
             user_id,
             is_authorized,
+            sudo_expires_at,
         )
         .execute(conn.ext())
         .await?;
@@ -127,7 +130,7 @@ impl DataSession for Postgres {
             query_as!(
                 DbSession,
                 r#"
-        	SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at FROM session
+        	SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at, sudo_expires_at FROM session
         	WHERE user_id = $1 AND id > $2 AND id < $3 AND status != 'Unauthorized'
         	ORDER BY (CASE WHEN $4 = 'f' THEN id END), id DESC LIMIT $5
         	"#,
@@ -169,7 +172,7 @@ impl DataSession for Postgres {
         let session = query_as!(
             DbSession,
             r#"
-            SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at
+            SELECT id, user_id, token, status as "status: _", name, expires_at, type as ty, application_id, last_seen_at, ip_addr::text, user_agent, country_code, country_name, city_name, authorized_at, deauthorized_at, sudo_expires_at
             FROM session
             WHERE id = $1
             FOR UPDATE

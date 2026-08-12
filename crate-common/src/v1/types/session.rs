@@ -149,6 +149,15 @@ impl SessionStatus {
             SessionStatus::Sudo { user_id, .. } => Some(*user_id),
         }
     }
+
+    pub fn sudo_expires_at(&self) -> Option<Time> {
+        match self {
+            SessionStatus::Sudo {
+                sudo_expires_at, ..
+            } => Some(*sudo_expires_at),
+            _ => None,
+        }
+    }
 }
 
 impl Session {

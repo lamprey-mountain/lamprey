@@ -432,6 +432,7 @@ pub struct DbSession {
     pub city_name: Option<String>,
     pub authorized_at: Option<PrimitiveDateTime>,
     pub deauthorized_at: Option<PrimitiveDateTime>,
+    pub sudo_expires_at: Option<PrimitiveDateTime>,
 }
 
 pub struct DbSessionCreate {
@@ -467,7 +468,10 @@ impl From<DbSession> for Session {
                 },
                 DbSessionStatus::Sudo => SessionStatus::Sudo {
                     user_id: row.user_id.expect("invalid data in db!").into(),
-                    sudo_expires_at: Time::now_utc(),
+                    sudo_expires_at: row
+                        .sudo_expires_at
+                        .map(|t| t.into())
+                        .unwrap_or_else(Time::now_utc),
                 },
             },
             name: row.name,
