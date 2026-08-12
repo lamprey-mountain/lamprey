@@ -52,6 +52,11 @@ impl DataPush for Postgres {
             r#"
             INSERT INTO push_subscription (session_id, user_id, endpoint, key_p256dh, key_auth)
             VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (session_id) DO UPDATE SET
+                user_id = EXCLUDED.user_id,
+                endpoint = EXCLUDED.endpoint,
+                key_p256dh = EXCLUDED.key_p256dh,
+                key_auth = EXCLUDED.key_auth
             "#,
             db_push.session_id,
             db_push.user_id,
