@@ -101,7 +101,7 @@
 			}
 
 			& > li > .spacer-mini {
-				min-height: 3.5rem;
+				min-height: 80px;
 
 				/* &.has-typing .spacer.mini { */
 				/* min-height: 4.5rem; */
@@ -658,7 +658,6 @@
 
 	& > .new-messages {
 		display: flex;
-		align-items: center;
 		width: calc(100% - 16px);
 		height: 32px;
 		margin-inline: 8px;
@@ -670,6 +669,7 @@
 		box-shadow: 0 4px 8px $bg-200;
 		background-color: $link-200;
 		color: $fg-100;
+		font-size: .8em;
 
 		// TODO: animate the new messages bar
 
@@ -680,7 +680,7 @@
 			cursor: pointer;
 
 			&:hover,
-			&:focus-within {
+			&:focus-visible {
 				background: #fff1;
 			}
 

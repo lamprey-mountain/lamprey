@@ -75,35 +75,18 @@ export type TimelineProviderProps = ParentProps & {
 };
 
 export const TimelineProvider = (props: TimelineProviderProps) => {
-	const [chanState, updateChanState] = useChannel();
-	let state = unwrap(chanState.timelineState);
+	const [chanState] = useChannel();
+	const state = unwrap(chanState.timelineState);
 
-	if (!state) {
-		const getInitialAnchor = (): MessageListAnchor => {
-			const readMarker = props.channel.last_read_id;
-			const hasReadMarker =
-				readMarker && readMarker !== props.channel.last_version_id;
-			if (hasReadMarker) {
-				return { type: "context", limit: 50, message_id: readMarker };
-			} else {
-				return { type: "backwards", limit: 50 };
-			}
-		};
-
-		state = {
-			messages: null,
-			loading: false,
-			highlight: null,
-			scrollTop: 0,
-			controller: chanState.timeline,
-			items: [{ type: "skeletons", key: "skeletons-top" }],
-			anchor: getInitialAnchor(),
-			readMarkerId: props.channel.last_read_id ?? null,
-			events: chanState.timeline.events,
-			commands: chanState.timeline.commands,
-		};
-
-		updateChanState("timelineState", state);
+	// Initialize channel-specific anchor on first render (before any fetch)
+	if (state.messages === null) {
+		const readMarker = props.channel.last_read_id;
+		const hasReadMarker =
+			readMarker && readMarker !== props.channel.last_version_id;
+		if (hasReadMarker) {
+			state.anchor = { type: "context", limit: 50, message_id: readMarker };
+		}
+		state.readMarkerId = readMarker ?? null;
 	}
 
 	return (

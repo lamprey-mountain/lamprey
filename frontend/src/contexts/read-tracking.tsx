@@ -183,22 +183,27 @@ export function createReadTrackingProvider(
 				}, 300),
 			);
 			return;
+		} else {
+			const existing = pendingAcks.get(channel_id);
+			if (existing) {
+				clearTimeout(existing);
+				pendingAcks.delete(channel_id);
+			}
 		}
 
-		const cc = channel_contexts.get(channel_id);
-		const timelineState = cc?.[0].timelineState;
+		const timelineState = channel_contexts.get(channel_id)?.[0].timelineState;
 		const previous_read_id = timelineState?.readMarkerId;
 
 		// optimistically update, rollback on failure
-		if (also_local && cc) {
-			cc[0].timeline.ackMessage(message_id);
+		if (also_local && timelineState) {
+			timelineState.controller.ackMessage(message_id);
 		}
 
 		try {
 			await channels2.ack(channel_id, message_id, undefined);
 		} catch (e) {
-			if (also_local && cc && previous_read_id) {
-				cc[0].timeline.ackMessage(previous_read_id);
+			if (also_local && timelineState && previous_read_id) {
+				timelineState.controller.ackMessage(previous_read_id);
 			}
 			throw e;
 		}

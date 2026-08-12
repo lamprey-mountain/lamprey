@@ -4,7 +4,6 @@ import { createContext, useContext } from "solid-js";
 import type { SetStoreFunction, Store } from "solid-js/store";
 import {
 	createTimelineController,
-	type TimelineController,
 	type TimelineState,
 } from "@/components/features/chat/timeline-context";
 import type { Attachment } from "@/types/chat";
@@ -35,8 +34,7 @@ export type ChannelState = {
 	editor_state?: EditorState;
 	reply_id?: string;
 	search?: ChannelSearch;
-	timeline: TimelineController;
-	timelineState?: TimelineState;
+	timelineState: TimelineState;
 
 	// TODO: merge these into sidebar: Sidebar
 	pinned_view: boolean;
@@ -59,6 +57,7 @@ export type ChannelState = {
 };
 
 export function createInitialChannelState(): ChannelState {
+	const controller = createTimelineController();
 	return {
 		attachments: [],
 		pinned_view: false,
@@ -68,7 +67,18 @@ export function createInitialChannelState(): ChannelState {
 		slowmode_expire_at: null,
 		selectMode: false,
 		selectedMessages: [],
-		timeline: createTimelineController(),
+		timelineState: {
+			messages: null,
+			loading: false,
+			highlight: null,
+			scrollTop: 0,
+			controller,
+			items: [{ type: "skeletons", key: "skeletons-top" }],
+			anchor: { type: "backwards", limit: 50 },
+			readMarkerId: null,
+			events: controller.events,
+			commands: controller.commands,
+		},
 	};
 }
 

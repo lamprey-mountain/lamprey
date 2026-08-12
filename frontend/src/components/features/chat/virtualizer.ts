@@ -199,7 +199,7 @@ export const createTimelineVirtualizer = (
 				const el = scrollEl();
 				if (!el) return;
 
-				// TODO: show skeletons while fetching messages?
+				// TODO: show skeletons while fetching initial messages
 				const messageRange = await messages.fetchSlice(
 					options.channel.id,
 					task.anchor,

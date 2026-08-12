@@ -379,7 +379,11 @@ export const RouteChannel = (
 		const [channelState, setChannelState] = c;
 
 		if (channel_id && message_id) {
-			channelState.timeline.jumpToMessage(message_id, false, true);
+			channelState.timelineState.controller.jumpToMessage(
+				message_id,
+				false,
+				true,
+			);
 		}
 		if (channel_id && script_id) {
 			setChannelState("script_id", script_id);

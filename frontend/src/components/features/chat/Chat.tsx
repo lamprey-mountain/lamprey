@@ -32,20 +32,9 @@ export const ChatMain = (props: ChatProps) => {
 	const [channelState] = useChannel()!;
 	const readTracking = useReadTracking();
 
-	const markReadFn = throttle(() => {
-		const message_id = props.channel.last_message_id;
-		const read_id = props.channel.last_read_id;
-		if (message_id && message_id !== read_id) {
-			readTracking.ack(props.channel.id, message_id, false, true);
-		}
-	}, 300);
-
-	// ack channel when scrolled to bottom
-	channelState.timeline.events.on("scrollBottom", markReadFn);
-
 	// when esc pressed, jump to end of timeline and mark channel as read
 	const jumpToEnd = () => {
-		channelState.timeline.jumpToBottom();
+		channelState.timelineState.controller.jumpToBottom();
 		const message_id = props.channel.last_message_id;
 		const read_id = props.channel.last_read_id;
 		if (message_id && message_id !== read_id) {
@@ -85,12 +74,12 @@ export const ChatMain = (props: ChatProps) => {
 							if (e.key === "Escape") {
 								jumpToEnd();
 							} else if (e.key === "PageDown") {
-								channelState.timeline.scrollBy(
+								channelState.timelineState.controller.scrollBy(
 									globalThis.innerHeight * 0.8,
 									true,
 								);
 							} else if (e.key === "PageUp") {
-								channelState.timeline.scrollBy(
+								channelState.timelineState.controller.scrollBy(
 									-globalThis.innerHeight * 0.8,
 									true,
 								);
@@ -154,14 +143,25 @@ export const TimelineControls = (props: ChatProps) => {
 	const [showNewMessages, setShowNewMessages] = createSignal(false);
 	const [scrollIndex, setScrollIndex] = createSignal(0);
 
+	// ack channel when scrolled to bottom
+	const markReadFn = throttle(() => {
+		const message_id = props.channel.last_message_id;
+		const read_id = props.channel.last_read_id;
+		if (message_id && message_id !== read_id) {
+			rt.ack(props.channel.id, message_id, false, true);
+		}
+	}, 300);
+	timeline.events.on("scrollBottom", markReadFn);
+
+	// TODO: move this into some utiity thing?
 	const isAtBottom = () => {
+		const si = scrollIndex();
 		const m = timeline.messages;
 		if (!m) return true;
-		if (m.has_forward) return true; // FIXME: try to merge with live timeline, avoid gaps
+		if (m.has_forward) return false; // FIXME: try to merge with live timeline, avoid gaps
 
-		const si = scrollIndex();
 		const itemsBelow = m.items.length - si;
-		return itemsBelow > 50;
+		return itemsBelow <= 50;
 	};
 
 	const hasUnread = () => {
@@ -172,7 +172,8 @@ export const TimelineControls = (props: ChatProps) => {
 	// TODO: always show new messages bar when not autoscrolling and a message is received
 	// TODO: extract new messages bar logic into a state machine or object/class?
 	const updateShow = () => {
-		setShowNewMessages(hasUnread() && isAtBottom());
+		// setShowNewMessages(hasUnread() && !isAtBottom());
+		setShowNewMessages(hasUnread());
 	};
 
 	createEffect(
@@ -258,7 +259,7 @@ export const TimelineControls = (props: ChatProps) => {
 					</Show>
 				</div>
 			</Show>
-			<Show when={showNewMessages()}>
+			<Show when={showNewMessages() && unreadMessageCount().count > 0}>
 				<div class="new-messages">
 					<button type="button" class="jump-read" onClick={jumpToRead}>
 						{(() => {

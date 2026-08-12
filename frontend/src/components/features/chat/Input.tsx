@@ -61,13 +61,13 @@ export function Input(props: InputProps) {
 
 	// TODO: deduplicate code with frontend/src/components/features/chat/Chat.tsx
 	const isAtBottom = () => {
+		const si = scrollIndex();
 		const m = timeline.messages;
 		if (!m) return true;
-		if (m.has_forward) return true; // FIXME: try to merge with live timeline, avoid gaps
+		if (m.has_forward) return false; // FIXME: try to merge with live timeline, avoid gaps
 
-		const si = scrollIndex();
 		const itemsBelow = m.items.length - si;
-		return itemsBelow > 50;
+		return itemsBelow <= 50;
 	};
 
 	function handleUpload(file: File) {
@@ -417,8 +417,11 @@ export function Input(props: InputProps) {
 			<footer>
 				<Show when={typingUsers().length}>
 					<div class="typing">
-						{/* TODO: bold names */}
-						{fmt.format(typingUsers().map((i) => getName(i) || "someone"))}{" "}
+						{fmt
+							.formatToParts(typingUsers().map((i) => getName(i) || "someone"))
+							.map((part) =>
+								part.type === "element" ? <b>{part.value}</b> : part.value,
+							)}{" "}
 						{typingUsers().length === 1 ? "is" : "are"} typing
 					</div>
 				</Show>

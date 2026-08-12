@@ -250,9 +250,9 @@
 
 	& > footer {
 		color: $fg-400;
-		height: 8px;
+		height: 1em;
 		font-size: 0.8em;
-		padding: 2px 2px;
+		padding: 2px;
 		display: flex;
 
 		.slowmode {
@@ -305,6 +305,10 @@
 		& > .editor {
 			flex: 1;
 			border: none;
+
+			.ProseMirror {
+				padding-block: 8px;
+			}
 		}
 	}
 
