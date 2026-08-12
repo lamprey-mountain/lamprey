@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::federation::Hostname;
 use common::v1::types::util::Time;
 use common::v1::types::{
     ChannelId, InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery,
@@ -121,7 +122,7 @@ impl DataInvite for Postgres {
         Ok(())
     }
 
-    async fn invite_select(&mut self, code: InviteCode) -> Result<InviteWithMetadata> {
+    async fn invite_get(&mut self, code: InviteCode) -> Result<InviteWithMetadata> {
         let mut tx = self.begin_tx().await?;
         let row = query!(
             r#"
@@ -139,6 +140,8 @@ impl DataInvite for Postgres {
             )),
             e => Error::Sqlx(e),
         })?;
+
+        // TODO: return a stripped down invite struct, fetch extra data in a new invite service instead of here (for caching, dedup, etc)
         let target = match row.target_type.as_str() {
             "room" => {
                 let room_id = RoomId::from(row.target_id.unwrap());
@@ -211,6 +214,34 @@ impl DataInvite for Postgres {
                 as Option<u16>,
         };
         Ok(invite_with_meta)
+    }
+
+    async fn invite_get_remote(
+        &mut self,
+        hostname: &Hostname,
+        origin_code: &InviteCode,
+    ) -> Result<InviteWithMetadata> {
+        let mut conn = self.acquire().await?;
+        let code = query_scalar!(
+            r#"
+            select code
+            from invite
+            where remote_hostname = $1 and remote_origin_code = $2 and deleted_at is null
+            "#,
+            hostname.0,
+            origin_code.0
+        )
+        .fetch_one(conn.ext())
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => {
+                Error::ApiError(ApiError::from_code(ErrorCode::UnknownInvite))
+            }
+            e => Error::Sqlx(e),
+        })?;
+
+        // PERF: don't query twice
+        self.invite_get(InviteCode(code)).await
     }
 
     async fn invite_delete(&mut self, code: InviteCode) -> Result<()> {
@@ -791,6 +822,6 @@ impl DataInvite for Postgres {
 
         tx.commit().await?;
 
-        self.invite_select(code).await
+        self.invite_get(code).await
     }
 }

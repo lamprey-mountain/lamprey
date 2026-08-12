@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use common::v1::types::RoomFeature;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::federation::RemoteReq;
 use sqlx::{query, query_as, query_scalar};
 use time::PrimitiveDateTime;
 use tracing::info;
@@ -25,8 +26,8 @@ impl DataRoom for Postgres {
         let mut conn = self.acquire().await?;
         query!(
             "
-    	    INSERT INTO room (id, version_id, name, description, icon, banner, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout, invites_paused_until, features)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NULL, '{}')
+    	    INSERT INTO room (id, version_id, name, description, icon, banner, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout, invites_paused_until, features, remote_hostname, remote_origin_id)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NULL, '{}', $14, $15)
         ",
             room_id,
             room_id,
@@ -41,6 +42,8 @@ impl DataRoom for Postgres {
             false,
             None::<uuid::Uuid>,
             300000,
+            extra.remote.as_ref().map(|r| r.hostname.0.clone()),
+            extra.remote.as_ref().map(|r| *r.origin_id),
         )
         .execute(conn.ext())
         .await?;
@@ -81,6 +84,51 @@ impl DataRoom for Postgres {
             WHERE id = $1
             "#,
             id
+        )
+        .fetch_one(conn.ext())
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownRoom,
+            )),
+            e => Error::Sqlx(e),
+        })?;
+        Ok(room.into())
+    }
+
+    async fn room_get_remote(&mut self, remote: &RemoteReq<RoomId>) -> Result<Room> {
+        let mut conn = self.acquire().await?;
+        let room = query_as!(
+            DbRoom,
+            r#"
+            SELECT
+                room.id,
+                room.version_id,
+                room.type as "ty: _",
+                room.name,
+                room.description,
+                room.icon,
+                room.banner,
+                room.archived_at,
+                room.public,
+                room.owner_id,
+                room.welcome_channel_id,
+                (SELECT COUNT(*) FROM room_member WHERE room_id = room.id AND membership = 'Join') AS "member_count!",
+                (SELECT COUNT(*) FROM channel WHERE room_id = room.id AND deleted_at IS NULL AND archived_at IS NULL) AS "channel_count!",
+                (SELECT COUNT(*) FROM custom_emoji WHERE room_id = room.id AND deleted_at IS NULL) AS "emoji_count!",
+                room.quarantined,
+                room.security_require_mfa,
+                room.security_require_sudo,
+                room.afk_channel_id,
+                room.afk_channel_timeout,
+                room.invites_paused_until,
+                room.deleted_at,
+                room.features as "features: _"
+            FROM room
+            WHERE remote_hostname = $1 AND remote_origin_id = $2
+            "#,
+            remote.hostname.0,
+            *remote.origin_id
         )
         .fetch_one(conn.ext())
         .await

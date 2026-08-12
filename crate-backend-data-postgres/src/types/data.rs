@@ -138,6 +138,7 @@ pub struct DbRoomCreate {
     pub id: Option<RoomId>,
     pub ty: RoomType,
     pub welcome_channel_id: Option<ChannelId>,
+    pub remote: Option<Remote<RoomId>>,
 }
 
 pub struct DbUserCreate {

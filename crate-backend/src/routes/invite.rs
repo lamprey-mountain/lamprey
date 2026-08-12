@@ -37,7 +37,7 @@ async fn invite_delete(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let mut d = s.data();
-    let invite = d.invite_select(req.invite_code.clone()).await?;
+    let invite = d.invite_get(req.invite_code.clone()).await?;
     let (has_perm, id_target) = match &invite.invite.target {
         InviteTarget::Room {
             room,
@@ -179,7 +179,7 @@ async fn invite_resolve(
 ) -> Result<impl IntoResponse> {
     let mut d = s.data();
     let s = s.services();
-    let invite = d.invite_select(req.invite_code).await?;
+    let invite = d.invite_get(req.invite_code).await?;
 
     // invite creators can view their own invites
     if let Some(user) = auth.user() {
@@ -243,7 +243,7 @@ async fn invite_use(
     auth.ensure_scopes(&[Scope::Full])?;
     let mut d = s.data();
     let srv = s.services();
-    let invite = d.invite_select(req.invite_code.clone()).await?;
+    let invite = d.invite_get(req.invite_code.clone()).await?;
     if invite.is_dead() {
         return Err(Error::ApiError(ApiError::from_code(
             ErrorCode::UnknownInvite,
@@ -504,7 +504,7 @@ async fn invite_room_create(
         req.invite.role_ids.as_deref().unwrap_or_default(),
     )
     .await?;
-    let invite = d.invite_select(code).await?;
+    let invite = d.invite_get(code).await?;
 
     let changes = Changes::new()
         .add("code", &invite.invite.code)
@@ -662,7 +662,7 @@ async fn invite_channel_create(
         req.invite.role_ids.as_deref().unwrap_or_default(),
     )
     .await?;
-    let invite = d.invite_select(code).await?;
+    let invite = d.invite_get(code).await?;
 
     let changes = Changes::new()
         .add("code", &invite.invite.code)
@@ -757,7 +757,7 @@ async fn invite_update(
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let mut d = s.data();
-    let start_invite = d.invite_select(req.invite_code.clone()).await?;
+    let start_invite = d.invite_get(req.invite_code.clone()).await?;
 
     let (has_perm, _id_target) = match &start_invite.invite.target {
         InviteTarget::Room {
@@ -934,7 +934,7 @@ async fn invite_server_create(
         req.invite.max_uses,
     )
     .await?;
-    let invite = d.invite_select(code).await?;
+    let invite = d.invite_get(code).await?;
 
     let changes = Changes::new()
         .add("code", &invite.invite.code)
@@ -1025,7 +1025,7 @@ async fn invite_user_create(
         req.invite.max_uses,
     )
     .await?;
-    let invite = d.invite_select(code).await?;
+    let invite = d.invite_get(code).await?;
 
     let changes = Changes::new()
         .add("code", &invite.invite.code)

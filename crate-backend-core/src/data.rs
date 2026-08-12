@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::ack::AckBulkItem;
+use common::v1::types::federation::Hostname;
 use common::v1::types::redex::{
     Eval, EvalLogEntry, EvalStatus, Redex, RedexFormat, RedexLocation, RedexMetadata, RedexVersion,
     RedexVersionStatus,
@@ -370,7 +371,12 @@ pub trait DataMetrics {
 
 #[async_trait]
 pub trait DataInvite {
-    async fn invite_select(&mut self, code: InviteCode) -> Result<InviteWithMetadata>;
+    async fn invite_get(&mut self, code: InviteCode) -> Result<InviteWithMetadata>;
+    async fn invite_get_remote(
+        &mut self,
+        hostname: &Hostname,
+        origin_code: &InviteCode,
+    ) -> Result<InviteWithMetadata>;
     async fn invite_delete(&mut self, code: InviteCode) -> Result<()>;
 
     async fn invite_insert_room(

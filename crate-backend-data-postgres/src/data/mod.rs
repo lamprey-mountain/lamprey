@@ -10,7 +10,7 @@ use common::v1::types::document::{
     DocumentBranchState, DocumentPatch, DocumentTag, Wiki, WikiPatch,
 };
 use common::v1::types::email::EmailAddr;
-use common::v1::types::federation::{Hostname, Remote};
+use common::v1::types::federation::{Hostname, Remote, RemoteReq};
 use common::v1::types::harvest::Harvest;
 use common::v1::types::message::{Message, MessageVersion};
 use common::v1::types::mirror::ChannelSync;
@@ -121,6 +121,7 @@ pub trait Database: Send + Sync {
 pub trait DataRoom {
     async fn room_create(&mut self, create: RoomCreate, extra: DbRoomCreate) -> Result<Room>;
     async fn room_get(&mut self, room_id: RoomId) -> Result<Room>;
+    async fn room_get_remote(&mut self, remote: &RemoteReq<RoomId>) -> Result<Room>;
     async fn room_list(
         &mut self,
         user_id: UserId,
@@ -394,6 +395,7 @@ pub trait DataSession {
 #[async_trait]
 pub trait DataChannel {
     // async fn channel_create(&mut self, channel: Channel) -> Result<()>;
+    async fn channel_get_remote(&mut self, remote: &RemoteReq<ChannelId>) -> Result<Channel>;
     async fn channel_create(&mut self, create: DbChannelCreate) -> Result<ChannelId>;
     async fn channel_create_with_id(
         &mut self,

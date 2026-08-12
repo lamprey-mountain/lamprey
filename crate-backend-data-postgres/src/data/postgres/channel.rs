@@ -6,6 +6,7 @@ use common::v1::types::document::{
     Document, DocumentArchived, DocumentPatch, DocumentPublished, Wiki, WikiPatch,
 };
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::federation::{Hostname, Remote, RemoteReq};
 use common::v1::types::misc::Color;
 use common::v1::types::util::Time;
 use common::v1::types::{Channel, ChannelReorder, RoomVerId};
@@ -26,6 +27,25 @@ use super::{Pagination, Postgres};
 
 #[async_trait]
 impl DataChannel for Postgres {
+    async fn channel_get_remote(&mut self, remote: &RemoteReq<ChannelId>) -> Result<Channel> {
+        let mut conn = self.acquire().await?;
+        let channel = query_file_as!(
+            DbChannel,
+            "sql/channel_get_remote.sql",
+            remote.hostname.0,
+            *remote.origin_id
+        )
+        .fetch_one(conn.ext())
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => {
+                Error::ApiError(ApiError::from_code(ErrorCode::UnknownChannel))
+            }
+            e => Error::Sqlx(e),
+        })?;
+        Ok(channel.into())
+    }
+
     async fn channel_create(&mut self, create: DbChannelCreate) -> Result<ChannelId> {
         let channel_id = ChannelId::new();
         self.channel_create_with_id(channel_id, create).await?;
