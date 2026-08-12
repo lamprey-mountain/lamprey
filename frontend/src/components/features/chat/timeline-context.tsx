@@ -31,11 +31,19 @@ export type TimelineEvents = {
 	/** scroll position updated */
 	scrollPosition: number;
 
+	/** scroll index changed
+	 *
+	 * passes the index of the timeline item that the user is scrolled to */
+	scrollIndex: number;
+
 	/** scrolled to top of channel */
 	scrollTop: void;
 
 	/** scrolled to bottom of channel */
 	scrollBottom: void;
+
+	/** pagination triggered */
+	paginate: MessageListAnchor;
 };
 
 export type TimelineCommands = {

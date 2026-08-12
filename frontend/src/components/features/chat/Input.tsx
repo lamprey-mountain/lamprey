@@ -17,7 +17,7 @@ import {
 	useRoomMembers,
 	useUsers,
 } from "@/api";
-import { type Attachment, useCtx } from "@/app/context";
+import type { Attachment } from "@/app/context";
 import icDelete from "@/assets/delete.png";
 import icEdit from "@/assets/edit.png";
 import cancelIc from "@/assets/x.png";
@@ -36,6 +36,7 @@ import { usePermissions } from "@/hooks/usePermissions.ts";
 import { getThumbFromId } from "@/media/util.tsx";
 import type { MessageT, ThreadT } from "@/types";
 import { getMessageOverrideName } from "@/utils/general";
+import { useTimeline } from "./timeline-context.tsx";
 
 type InputProps = {
 	channel: Channel;
@@ -53,6 +54,21 @@ export function Input(props: InputProps) {
 	const reply = () => messagesService.cache.get(reply_id()!);
 	const uploads = useUploads();
 	const currentUser = useCurrentUser();
+	const timeline = useTimeline();
+	const [scrollIndex, setScrollIndex] = createSignal(0);
+
+	timeline.events.on("scrollIndex", setScrollIndex);
+
+	// TODO: deduplicate code with frontend/src/components/features/chat/Chat.tsx
+	const isAtBottom = () => {
+		const m = timeline.messages;
+		if (!m) return true;
+		if (m.has_forward) return true; // FIXME: try to merge with live timeline, avoid gaps
+
+		const si = scrollIndex();
+		const itemsBelow = m.items.length - si;
+		return itemsBelow > 50;
+	};
 
 	function handleUpload(file: File) {
 		console.log(file);
@@ -359,12 +375,6 @@ export function Input(props: InputProps) {
 				</div>
 			</Show>
 			<Switch>
-				{/* TODO: move to top level Chat component(?) */}
-				<Match when={ch.has_forward}>
-					<button type="button" class="jump-to-latest" onClick={jumpToLatest}>
-						you are viewing older messages &bull; click to jump to present
-					</button>
-				</Match>
 				<Match when={ch.reply_jump_source}>
 					<button
 						type="button"
@@ -372,6 +382,11 @@ export function Input(props: InputProps) {
 						onClick={jumpToReplySource}
 					>
 						you are viewing a reply &bull; click to jump to source
+					</button>
+				</Match>
+				<Match when={!isAtBottom()}>
+					<button type="button" class="jump-to-latest" onClick={jumpToLatest}>
+						you are viewing older messages &bull; click to jump to present
 					</button>
 				</Match>
 			</Switch>

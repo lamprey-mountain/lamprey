@@ -206,6 +206,9 @@ export const Timeline = (props: ChatProps) => {
 		if (!el) return;
 		timeline.events.emit("scrollPosition", el.scrollTop);
 
+		const scrollIndex = virt.getIndexAtScrollTop(el.scrollTop);
+		timeline.events.emit("scrollIndex", scrollIndex);
+
 		const msgs = timeline.messages;
 		if (!msgs) return;
 

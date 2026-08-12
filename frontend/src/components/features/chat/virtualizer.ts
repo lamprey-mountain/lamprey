@@ -41,6 +41,7 @@ export interface TimelineVirtualizer {
 	accessVisibleRows: Accessor<VirtualItem[]>;
 	measurements: Map<string, number>;
 	refreshVisibleRows: () => void;
+	getIndexAtScrollTop: (scrollTop: number) => number;
 }
 
 export interface HighlighterState {
@@ -110,12 +111,6 @@ export const createTimelineVirtualizer = (
 		return s;
 	};
 
-	let cachedLayout: VirtualizerLayout;
-	let cachedRange: Array<VirtualItem>;
-
-	// PERF: cache calculateLayout and calculateRange more aggressively
-	// solidjs makes fine grained deps easy, but im not sure if i can use solid here? at least for something where timing is this critical.
-
 	const calculateLayout = (): VirtualizerLayout => {
 		const items = timeline.items;
 		const el = options.scrollEl();
@@ -143,6 +138,12 @@ export const createTimelineVirtualizer = (
 
 		return { sizes, offsets, totalSize: finalTotalSize };
 	};
+
+	let cachedLayout: VirtualizerLayout = calculateLayout();
+	let cachedRange: Array<VirtualItem>;
+
+	// PERF: cache calculateLayout and calculateRange more aggressively
+	// solidjs makes fine grained deps easy, but im not sure if i can use solid here? at least for something where timing is this critical.
 
 	const calculateRange = (): Array<VirtualItem> => {
 		const el = options.scrollEl();
@@ -260,6 +261,8 @@ export const createTimelineVirtualizer = (
 					}
 				}
 
+				timeline.events.emit("paginate", task.anchor);
+
 				break;
 			}
 			case "RESIZE": {
@@ -349,6 +352,12 @@ export const createTimelineVirtualizer = (
 			// PERF: skip updating visible rows if cachedRange didn't change
 			cachedRange = calculateRange();
 			setVisibleRows(reconcile(cachedRange, { key: "key", merge: true }));
+		},
+		getIndexAtScrollTop: (st: number): number => {
+			const { offsets } = cachedLayout;
+			let start = offsets.findIndex((o) => o > st);
+			start = start === -1 ? offsets.length - 1 : start - 1;
+			return Math.max(0, start);
 		},
 	};
 };

@@ -229,6 +229,7 @@
 	flex-direction: column;
 	padding: 8px;
 	max-height: 50%;
+	--border-radius: 4px;
 
 	&.locked {
 		cursor: not-allowed;
@@ -280,7 +281,7 @@
 		background: $bg-300;
 		border: solid $bg-400 1px;
 		box-shadow: 2px 2px 8px #1114;
-		border-radius: 4px;
+		border-radius: var(--border-radius);
 		overflow: hidden;
 		align-items: center;
 
@@ -304,6 +305,30 @@
 		& > .editor {
 			flex: 1;
 			border: none;
+		}
+	}
+
+	.jump-to-latest {
+		font-size: 0.8em;
+		background: $bg-150;
+		padding: 4px 8px;
+		border: solid $sep-300 1px;
+		border-bottom: 0;
+		border-radius: var(--border-radius) var(--border-radius) 0 0;
+		translate: 0 2px;
+		cursor: pointer;
+
+		&:hover,
+		&:focus-visible {
+			background: $bg-200;
+		}
+
+		&:active {
+			translate: 0 4px;
+		}
+
+		& + .text {
+			border-radius: 0 0 var(--border-radius) var(--border-radius);
 		}
 	}
 }
@@ -3382,57 +3407,6 @@ input[type="color"] {
 	}
 }
 
-.jump-to-latest {
-	font-size: 0.8rem;
-	background: #181818cc;
-	border: none;
-	padding: 4px 8px;
-	border-top-left-radius: 4px;
-	border-top-right-radius: 4px;
-	position: relative;
-	bottom: -2px;
-	cursor: pointer;
-
-	&:hover {
-		background: #111111ee;
-	}
-
-	&:active {
-		bottom: -3px;
-	}
-}
-
-.new-messages {
-	position: absolute;
-	z-index: 1;
-	width: calc(100% - 16px);
-	display: flex;
-	margin: 0 8px;
-
-	button {
-		border: none;
-		background: none;
-		// TODO: use theme color here
-		background: #111e;
-		padding: 4px 8px;
-		box-shadow: 0 2px 8px $bg-200;
-
-		&:hover {
-			background: #0c0c0cf0;
-		}
-	}
-
-	.jump-read {
-		border-bottom-left-radius: 8px;
-		flex: 1;
-		border-right: solid $bg-300 2px;
-	}
-
-	.mark-read {
-		border-bottom-right-radius: 8px;
-	}
-}
-
 .threads-popout {
 	background: $bg-150;
 	border: solid $sep-300 1px;
@@ -3873,12 +3847,11 @@ button.round {
 	/* pointer-events: none; */
 
 	.ghost {
-		background: linear-gradient(
-			90deg,
+		background: linear-gradient(90deg,
 			$bg-400 0%,
 			oklch(var(--color-bg4) / 0.75) 50%,
 			oklch(var(--color-bg4) / 0.85) 100%,
-		);
+			);
 		// PERF: use a solid color instead of gradient?
 		/* background-color: $bg-400; */
 		background-size: 200% 100%;
