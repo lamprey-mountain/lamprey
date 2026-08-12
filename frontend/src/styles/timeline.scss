@@ -628,33 +628,6 @@
 	}
 }
 
-.message.skeleton {
-	/* pointer-events: none; */
-
-	& .ghost {
-		background: linear-gradient(
-			90deg,
-			$bg-400 0%,
-			oklch(var(--color-bg4) / 0.85) 50%,
-			$bg-400 100%
-		);
-		background-size: 200% 100%;
-		// NOTE: this is pretty bad for performance
-		/* animation: skeleton-loading 1s infinite linear; */
-		border-radius: 4px;
-	}
-
-	& .text {
-		display: inline-block;
-		height: 1em;
-		margin-right: 4px;
-	}
-
-	& .content {
-		gap: 6px;
-	}
-}
-
 .automod-execution-details {
 	background: $bg-150;
 	border: solid $sep-300 1px;

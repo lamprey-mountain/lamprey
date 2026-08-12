@@ -3867,3 +3867,32 @@ button.round {
 		}
 	}
 }
+
+.skeleton {
+	/* pointer-events: none; */
+
+	.ghost {
+		background: linear-gradient(
+			90deg,
+			$bg-400 0%,
+			oklch(var(--color-bg4) / 0.75) 50%,
+			oklch(var(--color-bg4) / 0.85) 100%,
+		);
+		// PERF: use a solid color instead of gradient?
+		/* background-color: $bg-400; */
+		background-size: 200% 100%;
+		// PERF: this animation seems to cause a lot of lag
+		/* animation: skeleton-loading 1s infinite linear; */
+		border-radius: 4px;
+
+		&.text {
+			display: inline-block;
+			height: 1em;
+			margin-right: 4px;
+		}
+	}
+
+	& .content {
+		gap: 6px;
+	}
+}

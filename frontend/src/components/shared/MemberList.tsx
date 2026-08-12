@@ -7,6 +7,7 @@ import type { MemberListItem } from "@/api/services/MemberListService";
 import { AvatarWithStatus } from "@/components/shared/User";
 import { useMemberListContext } from "@/contexts/memberlist.tsx";
 import { useUserPopout } from "@/contexts/mod";
+import { MemberListSkeleton } from "./MemberListSkeleton";
 
 type MemberListProps =
 	| {
@@ -180,124 +181,133 @@ export const MemberList = (props: MemberListProps) => {
 	};
 
 	return (
-		<div ref={parentRef} class="member-list" data-room-id={props.id}>
-			<div
-				style={{
-					height: `${rowVirtualizer.getTotalSize()}px`,
-					width: "100%",
-					position: "relative",
-				}}
-			>
-				<For each={rowVirtualizer.getVirtualItems()}>
-					{(virtualRow) => {
-						const row = () => rows()[virtualRow.index];
+		<Show when={list()} fallback={<MemberListSkeleton />}>
+			{(l) => (
+				<div ref={parentRef} class="member-list" data-room-id={props.id}>
+					<div
+						style={{
+							height: `${rowVirtualizer.getTotalSize()}px`,
+							width: "100%",
+							position: "relative",
+						}}
+					>
+						<For each={rowVirtualizer.getVirtualItems()}>
+							{(virtualRow) => {
+								const row = () => rows()[virtualRow.index];
 
-						const matchesGroup = () => {
-							const r = row();
-							if (r?.type === "group") return r.group;
-						};
+								const matchesGroup = () => {
+									const r = row();
+									if (r?.type === "group") return r.group;
+								};
 
-						const matchesMember = () => {
-							const r = row();
-							if (r?.type === "member") return r.item;
-						};
+								const matchesMember = () => {
+									const r = row();
+									if (r?.type === "member") return r.item;
+								};
 
-						// FIXME: measure element when row changes
+								// FIXME: measure element when row changes
 
-						return (
-							<div
-								style={{
-									position: "absolute",
-									top: 0,
-									left: 0,
-									width: "100%",
-									transform: `translateY(${virtualRow.start}px)`,
-								}}
-								ref={rowVirtualizer.measureElement}
-								data-index={virtualRow.index}
-							>
-								<Switch>
-									<Match when={matchesGroup()}>
-										{(group) => (
-											<button
-												type="button"
-												class="member-group"
-												onClick={() => toggleGroup(group())}
-												onKeyDown={(e) => handleGroupKeyDown(e, group())}
-											>
-												{getGroupName(group())} — {group().count}
-											</button>
-										)}
-									</Match>
-									<Match when={matchesMember()}>
-										{(item) => {
-											const user = () =>
-												users2.cache.get(item().user.id) ?? item().user;
-											const room_member = () =>
-												props.roomId
-													? (roomMembers2.cache.get(
-															`${props.roomId}:${item().user.id}`,
-														) ?? item().room_member)
-													: item().room_member;
-											const isOffline = () =>
-												user()?.presence.status === "Offline";
-
-											const [hovered, setHovered] = createSignal(false);
-
-											function name() {
-												let name: string | undefined | null = null;
-												const rm = room_member();
-												if (rm) {
-													name ??= rm.override_name;
-												}
-												name ??= user()?.name;
-												return name;
-											}
-
-											// TODO: apply .active after clicking a user, while the user popout is open
-											// probably will only apply it when the user popout is opened from the member list
-
-											return (
-												<button
-													type="button"
-													class="menu-user"
-													data-user-id={item().user.id}
-													classList={{ active: false, offline: isOffline() }}
-													onClick={(e) => handleUserClick(e, user())}
-													onKeyDown={(e) =>
-														handleUserKeyDown(e, user(), room_member())
-													}
-													onMouseEnter={[setHovered, true]}
-													onMouseLeave={[setHovered, false]}
-												>
-													<div class="inner">
-														<AvatarWithStatus
-															user={user()}
-															animate={hovered()}
-														/>
-														<span class="text">
-															<div class="name">{name()}</div>
-															<Show
-																when={
-																	user()?.presence.activities.find(
-																		(a) => a.type === "Custom",
-																	)?.text
-																}
-															>
-																{(t) => <div class="status-message">{t()}</div>}
-															</Show>
-														</span>
-													</div>
-												</button>
-											);
+								return (
+									<div
+										style={{
+											position: "absolute",
+											top: 0,
+											left: 0,
+											width: "100%",
+											transform: `translateY(${virtualRow.start}px)`,
 										}}
-									</Match>
-								</Switch>
-							</div>
-						);
-					}}
-				</For>
-			</div>
-		</div>
+										ref={rowVirtualizer.measureElement}
+										data-index={virtualRow.index}
+									>
+										<Switch>
+											<Match when={matchesGroup()}>
+												{(group) => (
+													<button
+														type="button"
+														class="member-group"
+														onClick={() => toggleGroup(group())}
+														onKeyDown={(e) => handleGroupKeyDown(e, group())}
+													>
+														{getGroupName(group())} — {group().count}
+													</button>
+												)}
+											</Match>
+											<Match when={matchesMember()}>
+												{(item) => {
+													const user = () =>
+														users2.cache.get(item().user.id) ?? item().user;
+													const room_member = () =>
+														props.roomId
+															? (roomMembers2.cache.get(
+																	`${props.roomId}:${item().user.id}`,
+																) ?? item().room_member)
+															: item().room_member;
+													const isOffline = () =>
+														user()?.presence.status === "Offline";
+
+													const [hovered, setHovered] = createSignal(false);
+
+													function name() {
+														let name: string | undefined | null = null;
+														const rm = room_member();
+														if (rm) {
+															name ??= rm.override_name;
+														}
+														name ??= user()?.name;
+														return name;
+													}
+
+													// TODO: apply .active after clicking a user, while the user popout is open
+													// probably will only apply it when the user popout is opened from the member list
+
+													return (
+														<button
+															type="button"
+															class="menu-user"
+															data-user-id={item().user.id}
+															classList={{
+																active: false,
+																offline: isOffline(),
+															}}
+															onClick={(e) => handleUserClick(e, user())}
+															onKeyDown={(e) =>
+																handleUserKeyDown(e, user(), room_member())
+															}
+															onMouseEnter={[setHovered, true]}
+															onMouseLeave={[setHovered, false]}
+														>
+															<div class="inner">
+																<AvatarWithStatus
+																	user={user()}
+																	animate={hovered()}
+																/>
+																<span class="text">
+																	<div class="name">{name()}</div>
+																	<Show
+																		when={
+																			user()?.presence.activities.find(
+																				(a) => a.type === "Custom",
+																			)?.text
+																		}
+																	>
+																		{(t) => (
+																			<div class="status-message">{t()}</div>
+																		)}
+																	</Show>
+																</span>
+															</div>
+														</button>
+													);
+												}}
+											</Match>
+										</Switch>
+									</div>
+								);
+							}}
+						</For>
+					</div>
+				</div>
+			)}
+		</Show>
 	);
 };

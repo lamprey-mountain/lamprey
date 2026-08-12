@@ -90,4 +90,21 @@
 			}
 		}
 	}
+
+	&.skeleton {
+		padding-bottom: 240px;
+
+		.avatar {
+			height: 36px;
+			width: 36px;
+			margin: -8px;
+			display: grid;
+			place-items: center;
+
+			& .inner.ghost {
+				height: 32px;
+				width: 32px;
+			}
+		}
+	}
 }

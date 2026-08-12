@@ -45,19 +45,6 @@
 	}
 }
 
-.skeleton {
-	background: linear-gradient(
-		90deg,
-		$bg-400 0%,
-		oklch(var(--color-bg4) / 0.75) 50%,
-		oklch(var(--color-bg4) / 0.85) 100%,
-	);
-	background-size: 200% 100%;
-	// NOTE: this is pretty bad for performance
-	/* animation: skeleton-loading 1s infinite linear; */
-	border-radius: 4px;
-}
-
 #channel-nav {
 	grid-area: channel-nav;
 	display: flex;

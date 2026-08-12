@@ -560,7 +560,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 											<Index each={Array(10).fill(0)}>
 												{(_, index) => (
 													<li
-														class="channel-item"
+														class="channel-item skeleton"
 														style={{
 															"pointer-events": "none",
 															opacity: 1 - index / 10,
@@ -568,11 +568,11 @@ export const ChannelNav = (props: { room_id?: string }) => {
 													>
 														<div class="channel-link">
 															<div
-																class="skeleton avatar"
+																class="ghost avatar"
 																style="border-radius: 4px"
 															/>
 															<div
-																class="skeleton"
+																class="ghost"
 																style="width: 128px; height: 1em;"
 															/>
 														</div>
