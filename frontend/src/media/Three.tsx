@@ -119,10 +119,10 @@ export const ThreeView = (props: MediaProps) => {
 		});
 
 		onCleanup(() => {
-			obs.disconnect();
+			obs?.disconnect();
 			if (renderRequestId) cancelAnimationFrame(renderRequestId);
-			controls.dispose();
-			renderer.dispose();
+			controls?.dispose();
+			renderer?.dispose();
 		});
 	};
 
