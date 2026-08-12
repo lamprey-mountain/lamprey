@@ -1,7 +1,16 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import { createVirtualizer } from "@tanstack/solid-virtual";
 import type { MemberListGroup, RoomMember, User } from "sdk";
-import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	Match,
+	on,
+	Show,
+	Switch,
+} from "solid-js";
 import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
 import type { MemberListItem } from "@/api/services/MemberListService";
 import { AvatarWithStatus } from "@/components/shared/User";
@@ -87,7 +96,7 @@ export const MemberList = (props: MemberListProps) => {
 		let offset = 0;
 		for (const group of l.groups) {
 			if (group.count === 0) continue;
-			const groupId = JSON.stringify(group.id);
+			const groupId = group.id as string;
 			rows.push({ type: "group", group });
 			if (!collapsedGroups().get(groupId)) {
 				const members = l.items.slice(offset, offset + group.count);
@@ -113,7 +122,7 @@ export const MemberList = (props: MemberListProps) => {
 
 	let parentRef!: HTMLDivElement;
 
-	const rowVirtualizer = createVirtualizer({
+	const virt = createVirtualizer({
 		get count() {
 			return rows().length;
 		},
@@ -122,7 +131,7 @@ export const MemberList = (props: MemberListProps) => {
 			const row = rows()[i];
 			return row.type === "group" ? 28 : 44;
 		},
-		overscan: 5,
+		overscan: 10,
 	});
 
 	const { userView, setUserView } = useUserPopout();
@@ -180,18 +189,26 @@ export const MemberList = (props: MemberListProps) => {
 		}
 	};
 
+	// HACK: force the member list to render when rows update
+	// surely there's a better way?
+	createEffect(
+		on(rows, () => {
+			virt.measure();
+		}),
+	);
+
 	return (
 		<Show when={list()} fallback={<MemberListSkeleton />}>
-			{(l) => (
+			{(_list) => (
 				<div ref={parentRef} class="member-list" data-room-id={props.id}>
 					<div
 						style={{
-							height: `${rowVirtualizer.getTotalSize()}px`,
+							height: `${virt.getTotalSize()}px`,
 							width: "100%",
 							position: "relative",
 						}}
 					>
-						<For each={rowVirtualizer.getVirtualItems()}>
+						<For each={virt.getVirtualItems()}>
 							{(virtualRow) => {
 								const row = () => rows()[virtualRow.index];
 
@@ -216,7 +233,7 @@ export const MemberList = (props: MemberListProps) => {
 											width: "100%",
 											transform: `translateY(${virtualRow.start}px)`,
 										}}
-										ref={rowVirtualizer.measureElement}
+										ref={(el) => queueMicrotask(() => virt.measureElement(el))}
 										data-index={virtualRow.index}
 									>
 										<Switch>
