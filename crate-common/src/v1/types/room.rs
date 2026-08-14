@@ -1,12 +1,10 @@
+use lamprey_macros::record;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
 
 use crate::v1::types::{
     ChannelId, MediaId, Permission, UserId,
@@ -29,10 +27,7 @@ use super::{ids::RoomId, util::Time};
 /// and so on for instant messaging.
 // chose this name arbitrarily, maybe should be renamed to something else.
 // discord uses "guild", maybe if i do domain-name-per-room "zone" could work...
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct Room {
     /// A unique identifier for this room
     pub id: RoomId,
@@ -45,23 +40,20 @@ pub struct Room {
     /// This almost always exists, but for legacy rooms may be null
     pub owner_id: Option<UserId>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub description: Option<String>,
 
     pub icon: Option<MediaId>,
 
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    #[schema(required = false)]
     pub banner: Option<MediaId>,
 
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[serde(rename = "type")]
     pub room_type: RoomType,
 
     /// number of people in this room
@@ -120,10 +112,8 @@ impl Room {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Copy, PartialEq, Eq, Default)]
 pub struct RoomSecurity {
     pub require_mfa: bool,
     pub require_sudo: bool,
@@ -131,24 +121,19 @@ pub struct RoomSecurity {
 
 // NOTE: may be removed later, i dont see that much of a reason for this
 /// a minimal preview of a room
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RoomPreview {
     pub id: RoomId,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+    #[schema(min_length = 1, max_length = 64)]
     pub name: String,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
     pub description: Option<String>,
 
     pub icon: Option<MediaId>,
 
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    #[schema(required = false)]
     pub banner: Option<MediaId>,
 
     /// number of people in this room
@@ -159,9 +144,8 @@ pub struct RoomPreview {
 }
 
 /// User-specific room data
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct RoomPrivate {
     pub notifications: NotifsRoom,
 
@@ -170,25 +154,20 @@ pub struct RoomPrivate {
 }
 
 /// Data required to create a room
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct RoomCreate {
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub description: Option<String>,
 
     pub icon: Option<MediaId>,
 
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
+    #[schema(required = false)]
     pub banner: Option<MediaId>,
 
     pub public: Option<bool>,
@@ -197,27 +176,22 @@ pub struct RoomCreate {
 }
 
 /// An update to a room
-#[derive(Debug, Clone, PartialEq, Eq, Default, Diff)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq, Default, Diff)]
 pub struct RoomPatch {
     // TODO: make this some_option
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: Option<String>,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
+    #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub icon: Option<Option<MediaId>>,
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub banner: Option<Option<MediaId>>,
     pub public: Option<bool>,
 
@@ -228,22 +202,19 @@ pub struct RoomPatch {
     /// how long to wait before moving idle people to the afk channel, in milliseconds
     pub afk_channel_timeout: Option<u64>,
     /// if set, invites to this room cannot be used until this time has passed
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub invites_paused_until: Option<Option<Time>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct RoomSecurityUpdate {
     pub require_mfa: Option<bool>,
     pub require_sudo: Option<bool>,
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, Copy, PartialEq, Eq)]
 pub enum RoomType {
     /// the default generic room type
     #[default]
@@ -261,9 +232,8 @@ pub enum RoomType {
 }
 
 /// features enabled for this room
-#[derive(Debug, Clone, Copy, PartialEq, Eq, strum::EnumString, strum::Display)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Copy, PartialEq, Eq, strum::EnumString, strum::Display)]
 pub enum RoomFeature {
     /// can create and use script channels
     Scripts,
@@ -286,15 +256,14 @@ pub enum RoomFeature {
     // Discoverable,
 }
 
-// TODO: impl default
+// TODO: impl default (make default room features configurable?)
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct RoomFeatures(pub Vec<RoomFeature>);
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct TransferOwnership {
     pub owner_id: UserId,
 }
