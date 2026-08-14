@@ -1,33 +1,21 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
+use lamprey_macros::record;
 
 use crate::v1::types::{RoomMember, User, util::Time};
 
 use super::{ApplicationId, UserId, util::Diff};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct Application {
     pub id: ApplicationId,
     pub owner_id: UserId,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub description: Option<String>,
 
     /// enables managing Puppet users
@@ -40,8 +28,8 @@ pub struct Application {
     /// only returned on oauth token rotate endpoint
     pub oauth_secret: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
     pub oauth_redirect_uris: Vec<String>,
 
     /// oauth whether this client can keep secrets confidential
@@ -69,9 +57,8 @@ pub struct Application {
     // unfurl_domains: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ApplicationConnectionProvider {
     // platform_name = application.name
     // platform_description = application.description
@@ -79,27 +66,24 @@ pub struct ApplicationConnectionProvider {
     pub fields: Vec<ApplicationConnectionProviderField>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ApplicationConnectionProviderField {
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[serde(rename = "type")]
     pub ty: ApplicationConnectionProviderFieldType,
     pub name: String,
     pub description: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum ApplicationConnectionProviderFieldType {
     Int,
     // TODO: string, bool, time
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ApplicationOauthProvider {
     pub client_id: String,
     pub client_secret: String,
@@ -108,75 +92,63 @@ pub struct ApplicationOauthProvider {
     pub revocation_url: String,
 
     /// automatically mark users as registered if they create an account or link their account with this provider
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub autoregister: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ApplicationOauthClient {
     /// the oauth client secret
     ///
     /// only returned on oauth token rotate endpoint
     pub secret: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
     pub redirect_uris: Vec<String>,
 
     /// whether this client can keep secrets confidential
     pub confidential: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ApplicationCreate {
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub description: Option<String>,
 
     /// enables managing Puppet users
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub bridge: Option<Bridge>,
 
     /// if anyone can use this
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub public: bool,
 
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
+    #[serde(default)]
     pub oauth_redirect_uris: Vec<String>,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub oauth_confidential: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Diff)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq, Diff)]
 pub struct ApplicationPatch {
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: Option<String>,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub description: Option<Option<String>>,
 
     /// enables managing Puppet users
@@ -185,16 +157,15 @@ pub struct ApplicationPatch {
     /// if anyone can use this
     pub public: Option<bool>,
 
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
     pub oauth_redirect_uris: Option<Vec<String>>,
     pub oauth_confidential: Option<bool>,
 }
 
 /// an application that is authorized to a user
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct Connection {
     pub application: Application,
     pub scopes: Scopes,
@@ -202,9 +173,7 @@ pub struct Connection {
 }
 
 /// an application that is authorized to a room
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Integration {
     pub application: Application,
     pub bot: User,
@@ -212,25 +181,23 @@ pub struct Integration {
 }
 
 /// where this application bridge content to
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct Bridge {
     /// the human readable name of the platform
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub platform_name: Option<String>,
 
     /// the url where this platform can be reached
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 2048))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048), url))]
+    #[schema(min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048), url)]
     // FIXME: use Url type instead of String
     pub platform_url: Option<String>,
 
     /// a description of this platform
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 4096))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    #[schema(min_length = 1, max_length = 4096)]
+    #[validate(length(min = 1, max = 4096))]
     pub platform_description: Option<String>,
 }
 
