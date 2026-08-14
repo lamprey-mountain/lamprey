@@ -1,13 +1,5 @@
+use lamprey_macros::record;
 use url::Url;
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
 
 use crate::{
     v1::types::{
@@ -21,9 +13,7 @@ use crate::{
 };
 
 /// some code that can run
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Redex {
     pub id: RedexId,
     pub channel_id: ChannelId,
@@ -40,9 +30,7 @@ pub struct Redex {
 }
 
 /// data added to a channel for redexes
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ChannelRedex {
     pub format: RedexFormat,
     pub location: RedexLocation,
@@ -61,9 +49,7 @@ pub struct ChannelRedex {
 /// a currently live redex
 ///
 /// currently, redexes can only have one deployment. in the future, this may change to be more flexible.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexDeployment {
     /// when this deployment was last updated
     pub updated_at: Time,
@@ -72,9 +58,7 @@ pub struct RedexDeployment {
     pub status: RedexDeploymentStatus,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub enum RedexDeploymentStatus {
     Processing,
     Live,
@@ -82,9 +66,8 @@ pub enum RedexDeploymentStatus {
 }
 
 /// where a redex's source is stored
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum RedexLocation {
     /// stored on the host
     ///
@@ -100,9 +83,9 @@ pub enum RedexLocation {
 }
 
 /// used to set a RedexLocation
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
+#[derive(Default)]
 pub enum RedexLocationUpdate {
     /// stored on the host
     ///
@@ -112,7 +95,7 @@ pub enum RedexLocationUpdate {
 
     /// stored on the server through media
     Media {
-        #[cfg_attr(feature = "serde", serde(flatten))]
+        #[serde(flatten)]
         media_reference: MediaReference,
     },
 
@@ -122,18 +105,14 @@ pub enum RedexLocationUpdate {
 }
 
 /// request body for updating redex content
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexUpdate {
     pub format: RedexFormat,
     pub location: RedexLocationUpdate,
 }
 
 /// serialized json content of a redex
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SerializedRedex {
     pub files: Vec<SerializedRedexFile>,
 
@@ -141,9 +120,7 @@ pub struct SerializedRedex {
     pub hashes: Hashes,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SerializedRedexFile {
     /// file name
     ///
@@ -164,9 +141,7 @@ pub struct SerializedRedexFile {
 }
 
 /// external code this redex requires to run
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Dependency {
     pub ty: DependencyType,
     pub metadata: RedexMetadata,
@@ -180,9 +155,7 @@ pub struct Dependency {
     pub advisories: Vec<DependencyAdvisory>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DependencyGraph {
     pub nodes: Vec<Dependency>,
 
@@ -192,16 +165,13 @@ pub struct DependencyGraph {
     pub edges: Vec<(u64, u64)>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DependencyUpdate {
     pub latest_metadata: RedexMetadata,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum DependencyStatus {
     /// downloading the dependency
     Loading,
@@ -217,9 +187,7 @@ pub enum DependencyStatus {
 }
 
 /// a request to update the dependencies of a redex
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DependencyUpdateRequest {
     /// update these dependencies
     pub nodes: Vec<u64>,
@@ -230,9 +198,7 @@ pub struct DependencyUpdateRequest {
 }
 
 /// a reason to be worried about a dependency
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DependencyAdvisory {
     pub created_at: Time,
     pub updated_at: Option<Time>,
@@ -242,9 +208,8 @@ pub struct DependencyAdvisory {
     // TODO: urls, maybe link to cves, etc
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum DependencyType {
     /// a redex in the same channel
     Redex { redex_id: RedexId },
@@ -263,42 +228,33 @@ pub enum DependencyType {
     Builtin { name: String },
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct RedexMetadata {
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub homepage_url: Option<Url>,
 
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub authors: Vec<RedexAuthor>,
 
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub version: Option<Semver>,
 
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub license: Option<License>,
 
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub origin: Option<RedexOrigin>,
 
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Hashes::is_empty"))]
+    #[serde(skip_serializing_if = "Hashes::is_empty")]
     pub hashes: Hashes,
 }
 

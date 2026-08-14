@@ -1,17 +1,11 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{EvalId, RedexId};
 
 // TODO: use this in routes
 
 /// an error that occured while running a redex
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexError {
     /// the id of the run where this error occured
     pub run_id: EvalId,
@@ -22,14 +16,12 @@ pub struct RedexError {
     /// human readable message
     pub message: String,
 
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[serde(rename = "type")]
     pub ty: RedexErrorType,
 }
 
 /// an error that occured while running a redex
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub enum RedexErrorType {
     /// runtime type error
     RuntimeType,
@@ -52,9 +44,7 @@ pub enum RedexErrorType {
 }
 
 /// location metadata for this error
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexErrorLocation {
     /// the id of the redex that the error occured in
     pub redex_id: RedexId,

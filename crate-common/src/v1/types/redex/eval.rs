@@ -1,18 +1,12 @@
 use std::collections::HashMap;
 
 use bytes::Bytes;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{EvalId, MessageSync, RedexId, RedexVerId, UserId, misc::Time};
 
 /// a redex being run
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Eval {
     pub id: EvalId,
     pub redex_id: RedexId,
@@ -24,9 +18,7 @@ pub struct Eval {
 }
 
 /// request to start a redex run via trigger
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct EvalCreateManual {
     /// start in the background
     ///
@@ -44,9 +36,7 @@ pub struct EvalCreateManual {
 }
 
 /// status of an eval
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub enum EvalStatus {
     /// the eval is being created and started
     ///
@@ -114,9 +104,8 @@ pub enum EvalInput {
     Event { event: Box<MessageSync> },
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum EvalInputSummary {
     Extraction,
 
@@ -138,9 +127,7 @@ pub enum EvalInputSummary {
     },
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct HttpRequestSummary {
     pub request_method: String,
     pub request_url: String,

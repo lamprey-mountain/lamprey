@@ -1,16 +1,11 @@
 // TODO: allow configuring max cpu time per time period
 // TODO: allow bursts of mem/cpu/etc usage
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 /// execution limits
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct EvalLimits {
     /// maximum memory usage in bytes
     pub max_memory: u64,

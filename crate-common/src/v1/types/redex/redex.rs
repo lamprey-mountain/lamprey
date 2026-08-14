@@ -1,9 +1,6 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use lamprey_macros::record;
 
 use url::Url;
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
 
 use crate::v1::types::misc::Time;
 
@@ -12,9 +9,7 @@ use crate::v1::types::{ChannelId, MediaId, RedexId, RedexVerId, UserId};
 use crate::v2::types::media::{Media, MediaReference};
 
 /// some code that can run
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Redex {
     pub id: RedexId,
     pub channel_id: ChannelId,
@@ -34,9 +29,7 @@ pub struct Redex {
 }
 
 /// the valid inputs to this script
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexHandler {
     /// unique identifier for this input
     pub id: String,
@@ -44,16 +37,16 @@ pub struct RedexHandler {
     /// human readable label
     pub label: String,
 
-    #[cfg_attr(feature = "serde", serde(rename = "type", flatten))]
+    #[serde(flatten)]
     pub ty: RedexHandlerType,
 
     /// the capabilities this script wants
     pub capibilities: Vec<RedexCapability>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
+#[derive(PartialEq, Eq)]
 pub enum RedexHandlerType {
     /// a manual trigger/button
     Manual,
@@ -74,9 +67,8 @@ pub enum RedexHandlerType {
 /// can also be viewed as an effect that running this script may cause
 ///
 /// logging is considered pure
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum RedexCapability {
     /// can spawn new runs
     RunSpawn,
@@ -107,17 +99,14 @@ pub enum RedexCapability {
 }
 
 /// a permission granted to this redex
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexPermission {
     pub capability: RedexCapability,
     pub grant: RedexPermissionGrant,
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub enum RedexPermissionGrant {
     Allow,
     Deny,
@@ -126,9 +115,7 @@ pub enum RedexPermissionGrant {
     Prompt,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub enum RedexStatus {
     /// this redex has no content
     Empty,
@@ -149,9 +136,7 @@ pub enum RedexStatus {
     Invalid,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub enum RedexVersionStatus {
     /// this redex version is being processed and validated
     Processing,
@@ -165,9 +150,7 @@ pub enum RedexVersionStatus {
 }
 
 /// information about a redex version
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexVersion {
     pub version_id: RedexVerId,
     pub created_at: Time,
@@ -179,9 +162,7 @@ pub struct RedexVersion {
 }
 
 /// the format of a redex
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub enum RedexFormat {
     /// javascript via quickjs
     ///
@@ -196,9 +177,8 @@ pub enum RedexFormat {
 }
 
 /// where a redex's source is stored
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum RedexLocation {
     /// stored on the host
     ///
@@ -220,9 +200,8 @@ pub enum RedexLocation {
 }
 
 /// used to set a RedexLocation
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum RedexLocationUpdate {
     /// stored on the host
     ///
@@ -244,37 +223,28 @@ pub enum RedexLocationUpdate {
 
 /// a redex signature
 // probably use ed25519, copy federation
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexSignature {
     pub signature: String,
     // key, ids, etc
 }
 
 /// request body for creating a new redex
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(validator::Validate))]
+#[record]
 pub struct RedexCreate {
     pub format: RedexFormat,
     pub location: RedexLocationUpdate,
 }
 
 /// request body for updating redex content
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexContentUpdate {
     pub format: RedexFormat,
     pub location: RedexLocationUpdate,
 }
 
 /// a single redex dependency
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexDependency {
     /// the redex that is being depended on
     pub script: Redex,
@@ -283,18 +253,14 @@ pub struct RedexDependency {
     // maybe only return a minimal version of Redex instead of the full thing?
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexDependencyLink {
     pub dependent_id: RedexId,
     pub dependency_id: RedexId,
 }
 
 /// response body for the dependency graph
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexDependencyGraph {
     /// all dependencies of this redex, including transitive ones
     pub dependencies: Vec<RedexDependency>,
@@ -304,9 +270,7 @@ pub struct RedexDependencyGraph {
 }
 
 /// request body for updating redex dependencies
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RedexDependenciesUpdate {}
 
 impl RedexLocation {

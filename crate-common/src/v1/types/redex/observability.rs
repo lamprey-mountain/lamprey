@@ -1,15 +1,9 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{RedexId, metadata::Metadata, misc::Time};
 
 /// a log entry from an eval
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct EvalLogEntry {
     pub id: u64,
     pub created_at: Time,
@@ -22,13 +16,12 @@ pub struct EvalLogEntry {
     pub content: String,
 
     /// arbitrary metadata associated with this log line
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Metadata::is_empty"))]
+    #[serde(skip_serializing_if = "Metadata::is_empty")]
     pub attributes: Metadata,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum EvalLogSource {
     /// this log line came from a user written redex
     Redex {
@@ -57,9 +50,8 @@ pub enum EvalLogSource {
 }
 
 /// log level for a run log entry
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum EvalLogLevel {
     Trace,
     Debug,
