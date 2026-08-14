@@ -12,6 +12,7 @@ use crate::v1::types::ids::{DocumentBranchId, DocumentTagId};
 ///
 /// serialized as `branch-uuid@seq`
 // TODO: document how this is like/unlike yrs/yjs' `StateVector`
+// FIXME: utoipa should use string as the schema type
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 #[cfg_attr(

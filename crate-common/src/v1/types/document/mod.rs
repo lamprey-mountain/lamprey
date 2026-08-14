@@ -1,11 +1,4 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
-
-#[cfg(feature = "validator")]
-use validator::Validate;
+use lamprey_macros::record;
 
 use crate::v1::types::{
     ChannelId, MediaId, RoomMember, ThreadMember, User, UserId,
@@ -59,10 +52,7 @@ pub use ids::{DocumentRevisionId, DocumentRevisionRef};
 /// channel metadata for a document
 ///
 /// these properties only exist for documents in wiki channels
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct Document {
     /// whether this document is a draft
     ///
@@ -78,8 +68,8 @@ pub struct Document {
     pub template: bool,
 
     /// custom url path to put this at
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(max = 64)))]
+    #[schema(required = false, max_length = 64)]
+    #[validate(length(max = 64))]
     pub slug: Option<String>,
 
     /// if this document has been published
@@ -87,18 +77,14 @@ pub struct Document {
 }
 
 /// info about an archived document
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DocumentArchived {
     pub archived_at: Time,
     pub reason: Option<String>,
 }
 
 /// a lightweight alternate editing context for a document
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DocumentBranch {
     pub id: DocumentBranchId,
     pub document_id: ChannelId,
@@ -107,7 +93,7 @@ pub struct DocumentBranch {
     pub creator_id: UserId,
 
     /// the name of this branch
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 256))]
+    #[schema(required = false, max_length = 256)]
     pub name: Option<String>,
 
     /// when this branch was created
@@ -137,9 +123,8 @@ pub struct DocumentBranch {
     // pub merged_into: Option<DocumentBranchId>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Copy, PartialEq, Eq)]
 pub enum DocumentBranchState {
     /// currently being edited
     Active,
@@ -155,48 +140,39 @@ pub enum DocumentBranchState {
     Merged,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct DocumentBranchListParams {
     /// only include branches with these states
     ///
     /// defaults to only Active
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub state: Vec<DocumentBranchState>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct DocumentBranchCreate {
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 256))]
-    #[cfg_attr(feature = "validator", validate(length(max = 256)))]
+    #[schema(required = false, max_length = 256)]
+    #[validate(length(max = 256))]
     pub name: Option<String>,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub private: bool,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct DocumentBranchPatch {
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 256))]
-    #[cfg_attr(feature = "validator", validate(length(max = 256)))]
+    #[schema(required = false, max_length = 256)]
+    #[validate(length(max = 256))]
     pub name: Option<Option<String>>,
 
     /// once public, branches cannot be made private again
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub private: bool,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct DocumentBranchMerge {
     /// overwrite where to merge to, defaults to the parent branch
     pub target_branch_id: Option<DocumentBranchId>,
@@ -218,26 +194,22 @@ pub struct DocumentBranchMerge {
     // NOTE: the above could probably be folded into document threads/comments
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DocumentBranchSync {
     pub sync_from_branch_id: Option<DocumentBranchId>,
 }
 
 // NOTE: not useful; may be removed later?
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct DocumentBranchMergeResult {
     pub status: DocumentBranchMergeResultStatus,
 }
 
 // NOTE: not useful; may be removed later?
 // also, this (git semantics) doesn't even really make sense with crdts to begin with
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Copy, PartialEq, Eq)]
 pub enum DocumentBranchMergeResultStatus {
     /// no existing changes! the cleanest merge
     FastForward,
@@ -250,10 +222,7 @@ pub enum DocumentBranchMergeResultStatus {
 }
 
 /// a named version
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct DocumentTag {
     /// the unique identifier for this tag
     pub id: DocumentTagId,
@@ -267,7 +236,7 @@ pub struct DocumentTag {
     /// who created this tag
     ///
     /// may be None if the creator doesnt exist
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub creator_id: Option<UserId>,
 
     // use DocumentVersionId here
@@ -275,54 +244,47 @@ pub struct DocumentTag {
     pub revision_seq: u64,
 
     /// one line description
-    #[cfg_attr(feature = "utoipa", schema(max_length = 128))]
-    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    #[schema(max_length = 128)]
+    #[validate(length(max = 128))]
     pub summary: String,
 
     /// optional more detailed description
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 4096))]
-    #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
+    #[schema(required = false, max_length = 4096)]
+    #[validate(length(max = 4096))]
     pub description: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct DocumentTagCreate {
     /// one line description
-    #[cfg_attr(feature = "utoipa", schema(max_length = 128))]
-    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    #[schema(max_length = 128)]
+    #[validate(length(max = 128))]
     pub summary: String,
 
     /// optional more detailed description
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 4096))]
-    #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
+    #[schema(required = false, max_length = 4096)]
+    #[validate(length(max = 4096))]
     pub description: Option<String>,
 
     pub revision: DocumentRevisionRef,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct DocumentTagPatch {
     /// one line description
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 128))]
-    #[cfg_attr(feature = "validator", validate(length(max = 128)))]
+    #[schema(required = false, max_length = 128)]
+    #[validate(length(max = 128))]
     pub summary: Option<String>,
 
     /// optional more detailed description
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 4096))]
-    #[cfg_attr(feature = "validator", validate(length(max = 4096)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[schema(required = false, max_length = 4096)]
+    #[validate(length(max = 4096))]
+    #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(IntoParams, ToSchema))]
+#[record]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct HistoryParams {
     /// split group whenever author changes
     pub by_author: Option<bool>,
@@ -352,9 +314,7 @@ pub struct HistoryParams {
 
 /// a set of changes made to a document
 // TODO: rename to DocumentChangeset
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Changeset {
     /// the created_at time of the first change
     pub start_time: Time,
@@ -372,7 +332,7 @@ pub struct Changeset {
     pub stat_removed: u64,
 
     /// the document this changeset applies to
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub document_id: Option<ChannelId>,
 
     /// the sequence number of the first update in this changeset
@@ -383,9 +343,7 @@ pub struct Changeset {
 }
 
 /// a single atomic change to a document
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DocumentChange {
     /// the time this change was created
     pub time: Time,
@@ -413,9 +371,7 @@ impl FromIterator<DocumentChange> for Changeset {
     }
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct HistoryPagination {
     /// the resulting changesets, ordered oldest to newest
     pub changesets: Vec<Changeset>,
@@ -434,9 +390,8 @@ pub struct HistoryPagination {
 }
 
 /// parameters for getting a crdt
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(IntoParams, ToSchema))]
+#[record]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct DocumentCrdtDiffParams {
     pub sv: Option<DocumentStateVector>,
     // TODO: add these? probably would be mutually exclusive with sv
@@ -445,21 +400,16 @@ pub struct DocumentCrdtDiffParams {
 }
 
 /// parameters for updating a crdt
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DocumentCrdtApply {
     pub update: DocumentUpdate,
 }
 
 /// channel metadata for a wiki
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct Wiki {
     /// whether to allow indexing by search engines
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub allow_indexing: bool,
 
     /// the id of the document that should be used as the main/home/index page
@@ -470,10 +420,7 @@ pub struct Wiki {
 }
 
 /// info about when a document was published
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct DocumentPublished {
     /// when this document was published
     pub time: Time,
@@ -482,49 +429,41 @@ pub struct DocumentPublished {
     pub revision: DocumentRevisionRef,
 
     /// published but doesnt show up in any search results
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub unlisted: bool,
 }
 
 // TODO: move to `mod serialized`
 /// update a serdoc
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct SerdocPut {
     pub components: Vec<ComponentCreate>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct DocumentPatch {
     pub draft: Option<bool>,
     pub template: Option<bool>,
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub archived: Option<Option<DocumentArchivedPatch>>,
     pub slug: Option<Option<String>>,
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub published: Option<Option<DocumentPublishedPatch>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct DocumentPublishedPatch {
     pub revision: Option<DocumentRevisionRef>,
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub unlisted: Option<bool>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct DocumentArchivedPatch {
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub reason: Option<Option<String>>,
 }
 
@@ -687,39 +626,32 @@ impl Diff for WikiPatch {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct WikiPatch {
     pub allow_indexing: Option<bool>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub page_index: Option<Option<ChannelId>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub page_notfound: Option<Option<ChannelId>>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DocumentRevert {
     /// overwrite where to merge to, defaults to the parent branch
     pub target_branch_id: Option<DocumentBranchId>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct DocumentMediaAttach {
     pub media_id: MediaId,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(IntoParams, ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct WikiGraphQuery {
     /// maximum number of documents to return
     // TODO: default 10, max 1024
@@ -735,17 +667,13 @@ pub struct WikiGraphQuery {
 // should links be directed or undirected?
 // should `links` be renamed to `edges` and/or `documents` renamed to `nodes`?
 // maybe i should add a way to filter documents by tag?
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct WikiGraph {
     pub links: Vec<(ChannelId, ChannelId)>,
     pub documents: Vec<WikiGraphDocument>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct WikiGraphDocument {
     pub channel_id: ChannelId,
     pub title: String,
