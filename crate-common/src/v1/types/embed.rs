@@ -3,20 +3,12 @@ use crate::{
     v2::types::media::{Media, MediaReference},
 };
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use lamprey_macros::record;
 use url::Url;
 
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
-
 // maybe allow iframes for some sites? probably could be done client side though
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub enum EmbedType {
     /// this is a piece of media, ie. an image, video, or audio
     Media,
@@ -29,15 +21,12 @@ pub enum EmbedType {
     Custom,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct Embed {
     pub id: EmbedId,
 
     /// what kind of thing this is
-    #[cfg_attr(feature = "serde", serde(default, rename = "type"))]
+    #[serde(default, rename = "type")]
     pub ty: EmbedType,
 
     /// the url this embed was requested for
@@ -47,12 +36,12 @@ pub struct Embed {
     /// the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
     pub canonical_url: Option<Url>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[schema(min_length = 1, max_length = 256)]
+    #[validate(length(min = 1, max = 256))]
     pub title: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 4096))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    #[schema(min_length = 1, max_length = 4096)]
+    #[validate(length(min = 1, max = 4096))]
     pub description: Option<String>,
 
     /// the theme color of the site, as a hex string (`#rrggbb`)
@@ -61,16 +50,16 @@ pub struct Embed {
     pub media: Option<Media>,
     pub thumbnail: Option<Media>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[schema(min_length = 1, max_length = 256)]
+    #[validate(length(min = 1, max = 256))]
     pub author_name: Option<String>,
     // TODO: validate length
     pub author_url: Option<Url>,
     pub author_avatar: Option<Media>,
 
     /// the name of the website
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[schema(min_length = 1, max_length = 256)]
+    #[validate(length(min = 1, max = 256))]
     pub site_name: Option<String>,
 
     /// aka favicon
@@ -87,29 +76,26 @@ pub struct Embed {
 }
 
 // TODO: rename to EmbedGenerate
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 // #[cfg_attr(feature = "validator", derive(Validate))]
 pub struct EmbedRequest {
     pub url: Url,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct EmbedCreate {
     /// the url this embed was requested for
     // FIXME: validate max length
     pub url: Option<Url>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[schema(min_length = 1, max_length = 256)]
+    #[validate(length(min = 1, max = 256))]
     pub title: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 4096))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 4096)))]
+    #[schema(min_length = 1, max_length = 4096)]
+    #[validate(length(min = 1, max = 4096))]
     pub description: Option<String>,
 
     /// the theme color of the site, as a hex string (`#rrggbb`)
@@ -117,8 +103,8 @@ pub struct EmbedCreate {
     pub media: Option<MediaReference>,
     pub thumbnail: Option<MediaReference>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 256))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[schema(min_length = 1, max_length = 256)]
+    #[validate(length(min = 1, max = 256))]
     pub author_name: Option<String>,
 
     pub author_url: Option<Url>,
