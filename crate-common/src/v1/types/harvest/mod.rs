@@ -1,8 +1,4 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::{
     v1::types::{HarvestId, RoomId, UserId, misc::Time},
@@ -14,9 +10,7 @@ pub mod inside;
 /// how to create a harvest
 ///
 /// including extra data will make the export slower
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct HarvestCreateUser {
     /// include all messages you have sent
     pub include_messages: bool,
@@ -28,9 +22,7 @@ pub struct HarvestCreateUser {
 /// how to create a harvest
 ///
 /// including extra data will make the export slower
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct HarvestCreateRoom {
     /// include all messages in this room
     pub include_messages: bool,
@@ -44,9 +36,7 @@ pub struct HarvestCreateRoom {
     pub include_members: bool,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Harvest {
     pub id: HarvestId,
 
@@ -56,20 +46,16 @@ pub struct Harvest {
     /// when this archive was created
     pub queued_at: Time,
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub status: HarvestStatus,
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: HarvestType,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(tag = "status")
-)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[serde(tag = "status")]
 pub enum HarvestStatus {
     /// this is queued and not running yet
     Queued,
@@ -107,18 +93,16 @@ pub enum HarvestStatus {
 }
 
 /// the reason why harvest generation failed
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum HarvestFailedCode {
     // TODO: remove
     Other,
 }
 
 /// the reason why harvest generation was cancelled
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum HarvestCancelReason {
     CancelledByUser,
     CancelledByAdmin,
@@ -128,9 +112,8 @@ pub enum HarvestCancelReason {
 }
 
 /// what this harvest was generated for
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum HarvestType {
     User {
         target_user_id: UserId,
