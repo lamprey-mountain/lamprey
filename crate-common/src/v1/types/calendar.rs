@@ -518,6 +518,7 @@ impl CalendarEvent {
 
 #[record]
 #[derive(Default, PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct CalendarEventParticipantQuery {
     /// whether to include user and member
     #[serde(default)]

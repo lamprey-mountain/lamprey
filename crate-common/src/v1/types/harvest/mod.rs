@@ -54,7 +54,6 @@ pub struct Harvest {
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 #[serde(tag = "status")]
 pub enum HarvestStatus {
     /// this is queued and not running yet
