@@ -537,7 +537,10 @@ export class RootStore {
 		} else if (msg.type === "ScriptLogCreate") {
 			this.scriptLogs.upsert(msg.entry);
 		} else if (msg.type === "RelationshipUpsert") {
-			this.relationships.upsert(msg.target_user_id, msg.relationship);
+			this.relationships.upsertRelationship(
+				msg.target_user_id,
+				msg.relationship,
+			);
 		} else if (msg.type === "RelationshipDelete") {
 			this.relationships.delete(msg.target_user_id);
 		} else if (msg.type === "ChannelTyping") {

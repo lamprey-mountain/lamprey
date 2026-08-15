@@ -30,6 +30,11 @@ export class RelationshipsService extends BaseService<Relationship> {
 		throw new Error("Cannot upsert relationship without user id.");
 	}
 
+	upsertRelationship(user_id: UserId, relationship: Relationship) {
+		this.cache.set(user_id, relationship);
+		// TODO: upsert this.db
+	}
+
 	delete(user_id: UserId) {
 		this.cache.delete(user_id);
 	}
