@@ -94,16 +94,25 @@ async fn main() -> Result<()> {
     let portals = bridge.db.portal_list().await?;
 
     for realm in realms {
-        // TODO: create realms
+        let realm_id = realm.id;
+        let handle = bridge.create_realm_handle(realm.id);
+        let event = BridgeEvent::RealmInit(realm, handle);
+        bridge
+            .events
+            .send(Arc::new(event))
+            .expect("TODO: better error handling");
+        info!(%realm_id, "initialized realm actor");
     }
 
     for portal in portals {
+        let portal_id = portal.id;
         let handle = bridge.create_portal_handle(portal.id);
         let event = BridgeEvent::PortalInit(portal, handle);
         bridge
             .events
             .send(Arc::new(event))
             .expect("TODO: better error handling");
+        info!(%portal_id, "initialized portal actor");
     }
 
     // supervise everything

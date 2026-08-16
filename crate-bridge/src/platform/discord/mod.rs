@@ -2,19 +2,22 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use serenity::all::{
-    CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage, CreateWebhook,
-    EditAttachments, ExecuteWebhook, GatewayIntents, Mentionable,
+    CreateChannel, CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage,
+    CreateWebhook, EditAttachments, ExecuteWebhook, GatewayIntents, Mentionable,
 };
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio::task::JoinSet;
 use tracing::{debug, error, info, warn};
 
 use crate::actor::bridge::BridgeCommand;
-use crate::bridge_old::{MessageData, PlatformHandle, Portal, PortalHandle, PortalId};
+use crate::bridge_old::{
+    MessageData, PlatformHandle, Portal, PortalDiscord, PortalHandle, PortalId, PortalLamprey,
+    Realm, RealmEvent, RealmHandle, RealmId,
+};
 use crate::config::Config;
 use crate::platform::discord::events::DiscordEvent;
 use crate::prelude::*;
-use crate::types::Platform;
+use crate::types::{ChannelData, Platform};
 use crate::util::mentions::MessageTransformer;
 use crate::{
     bridge_old::{BridgeEvent, BridgeHandle, PortalEvent},
@@ -26,9 +29,9 @@ mod interactions;
 
 // re export discord (serenity) types
 pub use serenity::all::{
-    Activity, ActivityType, Attachment, AttachmentId, ChannelId, CreateAllowedMentions,
-    CreateEmbed, Embed, GuildId, Message, MessageId, OnlineStatus, Presence, RoleId, User, UserId,
-    WebhookId,
+    Activity, ActivityType, Attachment, AttachmentId, Channel, ChannelId, ChannelType,
+    CreateAllowedMentions, CreateEmbed, Embed, GuildChannel, GuildId, Message, MessageId,
+    OnlineStatus, Presence, RoleId, User, UserId, WebhookId,
 };
 
 pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -> PlatformHandle {
@@ -45,9 +48,13 @@ struct Discord {
     bridge: BridgeHandle,
     rx: mpsc::Receiver<events::DiscordEvent>,
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
+    realm_tasks: JoinSet<(RealmId, Result<()>)>,
     portal_handles: HashMap<PortalId, PortalHandle>,
     portal_lookup: HashMap<ChannelId, PortalId>,
     portal_data: HashMap<PortalId, Portal>,
+    realm_handles: HashMap<RealmId, RealmHandle>,
+    realm_lookup: HashMap<ChannelId, RealmId>,
+    realm_data: HashMap<RealmId, Realm>,
     webhook_lookup: HashMap<serenity::all::WebhookId, PortalId>,
     http: Arc<serenity::all::Http>,
     cache: Arc<serenity::all::Cache>,
@@ -80,9 +87,13 @@ impl Discord {
             bridge,
             rx,
             portal_tasks: JoinSet::new(),
+            realm_tasks: JoinSet::new(),
             portal_handles: HashMap::new(),
             portal_lookup: HashMap::new(),
             portal_data: HashMap::new(),
+            realm_handles: HashMap::new(),
+            realm_lookup: HashMap::new(),
+            realm_data: HashMap::new(),
             webhook_lookup: HashMap::new(),
             http,
             cache,
@@ -98,6 +109,18 @@ impl Discord {
         self.portal_tasks.spawn(spawn_portal(
             portal_id,
             portal,
+            handle,
+            self.http.clone(),
+            self.cache.clone(),
+        ));
+    }
+
+    fn spawn_realm_task(&mut self, realm_id: RealmId) {
+        let realm = self.realm_data.get(&realm_id).unwrap().clone();
+        let handle = self.realm_handles.get(&realm_id).unwrap().clone();
+        self.realm_tasks.spawn(spawn_realm(
+            realm_id,
+            realm,
             handle,
             self.http.clone(),
             self.cache.clone(),
@@ -141,6 +164,23 @@ impl Discord {
                         }
                         Err(e) => {
                             warn!("discord portal task join error: {e:?}");
+                        }
+                    }
+                },
+                Some(result) = self.realm_tasks.join_next() => {
+                    match result {
+                        Ok((realm_id, Err(e))) => {
+                            warn!(%realm_id, "discord realm task failed: {e:?}");
+                            self.spawn_realm_task(realm_id);
+                        }
+                        Ok((realm_id, Ok(()))) => {
+                            debug!(%realm_id, "discord realm task exited cleanly");
+                            self.realm_handles.remove(&realm_id);
+                            self.realm_data.remove(&realm_id);
+                            self.realm_lookup.retain(|_, v| *v != realm_id);
+                        }
+                        Err(e) => {
+                            warn!("discord realm task join error: {e:?}");
                         }
                     }
                 },
@@ -206,6 +246,76 @@ impl Discord {
                     .bridge
                     .events
                     .send(Arc::new(BridgeEvent::PresenceUpdate(presence)));
+            }
+            DiscordEvent::ChannelCreate(channel) => {
+                let has_continuous = self.realm_data.values().any(|r| r.continuous);
+                if !has_continuous {
+                    return;
+                }
+
+                let is_supported = matches!(
+                    channel.kind,
+                    ChannelType::Text | ChannelType::News | ChannelType::Category
+                );
+                if !is_supported {
+                    return;
+                }
+
+                let is_text = matches!(channel.kind, ChannelType::Text | ChannelType::News);
+
+                let Some(realm_id) = self.realm_data.iter().find_map(|(id, realm)| {
+                    if let Some(r_discord) = &realm.discord {
+                        if r_discord.guild_id == channel.guild_id && realm.continuous {
+                            return Some(*id);
+                        }
+                    }
+                    None
+                }) else {
+                    return;
+                };
+
+                let handle = self.realm_handles.get(&realm_id).unwrap().clone();
+                let http = self.http.clone();
+
+                tokio::spawn(async move {
+                    let channel_data = if is_text {
+                        let webhook = match channel
+                            .create_webhook(&http, CreateWebhook::new("bridge"))
+                            .await
+                        {
+                            Ok(wh) => wh,
+                            Err(e) => {
+                                error!(?e, "failed to create webhook");
+                                return;
+                            }
+                        };
+
+                        let webhook_url: url::Url = webhook
+                            .url()
+                            .expect("webhook url")
+                            .parse()
+                            .expect("invalid webhook url");
+
+                        ChannelData::Discord {
+                            channel: Box::new(channel.clone()),
+                            webhook: Some((webhook.id, webhook_url)),
+                        }
+                    } else {
+                        ChannelData::Discord {
+                            channel: Box::new(channel.clone()),
+                            webhook: None,
+                        }
+                    };
+
+                    let _ = handle
+                        .events
+                        .send(Arc::new(RealmEvent::ChannelCreate(channel_data)));
+                });
+            }
+            DiscordEvent::ChannelDelete(channel) => {
+                if self.portal_lookup.contains_key(&channel.id) {
+                    self.route_portal_event(channel.id, PortalEvent::ChannelDelete);
+                }
             }
             DiscordEvent::InteractionCreate(command) => match command.inner {
                 interactions::SlashCommandType::Ping => {
@@ -302,7 +412,7 @@ impl Discord {
                         // send command to bridge actor
                         let _ = bridge
                             .commands
-                            .send(BridgeCommand::LinkRequest {
+                            .send(BridgeCommand::PortalLinkRequest {
                                 discord_guild_id: command.guild_id(),
                                 discord_channel_id,
                                 lamprey_channel_id,
@@ -321,6 +431,63 @@ impl Discord {
                                     CreateInteractionResponseMessage::new()
                                         .ephemeral(true)
                                         .content("please send !accept from the lamprey side"),
+                                ),
+                            )
+                            .await;
+                    });
+                }
+                interactions::SlashCommandType::LinkGuild {
+                    discord_guild_id,
+                    lamprey_room_id,
+                    backfill: _,
+                    continuous,
+                } => {
+                    let http = self.http.clone();
+                    let bridge = self.bridge.clone();
+                    let discord_channel_id = command.interaction.channel_id;
+
+                    tokio::spawn(async move {
+                        let _ = bridge
+                            .commands
+                            .send(BridgeCommand::RealmLinkRequest {
+                                discord_guild_id,
+                                discord_channel_id,
+                                lamprey_room_id,
+                                continuous,
+                            })
+                            .await;
+
+                        let _ = command
+                            .interaction
+                            .create_response(
+                                &http,
+                                CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new()
+                                        .ephemeral(true)
+                                        .content("guild link initiated"),
+                                ),
+                            )
+                            .await;
+                    });
+                }
+                interactions::SlashCommandType::UnlinkGuild { discord_guild_id } => {
+                    let http = self.http.clone();
+                    let bridge = self.bridge.clone();
+
+                    tokio::spawn(async move {
+                        let _ = bridge
+                            .commands
+                            .send(BridgeCommand::RealmUnlink { discord_guild_id })
+                            .await;
+
+                        let _ = command
+                            .interaction
+                            .create_response(
+                                &http,
+                                CreateInteractionResponse::Message(
+                                    CreateInteractionResponseMessage::new()
+                                        .ephemeral(true)
+                                        .content("guild unlinked"),
                                 ),
                             )
                             .await;
@@ -349,24 +516,6 @@ impl Discord {
                             .await;
                     });
                 }
-                _ => {
-                    // TODO: implement link guild
-                    // TODO: implement unlink guild
-                    let http = self.http.clone();
-                    tokio::spawn(async move {
-                        let _ = command
-                            .interaction
-                            .create_response(
-                                &http,
-                                CreateInteractionResponse::Message(
-                                    CreateInteractionResponseMessage::new()
-                                        .ephemeral(true)
-                                        .content("command not yet implemented"),
-                                ),
-                            )
-                            .await;
-                    });
-                }
             },
         }
     }
@@ -382,6 +531,11 @@ impl Discord {
 
     async fn handle_bridge_event(&mut self, event: &BridgeEvent) {
         match event {
+            BridgeEvent::RealmInit(realm, handle) => {
+                self.realm_handles.insert(realm.id, handle.clone());
+                self.realm_data.insert(realm.id, realm.clone());
+                self.spawn_realm_task(realm.id);
+            }
             BridgeEvent::PortalInit(portal, handle) => {
                 self.init_portal(portal, handle);
             }
@@ -399,7 +553,7 @@ impl Discord {
                 self.portal_handles.remove(id);
                 // TODO: make sure portal tasks exit when their PortalHandle is dropped
             }
-            BridgeEvent::LinkResponse {
+            BridgeEvent::PortalLinkResponse {
                 discord_channel_id,
                 accepted,
             } => {
@@ -407,6 +561,24 @@ impl Discord {
                     "portal successfully created!"
                 } else {
                     "portal request was declined (or maybe something else went wrong)"
+                };
+                let http = self.http.clone();
+                let channel_id = *discord_channel_id;
+                tokio::spawn(async move {
+                    let _ = http
+                        .send_message(channel_id, vec![], &CreateMessage::new().content(msg))
+                        .await;
+                });
+            }
+            BridgeEvent::RealmLinkResponse {
+                discord_guild_id: _,
+                discord_channel_id,
+                accepted,
+            } => {
+                let msg = if *accepted {
+                    "guild successfully linked!"
+                } else {
+                    "guild request was declined (or maybe something else went wrong)"
                 };
                 let http = self.http.clone();
                 let channel_id = *discord_channel_id;
@@ -794,4 +966,112 @@ fn format_discord_reply_content(discord_msg: &serenity::all::Message) -> String 
     } else {
         "(no content?)".to_owned()
     }
+}
+
+async fn spawn_realm(
+    id: RealmId,
+    realm: Realm,
+    handle: RealmHandle,
+    http: Arc<serenity::all::Http>,
+    cache: Arc<serenity::all::Cache>,
+) -> (RealmId, Result<()>) {
+    (id, spawn_realm_inner(id, realm, handle, http, cache).await)
+}
+
+async fn spawn_realm_inner(
+    realm_id: RealmId,
+    realm: Realm,
+    handle: RealmHandle,
+    http: Arc<serenity::all::Http>,
+    _cache: Arc<serenity::all::Cache>,
+) -> Result<()> {
+    let mut events = handle.events.subscribe();
+    loop {
+        let event = match events.recv().await {
+            Ok(e) => e,
+            Err(broadcast::error::RecvError::Lagged(n)) => {
+                warn!(%realm_id, n, "realm event receiver lagged, skipping");
+                continue;
+            }
+            Err(broadcast::error::RecvError::Closed) => break,
+        };
+        match &*event {
+            RealmEvent::ChannelCreate(chan) => {
+                if !realm.continuous {
+                    continue;
+                }
+
+                match chan {
+                    ChannelData::Discord { .. } => continue,
+                    ChannelData::Lamprey { channel } => {
+                        let guild_id = realm.discord.as_ref().unwrap().guild_id;
+                        let http = http.clone();
+                        let bridge = handle.bridge.clone();
+
+                        let create_channel =
+                            CreateChannel::new(channel.name.clone()).kind(match channel.ty {
+                                lamprey::ChannelType::Text => ChannelType::Text,
+                                _ => continue,
+                            });
+
+                        // TODO: run below code in a tokio task instead of blocking loop
+
+                        // TODO: add audit log reason
+                        let discord_channel =
+                            match http.create_channel(guild_id, &create_channel, None).await {
+                                Ok(ch) => ch,
+                                Err(e) => {
+                                    error!(?e, "failed to create discord channel");
+                                    continue;
+                                }
+                            };
+
+                        // TODO: deduplicate this code with `/link`
+                        let webhook = match discord_channel
+                            .create_webhook(&http, CreateWebhook::new("bridge"))
+                            .await
+                        {
+                            Ok(wh) => wh,
+                            Err(e) => {
+                                error!(?e, "failed to create webhook");
+                                continue;
+                            }
+                        };
+
+                        let webhook_url = webhook
+                            .url()
+                            .expect("webhook url")
+                            .parse()
+                            .expect("invalid webhook url");
+
+                        let portal_id = PortalId::new();
+                        let portal = Portal {
+                            id: portal_id,
+                            realm_id: Some(realm_id),
+                            lamprey: Some(PortalLamprey {
+                                channel_id: channel.id,
+                                room_id: channel.room_id.unwrap(),
+                                last_id: channel.last_message_id.unwrap_or_default(),
+                            }),
+                            discord: Some(PortalDiscord {
+                                guild_id,
+                                parent_id: None,
+                                channel_id: discord_channel.id,
+                                webhook_url,
+                                webhook_id: Some(webhook.id),
+                                last_id: discord_channel.last_message_id.unwrap_or_default(),
+                            }),
+                        };
+
+                        if bridge.db.portal_create(portal.clone()).await.is_ok() {
+                            let _ = bridge
+                                .events
+                                .send(Arc::new(BridgeEvent::PortalCreated(portal)));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }

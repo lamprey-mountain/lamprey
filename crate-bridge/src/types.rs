@@ -46,6 +46,17 @@ pub struct PendingLink {
     pub discord_last_id: discord::MessageId,
 }
 
+/// Tracks a pending realm link request while waiting for confirmation
+#[derive(Debug, Clone)]
+pub struct PendingRealmLink {
+    pub id: PendingLinkId,
+    pub discord_guild_id: discord::GuildId,
+    pub discord_channel_id: discord::ChannelId,
+    pub lamprey_room_id: lamprey::RoomId,
+    pub continuous: bool,
+    pub confirmation_message_id: Option<lamprey::MessageId>,
+}
+
 /// a known/supported platform
 #[derive(
     Debug, Clone, Serialize, Deserialize, strum::Display, strum::EnumString, PartialEq, Eq,
@@ -160,6 +171,17 @@ pub mod may_redesign {
 
         Discord {
             message: Box<discord::Message>,
+        },
+    }
+
+    #[derive(Debug, Clone)]
+    pub enum ChannelData {
+        Lamprey {
+            channel: Box<lamprey::Channel>,
+        },
+        Discord {
+            channel: Box<discord::GuildChannel>,
+            webhook: Option<(discord::WebhookId, Url)>,
         },
     }
 

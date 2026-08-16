@@ -5,17 +5,18 @@ use tracing::debug;
 use url::Url;
 
 use crate::bridge_old::{
-    Portal, PortalCreate, PortalDiscord, PortalEvent, PortalHandle, PortalId, PortalLamprey,
+    Portal, PortalCreate, PortalDiscord, PortalEvent, PortalHandle, PortalId, PortalLamprey, Realm,
+    RealmDiscord, RealmHandle, RealmId, RealmLamprey,
 };
 use crate::database::Database;
 use crate::prelude::*;
-use crate::types::{PendingLink, PendingLinkId};
+use crate::types::{PendingLink, PendingLinkId, PendingRealmLink};
 
 // TODO: make these commands platform-agnostic
 #[derive(Debug, Clone)]
 pub enum BridgeCommand {
     /// Discord requests a link
-    LinkRequest {
+    PortalLinkRequest {
         discord_guild_id: discord::GuildId,
         discord_channel_id: discord::ChannelId,
         lamprey_channel_id: lamprey::ChannelId,
@@ -25,7 +26,7 @@ pub enum BridgeCommand {
     },
 
     /// Lamprey received !accept or !reject
-    LinkResponse {
+    PortalLinkResponse {
         lamprey_channel_id: lamprey::ChannelId,
         lamprey_room_id: lamprey::RoomId,
         accepted: bool,
@@ -36,6 +37,22 @@ pub enum BridgeCommand {
     PortalUnlink {
         discord_channel_id: discord::ChannelId,
     },
+
+    RealmLinkRequest {
+        discord_guild_id: discord::GuildId,
+        discord_channel_id: discord::ChannelId,
+        lamprey_room_id: lamprey::RoomId,
+        continuous: bool,
+    },
+
+    RealmLinkResponse {
+        lamprey_room_id: lamprey::RoomId,
+        accepted: bool,
+    },
+
+    RealmUnlink {
+        discord_guild_id: discord::GuildId,
+    },
 }
 
 /// an event that's broadcast to a bridge
@@ -44,7 +61,24 @@ pub enum BridgeCommand {
 #[derive(Debug, Clone)]
 pub enum BridgeEvent {
     /// load a realm from the database
-    RealmInit(bridge_old::Realm),
+    RealmInit(bridge_old::Realm, RealmHandle),
+
+    // TODO: add these
+    // RealmCreated,
+    // RealmEvent,
+    // RealmDeleted,
+
+    // TODO: make this event platform agnostic
+    RealmLinkRequest {
+        lamprey_room_id: lamprey::RoomId,
+    },
+
+    // TODO: make this event platform agnostic
+    RealmLinkResponse {
+        discord_guild_id: discord::GuildId,
+        discord_channel_id: discord::ChannelId,
+        accepted: bool,
+    },
 
     /// load a portal from the database
     PortalInit(Portal, PortalHandle),
@@ -60,17 +94,20 @@ pub enum BridgeEvent {
     /// the sender of this event should delete stuff from the database
     PortalDeleted(PortalId),
 
+    // TODO: make this event platform agnostic
+    // TODO(?): ues PortalRequest(PortalCreate)
     /// a portal has been requested to be created
-    PortalRequest(PortalCreate),
-
-    // TODO: make these events platform agnostic
+    ///
     /// Lamprey should send "Reply !accept or !reject"
-    LinkRequest {
+    PortalLinkRequest {
         lamprey_channel_id: lamprey::ChannelId,
     },
 
+    // TODO: make this event platform agnostic
+    /// a portal request has been resolved
+    ///
     /// Discord should notify user of success/failure
-    LinkResponse {
+    PortalLinkResponse {
         discord_channel_id: discord::ChannelId,
         accepted: bool,
     },
@@ -106,6 +143,7 @@ pub struct BridgeActor {
     events: broadcast::Sender<Arc<BridgeEvent>>,
     db: Arc<dyn Database>,
     pending_links: HashMap<lamprey::ChannelId, PendingLink>,
+    pending_realm_links: HashMap<lamprey::RoomId, PendingRealmLink>,
 }
 
 impl BridgeActor {
@@ -119,6 +157,7 @@ impl BridgeActor {
             events,
             db,
             pending_links: HashMap::new(),
+            pending_realm_links: HashMap::new(),
         }
     }
 
@@ -131,7 +170,7 @@ impl BridgeActor {
     async fn handle_command(&mut self, cmd: BridgeCommand) {
         debug!("bridge got command {cmd:?}");
         match cmd {
-            BridgeCommand::LinkRequest {
+            BridgeCommand::PortalLinkRequest {
                 discord_guild_id,
                 discord_channel_id,
                 lamprey_channel_id,
@@ -145,7 +184,7 @@ impl BridgeActor {
                     .portal_get_by_discord_channel(discord_channel_id.to_string())
                     .await
                 {
-                    let _ = self.events.send(Arc::new(BridgeEvent::LinkResponse {
+                    let _ = self.events.send(Arc::new(BridgeEvent::PortalLinkResponse {
                         discord_channel_id,
                         accepted: false,
                     }));
@@ -157,7 +196,7 @@ impl BridgeActor {
                     .portal_get_by_lamprey_channel(lamprey_channel_id.to_string())
                     .await
                 {
-                    let _ = self.events.send(Arc::new(BridgeEvent::LinkResponse {
+                    let _ = self.events.send(Arc::new(BridgeEvent::PortalLinkResponse {
                         discord_channel_id,
                         accepted: false,
                     }));
@@ -166,7 +205,7 @@ impl BridgeActor {
 
                 // 2. Check self.pending_links
                 if self.pending_links.contains_key(&lamprey_channel_id) {
-                    let _ = self.events.send(Arc::new(BridgeEvent::LinkResponse {
+                    let _ = self.events.send(Arc::new(BridgeEvent::PortalLinkResponse {
                         discord_channel_id,
                         accepted: false,
                     }));
@@ -189,13 +228,13 @@ impl BridgeActor {
                     },
                 );
 
-                // 4. Send BridgeEvent::SendConfirmationRequest to Lamprey
-                let _ = self
-                    .events
-                    .send(Arc::new(BridgeEvent::LinkRequest { lamprey_channel_id }));
+                // 4. Send BridgeEvent::LinkRequest to Lamprey
+                let _ = self.events.send(Arc::new(BridgeEvent::PortalLinkRequest {
+                    lamprey_channel_id,
+                }));
             }
 
-            BridgeCommand::LinkResponse {
+            BridgeCommand::PortalLinkResponse {
                 lamprey_channel_id,
                 lamprey_room_id,
                 accepted,
@@ -239,7 +278,7 @@ impl BridgeActor {
                     // }
 
                     // 3. Broadcast LinkResult to Discord
-                    let _ = self.events.send(Arc::new(BridgeEvent::LinkResponse {
+                    let _ = self.events.send(Arc::new(BridgeEvent::PortalLinkResponse {
                         discord_channel_id: pending.discord_channel_id,
                         accepted,
                     }));
@@ -257,6 +296,79 @@ impl BridgeActor {
                         .events
                         .send(Arc::new(BridgeEvent::PortalDeleted(portal.id)));
                 }
+            }
+            BridgeCommand::RealmLinkRequest {
+                discord_guild_id,
+                discord_channel_id,
+                lamprey_room_id,
+                continuous,
+            } => {
+                // 1. Check DB for existing link (both sides)
+                // TODO: check realm DB
+
+                // 2. Check self.pending_realm_links
+                if self.pending_realm_links.contains_key(&lamprey_room_id) {
+                    // already pending
+                    return;
+                }
+
+                // 3. Store in pending_realm_links
+                let pending_id = PendingLinkId::new();
+                self.pending_realm_links.insert(
+                    lamprey_room_id,
+                    PendingRealmLink {
+                        id: pending_id,
+                        discord_guild_id,
+                        discord_channel_id,
+                        lamprey_room_id,
+                        continuous,
+                        confirmation_message_id: None,
+                    },
+                );
+
+                // 4. Send BridgeEvent::RealmLinkRequest to Lamprey
+                let _ = self
+                    .events
+                    .send(Arc::new(BridgeEvent::RealmLinkRequest { lamprey_room_id }));
+            }
+            BridgeCommand::RealmLinkResponse {
+                lamprey_room_id,
+                accepted,
+            } => {
+                // 1. Remove from pending_links
+                if let Some(pending) = self.pending_realm_links.remove(&lamprey_room_id) {
+                    // 2. If accepted, create Realm in DB, broadcast RealmCreated (or similar)
+                    if accepted {
+                        let realm_id = RealmId::new();
+                        let realm = Realm {
+                            id: realm_id,
+                            continuous: pending.continuous,
+                            lamprey: Some(RealmLamprey {
+                                room_id: pending.lamprey_room_id,
+                            }),
+                            discord: Some(RealmDiscord {
+                                guild_id: pending.discord_guild_id,
+                            }),
+                        };
+
+                        if self.db.realm_create(realm.clone()).await.is_ok() {
+                            // TODO: broadcast RealmCreated
+                            // let _ = self.events.send(Arc::new(BridgeEvent::RealmCreated(realm)));
+                        }
+                    }
+
+                    // 3. Broadcast LinkResult to Discord
+                    let _ = self.events.send(Arc::new(BridgeEvent::RealmLinkResponse {
+                        discord_guild_id: pending.discord_guild_id,
+                        discord_channel_id: pending.discord_channel_id,
+                        accepted,
+                    }));
+                }
+            }
+            BridgeCommand::RealmUnlink { discord_guild_id } => {
+                let _ = self.db.realm_delete_by_guild(discord_guild_id).await;
+                // TODO: broadcast RealmDeleted event
+                // TODO(?): recursively remove portals
             }
         }
     }

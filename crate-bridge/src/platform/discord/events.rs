@@ -21,6 +21,8 @@ pub enum DiscordEvent {
     MessageCreate(Message),
     MessageUpdate(MessageUpdateEvent, Option<Message>),
     MessageDelete(ChannelId, MessageId),
+    ChannelCreate(GuildChannel),
+    ChannelDelete(GuildChannel),
     InteractionCreate(SlashCommand),
     TypingStart(TypingStartEvent),
     PresenceUpdate(Presence),
@@ -105,7 +107,17 @@ impl EventHandler for Handler {
 
     async fn channel_create(&self, _ctx: Context, channel: GuildChannel) {
         info!("discord channel create: {:?}", channel.name);
-        // TODO: Map to BridgeEvent/PortalEvent
+        let _ = self.tx.send(DiscordEvent::ChannelCreate(channel)).await;
+    }
+
+    async fn channel_delete(
+        &self,
+        _ctx: Context,
+        channel: GuildChannel,
+        _messages: Option<Vec<Message>>,
+    ) {
+        info!("discord channel delete: {:?}", channel.name);
+        let _ = self.tx.send(DiscordEvent::ChannelDelete(channel)).await;
     }
 
     async fn interaction_create(&self, _ctx: Context, interaction: Interaction) {

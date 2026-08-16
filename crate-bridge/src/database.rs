@@ -5,7 +5,10 @@ use sqlx::{SqlitePool, query};
 use uuid::Uuid;
 
 use crate::{
-    bridge_old::{Message, Portal, PortalDiscord, PortalId, PortalLamprey, Realm, RealmId, User},
+    bridge_old::{
+        Message, Portal, PortalDiscord, PortalId, PortalLamprey, Realm, RealmDiscord, RealmId,
+        RealmLamprey, User,
+    },
     prelude::*,
 };
 
@@ -14,6 +17,7 @@ pub trait Database: fmt::Debug + Send + Sync {
     async fn realm_create(&self, realm: Realm) -> Result<()>;
     async fn realm_update(&self, realm: Realm) -> Result<()>;
     async fn realm_delete(&self, id: RealmId) -> Result<()>;
+    async fn realm_delete_by_guild(&self, discord_guild_id: discord::GuildId) -> Result<()>;
     async fn realm_list(&self) -> Result<Vec<Realm>>;
 
     async fn portal_create(&self, portal: Portal) -> Result<()>;
@@ -80,10 +84,14 @@ impl Database for SqliteDatabase {
     async fn realm_create(&self, realm: Realm) -> Result<()> {
         let continuous = if realm.continuous { 1i64 } else { 0i64 };
         let realm_id = realm.id.to_string();
+        let lamprey_room_id = realm.lamprey.map(|l| l.room_id.to_string());
+        let discord_guild_id = realm.discord.map(|d| d.guild_id.to_string());
         query!(
-            "INSERT INTO realm (id, continuous) VALUES (?, ?)",
+            "INSERT INTO realm (id, continuous, lamprey_room_id, discord_guild_id) VALUES (?, ?, ?, ?)",
             realm_id,
-            continuous
+            continuous,
+            lamprey_room_id,
+            discord_guild_id
         )
         .execute(&self.pool)
         .await?;
@@ -93,9 +101,13 @@ impl Database for SqliteDatabase {
     async fn realm_update(&self, realm: Realm) -> Result<()> {
         let continuous = if realm.continuous { 1i64 } else { 0i64 };
         let realm_id = realm.id.to_string();
+        let lamprey_room_id = realm.lamprey.map(|l| l.room_id.to_string());
+        let discord_guild_id = realm.discord.map(|d| d.guild_id.to_string());
         query!(
-            "UPDATE realm SET continuous = ? WHERE id = ?",
+            "UPDATE realm SET continuous = ?, lamprey_room_id = ?, discord_guild_id = ? WHERE id = ?",
             continuous,
+            lamprey_room_id,
+            discord_guild_id,
             realm_id,
         )
         .execute(&self.pool)
@@ -111,8 +123,16 @@ impl Database for SqliteDatabase {
         Ok(())
     }
 
+    async fn realm_delete_by_guild(&self, discord_guild_id: discord::GuildId) -> Result<()> {
+        let guild_id_str = discord_guild_id.to_string();
+        query!("DELETE FROM realm WHERE discord_guild_id = ?", guild_id_str)
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
     async fn realm_list(&self) -> Result<Vec<Realm>> {
-        let rows = query!("SELECT id, continuous FROM realm")
+        let rows = query!("SELECT id, continuous, lamprey_room_id, discord_guild_id FROM realm")
             .fetch_all(&self.pool)
             .await?;
         Ok(rows
@@ -120,6 +140,12 @@ impl Database for SqliteDatabase {
             .map(|r| Realm {
                 id: r.id.expect("realm id").parse::<Uuid>().unwrap().into(),
                 continuous: r.continuous,
+                lamprey: r.lamprey_room_id.map(|room_id| RealmLamprey {
+                    room_id: room_id.parse().unwrap(),
+                }),
+                discord: r.discord_guild_id.map(|guild_id| RealmDiscord {
+                    guild_id: guild_id.parse().unwrap(),
+                }),
             })
             .collect())
     }

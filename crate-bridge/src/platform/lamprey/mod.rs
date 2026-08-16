@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use common::v1::types::misc::UserIdReq;
 use common::v1::types::presence::{Activity, Presence, Status};
-use common::v1::types::{MessageSync, MessageType, RoomMemberPut};
+use common::v1::types::{ChannelCreate, MessageSync, MessageType, PaginationQuery, RoomMemberPut};
 use futures::StreamExt;
 use sdk::http::{Http, MessageCreateOptions};
 use sdk::syncer::SyncerEvent;
@@ -13,20 +13,21 @@ use tracing::{debug, info, trace, warn};
 
 use crate::actor::bridge::BridgeCommand;
 use crate::bridge_old::{
-    BridgeEvent, BridgeHandle, Platform, PlatformHandle, Portal, PortalEvent, PortalHandle,
-    PortalId,
+    BridgeEvent, BridgeHandle, Platform, PlatformHandle, Portal, PortalDiscord, PortalEvent,
+    PortalHandle, PortalId, PortalLamprey, Realm, RealmEvent, RealmHandle, RealmId,
 };
 use crate::config::LampreyConfig;
 use crate::platform::lamprey::client::{ImportUrl, LampreyClient};
 use crate::platform::lamprey::presence::{PresenceEvent, PresenceRefreshActor};
 use crate::prelude::*;
+use crate::types::ChannelData;
 use crate::util::mentions::MessageTransformer;
 
 // re export lamprey types
 pub use common::v1::types::{
-    ChannelId, MediaId, Mentions, Message, MessageAttachment, MessageAttachmentCreate,
-    MessageAttachmentCreateType, MessageCreate, MessageId, ParseMentions, RoleId, RoomId,
-    RoomMember, User, UserId,
+    Channel, ChannelId, ChannelType, MediaId, Mentions, Message, MessageAttachment,
+    MessageAttachmentCreate, MessageAttachmentCreateType, MessageCreate, MessageId, ParseMentions,
+    RoleId, Room, RoomId, RoomMember, User, UserId,
     embed::{Embed, EmbedCreate, EmbedType},
 };
 pub use common::v2::types::media::{Media, MediaCreate, MediaCreateSource};
@@ -49,10 +50,14 @@ struct Lamprey {
     bridge: BridgeHandle,
     client: sdk::Client,
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
+    realm_tasks: JoinSet<(RealmId, Result<()>)>,
     presence_tx: mpsc::UnboundedSender<PresenceEvent>,
     portal_handles: HashMap<PortalId, PortalHandle>,
     portal_lookup: HashMap<ChannelId, PortalId>,
     portal_data: HashMap<PortalId, Portal>,
+    realm_handles: HashMap<RealmId, RealmHandle>,
+    realm_lookup: HashMap<ChannelId, RealmId>,
+    realm_data: HashMap<RealmId, Realm>,
 }
 
 impl Lamprey {
@@ -84,10 +89,14 @@ impl Lamprey {
             bridge,
             client,
             portal_tasks: JoinSet::new(),
+            realm_tasks: JoinSet::new(),
             presence_tx,
             portal_handles: HashMap::new(),
             portal_lookup: HashMap::new(),
             portal_data: HashMap::new(),
+            realm_handles: HashMap::new(),
+            realm_lookup: HashMap::new(),
+            realm_data: HashMap::new(),
         };
         me.start(ready_tx).await;
 
@@ -104,6 +113,13 @@ impl Lamprey {
             self.client.http(),
             channel_id,
         ));
+    }
+
+    fn spawn_realm_task(&mut self, realm_id: RealmId) {
+        let realm = self.realm_data.get(&realm_id).unwrap().clone();
+        let handle = self.realm_handles.get(&realm_id).unwrap().clone();
+        self.realm_tasks
+            .spawn(spawn_realm(realm_id, realm, handle, self.client.http()));
     }
 
     async fn start(mut self, ready_tx: oneshot::Sender<()>) {
@@ -146,6 +162,23 @@ impl Lamprey {
                         }
                     }
                 },
+                Some(result) = self.realm_tasks.join_next() => {
+                    match result {
+                        Ok((realm_id, Err(e))) => {
+                            warn!(%realm_id, "realm task failed: {e:?}");
+                            self.spawn_realm_task(realm_id);
+                        }
+                        Ok((realm_id, Ok(()))) => {
+                            debug!(%realm_id, "realm task exited cleanly");
+                            self.realm_handles.remove(&realm_id);
+                            self.realm_data.remove(&realm_id);
+                            self.realm_lookup.retain(|_, v| *v != realm_id);
+                        }
+                        Err(e) => {
+                            warn!("realm task join error: {e:?}");
+                        }
+                    }
+                },
             }
         }
     }
@@ -157,8 +190,45 @@ impl Lamprey {
             SyncerEvent::Sync(sync) => match &**sync {
                 // events relevant to realms
                 // MessageSync::RoomUpdate { room } => todo!(),
-                // MessageSync::ChannelCreate { channel } => todo!(),
-                // MessageSync::ChannelUpdate { channel } => todo!(),
+                MessageSync::ChannelCreate { channel } => {
+                    let channel_data = ChannelData::Lamprey {
+                        channel: channel.clone(),
+                    };
+
+                    let Some(room_id) = channel.room_id else {
+                        return Ok(());
+                    };
+
+                    let Some(realm_id) = self.realm_data.iter().find_map(|(id, realm)| {
+                        if let Some(r_lamprey) = &realm.lamprey {
+                            if r_lamprey.room_id == room_id && realm.continuous {
+                                return Some(*id);
+                            }
+                        }
+                        None
+                    }) else {
+                        return Ok(());
+                    };
+
+                    let handle = self.realm_handles.get(&realm_id).unwrap();
+                    let _ = handle
+                        .events
+                        .send(Arc::new(RealmEvent::ChannelCreate(channel_data)));
+                }
+                MessageSync::ChannelUpdate { channel } => {
+                    if self.portal_lookup.contains_key(&channel.id) {
+                        let channel_data = ChannelData::Lamprey {
+                            channel: channel.clone(),
+                        };
+                        self.route_portal_event(
+                            &channel.id,
+                            PortalEvent::ChannelUpdate(channel_data),
+                        );
+                    }
+
+                    // TODO: channel delete on channel.removed_at?
+                    // self.route_portal_event(channel_id, PortalEvent::ChannelDelete);
+                }
                 // MessageSync::UserUpdate { user } => todo!(), // ignore updates for your own puppets
                 // MessageSync::RoomMemberCreate { member, user } => todo!(),
                 // MessageSync::RoomMemberUpdate { member, user } => todo!(),
@@ -220,10 +290,22 @@ impl Lamprey {
                                         .await;
                                     return Ok(());
                                 };
+
+                                // FIXME: make it clear which request you're `!accept`ing or `!reject`ing (don't accept/reject *everything* at once)
+
                                 let _ = self
                                     .bridge
                                     .commands
-                                    .send(BridgeCommand::LinkResponse {
+                                    .send(BridgeCommand::RealmLinkResponse {
+                                        lamprey_room_id: room_id,
+                                        accepted,
+                                    })
+                                    .await;
+
+                                let _ = self
+                                    .bridge
+                                    .commands
+                                    .send(BridgeCommand::PortalLinkResponse {
                                         lamprey_room_id: room_id,
                                         lamprey_channel_id: message.channel_id,
                                         accepted,
@@ -232,11 +314,12 @@ impl Lamprey {
                                             .unwrap_or_default(),
                                     })
                                     .await;
+
                                 // FIXME: send msg on bridge event portal created instead of here
                                 let msg = if accepted {
-                                    "portal successfully created!"
+                                    "portal/realm request accepted!"
                                 } else {
-                                    "portal request denied"
+                                    "portal/realm request denied"
                                 };
                                 let _ = self
                                     .client
@@ -355,6 +438,11 @@ impl Lamprey {
 
     fn handle_bridge_event(&mut self, event: &BridgeEvent) {
         match event {
+            BridgeEvent::RealmInit(realm, handle) => {
+                self.realm_handles.insert(realm.id, handle.clone());
+                self.realm_data.insert(realm.id, realm.clone());
+                self.spawn_realm_task(realm.id);
+            }
             BridgeEvent::PortalInit(portal, handle) => {
                 self.init_portal(portal, handle);
             }
@@ -367,9 +455,9 @@ impl Lamprey {
                     let _ = handle.events.send(Arc::new(event.clone()));
                 }
             }
-            BridgeEvent::LinkRequest { lamprey_channel_id } => {
+            BridgeEvent::PortalLinkRequest { lamprey_channel_id } => {
                 let channel_id = *lamprey_channel_id;
-                let http = self.client.http().clone();
+                let http = self.client.http();
                 tokio::spawn(async move {
                     let _ = http.message_create_with_options(
                         sdk::http::MessageCreateOptions {
@@ -383,6 +471,60 @@ impl Lamprey {
                             timestamp: None,
                         }
                     ).await;
+                });
+            }
+            BridgeEvent::RealmLinkRequest { lamprey_room_id } => {
+                let http = self.client.http();
+                let lamprey_room_id = *lamprey_room_id;
+                tokio::spawn(async move {
+                    let channel_id = async {
+                        // prefer welcome_channel_id
+                        if let Ok(room) = http.room_get(lamprey_room_id).await {
+                            if let Some(id) = room.welcome_channel_id {
+                                return Some(id);
+                            }
+                        }
+
+                        // fallback to first channel
+                        // FIXME: don't try to send messages to channels we don't have permissions in
+                        if let Ok(channels) = http
+                            .channel_list(
+                                lamprey_room_id,
+                                &PaginationQuery {
+                                    limit: Some(10),
+                                    ..Default::default()
+                                },
+                            )
+                            .await
+                        {
+                            if let Some(channel) =
+                                channels.items.iter().find(|c| c.ty == ChannelType::Text)
+                            {
+                                return Some(channel.id);
+                            }
+                        }
+
+                        None
+                    }
+                    .await;
+
+                    if let Some(channel_id) = channel_id {
+                        // TODO: handle err
+                        let _ = http.message_create(
+                            channel_id,
+                            &MessageCreate {
+                                content: Some(
+                                    "A discord guild is requesting to link with this room. Reply with !accept or !reject"
+                                        .to_string(),
+                                ),
+                                ..Default::default()
+                            },
+                        ).await;
+                    } else {
+                        // TODO: handle this better somehow? instead of silently failing?
+                        // maybe send warning back to discord
+                        warn!("no valid lamprey channel to send link request to!");
+                    }
                 });
             }
             BridgeEvent::PresenceUpdate(presence) => {
@@ -771,5 +913,110 @@ async fn spawn_portal_inner(
         }
     }
 
+    Ok(())
+}
+
+async fn spawn_realm(
+    id: RealmId,
+    realm: Realm,
+    handle: RealmHandle,
+    http: Http,
+) -> (RealmId, Result<()>) {
+    (id, spawn_realm_inner(id, realm, handle, http).await)
+}
+
+async fn spawn_realm_inner(
+    realm_id: RealmId,
+    realm: Realm,
+    handle: RealmHandle,
+    http: Http,
+) -> Result<()> {
+    let room_id = realm.lamprey.as_ref().unwrap().room_id;
+    let mut events = handle.events.subscribe();
+    loop {
+        let event = match events.recv().await {
+            Ok(e) => e,
+            Err(broadcast::error::RecvError::Lagged(n)) => {
+                warn!(%realm_id, n, "realm event receiver lagged, skipping");
+                continue;
+            }
+            Err(broadcast::error::RecvError::Closed) => break,
+        };
+        match &*event {
+            RealmEvent::ChannelCreate(chan) => {
+                if !realm.continuous {
+                    continue;
+                }
+
+                let (create, chan, webhook) = match chan {
+                    ChannelData::Lamprey { .. } => continue,
+                    ChannelData::Discord {
+                        channel: chan,
+                        webhook,
+                    } => {
+                        let create = ChannelCreate {
+                            name: chan.name.clone(),
+                            description: chan.topic.clone(),
+                            ty: match chan.kind {
+                                discord::ChannelType::Text => ChannelType::Text,
+                                discord::ChannelType::News => ChannelType::Text,
+                                discord::ChannelType::Category => ChannelType::Category,
+
+                                // TODO: voice bridging
+                                // TODO: thread/forum bridging
+                                // discord::ChannelType::Voice => ChannelType::Voice,
+                                // discord::ChannelType::NewsThread => todo!(),
+                                // discord::ChannelType::PublicThread => todo!(),
+                                // discord::ChannelType::PrivateThread => todo!(),
+                                // discord::ChannelType::Stage => todo!(),
+                                // discord::ChannelType::Forum => todo!(),
+
+                                // not supported
+                                _ => continue,
+                            },
+                            // parent_id: chan.parent_id, // TODO: map discord channel id to lamprey channel id
+                            nsfw: chan.nsfw,
+                            ..Default::default()
+                        };
+                        (create, chan, webhook)
+                    }
+                };
+
+                let channel = http.channel_create_room(room_id, &create).await?;
+
+                let Some((webhook_id, webhook_url)) = webhook else {
+                    // this doesn't have an associated webhook (eg. this is a category channel), so do create a channel but don't create a portal
+                    // TODO: store channel id mappings
+                    continue;
+                };
+
+                let portal_id = PortalId::new();
+                let portal = Portal {
+                    id: portal_id,
+                    realm_id: Some(realm_id),
+                    lamprey: Some(PortalLamprey {
+                        channel_id: channel.id,
+                        room_id,
+                        last_id: channel.last_message_id.unwrap_or_default(), // NOTE: this will always be default
+                    }),
+                    discord: Some(PortalDiscord {
+                        guild_id: chan.guild_id,
+                        parent_id: chan.parent_id,
+                        channel_id: chan.id,
+                        webhook_url: webhook_url.clone(),
+                        webhook_id: Some(*webhook_id),
+                        last_id: chan.last_message_id.unwrap_or_default(),
+                    }),
+                };
+
+                if handle.bridge.db.portal_create(portal.clone()).await.is_ok() {
+                    let _ = handle
+                        .bridge
+                        .events
+                        .send(Arc::new(BridgeEvent::PortalCreated(portal)));
+                }
+            }
+        }
+    }
     Ok(())
 }
