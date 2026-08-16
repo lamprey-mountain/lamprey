@@ -74,6 +74,7 @@ import {
 import { is3D } from "@/media/three-util.ts";
 import { openThread } from "@/utils/channel";
 import {
+	icCall,
 	icChannelMove,
 	icFileAudio,
 	icFileGeneric,
@@ -83,6 +84,7 @@ import {
 	icInfo,
 	icSword,
 } from "@/utils/icons.ts";
+import { useVoice } from "../voice/context.tsx";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
 import { Reactions } from "./Reactions.tsx";
 
@@ -1201,24 +1203,54 @@ function SystemMessageChannelRename(props: SystemMessageProps) {
 
 function SystemMessageCall(props: SystemMessageProps) {
 	const { t } = useCtx();
+	const [voice, voiceActions] = useVoice();
+	const getMe = useCurrentUser();
 	const version = () =>
 		props.message.latest_version as MessageVersionT & {
 			ended_at?: string | null;
 			participants: string[];
 		};
 
+	const participated = createMemo(() =>
+		version().participants.includes(getMe()?.id ?? ""),
+	);
+	const duration = createMemo(() => {
+		const { ended_at } = version();
+		if (!ended_at) return null;
+		return Date.parse(ended_at) - Date.parse(props.message.created_at);
+	});
+
+	const joined = () => voice.joinedChannelId === props.message.channel_id;
+
+	const joinCall = () => {
+		voiceActions.selectChannel(props.message.channel_id);
+	};
+
 	return (
 		<SystemMessage
 			{...props}
-			icon={icMemberJoin}
+			icon={icCall}
 			content={
 				<div
 					class="body markdown"
 					classList={{ local: props.message.is_local }}
 				>
-					{/* @ts-ignore */}
-					{version().ended_at
-						? t(
+					<Switch>
+						<Match when={duration() !== null && !participated()}>
+							{t(
+								"message_content.call_missed",
+								<span class="author">
+									<UserDisplayName
+										user_id={props.message.author_id}
+										room_id={props.room_id}
+										onClick
+									/>
+								</span>,
+								<Duration ms={duration()!} dim={false} />,
+							)}
+						</Match>
+						<Match when={duration() !== null}>
+							{t(
 								"message_content.call_ended",
 								<span class="author">
 									<UserDisplayName
@@ -1227,9 +1259,11 @@ function SystemMessageCall(props: SystemMessageProps) {
 										onClick
 									/>
 								</span>,
-								version().participants.length,
-							)
-						: t(
+								<Duration ms={duration()!} dim={false} />,
+							)}
+						</Match>
+						<Match when={true}>
+							{t(
 								"message_content.call_started",
 								<span class="author">
 									<UserDisplayName
@@ -1238,8 +1272,20 @@ function SystemMessageCall(props: SystemMessageProps) {
 										onClick
 									/>
 								</span>,
-								version().participants.length,
 							)}
+							<Show when={!joined()}>
+								{" - "}
+								<button
+									type="button"
+									class="button link"
+									style="display:inline-block"
+									onClick={joinCall}
+								>
+									{t("message_content.call_join")}
+								</button>
+							</Show>
+						</Match>
+					</Switch>
 				</div>
 			}
 		/>

@@ -1,5 +1,6 @@
 // reexport icons
 
+export { default as icCall } from "@/assets/call.png";
 export { default as icCamera } from "@/assets/camera.png";
 // TODO: list all known icons here
 export { default as icEdit } from "@/assets/edit.png";

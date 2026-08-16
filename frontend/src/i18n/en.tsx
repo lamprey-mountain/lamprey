@@ -585,13 +585,24 @@ export default {
 			author,
 			" moved messages to a different channel",
 		],
-		call_started: (author: JSX.Element, count: number): JSX.Element[] => [
+		call_started: (author: JSX.Element): JSX.Element[] => [
 			author,
-			` started a call with ${count} participant(s)`,
+			" started a call",
 		],
-		call_ended: (author: JSX.Element, count: number): JSX.Element[] => [
+		call_ended: (author: JSX.Element, duration: JSX.Element): JSX.Element[] => [
 			author,
-			` call ended with ${count} participant(s)`,
+			" started a call that lasted ",
+			duration,
+		],
+		call_join: "join the call",
+		call_missed: (
+			author: JSX.Element,
+			duration: JSX.Element,
+		): JSX.Element[] => [
+			"You missed a call from ",
+			author,
+			" that lasted ",
+			duration,
 		],
 		channel_pingback: (author: JSX.Element): JSX.Element[] => [
 			author,

@@ -6,9 +6,11 @@ const mins = (ms: number) =>
 const secs = (ms: number) =>
 	(Math.floor(ms / 1000) % 60).toString().padStart(2, "0");
 
-export const Duration = (props: VoidProps<{ ms: number | null }>) => {
+export const Duration = (
+	props: VoidProps<{ ms: number | null; dim?: boolean }>,
+) => {
 	return (
-		<span class="duration dim">
+		<span class="duration" classList={{ dim: props.dim ?? true }}>
 			<Show when={props.ms} fallback="--:--">
 				{(ms) => (
 					<>
