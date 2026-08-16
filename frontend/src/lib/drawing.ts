@@ -162,8 +162,16 @@ export const generateFavicon = async (
 
 	if (mentionCount > 0) {
 		const circleRadius = 22;
+		const borderSize = 4;
 		const circleX = size - circleRadius;
 		const circleY = size - circleRadius;
+
+		// cut out circle for mention
+		ctx.globalCompositeOperation = "destination-out";
+		ctx.beginPath();
+		ctx.arc(circleX, circleY, circleRadius + borderSize, 0, 2 * Math.PI);
+		ctx.fill();
+		ctx.globalCompositeOperation = "source-over";
 
 		ctx.fillStyle = "oklch(54.03% 0.1759 13.16)";
 		ctx.beginPath();

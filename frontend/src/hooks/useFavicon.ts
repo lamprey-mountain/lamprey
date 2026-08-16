@@ -3,17 +3,15 @@ import { createEffect, createMemo, onCleanup } from "solid-js";
 import { useApi, useChannels } from "@/api";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { generateFavicon } from "@/lib/drawing";
-import { roomLayersLoaded } from "@/lib/pfp";
+import { pfpsLoaded, roomLayersLoaded } from "@/lib/pfp";
 
 export function useFavicon() {
-	const _api2 = useApi();
-	const channels2 = useChannels();
-	const store = useApi();
+	const api = useApi();
 	const location = useLocation();
 
 	const totalMentions = createMemo(() => {
 		let count = 0;
-		for (const channel of [...channels2.cache.values()]) {
+		for (const channel of [...api.channels.cache.values()]) {
 			if (channel.mention_count && channel.mention_count > 0) {
 				count += channel.mention_count;
 			}
@@ -25,13 +23,13 @@ export function useFavicon() {
 		const path = location.pathname;
 		const roomMatch = path.match(/^\/room\/([^/]+)/);
 		if (roomMatch) {
-			const room = store.rooms.cache.get(roomMatch[1]);
+			const room = api.rooms.cache.get(roomMatch[1]);
 			if (room) return { type: "room" as const, room };
 		}
 
 		const channelMatch = path.match(/^\/(?:channel|thread)\/([^/]+)/);
 		if (channelMatch) {
-			const channel = channels2.cache.get(channelMatch[1]);
+			const channel = api.channels.cache.get(channelMatch[1]);
 			if (channel) {
 				if (channel.type === "Dm") {
 					const self = useCurrentUser();
@@ -46,7 +44,7 @@ export function useFavicon() {
 					}
 				}
 				const room = channel.room_id
-					? store.rooms.cache.get(channel.room_id)
+					? api.rooms.cache.get(channel.room_id)
 					: undefined;
 				return { type: "channel" as const, channel, room };
 			}
@@ -57,7 +55,8 @@ export function useFavicon() {
 	createEffect(() => {
 		const mentions = totalMentions();
 		const data = faviconData();
-		const layers = roomLayersLoaded();
+		const _loaded_pfps = pfpsLoaded();
+		const _loaded_rooms = roomLayersLoaded();
 		let oldUrl: string | null = null;
 
 		(async () => {
