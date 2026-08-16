@@ -50,10 +50,18 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     };
 
     let extract_request_impl = {
+        // TODO: better errors
         let error_expr = quote! {
             ::http::Response::builder()
                 .status(::http::StatusCode::BAD_REQUEST)
-                .body(::bytes::Bytes::from("extraction failed"))
+                .header(::http::header::CONTENT_TYPE, "application/json")
+                .body(::bytes::Bytes::from(
+                    ::serde_json::to_vec(&crate::v1::types::error::ApiError::with_message(
+                        crate::v1::types::error::ErrorCode::InvalidData,
+                        "extraction failed".to_string(),
+                    ))
+                    .unwrap(),
+                ))
                 .unwrap()
         };
         let (path_extraction, query_extraction, header_extraction) =
@@ -194,9 +202,7 @@ fn build_encode_response_fn(
         let ident = &json_field.ident;
         Ok(quote! {
             fn encode(self) -> ::http::Response<::bytes::Bytes> {
-                // TODO: better error?
-                let json = ::serde_json::to_string(&self.#ident)
-                    .unwrap_or_else(|e| format!("{{\"error\": \"serialization failed: {}\"}}", e));
+                let json = ::serde_json::to_string(&self.#ident).unwrap();
                 ::http::Response::builder()
                     .status(#status_code)
                     .header(::http::header::CONTENT_TYPE, "application/json")
@@ -272,11 +278,15 @@ fn build_extract_response_fn(
                     .and_then(|v| v.to_str().ok())
                     .and_then(|v| v.parse().ok())
                     .ok_or_else(|| {
-                        // FIXME: use ApiError correctly
                         ::http::Response::builder()
                             .status(::http::StatusCode::BAD_REQUEST)
+                            .header("Content-Type", "application/json")
                             .body(::bytes::Bytes::from(
-                                format!("missing or invalid header: {}", #header_name)
+                                ::serde_json::to_vec(&crate::v1::types::error::ApiError::with_message(
+                                    crate::v1::types::error::ErrorCode::BadHeader,
+                                    format!("missing or invalid header: {}", #header_name),
+                                ))
+                                .unwrap(),
                             ))
                             .unwrap()
                     })?;
@@ -297,11 +307,17 @@ fn build_extract_response_fn(
                 let (parts, body) = resp.into_parts();
                 #(#header_extraction)*
                 let #ident: #ty = ::serde_json::from_slice(&body)
-                    .map_err(|_| {
-                        // FIXME: proper error handling
+                    .map_err(|e| {
                         ::http::Response::builder()
                             .status(::http::StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(::bytes::Bytes::from("failed to parse response json"))
+                            .header(::http::header::CONTENT_TYPE, "application/json")
+                            .body(::bytes::Bytes::from(
+                                ::serde_json::to_vec(&crate::v1::types::error::ApiError::with_message(
+                                    crate::v1::types::error::ErrorCode::InvalidData,
+                                    format!("failed to parse response json: {}", e),
+                                ))
+                                .unwrap(),
+                            ))
                             .unwrap()
                     })?;
                 Ok(Response { #ident, #(#header_idents,)* })

@@ -765,4 +765,8 @@ pub enum ErrorCode {
     /// thread slowmode in effect
     #[error("thread slowmode in effect")]
     SlowmodeThread,
+
+    /// missing or invalid header
+    #[error("missing or invalid header")]
+    BadHeader,
 }

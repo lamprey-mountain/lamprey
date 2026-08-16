@@ -176,6 +176,7 @@ impl ErrorCode {
             ErrorCode::InteractionNotAllowed => StatusCode::FORBIDDEN,
             ErrorCode::SlowmodeMessage => StatusCode::FORBIDDEN,
             ErrorCode::SlowmodeThread => StatusCode::FORBIDDEN,
+            ErrorCode::BadHeader => StatusCode::BAD_REQUEST,
 
             // "payload too large" is specifically for the request body, so "bad request" is used instead
             ErrorCode::MediaTooBig => StatusCode::BAD_REQUEST,
