@@ -976,7 +976,6 @@ input[type="url"] {
 	box-shadow: 4px 4px 8px #111f;
 	border: solid $sep-300 1px;
 	border-radius: 4px;
-	/* overflow: hidden; */
 	width: 320px;
 	display: block;
 	text-align: left;
@@ -984,9 +983,11 @@ input[type="url"] {
 	color: inherit;
 	padding: 0;
 	cursor: default;
+	contain: content;
 
 	.banner {
 		height: 96px;
+		width: 100%;
 		aspect-ratio: 10 / 3;
 		background-color: $bg-150;
 		background-size: cover;
