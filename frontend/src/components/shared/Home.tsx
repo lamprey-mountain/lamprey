@@ -2,6 +2,7 @@ import { A } from "@solidjs/router";
 import { Show } from "solid-js";
 import { useApi } from "@/api";
 import { AnimatedText } from "@/atoms/AnimatedText";
+import { ColorPicker, GradientPicker } from "@/atoms/ColorPicker";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
@@ -36,6 +37,10 @@ export const Home = () => {
 					this is a new category of entertainment, we haven't invented yet
 				</AnimatedText>
 			</p>
+
+			<ColorPicker hasAlpha />
+
+			<GradientPicker hasAlpha />
 
 			<Show when={isAuthorized()}>
 				<button type="button" class="button" onClick={logout}>

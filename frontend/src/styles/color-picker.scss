@@ -1,18 +1,29 @@
 @use "./util.scss" as *;
 
 .color-picker {
-	border: solid red 1px;
-	/* border: solid $sep-500 1px; */
-	/* box-shadow: 4px 4px 8px #1114; */
+	border: solid $sep-500 1px;
+	box-shadow: 4px 4px 8px #0006;
+	border-radius: 4px;
 	width: 300px;
+	contain: content;
 
 	display: flex;
 	flex-direction: column;
 	background: $bg-100;
 
-	& > .canvas {
+	& > .canvas-container {
+		position: relative;
 		cursor: crosshair;
 		border-bottom: solid $sep-300 1px;
+		width: 100%;
+		height: 200px;
+
+		& > .canvas {
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			pointer-events: none;
+		}
 	}
 
 	.range {
@@ -28,6 +39,7 @@
 			background: $fg-100;
 			box-shadow: 0 0 4px #1114;
 			pointer-events: none;
+			translate: -50% 0;
 		}
 	}
 
@@ -38,6 +50,8 @@
 	}
 
 	.hue-map {
+		--luminance: 70%;
+		--chroma: 50%;
 		background: linear-gradient(
 			to right in var(--colorspace) longer hue,
 			oklch(var(--luminance) var(--chroma) 0),
@@ -45,24 +59,122 @@
 		);
 
 		& > .reticle {
+			// PERF: use translate
 			left: calc(var(--hue) / 360 * 100%);
 		}
 	}
 
 	.alpha-map {
-		background: linear-gradient(
+		--checker-size: 8px;
+		--checker-one: white;
+		--checker-two: #ccc;
+
+		// TODO: dark mode checkers?
+		// --checker-one: oklch(var(--color-bg1));
+		// --checker-two: oklch(var(--color-bg2));
+
+		background:
+			linear-gradient(
 			to right in var(--colorspace) longer hue,
-			oklch(var(--luminance) var(--chroma) 0),
-			oklch(var(--luminance) var(--chroma) 0)
-		);
+			transparent,
+			oklch(var(--luminance) var(--chroma) var(--hue))
+		),
+			repeating-conic-gradient(var(--checker-one) 0% 25%, var(--checker-two) 0%
+			50%);
+		background-size: 100% 100%, var(--checker-size) var(--checker-size);
 
 		& > .reticle {
+			// PERF: use translate
 			left: calc(var(--alpha) / 360 * 100%);
 		}
 	}
 
-	.text-input {
+	.input-wrapper {
+		display: flex;
+		align-items: center;
 		margin: 8px;
-		background: $bg-200;
+		margin-bottom: 4px;
+		gap: 4px;
+
+		& > .dropdown-container {
+			flex: 0 1 4em;
+		}
+
+		& > .input {
+			flex: 1 1 0%;
+			background: $bg-200;
+			min-width: 0;
+		}
+	}
+}
+
+.color-picker-button {
+	min-width: 2em;
+	min-height: 1em;
+	border-radius: 2px;
+	border: solid $sep-500 2px;
+
+	&:hover {
+		filter: brightness(90%);
+	}
+}
+
+.gradient-picker {
+	border: solid $sep-500 1px;
+	box-shadow: 4px 4px 8px #1114;
+	border-radius: 4px;
+	width: 300px;
+	contain: content;
+
+	display: flex;
+	flex-direction: column;
+	background: $bg-100;
+
+	& > .canvas-container {
+		position: relative;
+		cursor: crosshair;
+		border-bottom: solid $sep-300 1px;
+		width: 100%;
+		height: 200px;
+
+		& > .canvas {
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			pointer-events: none;
+		}
+
+		& > .stop-marker {
+			position: absolute;
+			top: 50%;
+			left: calc(var(--x) * 100%);
+			right: calc(var(--y) * 100%);
+			transform: translate(-50%, -50%);
+			width: 16px;
+			height: 16px;
+			border: 2px solid #fff;
+			border-radius: 50%;
+			z-index: 10;
+
+			&:hover {
+				border: 2px solid #eee;
+			}
+		}
+	}
+
+	& > .stops {
+		margin: 8px;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+
+		& > .stop {
+			display: flex;
+			align-items: stretch;
+
+			& > .position-input {
+				width: 3em;
+			}
+		}
 	}
 }
