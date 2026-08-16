@@ -5,9 +5,6 @@ use tracing::warn;
 
 use crate::prelude::*;
 
-// FIXME: don't use internal errors everywhere
-// .map_err(|e| ServerError::Internal(Box::new(e)))?;
-
 #[handler(routes::ack_bulk)]
 async fn bulk(req: Req<routes::ack_bulk::Endpoint>) -> Result<routes::ack_bulk::Response> {
     let user = req.identity().ensure_user()?;
@@ -34,50 +31,41 @@ async fn bulk(req: Req<routes::ack_bulk::Endpoint>) -> Result<routes::ack_bulk::
         srv.perms
             .for_channel3(Some(user.id), channel_id)
             .await
-            .map_err(|e| ServerError::Internal(Box::new(e)))?
-            .ensure_view()
-            .map_err(|e| ServerError::Internal(Box::new(e)))?
-            .check()
-            .map_err(|e| ServerError::Internal(Box::new(e)))?;
+            .cast_internal()?
+            .ensure_view()?
+            .check()?;
     }
 
     if !req.inner().body.acks.is_empty() {
-        let mut txn = req
-            .globals()
-            .begin()
-            .await
-            .map_err(|e| ServerError::Internal(Box::new(e)))?;
+        let mut txn = req.globals().begin().await.cast_internal()?;
         txn.unread_ack_bulk(user.id, &req.inner().body.acks)
             .await
-            .map_err(|e| ServerError::Internal(Box::new(e)))?;
-        txn.commit()
-            .await
-            .map_err(|e| ServerError::Internal(Box::new(e)))?;
+            .cast_internal()?;
+        txn.commit().await.cast_internal()?;
 
         for &channel_id in &channel_ids {
             srv.channels.invalidate_user(channel_id, user.id).await;
         }
 
+        let event = MessageSync::PassiveAck {
+            user_id: user.id,
+            ack_states: req
+                .inner()
+                .body
+                .acks
+                .iter()
+                .map(|a| AckState {
+                    ty: a.ty.clone(),
+                    unread: false,
+                })
+                .collect(),
+        };
+
         req.globals()
             .messaging()
-            .broadcast_user(
-                user.id,
-                MessageSync::PassiveAck {
-                    user_id: user.id,
-                    ack_states: req
-                        .inner()
-                        .body
-                        .acks
-                        .iter()
-                        .map(|a| AckState {
-                            ty: a.ty.clone(),
-                            unread: false,
-                        })
-                        .collect(),
-                },
-            )
+            .broadcast_user(user.id, event)
             .await
-            .map_err(|e| ServerError::Internal(Box::new(e)))?;
+            .cast_internal();
     }
 
     Ok(routes::ack_bulk::Response {})

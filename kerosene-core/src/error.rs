@@ -39,7 +39,7 @@ impl ServerError {
     }
 }
 
-// TODO: remove
+// TODO: deprecate and remove
 impl From<ServerError> for ApiError {
     fn from(value: ServerError) -> Self {
         match value {
@@ -79,5 +79,16 @@ impl From<tracing::subscriber::SetGlobalDefaultError> for ServerError {
 impl From<tracing_subscriber::filter::ParseError> for ServerError {
     fn from(value: tracing_subscriber::filter::ParseError) -> Self {
         ServerError::Internal(Box::new(value))
+    }
+}
+
+pub trait LegacyErrorExt<T> {
+    /// cast all errors into `ServerError::Internal`
+    fn cast_internal(self) -> Result<T, ServerError>;
+}
+
+impl<T> LegacyErrorExt<T> for lamprey_backend_core::Result<T> {
+    fn cast_internal(self) -> Result<T, ServerError> {
+        self.map_err(|err| ServerError::Internal(Box::new(err)))
     }
 }

@@ -121,6 +121,12 @@ pub async fn well_known(State(s): State<Globals>) -> Result<impl IntoResponse> {
 }
 
 pub fn routes(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
-    // TODO: lamprey_backend_rest::router()
     OpenApiRouter::new().nest("/v1", routes_v1(s))
+
+    // let kerosene_routes = kerosene_rest::Routes::new_api()
+    //     .into_axum_openapi()
+    //     .with_state(s.globals.clone());
+    // OpenApiRouter::new()
+    //     .nest("/v1", routes_v1(s))
+    //     .merge(kerosene_routes)
 }

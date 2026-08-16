@@ -1,6 +1,6 @@
 // TODO: clean up this code
 
-use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::error::{ApiError, ApiResult, ErrorCode};
 use common::v1::types::{ChannelId, Permission, RoomId};
 
 use crate::error::{Error, Result};
@@ -319,12 +319,12 @@ impl Default for Permissions2Metadata {
 }
 
 impl ResourceContext {
-    fn not_found_error(&self) -> Error {
+    fn not_found_error(&self) -> ApiError {
         let code = match self {
             ResourceContext::Room(_) => ErrorCode::UnknownRoom,
             ResourceContext::Channel(..) | ResourceContext::Thread(..) => ErrorCode::UnknownChannel,
         };
-        Error::ApiError(ApiError::from_code(code))
+        ApiError::from_code(code)
     }
 }
 
@@ -409,7 +409,7 @@ impl Permissions2<CheckVisibility> {
     }
 
     /// Ensure the user can view this resource, transitioning to CheckPermissions state.
-    pub fn ensure_view(self) -> Result<Permissions2<CheckPermissions>> {
+    pub fn ensure_view(self) -> ApiResult<Permissions2<CheckPermissions>> {
         if self.visible {
             Ok(Permissions2 {
                 visible: self.visible,
@@ -426,14 +426,14 @@ impl Permissions2<CheckVisibility> {
     /// Assume the user can view this resource, transitioning to CheckPermissions state.
     ///
     /// Used for eg. invites to private rooms.
-    pub fn assume_visible(self) -> Result<Permissions2<CheckPermissions>> {
-        Ok(Permissions2 {
+    pub fn assume_visible(self) -> Permissions2<CheckPermissions> {
+        Permissions2 {
             visible: true,
             bits: self.bits,
             context: self.context,
             metadata: self.metadata,
             state: CheckPermissions::default(),
-        })
+        }
     }
 
     /// Set whether thread slowmode is currently active for this user.
@@ -493,28 +493,26 @@ impl Permissions2<CheckPermissions> {
     }
 
     /// evaluate all the configured checks, returning an Err if any of them fail.
-    pub fn check(&self) -> Result<()> {
+    pub fn check(&self) -> ApiResult<()> {
         if self.state.locked {
-            return Err(Error::ApiError(ApiError::from_code(
-                ErrorCode::ThreadLocked,
-            )));
+            return Err(ApiError::from_code(ErrorCode::ThreadLocked));
         }
 
         if self.state.slowmode_thread_bypass_needed {
-            return Err(Error::BadStatic("slowmode in effect"));
+            return Err(ApiError::from_code(ErrorCode::SlowmodeThread));
         }
 
         if self.state.slowmode_message_bypass_needed {
-            return Err(Error::BadStatic("slowmode in effect"));
+            return Err(ApiError::from_code(ErrorCode::SlowmodeMessage));
         }
 
         if self.state.missing == PermissionBits::default() {
             Ok(())
         } else {
-            Err(Error::ApiError(ApiError {
+            Err(ApiError {
                 required_permissions: self.state.missing.to_vec(),
                 ..ApiError::from_code(ErrorCode::MissingPermissions)
-            }))
+            })
         }
     }
 

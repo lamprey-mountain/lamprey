@@ -5,6 +5,7 @@ use axum::{
 use utoipa::openapi::{
     Components, Info, OpenApi, OpenApiBuilder, PathItem, Tag, extensions::Extensions,
 };
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::util::Globals;
 
@@ -87,7 +88,9 @@ impl Routes {
         };
 
         for handler in inventory::iter::<Handler> {
-            (handler.register)(&mut me);
+            if handler.tag == "api" {
+                (handler.register)(&mut me);
+            }
         }
 
         me
@@ -111,7 +114,9 @@ impl Routes {
         };
 
         for handler in inventory::iter::<Handler> {
-            (handler.register)(&mut me);
+            if handler.tag == "cdn" {
+                (handler.register)(&mut me);
+            }
         }
         me
     }
@@ -142,6 +147,13 @@ impl Routes {
         //         Json(openapi_filtered)
         //     }),
         // )
+    }
+
+    /// convert this into an OpenApiRouter router
+    pub fn into_axum_openapi(self) -> OpenApiRouter<Globals> {
+        let router: OpenApiRouter<Globals> = self.router.unwrap().into();
+        let schema: OpenApiRouter<Globals> = OpenApiRouter::with_openapi(self.openapi);
+        router.merge(schema)
     }
 
     pub(crate) fn nest<F: FnMut(&mut Self)>(&mut self, prefix: &str, mut f: F) {

@@ -194,7 +194,7 @@ async fn invite_resolve(
             .perms
             .for_room3(auth.user_id(), room.id)
             .await?
-            .assume_visible()?
+            .assume_visible()
             .needs(Permission::InviteManage)
             .check()
             .is_err(),
@@ -202,7 +202,7 @@ async fn invite_resolve(
             .perms
             .for_channel3(auth.user_id(), channel.id)
             .await?
-            .assume_visible()?
+            .assume_visible()
             .needs(Permission::InviteManage)
             .check()
             .is_err(),
@@ -210,7 +210,7 @@ async fn invite_resolve(
             .perms
             .for_room3(auth.user_id(), SERVER_ROOM_ID)
             .await?
-            .assume_visible()?
+            .assume_visible()
             .needs(Permission::InviteManage)
             .check()
             .is_err(),

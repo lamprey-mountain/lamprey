@@ -757,4 +757,12 @@ pub enum ErrorCode {
     /// media is too big
     #[error("media is too big")]
     MediaTooBig,
+
+    /// message slowmode in effect
+    #[error("message slowmode in effect")]
+    SlowmodeMessage,
+
+    /// thread slowmode in effect
+    #[error("thread slowmode in effect")]
+    SlowmodeThread,
 }

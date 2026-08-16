@@ -29,7 +29,7 @@ pub mod compat;
 
 /// common types used everywhere in backend
 pub mod prelude {
-    pub use crate::error::{ApiError, ApiResult, ServerError, ServerResult};
+    pub use crate::error::{ApiError, ApiResult, LegacyErrorExt, ServerError, ServerResult};
 
     // TODO: use more types in prelude?
     // pub use lamprey::v1::types::{UserId, RoomId, MediaId};
