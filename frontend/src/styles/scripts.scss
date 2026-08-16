@@ -7,111 +7,10 @@
 	width: 100%;
 	background-color: $bg-200;
 	overflow: hidden;
-}
 
-.pane-container {
-	display: flex;
-	flex-direction: column;
-	min-width: 0;
-	min-height: 0;
-}
-
-.pane-resize-handle {
-	position: relative;
-	z-index: 10;
-	transition: background-color 0.2s;
-
-	&.horizontal {
-		width: 4px;
-		margin: 0 -2px;
-		cursor: col-resize;
-		border-right: solid $sep-300 1px;
-	}
-
-	&.vertical {
-		height: 4px;
-		margin: -2px 0;
-		cursor: row-resize;
-		border-top: solid $sep-300 1px;
-	}
-
-	&:hover,
-	&:active {
-		background-color: $link-500;
-	}
-}
-
-.split-horizontal {
-	display: flex;
-	flex-direction: row;
-	height: 100%;
-	width: 100%;
-
-	& > .pane-container + .pane-container {
-		border-left: 1px solid $sep-500;
-	}
-}
-
-.split-vertical {
-	display: flex;
-	flex-direction: column;
-	height: 100%;
-	width: 100%;
-
-	& > .pane-container + .pane-container {
-		border-top: 1px solid $sep-500;
-	}
-}
-
-.script-pane {
-	display: flex;
-	flex-direction: column;
-	height: 100%;
-	width: 100%;
-	overflow: hidden;
-
-	header {
-		display: flex;
-		align-items: center;
-		padding: 4px 8px;
-		background-color: $bg-150;
-		border-bottom: 1px solid $sep-300;
-		gap: 8px;
-		height: 32px;
-
-		nav {
-			font-size: 0.8rem;
-			color: $fg-400;
-		}
-
-		.title {
-			font-weight: bold;
-			flex: 1;
-			font-size: 0.9rem;
-		}
-
-		.pane-header-save {
-			border-radius: 3px;
-			font-size: 0.75rem;
-		}
-
-		button.close {
-			color: $fg-500;
-			cursor: pointer;
-			padding: 0 4px;
-			font-size: 1.2rem;
-			line-height: 1;
-
-			&:hover {
-				color: $fg-100;
-			}
-		}
-	}
-
-	.pane-content {
-		flex: 1;
-		position: relative;
-		overflow: auto;
+	& > .pane-container {
+		height: 100%;
+		width: 100%;
 	}
 }
 
@@ -492,6 +391,51 @@
 
 			.cm-editor {
 				height: 100%;
+			}
+		}
+	}
+}
+
+.script-create-menu > .inner {
+	display: flex;
+	flex-direction: column;
+	background-color: $bg-150;
+	border: solid 1px $sep-500;
+	box-shadow: 2px 2px 8px $bg-100;
+	min-width: 128px;
+	padding: 4px;
+
+	.button {
+		display: flex;
+		gap: 4px;
+		align-items: center;
+		padding: 2px 4px;
+		border-radius: 2px;
+		width: 100%;
+		border: none;
+		color: $fg-500;
+		background: none;
+
+		.icon2 {
+			visibility: hidden;
+		}
+
+		&:hover,
+		&:focus-visible {
+			color: $fg-100;
+			background: #fff1;
+
+			.icon2 {
+				visibility: visible;
+			}
+		}
+
+		&.selected {
+			color: $fg-200;
+
+			.icon2 {
+				visibility: visible;
+				background-color: $link-500;
 			}
 		}
 	}

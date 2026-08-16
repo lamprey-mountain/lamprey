@@ -3921,3 +3921,107 @@ button.round {
 		translate: 0 -2px;
 	}
 }
+
+.pane-container {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+
+	.pane-resize-handle {
+		position: relative;
+		z-index: 10;
+		transition: background-color 0.2s;
+
+		&.horizontal {
+			width: 4px;
+			margin: 0 -2px;
+			cursor: col-resize;
+			border-right: solid $sep-300 1px;
+		}
+
+		&.vertical {
+			height: 4px;
+			margin: -2px 0;
+			cursor: row-resize;
+			border-top: solid $sep-300 1px;
+		}
+
+		&:hover,
+		&:active {
+			background-color: $link-500;
+		}
+	}
+
+	.pane-item {
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		min-width: 0;
+		min-height: 0;
+		flex: 1;
+
+		&.sized {
+			flex: 0 0 var(--size);
+		}
+
+		&[data-pane-type="split_horizontal"] {
+			flex-direction: row;
+
+			& > .pane-item + .pane-item {
+				border-left: 1px solid $sep-500;
+			}
+		}
+
+		&[data-pane-type="split_vertical"] {
+			flex-direction: column;
+
+			& > .pane-item + .pane-item {
+				border-top: 1px solid $sep-500;
+			}
+		}
+
+		& > .pane-header {
+			display: flex;
+			align-items: center;
+			padding: 4px 8px;
+			background-color: $bg-150;
+			border-bottom: 1px solid $sep-300;
+			gap: 8px;
+			height: 32px;
+
+			nav {
+				font-size: 0.8rem;
+				color: $fg-400;
+			}
+
+			.title {
+				font-weight: bold;
+				flex: 1;
+				font-size: 0.9rem;
+			}
+
+			.pane-header-save {
+				border-radius: 3px;
+				font-size: 0.75rem;
+			}
+
+			button.close {
+				color: $fg-500;
+				cursor: pointer;
+				padding: 0 4px;
+				font-size: 1.2rem;
+				line-height: 1;
+
+				&:hover {
+					color: $fg-100;
+				}
+			}
+		}
+
+		& > .pane-content {
+			flex: 1;
+			position: relative;
+		}
+	}
+}

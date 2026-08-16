@@ -1,42 +1,33 @@
+import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { useNavigate } from "@solidjs/router";
 import fuzzysort from "fuzzysort";
+import { type Channel, createUpload, type Media, type Script } from "sdk";
+import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
 	createResource,
 	createSignal,
 	For,
-	type JSX,
-	Match,
-	onCleanup,
 	Show,
-	Switch,
 } from "solid-js";
-import type { Channel, Script } from "ts-sdk";
-import { useScriptLogs, useScriptRuns, useScripts } from "@/api";
-import { PaneResizeHandle } from "@/atoms/Resizable";
+import { Portal } from "solid-js/web";
+import { useApi } from "@/api";
 import { Search } from "@/atoms/Search";
-import { Time } from "@/atoms/Time";
+import { createPanes } from "@/components/panes/context";
 import { useChannel } from "@/contexts/channel";
-import { getUrl } from "@/media/util";
-import {
-	createScriptContext,
-	ScriptContext,
-	type ScriptPaneChild,
-	type ScriptPane as ScriptPaneT,
-	useScript,
-} from "./context";
-import { LazyCodeEditor } from "./ScriptEditor";
+import { ChatHeader } from "../chat/ChatHeader";
+import { createScriptContext, ScriptContext } from "./context";
+import { RunLogs, ScriptCode, ScriptInputs, ScriptPreview } from "./Panes";
 
 // in channel nav: show current script like a thread
 
 export const Scripts = (props: { channel: Channel }) => {
+	const api = useApi();
 	const s = createScriptContext(props.channel.id);
-	const scriptsService = useScripts();
-	const logs = useScriptLogs();
 
 	const [scriptsResource] = createResource(
 		() => props.channel.id,
-		(id) => scriptsService.list(id),
+		(id) => api.scripts.list(id),
 	);
 
 	const [search, setSearch] = createSignal("");
@@ -57,6 +48,17 @@ export const Scripts = (props: { channel: Channel }) => {
 		navigate(`/channel/${props.channel.id}/script/${script.id}`);
 	};
 
+	const panes = createPanes({
+		types: {
+			script_code: (props) => (
+				<ScriptCode pane={props.pane} setHeaderExtra={props.setHeaderExtra} />
+			),
+			script_inputs: (props) => <ScriptInputs pane={props.pane} />,
+			script_preview: () => <ScriptPreview />,
+			run_logs: (props) => <RunLogs pane={props.pane} />,
+		},
+	});
+
 	// Auto-open script when script_id is set in channel state
 	const ch = useChannel();
 	createEffect(() => {
@@ -67,33 +69,91 @@ export const Scripts = (props: { channel: Channel }) => {
 		const script = items.find((s) => s.id === scriptId);
 		if (!script) return;
 
-		s.reset();
-		s.createPane({
+		panes.closeAll();
+		panes.create({
 			id: 0,
 			type: "split_horizontal",
 		});
-		s.createPane({
+		panes.create({
 			id: 1,
 			parentId: 0,
-			type: "script_code",
-			script_id: script.id,
+			type: "leaf",
+			data: {
+				type: "script_code",
+				script_id: script.id,
+			},
 		});
-		s.createPane({
+		panes.create({
 			id: 2,
 			parentId: 0,
-			type: "script_inputs",
-			script_id: script.id,
+			type: "leaf",
+			data: {
+				type: "script_inputs",
+				script_id: script.id,
+			},
 		});
-		logs.subscribe(props.channel.id, script.id);
+		api.scriptLogs.subscribe(props.channel.id, script.id);
 		ch[1]("script_id", undefined);
 	});
 
+	const [createOpen, setCreateOpen] = createSignal(false);
+	const [referenceEl, setReferenceEl] = createSignal<HTMLElement>();
+	const [floatingEl, setFloatingEl] = createSignal<HTMLElement>();
+	const position = useFloating(referenceEl, floatingEl, {
+		whileElementsMounted: autoUpdate,
+		middleware: [offset(5), flip(), shift()],
+		placement: "bottom-end",
+	});
+
+	let scriptUploadRef!: HTMLInputElement;
+
+	// TODO: navigate to redex on create
+
+	const onCreateDocument = async () => {
+		const redex = await api.scripts.create(props.channel.id, {
+			format: "Javascript",
+			location: { type: "Document" },
+		});
+		console.log(redex);
+	};
+
+	const onCreateUpload = async () => {
+		scriptUploadRef.click();
+	};
+
+	const onUpload = async () => {
+		// TODO: accept multiple files
+		const file = scriptUploadRef.files?.[0];
+		if (!file) return;
+		createUpload({
+			client: api.client,
+			file,
+			onProgress(_progress: number) {
+				// TODO: progress indicator
+			},
+			// TODO(future): pause/resume support
+			onPause() {},
+			onResume() {},
+			onFail(_error: Error) {
+				// TODO: error handling
+			},
+			async onComplete(media: Media) {
+				const redex = await api.scripts.create(props.channel.id, {
+					// NOTE:
+					format: file.name.endsWith(".wasm") ? "Webassembly" : "Javascript",
+					location: { type: "Hosted", media_id: media.id },
+				});
+				console.log(redex);
+			},
+		});
+	};
+
 	return (
 		<ScriptContext.Provider value={s}>
+			<ChatHeader channel={props.channel} />
 			<div class="scripts" style="grid-area:main">
-				<Show
-					when={s.root}
-					fallback={
+				<panes.Render
+					placeholder={
 						<div class="script-list">
 							<header class="scripts-header">
 								<Search
@@ -101,7 +161,56 @@ export const Scripts = (props: { channel: Channel }) => {
 									value={search}
 									onInput={setSearch}
 								/>
-								<button class="button primary">create</button>
+								<div class="script-create-container">
+									<button
+										type="button"
+										class="button primary"
+										ref={setReferenceEl}
+										onClick={() => setCreateOpen(!createOpen())}
+										classList={{ open: createOpen() }}
+									>
+										create
+									</button>
+									<input
+										type="file"
+										style="display:none"
+										ref={scriptUploadRef}
+										onInput={onUpload}
+										accept=".js,.wasm,text/javascript,application/wasm"
+									/>
+									<Portal>
+										<Show when={createOpen()}>
+											<div
+												ref={setFloatingEl}
+												class="script-create-menu"
+												style={{
+													position: position.strategy,
+													top: `${position.y ?? 0}px`,
+													left: `${position.x ?? 0}px`,
+													"z-index": 1000,
+												}}
+											>
+												{/* TODO: icons, descriptions */}
+												<menu class="inner">
+													<button
+														type="button"
+														class="button"
+														onClick={onCreateDocument}
+													>
+														document
+													</button>
+													<button
+														type="button"
+														class="button"
+														onClick={onCreateUpload}
+													>
+														upload
+													</button>
+												</menu>
+											</div>
+										</Show>
+									</Portal>
+								</div>
 							</header>
 							<ul>
 								<For each={filteredScripts()}>
@@ -121,481 +230,8 @@ export const Scripts = (props: { channel: Channel }) => {
 							</ul>
 						</div>
 					}
-				>
-					{(root) => <ScriptPaneRenderer pane={root()} />}
-				</Show>
-			</div>
-		</ScriptContext.Provider>
-	);
-};
-
-const ScriptPaneRenderer = (props: {
-	pane: ScriptPaneChild;
-	isHorizontal?: boolean;
-}) => {
-	const s = useScript();
-	const size = () => props.pane.size;
-
-	return (
-		<div
-			class="pane-container"
-			style={{
-				flex: size() ? `0 0 ${size()}px` : "1",
-				"min-width": "0",
-				"min-height": "0",
-			}}
-		>
-			<Show
-				when={
-					props.pane.type === "split_horizontal" ||
-					props.pane.type === "split_vertical"
-				}
-				fallback={<ScriptPane pane={props.pane} />}
-			>
-				<div
-					class={
-						props.pane.type === "split_horizontal"
-							? "split-horizontal"
-							: "split-vertical"
-					}
-				>
-					<For
-						each={
-							(
-								props.pane as Extract<
-									ScriptPaneT,
-									{ children: ScriptPaneChild[] }
-								>
-							).children
-						}
-					>
-						{(child, index) => (
-							<>
-								<Show when={index() > 0}>
-									<PaneResizeHandle
-										isHorizontal={props.pane.type === "split_horizontal"}
-										onResize={(sz) => {
-											s.updatePaneSize(
-												(
-													props.pane as Extract<
-														ScriptPaneT,
-														{ children: ScriptPaneChild[] }
-													>
-												).children[index() - 1].id,
-												sz,
-											);
-										}}
-									/>
-								</Show>
-								<ScriptPaneRenderer
-									pane={child}
-									isHorizontal={props.pane.type === "split_horizontal"}
-								/>
-							</>
-						)}
-					</For>
-				</div>
-			</Show>
-		</div>
-	);
-};
-
-export const ScriptPane = (props: { pane: ScriptPaneT }) => {
-	const s = useScript();
-	const pane = props.pane;
-	const navigate = useNavigate();
-	const [headerExtra, setHeaderExtra] = createSignal<JSX.Element>(null);
-
-	// TODO: use x icons for pane close button
-
-	return (
-		<div class="script-pane">
-			<header>
-				<nav>{pane.type.replace("script_", "").replace("_", " ")}</nav>
-				<div class="title">Pane {pane.id}</div>
-				{headerExtra()}
-				<button
-					type="button"
-					class="close"
-					onClick={() => {
-						s.closePane(pane.id);
-						if (!s.root) {
-							navigate(`/channel/${s.channel_id}`);
-						}
-					}}
-				>
-					&times;
-				</button>
-			</header>
-			<div class="pane-content">
-				<Switch>
-					<Match when={pane.type === "script_code"}>
-						<ScriptCode
-							pane={pane as Extract<ScriptPaneT, { type: "script_code" }>}
-							setHeaderExtra={setHeaderExtra}
-						/>
-					</Match>
-					<Match when={pane.type === "script_inputs"}>
-						<ScriptInputs
-							pane={pane as Extract<ScriptPaneT, { type: "script_inputs" }>}
-						/>
-					</Match>
-					<Match when={pane.type === "script_preview"}>
-						<ScriptPreview />
-					</Match>
-					<Match when={pane.type === "run_logs"}>
-						<RunLogs
-							pane={pane as Extract<ScriptPaneT, { type: "run_logs" }>}
-						/>
-					</Match>
-				</Switch>
-			</div>
-		</div>
-	);
-};
-
-export const ScriptCode = (props: {
-	pane: Extract<ScriptPaneT, { type: "script_code" }>;
-	setHeaderExtra: (el: JSX.Element) => void;
-}) => {
-	const scriptsService = useScripts();
-	const script = () => scriptsService.get(props.pane.script_id);
-	const [source, { mutate }] = createResource(
-		() => {
-			const loc = script()?.latest_version.location;
-			if (loc?.type === "Hosted") return loc.media;
-			return undefined;
-		},
-		(media) => {
-			return fetch(getUrl(media)).then((r) => r.text());
-		},
-	);
-
-	const [editedSource, setEditedSource] = createSignal<string>("");
-	const [saving, setSaving] = createSignal(false);
-
-	createEffect(() => {
-		const s = source();
-		if (s !== undefined) {
-			setEditedSource(s);
-		}
-	});
-
-	const hasEdits = () => {
-		const orig = source() ?? "";
-		const curr = editedSource();
-		return curr !== "" && curr !== orig;
-	};
-
-	const handleSave = async () => {
-		const scr = script();
-		if (!scr) return;
-		setSaving(true);
-		try {
-			await scriptsService.uploadAndSaveContent(
-				scr.channel_id,
-				scr.id,
-				editedSource(),
-			);
-			mutate(editedSource());
-		} catch (err) {
-			console.error("Failed to save script:", err);
-		} finally {
-			setSaving(false);
-		}
-	};
-	createEffect(() => {
-		props.setHeaderExtra(
-			<Show when={hasEdits()}>
-				<button
-					type="button"
-					class="pane-header-save button primary"
-					onClick={handleSave}
-					disabled={saving()}
-				>
-					{saving() ? "Saving..." : "Save Edits"}
-				</button>
-			</Show>,
-		);
-	});
-
-	onCleanup(() => {
-		props.setHeaderExtra(null);
-	});
-
-	return (
-		<div class="script-code-container">
-			<div class="editor-wrapper">
-				<LazyCodeEditor
-					source={source()}
-					loading={source.loading}
-					onChange={setEditedSource}
 				/>
 			</div>
-		</div>
-	);
-};
-
-export const ScriptInputs = (props: {
-	pane: Extract<ScriptPaneT, { type: "script_inputs" }>;
-}) => {
-	const s = useScript();
-	const scriptsService = useScripts();
-	const runsService = useScriptRuns();
-
-	const [script] = createResource(
-		() => `${s.channel_id}:${props.pane.script_id}`,
-		(id) => scriptsService.fetch(id),
-	);
-
-	const [runs, { refetch: refetchRuns }] = createResource(
-		() => props.pane.script_id,
-		(id) => runsService.list(s.channel_id, id),
-	);
-
-	const trigger = async (inputId: string) => {
-		await runsService.trigger(s.channel_id, props.pane.script_id, {
-			async: true,
-			exclusive: false,
-			trigger_id: inputId,
-		});
-		refetchRuns();
-	};
-
-	const openLogs = (runId: string) => {
-		const existingLogPane = s.findPane((p) => p.type === "run_logs");
-		if (existingLogPane) {
-			s.updatePane(existingLogPane.id, {
-				script_id: props.pane.script_id,
-				run_id: runId,
-			} as Partial<ScriptPane>);
-		} else {
-			s.splitPane(
-				props.pane.id,
-				{
-					type: "run_logs",
-					script_id: props.pane.script_id,
-					run_id: runId,
-				},
-				"vertical",
-			);
-		}
-	};
-
-	// FIXME: input.type.type -> input.type
-
-	return (
-		<div class="script-inputs">
-			<section>
-				<h3>Inputs</h3>
-				<div class="input-list">
-					<For each={script()?.handlers}>
-						{(input) => (
-							<div class="script-input" data-input-type={input.type}>
-								<Show when={input.type === "Manual"}>
-									<button
-										class="inner"
-										type="button"
-										onClick={() => trigger(input.id)}
-									>
-										<div>{input.label}</div>
-										<div class="dim">{input.id}</div>
-									</button>
-								</Show>
-								<Show when={input.type !== "Manual"}>
-									<div class="inner">
-										<div>{input.label}</div>
-										<div class="dim">{input.id}</div>
-									</div>
-								</Show>
-							</div>
-						)}
-					</For>
-				</div>
-			</section>
-			<section>
-				<h3>Recent Runs</h3>
-				<ul class="run-list">
-					<For each={runs()?.items}>
-						{(run) => (
-							<li>
-								<div class="run-item">
-									<div class="run-info">
-										<span class="status" data-status={run.status}>
-											{run.status}
-										</span>
-										<Time date={new Date(run.created_at)} />
-									</div>
-									<menu>
-										<button type="button" onClick={() => openLogs(run.id)}>
-											Logs
-										</button>
-									</menu>
-								</div>
-							</li>
-						)}
-					</For>
-				</ul>
-			</section>
-		</div>
-	);
-};
-
-export const ScriptPreview = () => {
-	// needs backend support
-	// would render http page for http endpoint, for example
-	return "todo";
-};
-
-// TODO: use table instead of flex
-export const RunLogs = (props: {
-	pane: Extract<ScriptPaneT, { type: "run_logs" }>;
-}) => {
-	const s = useScript();
-	const logs = useScriptLogs();
-	const runsService = useScriptRuns();
-
-	const { script_id, run_id } = props.pane;
-	const channel_id = s.channel_id;
-
-	const [logResource] = createResource(
-		() => [channel_id, script_id, run_id] as const,
-		([c, sid, rid]) => logs.list(c, sid, rid),
-	);
-
-	const [runInfo] = createResource(
-		() => run_id,
-		(rid) => runsService.fetch(`${channel_id}:${script_id}:${rid}`),
-	);
-
-	const [levelFilter, setLevelFilter] = createSignal<string>("all");
-	const [expandedEntry, setExpandedEntry] = createSignal<number | null>(null);
-
-	const filteredLogs = () => {
-		const filter = levelFilter();
-		if (filter === "all") return logs.getLogsForRun(run_id);
-		return logs.getLogsForRun(run_id).filter((e) => e.level === filter);
-	};
-
-	const hasAttrs = (entry: { attributes?: Record<string, unknown> }) =>
-		entry.attributes && Object.keys(entry.attributes).length > 0;
-
-	const toggleExpand = (entryId: number) => {
-		setExpandedEntry((prev) => (prev === entryId ? null : entryId));
-	};
-
-	const handleStop = async () => {
-		await runsService.stop(channel_id, script_id, run_id);
-	};
-
-	const formatAttrsSummary = (attrs?: Record<string, unknown>) => {
-		if (!attrs) return "";
-		return Object.entries(attrs)
-			.map(([key, val]) => {
-				let valStr = String(val);
-				if (valStr.length > 20) {
-					valStr = valStr.substring(0, 17) + "...";
-				}
-				return `${key}=${valStr}`;
-			})
-			.join(" ");
-	};
-
-	return (
-		<div class="run-logs">
-			<Show when={logResource.loading}>
-				<div>Loading logs...</div>
-			</Show>
-			<Show when={logResource.error}>
-				<div>Error: {logResource.error}</div>
-			</Show>
-			<Show when={!logResource.loading && !logResource.error}>
-				<Show when={runInfo()}>
-					{(run) => (
-						<div class="top">
-							<span class="status" data-status={run().status}>
-								{run().status}
-							</span>
-							<Show
-								when={run().status === "Active" || run().status === "Creating"}
-							>
-								<button type="button" onClick={handleStop}>
-									Stop
-								</button>
-							</Show>
-						</div>
-					)}
-				</Show>
-				<div class="log-filters">
-					<button
-						type="button"
-						onClick={() => setLevelFilter("all")}
-						aria-pressed={levelFilter() === "all"}
-					>
-						All
-					</button>
-					<button
-						type="button"
-						onClick={() => setLevelFilter("Info")}
-						aria-pressed={levelFilter() === "Info"}
-					>
-						Info
-					</button>
-					<button
-						type="button"
-						onClick={() => setLevelFilter("Warning")}
-						aria-pressed={levelFilter() === "Warning"}
-					>
-						Warning
-					</button>
-					<button
-						type="button"
-						onClick={() => setLevelFilter("Error")}
-						aria-pressed={levelFilter() === "Error"}
-					>
-						Error
-					</button>
-				</div>
-				<ul role="log">
-					<For each={filteredLogs()}>
-						{(entry) => (
-							<li
-								classList={{ expanded: expandedEntry() === entry.id }}
-								onclick={() => toggleExpand(entry.id)}
-								style="cursor: pointer"
-							>
-								<div class="main">
-									<span class="time">
-										<Time date={new Date(entry.created_at)} />
-									</span>
-									<span class="level" data-level={entry.level}>
-										{entry.level}
-									</span>
-									<span class="content">{entry.content}</span>
-									<Show when={hasAttrs(entry)}>
-										<span class="attrs-summary">
-											{formatAttrsSummary(entry.attributes)}
-										</span>
-									</Show>
-								</div>
-								<Show when={expandedEntry() === entry.id && hasAttrs(entry)}>
-									<ul class="attrs expanded">
-										<For each={Object.entries(entry.attributes ?? {})}>
-											{([key, val]) => (
-												<li>
-													<span class="key">{key}</span>
-													<span class="syn">=</span>
-													<span class="val">{String(val)}</span>
-												</li>
-											)}
-										</For>
-									</ul>
-								</Show>
-							</li>
-						)}
-					</For>
-				</ul>
-			</Show>
-		</div>
+		</ScriptContext.Provider>
 	);
 };

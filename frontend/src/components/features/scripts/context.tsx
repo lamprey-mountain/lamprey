@@ -1,345 +1,144 @@
-import {
-	createContext,
-	createSignal,
-	type ParentProps,
-	useContext,
-} from "solid-js";
-import type { Script } from "ts-sdk";
+import type { MessageSync, Script } from "sdk";
+import { createContext, createSignal, onCleanup, useContext } from "solid-js";
+import * as Y from "yjs";
+import { useApi } from "@/api";
+import type { PaneNode } from "@/components/panes/context";
+import { base64UrlDecode, base64UrlEncode } from "../editor/editor-utils";
 
 type ScriptContextT = {
 	channel_id: string;
-	script?: Script;
-	root?: ScriptPane;
-
-	createPane(create: ScriptPaneCreate): void;
-	closePane(tab_id: number): void;
-	updatePaneSize(tab_id: number, size: number): void;
-	findPane(predicate: (pane: ScriptPane) => boolean): ScriptPane | undefined;
-	updatePane(tab_id: number, update: Partial<ScriptPane>): void;
-	splitPane(
-		targetId: number,
-		newPane: ScriptPaneCreate,
-		direction: "horizontal" | "vertical",
-	): void;
-
-	/** close all tabs */
-	reset(): void;
-
-	/** replace all existing tabs to point to a different script */
-	switchScript(script_id: string): void;
+	documents: Map<string, Y.Doc>;
+	acquire(redex: Script): Y.Doc | null;
+	isSubscribed(id: string): boolean;
 };
 
-export type ScriptPane = ScriptPaneType & {
-	id: number;
-};
-
-export type ScriptPaneChild = ScriptPane & {
-	/** the size of this pane in pixels, otherwise flex: 1 */
-	size?: number;
-};
+export type ScriptPane = PaneNode<ScriptPaneType>;
 
 export type ScriptPaneType =
-	| { type: "split_horizontal"; children: ScriptPaneChild[] }
-	| { type: "split_vertical"; children: ScriptPaneChild[] }
 	| { type: "script_code"; script_id: string }
 	| { type: "script_inputs"; script_id: string }
 	| { type: "script_preview"; script_id: string }
 	| { type: "run_logs"; script_id: string; run_id: string };
-// future: run_traces (needs api design and backend support first)
-
-export type ScriptPaneCreate = (
-	| { type: "split_horizontal" }
-	| { type: "split_vertical" }
-	| { type: "script_code"; script_id: string }
-	| { type: "script_inputs"; script_id: string }
-	| { type: "script_preview"; script_id: string }
-	| { type: "run_logs"; script_id: string; run_id: string }
-) & {
-	/** unique identifier for this pane, if empty create one automatically */
-	id?: number;
-
-	parentId?: number;
-};
 
 export const ScriptContext = createContext<ScriptContextT>();
 
-// maybe don't use a global counter? this is probably fine though.
-let nextPaneId = 1;
-const assignTabId = () => nextPaneId++;
-
-const _findParent = (
-	root: ScriptPane,
-	parentId: number,
-): ScriptPane | undefined => {
-	if (root.id === parentId) return root;
-	const children =
-		root.type === "split_horizontal" || root.type === "split_vertical"
-			? root.children
-			: [];
-	for (const child of children) {
-		const found = _findParent(child, parentId);
-		if (found) return found;
-	}
-	return undefined;
-};
-
-const addChildToParent = (
-	root: ScriptPane,
-	parentId: number,
-	child: ScriptPane,
-): ScriptPane => {
-	if (root.id === parentId) {
-		const type = root.type;
-		if (type === "split_horizontal" || type === "split_vertical") {
-			return {
-				...root,
-				children: [...root.children, child],
-			};
-		}
-	}
-	const type = root.type;
-	if (type === "split_horizontal" || type === "split_vertical") {
-		return {
-			...root,
-			children: root.children.map((c) => addChildToParent(c, parentId, child)),
-		};
-	}
-	return root;
-};
-
-const removeTab = (root: ScriptPane, tabId: number): ScriptPane | null => {
-	if (root.id === tabId) return null;
-	const type = root.type;
-	if (type === "split_horizontal" || type === "split_vertical") {
-		const newChildren = root.children
-			.map((c) => removeTab(c, tabId))
-			.filter((c): c is ScriptPane => c !== null);
-		if (newChildren.length === 0) return null;
-		if (newChildren.length === 1) return newChildren[0];
-		return { ...root, children: newChildren };
-	}
-	return root;
-};
-
-const _removeChildByParent = (
-	root: ScriptPane,
-	parentId: number,
-	tabId: number,
-): ScriptPane => {
-	if (root.id === parentId) {
-		const type = root.type;
-		if (type === "split_horizontal" || type === "split_vertical") {
-			const newChildren = root.children
-				.map((c) => removeTab(c, tabId))
-				.filter((c): c is ScriptPane => c !== null);
-			if (newChildren.length === 0) {
-				return {
-					...root,
-					children: [] as ScriptPaneChild[],
-				};
-			}
-			if (newChildren.length === 1) return newChildren[0];
-			return { ...root, children: newChildren };
-		}
-	}
-	const type = root.type;
-	if (type === "split_horizontal" || type === "split_vertical") {
-		return {
-			...root,
-			children: root.children.map((c) =>
-				_removeChildByParent(c, parentId, tabId),
-			),
-		};
-	}
-	return root;
-};
-
-const _replaceTab = (
-	root: ScriptPane,
-	tabId: number,
-	replacement: ScriptPane,
-): ScriptPane => {
-	if (root.id === tabId) return replacement;
-	const type = root.type;
-	if (type === "split_horizontal" || type === "split_vertical") {
-		return {
-			...root,
-			children: root.children.map((c) => _replaceTab(c, tabId, replacement)),
-		};
-	}
-	return root;
-};
-
 export const createScriptContext = (channel_id: string) => {
-	const [root, setRoot] = createSignal<ScriptPane | undefined>();
+	const api = useApi();
+	const activeSubscriptions = new Map<string, number>();
+	const [subscribedDocs, setSubscribedDocs] = createSignal(new Set<string>());
+	let subscribeTimeout: ReturnType<typeof setTimeout>;
+
+	const scheduleSubscribe = () => {
+		clearTimeout(subscribeTimeout);
+		subscribeTimeout = setTimeout(() => {
+			const documents = Array.from(ctx.documents.entries()).map(
+				([id, doc]) => ({
+					// channel_id == script/redex id
+					// scripts/redexes will have branches later but not right now
+					channel_id: id,
+					branch_id: id,
+					state_vector: base64UrlEncode(Y.encodeStateVector(doc)),
+				}),
+			);
+
+			// HACK: unsubscribe from all first to force resync if needed,
+			// similar to DocumentEditor
+			api.client.send({
+				type: "Subscribe",
+				documents: [],
+			});
+
+			api.client.send({
+				type: "Subscribe",
+				documents,
+			});
+		}, 0);
+	};
 
 	const ctx: ScriptContextT = {
 		channel_id,
-		get root() {
-			return root();
-		},
+		documents: new Map(),
+		acquire(redex: Script) {
+			if (redex.latest_version.location.type !== "Document") {
+				return null;
+			}
 
-		createPane(create: ScriptPaneCreate) {
-			const tabId = create.id ?? assignTabId();
-			const tab: ScriptPane = {
-				id: tabId,
-				...create,
-				...(create.type === "split_horizontal" ||
-				create.type === "split_vertical"
-					? { children: [] }
-					: {}),
-			} as ScriptPane;
-			setRoot((prev) => {
-				if (!prev) return tab;
-				if (create.parentId === undefined) return tab;
-				return addChildToParent(prev, create.parentId, tab);
-			});
-		},
+			const id = redex.id;
+			const currentCount = activeSubscriptions.get(id) ?? 0;
+			activeSubscriptions.set(id, currentCount + 1);
 
-		closePane(tabId) {
-			setRoot((prev) => {
-				if (!prev) return undefined;
-				const result = removeTab(prev, tabId);
-				return result ?? undefined;
-			});
-		},
-
-		updatePaneSize(tabId, size) {
-			setRoot((prev) => {
-				if (!prev) return undefined;
-				const resize = (node: ScriptPane): ScriptPane => {
-					if (node.id === tabId) {
-						return { ...node, size } as unknown as ScriptPane;
-					}
-					if (
-						node.type === "split_horizontal" ||
-						node.type === "split_vertical"
-					) {
-						return {
-							...node,
-							children: node.children.map((c) => resize(c as ScriptPane)),
-						};
-					}
-					return node;
-				};
-				return resize(prev);
-			});
-		},
-
-		findPane(predicate) {
-			const find = (node: ScriptPane): ScriptPane | undefined => {
-				if (predicate(node)) return node;
-				if (
-					node.type === "split_horizontal" ||
-					node.type === "split_vertical"
-				) {
-					for (const child of node.children) {
-						const found = find(child as ScriptPane);
-						if (found) return found;
-					}
+			onCleanup(() => {
+				const count = activeSubscriptions.get(id) ?? 0;
+				if (count <= 1) {
+					activeSubscriptions.delete(id);
+					ctx.documents.delete(id);
+					setSubscribedDocs((prev) => {
+						const next = new Set(prev);
+						next.delete(id);
+						return next;
+					});
+					scheduleSubscribe();
+				} else {
+					activeSubscriptions.set(id, count - 1);
 				}
-				return undefined;
-			};
-			const r = root();
-			return r ? find(r) : undefined;
-		},
-
-		updatePane(tabId, update) {
-			setRoot((prev) => {
-				if (!prev) return prev;
-				const updateNode = (node: ScriptPane): ScriptPane => {
-					if (node.id === tabId) {
-						return { ...node, ...update } as ScriptPane;
-					}
-					if (
-						node.type === "split_horizontal" ||
-						node.type === "split_vertical"
-					) {
-						return { ...node, children: node.children.map(updateNode) };
-					}
-					return node;
-				};
-				return updateNode(prev);
 			});
-		},
 
-		splitPane(targetId, newPane, direction) {
-			const tabId = newPane.id ?? assignTabId();
-			const tab: ScriptPane = {
-				id: tabId,
-				...newPane,
-				...(newPane.type === "split_horizontal" ||
-				newPane.type === "split_vertical"
-					? { children: [] }
-					: {}),
-			} as ScriptPane;
-			const splitId = assignTabId();
+			const existing = ctx.documents.get(id);
+			if (existing) return existing;
 
-			setRoot((prev) => {
-				if (!prev) return prev;
-				const split = (node: ScriptPane): ScriptPane => {
-					if (node.id === targetId) {
-						return {
-							id: splitId,
-							type:
-								direction === "horizontal"
-									? "split_horizontal"
-									: "split_vertical",
-							children: [node, tab],
-						} as ScriptPane;
-					}
-					if (
-						node.type === "split_horizontal" ||
-						node.type === "split_vertical"
-					) {
-						return { ...node, children: node.children.map(split) };
-					}
-					return node;
-				};
-				return split(prev);
+			const ydoc = new Y.Doc();
+			ydoc.on("update", (update, origin) => {
+				if (origin && origin.key === "server") return;
+
+				api.client.send({
+					type: "DocumentEdit",
+					// channel_id == script/redex id
+					// scripts/redexes will have branches later but not right now
+					channel_id: id,
+					branch_id: id,
+					update: base64UrlEncode(update),
+				});
 			});
-		},
 
-		reset() {
-			setRoot(undefined);
-		},
+			ctx.documents.set(id, ydoc);
+			scheduleSubscribe();
 
-		switchScript(scriptId) {
-			setRoot((prev) => {
-				if (!prev) return prev;
-				// Find the pane with this script_id and replace it with script_code
-				const findAndReplace = (node: ScriptPane): ScriptPane => {
-					if (
-						node.type === "script_code" ||
-						node.type === "script_inputs" ||
-						node.type === "script_preview"
-					) {
-						if (node.script_id === scriptId) {
-							return {
-								type: "script_code",
-								script_id: scriptId,
-								id: node.id,
-							} as ScriptPane;
-						}
-						return node;
-					}
-					if (
-						node.type === "split_horizontal" ||
-						node.type === "split_vertical"
-					) {
-						return {
-							...node,
-							children: node.children.map((c) =>
-								findAndReplace(c as ScriptPane),
-							),
-						};
-					}
-					return node;
-				};
-				return findAndReplace(prev);
-			});
+			return ydoc;
+		},
+		isSubscribed(id: string) {
+			return subscribedDocs().has(id);
 		},
 	};
+
+	api.events.on("sync", ([msg]: [MessageSync, unknown]) => {
+		if (msg.type === "DocumentEdit") {
+			// check if this edit is for a script we are tracking
+			// for scripts, msg.channel_id is the script id
+			if (
+				ctx.documents.has(msg.channel_id) &&
+				msg.branch_id === msg.channel_id
+			) {
+				const ydoc = ctx.documents.get(msg.channel_id)!;
+				const update = (
+					(msg.update as unknown) instanceof Uint8Array
+						? msg.update
+						: base64UrlDecode(msg.update as unknown as string)
+				) as Uint8Array;
+				Y.applyUpdate(ydoc, update, { key: "server" });
+			}
+		} else if (msg.type === "DocumentSubscribed") {
+			// for scripts, msg.channel_id is the script id
+			if (ctx.documents.has(msg.channel_id)) {
+				setSubscribedDocs((prev) => {
+					const next = new Set(prev);
+					next.add(msg.channel_id);
+					return next;
+				});
+			}
+		} else if (msg.type === "DocumentPresence") {
+			// TODO
+		}
+	});
 
 	return ctx;
 };

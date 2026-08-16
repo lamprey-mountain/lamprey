@@ -56,6 +56,15 @@ export const getUrl = (t: Media) => {
 	return url.href;
 };
 
+// HACK: since useConfig cant be used outside of a reactive context
+export const getGetUrl = () => {
+	const config = useConfig();
+	return (t: Media) => {
+		const url = new URL(`/media/${t.id}`, config.cdn_url);
+		return url.href;
+	};
+};
+
 /** get the cdn url for the thumbnail for a piece of media */
 export const getThumb = (media: Media, size?: number) => {
 	return getThumbFromId(media.id, size);
