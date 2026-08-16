@@ -4484,7 +4484,7 @@ dependencies = [
 
 [[package]]
 name = "kerosene"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "axum",
  "figment",
@@ -4500,7 +4500,7 @@ dependencies = [
 
 [[package]]
 name = "kerosene-core"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "async-trait",
  "axum",
@@ -4518,7 +4518,7 @@ dependencies = [
 
 [[package]]
 name = "kerosene-rest"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "axum",
  "inventory",
@@ -4538,7 +4538,7 @@ dependencies = [
 
 [[package]]
 name = "kerosene-services"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "async-nats",
  "async-tempfile",
@@ -4617,7 +4617,7 @@ dependencies = [
 
 [[package]]
 name = "kerosene-sync"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "async-trait",
  "axum",
@@ -4647,7 +4647,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-backend"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "async-nats",
  "async-tempfile",
@@ -4746,7 +4746,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-backend-core"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "async-nats",
  "async-tempfile",
@@ -4791,7 +4791,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-backend-data-postgres"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "async-trait",
  "lamprey-backend-core",
@@ -4810,7 +4810,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-bot"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4834,7 +4834,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-bridge"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4870,7 +4870,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-bridge-old"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4902,7 +4902,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-cli"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -4925,7 +4925,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-common"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "base64 0.22.1",
  "bitflags 2.11.1",
@@ -4955,7 +4955,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-crypto"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "aes-gcm 0.11.0",
  "ed25519-dalek",
@@ -4977,7 +4977,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-hakari"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -5105,7 +5105,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-macros"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "bytes",
  "darling 0.23.0",
@@ -5121,7 +5121,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-markdown"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "clap",
@@ -5138,7 +5138,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-media"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "async-nats",
@@ -5177,7 +5177,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-script"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "async-trait",
  "bytes",
@@ -5200,7 +5200,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-sdk"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5229,7 +5229,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-search"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "bytes",
  "dashmap 6.1.0",
@@ -5245,7 +5245,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-unfurl"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "async-trait",
  "bytes",
@@ -5263,7 +5263,7 @@ dependencies = [
 
 [[package]]
 name = "lamprey-voice"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8246,7 +8246,7 @@ dependencies = [
 
 [[package]]
 name = "scanner-malware"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "anyhow",
  "async-tempfile",
