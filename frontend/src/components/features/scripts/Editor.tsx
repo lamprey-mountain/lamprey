@@ -27,7 +27,7 @@ import {
 	ViewUpdate,
 	WidgetType,
 } from "@codemirror/view";
-import { createEffect, createResource, onMount } from "solid-js";
+import { createEffect, createResource, createSignal, onMount } from "solid-js";
 import type { Script } from "ts-sdk";
 import { yCollab } from "y-codemirror.next";
 import * as Y from "yjs";
@@ -50,6 +50,8 @@ export const CodeEditor = (props: {
 
 	const getUrl = getGetUrl();
 
+	const [loading, setLoading] = createSignal(true);
+
 	let editorRef!: HTMLDivElement;
 	let view: EditorView;
 	const stateConfigCompartment = new Compartment();
@@ -66,7 +68,13 @@ export const CodeEditor = (props: {
 		},
 	);
 
-	// const ymapping = initCode(ytype, schema).mapping;
+	createEffect(() => {
+		if (props.script.latest_version.location.type === "Document") {
+			setLoading(scriptContext.isSubscribed(props.script.id));
+		} else {
+			setLoading(mediaContent.loading);
+		}
+	});
 
 	onMount(() => {
 		const extensions = [
@@ -110,8 +118,8 @@ export const CodeEditor = (props: {
 			javascript(),
 			syntaxHighlighting(highlight),
 			stateConfigCompartment.of([
-				EditorView.editable.of(!mediaContent.loading),
-				EditorState.readOnly.of(mediaContent.loading),
+				EditorView.editable.of(!loading()),
+				EditorState.readOnly.of(loading()),
 			]),
 			EditorView.updateListener.of((update) => {
 				if (update.docChanged && props.onChange) {
@@ -131,7 +139,6 @@ export const CodeEditor = (props: {
 		}
 
 		view = new EditorView({
-			doc: mediaContent.loading ? "Loading..." : (mediaContent() ?? ""),
 			parent: editorRef,
 			extensions,
 		});
@@ -145,20 +152,22 @@ export const CodeEditor = (props: {
 		if (ydoc) return;
 
 		// TODO: show indicator when media changes, button to reload mediaContent
-		const loading = mediaContent.loading;
-		const nextDoc = loading ? "Loading..." : (mediaContent() ?? "");
+		const nextDoc = mediaContent();
 		const currentDoc = view.state.doc.toString();
 
-		if (currentDoc !== nextDoc) {
+		if (nextDoc !== undefined && currentDoc !== nextDoc) {
 			view.dispatch({
 				changes: { from: 0, to: currentDoc.length, insert: nextDoc },
 			});
 		}
+	});
 
+	// disable editor when loading
+	createEffect(() => {
 		view.dispatch({
 			effects: stateConfigCompartment.reconfigure([
-				EditorView.editable.of(!loading),
-				EditorState.readOnly.of(loading),
+				EditorView.editable.of(!loading()),
+				EditorState.readOnly.of(loading()),
 			]),
 		});
 	});

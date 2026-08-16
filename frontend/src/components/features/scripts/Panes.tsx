@@ -1,4 +1,5 @@
 import {
+	createEffect,
 	createResource,
 	createSignal,
 	For,
@@ -6,7 +7,7 @@ import {
 	onCleanup,
 	Show,
 } from "solid-js";
-import { useApi, useScriptRuns, useScripts } from "@/api";
+import { useApi } from "@/api";
 import { Time } from "@/atoms/Time";
 import { usePanes } from "@/components/panes/context";
 import { type ScriptPane, useScript } from "./context";
@@ -27,68 +28,49 @@ export const ScriptCode = (props: {
 	const [editedSource, setEditedSource] = createSignal<string>("");
 	const [saving, setSaving] = createSignal(false);
 
-	// createEffect(() => {
-	// 	const doc = ydoc();
-	// 	if (!doc) return;
-	// 	const s = script();
-	// 	if (!s) return;
-	// 	const { channel_id, id: script_id } = s;
+	// FIXME: show when code is dirty
+	// FIXME: handle saving
+	// TODO(?): keybind ctrl+s to save/commit/deploy code? though it could be confusing to people since its not really the same as saving?
 
-	// 	const onSync = ([sync]: [any, unknown]) => {
-	// 		if (sync.type === "DocumentEdit") {
-	// 			if (sync.channel_id !== channel_id) return;
-	// 			if (sync.branch_id !== script_id) return;
-	// 			const update = (
-	// 				(sync.update as unknown) instanceof Uint8Array
-	// 					? sync.update
-	// 					: base64UrlDecode(sync.update)
-	// 			) as Uint8Array;
-	// 			Y.applyUpdate(doc, update, { key: "server" });
-	// 		}
-	// 	};
+	const hasEdits = () => {
+		// const orig = source() ?? "";
+		// const curr = editedSource();
+		// return curr !== "" && curr !== orig;
+		return false;
+	};
 
-	// 	const unsub = api.events.on("sync", onSync);
-	// 	onCleanup(unsub);
-	// });
+	const handleSave = async () => {
+		// const scr = script();
+		// if (!scr) return;
+		// setSaving(true);
+		// try {
+		// 	await scriptsService.uploadAndSaveContent(
+		// 		scr.channel_id,
+		// 		scr.id,
+		// 		editedSource(),
+		// 	);
+		// 	mutate(editedSource());
+		// } catch (err) {
+		// 	console.error("Failed to save script:", err);
+		// } finally {
+		// 	setSaving(false);
+		// }
+	};
 
-	// const hasEdits = () => {
-	// 	const orig = source() ?? "";
-	// 	const curr = editedSource();
-	// 	return curr !== "" && curr !== orig;
-	// };
-
-	// const handleSave = async () => {
-	// 	const scr = script();
-	// 	if (!scr) return;
-	// 	setSaving(true);
-	// 	try {
-	// 		await scriptsService.uploadAndSaveContent(
-	// 			scr.channel_id,
-	// 			scr.id,
-	// 			editedSource(),
-	// 		);
-	// 		mutate(editedSource());
-	// 	} catch (err) {
-	// 		console.error("Failed to save script:", err);
-	// 	} finally {
-	// 		setSaving(false);
-	// 	}
-	// };
-
-	// createEffect(() => {
-	// 	props.setHeaderExtra(
-	// 		<Show when={hasEdits()}>
-	// 			<button
-	// 				type="button"
-	// 				class="pane-header-save button primary"
-	// 				onClick={handleSave}
-	// 				disabled={saving()}
-	// 			>
-	// 				{saving() ? "Saving..." : "Save Edits"}
-	// 			</button>
-	// 		</Show>,
-	// 	);
-	// });
+	createEffect(() => {
+		props.setHeaderExtra(
+			<Show when={hasEdits()}>
+				<button
+					type="button"
+					class="pane-header-save button primary"
+					onClick={handleSave}
+					disabled={saving()}
+				>
+					{saving() ? "Saving..." : "Save Edits"}
+				</button>
+			</Show>,
+		);
+	});
 
 	onCleanup(() => {
 		props.setHeaderExtra(null);

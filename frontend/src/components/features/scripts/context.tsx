@@ -1,3 +1,5 @@
+import { debounce } from "@solid-primitives/scheduled";
+import { ReactiveSet } from "@solid-primitives/set";
 import type { MessageSync, Script } from "sdk";
 import { createContext, createSignal, onCleanup, useContext } from "solid-js";
 import * as Y from "yjs";
@@ -25,35 +27,21 @@ export const ScriptContext = createContext<ScriptContextT>();
 export const createScriptContext = (channel_id: string) => {
 	const api = useApi();
 	const activeSubscriptions = new Map<string, number>();
-	const [subscribedDocs, setSubscribedDocs] = createSignal(new Set<string>());
-	let subscribeTimeout: ReturnType<typeof setTimeout>;
+	const subscribedDocs = new ReactiveSet<string>();
 
-	const scheduleSubscribe = () => {
-		clearTimeout(subscribeTimeout);
-		subscribeTimeout = setTimeout(() => {
-			const documents = Array.from(ctx.documents.entries()).map(
-				([id, doc]) => ({
-					// channel_id == script/redex id
-					// scripts/redexes will have branches later but not right now
-					channel_id: id,
-					branch_id: id,
-					state_vector: base64UrlEncode(Y.encodeStateVector(doc)),
-				}),
-			);
+	const scheduleSubscribe = debounce(() => {
+		const documents = Array.from(ctx.documents.entries()).map(([id, doc]) => ({
+			channel_id,
+			redex_id: id,
+			branch_id: id,
+			state_vector: base64UrlEncode(Y.encodeStateVector(doc)),
+		}));
 
-			// HACK: unsubscribe from all first to force resync if needed,
-			// similar to DocumentEditor
-			api.client.send({
-				type: "Subscribe",
-				documents: [],
-			});
-
-			api.client.send({
-				type: "Subscribe",
-				documents,
-			});
-		}, 0);
-	};
+		api.client.send({
+			type: "Subscribe",
+			documents,
+		});
+	}, 0);
 
 	const ctx: ScriptContextT = {
 		channel_id,
@@ -72,11 +60,7 @@ export const createScriptContext = (channel_id: string) => {
 				if (count <= 1) {
 					activeSubscriptions.delete(id);
 					ctx.documents.delete(id);
-					setSubscribedDocs((prev) => {
-						const next = new Set(prev);
-						next.delete(id);
-						return next;
-					});
+					subscribedDocs.delete(id);
 					scheduleSubscribe();
 				} else {
 					activeSubscriptions.set(id, count - 1);
@@ -92,10 +76,9 @@ export const createScriptContext = (channel_id: string) => {
 
 				api.client.send({
 					type: "DocumentEdit",
-					// channel_id == script/redex id
-					// scripts/redexes will have branches later but not right now
-					channel_id: id,
+					channel_id: channel_id,
 					branch_id: id,
+					redex_id: id,
 					update: base64UrlEncode(update),
 				});
 			});
@@ -106,34 +89,24 @@ export const createScriptContext = (channel_id: string) => {
 			return ydoc;
 		},
 		isSubscribed(id: string) {
-			return subscribedDocs().has(id);
+			return subscribedDocs.has(id);
 		},
 	};
 
 	api.events.on("sync", ([msg]: [MessageSync, unknown]) => {
 		if (msg.type === "DocumentEdit") {
-			// check if this edit is for a script we are tracking
-			// for scripts, msg.channel_id is the script id
-			if (
-				ctx.documents.has(msg.channel_id) &&
-				msg.branch_id === msg.channel_id
-			) {
-				const ydoc = ctx.documents.get(msg.channel_id)!;
-				const update = (
-					(msg.update as unknown) instanceof Uint8Array
-						? msg.update
-						: base64UrlDecode(msg.update as unknown as string)
-				) as Uint8Array;
-				Y.applyUpdate(ydoc, update, { key: "server" });
-			}
+			// TODO(?): create a new ydoc if it doesnt exist yet
+			if (!ctx.documents.has(msg.document_id)) return;
+			const ydoc = ctx.documents.get(msg.document_id)!;
+			const update = (
+				(msg.update as unknown) instanceof Uint8Array
+					? msg.update
+					: base64UrlDecode(msg.update as unknown as string)
+			) as Uint8Array;
+			Y.applyUpdate(ydoc, update, { key: "server" });
 		} else if (msg.type === "DocumentSubscribed") {
-			// for scripts, msg.channel_id is the script id
-			if (ctx.documents.has(msg.channel_id)) {
-				setSubscribedDocs((prev) => {
-					const next = new Set(prev);
-					next.add(msg.channel_id);
-					return next;
-				});
+			if (ctx.documents.has(msg.document_id)) {
+				subscribedDocs.add(msg.document_id);
 			}
 		} else if (msg.type === "DocumentPresence") {
 			// TODO

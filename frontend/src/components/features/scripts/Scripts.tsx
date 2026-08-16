@@ -60,9 +60,9 @@ export const Scripts = (props: { channel: Channel }) => {
 	});
 
 	// Auto-open script when script_id is set in channel state
-	const ch = useChannel();
+	const [ch, updateCh] = useChannel();
 	createEffect(() => {
-		const scriptId = ch[0].script_id;
+		const scriptId = ch.script_id;
 		if (!scriptId) return;
 
 		const items = scriptsResource()?.items ?? [];
@@ -93,7 +93,7 @@ export const Scripts = (props: { channel: Channel }) => {
 			},
 		});
 		api.scriptLogs.subscribe(props.channel.id, script.id);
-		ch[1]("script_id", undefined);
+		updateCh("script_id", undefined);
 	});
 
 	const [createOpen, setCreateOpen] = createSignal(false);
@@ -107,14 +107,12 @@ export const Scripts = (props: { channel: Channel }) => {
 
 	let scriptUploadRef!: HTMLInputElement;
 
-	// TODO: navigate to redex on create
-
 	const onCreateDocument = async () => {
 		const redex = await api.scripts.create(props.channel.id, {
 			format: "Javascript",
 			location: { type: "Document" },
 		});
-		console.log(redex);
+		updateCh("script_id", redex.id);
 	};
 
 	const onCreateUpload = async () => {
@@ -139,11 +137,10 @@ export const Scripts = (props: { channel: Channel }) => {
 			},
 			async onComplete(media: Media) {
 				const redex = await api.scripts.create(props.channel.id, {
-					// NOTE:
 					format: file.name.endsWith(".wasm") ? "Webassembly" : "Javascript",
 					location: { type: "Hosted", media_id: media.id },
 				});
-				console.log(redex);
+				updateCh("script_id", redex.id);
 			},
 		});
 	};
