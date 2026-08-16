@@ -20,6 +20,7 @@ import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { icActivityLog } from "@/utils/icons";
+import { useVoice } from "../voice/context";
 
 type ChatHeaderProps = {
 	channel: Channel;
@@ -179,6 +180,8 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 		props.channel.type === "Voice" ||
 		props.channel.type === "Broadcast";
 
+	const [_voice, voiceActions] = useVoice();
+
 	return (
 		<header
 			class="chat-header"
@@ -310,9 +313,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						<button
 							type="button"
 							class="button icon-button"
-							onClick={() => {
-								// TODO: calling
-							}}
+							onClick={() => voiceActions.selectChannel(props.channel.id)}
 							ref={callTooltip.content}
 						>
 							<Icon src={icCall} color={null} />
