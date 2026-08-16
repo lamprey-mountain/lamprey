@@ -5,12 +5,16 @@ use common::v1::types::{
 };
 use dashmap::DashSet;
 use lamprey_backend_core::types::data::{SearchReindexQueue, SearchReindexQueueTarget};
+use lamprey_search::transform::{
+    SearchAuditLogEntry, SearchChannel, SearchMedia, SearchMessage, SearchRoom, SearchUser,
+};
 use tantivy::Term;
 use tokio::task::JoinSet;
 use tracing::error;
 use uuid::Uuid;
 
 use crate::prelude::*;
+use crate::services::channel::calculate_hotness;
 use crate::services::search::{index::AsyncIndexHandle, util::SCHEMA};
 
 #[derive(Clone)]
@@ -140,13 +144,9 @@ impl BackfillEtlInner {
 
             let mut batch = Vec::with_capacity(entries.items.len());
             for entry in &entries.items {
-                match SCHEMA.transform_audit_log_entry(entry) {
-                    Ok(doc) => {
-                        let term = Term::from_field_text(SCHEMA.id, &entry.id.to_string());
-                        batch.push((term, doc));
-                    }
-                    Err(e) => error!("failed to transform audit log entry {}: {e}", entry.id),
-                }
+                let doc = SearchAuditLogEntry::transform(entry);
+                let term = Term::from_field_text(SCHEMA.id, &entry.id.to_string());
+                batch.push((term, doc));
             }
 
             if !batch.is_empty() {
@@ -207,11 +207,9 @@ impl BackfillEtlInner {
 
             let mut batch = Vec::with_capacity(res.items.len());
             for user in &res.items {
-                // TODO: log error
-                if let Ok(doc) = SCHEMA.transform_user(user) {
-                    let term = Term::from_field_text(SCHEMA.id, &user.id.to_string());
-                    batch.push((term, doc));
-                }
+                let doc = SearchUser::transform(user);
+                let term = Term::from_field_text(SCHEMA.id, &user.id.to_string());
+                batch.push((term, doc));
             }
 
             if !batch.is_empty() {
@@ -261,13 +259,9 @@ impl BackfillEtlInner {
 
             let mut batch = Vec::with_capacity(media_list.len());
             for media in &media_list {
-                match SCHEMA.transform_media(media) {
-                    Ok(doc) => {
-                        let term = Term::from_field_text(SCHEMA.id, &media.id.to_string());
-                        batch.push((term, doc));
-                    }
-                    Err(e) => error!("failed to transform media {}: {e}", media.id),
-                }
+                let doc = SearchMedia::transform(media);
+                let term = Term::from_field_text(SCHEMA.id, &media.id.to_string());
+                batch.push((term, doc));
             }
 
             if !batch.is_empty() {
@@ -333,9 +327,7 @@ impl BackfillEtlInner {
             let mut batch = Vec::with_capacity(messages.items.len());
             for message in &messages.items {
                 let term = Term::from_field_text(SCHEMA.id, &message.id.to_string());
-                let doc = SCHEMA
-                    .transform_message(message, chan.room_id, chan.parent_id)
-                    .unwrap();
+                let doc = SearchMessage::transform(message, chan.room_id, chan.parent_id);
                 batch.push((term, doc));
             }
 
@@ -394,13 +386,15 @@ impl BackfillEtlInner {
             for channel in &res.items {
                 let srv = self.s.services();
                 let first_message = srv.messages.get_first(channel.id, None).await.ok();
-                match SCHEMA.transform_channel(channel, first_message.as_ref()) {
-                    Ok(doc) => {
-                        let term = Term::from_field_text(SCHEMA.id, &channel.id.to_string());
-                        batch.push((term, doc));
-                    }
-                    Err(e) => error!("failed to transform channel {}: {e}", channel.id),
-                }
+                let doc = SearchChannel::transform(
+                    channel,
+                    first_message.as_ref(),
+                    first_message
+                        .as_ref()
+                        .map(|m| calculate_hotness(channel, m)),
+                );
+                let term = Term::from_field_text(SCHEMA.id, &channel.id.to_string());
+                batch.push((term, doc));
             }
 
             if !batch.is_empty() {
@@ -457,10 +451,9 @@ impl BackfillEtlInner {
 
             let mut batch = Vec::with_capacity(res.items.len());
             for room in &res.items {
-                if let Ok(doc) = SCHEMA.transform_room(room) {
-                    let term = Term::from_field_text(SCHEMA.id, &room.id.to_string());
-                    batch.push((term, doc));
-                }
+                let doc = SearchRoom::transform(room);
+                let term = Term::from_field_text(SCHEMA.id, &room.id.to_string());
+                batch.push((term, doc));
             }
 
             if !batch.is_empty() {

@@ -2,12 +2,16 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::{AuditLogEntry, Channel, Message, MessageSync, Room, User};
 use common::v2::types::media::Media;
+use lamprey_search::transform::{
+    SearchAuditLogEntry, SearchChannel, SearchMedia, SearchMessage, SearchRoom, SearchUser,
+};
 use tantivy::Term;
 use tokio_stream::StreamExt;
 use tracing::{error, info};
 
 use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
+use crate::services::channel::calculate_hotness;
 use crate::services::search::{index::AsyncIndexHandle, util::SCHEMA};
 
 pub struct LiveEtl {
@@ -80,7 +84,7 @@ impl LiveEtl {
         let srv = self.srv();
         let chan = srv.channels.get(message.channel_id, None).await?;
         let term = Term::from_field_text(SCHEMA.id, &message.id.to_string());
-        let doc = SCHEMA.transform_message(&message, chan.room_id, chan.parent_id)?;
+        let doc = SearchMessage::transform(&message, chan.room_id, chan.parent_id);
         self.index.update_document(term, doc).await?;
         Ok(())
     }
@@ -88,35 +92,38 @@ impl LiveEtl {
     async fn index_channel(&self, channel: Channel) -> Result<()> {
         let first_message = self.srv().messages.get_first(channel.id, None).await.ok();
         let term = Term::from_field_text(SCHEMA.id, &channel.id.to_string());
-        let doc = SCHEMA.transform_channel(&channel, first_message.as_ref())?;
+        let hotness = first_message
+            .as_ref()
+            .map(|m| calculate_hotness(&channel, m));
+        let doc = SearchChannel::transform(&channel, first_message.as_ref(), hotness);
         self.index.update_document(term, doc).await?;
         Ok(())
     }
 
     async fn index_room(&self, room: Room) -> Result<()> {
         let term = Term::from_field_text(SCHEMA.id, &room.id.to_string());
-        let doc = SCHEMA.transform_room(&room)?;
+        let doc = SearchRoom::transform(&room);
         self.index.update_document(term, doc).await?;
         Ok(())
     }
 
     async fn index_user(&self, user: User) -> Result<()> {
         let term = Term::from_field_text(SCHEMA.id, &user.id.to_string());
-        let doc = SCHEMA.transform_user(&user)?;
+        let doc = SearchUser::transform(&user);
         self.index.update_document(term, doc).await?;
         Ok(())
     }
 
     async fn index_media(&self, media: Media) -> Result<()> {
         let term = Term::from_field_text(SCHEMA.id, &media.id.to_string());
-        let doc = SCHEMA.transform_media(&media)?;
+        let doc = SearchMedia::transform(&media);
         self.index.update_document(term, doc).await?;
         Ok(())
     }
 
     async fn index_audit_log(&self, entry: AuditLogEntry) -> Result<()> {
         let term = Term::from_field_text(SCHEMA.id, &entry.id.to_string());
-        let doc = SCHEMA.transform_audit_log_entry(&entry)?;
+        let doc = SearchAuditLogEntry::transform(&entry);
         self.index.update_document(term, doc).await?;
         Ok(())
     }

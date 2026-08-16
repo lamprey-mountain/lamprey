@@ -5241,12 +5241,14 @@ dependencies = [
  "bytes",
  "dashmap 6.1.0",
  "lamprey-common",
+ "lamprey-markdown",
  "once_cell",
  "opendal",
  "pastey 0.2.3",
  "tantivy",
  "tokio",
  "tracing",
+ "url",
  "uuid",
 ]
 

@@ -11,7 +11,6 @@ pub trait IndexDefinition {
 }
 
 mod doctype;
-mod transform;
 pub mod unified;
 
 pub use doctype::Doctype;
