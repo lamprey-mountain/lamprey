@@ -150,11 +150,6 @@ impl Globals {
         self.inner.database_compat.clone()
     }
 
-    // TEMP: compat
-    pub fn temp_services_raw(&self) -> Weak<Services> {
-        self.services.clone()
-    }
-
     // TEMP: maybe i'll have a reference to the Database instead
     pub async fn temp_test_database(&self) -> bool {
         self.inner
