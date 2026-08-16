@@ -149,8 +149,27 @@ export const TooltipProvider = (props: ParentProps) => {
 	const pos = useFloating(targetRef, tipRef, {
 		whileElementsMounted: autoUpdate,
 		strategy: "fixed",
-		placement: () => activeConfig()?.placement ?? "top",
-		middleware: [offset(8), flip(), shift({ padding: 8 })],
+		get placement() {
+			return activeConfig()?.placement ?? "top";
+		},
+		middleware: [
+			offset(8),
+			flip(),
+			shift({ padding: 8 }),
+			solidArrow({
+				element: () => arrowRef() as unknown as HTMLElement,
+				padding: 4,
+			}),
+		],
+	});
+
+	createEffect(() => {
+		const a = pos.middlewareData.arrow;
+		const el = arrowRef();
+		if (a && el) {
+			el.style.translate = `${Math.round(a.x ?? 0)}px ${Math.round(a.y ?? 0)}px`;
+			el.dataset.placement = pos.placement;
+		}
 	});
 
 	const handleMouseOver = (e: MouseEvent) => {
@@ -209,6 +228,8 @@ export const TooltipProvider = (props: ParentProps) => {
 						}}
 						style={{
 							position: pos.strategy,
+							top: "0",
+							left: "0",
 							translate: `${Math.round(pos.x ?? 0)}px ${Math.round(pos.y ?? 0)}px`,
 						}}
 						class="tooltip"
