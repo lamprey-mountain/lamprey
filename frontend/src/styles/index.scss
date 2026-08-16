@@ -993,6 +993,31 @@ input[type="url"] {
 		background-position: center;
 	}
 
+	.actions {
+		display: flex;
+		justify-content: end;
+		gap: 8px;
+		padding: 8px;
+
+		& > .button {
+			background: #111c;
+			border: solid #222c 1px;
+			border-radius: 50%;
+
+			& > .icon2 {
+				background: $fg-300;
+			}
+
+			&:hover {
+				background: #000c;
+
+				& > .icon2 {
+					background: $fg-100;
+				}
+			}
+		}
+	}
+
 	.header {
 		display: flex;
 		padding: 0 16px;
@@ -1030,16 +1055,6 @@ input[type="url"] {
 			align-items: center;
 		}
 
-		.actions {
-			display: flex;
-			gap: 8px;
-
-			button {
-				border: solid $sep-500 1px;
-				margin-right: 4px;
-			}
-		}
-
 		.roles ul {
 			display: flex;
 			flex-wrap: wrap;
@@ -1065,17 +1080,44 @@ input[type="url"] {
 			}
 		}
 
-		.note textarea {
-			width: 100%;
-			min-height: 80px;
-			background-color: $bg-100;
-			border: solid 1px $sep-300;
-			padding: 8px;
-			border-radius: 4px;
-			resize: vertical;
+		.note {
+			& > h3 {
+				margin-inline: 4px;
+				margin-bottom: 2px;
+			}
 
-			&:focus {
+			& > .editor {
+				background-color: $bg-150;
+				border: solid $sep-300 1px;
+				cursor: text;
+				border-radius: 4px;
+
+				// PERF: is this ok?
+				&:has(:focus-visible) {
+					border: solid 1px $link-500;
+				}
+
+				& > .ProseMirror {
+					min-height: 3lh;
+				}
+			}
+		}
+
+		.dm-input {
+			display: flex;
+			background-color: $bg-150;
+			border: solid $sep-300 1px;
+			border-radius: 4px;
+			cursor: text;
+
+			// PERF: is this ok?
+			&:has(:focus-visible) {
 				border: solid 1px $link-500;
+			}
+
+			& > .editor {
+				border: none;
+				background-color: transparent;
 			}
 		}
 	}
@@ -3851,7 +3893,7 @@ button.round {
 	}
 
 	&[data-animation="wave"] > .character {
-		animation: animated-text-wave 8000ms cubic-bezier(.74,-0.01,.35,1.03)
+		animation: animated-text-wave 8000ms cubic-bezier(.74, -0.01, .35, 1.03)
 			infinite;
 		// TODO: reverse animation?
 		animation-delay: calc(-400ms * var(--index));

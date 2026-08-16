@@ -1,7 +1,5 @@
 import { debounce } from "@solid-primitives/scheduled";
 import { useNavigate } from "@solidjs/router";
-import { history, redo, undo } from "prosemirror-history";
-import { keymap } from "prosemirror-keymap";
 import { type EditorState, Plugin } from "prosemirror-state";
 import type { PreferencesUser, UserWithRelationship } from "sdk";
 import {
@@ -32,8 +30,6 @@ import {
 	icMenu,
 } from "@/utils/icons";
 import { createEditor } from "../features/editor/Editor";
-import { schema } from "../features/editor/schema";
-import { syntaxHighlightingPlugin } from "../features/search";
 import { RoomIcon } from "./User";
 
 // TODO: redesign

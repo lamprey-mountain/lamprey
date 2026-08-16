@@ -1,4 +1,6 @@
+import { debounce } from "@solid-primitives/scheduled";
 import { useNavigate } from "@solidjs/router";
+import type { EditorState } from "prosemirror-state";
 import {
 	createEffect,
 	createSignal,
@@ -10,16 +12,25 @@ import {
 } from "solid-js";
 import type { Channel, PreferencesUser } from "ts-sdk";
 import { useApi } from "@/api";
+import { EmojiButton } from "@/atoms/EmojiButton.tsx";
+import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown.tsx";
+import { createTooltip } from "@/atoms/Tooltip";
+import { useAutocomplete } from "@/contexts/autocomplete";
 import { useCurrentUser } from "@/contexts/currentUser";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useMenu } from "@/contexts/menu";
+import { useUserPopout } from "@/contexts/user-popout";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getThumbFromId } from "@/media/util";
 import { Copyable } from "@/utils/general";
+import { icDm, icMemberAdd, icMemberRemove, icMore } from "@/utils/icons";
+import { createEditor } from "../features/editor/Editor";
 import { AvatarWithStatus, EditRoles, type UserProps } from "./User";
 
 export function UserProfile(props: UserProps) {
 	const api = useApi();
+	const userPopout = useUserPopout();
 	const { setMenu } = useMenu();
 	const nav = useNavigate();
 
@@ -40,6 +51,10 @@ export function UserProfile(props: UserProps) {
 		name ??= props.user.name;
 		return name;
 	}
+
+	const close = () => {
+		userPopout.setUserView(null);
+	};
 
 	const openUserMenu = (e: MouseEvent) => {
 		queueMicrotask(() => {
@@ -67,16 +82,28 @@ export function UserProfile(props: UserProps) {
 	};
 
 	const openDm = async () => {
+		const target_id = props.user.id;
+
+		const cached = [...api.channels.cache.values()].find(
+			(i) => i.type === "Dm" && i.recipients?.some((j) => j.id === target_id),
+		);
+		if (cached) return cached;
+
 		const { data } = await api.client.http.POST(
 			"/api/v1/user/@self/dm/{target_id}",
-			{
-				params: { path: { target_id: props.user.id } },
-			},
+			{ params: { path: { target_id } } },
 		);
-		if (data) {
-			const channel = data as Channel;
-			nav(`/thread/${channel.id}`);
-		}
+		if (!data) return null;
+		const channel = data as Channel;
+		api.channels.upsert(channel);
+		return channel;
+	};
+
+	const onOpenDm = async () => {
+		const channel = await openDm();
+		if (!channel) return;
+		close();
+		nav(`/thread/${channel.id}`);
 	};
 
 	const preferences = () => props.user.preferences;
@@ -85,22 +112,12 @@ export function UserProfile(props: UserProps) {
 		setNote((preferences()?.frontend?.note as string) || "");
 	});
 
-	let timeout: NodeJS.Timeout;
-	const handleNoteInput = (e: Event) => {
-		const newNote = (e.target as HTMLTextAreaElement).value;
-		setNote(newNote);
-		clearTimeout(timeout);
-		timeout = setTimeout(() => {
-			saveNote(newNote);
-		}, 500);
-	};
-
-	const saveNote = (noteToSave: string) => {
+	const saveNote = debounce((noteToSave: string) => {
 		const currentConfig = preferences() ?? {
 			frontend: {},
 			voice: { mute: false, volume: 1.0 },
 		};
-		const { note, ...restFrontend } = currentConfig.frontend ?? {};
+		const { note: _n, ...restFrontend } = currentConfig.frontend ?? {};
 
 		const newConfig: PreferencesUser = {
 			...currentConfig,
@@ -114,7 +131,7 @@ export function UserProfile(props: UserProps) {
 			params: { path: { user_id: props.user.id } },
 			body: newConfig,
 		});
-	};
+	}, 500);
 
 	const room_member = () => props.room_member;
 
@@ -122,6 +139,81 @@ export function UserProfile(props: UserProps) {
 	const editRolesClear = () => setEditRoles();
 	document.addEventListener("click", editRolesClear);
 	onCleanup(() => document.removeEventListener("click", editRolesClear));
+
+	// TODO: combine friend buttons into one button?
+	// TODO: button to reject friend request
+	const tipFriendRemove = createTooltip({ tip: () => "Remove Friend" });
+	// const tipFriendReject = createTooltip({ tip: () => "Reject Friend Request" });
+	const tipFriendCancel = createTooltip({ tip: () => "Cancel Friend Request" });
+	const tipFriendAccept = createTooltip({ tip: () => "Accept Friend Request" });
+	const tipFriendSend = createTooltip({ tip: () => "Send Friend Request" });
+	const tipDm = createTooltip({ tip: () => "Send Message" });
+	const tipMenu = createTooltip({ tip: () => "More..." });
+
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+
+	const noteEditor = createEditor({
+		channelId: () => props.user.id + "-notes",
+		toolbar,
+		autocomplete,
+		initialContent: note,
+	});
+
+	const handleNoteInput = (state: EditorState) => {
+		setNote(state.doc.textContent);
+		saveNote(state.doc.textContent);
+	};
+
+	const dmEditor = createEditor({
+		// TODO: use actual dm channel id?
+		channelId: () => props.user.id + "-dm",
+		toolbar,
+		autocomplete,
+	});
+
+	const [dmEditorState, setDmEditorState] = createSignal<EditorState>();
+
+	createEffect(() => {
+		const state = dmEditorState();
+		if (state) {
+			dmEditor.setState(state);
+			dmEditor.focus();
+		}
+	});
+
+	const onEmojiPick = (emoji: string, _keepOpen?: boolean) => {
+		const editorState = dmEditorState();
+		if (editorState) {
+			const { from, to } = editorState.selection;
+			const tr = editorState.tr.insertText(emoji, from, to);
+			const newState = editorState.apply(tr);
+			setDmEditorState(newState);
+		}
+	};
+
+	const onDmSubmit = async (text: string) => {
+		const channel = await openDm();
+
+		// TODO: show error message if dm failed
+		// TODO: hide dm input if you don't have permission to dm this user
+		if (!channel) return false;
+		close();
+		nav(`/thread/${channel.id}`);
+		api.messages.send(channel.id, {
+			content: text,
+			attachments: [],
+		});
+		return true;
+	};
+
+	const onDmChange = (state: EditorState) => {
+		setDmEditorState(state);
+	};
+
+	const onDmUpload = () => {
+		// TODO(future): sending attachments
+	};
 
 	return (
 		<div
@@ -142,7 +234,68 @@ export function UserProfile(props: UserProps) {
 							`url(${getThumbFromId(props.user.banner, 640)})`) ||
 						undefined,
 				}}
-			/>
+			>
+				<menu class="actions">
+					<Switch>
+						<Match when={props.user.relationship?.relation === "Friend"}>
+							<button
+								type="button"
+								class="button icon-button"
+								onClick={removeFriend}
+								ref={tipFriendRemove.content}
+							>
+								<Icon src={icMemberRemove} />
+							</button>
+						</Match>
+						<Match when={props.user.relationship?.relation === "Outgoing"}>
+							<button
+								type="button"
+								class="button icon-button"
+								onClick={removeFriend}
+								ref={tipFriendCancel.content}
+							>
+								<Icon src={icMemberRemove} />
+							</button>
+						</Match>
+						<Match when={props.user.relationship?.relation === "Incoming"}>
+							<button
+								type="button"
+								class="button icon-button"
+								onClick={sendFriendRequest}
+								ref={tipFriendAccept.content}
+							>
+								<Icon src={icMemberAdd} />
+							</button>
+						</Match>
+						<Match when={!props.user.relationship?.relation}>
+							<button
+								type="button"
+								class="button icon-button"
+								onClick={sendFriendRequest}
+								ref={tipFriendSend.content}
+							>
+								<Icon src={icMemberAdd} />
+							</button>
+						</Match>
+					</Switch>
+					<button
+						type="button"
+						class="button icon-button"
+						onClick={onOpenDm}
+						ref={tipDm.content}
+					>
+						<Icon src={icDm} />
+					</button>
+					<button
+						type="button"
+						class="button icon-button"
+						onClick={openUserMenu}
+						ref={tipMenu.content}
+					>
+						<Icon src={icMore} />
+					</button>
+				</menu>
+			</div>
 			<div class="header">
 				<AvatarWithStatus user={props.user} animate={true} />
 				<div class="name-area">
@@ -158,36 +311,6 @@ export function UserProfile(props: UserProps) {
 			<div class="body">
 				<div class="dim">
 					id: <Copyable>{props.user.id}</Copyable>
-				</div>
-				<div class="actions">
-					<Switch>
-						<Match when={props.user.relationship?.relation === "Friend"}>
-							<button type="button" class="button" onClick={removeFriend}>
-								Remove Friend
-							</button>
-						</Match>
-						<Match when={props.user.relationship?.relation === "Outgoing"}>
-							<button type="button" class="button" onClick={removeFriend}>
-								Cancel Request
-							</button>
-						</Match>
-						<Match when={props.user.relationship?.relation === "Incoming"}>
-							<button type="button" class="button" onClick={sendFriendRequest}>
-								Accept Friend
-							</button>
-						</Match>
-						<Match when={!props.user.relationship?.relation}>
-							<button type="button" class="button" onClick={sendFriendRequest}>
-								Add Friend
-							</button>
-						</Match>
-					</Switch>
-					<button type="button" class="button" onClick={openDm}>
-						Message
-					</button>
-					<button type="button" class="button" onClick={openUserMenu}>
-						menu
-					</button>
 				</div>
 
 				<Show when={props.user.description}>
@@ -235,11 +358,24 @@ export function UserProfile(props: UserProps) {
 
 				<div class="note">
 					<h3 class="dim">Note</h3>
-					<textarea
-						placeholder="Click to add a note"
-						value={note()}
-						onInput={handleNoteInput}
+					<noteEditor.View
+						onChange={handleNoteInput}
+						placeholder="Add a note... (only you can see this)"
+						submitOnEnter={false}
+						channelId={props.user.id + "-notes"}
+						autofocus={false}
 					/>
+				</div>
+
+				<div class="dm-input">
+					<dmEditor.View
+						onSubmit={onDmSubmit}
+						onChange={onDmChange}
+						onUpload={onDmUpload}
+						channelId={props.user.id}
+						placeholder={`Message @${props.user.name}...`}
+					/>
+					<EmojiButton picked={onEmojiPick} />
 				</div>
 			</div>
 			<Show when={editRoles()}>
