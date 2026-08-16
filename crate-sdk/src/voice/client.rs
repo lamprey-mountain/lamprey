@@ -10,7 +10,11 @@ use common::{
 };
 use futures_util::{StreamExt, stream::BoxStream};
 use str0m::Rtc;
-use tokio::{net::UdpSocket, sync::mpsc, time};
+use tokio::{
+    net::UdpSocket,
+    sync::{broadcast, mpsc},
+    time,
+};
 use tracing::{error, info};
 
 use crate::{
@@ -20,6 +24,7 @@ use crate::{
 
 pub(crate) struct VoiceInner {
     tx: mpsc::Sender<RtcCommand>,
+    rx: broadcast::Sender<RtcEvent>,
 }
 
 /// a connection to a voice channel
@@ -50,7 +55,18 @@ impl Voice {
 
     /// get a stream of events
     pub fn events(&self) -> BoxStream<'static, VoiceEvent> {
-        futures_util::stream::empty().boxed()
+        let rx = self.state.rx.subscribe();
+        let rx = tokio_stream::wrappers::BroadcastStream::new(rx);
+        rx.filter_map(|evt| async move {
+            match evt {
+                Ok(RtcEvent::Signalling(_cmd)) => {
+                    // FIXME: Map RtcEvent to VoiceEvent
+                    None
+                }
+                Err(_) => None,
+            }
+        })
+        .boxed()
     }
 
     // /// get a stream of incoming tracks
@@ -154,10 +170,17 @@ impl<'a> VoiceBuilder<'a> {
         // TODO: Use self.client to send signaling packets and initialize WebRTC
 
         let (tx, rx) = mpsc::channel::<RtcCommand>(64);
-        let worker = VoiceActor { rtc, rx, sock };
+        let (evt_tx, _) = broadcast::channel::<RtcEvent>(64);
+        let worker = VoiceActor {
+            rtc,
+            rx,
+            tx: evt_tx.clone(),
+            sock,
+            pending: None,
+        };
         tokio::spawn(worker.spawn());
 
-        let state = Arc::new(VoiceInner { tx });
+        let state = Arc::new(VoiceInner { tx, rx: evt_tx });
         Ok(Voice { state })
     }
 }
@@ -165,6 +188,7 @@ impl<'a> VoiceBuilder<'a> {
 // TODO: move below into new file?
 
 /// sent to the worker
+#[derive(Debug, Clone)]
 pub enum RtcCommand {
     /// handle a signalling event from the server
     Signalling(SignallingEvent),
@@ -172,6 +196,7 @@ pub enum RtcCommand {
 }
 
 /// emitted by the worker
+#[derive(Debug, Clone)]
 pub enum RtcEvent {
     /// send this signalling command to the server
     Signalling(SignallingCommand),
@@ -180,9 +205,9 @@ pub enum RtcEvent {
 pub struct VoiceActor {
     rtc: Rtc,
     rx: mpsc::Receiver<RtcCommand>,
+    tx: broadcast::Sender<RtcEvent>,
     sock: UdpSocket,
-    // pending: Option<SdpPendingOffer>,
-    // tx: Sender<RtcEvent>,
+    pending: Option<str0m::change::SdpPendingOffer>,
 }
 
 impl VoiceActor {
@@ -196,14 +221,16 @@ impl VoiceActor {
 
     pub async fn step(&mut self) -> Result<(), VoiceError> {
         if !self.rtc.is_alive() {
-            todo!("handle rtc dead");
+            // TODO: handle rtc dead
+            error!("rtc dead");
+            return Err(VoiceError::Internal);
         }
 
         let output = match self.rtc.poll_output() {
             Ok(o) => o,
             Err(e) => {
                 error!("rtc poll error: {e}");
-                todo!("handle rtc poll error")
+                return Err(VoiceError::Rtc(e));
             }
         };
 
@@ -257,34 +284,56 @@ impl VoiceActor {
     }
 
     pub async fn handle_command(&mut self, cmd: RtcCommand) -> Result<(), VoiceError> {
-        // adding a track
-        // let mut changes = self.rtc.sdp_api();
-        // changes.add_media(
-        //     str0m::media::MediaKind::Audio,
-        //     str0m::media::Direction::SendOnly,
-        //     None,
-        //     None,
-        //     None,
-        // );
-        // changes.apply();
-
         match cmd {
             RtcCommand::Signalling(s) => match s {
-                SignallingEvent::Connected { .. } => todo!("info!"),
-                SignallingEvent::Disconnected => todo!("disconnect"),
-                SignallingEvent::Offer { sdp, tracks } => todo!(),
-                SignallingEvent::Answer { sdp } => todo!(),
-                SignallingEvent::Candidate { candidate } => todo!(),
-                SignallingEvent::Tracks {
-                    user_id,
-                    added,
-                    removed,
-                } => todo!(),
-                SignallingEvent::Subscribe(subs) => todo!(),
-                SignallingEvent::Migrate { new_sfu_id } => todo!(),
-                SignallingEvent::Error { message, code } => todo!(),
+                SignallingEvent::Connected { .. } => {
+                    info!("Connected to SFU");
+                }
+                SignallingEvent::Disconnected => {
+                    info!("Disconnected from SFU");
+                }
+                SignallingEvent::Offer { sdp, .. } => {
+                    let sdp = str0m::change::SdpOffer::from_sdp_string(&sdp.0)?;
+                    let answer = self.rtc.sdp_api().accept_offer(sdp)?;
+                    self.tx
+                        .send(RtcEvent::Signalling(SignallingCommand::Answer {
+                            sdp: common::v1::types::voice::SessionDescription(
+                                answer.to_sdp_string(),
+                            ),
+                        }))
+                        .map_err(|_| VoiceError::Internal)?;
+                }
+                SignallingEvent::Answer { sdp } => {
+                    let sdp = str0m::change::SdpAnswer::from_sdp_string(&sdp.0)?;
+                    if let Some(pending) = self.pending.take() {
+                        self.rtc.sdp_api().accept_answer(pending, sdp)?;
+                    } else {
+                        error!("got answer without a pending offer, ignoring");
+                    }
+                }
+                SignallingEvent::Candidate { candidate } => {
+                    if let Ok(c) = str0m::Candidate::from_sdp_string(&candidate.0) {
+                        self.rtc.add_remote_candidate(c);
+                    } else {
+                        error!("failed to parse candidate: {}", candidate.0);
+                    }
+                }
+                SignallingEvent::Tracks { .. } => {
+                    todo!("handle tracks")
+                }
+                SignallingEvent::Subscribe(_subs) => {
+                    todo!("handle subscribe")
+                }
+                SignallingEvent::Migrate { new_sfu_id } => {
+                    info!("Migrating to SFU: {:?}", new_sfu_id);
+                    todo!("handle migrate")
+                }
+                SignallingEvent::Error { message, code } => {
+                    error!("Signalling error: {} ({:?})", message, code);
+                }
             },
         }
+        Ok(())
     }
 
     pub async fn handle_str0m_event(&mut self, event: str0m::Event) -> Result<(), VoiceError> {

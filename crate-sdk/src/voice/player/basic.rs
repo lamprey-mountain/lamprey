@@ -1,27 +1,34 @@
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+
 /// a basic audio player
 pub struct BasicPlayer {
-    // TODO
+    paused: Arc<AtomicBool>,
+    volume: Arc<AtomicU32>,
 }
 
 impl BasicPlayer {
     pub fn new() -> Self {
-        todo!()
+        Self {
+            paused: Arc::new(AtomicBool::new(false)),
+            volume: Arc::new(AtomicU32::new(1.0f32.to_bits())),
+        }
     }
 
     pub fn paused(&self) -> bool {
-        todo!()
+        self.paused.load(Ordering::Relaxed)
     }
 
     pub fn set_paused(&self, paused: bool) {
-        todo!()
+        self.paused.store(paused, Ordering::Relaxed);
     }
 
     pub fn volume(&self) -> f32 {
-        todo!()
+        f32::from_bits(self.volume.load(Ordering::Relaxed))
     }
 
     pub fn set_volume(&self, volume: f32) {
-        todo!()
+        self.volume.store(volume.to_bits(), Ordering::Relaxed);
     }
 
     // TODO: seeking
