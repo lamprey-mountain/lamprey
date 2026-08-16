@@ -71,6 +71,7 @@ pub use mirror::*;
 pub use moderation::*;
 pub use notification::*;
 pub use oauth::*;
+pub use pack::*;
 pub use permission_overwrite::*;
 pub use preferences::*;
 pub use push::*;

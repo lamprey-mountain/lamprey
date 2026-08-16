@@ -15,6 +15,9 @@ pub mod pack_create {
     pub struct Request {
         #[json]
         pub pack: RoomCreate,
+
+        #[header]
+        pub idempotency_key: Option<String>,
     }
 
     pub struct Response {
@@ -93,7 +96,7 @@ pub mod pack_export {
     }
 }
 
-/// Pack list user
+/// Pack user list
 #[endpoint(
     get,
     path = "/user/{user_id}/pack",
@@ -101,7 +104,7 @@ pub mod pack_export {
     scopes = [Rooms],
     response(OK, body = PaginationResponse<Room>, description = "success"),
 )]
-pub mod pack_list_user {
+pub mod pack_user_list {
     use crate::v1::types::{PaginationQuery, PaginationResponse, Room, RoomId, UserId};
 
     pub struct Request {
@@ -118,7 +121,7 @@ pub mod pack_list_user {
     }
 }
 
-/// Pack install user
+/// Pack user install
 #[endpoint(
     get,
     path = "/user/{user_id}/pack/{pack_id}",
@@ -126,7 +129,7 @@ pub mod pack_list_user {
     scopes = [Rooms],
     response(OK, body = PackInstallation, description = "success"),
 )]
-pub mod pack_install_user {
+pub mod pack_user_install {
     use crate::v1::types::{RoomId, UserId, pack::PackInstallation};
 
     pub struct Request {
@@ -143,7 +146,29 @@ pub mod pack_install_user {
     }
 }
 
-/// Pack list room
+/// Pack user uninstall
+#[endpoint(
+    delete,
+    path = "/user/{user_id}/pack/{pack_id}",
+    tags = ["pack"],
+    scopes = [Rooms],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod pack_user_uninstall {
+    use crate::v1::types::{RoomId, UserId};
+
+    pub struct Request {
+        #[path]
+        pub user_id: UserId,
+
+        #[path]
+        pub pack_id: RoomId,
+    }
+
+    pub struct Response {}
+}
+
+/// Pack room list
 #[endpoint(
     get,
     path = "/room/{room_id}/pack",
@@ -151,7 +176,7 @@ pub mod pack_install_user {
     scopes = [Rooms],
     response(OK, body = PaginationResponse<Room>, description = "success"),
 )]
-pub mod pack_list_room {
+pub mod pack_room_list {
     use crate::v1::types::{PaginationQuery, PaginationResponse, Room, RoomId};
 
     pub struct Request {
@@ -168,7 +193,7 @@ pub mod pack_list_room {
     }
 }
 
-/// Pack install room
+/// Pack room install
 #[endpoint(
     get,
     path = "/room/{room_id}/pack/{pack_id}",
@@ -177,7 +202,7 @@ pub mod pack_list_room {
     permissions = [EmojiManage],
     response(OK, body = PackInstallation, description = "success"),
 )]
-pub mod pack_install_room {
+pub mod pack_room_install {
     use crate::v1::types::{RoomId, pack::PackInstallation};
 
     pub struct Request {
@@ -194,7 +219,7 @@ pub mod pack_install_room {
     }
 }
 
-/// Pack uninstall room
+/// Pack room uninstall
 #[endpoint(
     delete,
     path = "/room/{room_id}/pack/{pack_id}",
@@ -203,34 +228,12 @@ pub mod pack_install_room {
     permissions = [EmojiManage],
     response(NO_CONTENT, description = "success"),
 )]
-pub mod pack_uninstall_room {
+pub mod pack_room_uninstall {
     use crate::v1::types::RoomId;
 
     pub struct Request {
         #[path]
         pub room_id: RoomId,
-
-        #[path]
-        pub pack_id: RoomId,
-    }
-
-    pub struct Response {}
-}
-
-/// Pack uninstall user
-#[endpoint(
-    delete,
-    path = "/user/{user_id}/pack/{pack_id}",
-    tags = ["pack"],
-    scopes = [Rooms],
-    response(NO_CONTENT, description = "success"),
-)]
-pub mod pack_uninstall_user {
-    use crate::v1::types::{RoomId, UserId};
-
-    pub struct Request {
-        #[path]
-        pub user_id: UserId,
 
         #[path]
         pub pack_id: RoomId,

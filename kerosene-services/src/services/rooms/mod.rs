@@ -581,6 +581,7 @@ impl ServiceRooms {
                 .add("banner", &room.banner)
                 .add("public", &room.public)
                 .add("welcome_channel_id", &room.welcome_channel_id)
+                .add("type", &room.room_type)
                 .build(),
         });
         Ok(room)
@@ -665,6 +666,9 @@ impl ServiceRooms {
                     .await?;
             }
         }
+
+        // TODO: stricter field validation based on room type
+        // eg. error if welcome_channel_id is passed for RoomType::Emoji
 
         if room.welcome_channel_id.is_some() {
             self.send_welcome_message(room_id, creator_id).await?;
