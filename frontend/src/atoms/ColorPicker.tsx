@@ -492,7 +492,7 @@ export const ColorPickerButton = (props: ColorPickerButtonProps) => {
 							translate: `${position.x ?? 0}px ${position.y ?? 0}px`,
 							"z-index": 1000,
 						}}
-						tabindex="0"
+						tabindex="-1"
 					>
 						<ColorPicker {...props} />
 					</div>
