@@ -9,9 +9,10 @@ export const Search = (props: {
 	onInput?: (s: string) => void;
 	onSubmit?: (value: string, e: KeyboardEvent) => void;
 	onEscape?: () => void;
+	class?: string;
 }) => {
 	return (
-		<div class="search">
+		<div class={props.class} classList={{ search: true }}>
 			<Icon src={icSearch} alt="" color={null} />
 			<input
 				ref={props.ref}

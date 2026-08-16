@@ -14,6 +14,7 @@ import icX2 from "@/assets/x-2.png";
 import icX3 from "@/assets/x-3.png";
 import icX4 from "@/assets/x-4.png";
 import { Markdown } from "@/atoms/Markdown";
+import { Search } from "@/atoms/Search";
 import { permissions } from "@/lib/permissions";
 import { cyrb53, LCG } from "@/lib/rng";
 
@@ -141,13 +142,15 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 
 	return (
 		<div class="permission-selector">
-			<input
-				type="search"
+			<Search
 				placeholder="Search permissions..."
-				value={search()}
-				onInput={(e) => {
-					if (props.onSearch) props.onSearch(e.currentTarget.value);
-					else setInternalSearch(e.currentTarget.value);
+				value={search}
+				onInput={(q) => {
+					if (props.onSearch) {
+						props.onSearch(q);
+					} else {
+						setInternalSearch(q);
+					}
 				}}
 				class="permission-search-input"
 			/>

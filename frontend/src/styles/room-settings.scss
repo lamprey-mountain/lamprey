@@ -80,6 +80,15 @@
 		overflow-y: auto;
 	}
 
+	& .roles-header {
+		display: flex;
+		gap: 4px;
+
+		& > .search {
+			flex: 1;
+		}
+	}
+
 	& .role-list > li {
 		/* border: solid $sep-500 1px; */
 		/* background: $bg-300; */

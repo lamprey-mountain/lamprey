@@ -17,6 +17,8 @@ import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Checkbox } from "@/atoms/icons";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { Resizable } from "@/atoms/Resizable";
+import { Savebar } from "@/atoms/Savebar";
+import { Search } from "@/atoms/Search";
 import { PermissionSelector } from "@/components/shared/PermissionSelector";
 import { Avatar } from "@/components/shared/User";
 import { useModals } from "@/contexts/modal";
@@ -132,28 +134,8 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 		<div class="room-settings-roles">
 			<div class="role-main">
 				<h2>roles</h2>
-				<header class="applications-header">
-					<input
-						type="search"
-						placeholder="search"
-						aria-label="search"
-						onInput={(e) => setSearch(e.target.value)}
-					/>
-					<Show when={isOrderDirty()}>
-						<div style="display: flex; gap: 8px; align-items: center; margin-left: auto">
-							<span>order changed</span>
-							<button type="button" class="button big" onClick={cancelOrder}>
-								cancel
-							</button>
-							<button
-								type="button"
-								class="button big primary"
-								onClick={saveOrder}
-							>
-								save
-							</button>
-						</div>
-					</Show>
+				<header class="roles-header">
+					<Search placeholder="Search roles..." onInput={setSearch} />
 					<button type="button" class="button big primary" onClick={createRole}>
 						create role
 					</button>
@@ -166,6 +148,11 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 						edit={edit}
 					/>
 				</Show>
+				<Savebar
+					onCancel={cancelOrder}
+					onSave={saveOrder}
+					show={isOrderDirty()}
+				/>
 			</div>
 			<Show when={roles2.cache.has(edit.role.id!)}>
 				<Resizable
@@ -397,7 +384,6 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	const roles2 = useRoles();
 	const users2 = useUsers();
 	const roomMembers2 = useRoomMembers();
-	const _ctx = useCtx();
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<"role" | "members">("role");
 	const [memberSearch, setMemberSearch] = createSignal("");
@@ -469,28 +455,6 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	return (
 		<div class="role-edit">
 			<div class="toolbar">
-				<button
-					type="button"
-					class="button"
-					onClick={() => {
-						props.edit.setRole({ id: null } as unknown as Role);
-					}}
-				>
-					close
-				</button>
-				<button
-					type="button"
-					class="button"
-					disabled={
-						!isDirty(
-							props.edit.role as Role,
-							roles2.cache.get(props.edit.role.id!)!,
-						)
-					}
-					onClick={saveRole}
-				>
-					save
-				</button>
 				<button
 					type="button"
 					class="button danger"
@@ -600,11 +564,10 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 			<Show when={activeTab() === "members"}>
 				<div class="members-tab">
 					<div class="members-header">
-						<input
-							type="search"
+						<Search
 							placeholder="search members..."
-							value={memberSearch()}
-							onInput={(e) => setMemberSearch(e.currentTarget.value)}
+							value={memberSearch}
+							onInput={setMemberSearch}
 						/>
 						<button type="button" class="button" onClick={addMember}>
 							add member
@@ -635,6 +598,16 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					</ul>
 				</div>
 			</Show>
+			<Savebar
+				show={isDirty(
+					props.edit.role as Role,
+					roles2.cache.get(props.edit.role.id!)!,
+				)}
+				onCancel={() => {
+					props.edit.setRole({ id: null } as unknown as Role);
+				}}
+				onSave={saveRole}
+			/>
 		</div>
 	);
 };
