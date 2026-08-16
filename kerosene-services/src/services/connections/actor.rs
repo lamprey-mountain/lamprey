@@ -1,10 +1,9 @@
 use common::{
     v1::types::{
-        ChannelId, DocumentBranchId, MessageClient, MessageEnvelope, MessagePayload, MessageSync,
-        Permission, Session, SyncSubscribeDocument, SyncSubscribeMemberList, SyncSubscribeScript,
+        ChannelId, MessageClient, MessageEnvelope, MessagePayload, MessageSync, Permission,
+        Session, SyncSubscribeDocument, SyncSubscribeMemberList, SyncSubscribeScript,
         SyncSubscription,
         document::DocumentUpdate,
-        presence::Presence,
         voice::{VoiceStateUpdate, messages::SignallingCommand},
     },
     v2::types::{ConnectionId, SessionId},
@@ -18,7 +17,7 @@ use kerosene_sync::{
     util::{HEARTBEAT_TIME, MAX_QUEUE_LEN, Timeout},
 };
 use tokio::sync::mpsc;
-use tracing::{Instrument, error, trace, warn};
+use tracing::{Instrument, error, trace};
 
 use crate::{
     globals::messaging::Broadcast, prelude::*,

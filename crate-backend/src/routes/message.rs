@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -19,7 +17,7 @@ use validator::Validate;
 use crate::prelude::*;
 use crate::routes::util::auth::Auth4;
 use crate::routes::util::extract::UniversalExtractor;
-use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
+use crate::routes::util::{Auth, AuthRelaxed2};
 use crate::routes2;
 use crate::types::{DbMessageCreate, MessageSync, Permission};
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};

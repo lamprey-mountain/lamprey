@@ -1,12 +1,10 @@
 use std::collections::HashSet;
-use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use common::v1::routes;
 use common::v1::types::application::Scope;
-use common::v1::types::automod::AutomodAction;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::util::{Diff, Time};
@@ -21,13 +19,13 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
+use crate::prelude::*;
 use crate::routes::util::AuthRelaxed2;
 use crate::{ServerState, routes2};
 use common::v1::types::misc::UserIdReq;
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
 use super::util::Auth;
-use crate::error::{Error, Result};
 
 /// Room member list
 #[handler(routes::room_member_list)]

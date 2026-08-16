@@ -7,8 +7,7 @@ use tokio::task::JoinHandle;
 
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
-    ChannelId, ConnectionId, DocumentBranchId, MessageSync, Permission, RedexId, UserId,
-    sync::SyncSubscription,
+    ChannelId, ConnectionId, MessageSync, Permission, RedexId, UserId, sync::SyncSubscription,
 };
 
 use crate::prelude::*;

@@ -3,10 +3,9 @@ use std::time::Duration;
 
 use common::v1::types::MessageSync;
 use common::v1::types::presence::{Presence, Status};
-use common::v1::types::{ConnectionId, User, UserId};
+use common::v1::types::{ConnectionId, UserId};
 use dashmap::DashMap;
 use tokio::sync::mpsc;
-use tokio::task::JoinHandle;
 use tokio_util::time::{DelayQueue, delay_queue};
 use tracing::debug;
 

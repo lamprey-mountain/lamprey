@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::extract::{Path, Query};
 use axum::{Json, extract::State, response::IntoResponse};
 use common::v1::routes;
@@ -11,7 +9,6 @@ use common::v1::types::{
 use common::v1::types::{PaginationQuery, PaginationResponse};
 use http::StatusCode;
 use kerosene_services::services::search::SearchAuditLogVisibility;
-use lamprey_backend_core::Error;
 use lamprey_backend_core::types::admin::{
     AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache, AdminPurgeCacheResponse,
     DlqEntry, SearchIndexStats, SearchIndexStatsRoom,
@@ -21,9 +18,10 @@ use lamprey_macros::handler;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::util::Auth;
+use crate::prelude::*;
 use crate::routes2;
 
-use crate::{ServerState, error::Result};
+use crate::ServerState;
 use common::v1::types::{ChannelId, RoomId};
 
 /// Admin whisper

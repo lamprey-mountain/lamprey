@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use axum::Json;
 use axum::extract::State;
@@ -19,15 +18,15 @@ use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::ServerState;
+use crate::prelude::*;
 use crate::routes::util::auth::Auth4;
-use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
+use crate::routes::util::{Auth, AuthRelaxed2};
 use crate::routes2;
-use crate::state::Globals;
 use crate::types::{
     ChannelPatch, DbChannelCreate, DbChannelType, DbRoomCreate, MediaLinkType, MessageSync,
     Permission,
 };
-use crate::{Error, ServerState, error::Result};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 
 /// Channel create room

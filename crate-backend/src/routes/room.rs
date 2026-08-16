@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 use axum::Json;
@@ -18,11 +17,12 @@ use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::ServerState;
+use crate::prelude::*;
+use crate::routes::util::Auth;
 use crate::routes::util::auth::Auth4;
-use crate::routes::util::{Auth, Auth3};
 use crate::routes2;
 use crate::types::{DbRoomCreate, MediaLinkType, MessageSync, PaginationResponse, Permission};
-use crate::{Error, ServerState, error::Result};
 use common::v1::types::error::{ApiError, ErrorCode};
 use kerosene_services::services::search::SearchRoomsVisibility;
 
