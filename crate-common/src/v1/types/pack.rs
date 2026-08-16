@@ -1,14 +1,8 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{RoomId, emoji::EmojiCustomMinimal, misc::binary::Binary};
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct PackInstallation {
     pub pack_id: RoomId,
 }
@@ -16,9 +10,7 @@ pub struct PackInstallation {
 /// room metadata for pack rooms
 // TODO: add `pack: Option<PackInfo>` to Room
 // NOTE: do i want to rename this to `Pack`?
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct PackInfo {
     /// the license of this pack
     // NOTE: do i want to reuse redex::License
@@ -28,9 +20,7 @@ pub struct PackInfo {
 /// a serialized pack
 ///
 /// can be used to import/export pack data
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct PackSnapshot {
     /// the room's name
     ///
@@ -54,9 +44,7 @@ pub struct PackSnapshot {
     // pub sounds: Vec<Sound>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct PackImport {
     /// the emojis in this pack
     pub emojis: Vec<PackSnapshotEmoji>,
@@ -65,11 +53,9 @@ pub struct PackImport {
     // pub sounds: Vec<Sound>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct PackSnapshotEmoji {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub inner: EmojiCustomMinimal,
 
     /// base64 image data for this emoji
