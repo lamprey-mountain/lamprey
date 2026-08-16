@@ -298,7 +298,7 @@ pub enum MessageType {
     /// a room member joined the room
     MemberJoin,
 
-    /// (TODO) a call was started in a dm or gdm
+    /// a call was started in a dm or gdm
     Call(MessageCall),
 
     /// this thread was renamed

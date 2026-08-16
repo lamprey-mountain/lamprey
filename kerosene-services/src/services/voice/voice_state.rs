@@ -2,6 +2,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::voice::internal::SfuVoiceState;
 use common::v1::types::voice::messages::{SfuCommand, SignallingCommand, SignallingEvent};
 use lamprey_backend_core::Error;
+use lamprey_backend_data_postgres::DbMessageUpdate;
 use std::sync::Arc;
 
 use crate::Result;
@@ -9,7 +10,8 @@ use crate::services::voice::ServiceVoice;
 use common::v1::types::util::Time;
 use common::v1::types::voice::{CallCreate, VoiceState, VoiceStateUpdate};
 use common::v1::types::{
-    ChannelId, ChannelType, ConnectionId, MessageSync, Permission, SessionId, SfuId, UserId,
+    ChannelId, ChannelType, ConnectionId, MessageCall, MessageSync, MessageType, Permission,
+    SessionId, SfuId, UserId,
 };
 
 pub struct VoiceStateHandleInner {
@@ -99,7 +101,7 @@ impl ServiceVoice {
         let call = if let Some(call) = self.call_get(update.channel_id) {
             call
         } else {
-            self.call_create(update.channel_id, CallCreate { topic: None })
+            self.call_create(update.channel_id, user_id, CallCreate { topic: None })
                 .await?
         };
 
@@ -153,6 +155,54 @@ impl ServiceVoice {
             sfu_id,
         });
         call.voice_states.insert(user_id, Arc::clone(&handle));
+
+        if let Some(message_id) = call.message_id {
+            let globals = self.state.clone();
+            let channel_id = update.channel_id;
+            tokio::spawn(async move {
+                let mut txn = globals.begin().await?;
+
+                // PERF: don't read message from db, store metadata in memory
+                let message = txn.message_get(channel_id, message_id).await?;
+
+                let MessageType::Call(mut message_call) = message.latest_version.message_type
+                else {
+                    return Ok(());
+                };
+
+                let mut participants = message_call.participants;
+                if participants.contains(&user_id) {
+                    return Ok(());
+                }
+
+                participants.push(user_id);
+
+                let update = DbMessageUpdate {
+                    attachments: vec![],
+                    author_id: message.author_id,
+                    embeds: vec![],
+                    components: vec![],
+                    message_type: MessageType::Call(MessageCall {
+                        ended_at: None,
+                        participants,
+                    }),
+                    created_at: None,
+                    mentions: Default::default(),
+                };
+
+                txn.message_update_in_place(channel_id, (*message_id).into(), update)
+                    .await?;
+                let message = txn.message_get(channel_id, message_id).await?;
+                txn.commit().await?;
+
+                globals
+                    .messaging()
+                    .broadcast_channel(channel_id, MessageSync::MessageUpdate { message })
+                    .await?;
+
+                Result::Ok(())
+            });
+        }
 
         sfu.send(SfuCommand::CreatePeer {
             channel_id: update.channel_id,

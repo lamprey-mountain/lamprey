@@ -462,7 +462,7 @@ async fn voice_call_create(
     let call_handle = s
         .services()
         .voice
-        .call_create(req.channel_id, req.call)
+        .call_create(req.channel_id, auth.user.id, req.call)
         .await?;
     Ok((StatusCode::CREATED, Json(call_handle.call().clone())))
 }

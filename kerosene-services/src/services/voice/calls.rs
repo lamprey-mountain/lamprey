@@ -1,15 +1,16 @@
 use crate::Result;
 use crate::services::voice::ServiceVoice;
 use crate::services::voice::voice_state::VoiceStateHandle;
-use common::v1::types::MessageSync;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::voice::CallMetadata;
 use common::v1::types::{
-    ChannelId, SfuId, UserId,
+    ChannelId, MessageId, SfuId, UserId,
     util::Time,
     voice::{Call, CallCreate, CallPatch},
 };
+use common::v1::types::{MessageCall, MessageSync, MessageType};
 use dashmap::{DashMap, DashSet};
+use lamprey_backend_data_postgres::{DbMessageCreate, DbMessageUpdate};
 use std::{sync::Arc, time::Duration};
 
 pub struct CallHandleInner {
@@ -17,6 +18,7 @@ pub struct CallHandleInner {
     pub sfus: DashSet<SfuId>,
     pub cleanup_task: tokio::task::AbortHandle,
     pub voice_states: DashMap<UserId, VoiceStateHandle>,
+    pub message_id: Option<MessageId>,
 }
 
 pub type CallHandle = Arc<CallHandleInner>;
@@ -52,6 +54,7 @@ impl ServiceVoice {
     pub async fn call_create(
         &self,
         channel_id: ChannelId,
+        user_id: UserId,
         params: CallCreate,
     ) -> Result<CallHandle> {
         // 1. return (and bump) existing call if it exists
@@ -79,44 +82,80 @@ impl ServiceVoice {
             sfus: DashSet::new(),
             cleanup_task: self.spawn_cleanup_task(channel_id),
             voice_states: DashMap::new(),
+            message_id: None,
         });
 
         self.calls.insert(channel_id, Arc::clone(&handle));
 
+        // 4. send call message, if needed
+        if channel.is_dm() {
+            let globals = self.state.clone();
+            tokio::spawn(async move {
+                let srv = globals.services();
+                // TODO(?): move this logic to messages service
+                let mut txn = globals.begin().await?;
+                let message_id = txn
+                    .message_create(DbMessageCreate {
+                        id: None,
+                        channel_id,
+                        attachments: vec![],
+                        author_id: user_id,
+                        embeds: vec![],
+                        components: vec![],
+                        message_type: MessageType::Call(MessageCall {
+                            ended_at: None,
+                            participants: vec![user_id],
+                        })
+                        .into(),
+                        created_at: None,
+                        removed_at: None,
+                        flume: None,
+                        mentions: Default::default(),
+                        interaction: None,
+                        ephemeral: false,
+                    })
+                    .await?;
+                let message = txn.message_get(channel_id, message_id).await?;
+                txn.commit().await?;
+
+                let event = MessageSync::MessageCreate { message };
+
+                globals
+                    .messaging()
+                    .broadcast_channel(channel_id, event)
+                    .await?;
+
+                if let Some(mut entry) = globals.services().voice.calls.get_mut(&channel_id) {
+                    let handle = entry.value();
+                    let updated_handle = Arc::new(CallHandleInner {
+                        call: handle.call.clone(),
+                        sfus: handle.sfus.clone(),
+                        cleanup_task: handle.cleanup_task.clone(),
+                        voice_states: handle.voice_states.clone(),
+                        message_id: Some(message_id),
+                    });
+                    *entry.value_mut() = updated_handle;
+                }
+
+                Result::Ok(())
+            });
+        }
+
+        // TODO: broadcast CallCreate
+        // TODO: clean up empty Calls after a timeout
+        // let _ = self.state.broadcast(MessageSync::CallCreate { call });
+
+        // let has_voice_states = self
+        //     .voice_states
+        //     .iter()
+        //     .any(|s| s.channel_id == params.channel_id);
+
+        // if !has_voice_states {
+        //     self.spawn_call_cleanup(params.channel_id);
+        // }
+
         Ok(handle)
     }
-
-    // TEMP: old code for reference
-    // pub async fn call_create(&self, params: CallCreate) -> Result<()> {
-    //     let channel = self
-    //         .state
-    //         .services()
-    //         .channels
-    //         .get(params.channel_id, None)
-    //         .await?;
-    //
-    //     let room_id = channel.room_id;
-    //     let call = Call {
-    //         room_id,
-    //         channel_id: params.channel_id,
-    //         topic: params.topic,
-    //         created_at: Time::now_utc(),
-    //     };
-    //     self.calls.insert(params.channel_id, call.clone());
-    //
-    //     let _ = self.state.broadcast(MessageSync::CallCreate { call });
-    //
-    //     let has_voice_states = self
-    //         .voice_states
-    //         .iter()
-    //         .any(|s| s.channel_id == params.channel_id);
-    //
-    //     if !has_voice_states {
-    //         self.spawn_call_cleanup(params.channel_id);
-    //     }
-    //
-    //     Ok(())
-    // }
 
     /// delete a call
     ///
@@ -132,6 +171,46 @@ impl ServiceVoice {
             let handle = entry.value();
             if !handle.voice_states.is_empty() && !force {
                 return false;
+            }
+
+            if let Some(message_id) = handle.message_id {
+                let globals = self.state.clone();
+                tokio::spawn(async move {
+                    let mut txn = globals.begin().await?;
+
+                    // PERF: don't read message from db, store metadata in memory
+                    let message = txn.message_get(channel_id, message_id).await?;
+
+                    let MessageType::Call(mut message_call) = message.latest_version.message_type
+                    else {
+                        return Ok(());
+                    };
+
+                    let update = DbMessageUpdate {
+                        attachments: vec![],
+                        author_id: message.author_id,
+                        embeds: vec![],
+                        components: vec![],
+                        message_type: MessageType::Call(MessageCall {
+                            ended_at: Some(Time::now_utc()),
+                            participants: message_call.participants,
+                        }),
+                        created_at: None,
+                        mentions: Default::default(),
+                    };
+
+                    txn.message_update_in_place(channel_id, (*message_id).into(), update)
+                        .await?;
+                    let message = txn.message_get(channel_id, message_id).await?;
+                    txn.commit().await?;
+
+                    globals
+                        .messaging()
+                        .broadcast_channel(channel_id, MessageSync::MessageUpdate { message })
+                        .await?;
+
+                    Result::Ok(())
+                });
             }
         }
 
@@ -154,11 +233,13 @@ impl ServiceVoice {
         let mut new_call = handle.call.clone();
         new_call.apply_patch(patch);
 
+        // PERF: dont clone to update calls (arc-swap?)
         let updated_handle = Arc::new(CallHandleInner {
             call: new_call.clone(),
             sfus: handle.sfus.clone(),
             cleanup_task: handle.cleanup_task.clone(),
             voice_states: handle.voice_states.clone(),
+            message_id: handle.message_id,
         });
 
         *entry.value_mut() = Arc::clone(&updated_handle);
@@ -225,6 +306,7 @@ impl ServiceVoice {
                 sfus: handle.sfus.clone(),
                 cleanup_task: new_cleanup_task,
                 voice_states: handle.voice_states.clone(),
+                message_id: handle.message_id,
             });
 
             *entry.value_mut() = updated_handle;
