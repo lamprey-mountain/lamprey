@@ -7,28 +7,28 @@ description.workspace = true
 license.workspace = true
 
 [dependencies]
-serde = { version = "1.0.228", features = ["derive"], optional = true }
-serde_json = { version = "1.0.149", optional = true }
-time = { version = "0.3.47", features = ["formatting", "parsing", "serde"] }
+serde = { version = "1.0.229", features = ["derive"], optional = true }
+serde_json = { version = "1.0.151", optional = true }
+time = { version = "0.3.55", features = ["formatting", "parsing", "serde"] }
 url = { version = "2.5.8", features = ["serde"] }
-utoipa = { version = "5.4.0", features = ["axum_extras", "url", "uuid", "time"], optional = true }
-uuid = { version = "1.22.0", features = ["serde", "v7"] }
+utoipa = { version = "5.5.0", features = ["axum_extras", "url", "uuid", "time"], optional = true }
+uuid = { version = "1.24.1", features = ["serde", "v7"] }
 mediatype = { version = "0.20.0", features = ["serde"] }
 validator = { version = "0.20.0", features = ["derive"], optional = true }
 strum = { version = "0.27.2", features = ["derive"] }
-unicode-segmentation = "1.12.0"
+unicode-segmentation = "1.13.3"
 unicode-properties = "0.1.4"
-regex = "1.12.3"
+regex = "1.13.1"
 pastey = "0.1.1"
-thiserror = "2.0.18"
+thiserror = "2.0.20"
 str0m = { version = "0.20.0", optional = true }
 lamprey-macros = { version = "0.1", path = "../crate-macros" }
 base64 = "0.22.1"
-http = "1.4.0"
-bytes = { version = "1.11.1", features = ["serde"] }
-bitflags = { version = "2.11.1", features = ["serde"] }
+http = "1.5.0"
+bytes = { version = "1.12.1", features = ["serde"] }
+bitflags = { version = "2.13.1", features = ["serde"] }
 ed25519-dalek = "2.2.0"
-rand = "0.10.1"
+rand = "0.10.2"
 serde_urlencoded = "0.7.1"
 percent-encoding = "2.3.2"
 

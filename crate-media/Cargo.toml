@@ -11,36 +11,36 @@ name = "media"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.102"
+anyhow = "1.0.104"
 async-nats = "0.46.0"
 async-recursion = "1.1.1"
 async-tempfile = "0.7.0"
-axum = "0.8.8"
+axum = "0.8.9"
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
 dotenvy = "0.15.7"
 figment = { version = "0.10.19", features = ["env", "toml"] }
-futures-util = "0.3.32"
+futures-util = "0.3.34"
 headers = "0.4.1"
-http = "1.4.0"
+http = "1.5.0"
 image = { version = "0.25.10", features = ["avif"] }
 lamprey-backend-core = { version = "0.1.1", path = "../crate-backend-core" }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
-moka = { version = "0.12.14", features = ["future"] }
+moka = { version = "0.12.16", features = ["future"] }
 opendal = { version = "0.54.1", features = ["services-s3"] }
 opentelemetry = "0.30.0"
 opentelemetry-otlp = { version = "0.30.0", features = ["grpc-tonic", "logs", "metrics", "reqwest", "tokio", "tracing", "trace"], default-features = false }
 opentelemetry_sdk = { version = "0.30.0", features = ["rt-tokio", "tokio"] }
 percent-encoding = "2.3.2"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "uuid"] }
-thiserror = "2.0.18"
-tokio = { version = "1.50.0", features = ["full"] }
-tokio-util = { version = "0.7.18", features = ["io"] }
-tower-http = { version = "0.6.8", features = ["catch-panic", "cors", "propagate-header", "trace"] }
+thiserror = "2.0.20"
+tokio = { version = "1.53.1", features = ["full"] }
+tokio-util = { version = "0.7.19", features = ["io"] }
+tower-http = { version = "0.6.11", features = ["catch-panic", "cors", "propagate-header", "trace"] }
 tracing = "0.1.44"
 tracing-opentelemetry = "0.31.0"
-tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 url = "2.5.8"
-utoipa = { version = "5.4.0", features = ["axum_extras"] }
+utoipa = { version = "5.5.0", features = ["axum_extras"] }
 utoipa-axum = "0.2.0"

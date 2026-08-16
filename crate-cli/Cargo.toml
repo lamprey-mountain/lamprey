@@ -9,20 +9,20 @@ repository.workspace = true
 keywords.workspace = true
 
 [dependencies]
-anyhow = "1.0.102"
-clap = { version = "4.6.1", features = ["derive"] }
+anyhow = "1.0.104"
+clap = { version = "4.6.6", features = ["derive"] }
 common = { package = "lamprey-common", version = "0.1.1", path = "../crate-common" }
-demand = "2.0.1"
+demand = "2.0.5"
 dirs = "6.0.0"
 figment = { version = "0.10.19", features = ["env", "toml"] }
-indicatif = { version = "0.18.4", features = ["tokio"] }
+indicatif = { version = "0.18.6", features = ["tokio"] }
 lamprey-backend = { version = "0.1.1", path = "../crate-backend" }
 lamprey-backend-core = { version = "0.1.1", path = "../crate-backend-core" }
 lamprey-media = { version = "0.1.1", path = "../crate-media" }
 lamprey-sdk = { version = "0.1.1", path = "../crate-sdk" }
 lamprey-voice = { version = "0.1.1", path = "../crate-voice" }
-serde = { version = "1.0.228", features = ["derive"] }
+serde = { version = "1.0.229", features = ["derive"] }
 strum = { version = "0.28.0", features = ["derive"] }
-tokio = { version = "1.52.3", features = ["macros"] }
-toml = "1.1.2"
+tokio = { version = "1.53.1", features = ["macros"] }
+toml = "1.1.4"
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }

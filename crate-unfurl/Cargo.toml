@@ -9,15 +9,15 @@ repository.workspace = true
 keywords.workspace = true
 
 [dependencies]
-async-trait = "0.1.89"
-bytes = "1.11.1"
+async-trait = "0.1.92"
+bytes = "1.12.1"
 html5ever = "0.39.0"
 lamprey-common = { version = "0.1.1", path = "../crate-common" }
-reqwest = "0.13.2"
-serde = { version = "1.0.228", features = ["derive"] }
-thiserror = "2.0.18"
-tokio = "1.50.0"
+reqwest = "0.13.4"
+serde = { version = "1.0.229", features = ["derive"] }
+thiserror = "2.0.20"
+tokio = "1.53.1"
 tracing = "0.1.44"
 url = "2.5.8"
-utoipa = { version = "5.4.0", features = ["url"] }
+utoipa = { version = "5.5.0", features = ["url"] }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }

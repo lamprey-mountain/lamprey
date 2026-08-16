@@ -17,5 +17,5 @@ kerosene-services = { version = "0.1.1", path = "../kerosene-services" }
 lamprey-backend-core = { version = "0.1.1", path = "../crate-backend-core" }
 opentelemetry = "0.32.0"
 opentelemetry-otlp = "0.32.0"
-tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.44"

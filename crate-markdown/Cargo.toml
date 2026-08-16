@@ -13,19 +13,19 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 # TODO: common refuses to compile without a random mishmash of features, i should clean up that code
-anyhow = { version = "1.0.102", optional = true }
-clap = { version = "4.6.1", features = ["derive"], optional = true }
+anyhow = { version = "1.0.104", optional = true }
+clap = { version = "4.6.6", features = ["derive"], optional = true }
 lamprey-common = { path = "../crate-common", optional = true, default-features = false, features = ["validator", "serde", "utoipa", "ptr_box", "feat_interaction_reaction" ] }
 logos = "0.16.1"
 rowan = "0.16.1"
-uuid = { version = "1.22.0", features = ["serde", "v7"] }
-wasm-bindgen = { version = "0.2.117", optional = true }
-serde = { version = "1.0.228", optional = true, features = ["derive"] }
+uuid = { version = "1.24.1", features = ["serde", "v7"] }
+wasm-bindgen = { version = "0.2.127", optional = true }
+serde = { version = "1.0.229", optional = true, features = ["derive"] }
 serde-wasm-bindgen = { version = "0.6.5", optional = true }
-tsify = { version = "0.5.5", optional = true, default-features = false, features = ["js"] }
+tsify = { version = "0.5.6", optional = true, default-features = false, features = ["js"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-uuid = { version = "1.22.0", features = ["serde", "v7", "js"] }
+uuid = { version = "1.24.1", features = ["serde", "v7", "js"] }
 getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [features]
