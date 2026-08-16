@@ -1211,6 +1211,15 @@ impl MessageCreate {
     }
 }
 
+impl From<String> for MessageCreate {
+    fn from(content: String) -> Self {
+        Self {
+            content: Some(content),
+            ..Default::default()
+        }
+    }
+}
+
 impl MessageDefaultMarkdown {
     pub fn is_empty(&self) -> bool {
         self.content.as_ref().is_none_or(|s| s.is_empty())

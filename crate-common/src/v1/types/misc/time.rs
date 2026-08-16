@@ -3,6 +3,8 @@ use std::{
     time::Duration,
 };
 
+use crate::v1::types::misc::duration::Duration as CommonDuration;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use time::{OffsetDateTime, PrimitiveDateTime};
@@ -82,11 +84,27 @@ impl Add<Duration> for Time {
     }
 }
 
+impl Add<CommonDuration> for Time {
+    type Output = Time;
+
+    fn add(self, rhs: CommonDuration) -> Self::Output {
+        self + std::time::Duration::from(rhs)
+    }
+}
+
 impl Sub<Duration> for Time {
     type Output = Time;
 
     fn sub(self, rhs: Duration) -> Self::Output {
         Time::from(self.0 - rhs)
+    }
+}
+
+impl Sub<CommonDuration> for Time {
+    type Output = Time;
+
+    fn sub(self, rhs: CommonDuration) -> Self::Output {
+        self - std::time::Duration::from(rhs)
     }
 }
 
