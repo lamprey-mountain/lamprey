@@ -389,10 +389,45 @@ export const ColorPickerButton = (props: ColorPickerProps) => {
 		placement: "right-end",
 	});
 
-	// TODO: close when clicked outside
-	// TODO: close when color picker is unfocused
-	// TODO: close when escape is pressed
 	// TODO: animate color picker
+
+	createEffect(() => {
+		if (menuOpen()) {
+			const onClickOutside = (e: MouseEvent) => {
+				const target = e.target as HTMLElement;
+				const ref = referenceEl();
+				const float = floatingEl();
+				if (ref && float && !ref.contains(target) && !float.contains(target)) {
+					setMenuOpen(false);
+				}
+			};
+
+			const onKeyDown = (e: KeyboardEvent) => {
+				if (e.key === "Escape") {
+					setMenuOpen(false);
+				}
+			};
+
+			const onFocusOut = (e: FocusEvent) => {
+				const target = e.relatedTarget as HTMLElement;
+				const ref = referenceEl();
+				const float = floatingEl();
+				if (ref && float && !ref.contains(target) && !float.contains(target)) {
+					setMenuOpen(false);
+				}
+			};
+
+			window.addEventListener("click", onClickOutside);
+			window.addEventListener("keydown", onKeyDown);
+			window.addEventListener("focusout", onFocusOut);
+
+			onCleanup(() => {
+				window.removeEventListener("click", onClickOutside);
+				window.removeEventListener("keydown", onKeyDown);
+				window.removeEventListener("focusout", onFocusOut);
+			});
+		}
+	});
 
 	return (
 		<>
@@ -415,6 +450,7 @@ export const ColorPickerButton = (props: ColorPickerProps) => {
 							translate: `${position.x ?? 0}px ${position.y ?? 0}px`,
 							"z-index": 1000,
 						}}
+						tabindex="0"
 					>
 						<ColorPicker {...props} />
 					</div>
