@@ -1,6 +1,5 @@
 use std::{
     collections::{HashMap, VecDeque},
-    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -13,12 +12,12 @@ use common::{
 };
 use kameo::{
     Actor,
+    actor::ActorRef,
     prelude::{Context, Message},
 };
 use lamprey_backend_core::{Error, Result};
 use tokio::sync::broadcast;
 use tracing::{debug, warn};
-use uuid::Uuid;
 use yrs::updates::encoder::Encode;
 use yrs::{
     DeepObservable, Doc, Out, ReadTxn, StateVector, Transact, Update,
@@ -43,6 +42,7 @@ pub struct PendingChange {
 #[derive(Clone, Debug)]
 pub struct PresenceData {
     pub conn_id: ConnectionId,
+    // PERF: use bytes for this if possible
     pub cursor_head: String,
     pub cursor_tail: Option<String>,
 }
@@ -70,59 +70,6 @@ pub struct DocumentActor {
     pub(super) last_flush: Instant,
     pub(super) last_active: Instant,
 }
-
-/// apply an edit to this edit context
-pub struct ApplyUpdate {
-    pub author_id: UserId,
-    pub origin_conn_id: Option<ConnectionId>,
-    pub update_bytes: Vec<u8>,
-}
-
-/// check if this document should be unloaded
-pub struct CheckUnload;
-
-/// get the current snapshot
-pub struct GetSnapshot;
-
-/// get the diff from a state vector
-pub struct GetDiff {
-    pub state_vector: StateVector,
-}
-
-/// broadcast presence update
-pub struct BroadcastPresence {
-    pub user_id: UserId,
-    pub origin_conn_id: Option<ConnectionId>,
-    pub cursor_head: String,
-    pub cursor_tail: Option<String>,
-}
-
-/// remove presence
-pub struct PresenceDelete {
-    pub user_id: UserId,
-    pub conn_id: ConnectionId,
-}
-
-/// get all presence
-pub struct PresenceGet;
-
-/// get the document content as a Serdoc
-pub struct SerdocGet;
-
-/// replace the document content from a Serdoc
-pub struct SerdocPut {
-    pub author_id: UserId,
-    pub components: Vec<ComponentCreate>,
-}
-
-/// get document state vector
-pub struct GetStateVector;
-
-/// persist and unload this document
-pub struct PersistAndUnload;
-
-/// get a subscriber to the document event stream
-pub struct Subscribe;
 
 impl DocumentActor {
     fn should_snapshot(&self) -> bool {
@@ -184,15 +131,253 @@ impl DocumentActor {
     }
 }
 
-impl Message<ApplyUpdate> for DocumentActor {
-    type Reply = Result<()>;
+#[kameo::messages]
+impl DocumentActor {
+    /// get a broadcast receiver to the document event stream
+    #[message]
+    pub fn subscribe(&self) -> broadcast::Receiver<DocumentEvent> {
+        self.update_tx.subscribe()
+    }
 
-    async fn handle(
+    /// get document state vector
+    #[message]
+    pub fn get_state_vector(&self) -> Vec<u8> {
+        self.doc.transact().state_vector().encode_v1()
+    }
+
+    /// check if this document should be unloaded
+    #[message]
+    pub fn should_unload(&self) -> bool {
+        self.presence.is_empty() && self.last_active.elapsed() > Duration::from_secs(60)
+    }
+
+    /// get the current snapshot
+    #[message]
+    pub fn get_snapshot(&self) -> Result<Vec<u8>> {
+        Ok(self
+            .doc
+            .transact()
+            .encode_state_as_update_v1(&StateVector::default()))
+    }
+
+    /// broadcast presence update
+    #[message]
+    pub fn broadcast_presence(
         &mut self,
-        msg: ApplyUpdate,
-        _ctx: &mut kameo::prelude::Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        let update = Update::decode_v1(&msg.update_bytes)
+        user_id: UserId,
+        origin_conn_id: Option<ConnectionId>,
+        cursor_head: String,
+        cursor_tail: Option<String>,
+    ) -> Result<()> {
+        self.last_active = Instant::now();
+        if let Some(conn_id) = origin_conn_id {
+            self.presence.insert(
+                user_id,
+                PresenceData {
+                    conn_id,
+                    cursor_head: cursor_head.clone(),
+                    cursor_tail: cursor_tail.clone(),
+                },
+            );
+        }
+        let _ = self.update_tx.send(DocumentEvent::Presence {
+            user_id,
+            origin_conn_id,
+            cursor_head,
+            cursor_tail,
+        });
+        Ok(())
+    }
+
+    /// remove presence
+    #[message]
+    pub fn presence_delete(&mut self, user_id: UserId, conn_id: ConnectionId) -> Result<()> {
+        if let Some(presence) = self.presence.get(&user_id) {
+            if presence.conn_id == conn_id {
+                self.presence.remove(&user_id);
+                if self.presence.is_empty() {
+                    self.last_active = Instant::now();
+                }
+                let _ = self.update_tx.send(DocumentEvent::Presence {
+                    user_id,
+                    origin_conn_id: Some(conn_id),
+                    cursor_head: "".to_string(),
+                    cursor_tail: None,
+                });
+            }
+        }
+        Ok(())
+    }
+
+    /// get all presence
+    #[message]
+    pub fn presence_get(&self) -> Result<Vec<(UserId, String, Option<String>, ConnectionId)>> {
+        Ok(self
+            .presence
+            .iter()
+            .map(|(uid, data)| {
+                (
+                    *uid,
+                    data.cursor_head.clone(),
+                    data.cursor_tail.clone(),
+                    data.conn_id,
+                )
+            })
+            .collect())
+    }
+
+    /// get the diff from a state vector
+    #[message]
+    pub fn get_diff(&self, state_vector: StateVector) -> Result<Vec<u8>> {
+        Ok(self.doc.transact().encode_diff_v1(&state_vector))
+    }
+
+    /// get the document content as a Serdoc
+    #[message]
+    pub fn serdoc_get(&self) -> Result<Serdoc> {
+        Ok(crate::services::documents::serialized::doc_to_serdoc(
+            &self.doc,
+        ))
+    }
+
+    /// replace the document content from a Serdoc
+    #[message]
+    pub async fn serdoc_put(
+        &mut self,
+        author_id: UserId,
+        components: Vec<ComponentCreate>,
+    ) -> Result<()> {
+        use crate::services::documents::serialized;
+
+        // calculate stats
+        let old_serdoc = serialized::doc_to_serdoc(&self.doc);
+        let stat_removed = old_serdoc
+            .components
+            .iter()
+            .map(|c| match &c.ty {
+                ComponentType::Text { content } => content.chars().count(),
+                _ => 0,
+            })
+            .sum::<usize>() as u32;
+
+        let stat_added = components
+            .iter()
+            .map(|c| match &c.ty {
+                ComponentType::Text { content } => content.chars().count(),
+                _ => 0,
+            })
+            .sum::<usize>() as u32;
+
+        let update_out = Arc::new(std::sync::Mutex::new(Vec::new()));
+        let update_out_inner = update_out.clone();
+
+        let _sub_update = self.doc.observe_update_v1(move |_, event| {
+            let mut u = update_out_inner.lock().unwrap();
+            *u = event.update.to_vec();
+        });
+
+        let mut allocator = IdAllocator::new();
+        let canonical_components: Vec<ComponentCanonical> = components
+            .into_iter()
+            .map(|c| {
+                let id = allocator.allocate(c.id);
+                match c.ty {
+                    ComponentType::Text { content } => Component {
+                        id,
+                        ty: ComponentType::Text { content },
+                        allow: None,
+                    },
+                    _ => unimplemented!("only text components are supported for now"),
+                }
+            })
+            .collect();
+
+        serialized::serdoc_apply_to_doc(&self.doc, &canonical_components);
+
+        drop(_sub_update);
+
+        let update_bytes = {
+            let u = update_out.lock().unwrap();
+            u.clone()
+        };
+
+        if update_bytes.is_empty() {
+            return Ok(());
+        }
+
+        self.last_active = Instant::now();
+        self.changes_since_last_snapshot += 1;
+
+        // Clone for broadcast, move original into pending_changes
+        let broadcast_bytes = update_bytes.clone();
+        self.pending_changes.push_back(PendingChange {
+            author_id,
+            change: update_bytes,
+            stat_added,
+            stat_removed,
+        });
+
+        if self.should_flush() {
+            self.flush().await?;
+        }
+
+        if self.should_snapshot() {
+            self.snapshot().await?;
+        }
+
+        let _ = self.update_tx.send(DocumentEvent::Update {
+            origin_conn_id: None,
+            update: broadcast_bytes,
+        });
+
+        Ok(())
+    }
+
+    /// persist and unload this document
+    #[message]
+    pub async fn persist_and_unload(&mut self) -> Result<()> {
+        let mut txn = self.state.begin().await?;
+
+        // flush changes
+        while let Some(change) = self.pending_changes.pop_front() {
+            let new_seq = txn
+                .document_update(
+                    self.context_id,
+                    change.author_id,
+                    change.change,
+                    change.stat_added,
+                    change.stat_removed,
+                )
+                .await?;
+            self.last_seq = new_seq;
+        }
+
+        // snapshot if needed
+        if self.changes_since_last_snapshot > 0 {
+            let snapshot = self
+                .doc
+                .transact()
+                .encode_state_as_update_v1(&StateVector::default());
+            let snapshot_id = Uuid::now_v7();
+            let seq = self.last_seq;
+
+            txn.document_compact(self.context_id, snapshot_id, seq, snapshot)
+                .await?;
+        }
+        txn.commit().await?;
+
+        Ok(())
+    }
+
+    /// apply an edit to this edit context
+    #[message]
+    pub async fn apply_update(
+        &mut self,
+        author_id: UserId,
+        origin_conn_id: Option<ConnectionId>,
+        update_bytes: Vec<u8>,
+    ) -> Result<()> {
+        let update = Update::decode_v1(&update_bytes)
             .map_err(|_| Error::Internal("Invalid update bytes".to_string()))?;
 
         // PERF: surely theres a better way than with a mutex?
@@ -266,10 +451,10 @@ impl Message<ApplyUpdate> for DocumentActor {
         self.changes_since_last_snapshot += 1;
 
         // Clone for broadcast, move original into pending_changes
-        let broadcast_bytes = msg.update_bytes.clone();
+        let broadcast_bytes = update_bytes.clone();
         self.pending_changes.push_back(PendingChange {
-            author_id: msg.author_id,
-            change: msg.update_bytes,
+            author_id,
+            change: update_bytes,
             stat_added: stat_inserted,
             stat_removed: stat_deleted,
         });
@@ -283,7 +468,7 @@ impl Message<ApplyUpdate> for DocumentActor {
         }
 
         let _ = self.update_tx.send(DocumentEvent::Update {
-            origin_conn_id: msg.origin_conn_id,
+            origin_conn_id,
             update: broadcast_bytes,
         });
 
@@ -291,290 +476,150 @@ impl Message<ApplyUpdate> for DocumentActor {
     }
 }
 
-impl Message<CheckUnload> for DocumentActor {
-    type Reply = bool;
-
-    async fn handle(
-        &mut self,
-        _msg: CheckUnload,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        self.presence.is_empty() && self.last_active.elapsed() > Duration::from_secs(60)
-    }
+/// a handle to a document actor
+#[derive(Clone)]
+pub struct DocumentHandle {
+    actor_ref: ActorRef<DocumentActor>,
 }
 
-impl Message<GetSnapshot> for DocumentActor {
-    type Reply = Result<Vec<u8>>;
-
-    async fn handle(
-        &mut self,
-        _msg: GetSnapshot,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        Ok(self
-            .doc
-            .transact()
-            .encode_state_as_update_v1(&StateVector::default()))
+impl DocumentHandle {
+    pub(super) fn new(actor_ref: ActorRef<DocumentActor>) -> Self {
+        Self { actor_ref }
     }
-}
 
-impl Message<GetDiff> for DocumentActor {
-    type Reply = Result<Vec<u8>>;
-
-    async fn handle(&mut self, msg: GetDiff, _ctx: &mut Context<Self, Self::Reply>) -> Self::Reply {
-        Ok(self.doc.transact().encode_diff_v1(&msg.state_vector))
+    /// get a broadcast receiver to the document event stream
+    pub async fn subscribe(&self) -> Result<broadcast::Receiver<DocumentEvent>> {
+        self.actor_ref
+            .ask(Subscribe {})
+            .send()
+            .await
+            // TODO: better error
+            .map_err(|e| Error::Internal(e.to_string()))
     }
-}
 
-impl Message<BroadcastPresence> for DocumentActor {
-    type Reply = Result<()>;
-
-    async fn handle(
-        &mut self,
-        msg: BroadcastPresence,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        self.last_active = Instant::now();
-        if let Some(conn_id) = msg.origin_conn_id {
-            self.presence.insert(
-                msg.user_id,
-                PresenceData {
-                    conn_id,
-                    cursor_head: msg.cursor_head.clone(),
-                    cursor_tail: msg.cursor_tail.clone(),
-                },
-            );
-        }
-        let _ = self.update_tx.send(DocumentEvent::Presence {
-            user_id: msg.user_id,
-            origin_conn_id: msg.origin_conn_id,
-            cursor_head: msg.cursor_head,
-            cursor_tail: msg.cursor_tail,
-        });
-        Ok(())
-    }
-}
-
-impl Message<PresenceDelete> for DocumentActor {
-    type Reply = Result<()>;
-
-    async fn handle(
-        &mut self,
-        msg: PresenceDelete,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        if let Some(presence) = self.presence.get(&msg.user_id) {
-            if presence.conn_id == msg.conn_id {
-                self.presence.remove(&msg.user_id);
-                if self.presence.is_empty() {
-                    self.last_active = Instant::now();
-                }
-                let _ = self.update_tx.send(DocumentEvent::Presence {
-                    user_id: msg.user_id,
-                    origin_conn_id: Some(msg.conn_id),
-                    cursor_head: "".to_string(),
-                    cursor_tail: None,
-                });
-            }
-        }
-        Ok(())
-    }
-}
-
-impl Message<PresenceGet> for DocumentActor {
-    type Reply = Result<Vec<(UserId, String, Option<String>, ConnectionId)>>;
-
-    async fn handle(
-        &mut self,
-        _msg: PresenceGet,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        Ok(self
-            .presence
-            .iter()
-            .map(|(uid, data)| {
-                (
-                    *uid,
-                    data.cursor_head.clone(),
-                    data.cursor_tail.clone(),
-                    data.conn_id,
-                )
+    pub async fn presence_upsert(
+        &self,
+        user_id: UserId,
+        origin_conn_id: Option<ConnectionId>,
+        cursor_head: String,
+        cursor_tail: Option<String>,
+    ) -> Result<()> {
+        self.actor_ref
+            .ask(BroadcastPresence {
+                user_id,
+                origin_conn_id,
+                cursor_head,
+                cursor_tail,
             })
-            .collect())
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
     }
-}
 
-impl Message<SerdocGet> for DocumentActor {
-    type Reply = Result<Serdoc>;
-
-    async fn handle(
-        &mut self,
-        _msg: SerdocGet,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        Ok(crate::services::documents::serdoc::doc_to_serdoc(&self.doc))
+    // TODO: better return type
+    pub async fn presence_list(
+        &self,
+    ) -> Result<Vec<(UserId, String, Option<String>, ConnectionId)>> {
+        self.actor_ref
+            .ask(PresenceGet {})
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
     }
-}
 
-impl Message<SerdocPut> for DocumentActor {
-    type Reply = Result<()>;
+    pub async fn presence_delete(&self, user_id: UserId, conn_id: ConnectionId) -> Result<()> {
+        self.actor_ref
+            .ask(PresenceDelete { user_id, conn_id })
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
+    }
 
-    async fn handle(
-        &mut self,
-        msg: SerdocPut,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        use crate::services::documents::serdoc;
+    /// check if this document should be unloaded
+    pub async fn should_unload(&self) -> Result<bool> {
+        self.actor_ref
+            .ask(ShouldUnload {})
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
+    }
 
-        // calculate stats
-        let old_serdoc = serdoc::doc_to_serdoc(&self.doc);
-        let stat_removed = old_serdoc
-            .components
-            .iter()
-            .map(|c| match &c.ty {
-                ComponentType::Text { content } => content.chars().count(),
-                _ => 0,
+    /// persist and unload this document
+    pub async fn persist_and_unload(&self) -> Result<()> {
+        self.actor_ref
+            .ask(PersistAndUnload {})
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
+    }
+
+    /// get the diff from a state vector
+    pub async fn get_diff(&self, state_vector: StateVector) -> Result<Vec<u8>> {
+        self.actor_ref
+            .ask(GetDiff { state_vector })
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
+    }
+
+    /// get the current snapshot
+    pub async fn get_snapshot(&self) -> Result<Vec<u8>> {
+        self.actor_ref
+            .ask(GetSnapshot {})
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
+    }
+
+    /// get document state vector
+    pub async fn get_state_vector(&self) -> Result<Vec<u8>> {
+        self.actor_ref
+            .ask(GetStateVector {})
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
+    }
+
+    /// replace the document content from a Serdoc
+    pub async fn serdoc_put(
+        &self,
+        author_id: UserId,
+        components: Vec<ComponentCreate>,
+    ) -> Result<()> {
+        self.actor_ref
+            .ask(SerdocPut {
+                author_id,
+                components,
             })
-            .sum::<usize>() as u32;
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
+    }
 
-        let stat_added = msg
-            .components
-            .iter()
-            .map(|c| match &c.ty {
-                ComponentType::Text { content } => content.chars().count(),
-                _ => 0,
+    /// get the document content as a Serdoc
+    pub async fn serdoc_get(&self) -> Result<Serdoc> {
+        self.actor_ref
+            .ask(SerdocGet {})
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
+    }
+
+    /// apply an edit to this edit context
+    pub async fn apply_update(
+        &self,
+        author_id: UserId,
+        origin_conn_id: Option<ConnectionId>,
+        update_bytes: Vec<u8>,
+    ) -> Result<()> {
+        self.actor_ref
+            .ask(ApplyUpdate {
+                author_id,
+                origin_conn_id,
+                update_bytes,
             })
-            .sum::<usize>() as u32;
-
-        let update_out = Arc::new(std::sync::Mutex::new(Vec::new()));
-        let update_out_inner = update_out.clone();
-
-        let _sub_update = self.doc.observe_update_v1(move |_, event| {
-            let mut u = update_out_inner.lock().unwrap();
-            *u = event.update.to_vec();
-        });
-
-        let mut allocator = IdAllocator::new();
-        let canonical_components: Vec<ComponentCanonical> = msg
-            .components
-            .into_iter()
-            .map(|c| {
-                let id = allocator.allocate(c.id);
-                match c.ty {
-                    ComponentType::Text { content } => Component {
-                        id,
-                        ty: ComponentType::Text { content },
-                        allow: None,
-                    },
-                    _ => unimplemented!("only text components are supported for now"),
-                }
-            })
-            .collect();
-
-        serdoc::serdoc_apply_to_doc(&self.doc, &canonical_components);
-
-        drop(_sub_update);
-
-        let update_bytes = {
-            let u = update_out.lock().unwrap();
-            u.clone()
-        };
-
-        if update_bytes.is_empty() {
-            return Ok(());
-        }
-
-        self.last_active = Instant::now();
-        self.changes_since_last_snapshot += 1;
-
-        // Clone for broadcast, move original into pending_changes
-        let broadcast_bytes = update_bytes.clone();
-        self.pending_changes.push_back(PendingChange {
-            author_id: msg.author_id,
-            change: update_bytes,
-            stat_added,
-            stat_removed,
-        });
-
-        if self.should_flush() {
-            self.flush().await?;
-        }
-
-        if self.should_snapshot() {
-            self.snapshot().await?;
-        }
-
-        let _ = self.update_tx.send(DocumentEvent::Update {
-            origin_conn_id: None,
-            update: broadcast_bytes,
-        });
-
-        Ok(())
-    }
-}
-
-impl Message<GetStateVector> for DocumentActor {
-    type Reply = Result<Vec<u8>>;
-
-    async fn handle(
-        &mut self,
-        _msg: GetStateVector,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        Ok(self.doc.transact().state_vector().encode_v1())
-    }
-}
-
-impl Message<PersistAndUnload> for DocumentActor {
-    type Reply = Result<()>;
-
-    async fn handle(
-        &mut self,
-        _msg: PersistAndUnload,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        let mut txn = self.state.begin().await?;
-
-        // flush changes
-        while let Some(change) = self.pending_changes.pop_front() {
-            let new_seq = txn
-                .document_update(
-                    self.context_id,
-                    change.author_id,
-                    change.change,
-                    change.stat_added,
-                    change.stat_removed,
-                )
-                .await?;
-            self.last_seq = new_seq;
-        }
-
-        // snapshot if needed
-        if self.changes_since_last_snapshot > 0 {
-            let snapshot = self
-                .doc
-                .transact()
-                .encode_state_as_update_v1(&StateVector::default());
-            let snapshot_id = Uuid::now_v7();
-            let seq = self.last_seq;
-
-            txn.document_compact(self.context_id, snapshot_id, seq, snapshot)
-                .await?;
-        }
-        txn.commit().await?;
-
-        Ok(())
-    }
-}
-
-impl Message<Subscribe> for DocumentActor {
-    type Reply = broadcast::Receiver<DocumentEvent>;
-
-    async fn handle(
-        &mut self,
-        _msg: Subscribe,
-        _ctx: &mut Context<Self, Self::Reply>,
-    ) -> Self::Reply {
-        self.update_tx.subscribe()
+            .send()
+            .await
+            .map_err(|e| Error::Internal(e.to_string()))
     }
 }

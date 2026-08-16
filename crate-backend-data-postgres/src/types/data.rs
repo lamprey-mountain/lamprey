@@ -1211,8 +1211,6 @@ pub struct DbMediaRaw {
     pub data: Vec<u8>,
 }
 
-pub type EditContextId = (ChannelId, DocumentBranchId);
-
 // Additional types needed by crate-backend
 
 #[derive(sqlx::FromRow)]

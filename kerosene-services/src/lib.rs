@@ -10,6 +10,7 @@ pub(crate) mod prelude {
     pub use std::sync::Arc;
     pub type CoreResult<T, E> = ::core::result::Result<T, E>;
     pub use futures_util::StreamExt;
+    pub use uuid::Uuid;
 }
 
 // TEMP: compatability

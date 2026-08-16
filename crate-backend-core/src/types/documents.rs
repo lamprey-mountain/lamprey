@@ -1,12 +1,58 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use common::{
     v1::types::{document::DocumentRevisionId, ids::DocumentBranchId, util::Time},
-    v2::types::UserId,
+    v2::types::{ChannelId, DocumentId, UserId},
 };
 use thiserror::Error;
 use uuid::Uuid;
 
 // TODO: validate lengths, avoid casting `as u16` as that can lead to silent truncation
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct EditContextId {
+    document_id: DocumentId,
+    branch_id: DocumentBranchId,
+}
+
+// TODO: use this?
+// pub enum EditContextIdType {
+//     Document {
+//         channel_id: ChannelId,
+//         branch_id: DocumentBranchId,
+//     },
+//     Script {
+//         channel_id: ChannelId,
+//         script_id: RedexId,
+//         branch_id: DocumentBranchId,
+//         // file_id: Option<()>,
+//     },
+// }
+
+impl EditContextId {
+    pub fn new(document_id: DocumentId, branch_id: DocumentBranchId) -> Self {
+        Self {
+            document_id,
+            branch_id,
+        }
+    }
+
+    pub fn from_channel(channel_id: ChannelId, branch_id: DocumentBranchId) -> Self {
+        Self::new((*channel_id).into(), branch_id)
+    }
+
+    pub fn document_id(&self) -> DocumentId {
+        self.document_id
+    }
+
+    // TODO: deprecate?
+    pub fn channel_id(&self) -> ChannelId {
+        (*self.document_id).into()
+    }
+
+    pub fn branch_id(&self) -> DocumentBranchId {
+        self.branch_id
+    }
+}
 
 /// compact serialized set of document changes
 ///

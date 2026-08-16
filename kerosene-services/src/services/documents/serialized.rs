@@ -3,8 +3,18 @@ use common::v1::types::document::serialized::Serdoc;
 use yrs::types::xml::{XmlElementPrelim, XmlIn};
 use yrs::{Doc, GetString, Transact, XmlFragment, XmlOut, XmlTextPrelim};
 
+use crate::services::documents::util::DOCUMENT_ROOT_NAME;
+
+// pub trait SerializedDocument {
+//     fn from_document(doc: &Doc) -> Self;
+//     fn replace_document(&self, &Doc);
+// }
+
+// pub struct SerializedDocumentDefault;
+// pub struct SerializedDocumentRedex;
+
 pub fn doc_to_serdoc(doc: &Doc) -> Serdoc {
-    let root = doc.get_or_insert_xml_fragment("doc");
+    let root = doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
     let txn = doc.transact();
     let mut components = Vec::new();
     let mut next_id = 0;
@@ -30,7 +40,7 @@ pub fn doc_to_serdoc(doc: &Doc) -> Serdoc {
 
 pub fn serdoc_apply_to_doc(doc: &Doc, components: &[ComponentCanonical]) {
     let mut txn = doc.transact_mut();
-    let root = doc.get_or_insert_xml_fragment("doc");
+    let root = doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
 
     // clear existing data
     let len = root.len(&txn);

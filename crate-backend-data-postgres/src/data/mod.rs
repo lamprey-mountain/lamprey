@@ -1,8 +1,6 @@
 pub mod postgres;
 use std::collections::HashMap;
 
-use crate::EditContextId;
-
 use async_trait::async_trait;
 use common::v1::types::calendar::{Calendar, CalendarPatch};
 use common::v1::types::document::{
@@ -36,6 +34,7 @@ pub use lamprey_backend_core::data::{
     DataSearchQueue, DataTag, DataThread, DataThreadMember, DataUnread, DataUserEmail,
     DataUserRelationship, DataWebhook,
 };
+use lamprey_backend_core::types::documents::EditContextId;
 use uuid::Uuid;
 
 use crate::error::Result;

@@ -1002,6 +1002,8 @@ pub trait DataConfigInternal {
     async fn config_get(&mut self) -> Result<Option<ConfigInternal>>;
 }
 
+// TODO: split into multiple traits
+// TODO: rename to redex?
 #[async_trait]
 pub trait DataScript {
     /// create a new script and script version

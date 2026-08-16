@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -9,11 +7,11 @@ use common::v1::types::application::Scope;
 use common::v1::types::document::{DocumentBranchState, DocumentRevisionRef, HistoryPagination};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{MessageSync, Permission};
+use kerosene_core::types::documents::EditContextId;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
-use uuid::Uuid;
 
-use crate::error::{Error, Result};
+use crate::prelude::*;
 use crate::routes::util::Auth;
 use crate::{ServerState, routes2};
 
@@ -250,18 +248,27 @@ async fn document_branch_fork(
     }
 
     let branch_id = data
-        .document_fork((req.channel_id, req.parent_id), user_id, req.branch)
+        .document_fork(
+            EditContextId::from_channel(req.channel_id, req.parent_id),
+            user_id,
+            req.branch,
+        )
         .await?;
 
     let snapshot = srv
         .documents
-        .get_snapshot((req.channel_id, req.parent_id))
+        .get_snapshot(EditContextId::from_channel(req.channel_id, req.parent_id))
         .await?;
 
     // use seq 0 for the initial snapshot of the new branch
     let snapshot_id = Uuid::now_v7();
-    data.document_compact((req.channel_id, branch_id), snapshot_id, 0, snapshot)
-        .await?;
+    data.document_compact(
+        EditContextId::from_channel(req.channel_id, branch_id),
+        snapshot_id,
+        0,
+        snapshot,
+    )
+    .await?;
 
     let branch = data.document_branch_get(req.channel_id, branch_id).await?;
 
@@ -327,8 +334,8 @@ async fn document_branch_merge(
         )));
     }
 
-    let target_context = (req.channel_id, target_branch_id);
-    let source_context = (req.channel_id, req.branch_id);
+    let target_context = EditContextId::from_channel(req.channel_id, target_branch_id);
+    let source_context = EditContextId::from_channel(req.channel_id, req.branch_id);
 
     let target_sv = srv.documents.get_state_vector(target_context).await?;
     let update = srv
@@ -408,8 +415,8 @@ async fn document_branch_sync(
         )));
     }
 
-    let source_context = (req.channel_id, source_branch_id);
-    let target_context = (req.channel_id, req.branch_id);
+    let source_context = EditContextId::from_channel(req.channel_id, source_branch_id);
+    let target_context = EditContextId::from_channel(req.channel_id, req.branch_id);
 
     let target_sv = srv.documents.get_state_vector(target_context).await?;
     let update = srv
@@ -675,7 +682,10 @@ async fn document_history(
 
     let summary = srv
         .documents
-        .query_history((req.channel_id, req.branch_id), req.query)
+        .query_history(
+            EditContextId::from_channel(req.channel_id, req.branch_id),
+            req.query,
+        )
         .await?;
 
     let user_ids = summary.user_ids();
@@ -733,7 +743,11 @@ async fn document_crdt_diff(
         .0;
     let update = srv
         .documents
-        .diff((req.channel_id, req.branch_id), Some(auth.user.id), &sv)
+        .diff(
+            EditContextId::from_channel(req.channel_id, req.branch_id),
+            Some(auth.user.id),
+            &sv,
+        )
         .await?;
 
     Ok(update)
@@ -769,7 +783,7 @@ async fn document_crdt_apply(
     let update_data = req.data;
     srv.documents
         .apply_update(
-            (req.channel_id, req.branch_id),
+            EditContextId::from_channel(req.channel_id, req.branch_id),
             auth.user.id,
             None,
             update_data.as_ref(),
@@ -816,12 +830,12 @@ async fn document_content_get(
     let serdoc = match seq {
         Some(seq) => {
             srv.documents
-                .get_content_at_seq((req.channel_id, branch_id), seq)
+                .get_content_at_seq(EditContextId::from_channel(req.channel_id, branch_id), seq)
                 .await?
         }
         None => {
             srv.documents
-                .get_content((req.channel_id, branch_id))
+                .get_content(EditContextId::from_channel(req.channel_id, branch_id))
                 .await?
         }
     };
@@ -858,7 +872,7 @@ async fn document_content_put(
 
     srv.documents
         .set_content(
-            (req.channel_id, req.branch_id),
+            EditContextId::from_channel(req.channel_id, req.branch_id),
             auth.user.id,
             req.content.components,
         )

@@ -6,10 +6,12 @@ use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::document::{Changeset, DocumentTag, HistoryParams};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{ChannelId, ConnectionId, DocumentBranchId, UserId};
+use common::v2::types::DocumentId;
 use dashmap::DashMap;
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
-use kameo::actor::{ActorRef, Spawn};
+use kameo::actor::Spawn;
+use kerosene_core::types::documents::EditContextId;
 use lamprey_backend_data_postgres::DocumentUpdateSummary;
 use tokio::sync::broadcast;
 use tracing::{debug, error};
@@ -18,24 +20,24 @@ use yrs::{Doc, StateVector, Transact, Update, updates::decoder::Decode};
 
 use crate::prelude::*;
 use crate::services::documents::actor::{
-    ApplyUpdate, BroadcastPresence, CheckUnload, DocumentActor, GetDiff, GetSnapshot,
-    GetStateVector, PersistAndUnload, PresenceDelete, PresenceGet, SerdocGet, SerdocPut, Subscribe,
+    ApplyUpdate, BroadcastPresence, DocumentActor, DocumentHandle, GetDiff, GetSnapshot,
+    GetStateVector, PersistAndUnload, PresenceDelete, PresenceGet, SerdocGet, SerdocPut,
+    ShouldUnload, Subscribe,
 };
 use crate::services::documents::syncer::DocumentSyncer;
 use crate::services::documents::util::{DOCUMENT_ROOT_NAME, HistoryPaginationSummary};
 
 mod actor;
-mod serdoc;
+mod compact;
+mod history;
+mod serialized;
 mod syncer;
 mod util;
 // mod validate;
 
-// TODO: use DocumentId
-pub type EditContextId = (ChannelId, DocumentBranchId);
-
 pub struct ServiceDocuments {
-    state: Globals,
-    edit_contexts: DashMap<EditContextId, ActorRef<DocumentActor>>,
+    globals: Globals,
+    handles: DashMap<EditContextId, DocumentHandle>,
 }
 
 #[derive(Clone, Debug)]
@@ -56,15 +58,15 @@ pub use actor::PendingChange;
 
 // TODO: better error handling (add yrs errors to to crate::Error)
 impl ServiceDocuments {
-    pub fn new(state: Globals) -> Self {
+    pub fn new(globals: Globals) -> Self {
         Self {
-            state,
-            edit_contexts: DashMap::new(),
+            globals,
+            handles: DashMap::new(),
         }
     }
 
     pub fn start_background_tasks(&self) {
-        let state = self.state.clone();
+        let state = self.globals.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(Duration::from_secs(60));
             loop {
@@ -74,14 +76,14 @@ impl ServiceDocuments {
 
                 // capture actors to avoid holding dashmap locks across await points
                 let actors: Vec<_> = documents
-                    .edit_contexts
+                    .handles
                     .iter()
                     .map(|entry| (*entry.key(), entry.value().clone()))
                     .collect();
 
                 let mut to_unload = Vec::new();
-                for (id, actor_ref) in actors {
-                    if let Ok(true) = actor_ref.ask(CheckUnload).send().await {
+                for (id, handle) in actors {
+                    if let Ok(true) = handle.should_unload().await {
                         to_unload.push(id);
                     }
                 }
@@ -95,18 +97,25 @@ impl ServiceDocuments {
         });
     }
 
+    /// get a loaded document
+    pub fn get(&self, context_id: EditContextId) -> Option<DocumentHandle> {
+        self.handles
+            .get(&context_id)
+            .map(|h| h.value().clone())
+    }
+
     /// load a document. reads from postgres if its not already in memory
     pub async fn load(
         &self,
         context_id: EditContextId,
         maybe_author: Option<UserId>,
-    ) -> Result<ActorRef<DocumentActor>> {
-        if let Some(actor_ref) = self.edit_contexts.get(&context_id) {
-            return Ok(actor_ref.clone());
+    ) -> Result<DocumentHandle> {
+        if let Some(handle) = self.handles.get(&context_id) {
+            return Ok(handle.clone());
         }
 
         debug!(context_id = ?context_id, maybe_author = ?maybe_author, "load document");
-        let mut txn = self.state.begin().await?;
+        let mut txn = self.globals.begin().await?;
         let loaded = txn.document_load(context_id).await;
 
         let actor_ref = match loaded {
@@ -130,7 +139,7 @@ impl ServiceDocuments {
 
                 let actor = DocumentActor {
                     context_id,
-                    state: self.state.clone(),
+                    state: self.globals.clone(),
                     doc,
                     changes_since_last_snapshot: dehydrated.changes.len() as u64,
                     pending_changes: VecDeque::new(),
@@ -162,7 +171,7 @@ impl ServiceDocuments {
 
                     let actor = DocumentActor {
                         context_id,
-                        state: self.state.clone(),
+                        state: self.globals.clone(),
                         doc,
                         changes_since_last_snapshot: 0,
                         pending_changes: VecDeque::new(),
@@ -183,11 +192,14 @@ impl ServiceDocuments {
             Err(e) => return Err(e),
         };
 
-        match self.edit_contexts.entry(context_id) {
+        let handle = DocumentHandle::new(actor_ref);
+
+        match self.handles.entry(context_id) {
+            // PERF: avoid double loading document (race condition)
             dashmap::Entry::Occupied(o) => Ok(o.get().clone()),
             dashmap::Entry::Vacant(v) => {
-                v.insert(actor_ref.clone());
-                Ok(actor_ref)
+                v.insert(handle.clone());
+                Ok(handle)
             }
         }
     }
@@ -195,12 +207,8 @@ impl ServiceDocuments {
     /// unload a document from memory
     // TODO: automatically unload unused documents
     pub async fn unload(&self, context_id: EditContextId) -> Result<()> {
-        if let Some((_, actor_ref)) = self.edit_contexts.remove(&context_id) {
-            actor_ref
-                .ask(PersistAndUnload)
-                .send()
-                .await
-                .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?;
+        if let Some((_, handle)) = self.handles.remove(&context_id) {
+            handle.persist_and_unload().await?;
         }
 
         Ok(())
@@ -209,7 +217,7 @@ impl ServiceDocuments {
     /// unload all documents, for shutting down
     pub async fn unload_all(&self) {
         // collect edit contexts before unloading to prevent deadlock
-        let ids: Vec<EditContextId> = self.edit_contexts.iter().map(|e| *e.key()).collect();
+        let ids: Vec<EditContextId> = self.handles.iter().map(|e| *e.key()).collect();
 
         let mut futures = FuturesUnordered::new();
         for id in ids {
@@ -232,30 +240,20 @@ impl ServiceDocuments {
         origin_conn_id: Option<ConnectionId>,
         update_bytes: &[u8],
     ) -> Result<()> {
-        let actor_ref = self.load(context_id, Some(author_id)).await?;
-        actor_ref
-            .ask(ApplyUpdate {
-                author_id,
-                origin_conn_id,
-                update_bytes: update_bytes.to_vec(),
-            })
-            .send()
+        let handle = self.load(context_id, Some(author_id)).await?;
+        handle
+            .apply_update(author_id, origin_conn_id, update_bytes.to_vec())
             .await
-            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))
     }
 
     pub async fn get_content(&self, context_id: EditContextId) -> Result<Serdoc> {
-        let actor_ref = self.load(context_id, None).await?;
-        Ok(actor_ref
-            .ask(SerdocGet)
-            .send()
-            .await
-            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
+        let handle = self.load(context_id, None).await?;
+        handle.serdoc_get().await
     }
 
     pub async fn get_content_at_seq(&self, context_id: EditContextId, seq: u64) -> Result<Serdoc> {
         let dehydrated = self
-            .state
+            .globals
             .begin_read()
             .await?
             .document_load_at_seq(context_id, seq as u32)
@@ -277,7 +275,7 @@ impl ServiceDocuments {
         }
         drop(txn);
 
-        Ok(serdoc::doc_to_serdoc(&doc))
+        Ok(serialized::doc_to_serdoc(&doc))
     }
 
     pub async fn set_content(
@@ -286,15 +284,8 @@ impl ServiceDocuments {
         author_id: UserId,
         components: Vec<ComponentCreate>,
     ) -> Result<()> {
-        let actor_ref = self.load(context_id, Some(author_id)).await?;
-        actor_ref
-            .ask(SerdocPut {
-                author_id,
-                components,
-            })
-            .send()
-            .await
-            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))
+        let handle = self.load(context_id, Some(author_id)).await?;
+        handle.serdoc_put(author_id, components).await
     }
 
     pub async fn broadcast_presence(
@@ -305,17 +296,11 @@ impl ServiceDocuments {
         cursor_head: String,
         cursor_tail: Option<String>,
     ) -> Result<()> {
-        if let Some(actor_ref) = self.edit_contexts.get(&context_id) {
-            actor_ref
-                .ask(BroadcastPresence {
-                    user_id,
-                    origin_conn_id,
-                    cursor_head,
-                    cursor_tail,
-                })
-                .send()
-                .await
-                .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?;
+        if let Some(handle) = self.handles.get(&context_id) {
+            let handle = handle.value();
+            handle
+                .presence_upsert(user_id, origin_conn_id, cursor_head, cursor_tail)
+                .await?;
         }
 
         Ok(())
@@ -327,13 +312,11 @@ impl ServiceDocuments {
         user_id: UserId,
         conn_id: ConnectionId,
     ) -> Result<()> {
-        if let Some(actor_ref) = self.edit_contexts.get(&context_id) {
-            actor_ref
-                .ask(PresenceDelete { user_id, conn_id })
-                .send()
-                .await
-                .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?;
+        if let Some(handle) = self.handles.get(&context_id) {
+            let handle = handle.value();
+            handle.presence_delete(user_id, conn_id).await?;
         }
+
         Ok(())
     }
 
@@ -341,12 +324,13 @@ impl ServiceDocuments {
         &self,
         context_id: EditContextId,
     ) -> Result<Vec<(UserId, String, Option<String>, ConnectionId)>> {
-        let actor_ref = self.load(context_id, None).await?;
-        Ok(actor_ref
-            .ask(PresenceGet)
-            .send()
-            .await
-            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
+        if let Some(handle) = self.handles.get(&context_id) {
+            let handle = handle.value();
+            handle.presence_list().await
+        } else {
+            // TODO: return error if document does not exist
+            Ok(vec![])
+        }
     }
 
     pub async fn diff(
@@ -360,30 +344,18 @@ impl ServiceDocuments {
         } else {
             StateVector::decode_v1(state_vector)?
         };
-        let actor_ref = self.load(context_id, maybe_author).await?;
-        Ok(actor_ref
-            .ask(GetDiff { state_vector: s })
-            .send()
-            .await
-            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
+        let handle = self.load(context_id, maybe_author).await?;
+        handle.get_diff(s).await
     }
 
     pub async fn get_snapshot(&self, context_id: EditContextId) -> Result<Vec<u8>> {
-        let actor_ref = self.load(context_id, None).await?;
-        Ok(actor_ref
-            .ask(GetSnapshot)
-            .send()
-            .await
-            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
+        let handle = self.load(context_id, None).await?;
+        handle.get_snapshot().await
     }
 
     pub async fn get_state_vector(&self, context_id: EditContextId) -> Result<Vec<u8>> {
-        let actor_ref = self.load(context_id, None).await?;
-        Ok(actor_ref
-            .ask(GetStateVector)
-            .send()
-            .await
-            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
+        let handle = self.load(context_id, None).await?;
+        handle.get_state_vector().await
     }
 
     pub async fn subscribe(
@@ -391,167 +363,7 @@ impl ServiceDocuments {
         context_id: EditContextId,
         maybe_author: Option<UserId>,
     ) -> Result<broadcast::Receiver<DocumentEvent>> {
-        let actor_ref = self.load(context_id, maybe_author).await?;
-        Ok(actor_ref
-            .ask(Subscribe)
-            .send()
-            .await
-            .map_err(|e| Error::Internal(format!("actor send error: {}", e)))?)
-    }
-
-    /// create a new DocumentSyncer for a session
-    pub fn create_syncer(&self, conn_id: ConnectionId) -> DocumentSyncer {
-        let (query_tx, query_rx) = tokio::sync::watch::channel(None);
-        DocumentSyncer {
-            s: self.state.clone(),
-            query_tx,
-            query_rx,
-            current_rx: None,
-            conn_id,
-            pending_sync: VecDeque::new(),
-            user_id: None,
-        }
-    }
-
-    pub async fn query_history(
-        &self,
-        context_id: EditContextId,
-        query: HistoryParams,
-    ) -> Result<HistoryPaginationSummary> {
-        let (updates, tags) = self
-            .state
-            .begin_read()
-            .await?
-            .document_history(context_id)
-            .await?;
-        self.process_history(updates, tags, query)
-    }
-
-    pub async fn query_wiki_history(
-        &self,
-        wiki_id: ChannelId,
-        query: HistoryParams,
-    ) -> Result<HistoryPaginationSummary> {
-        let (updates, tags) = self.state.begin_read().await?.wiki_history(wiki_id).await?;
-        self.process_history(updates, tags, query)
-    }
-
-    fn process_history(
-        &self,
-        updates: Vec<DocumentUpdateSummary>,
-        tags: Vec<DocumentTag>,
-        query: HistoryParams,
-    ) -> Result<HistoryPaginationSummary> {
-        // PERF: create some sort of streaming history processor
-
-        let by_author = query.by_author.unwrap_or(true);
-        let by_tag = query.by_tag.unwrap_or(true);
-        let by_time = query.by_time.unwrap_or(3600) as i64;
-        let by_changes = query.by_changes.unwrap_or(100) as usize;
-
-        let mut changesets = Vec::new();
-        if updates.is_empty() {
-            return Ok(HistoryPaginationSummary {
-                changesets,
-                tags: vec![],
-            });
-        }
-
-        let mut current_authors = HashSet::new();
-        let mut current_added = 0;
-        let mut current_removed = 0;
-        let mut current_start = updates[0].created_at;
-        let mut current_end = updates[0].created_at;
-        let mut current_count = 0;
-        let mut current_document_id = updates[0].document_id;
-        let mut current_start_seq = updates[0].seq;
-        let mut current_end_seq = updates[0].seq;
-
-        let mut tag_iter = tags.iter().peekable();
-
-        for (i, update) in updates.iter().enumerate() {
-            let mut split = false;
-
-            if i > 0 {
-                let prev = &updates[i - 1];
-
-                if update.document_id != prev.document_id {
-                    split = true;
-                }
-
-                if by_author && update.user_id != prev.user_id {
-                    split = true;
-                }
-
-                let diff = (*update.created_at - *prev.created_at).whole_seconds();
-                if diff > by_time {
-                    split = true;
-                }
-
-                if current_count >= by_changes {
-                    split = true;
-                }
-
-                if by_tag {
-                    while let Some(tag) = tag_iter.peek() {
-                        if tag.revision_seq < prev.seq as u64 {
-                            tag_iter.next();
-                            continue;
-                        }
-                        if tag.revision_seq == prev.seq as u64 {
-                            split = true;
-                        }
-                        break;
-                    }
-                }
-            }
-
-            if split {
-                changesets.push(Changeset {
-                    start_time: current_start,
-                    end_time: current_end,
-                    authors: current_authors.drain().collect(),
-                    stat_added: current_added,
-                    stat_removed: current_removed,
-                    document_id: Some(current_document_id),
-                    start_seq: current_start_seq,
-                    end_seq: current_end_seq,
-                });
-                current_added = 0;
-                current_removed = 0;
-                current_count = 0;
-                current_start = update.created_at;
-                current_start_seq = update.seq;
-                current_document_id = update.document_id;
-            }
-
-            current_authors.insert(UserId::from(update.user_id));
-            current_added += update.stat_added as u64;
-            current_removed += update.stat_removed as u64;
-            current_end = update.created_at;
-            current_end_seq = update.seq;
-            current_count += 1;
-        }
-
-        changesets.push(Changeset {
-            start_time: current_start,
-            end_time: current_end,
-            authors: current_authors.drain().collect(),
-            stat_added: current_added,
-            stat_removed: current_removed,
-            document_id: Some(current_document_id),
-            start_seq: current_start_seq,
-            end_seq: current_end_seq,
-        });
-
-        changesets.reverse();
-
-        if let Some(limit) = query.limit {
-            changesets.truncate(limit as usize);
-        } else {
-            changesets.truncate(20);
-        }
-
-        Ok(HistoryPaginationSummary { changesets, tags })
+        let handle = self.load(context_id, maybe_author).await?;
+        handle.subscribe().await
     }
 }

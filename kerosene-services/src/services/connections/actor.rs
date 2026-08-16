@@ -9,6 +9,7 @@ use common::{
     },
     v2::types::{ConnectionId, SessionId},
 };
+use kerosene_core::types::documents::EditContextId;
 use kerosene_sync::{
     error::{ConnectionErrorSeverity, severity},
     permissions::AuthCheck,
@@ -521,7 +522,7 @@ impl Connection {
 
         srv.documents
             .broadcast_presence(
-                (channel_id, branch_id),
+                EditContextId::from_channel(channel_id, branch_id),
                 user_id,
                 Some(self.id),
                 cursor_head,
@@ -588,7 +589,12 @@ impl Connection {
         }
 
         srv.documents
-            .apply_update((channel_id, branch_id), user_id, Some(self.id), &update.0)
+            .apply_update(
+                EditContextId::from_channel(channel_id, branch_id),
+                user_id,
+                Some(self.id),
+                &update.0,
+            )
             .await?;
 
         Ok(())

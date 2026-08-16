@@ -1,4 +1,5 @@
 use common::v1::types::SERVER_ROOM_ID;
+use kerosene_core::types::documents::EditContextId;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
@@ -21,7 +22,7 @@ pub struct ConnectionSubscriptions {
     event_tx: mpsc::UnboundedSender<Result<MessageSync>>,
     event_rx: mpsc::UnboundedReceiver<Result<MessageSync>>,
 
-    documents: HashMap<(ChannelId, DocumentBranchId), JoinHandle<()>>,
+    documents: HashMap<EditContextId, JoinHandle<()>>,
     scripts: HashMap<(ChannelId, RedexId), JoinHandle<()>>,
     member_lists: HashMap<String, (JoinHandle<()>, Vec<(u64, u64)>)>, // store ranges to detect when ranges are updated
 }
@@ -45,7 +46,8 @@ impl ConnectionSubscriptions {
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
     ) -> bool {
-        self.documents.contains_key(&(channel_id, branch_id))
+        let key = EditContextId::from_channel(channel_id, branch_id);
+        self.documents.contains_key(&key)
     }
 
     pub async fn disconnect(&mut self, user_id: UserId) {
@@ -82,10 +84,10 @@ impl ConnectionSubscriptions {
 
         // document subscriptions
         if let Some(docs) = subscription.documents {
-            let mut new_keys = HashSet::new();
+            let mut new_keys: HashSet<EditContextId> = HashSet::new();
 
             for doc in docs {
-                let key = (doc.channel_id, doc.branch_id);
+                let key = EditContextId::from_channel(doc.channel_id, doc.branch_id);
                 new_keys.insert(key);
 
                 if !self.documents.contains_key(&key) {

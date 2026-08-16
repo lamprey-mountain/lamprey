@@ -10,7 +10,7 @@ use tracing::{error, warn};
 
 use crate::{
     prelude::*,
-    services::documents::{DocumentEvent, EditContextId},
+    services::documents::{DocumentEvent, EditContextId, ServiceDocuments},
 };
 
 /// Handles document synchronization for a single client connection.
@@ -124,8 +124,8 @@ impl DocumentSyncer {
                         for (user_id, cursor_head, cursor_tail, conn_id) in presences {
                             if conn_id != self.conn_id {
                                 self.pending_sync.push_back(MessageSync::DocumentPresence {
-                                    channel_id: context_id.0,
-                                    branch_id: context_id.1,
+                                    channel_id: context_id.channel_id(),
+                                    branch_id: context_id.branch_id(),
                                     user_id,
                                     cursor_head,
                                     cursor_tail,
@@ -136,14 +136,14 @@ impl DocumentSyncer {
                         // Queue DocumentSubscribed to be sent after the initial DocumentEdit
                         self.pending_sync
                             .push_back(MessageSync::DocumentSubscribed {
-                                channel_id: context_id.0,
-                                branch_id: context_id.1,
+                                channel_id: context_id.channel_id(),
+                                branch_id: context_id.branch_id(),
                                 connection_id: self.conn_id,
                             });
 
                         return Ok(MessageSync::DocumentEdit {
-                            channel_id: context_id.0,
-                            branch_id: context_id.1,
+                            channel_id: context_id.channel_id(),
+                            branch_id: context_id.branch_id(),
                             update: DocumentUpdate(update),
                         });
                     }
@@ -164,8 +164,8 @@ impl DocumentSyncer {
                                         continue;
                                     }
                                     return Ok(MessageSync::DocumentEdit {
-                                        channel_id: context_id.0,
-                                        branch_id: context_id.1,
+                                        channel_id: context_id.channel_id(),
+                                        branch_id: context_id.branch_id(),
                                         update: DocumentUpdate(update),
                                     });
                                 }
@@ -179,8 +179,8 @@ impl DocumentSyncer {
                                         continue;
                                     }
                                     return Ok(MessageSync::DocumentPresence {
-                                        channel_id: context_id.0,
-                                        branch_id: context_id.1,
+                                        channel_id: context_id.channel_id(),
+                                        branch_id: context_id.branch_id(),
                                         user_id,
                                         cursor_head,
                                         cursor_tail,
@@ -207,6 +207,22 @@ impl DocumentSyncer {
                     .map_err(|_| Error::Internal("query channel closed".to_string()))?;
                 continue;
             }
+        }
+    }
+}
+
+impl ServiceDocuments {
+    /// create a new DocumentSyncer for a session
+    pub fn create_syncer(&self, conn_id: ConnectionId) -> DocumentSyncer {
+        let (query_tx, query_rx) = tokio::sync::watch::channel(None);
+        DocumentSyncer {
+            s: self.globals.clone(),
+            query_tx,
+            query_rx,
+            current_rx: None,
+            conn_id,
+            pending_sync: VecDeque::new(),
+            user_id: None,
         }
     }
 }

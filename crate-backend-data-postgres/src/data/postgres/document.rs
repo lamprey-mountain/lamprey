@@ -1,8 +1,8 @@
 use crate::data::DataDocument;
 use crate::data::postgres::{Pagination, Postgres};
 use crate::error::{Error, Result};
+use crate::gen_paginate;
 use crate::types::{DehydratedDocument, DocumentUpdateSummary, PaginationDirection};
-use crate::{EditContextId, gen_paginate};
 use async_trait::async_trait;
 use common::v1::types::document::{
     DocumentBranch, DocumentBranchCreate, DocumentBranchListParams, DocumentBranchPatch,
@@ -12,6 +12,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelId, DocumentBranchId, DocumentTagId, UserId};
+use lamprey_backend_core::types::documents::EditContextId;
 use sqlx::{query, query_as, query_scalar};
 use uuid::Uuid;
 
@@ -113,7 +114,8 @@ impl DataDocument for Postgres {
         snapshot: Vec<u8>,
     ) -> Result<()> {
         let mut conn = self.acquire().await?;
-        let (document_id, branch_id) = context_id;
+        let document_id = context_id.document_id();
+        let branch_id = context_id.branch_id();
         query!(
             r#"
             INSERT INTO document_snapshot (id, document_id, branch_id, snapshot, seq)
@@ -132,7 +134,7 @@ impl DataDocument for Postgres {
 
     async fn document_load(&mut self, context_id: EditContextId) -> Result<DehydratedDocument> {
         let mut conn = self.acquire().await?;
-        let (_, branch_id) = context_id;
+        let branch_id = context_id.branch_id();
         let snapshot = query!(
             r#"
             SELECT id, snapshot, seq
@@ -181,7 +183,7 @@ impl DataDocument for Postgres {
         target_seq: u32,
     ) -> Result<DehydratedDocument> {
         let mut conn = self.acquire().await?;
-        let (_, branch_id) = context_id;
+        let branch_id = context_id.branch_id();
 
         // Find the latest snapshot at or before the target seq
         let snapshot = query!(
@@ -235,7 +237,8 @@ impl DataDocument for Postgres {
         creator_id: UserId,
         snapshot: Vec<u8>,
     ) -> Result<()> {
-        let (document_id, branch_id) = context_id;
+        let document_id = context_id.document_id();
+        let branch_id = context_id.branch_id();
 
         let mut tx = self.begin_tx().await?;
 
@@ -280,7 +283,8 @@ impl DataDocument for Postgres {
         stat_added: u32,
         stat_removed: u32,
     ) -> Result<u32> {
-        let (document_id, branch_id) = context_id;
+        let document_id = context_id.document_id();
+        let branch_id = context_id.branch_id();
         let mut tx = self.begin_tx().await?;
 
         // get latest snapshot
@@ -349,7 +353,8 @@ impl DataDocument for Postgres {
         creator_id: UserId,
         create: DocumentBranchCreate,
     ) -> Result<DocumentBranchId> {
-        let (document_id, parent_branch_id) = context_id;
+        let document_id = context_id.document_id();
+        let parent_branch_id = context_id.branch_id();
 
         let mut tx = self.begin_tx().await?;
 
@@ -736,7 +741,8 @@ impl DataDocument for Postgres {
         context_id: EditContextId,
     ) -> Result<(Vec<DocumentUpdateSummary>, Vec<DocumentTag>)> {
         let mut conn = self.acquire().await?;
-        let (document_id, branch_id) = context_id;
+        let document_id = context_id.document_id();
+        let branch_id = context_id.branch_id();
 
         struct DbUpdateSummary {
             user_id: Uuid,
@@ -781,7 +787,7 @@ impl DataDocument for Postgres {
                     stat_added: u.stat_added.unwrap_or(0) as u32,
                     stat_removed: u.stat_removed.unwrap_or(0) as u32,
                     seq: u.seq as u32,
-                    document_id,
+                    document_id: (*document_id).into(),
                 })
                 .collect(),
             tags.into_iter().map(Into::into).collect(),
