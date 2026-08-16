@@ -247,7 +247,7 @@ export function createTooltip(props: CreateTooltipProps) {
 // 	// tooltip.considerHidingTip()
 // };
 
-const FloatingArrow = (props: { ref: Ref<SVGSVGElement> }) => {
+export const FloatingArrow = (props: { ref: Ref<SVGSVGElement> }) => {
 	return (
 		<svg
 			class="arrow"
@@ -270,7 +270,7 @@ const FloatingArrow = (props: { ref: Ref<SVGSVGElement> }) => {
 };
 
 // from https://github.com/lxsmnsyc/solid-floating-ui/issues/5#issuecomment-1869444380
-const solidArrow = ({
+export const solidArrow = ({
 	element,
 	padding,
 }: {

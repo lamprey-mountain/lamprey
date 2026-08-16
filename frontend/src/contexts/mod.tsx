@@ -7,6 +7,7 @@ export * from "./formatting-toolbar.tsx";
 export * from "./menu.tsx";
 export * from "./modal.tsx";
 export * from "./slash-commands.tsx";
+export * from "./tooltips.tsx";
 export * from "./uploads.tsx";
 export * from "./user-popout.tsx";
 

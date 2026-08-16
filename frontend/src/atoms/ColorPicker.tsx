@@ -290,6 +290,7 @@ export const ColorPicker = (props: ColorpickerProps) => {
 };
 
 // PERF: if i really wanted to make this go brrrr i could use webgl
+// PERF: maybe i could use div with linear-gradient background? but css may not render colors correctly with 2 dimensional gradients
 function renderGradientMap(hue: number, img: ImageData) {
 	const hRad = (hue * Math.PI) / 180;
 	const cosH = Math.cos(hRad);
@@ -309,3 +310,5 @@ function renderGradientMap(hue: number, img: ImageData) {
 		}
 	}
 }
+
+// TODO: gradient picker
