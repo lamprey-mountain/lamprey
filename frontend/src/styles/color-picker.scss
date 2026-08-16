@@ -106,9 +106,27 @@
 			min-width: 0;
 		}
 	}
+
+	.presets {
+		margin: 8px;
+		margin-block: 4px;
+
+		& > .presets-grid {
+			display: grid;
+			grid-template-columns: repeat(8, 1fr);
+			gap: 4px;
+
+			& > .button {
+				aspect-ratio: 1;
+				border: none;
+				border-radius: 4px;
+			}
+		}
+	}
 }
 
 .color-picker-button {
+	display: flex;
 	min-width: 2em;
 	min-height: 1em;
 	border-radius: 2px;
@@ -116,6 +134,15 @@
 
 	&:hover {
 		filter: brightness(90%);
+	}
+
+	& > .icon2 {
+		/* background: $bg-100; */
+		background: $fg-100;
+	}
+
+	&.wide {
+		align-items: center;
 	}
 }
 
@@ -171,9 +198,12 @@
 		& > .stop {
 			display: flex;
 			align-items: stretch;
+			gap: 4px;
 
 			& > .position-input {
 				width: 3em;
+				background: $bg-200;
+				margin-block: 2px;
 			}
 		}
 	}

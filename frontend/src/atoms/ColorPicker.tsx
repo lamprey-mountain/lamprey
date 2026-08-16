@@ -14,7 +14,7 @@ import { createTooltip } from "@/atoms/Tooltip";
 import { useMenu } from "@/contexts/mod.tsx";
 import { Color, oklchToRgb } from "@/lib/colors";
 import { compileShader, createWebGLProgram } from "@/lib/webgl";
-import { icGear } from "@/utils/icons";
+import { icEdit, icGear } from "@/utils/icons";
 import colorPickerFrag from "./color-picker.frag?raw";
 import colorPickerVert from "./color-picker.vert?raw";
 import { Dropdown } from "./Dropdown";
@@ -371,14 +371,47 @@ export const ColorPicker = (props: ColorPickerProps) => {
 					<Icon src={icGear} />
 				</button>
 			</div>
-			<div class="presets">
-				{/* TODO: preset colors (see frontend/src/lib/colors.ts, frontend/src/styles/theme.scss) */}
-			</div>
+			<Show when={true}>
+				<div class="presets">
+					<h3 class="dim">Presets</h3>
+					<div class="presets-grid">
+						<For
+							each={[
+								// TODO: move these into lib/colors.ts
+								{ label: "red", color: "oklch(74.03% 0.1759 13.16)" },
+								{ label: "green", color: "oklch(85.53% 0.1395 130.14)" },
+								{ label: "yellow", color: "oklch(85.39% 0.1187 92.43)" },
+								{ label: "blue", color: "oklch(79.29% 0.1636 255.6)" },
+								{ label: "magenta", color: "oklch(80.6% 0.15 299.2)" },
+								{ label: "cyan", color: "oklch(80.21% 0.1086 199.72)" },
+								{ label: "orange", color: "oklch(80.7% 0.1273 50.56)" },
+								{ label: "teal", color: "oklch(80% 0.128 168)" },
+							]}
+						>
+							{(preset) => (
+								<button
+									type="button"
+									class="button"
+									style={{
+										background: preset.color,
+									}}
+									onClick={() => updateColor(new Color(preset.color))}
+									data-tooltip={preset.label}
+								></button>
+							)}
+						</For>
+					</div>
+				</div>
+			</Show>
 		</div>
 	);
 };
 
-export const ColorPickerButton = (props: ColorPickerProps) => {
+export type ColorPickerButtonProps = ColorPickerProps & {
+	wide?: boolean;
+};
+
+export const ColorPickerButton = (props: ColorPickerButtonProps) => {
 	const [menuOpen, setMenuOpen] = createSignal(false);
 	const [referenceEl, setReferenceEl] = createSignal<HTMLElement>();
 	const [floatingEl, setFloatingEl] = createSignal<HTMLElement>();
@@ -390,6 +423,7 @@ export const ColorPickerButton = (props: ColorPickerProps) => {
 	});
 
 	// TODO: animate color picker
+	// TODO: make icEdit edit icon change color depending on if selected color is light or dark
 
 	createEffect(() => {
 		if (menuOpen()) {
@@ -437,8 +471,16 @@ export const ColorPickerButton = (props: ColorPickerProps) => {
 				onClick={() => setMenuOpen(!menuOpen())}
 				style={{
 					background: props.value ?? "transparent",
+					// "--is-dark"
+					// "--color"
 				}}
-			></button>
+				classList={{
+					wide: props.wide,
+				}}
+			>
+				<Icon src={icEdit} />
+				<Show when={props.wide}>{props.value}</Show>
+			</button>
 			<Portal>
 				<Show when={menuOpen()}>
 					<div
@@ -520,6 +562,8 @@ export const GradientPicker = (props: GradientPickerProps) => {
 		);
 		return `linear-gradient(${angle()}deg, ${stopStrings.join(", ")})`;
 	});
+
+	// TODO: preset gradients
 
 	return (
 		<div class="gradient-picker">
@@ -635,16 +679,18 @@ export const GradientPicker = (props: GradientPickerProps) => {
 					)}
 				</For>
 			</div>
-			<div class="dim">Angle: {angle()}°</div>
-			<Dropdown
-				options={[
-					{ item: "linear", label: "linear" },
-					{ item: "radial", label: "radial" },
-				]}
-				// onSelect={(item) => item && setFormat(item)}
-				required
-				selected="linear"
-			/>
+			<div style="display:flex;flex-direction:column;margin:8px;margin-bottom:4px">
+				<div class="dim">Angle: {angle()}°</div>
+				<Dropdown
+					options={[
+						{ item: "linear", label: "linear" },
+						{ item: "radial", label: "radial" },
+					]}
+					// onSelect={(item) => item && setFormat(item)}
+					required
+					selected="linear"
+				/>
+			</div>
 			<div class="stops">
 				<h3 class="dim">stops</h3>
 				<For each={stops()}>
@@ -654,7 +700,11 @@ export const GradientPicker = (props: GradientPickerProps) => {
 						// TODO: open color picker for a stop
 						// TODO: change stop position
 						<div class="stop">
-							<input type="text" value={getStopPosition(stop)} />
+							<input
+								type="text"
+								class="position-input"
+								value={getStopPosition(stop)}
+							/>
 							<ColorPickerButton
 								hasAlpha={props.hasAlpha}
 								// onInput={}
