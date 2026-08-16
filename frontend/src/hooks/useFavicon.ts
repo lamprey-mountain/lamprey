@@ -49,6 +49,13 @@ export function useFavicon() {
 				return { type: "channel" as const, channel, room };
 			}
 		}
+
+		const userMatch = path.match(/^\/user\/([^/]+)/);
+		if (userMatch) {
+			const user = api.users.cache.get(userMatch[1]);
+			if (user) return { type: "user" as const, user };
+		}
+
 		return null;
 	});
 
