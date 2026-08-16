@@ -1,11 +1,7 @@
 //! api errors
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use lamprey_macros::record;
 use thiserror::Error;
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
 
 use crate::v1::types::{Permission, application::Scope, redex::error::RedexError};
 
@@ -17,9 +13,7 @@ pub type ApiResult<T> = Result<T, ApiError>;
 pub use codes::ErrorCode;
 
 /// an error that may be returned from the api
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ApiError {
     /// human readable error message
     pub message: String,
@@ -28,50 +22,35 @@ pub struct ApiError {
     pub code: ErrorCode,
 
     /// errors in the request body
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub fields: Vec<ErrorField>,
 
     /// required room permissions
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_permissions: Vec<Permission>,
 
     /// required server permissions
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_permissions_server: Vec<Permission>,
 
     /// missing oauth scopes that are required
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub required_scopes: Vec<Scope>,
 
     /// unacknowledged warnings
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, skip_serializing_if = "Vec::is_empty")
-    )]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub warnings: Vec<Warning>,
 
     /// moderator-set message for automod
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub automod_message: Option<String>,
 
     /// ratelimit that you ran into
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ratelimit: Option<Ratelimit>,
 
     /// errors with your script
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub script: Vec<RedexError>,
 }
 
@@ -80,9 +59,7 @@ pub struct ApiError {
 /// generally, this means you must pass ?force=true in the url. if you like to
 /// live life on the edge, you can always pass ?force.
 // maybe require header instead? `X-Force: Warning1, Warning2`
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub enum Warning {
     /// this role is applied to one or more room member
     RoleNotEmpty,
@@ -95,9 +72,8 @@ pub enum Warning {
 }
 
 /// an error that may be returned from the sync websocket
-#[derive(Debug, Error, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Error)]
 pub enum SyncErrorCode {
     /// invalid sequence number (connection may be too old)
     #[error("invalid sequence number (connection may be too old)")]
@@ -133,9 +109,7 @@ pub enum SyncErrorCode {
 }
 
 /// a field that has an error
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ErrorField {
     /// path to this field inside the request object
     pub key: Vec<String>,
@@ -145,18 +119,13 @@ pub struct ErrorField {
     // re-add { message: String } to ErrorFieldType::Other
     pub message: String,
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ty: ErrorFieldType,
 }
 
 /// the type of error in the field
-#[derive(Debug, Clone)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(rename = "type")
-)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(rename = "type")]
 pub enum ErrorFieldType {
     /// this field was required but not specified
     Required,
@@ -186,9 +155,7 @@ impl ErrorFieldType {
     }
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Ratelimit {
     /// how many seconds to wait until retrying
     pub retry_after: f64,
