@@ -1,0 +1,3 @@
+alter table document_branch drop constraint document_branch_document_id_fkey;
+alter table document_snapshot drop constraint document_snapshot_document_id_fkey;
+alter table document_update drop constraint document_update_document_id_fkey;

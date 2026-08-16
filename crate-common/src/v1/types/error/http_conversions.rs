@@ -48,6 +48,7 @@ impl ErrorCode {
             ErrorCode::UnknownCall => StatusCode::NOT_FOUND,
             ErrorCode::UnknownSfu => StatusCode::NOT_FOUND,
             ErrorCode::UnknownDm => StatusCode::NOT_FOUND,
+            ErrorCode::UnknownRedex => StatusCode::NOT_FOUND,
             ErrorCode::Automod => StatusCode::FORBIDDEN,
             ErrorCode::MissingPermissions => StatusCode::FORBIDDEN,
             ErrorCode::CannotUnsetStripExif => StatusCode::BAD_REQUEST,

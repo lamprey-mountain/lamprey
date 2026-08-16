@@ -1,7 +1,7 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use common::{
     v1::types::{document::DocumentRevisionId, ids::DocumentBranchId, util::Time},
-    v2::types::{ChannelId, DocumentId, UserId},
+    v2::types::{ChannelId, DocumentId, RedexId, UserId},
 };
 use thiserror::Error;
 use uuid::Uuid;
@@ -10,47 +10,70 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct EditContextId {
-    document_id: DocumentId,
-    branch_id: DocumentBranchId,
+    inner: EditContextIdType,
 }
 
-// TODO: use this?
-// pub enum EditContextIdType {
-//     Document {
-//         channel_id: ChannelId,
-//         branch_id: DocumentBranchId,
-//     },
-//     Script {
-//         channel_id: ChannelId,
-//         script_id: RedexId,
-//         branch_id: DocumentBranchId,
-//         // file_id: Option<()>,
-//     },
-// }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum EditContextIdType {
+    Prose {
+        channel_id: ChannelId,
+        branch_id: DocumentBranchId,
+    },
+
+    Redex {
+        channel_id: ChannelId,
+        redex_id: RedexId,
+        // TODO: redex document branches
+        // branch_id: Option<DocumentBranchId>,
+        // file_id: Option<()>,
+    },
+}
 
 impl EditContextId {
-    pub fn new(document_id: DocumentId, branch_id: DocumentBranchId) -> Self {
+    pub fn from_prose(channel_id: ChannelId, branch_id: DocumentBranchId) -> Self {
         Self {
-            document_id,
-            branch_id,
+            inner: EditContextIdType::Prose {
+                channel_id,
+                branch_id,
+            },
         }
     }
 
-    pub fn from_channel(channel_id: ChannelId, branch_id: DocumentBranchId) -> Self {
-        Self::new((*channel_id).into(), branch_id)
+    pub fn from_redex(channel_id: ChannelId, redex_id: RedexId) -> Self {
+        Self {
+            inner: EditContextIdType::Redex {
+                channel_id,
+                redex_id,
+            },
+        }
     }
 
     pub fn document_id(&self) -> DocumentId {
-        self.document_id
+        match self.inner {
+            EditContextIdType::Prose { channel_id, .. } => (*channel_id).into(),
+            EditContextIdType::Redex { redex_id, .. } => (*redex_id).into(),
+        }
     }
 
-    // TODO: deprecate?
     pub fn channel_id(&self) -> ChannelId {
-        (*self.document_id).into()
+        match self.inner {
+            EditContextIdType::Prose { channel_id, .. } => channel_id,
+            EditContextIdType::Redex { channel_id, .. } => channel_id,
+        }
     }
 
     pub fn branch_id(&self) -> DocumentBranchId {
-        self.branch_id
+        match self.inner {
+            EditContextIdType::Prose { branch_id, .. } => branch_id,
+            EditContextIdType::Redex { redex_id, .. } => (*redex_id).into(),
+        }
+    }
+
+    pub fn is_prose(&self) -> bool {
+        match self.inner {
+            EditContextIdType::Prose { .. } => true,
+            EditContextIdType::Redex { .. } => false,
+        }
     }
 }
 

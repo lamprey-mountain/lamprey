@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+// TODO: include id of unknown object
+
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
@@ -261,6 +263,10 @@ pub enum ErrorCode {
     /// unknown dm
     #[error("unknown dm")]
     UnknownDm,
+
+    /// unknown redex
+    #[error("unknown redex")]
+    UnknownRedex,
 
     /// cannot set strip_exif to false once it has been set to true
     #[error("cannot set strip_exif to false once it has been set to true")]

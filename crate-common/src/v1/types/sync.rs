@@ -1,12 +1,3 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
-
-#[cfg(feature = "validator")]
-use validator::Validate;
-
 use crate::v1::types::ack::AckState;
 #[cfg(feature = "feat_e2ee")]
 use crate::v1::types::e2ee::E2EEDispatch;
@@ -32,8 +23,8 @@ use crate::v1::types::{ChannelReorderItem, EvalId, InteractionId, Message, Redex
 use crate::v2::types::media::Media;
 
 use super::{
-    Channel, ChannelId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId, Room, RoomId,
-    RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
+    Channel, ChannelId, DocumentId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId,
+    Room, RoomId, RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
     calendar::{CalendarEvent, CalendarEventParticipant, CalendarOverwrite},
     emoji::EmojiCustom,
     harvest::Harvest,
@@ -59,9 +50,8 @@ pub struct MessageHello {
 }
 
 // TODO: include nonce/seq for MessageClient too, so theres some way to associate an error response to a request
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum MessageClient {
     /// initial message
     Hello(MessageHello),
@@ -120,6 +110,7 @@ pub enum MessageClient {
         channel_id: ChannelId,
 
         branch_id: DocumentBranchId,
+        redex_id: Option<RedexId>,
 
         /// the encoded update to this document
         update: DocumentUpdate,
@@ -131,6 +122,7 @@ pub enum MessageClient {
     DocumentPresence {
         channel_id: ChannelId,
         branch_id: DocumentBranchId,
+        redex_id: Option<RedexId>,
         cursor_head: String,
         cursor_tail: Option<String>,
     },
@@ -147,10 +139,8 @@ pub enum MessageClient {
 }
 
 /// metadata for this connection
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ConnectionProperties {
     /// a valid user agent string
     pub user_agent: String,
@@ -162,83 +152,76 @@ pub struct ConnectionProperties {
 /// update what the client is subscribed to
 ///
 /// leaving a field as None will skip updating. set it to an empty vec to clear.
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct SyncSubscription {
     /// the member lists to subscribe to
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub member_lists: Option<Vec<SyncSubscribeMemberList>>,
 
     /// the documents to subscribe to
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub documents: Option<Vec<SyncSubscribeDocument>>,
 
     /// the scripts to subscribe to
-    #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    #[cfg_attr(feature = "validator", validate(length(max = 8)))]
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[schema(required = false, max_length = 8)]
+    #[validate(length(max = 8))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub scripts: Option<Vec<SyncSubscribeScript>>,
     // TODO: more subscriptions
     // /// the user profiles to subscribe to
-    // #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    // #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    // #[schema(required = false, max_length = 8)]
+    // #[validate(length(max = 8))]
     // pub users: Option<Vec<UserId>>,
 
     // /// the invite to subscribe to
-    // #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    // #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    // #[schema(required = false, max_length = 8)]
+    // #[validate(length(max = 8))]
     // pub invites: Option<Vec<InviteCode>>,
 
     // /// the rooms to subscribe to (lurking)
-    // #[cfg_attr(feature = "utoipa", schema(required = false, max_length = 8))]
-    // #[cfg_attr(feature = "validator", validate(length(max = 8)))]
+    // #[schema(required = false, max_length = 8)]
+    // #[validate(length(max = 8))]
     // pub rooms: Option<Vec<RoomId>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct SyncSubscribeScript {
     pub channel_id: ChannelId,
     pub script_id: RedexId,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct SyncSubscribeDocument {
     pub channel_id: ChannelId,
     pub branch_id: DocumentBranchId,
+    pub redex_id: Option<RedexId>,
     pub state_vector: Option<DocumentStateVector>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct SyncResume {
     pub conn: ConnectionId,
     pub seq: u64,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct MessageEnvelope {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub payload: MessagePayload,
     // should i move seq here?
 }
 
 // NOTE: consider making Ready and ReadySupplemental part of Sync
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "op"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "op")]
 pub enum MessagePayload {
     /// heartbeat
     Ping,
@@ -256,7 +239,7 @@ pub enum MessagePayload {
         // TODO: add here
         // channel_seq: Option<u64>,
         /// the nonce, if this is in response to a request with the `Idempotency-Key` header set
-        #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+        #[serde(skip_serializing_if = "Option::is_none")]
         nonce: Option<String>,
     },
 
@@ -915,7 +898,9 @@ pub enum MessageSync {
     ///
     /// only returned if subscribed
     DocumentEdit {
+        #[deprecated = "use document_id"]
         channel_id: ChannelId,
+        document_id: DocumentId,
         branch_id: DocumentBranchId,
 
         /// the encoded update to this document
@@ -926,7 +911,9 @@ pub enum MessageSync {
     ///
     /// only returned if subscribed
     DocumentPresence {
+        #[deprecated = "use document_id"]
         channel_id: ChannelId,
+        document_id: DocumentId,
         branch_id: DocumentBranchId,
         user_id: UserId,
         cursor_head: String,
@@ -939,7 +926,9 @@ pub enum MessageSync {
     /// state has been sent. clients should wait for this event before sending
     /// `DocumentPresence` or `DocumentEdit` messages to avoid "not subscribed" errors.
     DocumentSubscribed {
+        #[deprecated = "use document_id"]
         channel_id: ChannelId,
+        document_id: DocumentId,
         branch_id: DocumentBranchId,
         /// the connection ID this subscription confirmation is sent to
         connection_id: ConnectionId,
@@ -1103,13 +1092,13 @@ pub enum MessageSync {
     // TODO: box more types: PreferencesFoo, Tag, Session, Webhook, AutomodRule, Media
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct SyncParams {
     pub version: SyncVersion,
     pub compression: Option<SyncCompression>,
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub format: SyncFormat,
 }
 
@@ -1117,7 +1106,7 @@ pub struct SyncParams {
 // apparently websockets are hard to load balance. being able to use arbitrary
 // urls/paths in the future could be helpful.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[repr(u8)]
 pub enum SyncVersion {
     V1 = 1,
@@ -1125,7 +1114,7 @@ pub enum SyncVersion {
 }
 
 #[cfg(feature = "serde")]
-impl Serialize for SyncVersion {
+impl serde::Serialize for SyncVersion {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -1135,7 +1124,7 @@ impl Serialize for SyncVersion {
 }
 
 #[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for SyncVersion {
+impl<'de> serde::Deserialize<'de> for SyncVersion {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -1148,13 +1137,9 @@ impl<'de> Deserialize<'de> for SyncVersion {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(rename_all = "snake_case")
-)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum SyncFormat {
     #[default]
     Json,
@@ -1166,13 +1151,9 @@ pub enum SyncFormat {
 /// the client may send non-compressed json, but not non-compressed
 /// msgpack payloads (as theres no way to differentiate between compressed and
 /// non-compressed)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(rename_all = "snake_case")
-)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum SyncCompression {
     /// Deflate compression
     Deflate,

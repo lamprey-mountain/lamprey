@@ -249,7 +249,7 @@ async fn document_branch_fork(
 
     let branch_id = data
         .document_fork(
-            EditContextId::from_channel(req.channel_id, req.parent_id),
+            EditContextId::from_prose(req.channel_id, req.parent_id),
             user_id,
             req.branch,
         )
@@ -257,13 +257,13 @@ async fn document_branch_fork(
 
     let snapshot = srv
         .documents
-        .get_snapshot(EditContextId::from_channel(req.channel_id, req.parent_id))
+        .get_snapshot(EditContextId::from_prose(req.channel_id, req.parent_id))
         .await?;
 
     // use seq 0 for the initial snapshot of the new branch
     let snapshot_id = Uuid::now_v7();
     data.document_compact(
-        EditContextId::from_channel(req.channel_id, branch_id),
+        EditContextId::from_prose(req.channel_id, branch_id),
         snapshot_id,
         0,
         snapshot,
@@ -334,8 +334,8 @@ async fn document_branch_merge(
         )));
     }
 
-    let target_context = EditContextId::from_channel(req.channel_id, target_branch_id);
-    let source_context = EditContextId::from_channel(req.channel_id, req.branch_id);
+    let target_context = EditContextId::from_prose(req.channel_id, target_branch_id);
+    let source_context = EditContextId::from_prose(req.channel_id, req.branch_id);
 
     let target_sv = srv.documents.get_state_vector(target_context).await?;
     let update = srv
@@ -415,8 +415,8 @@ async fn document_branch_sync(
         )));
     }
 
-    let source_context = EditContextId::from_channel(req.channel_id, source_branch_id);
-    let target_context = EditContextId::from_channel(req.channel_id, req.branch_id);
+    let source_context = EditContextId::from_prose(req.channel_id, source_branch_id);
+    let target_context = EditContextId::from_prose(req.channel_id, req.branch_id);
 
     let target_sv = srv.documents.get_state_vector(target_context).await?;
     let update = srv
@@ -683,7 +683,7 @@ async fn document_history(
     let summary = srv
         .documents
         .query_history(
-            EditContextId::from_channel(req.channel_id, req.branch_id),
+            EditContextId::from_prose(req.channel_id, req.branch_id),
             req.query,
         )
         .await?;
@@ -744,7 +744,7 @@ async fn document_crdt_diff(
     let update = srv
         .documents
         .diff(
-            EditContextId::from_channel(req.channel_id, req.branch_id),
+            EditContextId::from_prose(req.channel_id, req.branch_id),
             Some(auth.user.id),
             &sv,
         )
@@ -783,7 +783,7 @@ async fn document_crdt_apply(
     let update_data = req.data;
     srv.documents
         .apply_update(
-            EditContextId::from_channel(req.channel_id, req.branch_id),
+            EditContextId::from_prose(req.channel_id, req.branch_id),
             auth.user.id,
             None,
             update_data.as_ref(),
@@ -830,12 +830,12 @@ async fn document_content_get(
     let serdoc = match seq {
         Some(seq) => {
             srv.documents
-                .get_content_at_seq(EditContextId::from_channel(req.channel_id, branch_id), seq)
+                .get_content_at_seq(EditContextId::from_prose(req.channel_id, branch_id), seq)
                 .await?
         }
         None => {
             srv.documents
-                .get_content(EditContextId::from_channel(req.channel_id, branch_id))
+                .get_content(EditContextId::from_prose(req.channel_id, branch_id))
                 .await?
         }
     };
@@ -872,7 +872,7 @@ async fn document_content_put(
 
     srv.documents
         .set_content(
-            EditContextId::from_channel(req.channel_id, req.branch_id),
+            EditContextId::from_prose(req.channel_id, req.branch_id),
             auth.user.id,
             req.content.components,
         )

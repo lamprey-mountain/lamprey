@@ -33,7 +33,6 @@ mod history;
 mod serialized;
 mod syncer;
 mod util;
-// mod validate;
 
 pub struct ServiceDocuments {
     globals: Globals,
@@ -99,9 +98,7 @@ impl ServiceDocuments {
 
     /// get a loaded document
     pub fn get(&self, context_id: EditContextId) -> Option<DocumentHandle> {
-        self.handles
-            .get(&context_id)
-            .map(|h| h.value().clone())
+        self.handles.get(&context_id).map(|h| h.value().clone())
     }
 
     /// load a document. reads from postgres if its not already in memory
@@ -122,7 +119,13 @@ impl ServiceDocuments {
             Ok(dehydrated) => {
                 // load an existing document
                 let doc = Doc::new();
-                doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
+
+                if context_id.is_prose() {
+                    doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
+                } else {
+                    doc.get_or_insert_text(DOCUMENT_ROOT_NAME);
+                }
+
                 let mut tx = doc.transact_mut();
 
                 let snapshot = Update::decode_v1(&dehydrated.last_snapshot)?;
@@ -158,7 +161,12 @@ impl ServiceDocuments {
             })) => {
                 if let Some(author_id) = maybe_author {
                     let doc = Doc::new();
-                    doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
+
+                    if context_id.is_prose() {
+                        doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
+                    } else {
+                        doc.get_or_insert_text(DOCUMENT_ROOT_NAME);
+                    }
 
                     let snapshot = doc
                         .transact()

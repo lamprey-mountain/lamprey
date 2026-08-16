@@ -126,6 +126,7 @@ impl DocumentSyncer {
                                 self.pending_sync.push_back(MessageSync::DocumentPresence {
                                     channel_id: context_id.channel_id(),
                                     branch_id: context_id.branch_id(),
+                                    document_id: context_id.document_id(),
                                     user_id,
                                     cursor_head,
                                     cursor_tail,
@@ -138,12 +139,14 @@ impl DocumentSyncer {
                             .push_back(MessageSync::DocumentSubscribed {
                                 channel_id: context_id.channel_id(),
                                 branch_id: context_id.branch_id(),
+                                document_id: context_id.document_id(),
                                 connection_id: self.conn_id,
                             });
 
                         return Ok(MessageSync::DocumentEdit {
                             channel_id: context_id.channel_id(),
                             branch_id: context_id.branch_id(),
+                            document_id: context_id.document_id(),
                             update: DocumentUpdate(update),
                         });
                     }
@@ -165,6 +168,7 @@ impl DocumentSyncer {
                                     }
                                     return Ok(MessageSync::DocumentEdit {
                                         channel_id: context_id.channel_id(),
+                                        document_id: context_id.document_id(),
                                         branch_id: context_id.branch_id(),
                                         update: DocumentUpdate(update),
                                     });
@@ -181,6 +185,7 @@ impl DocumentSyncer {
                                     return Ok(MessageSync::DocumentPresence {
                                         channel_id: context_id.channel_id(),
                                         branch_id: context_id.branch_id(),
+                                        document_id: context_id.document_id(),
                                         user_id,
                                         cursor_head,
                                         cursor_tail,

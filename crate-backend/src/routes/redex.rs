@@ -51,31 +51,45 @@ async fn redex_create(
 
     let al = auth.audit_log(room_id);
 
-    let media = match &req.redex.location {
+    let mut changes = Changes::new().add("format", &req.redex.format.as_str());
+
+    let location = match &req.redex.location {
         RedexLocationUpdate::Local { .. } => return Err(Error::Unimplemented),
         RedexLocationUpdate::Remote { .. } => return Err(Error::Unimplemented),
         RedexLocationUpdate::Hosted { media_reference } => match media_reference {
             MediaReference::Attachment { .. } => return Err(Error::Unimplemented),
             MediaReference::Url { .. } => return Err(Error::Unimplemented),
             MediaReference::Media { media_id } => {
-                let mut d = s.data();
-                let media = d.media_select(*media_id).await?;
-                media
+                let media = srv.media.get(*media_id).await?;
+
+                if media.media().size > MAX_SCRIPT_FILE_SIZE {
+                    // TODO: better error
+                    return Err(Error::BadStatic("file too large"));
+                }
+
+                changes = changes
+                    .add("location", &"hosted")
+                    .add("media_id", &media_id);
+
+                RedexLocation::Hosted {
+                    media: (*media.media()).clone(),
+                }
             }
         },
-    };
+        RedexLocationUpdate::Document { .. } => {
+            // TODO: create document?
 
-    if media.size > MAX_SCRIPT_FILE_SIZE {
-        return Err(Error::BadStatic("file too large"));
-    }
+            changes = changes.add("location", &"document");
+
+            RedexLocation::Document
+        }
+    };
 
     let redex_id = RedexId::new();
     let version_id = RedexVerId::new();
     let created_at = Time::now_utc();
 
     let format = req.redex.format.clone();
-    let media_id = media.id;
-    let location = RedexLocation::Hosted { media };
 
     let script = Redex {
         id: redex_id,
@@ -102,17 +116,7 @@ async fn redex_create(
     al.commit_success(AuditLogEntryType::RedexCreate {
         channel_id: req.channel_id,
         redex_id,
-        changes: Changes::new()
-            .add(
-                "format",
-                &match &format {
-                    RedexFormat::Javascript => "Javascript",
-                    RedexFormat::Webassembly => "Webassembly",
-                },
-            )
-            .add("location", &"hosted")
-            .add("media_id", &media_id)
-            .build(),
+        changes: changes.build(),
     })
     .await?;
 
@@ -289,29 +293,47 @@ async fn redex_content_update(
         return Err(Error::NotFound);
     }
 
-    let media = match &req.content.location {
+    let mut changes = Changes::new().change(
+        "format",
+        &script.latest_version.format.as_str(),
+        &req.content.format.as_str(),
+    );
+
+    let location = match &req.content.location {
         RedexLocationUpdate::Local { .. } => return Err(Error::Unimplemented),
         RedexLocationUpdate::Remote { .. } => return Err(Error::Unimplemented),
         RedexLocationUpdate::Hosted { media_reference } => match media_reference {
             MediaReference::Attachment { .. } => return Err(Error::Unimplemented),
             MediaReference::Url { .. } => return Err(Error::Unimplemented),
             MediaReference::Media { media_id } => {
-                let mut d = s.data();
-                let media = d.media_select(*media_id).await?;
-                media
+                let media = srv.media.get(*media_id).await?;
+
+                if media.media().size > MAX_SCRIPT_FILE_SIZE {
+                    // TODO: better error
+                    return Err(Error::BadStatic("file too large"));
+                }
+
+                changes = changes
+                    .add("location", &"hosted")
+                    .add("media_id", &media_id);
+
+                RedexLocation::Hosted {
+                    media: (*media.media()).clone(),
+                }
             }
         },
-    };
+        RedexLocationUpdate::Document { .. } => {
+            // FIXME: creating/updating document-based redexes should create a snapshot with the current content
 
-    if media.size > MAX_SCRIPT_FILE_SIZE {
-        return Err(Error::BadStatic("file too large"));
-    }
+            changes = changes.add("location", &"document");
+
+            RedexLocation::Document
+        }
+    };
 
     let version_id = RedexVerId::new();
     let created_at = Time::now_utc();
     let format = req.content.format.clone();
-    let media_id = media.id;
-    let location = RedexLocation::Hosted { media };
 
     let new_version = RedexVersion {
         version_id,
@@ -331,17 +353,7 @@ async fn redex_content_update(
         channel_id: req.channel_id,
         redex_id: req.redex_id,
         redex_version_id: version_id,
-        changes: Changes::new()
-            .add(
-                "format",
-                &match &format {
-                    RedexFormat::Javascript => "Javascript",
-                    RedexFormat::Webassembly => "Webassembly",
-                },
-            )
-            .add("location", &"hosted")
-            .add("media_id", &media_id)
-            .build(),
+        changes: changes.build(),
     })
     .await?;
 

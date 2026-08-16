@@ -180,6 +180,7 @@ impl ServicePermissions {
     }
 
     /// calculate the permissions a user has in a channel
+    // TODO: #[deprecated = "use for_channel3"]
     pub async fn for_channel(&self, user_id: UserId, channel_id: ChannelId) -> Result<Permissions> {
         // why is this wrapped?
         self.for_channel_inner(Some(user_id), channel_id)
@@ -187,6 +188,7 @@ impl ServicePermissions {
             .map(|p| p.into())
     }
 
+    // TODO: #[deprecated = "use for_channel3"]
     pub async fn for_channel2(
         &self,
         user_id: Option<UserId>,

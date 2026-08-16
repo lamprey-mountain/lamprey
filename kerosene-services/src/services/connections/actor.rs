@@ -448,6 +448,7 @@ impl Connection {
                             documents: Some(vec![SyncSubscribeDocument {
                                 channel_id,
                                 branch_id,
+                                redex_id: None,
                                 state_vector,
                             }]),
                             member_lists: None,
@@ -460,18 +461,29 @@ impl Connection {
             MessageClient::DocumentEdit {
                 channel_id,
                 branch_id,
+                redex_id,
                 update,
             } => {
-                self.handle_document_edit(channel_id, branch_id, update)
-                    .await?
+                let context_id = if let Some(redex_id) = redex_id {
+                    EditContextId::from_redex(channel_id, redex_id)
+                } else {
+                    EditContextId::from_prose(channel_id, branch_id)
+                };
+                self.handle_document_edit(context_id, update).await?
             }
             MessageClient::DocumentPresence {
                 channel_id,
                 branch_id,
+                redex_id,
                 cursor_head,
                 cursor_tail,
             } => {
-                self.handle_document_presence(channel_id, branch_id, cursor_head, cursor_tail)
+                let context_id = if let Some(redex_id) = redex_id {
+                    EditContextId::from_redex(channel_id, redex_id)
+                } else {
+                    EditContextId::from_prose(channel_id, branch_id)
+                };
+                self.handle_document_presence(context_id, cursor_head, cursor_tail)
                     .await?
             }
             MessageClient::ScriptSubscribe {
@@ -502,32 +514,25 @@ impl Connection {
 
     async fn handle_document_presence(
         &mut self,
-        channel_id: ChannelId,
-        branch_id: DocumentBranchId,
+        context_id: EditContextId,
         cursor_head: String,
         cursor_tail: Option<String>,
     ) -> Result<()> {
         let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
 
+        let channel_id = context_id.channel_id();
+        let branch_id = context_id.branch_id();
+
         let srv = self.globals.services();
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ChannelView)?;
 
-        if !self
-            .subscriptions
-            .is_document_subscribed(channel_id, branch_id)
-        {
+        if !self.subscriptions.is_document_subscribed(context_id) {
             return Err(Error::BadStatic("not subscribed to this document"));
         }
 
         srv.documents
-            .broadcast_presence(
-                EditContextId::from_channel(channel_id, branch_id),
-                user_id,
-                Some(self.id),
-                cursor_head,
-                cursor_tail,
-            )
+            .broadcast_presence(context_id, user_id, Some(self.id), cursor_head, cursor_tail)
             .await?;
         Ok(())
     }
@@ -571,30 +576,24 @@ impl Connection {
 
     async fn handle_document_edit(
         &mut self,
-        channel_id: ChannelId,
-        branch_id: DocumentBranchId,
+        context_id: EditContextId,
         update: DocumentUpdate,
     ) -> Result<()> {
         let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+        let channel_id = context_id.channel_id();
+        let branch_id = context_id.branch_id();
+
         let srv = self.globals.services();
         let perms = srv.perms.for_channel(user_id, channel_id).await?;
         perms.ensure(Permission::ChannelView)?;
         perms.ensure(Permission::DocumentEdit)?;
 
-        if !self
-            .subscriptions
-            .is_document_subscribed(channel_id, branch_id)
-        {
+        if !self.subscriptions.is_document_subscribed(context_id) {
             return Err(Error::BadStatic("not subscribed to this document"));
         }
 
         srv.documents
-            .apply_update(
-                EditContextId::from_channel(channel_id, branch_id),
-                user_id,
-                Some(self.id),
-                &update.0,
-            )
+            .apply_update(context_id, user_id, Some(self.id), &update.0)
             .await?;
 
         Ok(())

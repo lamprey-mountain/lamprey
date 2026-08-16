@@ -15,6 +15,10 @@ pub struct Handler {
 
 inventory::collect!(Handler);
 
+// FIXME: v1 routes should be prefixed with /api/v1
+// v2 routes should be prefixed similarly
+// unsuse how to best do this. i might need to rework some macros for this?
+
 pub struct Routes {
     openapi: OpenApi,
     router: Option<Router<Globals>>,

@@ -162,7 +162,9 @@ pub struct RedexVersion {
 }
 
 /// the format of a redex
+// TODO: rename to RedexLanguage
 #[record]
+#[derive(Copy, PartialEq, Eq, strum::EnumString, strum::IntoStaticStr)]
 pub enum RedexFormat {
     /// javascript via quickjs
     ///
@@ -172,8 +174,14 @@ pub enum RedexFormat {
 
     /// webassembly script (either wasm or wat)
     ///
-    /// probably will use wasmtime or something
+    /// uses [wasmtime](https://lib.rs/crates/wasmtime) bindings
     Webassembly,
+}
+
+impl RedexFormat {
+    pub fn as_str(&self) -> &'static str {
+        self.into()
+    }
 }
 
 /// where a redex's source is stored
@@ -196,7 +204,9 @@ pub enum RedexLocation {
 
     /// stored on the server
     Hosted { media: Media },
-    // TODO: document
+
+    /// as a document
+    Document,
 }
 
 /// used to set a RedexLocation
@@ -217,6 +227,9 @@ pub enum RedexLocationUpdate {
         #[cfg_attr(feature = "serde", serde(flatten))]
         media_reference: MediaReference,
     },
+
+    /// as a document
+    Document,
     // note that Remote and Hosted + source_url are different
     // the first is a "live pointer" wheras the latter effectively vendors a snapshot
 }
@@ -279,6 +292,7 @@ impl RedexLocation {
             RedexLocation::Local { .. } => None,
             RedexLocation::Remote { media, .. } => Some(media.id),
             RedexLocation::Hosted { media } => Some(media.id),
+            RedexLocation::Document => None,
         }
     }
 }

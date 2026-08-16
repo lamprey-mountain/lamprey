@@ -29,7 +29,12 @@ impl ServiceDocuments {
         wiki_id: ChannelId,
         query: HistoryParams,
     ) -> Result<HistoryPaginationSummary> {
-        let (updates, tags) = self.globals.begin_read().await?.wiki_history(wiki_id).await?;
+        let (updates, tags) = self
+            .globals
+            .begin_read()
+            .await?
+            .wiki_history(wiki_id)
+            .await?;
         self.process_history(updates, tags, query)
     }
 

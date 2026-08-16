@@ -20,7 +20,7 @@ use tokio::sync::broadcast;
 use tracing::{debug, warn};
 use yrs::updates::encoder::Encode;
 use yrs::{
-    DeepObservable, Doc, Out, ReadTxn, StateVector, Transact, Update,
+    DeepObservable, Doc, GetString, Out, ReadTxn, StateVector, Transact, Update, XmlFragment,
     types::{Delta, Event},
     updates::decoder::Decode,
 };
@@ -133,6 +133,15 @@ impl DocumentActor {
 
 #[kameo::messages]
 impl DocumentActor {
+    /// get the document content as plain text
+    #[message]
+    pub fn get_plain(&self) -> Result<String> {
+        let txn = self.doc.transact();
+        let root = self.doc.get_or_insert_text(DOCUMENT_ROOT_NAME);
+        let text = root.get_string(&txn);
+        Ok(text)
+    }
+
     /// get a broadcast receiver to the document event stream
     #[message]
     pub fn subscribe(&self) -> broadcast::Receiver<DocumentEvent> {
@@ -494,6 +503,15 @@ impl DocumentHandle {
             .send()
             .await
             // TODO: better error
+            .map_err(|e| Error::Internal(e.to_string()))
+    }
+
+    /// get the document content as plain text
+    pub async fn get_plain(&self) -> Result<String> {
+        self.actor_ref
+            .ask(GetPlain {})
+            .send()
+            .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
 

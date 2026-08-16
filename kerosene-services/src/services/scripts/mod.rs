@@ -1,11 +1,17 @@
+use common::v1::types::components::ComponentType;
 use common::v1::types::redex::{
-    Eval, EvalInput, EvalStatus, Redex, RedexFormat, RedexVersion, RedexVersionStatus,
+    Eval, EvalInput, EvalStatus, Redex, RedexFormat, RedexLocation, RedexVersion,
+    RedexVersionStatus,
 };
 use common::v1::types::util::Time;
 use common::v1::types::{
-    ChannelId, ConnectionId, EvalId, MediaId, MessageSync, RedexId, RedexVerId,
+    ChannelId, ConnectionId, DocumentBranchId, DocumentId, EvalId, MediaId, MessageSync, RedexId,
+    RedexVerId,
 };
 use dashmap::DashMap;
+use futures::TryFutureExt;
+use kerosene_core::error::{ApiError, ErrorCode};
+use kerosene_core::types::documents::EditContextId;
 use lamprey_script::engine::{AnyExecutionHandle, ExecutionEvent, ScriptExtracted};
 use lamprey_script::{Engine, Executor, Limits};
 use tokio::sync::broadcast;
@@ -14,6 +20,8 @@ use crate::prelude::*;
 use crate::services::scripts::sync::ScriptSyncer;
 
 mod sync;
+// mod redex;
+// mod eval;
 
 /// the service that manages all scripts
 pub struct ServiceScripts {
@@ -79,31 +87,6 @@ impl ServiceScripts {
             self.script_event_txs.insert(channel_id, tx);
             Ok(rx)
         }
-    }
-
-    async fn load_from_source(
-        &self,
-        redex_id: RedexId,
-        redex_version_id: RedexVerId,
-        media_id: MediaId,
-        format: RedexFormat,
-    ) -> Result<Box<dyn Executor>> {
-        let item = self.globals.services().media.get(media_id).await?;
-        let bytes = item.download_bytes().await?;
-        let loaded = match format {
-            RedexFormat::Javascript => {
-                let source = std::str::from_utf8(&bytes)?;
-                self.engine
-                    .load_js(redex_id, redex_version_id, "strobbery", source)
-                    .await?
-            }
-            RedexFormat::Webassembly => {
-                self.engine
-                    .load_wasm(redex_id, redex_version_id, "strobbery", &bytes)
-                    .await?
-            }
-        };
-        Ok(loaded)
     }
 
     /// create a script
@@ -210,30 +193,44 @@ impl ServiceScripts {
     }
 
     /// load a redex
-    async fn load(&self, redex_id: RedexId) -> Result<Box<dyn Executor>> {
+    async fn load(&self, redex: &Redex) -> Result<Box<dyn Executor>> {
         // TODO: check if script is already loaded first
         // self.engine.get_js(&script_id);
 
         let srv = self.globals.services();
-        let mut data = self.globals.begin_read().await?;
 
-        let script = data
-            .script_get(redex_id)
-            .await?
-            .ok_or(Error::BadStatic("script not found"))?;
         // TODO: verify the script status is Valid? for `spawn` but not `process`.
 
-        let media_id = script.latest_version.location.media_id().unwrap();
-        let item = srv.media.get(media_id).await?;
-        let bytes = item.download_bytes().await?;
+        let bytes = match &redex.latest_version.location {
+            // TODO: implement Local, Remote
+            RedexLocation::Local { path } => return Err(Error::Unimplemented),
+            RedexLocation::Remote { media, url } => return Err(Error::Unimplemented),
+            RedexLocation::Hosted { media } => {
+                let item = srv.media.get(media.id).await?;
+                let bytes = item.download_bytes().await?;
+                bytes
+            }
+            RedexLocation::Document => {
+                let context_id = EditContextId::from_redex(redex.channel_id, redex.id);
+                let doc = srv.documents.load(context_id, Some(redex.creator_id)).await;
+                match doc {
+                    Ok(doc) => {
+                        let text = doc.get_plain().await?;
+                        text.into_bytes().into()
+                    }
+                    // TODO: differentiate between "document not created yet" and an actual error
+                    Err(_) => Bytes::new(),
+                }
+            }
+        };
 
-        let loaded = match script.latest_version.format {
+        let loaded = match redex.latest_version.format {
             RedexFormat::Javascript => {
                 let source = std::str::from_utf8(&bytes)?;
                 self.engine
                     .load_js(
-                        redex_id,
-                        script.latest_version.version_id,
+                        redex.id,
+                        redex.latest_version.version_id,
                         "strobbery",
                         source,
                     )
@@ -243,8 +240,8 @@ impl ServiceScripts {
             RedexFormat::Webassembly => self
                 .engine
                 .load_wasm(
-                    redex_id,
-                    script.latest_version.version_id,
+                    redex.id,
+                    redex.latest_version.version_id,
                     "strobbery",
                     &bytes,
                 )
@@ -264,13 +261,7 @@ impl ServiceScripts {
         // NOTE: should i insert the extraction run in the db too?
 
         let latest_version = ver.as_ref().unwrap_or(&script.latest_version);
-        let version_id = latest_version.version_id;
-        let location = &latest_version.location;
-        let format = &latest_version.format;
-        let media_id = location.media_id().unwrap();
-        let loaded = self
-            .load_from_source(script.id, version_id, media_id, format.clone())
-            .await?;
+        let loaded = self.load(&script).await?;
 
         let mut handle = loaded
             .spawn(EvalInput::Extraction, EvalId::new())
@@ -290,7 +281,14 @@ impl ServiceScripts {
         input: EvalInput,
     ) -> Result<AnyExecutionHandle> {
         // load redex
-        let loaded = self.load(redex_id).await?;
+        let redex = self
+            .globals
+            .begin_read()
+            .await?
+            .script_get(redex_id)
+            .await?
+            .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRedex)))?;
+        let loaded = self.load(&redex).await?;
         let eval_id = EvalId::new();
 
         // insert run into database

@@ -1,4 +1,5 @@
 use common::v1::types::SERVER_ROOM_ID;
+use common::v2::types::DocumentId;
 use kerosene_core::types::documents::EditContextId;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::mpsc;
@@ -41,13 +42,8 @@ impl ConnectionSubscriptions {
         }
     }
 
-    pub fn is_document_subscribed(
-        &self,
-        channel_id: ChannelId,
-        branch_id: DocumentBranchId,
-    ) -> bool {
-        let key = EditContextId::from_channel(channel_id, branch_id);
-        self.documents.contains_key(&key)
+    pub fn is_document_subscribed(&self, edit_context_id: EditContextId) -> bool {
+        self.documents.contains_key(&edit_context_id)
     }
 
     pub async fn disconnect(&mut self, user_id: UserId) {
@@ -87,7 +83,12 @@ impl ConnectionSubscriptions {
             let mut new_keys: HashSet<EditContextId> = HashSet::new();
 
             for doc in docs {
-                let key = EditContextId::from_channel(doc.channel_id, doc.branch_id);
+                let key = if let Some(redex_id) = doc.redex_id {
+                    EditContextId::from_redex(doc.channel_id, redex_id)
+                } else {
+                    EditContextId::from_prose(doc.channel_id, doc.branch_id)
+                };
+
                 new_keys.insert(key);
 
                 if !self.documents.contains_key(&key) {
@@ -98,7 +99,8 @@ impl ConnectionSubscriptions {
                         .globals
                         .begin_read()
                         .await?
-                        .document_branch_get(doc.channel_id, doc.branch_id)
+                        // FIXME: make document_branch_get take a DocumentId
+                        .document_branch_get((*key.document_id()).into(), key.branch_id())
                         .await;
                     match branch {
                         Ok(branch) => {
@@ -108,8 +110,8 @@ impl ConnectionSubscriptions {
                                 )));
                             }
                         }
-                        Err(_) if *doc.branch_id == *doc.channel_id => {
-                            // Default branch fallback
+                        Err(_) if *key.branch_id() == *key.document_id() => {
+                            // this is the default branch
                         }
                         Err(_) => {
                             return Err(Error::ApiError(ApiError::from_code(
