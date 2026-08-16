@@ -408,6 +408,11 @@ pub trait DataChannel {
         channel_id: ChannelId,
         user_id: UserId,
     ) -> Result<DbChannelPrivate>;
+    async fn channel_get_private_many(
+        &mut self,
+        user_id: UserId,
+        channel_ids: &[ChannelId],
+    ) -> Result<Vec<DbChannelPrivate>>;
     // async fn channel_list_all(&mut self, p: PaginationQuery<ChannelId>) -> Result<PaginationResult<Channel>>;
     async fn channel_list(&mut self, room_id: RoomId) -> Result<Vec<Channel>>;
     async fn channel_list_all(

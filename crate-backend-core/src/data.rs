@@ -530,6 +530,11 @@ pub trait DataThreadMember {
         thread_id: ChannelId,
         user_ids: &[UserId],
     ) -> Result<Vec<ThreadMember>>;
+    async fn thread_member_get_many_for_user(
+        &mut self,
+        user_id: UserId,
+        thread_ids: &[ChannelId],
+    ) -> Result<Vec<ThreadMember>>;
     async fn thread_member_list(
         &mut self,
         thread_id: ChannelId,

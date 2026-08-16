@@ -5,7 +5,7 @@ use common::v1::types::{
     ThreadMemberPut, UserId,
 };
 use lamprey_backend_core::Error;
-use sqlx::{query, query_as, query_scalar};
+use sqlx::{query, query_as, query_file_as, query_scalar};
 use tracing::info;
 use uuid::Uuid;
 
@@ -181,6 +181,24 @@ impl DataThreadMember for Postgres {
         "#,
             *thread_id,
             &user_ids
+        )
+        .fetch_all(conn.ext())
+        .await?;
+        Ok(items.into_iter().map(Into::into).collect())
+    }
+
+    async fn thread_member_get_many_for_user(
+        &mut self,
+        user_id: UserId,
+        thread_ids: &[ChannelId],
+    ) -> Result<Vec<ThreadMember>> {
+        let mut conn = self.acquire().await?;
+        let thread_ids: Vec<Uuid> = thread_ids.iter().map(|id| id.into_inner()).collect();
+        let items = query_file_as!(
+            DbThreadMember,
+            "sql/thread_member_get_many_for_user.sql",
+            *user_id,
+            &thread_ids
         )
         .fetch_all(conn.ext())
         .await?;

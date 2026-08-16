@@ -68,57 +68,47 @@ impl ServiceChannels {
 
         let mut data = self.state.begin_read().await?;
 
-        // collect all channel ids for batch fetching
         let channel_ids: Vec<_> = channels.iter().map(|c| c.id).collect();
 
-        // fetch preferences for all channels
+        // TODO: update caches
         let preferences_map = data
             .preferences_channel_get_many(user_id, &channel_ids)
             .await?;
 
-        // fetch thread members for thread channels
-        let thread_channels: Vec<_> = channels
-            .iter()
-            .filter(|c| c.is_thread())
-            .map(|c| c.id)
+        // NOTE: maybe each thread should store its full thread member list
+        let thread_members: HashMap<_, _> = data
+            .thread_member_get_many_for_user(user_id, &channel_ids)
+            .await?
+            .into_iter()
+            .map(|a| (a.thread_id, a))
             .collect();
 
-        // PERF: n+1 query
-        let thread_member_map = if !thread_channels.is_empty() {
-            let mut map = HashMap::new();
-            for thread_id in &thread_channels {
-                if let Ok(member) = data.thread_member_get(*thread_id, user_id).await {
-                    map.insert(*thread_id, member);
-                }
-            }
-            map
-        } else {
-            HashMap::new()
-        };
+        let channel_private: HashMap<_, _> = data
+            .channel_get_private_many(user_id, &channel_ids)
+            .await?
+            .into_iter()
+            .map(|a| (a.id, a))
+            .collect();
 
         // populate each channel with private data
         for channel in channels {
-            // PERF: n+1 query
-            // fetch private data for this channel
-            if let Ok(private) = data.channel_get_private(channel.id, user_id).await {
+            if let Some(p) = channel_private.get(&channel.id) {
                 // let srv = self.state.services();
                 // TODO: update ack state
                 // let ack_state = AckStateUserChannel { };
                 // srv.unread.put_user_channel(ack_state);
                 // NOTE: ignore updating self.cache_thread_private...?
-                channel.is_unread = Some(private.is_unread);
-                channel.last_read_id = private.last_read_id.map(Into::into);
-                channel.mention_count = Some(private.mention_count as u64);
+                channel.is_unread = Some(p.is_unread);
+                channel.last_read_id = p.last_read_id.map(Into::into);
+                channel.mention_count = Some(p.mention_count as u64);
             }
 
             if let Some(config) = preferences_map.get(&channel.id) {
                 channel.preferences = Some(config.clone());
             }
 
-            if channel.is_thread() {
-                if let Some(member) = thread_member_map.get(&channel.id) {
-                    channel.thread_member = Some(Box::new(member.clone()));
-                }
+            if let Some(a) = thread_members.get(&channel.id) {
+                channel.thread_member = Some(Box::new(a.clone()));
             }
         }
 

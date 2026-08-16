@@ -223,6 +223,24 @@ impl DataChannel for Postgres {
         Ok(thread_private)
     }
 
+    async fn channel_get_private_many(
+        &mut self,
+        user_id: UserId,
+        channel_ids: &[ChannelId],
+    ) -> Result<Vec<DbChannelPrivate>> {
+        let mut conn = self.acquire().await?;
+        let ids: Vec<uuid::Uuid> = channel_ids.iter().map(|id| id.into_inner()).collect();
+        let thread_privates = query_file_as!(
+            DbChannelPrivate,
+            "sql/channel_get_private_many.sql",
+            &ids,
+            *user_id,
+        )
+        .fetch_all(conn.ext())
+        .await?;
+        Ok(thread_privates)
+    }
+
     async fn channel_update(
         &mut self,
         thread_id: ChannelId,
