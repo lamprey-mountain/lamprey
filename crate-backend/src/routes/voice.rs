@@ -496,7 +496,8 @@ async fn voice_call_delete(
 
     s.services()
         .voice
-        .call_delete(req.channel_id, req.params.force);
+        .call_delete(req.channel_id, req.params.force)
+        .await;
     Ok(StatusCode::NO_CONTENT)
 }
 
