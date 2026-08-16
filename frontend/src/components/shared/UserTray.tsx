@@ -177,7 +177,14 @@ export const UserTray = () => {
 												</>
 											)}
 										</Show>
-										{chan().name}
+										<Show
+											when={chan().type === "Dm" && currentUser()}
+											fallback={chan().name}
+										>
+											{(me) =>
+												`@${chan().recipients?.find((i) => i.id !== me().id)?.name ?? "unknown user"}`
+											}
+										</Show>
 									</A>{" "}
 									for <Duration ms={voiceDuration.duration} />
 								</div>
