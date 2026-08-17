@@ -600,7 +600,7 @@ impl Database for SqliteDatabase {
         let discord_banner_url = puppet.discord_banner_url.map(|u| u.to_string());
 
         query!(
-            "INSERT INTO \"user\" (source_platform, lamprey_id, discord_id, discord_avatar_url, discord_banner_url) VALUES (?, ?, ?, ?, ?)",
+            "INSERT OR REPLACE INTO \"user\" (source_platform, lamprey_id, discord_id, discord_avatar_url, discord_banner_url) VALUES (?, ?, ?, ?, ?)",
             source_platform,
             lamprey_id,
             discord_id,
