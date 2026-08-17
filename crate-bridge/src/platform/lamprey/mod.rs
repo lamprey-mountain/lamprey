@@ -620,7 +620,10 @@ async fn spawn_portal_inner(
     // HOWEVER, the portal should bridge messages until backfilling is done
     let mut last_id = portal.lamprey.as_ref().expect("handle None").last_id;
     loop {
-        let messages = ly.fetch_after(last_id).await?;
+        let Ok(messages) = ly.fetch_after(last_id).await else {
+            warn!(%last_id, %portal_id, %channel_id, "failed to fetch_after messages");
+            break;
+        };
 
         // break if messages is empty
         let Some(last) = messages.last() else {
