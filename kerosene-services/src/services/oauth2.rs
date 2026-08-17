@@ -177,7 +177,8 @@ impl ServiceOauth {
 
         let ua = match s.provider.as_str() {
             "discord" => HeaderValue::from_static(
-                "User-Agent: DiscordBot (https://git.celery.eu.org/lamprey/lamprey, v0.1.0)",
+                // TODO: get version from env at compile time
+                "DiscordBot (https://git.celery.eu.org/lamprey/lamprey, 0.1.0)",
             ),
             _ => self.state.config().user_agent_header_value()?,
         };
