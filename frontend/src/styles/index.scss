@@ -2709,16 +2709,23 @@ button.link {
 	height: 48px;
 }
 
-.user-profile-page {
+.user-profile-page-wrapper {
 	grid-area: main;
+	overflow-y: auto;
+}
+
+.user-profile-page {
 	display: grid;
 	grid-template-areas: "banner banner" "header actions" "content aside";
 	grid-template-rows: auto auto 1fr;
 	grid-template-columns: auto auto;
+	padding-bottom: 80px;
 
 	& > .banner {
 		grid-area: banner;
+		max-height: min(30vh, 320px);
 		min-height: 96px;
+		width: 100%;
 		aspect-ratio: 10 / 3;
 		background-color: $bg-150;
 		background-size: cover;

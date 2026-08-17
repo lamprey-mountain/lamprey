@@ -147,147 +147,152 @@ export function UserPage(props: { user: UserWithRelationship }) {
 	});
 
 	return (
-		<div class="user-profile-page">
-			<div
-				class="banner"
-				style={{
-					"background-image":
-						(props.user.banner &&
-							`url(${getThumbFromId(props.user.banner)})`) ||
-						undefined,
-				}}
-			/>
+		<div class="user-profile-page-wrapper">
+			<div class="user-profile-page">
+				<div
+					class="banner"
+					style={{
+						"background-image":
+							(props.user.banner &&
+								`url(${getThumbFromId(props.user.banner)})`) ||
+							undefined,
+					}}
+				/>
 
-			<header class="header">
-				<div class="avatar-wrap">
-					<AvatarWithStatus user={props.user} animate={true} />
-				</div>
-				<div class="name-area">
-					<div class="name"> {props.user.name} </div>
-				</div>
-			</header>
+				<header class="header">
+					<div class="avatar-wrap">
+						<AvatarWithStatus user={props.user} animate={true} />
+					</div>
+					<div class="name-area">
+						<div class="name"> {props.user.name} </div>
+					</div>
+				</header>
 
-			<menu class="actions">
-				<Switch>
-					<Match when={props.user.relationship?.relation === "Friend"}>
-						<button
-							type="button"
-							class="button icon-button"
-							onClick={removeFriend}
-							ref={friendTooltip.content}
-						>
-							<Icon src={icFriendReject} />
-						</button>
-					</Match>
-					<Match when={props.user.relationship?.relation === "Outgoing"}>
-						<button
-							type="button"
-							class="button icon-button"
-							onClick={removeFriend}
-							ref={friendTooltip.content}
-						>
-							<Icon src={icFriendReject} />
-						</button>
-					</Match>
-					<Match when={props.user.relationship?.relation === "Incoming"}>
-						<button
-							type="button"
-							class="button icon-button"
-							onClick={sendFriendRequest}
-							ref={friendTooltip.content}
-						>
-							<Icon src={icFriendAdd} />
-						</button>
-					</Match>
-					<Match when={!props.user.relationship?.relation}>
-						<button
-							type="button"
-							class="button icon-button"
-							onClick={sendFriendRequest}
-							ref={friendTooltip.content}
-						>
-							<Icon src={icFriendAdd} />
-						</button>
-					</Match>
-				</Switch>
-				<button
-					type="button"
-					class="button icon-button"
-					onClick={openDm}
-					ref={dmTooltip.content}
-				>
-					<Icon src={icDm} />
-				</button>
-				<button
-					type="button"
-					class="button icon-button"
-					onClick={openUserMenu}
-					ref={menuTooltip.content}
-				>
-					<Icon src={icMenu} />
-				</button>
-			</menu>
-
-			<div class="content">
-				<h3 class="dim">About Me</h3>
-				<div class="description">
-					<Show
-						when={props.user.description}
-						fallback={<div class="dim empty">no bio!</div>}
+				<menu class="actions">
+					<Switch>
+						<Match when={props.user.relationship?.relation === "Friend"}>
+							<button
+								type="button"
+								class="button icon-button"
+								onClick={removeFriend}
+								ref={friendTooltip.content}
+							>
+								<Icon src={icFriendReject} />
+							</button>
+						</Match>
+						<Match when={props.user.relationship?.relation === "Outgoing"}>
+							<button
+								type="button"
+								class="button icon-button"
+								onClick={removeFriend}
+								ref={friendTooltip.content}
+							>
+								<Icon src={icFriendReject} />
+							</button>
+						</Match>
+						<Match when={props.user.relationship?.relation === "Incoming"}>
+							<button
+								type="button"
+								class="button icon-button"
+								onClick={sendFriendRequest}
+								ref={friendTooltip.content}
+							>
+								<Icon src={icFriendAdd} />
+							</button>
+						</Match>
+						<Match when={!props.user.relationship?.relation}>
+							<button
+								type="button"
+								class="button icon-button"
+								onClick={sendFriendRequest}
+								ref={friendTooltip.content}
+							>
+								<Icon src={icFriendAdd} />
+							</button>
+						</Match>
+					</Switch>
+					<button
+						type="button"
+						class="button icon-button"
+						onClick={openDm}
+						ref={dmTooltip.content}
 					>
-						{(d) => <Markdown content={d()} />}
-					</Show>
+						<Icon src={icDm} />
+					</button>
+					<button
+						type="button"
+						class="button icon-button"
+						onClick={openUserMenu}
+						ref={menuTooltip.content}
+					>
+						<Icon src={icMenu} />
+					</button>
+				</menu>
+
+				<div class="content">
+					<h3 class="dim">About Me</h3>
+					<div class="description">
+						<Show
+							when={props.user.description}
+							fallback={<div class="dim empty">no bio!</div>}
+						>
+							{(d) => <Markdown content={d()} />}
+						</Show>
+					</div>
+
+					<h3 class="dim">Note</h3>
+					<div class="note">
+						<noteEditor.View
+							onChange={handleNoteInput}
+							placeholder="Add a note... (only you can see this)"
+							submitOnEnter={false}
+							channelId={props.user.id}
+							autofocus={false}
+						/>
+					</div>
+
+					<div class="dim">
+						id: <Copyable>{props.user.id}</Copyable>
+					</div>
 				</div>
 
-				<h3 class="dim">Note</h3>
-				<div class="note">
-					<noteEditor.View
-						onChange={handleNoteInput}
-						placeholder="Add a note... (only you can see this)"
-						submitOnEnter={false}
-						channelId={props.user.id}
-						autofocus={false}
-					/>
-				</div>
+				<aside class="aside">
+					<h3 class="dim">mutual rooms</h3>
+					<ul class="mutual-rooms">
+						{/* TODO: use actual store/live update */}
+						<For
+							each={mutualRooms()?.items ?? []}
+							fallback="no mutual rooms :("
+						>
+							{(room) => {
+								// TODO: return nicknames in mutual room endpoint
+								const member = api.roomMembers.useMember(
+									() => room.id,
+									() => props.user.id,
+								);
 
-				<div class="dim">
-					id: <Copyable>{props.user.id}</Copyable>
-				</div>
+								return (
+									<li class="mutual-room">
+										<a class="mutual-room-link" href={`/room/${room.id}`}>
+											<RoomIcon room={room} />
+											<div class="info">
+												<div>{room.name}</div>
+												<Show when={member()?.override_name}>
+													{(nick) => (
+														<div class="nickname">
+															<span class="as">as</span> {nick()}
+														</div>
+													)}
+												</Show>
+											</div>
+										</a>
+									</li>
+								);
+							}}
+						</For>
+					</ul>
+				</aside>
 			</div>
-
-			<aside class="aside">
-				<h3 class="dim">mutual rooms</h3>
-				<ul class="mutual-rooms">
-					{/* TODO: use actual store/live update */}
-					<For each={mutualRooms()?.items ?? []} fallback="no mutual rooms :(">
-						{(room) => {
-							// TODO: return nicknames in mutual room endpoint
-							const member = api.roomMembers.useMember(
-								() => room.id,
-								() => props.user.id,
-							);
-
-							return (
-								<li class="mutual-room">
-									<a class="mutual-room-link" href={`/room/${room.id}`}>
-										<RoomIcon room={room} />
-										<div class="info">
-											<div>{room.name}</div>
-											<Show when={member()?.override_name}>
-												{(nick) => (
-													<div class="nickname">
-														<span class="as">as</span> {nick()}
-													</div>
-												)}
-											</Show>
-										</div>
-									</a>
-								</li>
-							);
-						}}
-					</For>
-				</ul>
-			</aside>
 		</div>
 	);
 }
