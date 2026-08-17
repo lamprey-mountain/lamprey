@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM realm WHERE discord_guild_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "ac837e001e717ed3e15875b883fcf316e8569718b1b1adb6bb20bb3c24b320a9"
+}

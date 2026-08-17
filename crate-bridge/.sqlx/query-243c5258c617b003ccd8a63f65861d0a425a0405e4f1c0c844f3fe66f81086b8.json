@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE realm SET continuous = ?, lamprey_room_id = ?, discord_guild_id = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "243c5258c617b003ccd8a63f65861d0a425a0405e4f1c0c844f3fe66f81086b8"
+}

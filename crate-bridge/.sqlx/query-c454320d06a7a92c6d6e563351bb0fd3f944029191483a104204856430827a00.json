@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, continuous, lamprey_room_id, discord_guild_id FROM realm",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "continuous",
+        "ordinal": 1,
+        "type_info": "Bool"
+      },
+      {
+        "name": "lamprey_room_id",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "discord_guild_id",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "c454320d06a7a92c6d6e563351bb0fd3f944029191483a104204856430827a00"
+}
