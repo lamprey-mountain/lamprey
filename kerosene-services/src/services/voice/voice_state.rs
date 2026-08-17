@@ -4,6 +4,7 @@ use common::v1::types::voice::messages::{SfuCommand, SignallingCommand, Signalli
 use lamprey_backend_core::Error;
 use lamprey_backend_data_postgres::DbMessageUpdate;
 use std::sync::Arc;
+use tracing::error;
 
 use crate::Result;
 use crate::services::voice::ServiceVoice;
@@ -157,50 +158,57 @@ impl ServiceVoice {
         call.voice_states.insert(user_id, Arc::clone(&handle));
 
         if let Some(message_id) = call.message_id {
+            // TODO: split out this code
             let globals = self.state.clone();
             let channel_id = update.channel_id;
             tokio::spawn(async move {
-                let mut txn = globals.begin().await?;
+                let result = async move {
+                    let mut txn = globals.begin().await?;
 
-                // PERF: don't read message from db, store metadata in memory
-                let message = txn.message_get(channel_id, message_id).await?;
+                    // PERF: don't read message from db, store metadata in memory
+                    let message = txn.message_get(channel_id, message_id).await?;
 
-                let MessageType::Call(mut message_call) = message.latest_version.message_type
-                else {
-                    return Ok(());
-                };
+                    let MessageType::Call(mut message_call) = message.latest_version.message_type
+                    else {
+                        return Ok(());
+                    };
 
-                let mut participants = message_call.participants;
-                if participants.contains(&user_id) {
-                    return Ok(());
+                    let mut participants = message_call.participants;
+                    if participants.contains(&user_id) {
+                        return Ok(());
+                    }
+
+                    participants.push(user_id);
+
+                    let update = DbMessageUpdate {
+                        attachments: vec![],
+                        author_id: message.author_id,
+                        embeds: vec![],
+                        components: vec![],
+                        message_type: MessageType::Call(MessageCall {
+                            ended_at: None,
+                            participants,
+                        }),
+                        created_at: Some(message.created_at.into()),
+                        mentions: Default::default(),
+                    };
+
+                    txn.message_update_in_place(channel_id, (*message_id).into(), update)
+                        .await?;
+                    let message = txn.message_get(channel_id, message_id).await?;
+                    txn.commit().await?;
+
+                    globals
+                        .messaging()
+                        .broadcast_channel(channel_id, MessageSync::MessageUpdate { message })
+                        .await?;
+
+                    Result::Ok(())
                 }
-
-                participants.push(user_id);
-
-                let update = DbMessageUpdate {
-                    attachments: vec![],
-                    author_id: message.author_id,
-                    embeds: vec![],
-                    components: vec![],
-                    message_type: MessageType::Call(MessageCall {
-                        ended_at: None,
-                        participants,
-                    }),
-                    created_at: None,
-                    mentions: Default::default(),
-                };
-
-                txn.message_update_in_place(channel_id, (*message_id).into(), update)
-                    .await?;
-                let message = txn.message_get(channel_id, message_id).await?;
-                txn.commit().await?;
-
-                globals
-                    .messaging()
-                    .broadcast_channel(channel_id, MessageSync::MessageUpdate { message })
-                    .await?;
-
-                Result::Ok(())
+                .await;
+                if let Err(err) = result {
+                    error!("couldn't update message: {err}");
+                }
             });
         }
 
@@ -306,8 +314,6 @@ impl ServiceVoice {
             )
             .await?;
 
-        // TODO: if nobody is connected to the old channel anymore, spawn timeout task to clean up the call?
-
         Ok(())
     }
 
@@ -354,7 +360,13 @@ impl ServiceVoice {
             )
             .await?;
 
-        // TODO: if nobody is connected anymore, spawn timeout task to clean up the call?
+        if call.voice_states.is_empty() {
+            let srv = self.state.services();
+            let channel = srv.channels.get(channel_id, None).await?;
+            if channel.ty != ChannelType::Broadcast {
+                Box::pin(self.call_delete(channel_id, false)).await;
+            }
+        }
 
         Ok(())
     }
