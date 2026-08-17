@@ -92,9 +92,9 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 		on(
 			() => [store.muted, store.deafened, store.camera] as const,
 			([mute, deaf, video]) => {
+				if (vc.connectionState() === "disconnected") return;
 				const vs = api.voiceState;
 				if (!vs) return;
-				// FIXME: don't send VoiceState while disconnected (ie. after sending Disconnect)
 				api.client.send({
 					type: "VoiceDispatch",
 					channel_id: vs.channel_id,
