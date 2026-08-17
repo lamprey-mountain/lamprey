@@ -463,12 +463,14 @@
 	border: solid 1px $sep-500;
 	padding: 4px;
 	white-space: pre-wrap;
-	overflow-y: auto;
+	overflow: hidden auto;
 	caret-color: $fg-400;
 
 	& .placeholder {
 		position: absolute;
 		color: $fg-600;
+		max-width: 100%;
+		@include truncate;
 	}
 
 	& .syn {
