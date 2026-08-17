@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE thread_member\n        \tSET membership = 'Leave'\n            WHERE channel_id = $1 AND user_id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "58dc9e2f09eda401d94497038863497a1f52c18618c231648fc53c609a2437f7"
+}

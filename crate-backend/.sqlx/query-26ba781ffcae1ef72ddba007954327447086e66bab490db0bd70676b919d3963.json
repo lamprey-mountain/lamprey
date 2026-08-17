@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT rm1.room_id\n            FROM room_member rm1\n            JOIN room_member rm2 ON rm1.room_id = rm2.room_id\n            WHERE rm1.user_id = $1 AND rm2.user_id = $2\n            AND rm1.membership = 'Join' AND rm2.membership = 'Join'\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "room_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "26ba781ffcae1ef72ddba007954327447086e66bab490db0bd70676b919d3963"
+}

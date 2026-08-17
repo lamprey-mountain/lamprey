@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select totp_secret, totp_enabled from usr where id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "totp_secret",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "totp_enabled",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false
+    ]
+  },
+  "hash": "a61b1288d57bfa3e36f4459bdf32f1eaca7a4d52380b61a5937cfde9491e5d31"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select from role where room_id = $1 for share",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e8b5cde653e64ea75542407a0e4220fb907d5bcb71bcb9997dc26e53d348e8fa"
+}

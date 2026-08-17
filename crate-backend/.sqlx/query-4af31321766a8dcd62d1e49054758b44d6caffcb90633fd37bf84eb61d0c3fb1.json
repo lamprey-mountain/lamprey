@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update message set pinned = null where id = $1 and channel_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4af31321766a8dcd62d1e49054758b44d6caffcb90633fd37bf84eb61d0c3fb1"
+}

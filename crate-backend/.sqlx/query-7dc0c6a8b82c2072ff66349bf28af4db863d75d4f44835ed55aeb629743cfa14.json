@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO document_branch (id, document_id, creator_id, is_default, state)\n            VALUES ($1, $2, $3, true, 'Active'::branch_state)\n            ON CONFLICT (id) DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7dc0c6a8b82c2072ff66349bf28af4db863d75d4f44835ed55aeb629743cfa14"
+}

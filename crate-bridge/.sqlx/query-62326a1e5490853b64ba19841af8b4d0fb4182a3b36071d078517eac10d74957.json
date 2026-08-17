@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR REPLACE INTO \"user\" (source_platform, lamprey_id, discord_id, discord_avatar_url, discord_banner_url) VALUES (?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "62326a1e5490853b64ba19841af8b4d0fb4182a3b36071d078517eac10d74957"
+}

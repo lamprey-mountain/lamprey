@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO search_ingestion_dlq (id, entity_id, entity_type, error_message) VALUES ($1, $2, $3, $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "37c48dbd4f1254c891ad74f26580ed9ae9a8acfeed9f508e94cd9a112229e153"
+}

@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT rel as \"rel: _\", ignore, ignore_until FROM user_relationship\n            WHERE user_id = $1 AND other_id = $2\n            FOR UPDATE\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rel: _",
+        "type_info": {
+          "Custom": {
+            "name": "user_relationship_type",
+            "kind": {
+              "Enum": [
+                "Friend",
+                "Outgoing",
+                "Incoming",
+                "Block"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "ignore",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "ignore_until",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "ca1fd6523cbb85fdf08f9f2c743f506369deb680fcc5dcc2dc8938bbef066f75"
+}
