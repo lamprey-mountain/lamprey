@@ -43,7 +43,13 @@ import { useUploads } from "@/contexts/uploads";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
-import { icChevron, icCollapse, icExpand, icSort } from "@/utils/icons.ts";
+import {
+	icAdd,
+	icChevron,
+	icCollapse,
+	icExpand,
+	icSort,
+} from "@/utils/icons.ts";
 import { Forum2CreateForm } from "../../shared/Forum2CreateForm.tsx";
 import { RenderUploadItem } from "../chat/Input.tsx";
 import { MessageSkeleton } from "../chat/MessageSkeleton.tsx";
@@ -799,7 +805,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 						</Show>
 						<div class="text">
 							<label class="upload">
-								+
+								<Icon src={icAdd} />
 								<input
 									multiple
 									type="file"

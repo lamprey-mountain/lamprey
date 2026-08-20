@@ -36,6 +36,7 @@ import { usePermissions } from "@/hooks/usePermissions.ts";
 import { getThumbFromId } from "@/media/util.tsx";
 import type { MessageT, ThreadT } from "@/types";
 import { getMessageOverrideName } from "@/utils/general";
+import { icAdd, icUpload } from "@/utils/icons.ts";
 import { useTimeline } from "./timeline-context.tsx";
 
 type InputProps = {
@@ -395,7 +396,7 @@ export function Input(props: InputProps) {
 			</Show>
 			<div class="text">
 				<label class="upload">
-					+
+					<Icon src={icAdd} />
 					<input
 						multiple
 						type="file"

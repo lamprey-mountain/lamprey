@@ -38,6 +38,7 @@ export {
 	default as icActivityLog,
 } from "@/assets/settings.png";
 export { default as icThread } from "@/assets/threads.png";
+export { default as icUpload } from "@/assets/upload.png";
 
 import { default as icX } from "@/assets/x.png";
 import { default as icX1 } from "@/assets/x-1.png";
