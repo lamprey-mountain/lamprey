@@ -70,7 +70,7 @@ export const CodeEditor = (props: {
 
 	createEffect(() => {
 		if (props.script.latest_version.location.type === "Document") {
-			setLoading(scriptContext.isSubscribed(props.script.id));
+			setLoading(!scriptContext.isSubscribed(props.script.id));
 		} else {
 			setLoading(mediaContent.loading);
 		}
