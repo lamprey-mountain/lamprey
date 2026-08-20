@@ -2,6 +2,7 @@ use common::v1::types::error::ErrorCode;
 use common::v1::types::{MessageSync, RoomId, User, UserId};
 use im::HashMap as ImMap;
 use kameo::prelude::{Actor, ActorRef, Spawn, WeakActorRef};
+use kerosene_core::error::ApiError;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
@@ -10,7 +11,8 @@ use tokio::time::Duration;
 use tracing::Instrument;
 
 use super::{
-    CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, LoadedRoom, RoomSnapshot,
+    CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, LoadedRoom,
+    RoomSnapshot, RoomUnavailable,
 };
 use crate::prelude::*;
 use crate::services::member_lists::actor::MemberList;
@@ -184,8 +186,8 @@ impl RoomActor {
 
         let mut roles = ImMap::new();
         for role in roles_data {
-            let allow = PermissionBits::from(&role.allow);
-            let deny = PermissionBits::from(&role.deny);
+            let allow = PermissionBits::from(role.allow.as_slice());
+            let deny = PermissionBits::from(role.deny.as_slice());
             roles.insert(
                 role.id,
                 CachedRole {
@@ -208,8 +210,8 @@ impl RoomActor {
                     CachedPermissionOverwrite {
                         id: ow.id,
                         ty: ow.ty,
-                        allow: PermissionBits::from(&ow.allow),
-                        deny: PermissionBits::from(&ow.deny),
+                        allow: PermissionBits::from(ow.allow.as_slice()),
+                        deny: PermissionBits::from(ow.deny.as_slice()),
                     },
                 );
             }
@@ -448,56 +450,56 @@ impl RoomActor {
 /// a handle for interacting with a room actor
 #[derive(Clone)]
 pub struct RoomHandle {
-    pub room_id: RoomId,
+    room_id: RoomId,
+    // TODO: make private
     pub actor_ref: ActorRef<RoomActor>,
-    pub snapshot_rx: watch::Receiver<Arc<RoomSnapshot>>,
+    snapshot_rx: watch::Receiver<Arc<RoomSnapshot>>,
 }
 
+// TODO: handle backlogged rooms better?
 impl RoomHandle {
     pub fn room_id(&self) -> RoomId {
         self.room_id
     }
 
-    // /// wait until the room has successfully loaded
-    // ///
-    // /// - `with_members` will wait until all room members are loaded
-    // /// - `fail_if_unavailable` returns an error if the room is or becomes unavailable
-    // pub async fn ready(
-    //     &mut self,
-    //     with_members: bool,
-    //     fail_if_unavailable: bool,
-    // ) -> Result<Arc<RoomData>> {
-    //     let s = self
-    //         .snapshot
-    //         .wait_for(|s| match &s.state {
-    //             RoomSnapshotState::Loading => false,
-    //             // RoomSnapshotState::Loaded(data) => !with_members || data.members_loaded,
-    //             RoomSnapshotState::Loaded(data) => todo!(),
-    //             RoomSnapshotState::Unavailable(r) => r.is_fatal() || fail_if_unavailable,
-    //         })
-    //         .await
-    //         .expect("todo better error handling");
-    //     let data = match &s.state {
-    //         RoomSnapshotState::Loaded(data) => Arc::clone(data),
-    //         RoomSnapshotState::Unavailable(_) => todo!("return err"),
-    //         _ => unreachable!(),
-    //     };
-    //     Ok(data)
-    // }
+    /// wait until the room has successfully loaded
+    ///
+    /// `with_members` will wait until room members are loaded
+    pub async fn ready(&self, with_members: bool) -> Result<Arc<LoadedRoom>> {
+        if with_members {
+            _ = self.actor_ref.tell(EnsureMembers).await;
+        }
 
-    // /// get the current room snapshot
-    // pub fn snapshot(&self) -> Arc<RoomSnapshot> {
-    //     Arc::clone(&self.snapshot.borrow())
-    // }
+        let mut rx = self.snapshot_rx.clone();
+        let snapshot = rx
+            .wait_for(|s| match &**s {
+                RoomSnapshot::Available(loaded) => !with_members || loaded.members.is_loaded(),
+                RoomSnapshot::Unavailable(u) => match u {
+                    RoomUnavailable::Loading => false,
+                    _ => true,
+                },
+            })
+            .await
+            .map_err(|_| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))?;
 
-    // /// get the current room data
-    // pub fn data(&self) -> Result<Arc<RoomData>> {
-    //     match &self.snapshot.borrow().state {
-    //         RoomSnapshotState::Loading => Err(Error::BadStatic("room is still loading")),
-    //         RoomSnapshotState::Loaded(_) => todo!(),
-    //         RoomSnapshotState::Unavailable(_) => Err(Error::BadStatic("room is unavailable")),
-    //     }
-    // }
+        match &**snapshot {
+            RoomSnapshot::Available(loaded) => Ok(Arc::clone(loaded)),
+            RoomSnapshot::Unavailable(unavailable) => Err(Error::ApiError(unavailable.to_error())),
+        }
+    }
+
+    /// get the current room snapshot
+    pub fn snapshot(&self) -> Arc<RoomSnapshot> {
+        Arc::clone(&self.snapshot_rx.borrow())
+    }
+
+    /// get the current room data
+    pub fn data(&self) -> Result<Arc<LoadedRoom>> {
+        match &**self.snapshot_rx.borrow() {
+            RoomSnapshot::Available(loaded) => Ok(Arc::clone(loaded)),
+            RoomSnapshot::Unavailable(unavailable) => Err(Error::ApiError(unavailable.to_error())),
+        }
+    }
 
     // pub fn subscribe(&self) -> mpsc::Receiver<Arc<RoomEvent>> {}
 

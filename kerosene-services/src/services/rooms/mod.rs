@@ -118,7 +118,18 @@ impl ServiceRooms {
         Ok(())
     }
 
+    /// get a handle to a room
+    // TODO: make this not async
+    pub async fn load2(&self, room_id: RoomId) -> RoomHandle {
+        self.actors
+            .get_with(room_id, async {
+                RoomActor::spawn_room(room_id, self.globals.clone())
+            })
+            .await
+    }
+
     /// load a room snapshot, ensuring members are loaded if requested.
+    #[deprecated = "use load2"]
     pub fn load_room(
         &self,
         room_id: RoomId,
@@ -142,36 +153,8 @@ impl ServiceRooms {
                     .map_err(|e| Error::Internal(format!("Actor mailbox closed: {e}")))?;
             }
 
-            let mut rx = handle.snapshot_rx.clone();
-            let snapshot = rx
-                .wait_for(|s| {
-                    if s.is_loading() {
-                        return false;
-                    }
-
-                    let is_without_members = s
-                        .get_data()
-                        .map_or(false, |d| matches!(d.members, RoomMembers::Loading));
-                    if ensure_members && is_without_members {
-                        return false;
-                    }
-                    true
-                })
-                .await
-                .map_err(|_| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))?;
-
-            let snapshot = snapshot.clone();
-
-            if snapshot.is_not_found() {
-                return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)));
-            }
-
-            if let RoomSnapshot::Unavailable(_) = snapshot.as_ref() {
-                // If it's backlogged, we should probably evict it so it can retry later
-                return Err(Error::ServiceUnavailable);
-            }
-
-            Ok(snapshot)
+            handle.ready(ensure_members).await?;
+            Ok(handle.snapshot())
         })
     }
 

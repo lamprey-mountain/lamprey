@@ -2,6 +2,7 @@
 
 use common::v2::types::PermissionOverwriteId;
 use im::HashMap as ImMap;
+use kerosene_core::error::{ApiError, ErrorCode};
 use std::sync::Arc;
 use tracing::warn;
 
@@ -67,6 +68,21 @@ impl RoomUnavailable {
     // pub fn is_fatal(&self) -> bool {
     //     matches!(self, Self::NotFound | Self::Deleted | Self::Quarantined)
     // }
+
+    pub fn to_error(&self) -> ApiError {
+        match self {
+            // TODO(?): better codes for Loading/Backlogged?
+            // TODO(?): actual error code for deleted instead of UnknownRoom? or will that cause leaks?
+            RoomUnavailable::Loading => {
+                ApiError::with_message(ErrorCode::Internal, "Room is still loading".to_string())
+            }
+            RoomUnavailable::NotFound => ApiError::from_code(ErrorCode::UnknownRoom),
+            RoomUnavailable::Deleted => ApiError::from_code(ErrorCode::UnknownRoom),
+            RoomUnavailable::Backlogged => {
+                ApiError::with_message(ErrorCode::Internal, "Room is backlogged".to_string())
+            }
+        }
+    }
 }
 
 /// a fully loaded room from the database
@@ -113,6 +129,13 @@ pub enum RoomMembers {
 }
 
 impl RoomMembers {
+    pub fn is_loaded(&self) -> bool {
+        match self {
+            RoomMembers::Loaded { .. } => true,
+            RoomMembers::Loading => false,
+        }
+    }
+
     pub fn get(&self, user_id: &UserId) -> Option<&CachedRoomMember> {
         match self {
             Self::Loaded { members } => members.get(user_id),
@@ -390,8 +413,8 @@ impl LoadedRoom {
                 }
             }
             MessageSync::RoleCreate { role } => {
-                let allow = PermissionBits::from(&role.allow);
-                let deny = PermissionBits::from(&role.deny);
+                let allow = PermissionBits::from(role.allow.as_slice());
+                let deny = PermissionBits::from(role.deny.as_slice());
                 new_room.roles.insert(
                     role.id,
                     CachedRole {
@@ -402,8 +425,8 @@ impl LoadedRoom {
                 );
             }
             MessageSync::RoleUpdate { role } => {
-                let allow = PermissionBits::from(&role.allow);
-                let deny = PermissionBits::from(&role.deny);
+                let allow = PermissionBits::from(role.allow.as_slice());
+                let deny = PermissionBits::from(role.deny.as_slice());
                 new_room.roles.insert(
                     role.id,
                     CachedRole {
@@ -532,8 +555,8 @@ impl From<Channel> for CachedChannel {
                 CachedPermissionOverwrite {
                     id: ow.id,
                     ty: ow.ty,
-                    allow: PermissionBits::from(&ow.allow),
-                    deny: PermissionBits::from(&ow.deny),
+                    allow: PermissionBits::from(ow.allow.as_slice()),
+                    deny: PermissionBits::from(ow.deny.as_slice()),
                 },
             );
         }
