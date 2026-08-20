@@ -4808,6 +4808,7 @@ dependencies = [
  "async-tempfile",
  "async-trait",
  "axum",
+ "bitflags 2.13.1",
  "bytes",
  "crc32fast",
  "figment",

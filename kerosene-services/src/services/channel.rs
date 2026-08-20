@@ -671,7 +671,7 @@ impl ServiceChannels {
                 let mut data = self.state.begin().await?;
                 let system_message_id = data
                     .message_create(DbMessageCreate {
-                        id: None,
+                        id: Some(channel.id.into_inner().into()),
                         channel_id: parent_id,
                         attachments: vec![],
                         author_id: user_id,
