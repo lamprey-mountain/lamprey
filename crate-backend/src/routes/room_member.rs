@@ -1056,6 +1056,37 @@ async fn room_ban_list(
     Ok(Json(res))
 }
 
+/// Room ban search
+#[handler(routes::room_ban_search)]
+async fn room_ban_search(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::room_ban_search::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let room = srv.rooms.get(req.room_id, None).await?;
+    room.room_type.ensure_members_manageable()?;
+    let mut d = s.data();
+    srv.perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?
+        .needs(Permission::MemberBan)
+        .check()?;
+    let res = d
+        .room_ban_search(req.room_id, req.search.query, req.pagination)
+        .await?;
+    let cursor = res.items.last().map(|i| i.user_id.to_string());
+    let res = PaginationResponse {
+        items: res.items,
+        has_more: res.has_more,
+        total: res.total,
+        cursor,
+    };
+    Ok(Json(res))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(room_member_list))
@@ -1071,4 +1102,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(room_ban_delete))
         .routes(routes2!(room_ban_get))
         .routes(routes2!(room_ban_list))
+        .routes(routes2!(room_ban_search))
 }
