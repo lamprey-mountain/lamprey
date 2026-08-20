@@ -1,11 +1,4 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
-
-#[cfg(feature = "validator")]
-use validator::Validate;
+use lamprey_macros::record;
 
 use crate::v1::types::{UserId, util::Diff};
 
@@ -14,35 +7,27 @@ use crate::v1::types::util::{deserialize_sorted, deserialize_sorted_option, some
 
 use super::{Permission, RoleId, RoleVerId, RoomId};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct Role {
     pub id: RoleId,
     pub version_id: RoleVerId,
     pub room_id: RoomId,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub description: Option<String>,
 
     /// the permissions to grant for this role
-    #[cfg_attr(
-        feature = "serde",
-        serde(deserialize_with = "deserialize_sorted", alias = "permissions")
-    )]
+    #[serde(deserialize_with = "deserialize_sorted", alias = "permissions")]
     pub allow: Vec<Permission>,
 
     /// the permissions to deny for this role
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, deserialize_with = "deserialize_sorted")
-    )]
+    #[serde(default, deserialize_with = "deserialize_sorted")]
     pub deny: Vec<Permission>,
 
     // TODO: remove is_
@@ -61,48 +46,42 @@ pub struct Role {
     pub member_count: u64,
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct RoleDeleteQuery {
     pub fallback_role_id: Option<RoleId>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct RoleCreate {
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
+    #[serde(default)]
     pub description: Option<String>,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub allow: Vec<Permission>,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub deny: Vec<Permission>,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub is_self_applicable: bool,
 
     /// if this role can be mentioned by members
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub is_mentionable: bool,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub hoist: bool,
 
-    #[cfg_attr(feature = "serde", serde(default))]
+    #[serde(default)]
     pub sticky: bool,
     // the main reason this doesn't exist yet is because i've seen in
     // discord how the ui can become extremely unreadable, cluttered, and
@@ -119,33 +98,22 @@ pub struct RoleCreate {
     // pub color: Color,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Diff)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq, Diff)]
 pub struct RolePatch {
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 64)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(required = false, min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: Option<String>,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 8192))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[schema(min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
+    #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, deserialize_with = "deserialize_sorted_option")
-    )]
+    #[serde(default, deserialize_with = "deserialize_sorted_option")]
     pub allow: Option<Vec<Permission>>,
 
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, deserialize_with = "deserialize_sorted_option")
-    )]
+    #[serde(default, deserialize_with = "deserialize_sorted_option")]
     pub deny: Option<Vec<Permission>>,
 
     pub is_self_applicable: Option<bool>,
@@ -155,38 +123,32 @@ pub struct RolePatch {
 }
 
 /// apply and remove a role to many members at once
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct RoleMemberBulkPatch {
     /// add this role to these users
-    #[cfg_attr(feature = "serde", serde(default))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[serde(default)]
+    #[validate(length(min = 1, max = 256))]
     pub apply: Vec<UserId>,
 
     /// remove this role from these users
-    #[cfg_attr(feature = "serde", serde(default))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
+    #[serde(default)]
+    #[validate(length(min = 1, max = 256))]
     pub remove: Vec<UserId>,
 }
 
 /// reorder some roles
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct RoleReorder {
     /// the roles to reorder
-    #[cfg_attr(feature = "serde", serde(default))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 1024)))]
+    #[serde(default)]
+    #[validate(length(min = 1, max = 1024))]
     pub roles: Vec<RoleReorderItem>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct RoleReorderItem {
     pub role_id: RoleId,
     pub position: u64,

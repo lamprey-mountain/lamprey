@@ -115,7 +115,15 @@ impl Room {
 #[record]
 #[derive(Copy, PartialEq, Eq, Default)]
 pub struct RoomSecurity {
+    /// mfa must be enabled to access certain endpoints
+    ///
+    /// you don't need to do any ritual before accessing the endpoints aside
+    /// from having multifactor authentication of any kind enabled.
+    ///
+    /// currently the only method of mfa available is totp
     pub require_mfa: bool,
+
+    /// sudo mode must be active to access certain endpoints
     pub require_sudo: bool,
 }
 
