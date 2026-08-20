@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+#[cfg(feature = "feat_tag_reactions")]
+use crate::v1::types::tag::Tag;
 use crate::v1::types::{EmojiId, emoji::EmojiCustom, util::Time};
 
 use super::{MessageId, UserId};
@@ -57,8 +59,12 @@ pub struct ReactionListItem {
 #[derive(PartialEq, Eq)]
 #[serde(tag = "type")]
 pub enum ReactionKey {
-    Text { content: String },
+    Text {
+        content: String,
+    },
     Custom(EmojiCustom),
+    #[cfg(feature = "feat_tag_reactions")]
+    Tag(Tag),
 }
 
 /// reaction key used in reaction route params
@@ -66,10 +72,14 @@ pub enum ReactionKey {
 /// serialized as:
 /// - `t:{unicode emoji or text}` for emoji and text
 /// - `c:{custom emoji id}` for custom emoji
+/// - `a:{tag id}` for thread tags
+// TODO: redo string serialization format?
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ReactionKeyParam {
     Text(String),
     Custom(EmojiId),
+    #[cfg(feature = "feat_tag_reactions")]
+    Tag(TagId),
 }
 
 /// deserializes as a `ReactionKeyParam`, serializes as a `ReactionKey`
@@ -99,7 +109,7 @@ mod u {
             utoipa::openapi::ObjectBuilder::new()
                 .schema_type(utoipa::openapi::schema::Type::String)
                 .description(Some(
-                    "Reaction key used in reaction route params.\n\nSerialized as:\n- `t:{unicode emoji or text}` for emoji and text\n- `c:{custom emoji id}` for custom emoji",
+                    "Reaction key used in reaction route params.\n\nSerialized as:\n- `t:{unicode emoji or text}` for emoji and text\n- `c:{custom emoji id}` for custom emoji\n- `a:{tag id}` for thread tags",
                 )).examples(vec!["t:🤔".to_owned()])
                 .build()
                 .into()
@@ -170,6 +180,8 @@ impl Display for ReactionKeyParam {
         match self {
             ReactionKeyParam::Text(t) => write!(f, "t:{t}"),
             ReactionKeyParam::Custom(id) => write!(f, "c:{id}"),
+            #[cfg(feature = "feat_tag_reactions")]
+            ReactionKeyParam::Tag(id) => write!(f, "a:{id}"),
         }
     }
 }
@@ -183,6 +195,11 @@ impl FromStr for ReactionKeyParam {
         } else if let Some(s) = s.strip_prefix("c:") {
             Ok(ReactionKeyParam::Custom(s.parse().map_err(|_| ())?))
         } else {
+            #[cfg(feature = "feat_tag_reactions")]
+            if let Some(s) = s.strip_prefix("a:") {
+                return Ok(ReactionKeyParam::Tag(s.parse().map_err(|_| ())?));
+            }
+
             Err(())
         }
     }
@@ -198,6 +215,12 @@ impl ReactionKey {
     /// check if this key is a custom emoji
     pub fn is_custom_emoji(&self) -> bool {
         matches!(self, ReactionKey::Custom(_))
+    }
+
+    #[cfg(feature = "feat_tag_reactions")]
+    /// check if this key is a thread tag
+    pub fn is_thread_tag(&self) -> bool {
+        matches!(self, ReactionKey::Tag(_))
     }
 
     /// check if this key is a single unicode emoji
@@ -228,6 +251,8 @@ impl ReactionKey {
                     && !g.chars().all(|c| c.is_ascii_alphanumeric())
             }
             ReactionKey::Custom(_) => false,
+            #[cfg(feature = "feat_tag_reactions")]
+            ReactionKey::Tag(_) => false,
         }
     }
 
@@ -241,6 +266,8 @@ impl ReactionKey {
         match self {
             ReactionKey::Text { content: t } => ReactionKeyParam::Text(t.to_owned()),
             ReactionKey::Custom(e) => ReactionKeyParam::Custom(e.id),
+            #[cfg(feature = "feat_tag_reactions")]
+            ReactionKey::Tag(t) => ReactionKeyParam::Tag(t.id),
         }
     }
 
