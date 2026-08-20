@@ -192,26 +192,6 @@
 	flex: 1;
 	padding: 8px;
 
-	.document-presence-cursor {
-		position: absolute;
-		display: inline-block;
-		height: 1.2em;
-		vertical-align: text-bottom;
-		user-select: none;
-	}
-
-	.document-presence-name {
-		color: black;
-		font-size: 12px;
-		padding: 2px 6px;
-		border-radius: 4px;
-		white-space: nowrap;
-		position: absolute;
-		pointer-events: none;
-		z-index: 9999;
-		width: max-content;
-	}
-
 	.editor {
 		background-color: $bg-150;
 		box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
@@ -543,5 +523,25 @@
 	&.selected {
 		background: $bg-100;
 		border-color: $link-200;
+	}
+}
+
+.document-presence-cursor {
+	position: absolute;
+	display: inline-block;
+	height: 1.2em;
+	vertical-align: text-bottom;
+	user-select: none;
+
+	.document-presence-name {
+		color: black;
+		font-size: 12px;
+		padding: 2px 6px;
+		border-radius: 4px;
+		white-space: nowrap;
+		position: absolute;
+		pointer-events: none;
+		z-index: 9999;
+		width: max-content;
 	}
 }

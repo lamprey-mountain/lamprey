@@ -33,6 +33,7 @@ import { yCollab } from "y-codemirror.next";
 import * as Y from "yjs";
 import { useApi } from "@/api";
 import { getGetUrl } from "@/media/util";
+import { cursorPlugin } from "./codemirror-editor-cursors";
 import { useScript } from "./context";
 import { highlight, theme } from "./theme";
 
@@ -134,6 +135,9 @@ export const CodeEditor = (props: {
 			const ytype = ydoc.getText("doc");
 			const undoManager = new Y.UndoManager(ytype);
 			extensions.push(yCollab(ytype, null, { undoManager }));
+			extensions.push(
+				cursorPlugin(api, scriptContext.channel_id, props.script.id, ytype),
+			);
 		} else {
 			// TODO(?): move mediaContent-specific logic here
 		}
