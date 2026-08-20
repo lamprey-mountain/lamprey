@@ -110,6 +110,7 @@ export function formatBytes(bytes: number): string {
 		unitIndex++;
 	}
 
+	if (unitIndex === 0) return size + units[unitIndex];
 	return size.toFixed(2) + units[unitIndex];
 }
 
