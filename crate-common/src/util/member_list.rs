@@ -1,17 +1,12 @@
 //! utilities for calculating member lists
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v2::types::{RoleId, UserId, sync::subscribe::MemberListGroupId};
 
-// a sortable version of member list group id
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+/// like a MemberListGroupId with extra metadata for sorting
+#[record]
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
 pub enum MemberGroupKey {
     Connected,
     Hoisted { role_position: u64, role_id: RoleId },
@@ -19,7 +14,7 @@ pub enum MemberGroupKey {
     Offline,
 }
 
-// sorting key for someone on a member list
+/// data required to determine a member's position on a member list
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemberKey {
     /// the group the member is in

@@ -153,3 +153,365 @@ impl MemberListHandle {
         self.events_tx.subscribe()
     }
 }
+
+#[cfg(any())]
+mod next {
+    use crate::{prelude::*, services::member_lists::next::actor::ListHandle};
+
+    use common::{
+        util::member_list::MemberKey,
+        v2::types::{ChannelId, ConnectionId, RoomId},
+    };
+    use dashmap::DashMap;
+
+    pub struct ServiceMemberLists {
+        globals: Globals,
+        lists: DashMap<ListKey, ListHandle>,
+    }
+
+    pub struct ListKey {
+        room_id: RoomId,
+        visibility: visibility::ListVisibility,
+    }
+
+    impl ServiceMemberLists {
+        pub fn new(globals: Globals) -> Self {
+            todo!()
+        }
+
+        pub fn create_syncer(&self, id: ConnectionId) -> syncer::ListSyncer {
+            todo!()
+        }
+
+        pub fn ensure_handle(
+            &self,
+            room_id: RoomId,
+            channel_id: Option<ChannelId>,
+        ) -> actor::ListHandle {
+            todo!()
+        }
+    }
+
+    pub mod actor {
+        use std::collections::btree_map::Entry;
+        use std::collections::{BTreeMap, HashMap};
+
+        use common::v1::types::{MemberListOp, RoomMember, User};
+        use common::v2::types::ChannelId;
+        use common::{util::member_list::MemberKey, v1::types::MessageSync, v2::types::UserId};
+
+        use crate::prelude::*;
+        use crate::services::cache::RoomHandle;
+        use crate::services::member_lists::util::MemberGroupInfo;
+
+        // TODO: copy member list logic to common or core?
+        // TODO(future): dm/gdm member list
+        /// a member list.
+        ///
+        /// each list is currently tied to a room. in the future, lists *may* exist for dm/gdm channels too.
+        #[derive(Debug)]
+        pub struct List {
+            /// ordered map of members for range queries and position tracking
+            members: BTreeMap<MemberKey, UserId>,
+
+            /// reverse lookup: UserId -> MemberKey
+            // PERF: share between member lists (store in room/roomdata?)
+            user_to_key: HashMap<UserId, MemberKey>,
+
+            /// group summaries (id and count)
+            groups: BTreeMap<MemberGroupInfo, MemberListGroup>,
+        }
+
+        /// list data for a room
+        pub struct RoomList {
+            room: RoomHandle,
+            // /// ordered map of members for range queries and position tracking
+            // members: BTreeMap<MemberKey, UserId>,
+
+            // /// reverse lookup: UserId -> MemberKey
+            // // PERF: share between member lists (store in room/roomdata?)
+            // user_to_key: HashMap<UserId, MemberKey>,
+
+            // /// group summaries (id and count)
+            // groups: BTreeMap<MemberGroupInfo, MemberListGroup>,
+        }
+
+        #[derive(Debug, Clone)]
+        pub enum ListTarget {
+            Room,
+            Channel(ChannelId),
+        }
+
+        /// a handle for interacting with a member list
+        pub struct ListHandle {
+            //
+        }
+
+        impl List {
+            // let (send, recv) = tokio::sync::broadcast::channel(capacity);
+            // list is idle if send.receiver_count() == 0;
+            // if idle for too long, clean up the list
+
+            /// handle a `MessageSync` event
+            ///
+            /// assumes the event is for this list
+            fn handle_sync(&mut self, events: &[MessageSync]) {
+                let mut ops = vec![];
+                for event in events {
+                    self.handle_sync_inner(event, &mut ops);
+                }
+                // TODO: broadcast sync
+                // MemberListSync::Sync {
+                //     room_id: (),
+                //     channel_id: (),
+                //     ops,
+                //     groups: (),
+                // };
+            }
+
+            fn handle_sync_inner(&mut self, event: &MessageSync, ops: &mut Vec<MemberListOp>) {
+                match event {
+                    MessageSync::RoomMemberCreate { member, user }
+                    | MessageSync::RoomMemberUpdate { member, user } => {
+                        let can_view = self.can_view(user, member);
+
+                        let old_key = self.user_to_key.get(&user.id);
+                        match (old_key, can_view) {
+                            (None, true) => {
+                                // add member
+                                let key = self.calculate_key(&user, &member);
+                                self.members.insert(key.clone(), user.id);
+                                self.groups
+                                    .entry(key.group.clone())
+                                    .and_modify(|g| g.count += 1)
+                                    .or_insert_with(|| MemberListGroup {
+                                        id: key.group.into(),
+                                        count: 1,
+                                    });
+                                let op = MemberListOp::Insert {
+                                    position: todo!(),
+                                    user_id: user.id,
+                                    room_member: todo!(),
+                                    thread_member: todo!(),
+                                    user: todo!(),
+                                };
+                                ops.push(op);
+                            }
+                            (Some(_), false) => {
+                                // remove member
+                                if let Some(key) = self.user_to_key.remove(&user.id) {
+                                    let pos = self.members.range(..&key).count() as u64;
+                                    self.members.remove(&key);
+                                    self.groups.get_mut(&key.group).map(|k| k.count -= 1);
+                                    let op = MemberListOp::Delete {
+                                        position: pos,
+                                        count: 1,
+                                    };
+                                    ops.push(op);
+                                }
+                            }
+                            (Some(_), true) => {
+                                // reorder member
+                                let key = self.calculate_key(&user, &member);
+
+                                // PERF: don't call entry again, merge this call with first `let old_key =`
+                                let has_cached = match self.user_to_key.entry(user.id) {
+                                    Entry::Occupied(mut e) => {
+                                        let old_key = e.get();
+                                        if old_key == &key {
+                                            // skip updating
+                                            return;
+                                        } else {
+                                            // member already exists in the list, update their position
+                                            let old_pos =
+                                                self.members.range(..old_key).count() as u64;
+                                            ops.push(MemberListOp::Delete {
+                                                position: old_pos,
+                                                count: 1,
+                                            });
+
+                                            self.groups
+                                                .get_mut(&old_key.group)
+                                                .map(|k| k.count -= 1);
+                                            self.members.remove(old_key);
+                                            self.members.insert(key.clone(), user.id);
+                                            e.insert(key.clone());
+                                            true
+                                        }
+                                    }
+                                    Entry::Vacant(e) => {
+                                        // member doesn't exist in the list, insert them
+                                        e.insert(key.clone());
+                                        self.members.insert(key.clone(), user.id);
+                                        self.user_to_key.insert(user.id, key.clone());
+                                        false
+                                    }
+                                };
+
+                                self.groups
+                                    .entry(key.group.clone())
+                                    .and_modify(|g| g.count += 1)
+                                    .or_insert_with(|| MemberListGroup {
+                                        id: key.group.into(),
+                                        count: 1,
+                                    });
+
+                                let pos = self.members.range(..key).count() as u64;
+                                ops.push(MemberListOp::Insert {
+                                    position: pos,
+                                    user_id: user.id,
+                                    room_member: if has_cached {
+                                        None
+                                    } else {
+                                        Some(member.clone())
+                                    },
+                                    thread_member: if has_cached {
+                                        None
+                                    } else {
+                                        todo!("handle thread member list + room member update")
+                                    },
+                                    user: if has_cached {
+                                        None
+                                    } else {
+                                        Some(Box::new(user.clone()))
+                                    },
+                                })
+                            }
+                            (None, false) => {}
+                        }
+                    }
+                    MessageSync::RoomMemberDelete { user_id, .. } => {
+                        if let Some(key) = self.user_to_key.remove(&user_id) {
+                            let pos = self.members.range(..&key).count() as u64;
+                            self.members.remove(&key);
+                            self.groups.get_mut(&key.group).map(|k| k.count -= 1);
+                            let op = MemberListOp::Delete {
+                                position: pos,
+                                count: 1,
+                            };
+                            ops.push(op);
+                        }
+                    }
+                    MessageSync::ThreadMemberUpsert { .. } => {
+                        todo!()
+                    }
+                    MessageSync::PresenceUpdate { .. } => {
+                        todo!()
+                    }
+                    MessageSync::UserUpdate { .. } => {
+                        todo!()
+                    }
+                    // RoleCreate isn't handled since the member list wouldn't update until a member was assigned that role anyways
+                    MessageSync::RoleUpdate { .. } => {
+                        todo!()
+                    }
+                    MessageSync::RoleDelete { .. } => {
+                        todo!()
+                    }
+                    MessageSync::RoleReorder { .. } => {
+                        todo!()
+                    }
+                    MessageSync::ChannelUpdate { .. } => {
+                        todo!("handle permission overwrite updates")
+                    }
+                    _ => {}
+                }
+            }
+
+            /// calculate the member key (sorting key) for a room member
+            fn calculate_key(&self, _user: &User, _member: &RoomMember) -> MemberKey {
+                todo!()
+            }
+
+            /// calculate whether this room member can view this member list
+            fn can_view(&self, _user: &User, _member: &RoomMember) -> bool {
+                todo!()
+            }
+        }
+
+        impl ListHandle {
+            pub fn room_id(&self) -> RoomId {
+                todo!()
+            }
+
+            pub fn target(&self) -> ListTarget {
+                todo!()
+            }
+
+            // /// get initial ranges
+            // fn initial_ranges(&mut self, ranges: &[(u64, u64)]) -> MemberListSync {
+            //     todo!()
+            // }
+
+            // pub fn subscribe(&self) -> broadcast::Receiver<Arc<MemberListSync>> {
+            //     todo!()
+            // }
+        }
+    }
+
+    pub mod syncer {
+        use common::{
+            v1::types::{MessageSync, SyncSubscribeMemberList},
+            v2::types::UserId,
+        };
+
+        pub struct ListQuery {
+            // pub target: MemberListTarget,
+            pub ranges: Vec<(u64, u64)>,
+        }
+
+        // pub enum MemberListTarget {
+        //     Room(RoomId),
+        //     Channel(ChannelId),
+        // }
+
+        // pub enum MemberListSync {
+        //     Sync {
+        //         room_id: Option<RoomId>,
+        //         channel_id: Option<ChannelId>,
+        //         ops: Vec<MemberListOp>,
+        //         groups: Vec<MemberListGroup>,
+        //     },
+        //     // /// initial ranges for a list
+        //     // Initial {},
+        // }
+
+        /// manages multiple member lists
+        ///
+        /// tries to deduplicate data, ie. avoids sending user, room member, and
+        /// thread member objects the client already has
+        ///
+        /// also handles range filtering
+        pub struct ListSyncer {
+            // TODO: ...
+        }
+
+        impl ListSyncer {
+            /// set the user id for this syncer
+            pub fn set_user_id(&mut self, user_id: Option<UserId>) {
+                todo!()
+            }
+
+            /// set the subscribed lists for this syncer
+            pub fn set_lists(&mut self, _queries: &[SyncSubscribeMemberList]) {
+                todo!()
+            }
+
+            // /// get a ~~stream~~ mpsc receiver for MessageSync events
+            // pub fn subscribe(&self) -> mpsc::Receiver<Arc<MemberListSync>> {
+            //     todo!()
+            // }
+
+            /// poll for a new sync message
+            pub async fn poll(&mut self) -> Result<MessageSync> {
+                todo!()
+            }
+        }
+    }
+
+    pub mod visibility {
+        // TEMP: reexport
+        pub use crate::services::member_lists::visibility::MemberListVisibility as ListVisibility;
+        // pub use crate::services::member_lists::visibility::VisibilityPermission;
+    }
+}

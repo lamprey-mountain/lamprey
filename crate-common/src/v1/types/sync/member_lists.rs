@@ -1,14 +1,9 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{ChannelId, RoleId, RoomId, RoomMember, ThreadMember, User, UserId};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct SyncSubscribeMemberList {
     pub room_id: Option<RoomId>,
 
@@ -21,9 +16,8 @@ pub struct SyncSubscribeMemberList {
 
 // TODO: skip sending room_members/thread_members/users if the client already has them
 // NOTE: maybe i should move users/room_members/thread_members to the MemberListSync event
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[serde(tag = "type")]
 pub enum MemberListOp {
     /// replace a range of members
     Sync {
@@ -60,18 +54,22 @@ pub enum MemberListOp {
     },
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+/// information about a group of members
+#[record]
 pub struct MemberListGroup {
     pub id: MemberListGroupId,
     pub count: u64,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+/// a unique identifier for a member group
+#[record]
+#[derive(Copy, PartialEq, Eq)]
 pub enum MemberListGroupId {
+    /// members connected to the current channel
+    ///
+    /// only exists for voice channels and documents
+    Connected,
+
     /// online members without a hoisted role
     Online,
 
@@ -79,6 +77,6 @@ pub enum MemberListGroupId {
     Offline,
 
     /// hoisted roles
-    #[cfg_attr(feature = "serde", serde(untagged))]
+    #[serde(untagged)]
     Role(RoleId),
 }

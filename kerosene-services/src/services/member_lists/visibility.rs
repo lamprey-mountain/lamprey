@@ -5,23 +5,23 @@ use common::{
 use std::collections::HashSet;
 
 /// Minimal calculated visibility for member lists
-#[derive(Debug, Default, Clone, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
 pub struct MemberListVisibility {
     /// flat list of minimal permission overwrites in application order
     overwrites: Vec<VisibilityPermission>,
 }
 
 /// Minimal permission overwrite for ViewChannel
-#[derive(Debug, Clone, Hash, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct VisibilityPermission {
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+struct VisibilityPermission {
     /// ID of role or user
-    pub id: PermissionOverwriteId,
+    id: PermissionOverwriteId,
 
     /// Whether this is for a user or role
-    pub ty: PermissionOverwriteType,
+    ty: PermissionOverwriteType,
 
     /// True if ViewChannel is allowed, false if ViewChannel is denied
-    pub allowed: bool,
+    allowed: bool,
 }
 
 impl MemberListVisibility {
