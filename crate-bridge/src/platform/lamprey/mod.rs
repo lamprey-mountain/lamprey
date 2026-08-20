@@ -897,13 +897,20 @@ async fn spawn_portal_inner(
                 // make sure the puppet is a room member, otherwise it won't be able to send any messages
                 // PERF: don't send this request for every message, cache this
                 if let Some(lamprey_cfg) = &portal.lamprey {
-                    ly.http
-                        .room_member_add(
-                            lamprey_cfg.room_id,
-                            UserIdReq::UserId(puppet.id),
-                            &RoomMemberPut::default(),
-                        )
-                        .await?;
+                    if ly
+                        .http
+                        .room_member_get(lamprey_cfg.room_id, puppet.id.into())
+                        .await
+                        .is_err()
+                    {
+                        ly.http
+                            .room_member_add(
+                                lamprey_cfg.room_id,
+                                UserIdReq::UserId(puppet.id),
+                                &RoomMemberPut::default(),
+                            )
+                            .await?;
+                    }
                 }
 
                 let sent_message = ly
