@@ -115,13 +115,14 @@ impl ServiceVoice {
         let mut suppress = false;
 
         if let Some(room_id) = chan.room_id {
-            let room = srv.rooms.load_room(room_id, true).await?;
-            if let Some(member) = room.get_member(&user_id) {
+            let room_handle = srv.rooms.load2(room_id).await;
+            let room_data = room_handle.ready(true).await?;
+            if let Some(member) = room_data.members.get(&user_id) {
                 mute = member.member.mute;
                 deaf = member.member.deaf;
             }
 
-            if let Some(afk_id) = room.get_data().unwrap().room.afk_channel_id {
+            if let Some(afk_id) = room_data.room.afk_channel_id {
                 if update.channel_id == afk_id {
                     suppress = true;
                 }
