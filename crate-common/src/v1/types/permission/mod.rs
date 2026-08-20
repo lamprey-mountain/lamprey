@@ -1,8 +1,5 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
+use thiserror::Error;
 
 use crate::v1::types::PermissionOverwriteId;
 #[cfg(feature = "serde")]
@@ -10,13 +7,70 @@ use crate::v1::types::util::deserialize_sorted;
 
 pub mod defaults;
 
-/// a permission that lets a user do something
-#[derive(
-    Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, strum::EnumIter, strum::EnumCount,
-)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum Permission {
+/// an error that occurred whilst trying to convert a `u32` into a `Permission`
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+#[error("invalid permission discriminant: {}", self.0)]
+pub struct PermissionConversionError(pub u32);
+
+macro_rules! define_permissions {
+    (
+        $(
+            $(#[$meta:meta])*
+            $variant:ident
+        ),* $(,)?
+    ) => {
+        /// a permission that lets a user do something
+        #[record]
+        #[derive(Hash, Copy, PartialEq, Eq, PartialOrd, Ord, strum::EnumIter, strum::EnumCount)]
+        pub enum Permission {
+            $(
+                $(#[$meta])*
+                $variant,
+            )*
+        }
+
+        bitflags::bitflags! {
+            /// compact bitset representation of permissions
+            ///
+            /// represented with a single `u128`
+            #[derive(Debug, Default, Clone, Copy, Hash, PartialEq, Eq)]
+            pub struct PermissionBits: u128 {
+                $(
+                    const $variant = 1 << (Permission::$variant as u32);
+                )*
+
+                /// permissions that affect one's ability to view something
+                const VIEW_PERMS = Self::ChannelView.bits() | Self::AuditLogView.bits() | Self::AnalyticsView.bits();
+
+                /// permissions for lurkers in broadcast channels
+                const BROADCAST_LURKER_PERMS = Self::VIEW_PERMS.bits() | Self::VoiceRequest.bits() | Self::VoiceVad.bits();
+
+                /// permissions for quarantined users
+                ///
+                /// this includes view perms + nickname
+                const QUARANTINE_PERMS = Self::VIEW_PERMS.bits() | Self::MemberNickname.bits();
+
+                /// bitset with **every** permission (including ones that dont exist yet)
+                const EVERYTHING = u128::MAX;
+            }
+        }
+
+        impl TryFrom<u32> for Permission {
+            type Error = PermissionConversionError;
+
+            fn try_from(value: u32) -> Result<Self, Self::Error> {
+                $(
+                    if value == Permission::$variant as u32 {
+                        return Ok(Permission::$variant);
+                    }
+                )*
+                Err(PermissionConversionError(value))
+            }
+        }
+    };
+}
+
+define_permissions! {
     /// Allows **everything**. Bypasses all locks, overwrites, etc. People with
     /// this permission effectively become a second owner.
     Admin,
@@ -174,10 +228,6 @@ pub enum Permission {
     /// use voice activity detection
     VoiceVad,
 
-    /// whisper to other people
-    #[cfg(any())] // TODO: add
-    VoiceWhisper,
-
     /// can request to speak in broadcast channels
     VoiceRequest,
 
@@ -256,55 +306,153 @@ pub enum Permission {
     // like discord's expression create permission
 }
 
+// TODO: add VoiceWhisper
+// /// whisper to other people
+// VoiceWhisper,
+
+impl From<Permission> for PermissionBits {
+    fn from(p: Permission) -> Self {
+        PermissionBits::from_bits_retain(1 << (p as u32))
+    }
+}
+
+impl From<&Permission> for PermissionBits {
+    fn from(p: &Permission) -> Self {
+        PermissionBits::from(*p)
+    }
+}
+
+impl From<Vec<Permission>> for PermissionBits {
+    fn from(perms: Vec<Permission>) -> Self {
+        perms.into_iter().map(PermissionBits::from).collect()
+    }
+}
+
+impl From<&[Permission]> for PermissionBits {
+    fn from(perms: &[Permission]) -> Self {
+        perms.iter().copied().map(PermissionBits::from).collect()
+    }
+}
+
+impl FromIterator<Permission> for PermissionBits {
+    fn from_iter<I: IntoIterator<Item = Permission>>(iter: I) -> Self {
+        iter.into_iter()
+            .fold(PermissionBits::empty(), |mut acc, p| {
+                acc.insert(p.into());
+                acc
+            })
+    }
+}
+
+impl From<PermissionBits> for Vec<Permission> {
+    fn from(bits: PermissionBits) -> Self {
+        use strum::IntoEnumIterator;
+        Permission::iter()
+            .filter(|&p| bits.contains(p.into()))
+            .collect()
+    }
+}
+
+impl PermissionBits {
+    /// Check if a specific permission is set
+    pub fn has(self, permission: Permission) -> bool {
+        self.contains(permission.into())
+    }
+
+    /// Add a permission
+    pub fn add(&mut self, permission: Permission) {
+        self.insert(permission.into());
+    }
+
+    /// Remove a permission
+    pub fn remove_perm(&mut self, permission: Permission) {
+        self.remove(permission.into());
+    }
+
+    /// Add all permissions from another PermissionBits
+    pub fn add_all(&mut self, other: PermissionBits) {
+        self.insert(other);
+    }
+
+    /// Remove all permissions that are set in another PermissionBits
+    pub fn remove_all(&mut self, other: PermissionBits) {
+        self.remove(other);
+    }
+
+    /// Create a PermissionBits from a slice of Permissions
+    pub fn from_slice(perms: &[Permission]) -> Self {
+        perms.iter().copied().map(PermissionBits::from).collect()
+    }
+
+    /// remove all permissions except those in the allowed set
+    pub fn mask(&mut self, mask: PermissionBits) {
+        *self &= mask;
+    }
+
+    /// Check if any of the given permissions are set
+    pub fn has_any(self, perms: &[Permission]) -> bool {
+        self.intersects(Self::from_slice(perms))
+    }
+
+    /// Check if all of the given permissions are set
+    pub fn has_all(self, perms: &[Permission]) -> bool {
+        self.contains(Self::from_slice(perms))
+    }
+
+    /// Get all permissions contained in this PermissionBits
+    pub fn to_vec(self) -> Vec<Permission> {
+        use strum::IntoEnumIterator;
+        Permission::iter()
+            .filter(|&p| self.contains(p.into()))
+            .collect()
+    }
+}
+
 // TODO: either use or remove this
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct PermissionOverwrites {
     #[cfg_attr(feature = "serde", serde(flatten))]
     inner: Vec<PermissionOverwrite>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct PermissionOverwrite {
     /// id of role or user
     pub id: PermissionOverwriteId,
 
     /// whether this is for a user or role
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[serde(rename = "type")]
     pub ty: PermissionOverwriteType,
 
     /// extra permissions allowed here
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_sorted"))]
+    #[serde(deserialize_with = "deserialize_sorted")]
     pub allow: Vec<Permission>,
 
     /// permissions denied here
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_sorted"))]
+    #[serde(deserialize_with = "deserialize_sorted")]
     pub deny: Vec<Permission>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct PermissionOverwriteSet {
     /// whether this is for a user or role
-    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[serde(rename = "type")]
     pub ty: PermissionOverwriteType,
 
     /// extra permissions allowed here
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_sorted"))]
+    #[serde(deserialize_with = "deserialize_sorted")]
     pub allow: Vec<Permission>,
 
     /// permissions denied here
-    #[cfg_attr(feature = "serde", serde(deserialize_with = "deserialize_sorted"))]
+    #[serde(deserialize_with = "deserialize_sorted")]
     pub deny: Vec<Permission>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Copy, PartialEq, Eq, Hash)]
 pub enum PermissionOverwriteType {
     /// permission overrides for a role
     Role,

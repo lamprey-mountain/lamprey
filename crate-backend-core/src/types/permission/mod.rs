@@ -9,7 +9,7 @@ pub mod bits;
 pub mod flags;
 pub mod requirements;
 
-pub use bits::{BROADCAST_LURKER_PERMS, PermissionBits, QUARANTINE_PERMS, VIEW_PERMS};
+pub use bits::PermissionBits;
 pub use flags::PermissionsFlags;
 
 /// representation of what permissions a user has
