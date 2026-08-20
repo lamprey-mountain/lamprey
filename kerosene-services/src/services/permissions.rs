@@ -1,4 +1,6 @@
 use common::v1::types::defaults::EVERYONE_TRUSTED;
+use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::oauth::ScopeBits;
 use common::v1::types::util::Time;
 use common::v1::types::{
     ChannelId, ConnectionId, Permission, PermissionOverwriteType, RoomId, SERVER_ROOM_ID, Session,
@@ -6,6 +8,8 @@ use common::v1::types::{
 };
 use dashmap::DashMap;
 use kerosene_core::compat::authz::AuthCheck;
+use kerosene_core::types::auth::{Auth5, Auth5Ext};
+use kerosene_core::types::permission::requirements::{Requirements, RequirementsContext};
 use lamprey_backend_core::types::permission::{
     CheckVisibility, MemberState, PermissionBits, Permissions, Permissions2, Permissions2Metadata,
     PermissionsFlags, ResourceContext,
@@ -439,5 +443,93 @@ impl ServicePermissions {
         };
 
         Ok(should_send)
+    }
+
+    /// enforce a set of requirements
+    // TODO: finish implementing and use
+    pub async fn enforce<A: Auth5>(&self, requirements: Requirements, auth: A) -> Result<()> {
+        let identity = auth.identity();
+        let flags = requirements.get_flags();
+
+        if !flags.allow_suspended() {
+            if let Some(u) = identity.user() {
+                u.ensure_unsuspended()?;
+            }
+        }
+
+        // mfa and sudo checks
+        if flags.require_mfa() || flags.require_sudo() {
+            let srv = self.state.services();
+            let user_id = identity.user_id();
+
+            // PERF: only match on RequirementsContext once
+            let room_id = match requirements.get_context() {
+                RequirementsContext::Server => SERVER_ROOM_ID,
+                RequirementsContext::Room(rid) => rid,
+                RequirementsContext::Channel(cid) => srv
+                    .channels
+                    .get(cid, user_id)
+                    .await?
+                    .room_id
+                    .unwrap_or(SERVER_ROOM_ID),
+            };
+
+            let room_handle = srv.rooms.load2(room_id).await;
+            let security = &room_handle.ready(false).await?.room.security;
+
+            if security.require_mfa || flags.require_mfa() {
+                if let Some(uid) = user_id {
+                    let mut data = self.state.begin_read().await?;
+                    let totp = data.auth_totp_get(uid).await?;
+                    if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
+                        return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
+                    }
+                } else {
+                    return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
+                }
+            }
+
+            if security.require_sudo || flags.require_sudo() {
+                auth.ensure_sudo()?;
+            }
+        }
+
+        if let Some(s) = identity.scopes() {
+            let s = ScopeBits::from(s);
+            s.ensure_all(requirements.get_scopes())?;
+        }
+
+        let user_id = identity.user_id();
+        let mut perms = match requirements.get_context() {
+            RequirementsContext::Server => self.for_room3(user_id, SERVER_ROOM_ID).await?,
+            RequirementsContext::Room(room_id) => self.for_room3(user_id, room_id).await?,
+            RequirementsContext::Channel(channel_id) => {
+                self.for_channel3(user_id, channel_id).await?
+            }
+        };
+
+        let mut perms = if flags.always_visible() {
+            perms.assume_visible()
+        } else {
+            perms.ensure_view()?
+        };
+
+        perms.needs_all(&requirements.get_permissions().to_vec());
+
+        if flags.slowmode_thread() {
+            perms.needs_slowmode_thread_bypass();
+        }
+
+        if flags.slowmode_message() {
+            perms.needs_slowmode_message_bypass();
+        }
+
+        if !flags.allow_locked() {
+            perms.needs_unlocked();
+        }
+
+        perms.check()?;
+
+        Ok(())
     }
 }
