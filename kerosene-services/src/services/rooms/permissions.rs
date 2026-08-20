@@ -3,10 +3,7 @@ use common::{
     v2::types::{ChannelId, RoleId, UserId},
 };
 use im::HashMap;
-use kerosene_core::types::permission::{
-    BROADCAST_LURKER_PERMS, CheckVisibility, PermissionBits, Permissions2, QUARANTINE_PERMS,
-    VIEW_PERMS,
-};
+use kerosene_core::types::permission::{CheckVisibility, PermissionBits, Permissions2};
 
 // TODO: finish implementing
 
@@ -167,20 +164,20 @@ impl RoomPermissionsCalculator {
         match member {
             Some(member) => {
                 if member.quarantined && !bits.has(Permission::Admin) {
-                    bits.mask(QUARANTINE_PERMS);
+                    bits.mask(PermissionBits::QUARANTINE_PERMS);
                 }
 
                 if let Some(timeout_until) = member.timeout_until {
                     if timeout_until > Time::now_utc() {
-                        bits.mask(VIEW_PERMS);
+                        bits.mask(PermissionBits::VIEW_PERMS);
                     }
                 }
             }
             None => {
                 if channel.is_some_and(|c| c.ty == ChannelType::Broadcast) {
-                    bits.mask(BROADCAST_LURKER_PERMS);
+                    bits.mask(PermissionBits::BROADCAST_LURKER_PERMS);
                 } else {
-                    bits.mask(VIEW_PERMS);
+                    bits.mask(PermissionBits::VIEW_PERMS);
                 }
             }
         }

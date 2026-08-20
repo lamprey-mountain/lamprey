@@ -9,8 +9,7 @@ use common::v1::types::{
 };
 use lamprey_backend_core::types::permission::Permissions2Metadata;
 use lamprey_backend_core::types::permission::{
-    BROADCAST_LURKER_PERMS, CheckVisibility, MemberState, PermissionBits, Permissions2,
-    QUARANTINE_PERMS, ResourceContext, VIEW_PERMS,
+    CheckVisibility, MemberState, PermissionBits, Permissions2, ResourceContext,
 };
 use tracing::warn;
 
@@ -45,101 +44,11 @@ impl PermissionsCalculator {
         user_id: Option<UserId>,
         channel: Option<&Channel>,
     ) -> Result<Permissions2<CheckVisibility>> {
-        let Some(user_id) = user_id else {
-            // calculate default room permissions for lurkers/unauthed sessions
-
-            let Some(data) = self.room.get_data() else {
-                return Err(Error::ServiceUnavailable);
-            };
-
-            let mut bits = PermissionBits::default();
-            let mut channel_locked = false;
-            let mut visible = self.public;
-
-            // use default perms (everyone role)
-            let everyone_role_id: RoleId = self.room_id.into_inner().into();
-
-            if let Some(role) = data.roles.get(&everyone_role_id) {
-                bits.add_all(role.allow);
-                bits.remove_all(role.deny);
-            }
-
-            if let Some(channel) = channel {
-                if let Some(cached_channel) = data.channels.get(&channel.id) {
-                    self.apply_channel_overwrites(
-                        &mut bits,
-                        &mut channel_locked,
-                        &mut false,
-                        cached_channel,
-                        None,
-                    );
-
-                    // lurkers can't be thread members
-                    if cached_channel.inner.ty == ChannelType::ThreadPrivate {
-                        visible = false;
-                    }
-                }
-            }
-
-            let context = match channel {
-                Some(ch) if ch.is_thread() => {
-                    ResourceContext::Thread(Some(self.room_id), ch.parent_id.unwrap(), ch.id)
-                }
-                Some(ch) => ResourceContext::Channel(Some(self.room_id), ch.id),
-                None => ResourceContext::Room(self.room_id),
-            };
-
-            if channel.is_some_and(|c| c.ty == ChannelType::Broadcast) {
-                bits.mask(BROADCAST_LURKER_PERMS);
-            } else {
-                bits.mask(VIEW_PERMS);
-            }
-
-            let perms = Permissions2 {
-                visible,
-                context,
-                bits,
-                metadata: Permissions2Metadata {
-                    rank: 0,
-                    member_state: MemberState::Lurker,
-                    channel_locked,
-                    channel_slowmode_thread_active: false,
-                    channel_slowmode_message_active: false,
-                },
-                state: CheckVisibility,
-            };
-
-            return Ok(perms);
-        };
-
-        self.query_inner(user_id, channel)
-    }
-
-    /// get whether a user (or guest) can view this room
-    pub fn can_view_room(&self, user_id: Option<UserId>) -> bool {
-        let is_public = self.room.get_data().is_some_and(|d| d.room.public);
-        if is_public {
-            // anyone can view public rooms
-            true
-        } else if let Some(user_id) = user_id {
-            // you can view private rooms you're a member of
-            self.room.get_member(&user_id).is_some()
-        } else {
-            // otherwise, deny
-            false
-        }
-    }
-
-    fn query_inner(
-        &self,
-        user_id: UserId,
-        channel: Option<&Channel>,
-    ) -> Result<Permissions2<CheckVisibility>> {
         let Some(data) = self.room.get_data() else {
             return Err(Error::ServiceUnavailable);
         };
 
-        let member = data.members.get(&user_id).map(|m| &m.member);
+        let member = user_id.and_then(|uid| data.members.get(&uid).map(|m| &m.member));
 
         let mut bits = PermissionBits::default();
         let mut rank = 0u16;
@@ -185,9 +94,11 @@ impl PermissionsCalculator {
                 if cached_channel.inner.ty == ChannelType::ThreadPrivate {
                     if !bits.has(Permission::ThreadManage) {
                         let is_member = if let Some(threads) = &data.threads {
-                            threads
-                                .get(&channel.id)
-                                .map_or(false, |t| t.members.contains_key(&user_id))
+                            user_id.is_some_and(|uid| {
+                                threads
+                                    .get(&channel.id)
+                                    .map_or(false, |t| t.members.contains_key(&uid))
+                            })
                         } else {
                             // TODO: fetch thread from db
                             // self.state.acquire_data().await?;
@@ -211,18 +122,18 @@ impl PermissionsCalculator {
         // mask permissions for lurkers/non-members
         if member.is_none() {
             if channel.is_some_and(|c| c.ty == ChannelType::Broadcast) {
-                bits.mask(BROADCAST_LURKER_PERMS);
+                bits.mask(PermissionBits::BROADCAST_LURKER_PERMS);
             } else {
-                bits.mask(VIEW_PERMS);
+                bits.mask(PermissionBits::VIEW_PERMS);
             }
         }
 
         if quarantined && !bits.has(Permission::Admin) {
-            bits.mask(QUARANTINE_PERMS);
+            bits.mask(PermissionBits::QUARANTINE_PERMS);
         }
 
         if timed_out {
-            bits.mask(VIEW_PERMS);
+            bits.mask(PermissionBits::VIEW_PERMS);
         }
 
         let member_state = match member {
@@ -236,6 +147,21 @@ impl PermissionsCalculator {
         };
 
         Ok(self.build_permissions2(bits, rank, channel, channel_locked, member_state))
+    }
+
+    /// get whether a user (or guest) can view this room
+    pub fn can_view_room(&self, user_id: Option<UserId>) -> bool {
+        let is_public = self.room.get_data().is_some_and(|d| d.room.public);
+        if is_public {
+            // anyone can view public rooms
+            true
+        } else if let Some(user_id) = user_id {
+            // you can view private rooms you're a member of
+            self.room.get_member(&user_id).is_some()
+        } else {
+            // otherwise, deny
+            false
+        }
     }
 
     fn build_permissions2(
@@ -284,11 +210,11 @@ impl PermissionsCalculator {
         rank: &mut u16,
         timed_out: &mut bool,
         quarantined: &mut bool,
-        user_id: UserId,
+        user_id: Option<UserId>,
         member: Option<&RoomMember>,
     ) -> Result<()> {
         // root user and owners have full permissions
-        if user_id == SERVER_USER_ID || self.owner_id == Some(user_id) {
+        if user_id.is_some_and(|uid| uid == SERVER_USER_ID || self.owner_id == Some(uid)) {
             *rank = u16::MAX;
             *bits = Permission::Admin.into();
             return Ok(());
