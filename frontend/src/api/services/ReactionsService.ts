@@ -161,8 +161,10 @@ export class ReactionsService extends BaseService<never> {
 		},
 	) {
 		const me = this.store.users.get("@self")!;
-		const msg = this.store.messages.cache.get(sync.message_id);
+		let msg = this.store.messages.cache.get(sync.message_id);
 		if (!msg) return;
+
+		msg = structuredClone(msg);
 		msg.reactions ??= [];
 
 		if (sync.type === "ReactionCreate") {
@@ -198,6 +200,6 @@ export class ReactionsService extends BaseService<never> {
 		}
 
 		// PERF: don't clone
-		this.store.messages.handleMessageUpdate(structuredClone(msg));
+		this.store.messages.handleMessageUpdate(msg);
 	}
 }
