@@ -30,6 +30,7 @@ pub enum DiscordEvent {
     InteractionCreate(SlashCommand),
     TypingStart(TypingStartEvent),
     PresenceUpdate(Presence),
+    GuildMemberUpdate(GuildMemberUpdateEvent),
 }
 
 #[async_trait]
@@ -173,10 +174,10 @@ impl EventHandler for Handler {
         _ctx: Context,
         _old: Option<serenity::model::guild::Member>,
         _new: Option<serenity::model::guild::Member>,
-        _event: GuildMemberUpdateEvent,
+        event: GuildMemberUpdateEvent,
     ) {
-        info!("discord guild member update");
-        // TODO: Map to BridgeEvent/PortalEvent
+        info!("discord guild member update: {:?}", event.user.name);
+        let _ = self.tx.send(DiscordEvent::GuildMemberUpdate(event)).await;
     }
 
     async fn presence_update(&self, _ctx: Context, presence: Presence) {

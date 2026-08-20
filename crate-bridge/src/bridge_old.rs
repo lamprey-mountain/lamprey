@@ -59,6 +59,13 @@ pub struct RealmDiscord {
     pub guild_id: discord::GuildId,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RealmMember {
+    pub realm_id: RealmId,
+    pub user_lamprey_id: lamprey::UserId,
+    pub nickname: Option<String>,
+}
+
 // TEMP: reexport
 pub use crate::actor::bridge::BridgeEvent;
 
@@ -98,6 +105,7 @@ pub enum ReactionKey {
 #[derive(Debug, Clone)]
 pub enum RealmEvent {
     ChannelCreate(ChannelData),
+    MemberUpdate(RealmMember),
 }
 
 // TODO: remove pub from handles

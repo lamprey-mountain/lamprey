@@ -248,6 +248,42 @@ impl Discord {
                     .events
                     .send(Arc::new(BridgeEvent::PresenceUpdate(presence)));
             }
+            DiscordEvent::GuildMemberUpdate(event) => {
+                let discord_user_id = event.user.id.to_string();
+                if let Ok(Some(puppet)) = self
+                    .bridge
+                    .db
+                    .puppet_get_by_discord_id(discord_user_id)
+                    .await
+                {
+                    let guild_id = event.guild_id;
+                    let Some(realm_id) = self.realm_data.iter().find_map(|(id, realm)| {
+                        if let Some(r_discord) = &realm.discord {
+                            if r_discord.guild_id == guild_id {
+                                return Some(*id);
+                            }
+                        }
+                        None
+                    }) else {
+                        return;
+                    };
+
+                    let nickname = event.nick;
+                    let member = bridge_old::RealmMember {
+                        realm_id,
+                        user_lamprey_id: puppet.lamprey_id,
+                        nickname,
+                    };
+
+                    let _ = self.bridge.db.realm_member_upsert(member.clone()).await;
+
+                    if let Some(handle) = self.realm_handles.get(&realm_id) {
+                        let _ = handle
+                            .events
+                            .send(Arc::new(RealmEvent::MemberUpdate(member)));
+                    }
+                }
+            }
             DiscordEvent::ChannelCreate(channel) => {
                 let has_continuous = self.realm_data.values().any(|r| r.continuous);
                 if !has_continuous {
@@ -1177,6 +1213,30 @@ async fn spawn_realm_inner(
                                 .events
                                 .send(Arc::new(BridgeEvent::PortalCreated(portal)));
                         }
+                    }
+                }
+            }
+            RealmEvent::MemberUpdate(member) => {
+                let Ok(Some(puppet)) = handle
+                    .bridge
+                    .db
+                    .puppet_get_by_lamprey_id(member.user_lamprey_id.to_string())
+                    .await
+                else {
+                    continue;
+                };
+                if puppet.source_platform == crate::types::Platform::Lamprey {
+                    if let Some(discord_cfg) = realm.discord.as_ref() {
+                        let guild_id = discord_cfg.guild_id;
+                        let discord_id: serenity::all::UserId = puppet.discord_id;
+                        let nick = member.nickname.as_deref().unwrap_or("");
+                        let _ = guild_id
+                            .edit_member(
+                                &http,
+                                discord_id,
+                                serenity::all::EditMember::new().nickname(nick),
+                            )
+                            .await;
                     }
                 }
             }

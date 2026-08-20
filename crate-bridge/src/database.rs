@@ -7,7 +7,7 @@ use uuid::Uuid;
 use crate::{
     bridge_old::{
         Message, Portal, PortalDiscord, PortalId, PortalLamprey, Realm, RealmDiscord, RealmId,
-        RealmLamprey, User,
+        RealmLamprey, RealmMember, User,
     },
     prelude::*,
 };
@@ -19,6 +19,18 @@ pub trait Database: fmt::Debug + Send + Sync {
     async fn realm_delete(&self, id: RealmId) -> Result<()>;
     async fn realm_delete_by_guild(&self, discord_guild_id: discord::GuildId) -> Result<()>;
     async fn realm_list(&self) -> Result<Vec<Realm>>;
+
+    async fn realm_member_upsert(&self, member: RealmMember) -> Result<()>;
+    async fn realm_member_get(
+        &self,
+        realm_id: RealmId,
+        lamprey_id: lamprey::UserId,
+    ) -> Result<Option<RealmMember>>;
+    async fn realm_member_delete(
+        &self,
+        realm_id: RealmId,
+        lamprey_id: lamprey::UserId,
+    ) -> Result<()>;
 
     async fn portal_create(&self, portal: Portal) -> Result<()>;
     async fn portal_update(&self, portal: Portal) -> Result<()>;
@@ -148,6 +160,60 @@ impl Database for SqliteDatabase {
                 }),
             })
             .collect())
+    }
+
+    async fn realm_member_upsert(&self, member: RealmMember) -> Result<()> {
+        let realm_id_str = member.realm_id.to_string();
+        let lamprey_id_str = member.user_lamprey_id.to_string();
+        query!(
+            "INSERT INTO realm_member (realm_id, lamprey_id, nickname) VALUES (?, ?, ?)
+             ON CONFLICT (realm_id, lamprey_id) DO UPDATE SET nickname = excluded.nickname",
+            realm_id_str,
+            lamprey_id_str,
+            member.nickname
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    async fn realm_member_get(
+        &self,
+        realm_id: RealmId,
+        lamprey_id: lamprey::UserId,
+    ) -> Result<Option<RealmMember>> {
+        let realm_id_str = realm_id.to_string();
+        let lamprey_id_str = lamprey_id.to_string();
+        let row = query!(
+            "SELECT nickname FROM realm_member WHERE realm_id = ? AND lamprey_id = ?",
+            realm_id_str,
+            lamprey_id_str
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(row.map(|r| RealmMember {
+            realm_id,
+            user_lamprey_id: lamprey_id,
+            nickname: r.nickname,
+        }))
+    }
+
+    async fn realm_member_delete(
+        &self,
+        realm_id: RealmId,
+        lamprey_id: lamprey::UserId,
+    ) -> Result<()> {
+        let realm_id_str = realm_id.to_string();
+        let lamprey_id_str = lamprey_id.to_string();
+        query!(
+            "DELETE FROM realm_member WHERE realm_id = ? AND lamprey_id = ?",
+            realm_id_str,
+            lamprey_id_str
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
     }
 
     async fn portal_create(&self, portal: Portal) -> Result<()> {

@@ -234,7 +234,37 @@ impl Lamprey {
                 }
                 // MessageSync::UserUpdate { user } => todo!(), // ignore updates for your own puppets
                 // MessageSync::RoomMemberCreate { member, user } => todo!(),
-                // MessageSync::RoomMemberUpdate { member, user } => todo!(),
+                MessageSync::RoomMemberUpdate { member, user } => {
+                    let Some(realm_id) = self.realm_data.iter().find_map(|(id, realm)| {
+                        if let Some(r_lamprey) = &realm.lamprey {
+                            if r_lamprey.room_id == member.room_id {
+                                return Some(*id);
+                            }
+                        }
+                        None
+                    }) else {
+                        return Ok(());
+                    };
+
+                    let nickname = member.override_name.clone();
+                    let realm_member = bridge_old::RealmMember {
+                        realm_id,
+                        user_lamprey_id: member.user_id,
+                        nickname,
+                    };
+
+                    let _ = self
+                        .bridge
+                        .db
+                        .realm_member_upsert(realm_member.clone())
+                        .await;
+
+                    if let Some(handle) = self.realm_handles.get(&realm_id) {
+                        let _ = handle
+                            .events
+                            .send(Arc::new(RealmEvent::MemberUpdate(realm_member)));
+                    }
+                }
                 // MessageSync::RoomMemberDelete { room_id, user_id } => todo!(),
 
                 // events relevant to portals
@@ -349,19 +379,24 @@ impl Lamprey {
                         .user_get(UserIdReq::UserId(message.author_id))
                         .await?;
 
-                    // // TODO: fetch room member if message.room_id is some
-                    // let room_member = self
-                    //     .client
-                    //     .http()
-                    //     .room_member_get(room_id, UserIdReq::UserId(message.author_id))
-                    //     .await?;
+                    // PERF: cache this too
+                    let room_member = if let Some(room_id) = message.room_id {
+                        let member = self
+                            .client
+                            .http()
+                            .room_member_get(room_id, message.author_id.into())
+                            .await?;
+                        Some(Box::new(member))
+                    } else {
+                        None
+                    };
 
                     self.route_portal_event(
                         &message.channel_id,
                         PortalEvent::MessageCreate(bridge_old::MessageData::Lamprey {
                             message: Box::new(message.clone()),
                             user: Box::new(user.inner),
-                            room_member: None,
+                            room_member,
                             info: Box::new(bridge_old::LampreyInfo {
                                 cdn_url: self.client.http().cdn_url().clone(),
                             }),
@@ -386,6 +421,8 @@ impl Lamprey {
                         .http()
                         .user_get(UserIdReq::UserId(message.author_id))
                         .await?;
+
+                    // NOTE: do i want to pass room_member here?
 
                     self.route_portal_event(
                         &message.channel_id,
@@ -1209,6 +1246,31 @@ async fn spawn_realm_inner(
                         .bridge
                         .events
                         .send(Arc::new(BridgeEvent::PortalCreated(portal)));
+                }
+            }
+            RealmEvent::MemberUpdate(member) => {
+                let Ok(Some(puppet)) = handle
+                    .bridge
+                    .db
+                    .puppet_get_by_lamprey_id(member.user_lamprey_id.to_string())
+                    .await
+                else {
+                    continue;
+                };
+                if puppet.source_platform == crate::types::Platform::Discord {
+                    let room_id = realm.lamprey.as_ref().unwrap().room_id;
+                    let lamprey_id = member.user_lamprey_id;
+
+                    let _ = http
+                        .room_member_add(
+                            room_id,
+                            lamprey_id.into(),
+                            &RoomMemberPut {
+                                override_name: member.nickname.clone(),
+                                ..Default::default()
+                            },
+                        )
+                        .await;
                 }
             }
         }
