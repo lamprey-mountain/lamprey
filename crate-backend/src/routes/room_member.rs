@@ -9,10 +9,11 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
-    AuditLogEntryType, MessageSync, PaginationResponse, Permission, RoomMemberSearchResponse,
-    UserId,
+    AuditLogEntryType, MessageSync, PaginationResponse, Permission, RoomMember,
+    RoomMemberSearchResponse, UserId,
 };
 use common::v1::types::{RoleId, RoomMemberOrigin, SERVER_ROOM_ID};
+use common::v2::types::ApplicationId;
 use http::StatusCode;
 use kerosene_services::services::automod::AutomodContext;
 use lamprey_macros::handler;
@@ -21,6 +22,7 @@ use validator::Validate;
 
 use crate::prelude::*;
 use crate::routes::util::AuthRelaxed2;
+use crate::routes::util::auth::Auth4;
 use crate::{ServerState, routes2};
 use common::v1::types::misc::UserIdReq;
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
@@ -95,236 +97,144 @@ async fn room_member_get(
 /// - Only registered users (not guests) can join public rooms
 #[handler(routes::room_member_add)]
 async fn room_member_add(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
+    auth: Auth4,
+    State(globals): State<Globals>,
     req: routes::room_member_add::Request,
 ) -> Result<impl IntoResponse> {
-    let mut req = req;
     auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
-    let al = auth.audit_log(req.room_id);
-    let srv = s.services();
-    let room = srv.rooms.get(req.room_id, None).await?;
-    room.room_type.ensure_members_manageable()?;
-    let mut data = s.data();
-    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+    let auth_user = auth.ensure_user()?;
+    auth_user.ensure_unsuspended()?;
+    let target_user_id = req.user_id.unwrap_or(auth_user.id);
 
-    let room = srv.rooms.get(req.room_id, Some(auth.user.id)).await?;
+    let srv = globals.services();
+    let room_handle = srv.rooms.load2(req.room_id).await;
+    let room = room_handle.ready(true).await?;
+    room.room.room_type.ensure_members_manageable()?;
 
-    // allow self joins
-    if room.security.require_mfa && target_user_id != auth.user.id {
-        let user = srv.users.get(auth.user.id, None).await?;
-        let totp = data.auth_totp_get(user.id).await?;
+    // enforce room security
+    if room.room.security.require_mfa && target_user_id != auth_user.id {
+        let totp = globals
+            .begin_read()
+            .await?
+            .auth_totp_get(auth_user.id)
+            .await?;
         if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
             return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
         }
     }
 
-    // handle joining public rooms
-    if target_user_id == auth.user.id {
-        let room = srv.rooms.get(req.room_id, None).await?;
-        if room.public {
-            if auth.user.registered_at.is_none() {
-                return Err(ApiError::from_code(ErrorCode::GuestsCannotJoinPublicRooms).into());
-            }
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth_user.id), req.room_id)
+        .await?
+        .ensure_view()?;
 
-            if let Ok(ban) = s.data().room_ban_get(req.room_id, target_user_id).await {
-                if let Some(expires_at) = ban.expires_at {
-                    if expires_at > Time::now_utc() {
-                        return Err(ApiError::from_code(ErrorCode::YouAreBanned).into());
-                    }
-                } else {
+    let target_user = srv.users.get(target_user_id, None).await?;
+
+    let mut txn = globals.begin_read().await?;
+    let existing = txn.room_member_get(req.room_id, target_user_id).await;
+
+    let is_target_other = target_user_id != auth_user.id;
+    let is_public_join = target_user_id == auth_user.id && room.room.public;
+    let is_new_join = existing.is_err();
+    let origin = if is_public_join {
+        // user is joining a public room
+
+        // only registered users can join public rooms
+        if auth_user.registered_at.is_none() {
+            return Err(ApiError::from_code(ErrorCode::GuestsCannotJoinPublicRooms).into());
+        }
+
+        // enforce bans
+        if let Ok(ban) = txn.room_ban_get(req.room_id, target_user_id).await {
+            if let Some(expires_at) = ban.expires_at {
+                if expires_at > Time::now_utc() {
                     return Err(ApiError::from_code(ErrorCode::YouAreBanned).into());
                 }
-            }
-
-            let mut d = s.data();
-            let existing = d.room_member_get(req.room_id, target_user_id).await;
-            let perms = if existing.is_ok() {
-                // User already exists, get their actual permissions
-                s.services()
-                    .perms
-                    .for_room3(Some(auth.user.id), req.room_id)
-                    .await?
             } else {
-                // User doesn't exist yet, get default room permissions
-                // Use for_room3 to get the new system type
-                s.services().perms.default_for_room3(req.room_id).await?
-            };
-            let mut perms: Permissions2<CheckPermissions> = perms.ensure_view()?;
-
-            if let Ok(start) = &existing {
-                // already exists
-                if req.member.mute.is_some_and(|m| m != start.mute) {
-                    perms.needs(Permission::VoiceMute);
-                }
-                if req.member.deaf.is_some_and(|m| m != start.deaf) {
-                    perms.needs(Permission::VoiceDeafen);
-                }
-                if req.member.override_name.is_some()
-                    && req.member.override_name != start.override_name
-                {
-                    perms.needs(Permission::MemberNickname);
-                }
-                if let Some(r) = &mut req.member.roles {
-                    // TODO: let users add self applicable roles to themselves
-                    // TODO: also handle if @everyone has RoleApply permissions
-                    if !r.is_empty() {
-                        return Err(ApiError::from_code(ErrorCode::CannotAddRolesToYourself).into());
-                    }
-                }
-            } else {
-                // joining for the first time
-                if req.member.mute == Some(true) {
-                    perms.needs(Permission::VoiceMute);
-                }
-                if req.member.deaf == Some(true) {
-                    perms.needs(Permission::VoiceDeafen);
-                }
-                if req.member.override_name.is_some() {
-                    perms.needs(Permission::MemberNickname);
-                }
-                if let Some(r) = &mut req.member.roles {
-                    // TODO: let users add self applicable roles to themselves
-                    // TODO: also handle if @everyone has RoleApply permissions
-                    if !r.is_empty() {
-                        return Err(ApiError::from_code(ErrorCode::CannotAddRolesToYourself).into());
-                    }
-                }
+                return Err(ApiError::from_code(ErrorCode::YouAreBanned).into());
             }
-
-            let origin = RoomMemberOrigin::PublicJoin;
-            d.room_member_put(
-                req.room_id,
-                target_user_id,
-                Some(origin),
-                req.member.clone(),
-            )
-            .await?;
-
-            s.services()
-                .perms
-                .invalidate_room(target_user_id, req.room_id)
-                .await;
-            s.services().perms.invalidate_is_mutual(target_user_id);
-            let mut res = d.room_member_get(req.room_id, target_user_id).await?;
-
-            let is_new_join = existing.is_err();
-
-            // handle role updates if any
-            if let Some(r) = req.member.roles {
-                if let Ok(ref existing) = existing {
-                    let old = HashSet::<RoleId>::from_iter(existing.roles.iter().copied());
-                    let new = HashSet::<RoleId>::from_iter(r.iter().copied());
-                    // removed roles
-                    for role_id in old.difference(&new) {
-                        d.role_member_delete(req.room_id, target_user_id, *role_id)
-                            .await?;
-                    }
-
-                    // added roles
-                    for role_id in new.difference(&old) {
-                        d.role_member_put(req.room_id, target_user_id, *role_id)
-                            .await?;
-                    }
-                } else {
-                    for role_id in r {
-                        d.role_member_put(req.room_id, target_user_id, role_id)
-                            .await?;
-                    }
-                }
-            }
-
-            // scan member with automod
-            let automod = srv.automod.load(req.room_id).await?;
-            let automod_ctx = AutomodContext::new(room.id, auth.user.id);
-            let scan = automod.scan(&(&res, &auth.user), &automod_ctx).await;
-            let has_block_action = scan.should_block();
-
-            if has_block_action {
-                d.room_member_set_quarantined(req.room_id, target_user_id, true)
-                    .await?;
-            } else if res.quarantined {
-                d.room_member_set_quarantined(req.room_id, target_user_id, false)
-                    .await?;
-            }
-
-            if has_block_action || (!has_block_action && res.quarantined) {
-                res = d.room_member_get(req.room_id, target_user_id).await?;
-            }
-
-            if is_new_join {
-                let user = srv.users.get(res.user_id, None).await?;
-                s.broadcast_room(
-                    req.room_id,
-                    auth.user.id,
-                    MessageSync::RoomMemberCreate {
-                        member: res.clone(),
-                        user,
-                    },
-                )
-                .await?;
-            }
-
-            return Ok(Json(res));
         }
-    }
 
-    let perms = s
-        .services()
-        .perms
-        .for_room3(Some(auth.user.id), req.room_id)
-        .await?;
-    let mut perms: Permissions2<CheckPermissions> = perms.ensure_view()?;
-    perms.needs(Permission::IntegrationsBridge);
-    perms.check()?;
-    let auth_user = srv.users.get(auth.user.id, None).await?;
-    let target_user = srv.users.get(target_user_id, None).await?;
-    let Some(puppet) = target_user.puppet else {
-        return Err(ApiError::from_code(ErrorCode::CantAddThatUser).into());
+        RoomMemberOrigin::PublicJoin
+    } else {
+        // bridge is adding a puppet to a room
+        perms.needs(Permission::IntegrationsBridge);
+
+        if !auth_user.bot {
+            return Err(ApiError::from_code(ErrorCode::OnlyBotsCanUseThis).into());
+        };
+
+        let Some(puppet) = &target_user.puppet else {
+            return Err(ApiError::from_code(ErrorCode::CantAddThatUser).into());
+        };
+
+        let app_id: ApplicationId = auth_user.id.into_inner().into();
+        let app = txn.application_get(app_id).await?;
+        if app.bridge.is_none() {
+            return Err(ApiError::from_code(ErrorCode::BotIsNotABridge).into());
+        }
+
+        if puppet.owner_id != app_id {
+            return Err(ApiError::from_code(ErrorCode::NotPuppetOwner).into());
+        }
+
+        RoomMemberOrigin::Bridged {
+            bridge_id: auth_user.id,
+        }
     };
-    if !auth_user.bot {
-        return Err(ApiError::from_code(ErrorCode::OnlyBotsCanUseThis).into());
-    };
 
-    let app = s
-        .data()
-        .application_get(auth.user.id.into_inner().into())
-        .await?;
-    if app.bridge.is_none() {
-        return Err(ApiError::from_code(ErrorCode::BotIsNotABridge).into());
-    }
-
-    if puppet.owner_id.into_inner() != *auth.user.id {
-        return Err(ApiError::from_code(ErrorCode::NotPuppetOwner).into());
-    }
-
-    let mut d = s.data();
-    let existing = d.room_member_get(req.room_id, target_user_id).await;
-
+    // calculate changes, collect permissions
+    // NOTE: should i prevent moderators from changing override_description altogether?
+    let mut changes = Changes::new();
     if let Ok(start) = &existing {
-        if req.member.mute.is_some_and(|m| m != start.mute) {
+        // update existing member
+
+        let m = &req.member;
+
+        // mute
+        if m.mute != start.mute {
+            changes = changes.change("mute", &start.mute, &m.mute);
             perms.needs(Permission::VoiceMute);
         }
 
-        if req.member.deaf.is_some_and(|m| m != start.deaf) {
+        // deaf
+        if m.deaf != start.deaf {
+            changes = changes.change("deaf", &start.deaf, &m.deaf);
             perms.needs(Permission::VoiceDeafen);
         }
 
-        if req.member.override_name.is_some() && req.member.override_name != start.override_name {
-            perms.needs(Permission::MemberNicknameManage);
+        // name
+        if m.override_name != start.override_name {
+            changes = changes.change("override_name", &start.override_name, &m.override_name);
+            if is_target_other {
+                perms.needs(Permission::MemberNicknameManage);
+            } else {
+                perms.needs(Permission::MemberNickname);
+            }
         }
 
-        if let Some(r) = &mut req.member.roles {
-            r.sort();
+        // description
+        if m.override_description != start.override_description {
+            changes = changes.change(
+                "override_description",
+                &start.override_description,
+                &m.override_description,
+            );
+        }
+
+        // roles
+        if m.roles != start.roles {
+            // FIXME: let users add self applicable roles to themselves
+
             perms.needs(Permission::RoleApply);
             let old = HashSet::<RoleId>::from_iter(start.roles.iter().copied());
-            let new = HashSet::<RoleId>::from_iter(r.iter().copied());
-            let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
+            let new = HashSet::<RoleId>::from_iter(m.roles.iter().copied());
+            let rank = srv.perms.get_user_rank(req.room_id, target_user_id).await?;
 
             // removed roles
             for role_id in old.difference(&new) {
-                let role = d.role_select(req.room_id, *role_id).await?;
+                let role = txn.role_select(req.room_id, *role_id).await?;
                 if role.position >= rank {
                     return Err(
                         ApiError::from_code(ErrorCode::CannotRemoveRoleAboveYourRole).into(),
@@ -334,149 +244,153 @@ async fn room_member_add(
 
             // added roles
             for role_id in new.difference(&old) {
-                let role = d.role_select(req.room_id, *role_id).await?;
+                let role = txn.role_select(req.room_id, *role_id).await?;
                 if role.position >= rank {
                     return Err(ApiError::from_code(ErrorCode::CannotAddRoleAboveYourRole).into());
                 }
             }
+
+            changes = changes.change("roles", &start.roles, &m.roles);
         }
     } else {
-        if req.member.mute == Some(true) {
+        // joining for the first time
+
+        let m = &req.member;
+
+        // mute
+        if m.mute {
             perms.needs(Permission::VoiceMute);
+            changes = changes.add("mute", &m.mute);
         }
 
-        if req.member.deaf == Some(true) {
+        // deaf
+        if m.deaf {
             perms.needs(Permission::VoiceDeafen);
+            changes = changes.add("deaf", &m.deaf);
         }
 
-        if req.member.override_name.is_some() {
-            perms.needs(Permission::MemberNicknameManage);
+        // name
+        if m.override_name.is_some() {
+            if is_target_other {
+                perms.needs(Permission::MemberNicknameManage);
+            } else {
+                perms.needs(Permission::MemberNickname);
+            }
+            changes = changes.add("override_name", &m.override_name);
         }
 
-        if let Some(r) = &mut req.member.roles {
-            r.sort();
+        // description
+        if m.override_description.is_some() {
+            changes = changes.add("override_description", &m.override_description);
+        }
+
+        // roles
+        if !m.roles.is_empty() {
+            // TODO: let users add self applicable roles to themselves
+            // TODO: also handle if @everyone has RoleApply permissions
+
             perms.needs(Permission::RoleApply);
-            let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
-            for role_id in r {
-                let role = d.role_select(req.room_id, *role_id).await?;
+            let rank = srv.perms.get_user_rank(req.room_id, target_user_id).await?;
+            for role_id in &m.roles {
+                let role = txn.role_select(req.room_id, *role_id).await?;
                 if role.position >= rank {
                     return Err(ApiError::from_code(ErrorCode::CannotAddRoleAboveYourRole).into());
                 }
             }
+
+            changes = changes.add("roles", &m.roles);
         }
     }
 
-    let origin = RoomMemberOrigin::Bridged {
-        bridge_id: auth.user.id,
-    };
-    d.room_member_put(
+    perms.check()?;
+
+    // PERF: create one query for all of these?
+    // insert room member into database
+    let mut txn = globals.begin().await?;
+    txn.room_member_put(
         req.room_id,
         target_user_id,
         Some(origin),
         req.member.clone(),
     )
     .await?;
+    if let Ok(start) = &existing {
+        let old = HashSet::<RoleId>::from_iter(start.roles.iter().copied());
+        let new = HashSet::<RoleId>::from_iter(req.member.roles.iter().copied());
 
-    if let Some(r) = req.member.roles {
-        if let Ok(start) = &existing {
-            let old = HashSet::<RoleId>::from_iter(start.roles.iter().copied());
-            let new = HashSet::<RoleId>::from_iter(r.iter().copied());
-            // removed roles
-            for role_id in old.difference(&new) {
-                d.role_member_delete(req.room_id, target_user_id, *role_id)
-                    .await?;
-            }
+        // removed roles
+        for role_id in old.difference(&new) {
+            txn.role_member_delete(req.room_id, target_user_id, *role_id)
+                .await?;
+        }
 
-            // added roles
-            for role_id in new.difference(&old) {
-                d.role_member_put(req.room_id, target_user_id, *role_id)
-                    .await?;
-            }
-        } else {
-            for role_id in r {
-                d.role_member_put(req.room_id, target_user_id, role_id)
-                    .await?;
-            }
+        // added roles
+        for role_id in new.difference(&old) {
+            txn.role_member_put(req.room_id, target_user_id, *role_id)
+                .await?;
+        }
+    } else {
+        for role_id in &req.member.roles {
+            txn.role_member_put(req.room_id, target_user_id, *role_id)
+                .await?;
         }
     }
+    txn.commit().await?;
 
-    s.services()
-        .perms
-        .invalidate_room(target_user_id, req.room_id)
-        .await;
-    s.services().perms.invalidate_is_mutual(target_user_id);
-    let mut res = d.room_member_get(req.room_id, target_user_id).await?;
+    srv.perms.invalidate_room(target_user_id, req.room_id).await;
+    srv.perms.invalidate_is_mutual(target_user_id);
+
+    // PERF: calculate new room member instead of querying the db
+    // TODO: make room member queries take RoomMember directly, instead of RoomMember{Patch,Put}
+    let mut txn = globals.begin().await?;
+    let mut res = txn.room_member_get(req.room_id, target_user_id).await?;
 
     // scan member with automod
     let automod = srv.automod.load(req.room_id).await?;
-    let automod_ctx = AutomodContext::new(room.id, auth.user.id);
-    let scan = automod.scan(&(&res, &auth.user), &automod_ctx).await;
+    let automod_ctx = AutomodContext::new(req.room_id, target_user_id);
+    let scan = automod.scan(&(&res, &target_user), &automod_ctx).await;
     let has_block_action = scan.should_block();
-
+    let mut txn = globals.begin().await?;
     if has_block_action {
-        d.room_member_set_quarantined(req.room_id, target_user_id, true)
+        txn.room_member_set_quarantined(req.room_id, target_user_id, true)
             .await?;
     } else if res.quarantined {
-        d.room_member_set_quarantined(req.room_id, target_user_id, false)
+        txn.room_member_set_quarantined(req.room_id, target_user_id, false)
             .await?;
     }
-
     if has_block_action || (!has_block_action && res.quarantined) {
-        res = d.room_member_get(req.room_id, target_user_id).await?;
+        res = txn.room_member_get(req.room_id, target_user_id).await?;
     }
-
-    let changes = if let Ok(existing) = &existing {
-        Changes::new()
-            .change("override_name", &existing.override_name, &res.override_name)
-            .change(
-                "override_description",
-                &existing.override_description,
-                &res.override_description,
-            )
-            .change("mute", &existing.mute, &res.mute)
-            .change("deaf", &existing.deaf, &res.deaf)
-            .change("roles", &existing.roles, &res.roles)
-    } else {
-        Changes::new()
-            .add("override_name", &res.override_name)
-            .add("override_description", &res.override_description)
-            .add("mute", &res.mute)
-            .add("deaf", &res.deaf)
-            .add("roles", &res.roles)
-    };
+    txn.commit().await?;
 
     let changes = changes.build();
     if !changes.is_empty() {
-        al.commit_success(AuditLogEntryType::MemberUpdate {
-            room_id: req.room_id,
-            user_id: target_user_id,
-            changes,
-        })
-        .await?;
+        // append audit log
+        auth.begin_audit_log(
+            req.room_id,
+            AuditLogEntryType::MemberUpdate {
+                room_id: req.room_id,
+                user_id: target_user_id,
+                changes,
+            },
+        )
+        .await?
+        .success();
 
-        if existing.is_err() {
-            let user = srv.users.get(res.user_id, None).await?;
-            s.broadcast_room(
-                req.room_id,
-                auth.user.id,
-                MessageSync::RoomMemberCreate {
-                    member: res.clone(),
-                    user,
-                },
-            )
-            .await?;
+        // broadcast sync event
+        let msg = if is_new_join {
+            MessageSync::RoomMemberCreate {
+                member: res.clone(),
+                user: target_user,
+            }
         } else {
-            let user = srv.users.get(res.user_id, None).await?;
-            s.broadcast_room(
-                req.room_id,
-                auth.user.id,
-                MessageSync::RoomMemberUpdate {
-                    member: res.clone(),
-                    user,
-                },
-            )
-            .await?;
-        }
+            MessageSync::RoomMemberUpdate {
+                member: res.clone(),
+                user: target_user,
+            }
+        };
+
+        globals.messaging().broadcast_room(req.room_id, msg).await?;
     }
 
     Ok(Json(res))
@@ -988,13 +902,13 @@ async fn room_ban_bulk_create(
     if req.room_id == SERVER_ROOM_ID {
         return Err(ApiError::from_code(ErrorCode::CannotKickFromServerRoom).into());
     }
-    let auth_user_rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
+    let rank = srv.perms.get_user_rank(req.room_id, auth.user.id).await?;
 
     for &target_user_id in &req.ban.target_ids {
         if let Ok(_member) = d.room_member_get(req.room_id, target_user_id).await {
             if room.owner_id != Some(auth.user.id) {
                 let other_rank = srv.perms.get_user_rank(req.room_id, target_user_id).await?;
-                if auth_user_rank <= other_rank {
+                if rank <= other_rank {
                     return Err(ApiError::from_code(ErrorCode::InsufficientRankToManageUser).into());
                 }
             }

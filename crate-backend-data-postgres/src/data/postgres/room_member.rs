@@ -190,6 +190,11 @@ impl DataRoomMember for Postgres {
             VALUES ($1, $2, $3, $4, $5, now(), $6, $7, $8, $9, false)
 			ON CONFLICT ON CONSTRAINT room_member_pkey DO UPDATE SET
     			membership = excluded.membership,
+                override_name = excluded.override_name,
+                override_description = excluded.override_description,
+                mute = excluded.mute,
+                deaf = excluded.deaf,
+                timeout_until = excluded.timeout_until,
                 joined_at = case
                     when excluded.membership = 'Leave'
                     then now()
@@ -202,8 +207,8 @@ impl DataRoomMember for Postgres {
             put.override_name,
             put.override_description,
             origin.and_then(|o| serde_json::to_value(o).ok()),
-            put.mute.unwrap_or(false),
-            put.deaf.unwrap_or(false),
+            put.mute,
+            put.deaf,
             put.timeout_until.map(|t| PrimitiveDateTime::new(t.date(), t.time())),
         )
         .execute(conn.ext())
