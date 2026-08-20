@@ -81,12 +81,18 @@ pub enum PortalEvent {
     MessageUpdate(MessageData),
     MessageDelete(MessageId),
 
-    ReactionCreate(MessageId, String, User),
-    ReactionDelete(MessageId, String, User),
-    ReactionDeleteEmoji(MessageId, String),
-    ReactionDeleteAll(MessageId, String),
+    ReactionCreate(MessageId, ReactionKey, User),
+    ReactionDelete(MessageId, ReactionKey, User),
+    ReactionDeleteKey(MessageId, ReactionKey),
+    ReactionDeleteAll(MessageId),
 
     Typing(User),
+}
+
+#[derive(Debug, Clone)]
+pub enum ReactionKey {
+    Discord(discord::ReactionType),
+    Lamprey(lamprey::ReactionKey),
 }
 
 #[derive(Debug, Clone)]

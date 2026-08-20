@@ -405,9 +405,11 @@ route!(patch  "/api/v1/channel/{channel_id}/message/{message_id}" => message_edi
 route!(delete "/api/v1/channel/{channel_id}/message/{message_id}" => message_delete(channel_id: ChannelId, message_id: MessageId));
 route!(get    "/api/v1/channel/{channel_id}/message/{message_id}/version/{version_id}" => message_version_get(channel_id: ChannelId, message_id: MessageId, version_id: MessageVerId) -> Message);
 
-// Message Reaction Routes (Basic)
-route!(put    "/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction}" => message_react(channel_id: ChannelId, message_id: MessageId, reaction: String));
-route!(delete "/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction}" => message_unreact(channel_id: ChannelId, message_id: MessageId, reaction: String));
+// message reaction routes
+route!(put    "/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction}/{user_id}" => reaction_create(channel_id: ChannelId, message_id: MessageId, reaction: String, user_id: UserIdReq));
+route!(delete "/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction}/{user_id}" => reaction_delete(channel_id: ChannelId, message_id: MessageId, reaction: String, user_id: UserIdReq));
+route!(delete "/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction}" => reaction_delete_key(channel_id: ChannelId, message_id: MessageId, reaction: String));
+route!(delete "/api/v1/channel/{channel_id}/message/{message_id}/reaction" => reaction_delete_all(channel_id: ChannelId, message_id: MessageId));
 
 // Message Pin Routes
 route!(put    "/api/v1/channel/{channel_id}/pin/{message_id}"     => message_pin_create(channel_id: ChannelId, message_id: MessageId));

@@ -1,5 +1,7 @@
 use std::{fmt::Display, str::FromStr};
 
+use lamprey_macros::record;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -11,19 +13,15 @@ use crate::v1::types::{EmojiId, emoji::EmojiCustom, util::Time};
 use super::{MessageId, UserId};
 
 /// A reaction with its creation timestamp, returned in sync events.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Reaction {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub info: ReactionInfo,
     pub created_at: Time,
 }
 
 /// Information identifying a reaction without its timestamp.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ReactionInfo {
     pub user_id: UserId,
     pub message_id: MessageId,
@@ -37,29 +35,27 @@ pub struct ReactionInfo {
 pub struct ReactionCounts(pub Vec<ReactionCount>);
 
 /// the total reaction counts for a key
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ReactionCount {
     pub key: ReactionKey,
     pub count: u64,
 
-    #[cfg_attr(feature = "serde", serde(default, rename = "self"))]
+    #[serde(default, rename = "self")]
     pub self_reacted: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct ReactionListItem {
     pub user_id: UserId,
     pub created_at: Time,
 }
 
 /// reaction key returned in reaction counts for messages
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema), serde(tag = "type"))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[serde(tag = "type")]
 pub enum ReactionKey {
     Text { content: String },
     Custom(EmojiCustom),
@@ -77,6 +73,7 @@ pub enum ReactionKeyParam {
 }
 
 /// deserializes as a `ReactionKeyParam`, serializes as a `ReactionKey`
+// TODO: use this?
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum ReactionKeyField {
     Param(ReactionKeyParam),

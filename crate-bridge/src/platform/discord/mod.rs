@@ -10,6 +10,7 @@ use tokio::task::JoinSet;
 use tracing::{debug, error, info, warn};
 
 use crate::actor::bridge::BridgeCommand;
+use crate::bridge_old as bridge;
 use crate::bridge_old::{
     MessageData, PlatformHandle, Portal, PortalDiscord, PortalHandle, PortalId, PortalLamprey,
     Realm, RealmEvent, RealmHandle, RealmId,
@@ -31,7 +32,7 @@ mod interactions;
 pub use serenity::all::{
     Activity, ActivityType, Attachment, AttachmentId, Channel, ChannelId, ChannelType,
     CreateAllowedMentions, CreateEmbed, Embed, GuildChannel, GuildId, Message, MessageId,
-    OnlineStatus, Presence, RoleId, User, UserId, WebhookId,
+    OnlineStatus, Presence, ReactionType, RoleId, User, UserId, WebhookId,
 };
 
 pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -> PlatformHandle {
@@ -517,6 +518,90 @@ impl Discord {
                     });
                 }
             },
+            DiscordEvent::ReactionAdd(reaction) => {
+                if let Some(portal_id) = self.portal_lookup.get(&reaction.channel_id) {
+                    if let Ok(Some(msg)) = self
+                        .bridge
+                        .db
+                        .message_get_by_discord_id(*portal_id, reaction.message_id)
+                        .await
+                    {
+                        if let Ok(Some(user)) = self
+                            .bridge
+                            .db
+                            .puppet_get_by_discord_id(reaction.user_id.unwrap().to_string())
+                            .await
+                        {
+                            self.route_portal_event(
+                                reaction.channel_id,
+                                PortalEvent::ReactionCreate(
+                                    msg.id,
+                                    bridge::ReactionKey::Discord(reaction.emoji),
+                                    user,
+                                ),
+                            );
+                        }
+                    }
+                }
+            }
+            DiscordEvent::ReactionRemove(reaction) => {
+                if let Some(portal_id) = self.portal_lookup.get(&reaction.channel_id) {
+                    if let Ok(Some(msg)) = self
+                        .bridge
+                        .db
+                        .message_get_by_discord_id(*portal_id, reaction.message_id)
+                        .await
+                    {
+                        if let Some(user_id) = reaction.user_id {
+                            if let Ok(Some(user)) = self
+                                .bridge
+                                .db
+                                .puppet_get_by_discord_id(user_id.to_string())
+                                .await
+                            {
+                                self.route_portal_event(
+                                    reaction.channel_id,
+                                    PortalEvent::ReactionDelete(
+                                        msg.id,
+                                        bridge::ReactionKey::Discord(reaction.emoji),
+                                        user,
+                                    ),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            DiscordEvent::ReactionRemoveAll(channel_id, message_id) => {
+                if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                    if let Ok(Some(msg)) = self
+                        .bridge
+                        .db
+                        .message_get_by_discord_id(*portal_id, message_id)
+                        .await
+                    {
+                        self.route_portal_event(channel_id, PortalEvent::ReactionDeleteAll(msg.id));
+                    }
+                }
+            }
+            DiscordEvent::ReactionRemoveEmoji(reaction) => {
+                if let Some(portal_id) = self.portal_lookup.get(&reaction.channel_id) {
+                    if let Ok(Some(msg)) = self
+                        .bridge
+                        .db
+                        .message_get_by_discord_id(*portal_id, reaction.message_id)
+                        .await
+                    {
+                        self.route_portal_event(
+                            reaction.channel_id,
+                            PortalEvent::ReactionDeleteKey(
+                                msg.id,
+                                bridge::ReactionKey::Discord(reaction.emoji),
+                            ),
+                        );
+                    }
+                }
+            }
         }
     }
 
@@ -935,11 +1020,35 @@ async fn spawn_portal_inner(
                     }
                 }
             }
-            // TODO: implement
-            // PortalEvent::ReactionCreate(_, _, _) => todo!(),
-            // PortalEvent::ReactionDelete(_, _, _) => todo!(),
-            // PortalEvent::ReactionDeleteEmoji(_, _) => todo!(),
-            // PortalEvent::ReactionDeleteAll(_, _) => todo!(),
+            // TODO: how do i handle lamprey -> discord reactions?
+            // PortalEvent::ReactionCreate(message_id, reaction_key, _user) => {
+            //     if let Some(discord_cfg) = portal.discord.as_ref() {
+            //         if let Ok(Some(msg)) = handle.bridge.db.message_get(*message_id).await {
+            //             if let Some(discord_message_id) = msg.discord_message_id {
+            //                 let key = match reaction_key {
+            //                     bridge::ReactionKey::Lamprey(key) => match &key {
+            //                         lamprey::ReactionKey::Text { content }
+            //                             if key.is_unicode_emoji() =>
+            //                         {
+            //                             ReactionType::Unicode(content.to_owned())
+            //                         }
+            //                         // TODO: support custom reactions
+            //                         // lamprey::ReactionKey::Custom(emoji) => todo!(),
+            //                         _ => return Ok(()),
+            //                     },
+            //                     bridge::ReactionKey::Discord(_key) => return Ok(()),
+            //                 };
+            //
+            //                 let _ = http
+            //                     .create_reaction(discord_cfg.channel_id, discord_message_id, &key)
+            //                     .await;
+            //             }
+            //         }
+            //     }
+            // }
+            // PortalEvent::ReactionDelete(message_id, reaction_key, user) => {}
+            // PortalEvent::ReactionDeleteKey(message_id, reaction_key) => {}
+            // PortalEvent::ReactionDeleteAll(message_id, _) => {}
             _ => {}
         }
     }

@@ -21,6 +21,10 @@ pub enum DiscordEvent {
     MessageCreate(Message),
     MessageUpdate(MessageUpdateEvent, Option<Message>),
     MessageDelete(ChannelId, MessageId),
+    ReactionAdd(Reaction),
+    ReactionRemove(Reaction),
+    ReactionRemoveAll(ChannelId, MessageId),
+    ReactionRemoveEmoji(Reaction),
     ChannelCreate(GuildChannel),
     ChannelDelete(GuildChannel),
     InteractionCreate(SlashCommand),
@@ -92,12 +96,42 @@ impl EventHandler for Handler {
 
     async fn reaction_add(&self, _ctx: Context, add_reaction: Reaction) {
         info!("discord reaction add: {:?}", add_reaction.emoji);
-        // TODO: Map to BridgeEvent/PortalEvent
+        let _ = self.tx.send(DiscordEvent::ReactionAdd(add_reaction)).await;
     }
 
     async fn reaction_remove(&self, _ctx: Context, removed_reaction: Reaction) {
         info!("discord reaction remove: {:?}", removed_reaction.emoji);
-        // TODO: Map to BridgeEvent/PortalEvent
+        let _ = self
+            .tx
+            .send(DiscordEvent::ReactionRemove(removed_reaction))
+            .await;
+    }
+
+    async fn reaction_remove_all(
+        &self,
+        _ctx: Context,
+        channel_id: ChannelId,
+        removed_from_message_id: MessageId,
+    ) {
+        info!("discord reaction remove all: {:?}", removed_from_message_id);
+        let _ = self
+            .tx
+            .send(DiscordEvent::ReactionRemoveAll(
+                channel_id,
+                removed_from_message_id,
+            ))
+            .await;
+    }
+
+    async fn reaction_remove_emoji(&self, _ctx: Context, removed_reactions: Reaction) {
+        info!(
+            "discord reaction remove emoji: {:?}",
+            removed_reactions.emoji
+        );
+        let _ = self
+            .tx
+            .send(DiscordEvent::ReactionRemoveEmoji(removed_reactions))
+            .await;
     }
 
     async fn typing_start(&self, _ctx: Context, event: TypingStartEvent) {
