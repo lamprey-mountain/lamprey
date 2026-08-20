@@ -1,12 +1,13 @@
 use core::fmt;
+use lamprey_macros::record;
 use std::{ops::Deref, str::FromStr};
+use url::Url;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 #[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
+use utoipa::ToSchema;
 
 use crate::v1::types::{
     ApplicationId, User, UserId,
@@ -16,9 +17,7 @@ use crate::v1::types::{
 };
 
 /// openid connect automatic configuration
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Autoconfig {
     pub issuer: Url,
     pub authorization_endpoint: Url,
@@ -32,9 +31,7 @@ pub struct Autoconfig {
 }
 
 /// user info response for openid connect
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Userinfo {
     /// oauth issuer
     pub iss: Url,
@@ -62,9 +59,7 @@ pub struct Userinfo {
 }
 
 /// information about an application that can be granted access to your account
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct OauthAuthorizeInfo {
     /// the application itself
     pub application: Application,
@@ -79,9 +74,8 @@ pub struct OauthAuthorizeInfo {
     pub authorized: bool,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct OauthAuthorizeParams {
     pub response_type: String,
     pub client_id: ApplicationId,
@@ -96,16 +90,12 @@ pub struct OauthAuthorizeParams {
     pub code_challenge_method: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct OauthAuthorizeResponse {
     pub redirect_uri: Url,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct OauthTokenRequest {
     pub grant_type: String,
     pub code: Option<String>,
@@ -116,9 +106,7 @@ pub struct OauthTokenRequest {
     pub code_verifier: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct OauthTokenResponse {
     pub access_token: String,
     pub token_type: String,
@@ -127,9 +115,7 @@ pub struct OauthTokenResponse {
     pub scope: String,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct OauthIntrospectResponse {
     pub active: bool,
     pub scopes: Scopes,
@@ -143,18 +129,14 @@ pub struct OauthIntrospectResponse {
 /// an oauth scope
 // TODO: use strum for this (if it can handle "identify" | "openid")
 // TODO: remove "implied scopes"?
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::EnumIter)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(rename_all = "lowercase")
-)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Copy, PartialEq, Eq, Hash, strum::EnumIter)]
+#[serde(rename_all = "lowercase")]
 pub enum Scope {
     /// basic user profle information
     ///
     /// affects user_get and oauth_userinfo
-    #[cfg_attr(feature = "serde", serde(alias = "openid"))]
+    #[serde(alias = "openid")]
     Identify,
 
     /// return email address in user profile
@@ -185,16 +167,20 @@ pub enum Scope {
     Auth,
 }
 
+// TODO: copy macro from crate-common/src/v1/types/permission/mod.rs
 bitflags::bitflags! {
     /// compact representation of a set of scopes
     ///
     /// for internal use, not sent to clients
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct ScopeBits: u8 {
         const Identify = 1 << 0;
         const Email = 1 << 1;
         const Rooms = 1 << 2;
+        const Relationships = 1 << 3;
+        const Full = 1 << 4;
+        const Auth = 1 << 5;
     }
 }
 
@@ -289,6 +275,45 @@ impl Scope {
     }
 }
 
+impl ScopeBits {
+    /// check if this set of scopes contains a scope
+    pub fn has(&self, scope: Scope) -> bool {
+        self.contains(scope.into())
+    }
+
+    /// expand this bitset into a vec of scopes
+    // TODO: serde serialize/deserialize from this
+    pub fn to_vec(&self) -> Vec<Scope> {
+        Scopes::from(*self).0
+    }
+
+    /// check that this set of scopes contains a required scope, returning an error if it is missing
+    pub fn ensure_single(&self, scope: Scope) -> Result<(), ApiError> {
+        if self.has(scope) {
+            Ok(())
+        } else {
+            Err(ApiError {
+                required_scopes: vec![scope.clone()],
+                ..ApiError::from_code(ErrorCode::MissingScopes)
+            })
+        }
+    }
+
+    /// check that this set of scopes contains all required scopes, returning an error if any are missing
+    pub fn ensure_all(&self, required: ScopeBits) -> Result<(), ApiError> {
+        let missing = required - *self;
+
+        if missing.is_empty() {
+            Ok(())
+        } else {
+            Err(ApiError {
+                required_scopes: missing.to_vec(),
+                ..ApiError::from_code(ErrorCode::MissingScopes)
+            })
+        }
+    }
+}
+
 impl fmt::Display for Scope {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
@@ -316,5 +341,60 @@ impl FromStr for Scope {
             "auth" => Ok(Scope::Auth),
             _ => Err(()),
         }
+    }
+}
+
+impl From<Scope> for ScopeBits {
+    fn from(value: Scope) -> Self {
+        match value {
+            Scope::Identify => ScopeBits::Identify,
+            Scope::Email => ScopeBits::Email,
+            Scope::Rooms => ScopeBits::Rooms,
+            Scope::Relationships => ScopeBits::Relationships,
+            Scope::Full => ScopeBits::Full,
+            Scope::Auth => ScopeBits::Auth,
+        }
+    }
+}
+
+impl From<&Scopes> for ScopeBits {
+    fn from(value: &Scopes) -> Self {
+        let mut bits = ScopeBits::empty();
+        for scope in &value.0 {
+            match scope {
+                Scope::Identify => bits |= ScopeBits::Identify,
+                Scope::Email => bits |= ScopeBits::Email,
+                Scope::Rooms => bits |= ScopeBits::Rooms,
+                Scope::Relationships => bits |= ScopeBits::Relationships,
+                Scope::Full => bits |= ScopeBits::Full,
+                Scope::Auth => bits |= ScopeBits::Auth,
+            }
+        }
+        bits
+    }
+}
+
+impl From<ScopeBits> for Scopes {
+    fn from(value: ScopeBits) -> Self {
+        let mut scopes = Vec::new();
+        if value.contains(ScopeBits::Identify) {
+            scopes.push(Scope::Identify);
+        }
+        if value.contains(ScopeBits::Email) {
+            scopes.push(Scope::Email);
+        }
+        if value.contains(ScopeBits::Rooms) {
+            scopes.push(Scope::Rooms);
+        }
+        if value.contains(ScopeBits::Relationships) {
+            scopes.push(Scope::Relationships);
+        }
+        if value.contains(ScopeBits::Full) {
+            scopes.push(Scope::Full);
+        }
+        if value.contains(ScopeBits::Auth) {
+            scopes.push(Scope::Auth);
+        }
+        Scopes(scopes)
     }
 }
