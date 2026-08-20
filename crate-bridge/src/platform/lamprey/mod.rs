@@ -451,50 +451,85 @@ impl Lamprey {
                         );
                     }
                 }
-                // MessageSync::ReactionDelete {
-                //     channel_id,
-                //     message_id,
-                //     user_id,
-                //     reaction_key,
-                // } => {
-                //     if let Ok(Some(user)) = self
-                //         .bridge
-                //         .db
-                //         .puppet_get_by_lamprey_id(user_id.to_string())
-                //         .await
-                //     {
-                //         self.route_portal_event(
-                //             channel_id,
-                //             PortalEvent::ReactionDelete(
-                //                 message_id.to_string().parse().unwrap(),
-                //                 crate::bridge_old::ReactionKey::Lamprey(reaction_key.clone()),
-                //                 user,
-                //             ),
-                //         );
-                //     }
-                // }
-                // MessageSync::ReactionDeleteKey {
-                //     channel_id,
-                //     message_id,
-                //     reaction_key,
-                // } => {
-                //     self.route_portal_event(
-                //         channel_id,
-                //         PortalEvent::ReactionDeleteKey(
-                //             message_id.to_string().parse().unwrap(),
-                //             crate::bridge_old::ReactionKey::Lamprey(reaction_key.clone()),
-                //         ),
-                //     );
-                // }
-                // MessageSync::ReactionDeleteAll {
-                //     channel_id,
-                //     message_id,
-                // } => {
-                //     self.route_portal_event(
-                //         channel_id,
-                //         PortalEvent::ReactionDeleteAll(message_id.to_string().parse().unwrap()),
-                //     );
-                // }
+                MessageSync::ReactionDelete {
+                    room_id: _,
+                    channel_id,
+                    message_id,
+                    user_id,
+                    key,
+                } => {
+                    if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                        let Some(msg) = self
+                            .bridge
+                            .db
+                            .message_get_by_lamprey_id(*portal_id, *message_id)
+                            .await?
+                        else {
+                            return Ok(());
+                        };
+
+                        let Some(user) = self
+                            .bridge
+                            .db
+                            .puppet_get_by_lamprey_id(user_id.to_string())
+                            .await?
+                        else {
+                            return Ok(());
+                        };
+
+                        self.route_portal_event(
+                            channel_id,
+                            PortalEvent::ReactionDelete(
+                                msg.id,
+                                crate::bridge_old::ReactionKey::Lamprey(key.clone()),
+                                user,
+                            ),
+                        );
+                    }
+                }
+                MessageSync::ReactionDeleteKey {
+                    room_id: _,
+                    channel_id,
+                    message_id,
+                    key,
+                } => {
+                    if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                        let Some(msg) = self
+                            .bridge
+                            .db
+                            .message_get_by_lamprey_id(*portal_id, *message_id)
+                            .await?
+                        else {
+                            return Ok(());
+                        };
+
+                        self.route_portal_event(
+                            channel_id,
+                            PortalEvent::ReactionDeleteKey(
+                                msg.id,
+                                crate::bridge_old::ReactionKey::Lamprey(key.clone()),
+                            ),
+                        );
+                    }
+                }
+                MessageSync::ReactionDeleteAll {
+                    room_id: _,
+                    channel_id,
+                    message_id,
+                } => {
+                    if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                        let Some(msg) = self
+                            .bridge
+                            .db
+                            .message_get_by_lamprey_id(*portal_id, *message_id)
+                            .await?
+                        else {
+                            return Ok(());
+                        };
+
+                        self.route_portal_event(channel_id, PortalEvent::ReactionDeleteAll(msg.id));
+                    }
+                }
                 _ => {}
             },
             SyncerEvent::StateChanged => {
