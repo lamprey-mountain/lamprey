@@ -1,28 +1,38 @@
 import {
 	autocompletion,
 	CompletionContext,
+	closeBrackets,
 	// autocompletion, completionKeymap, closeBrackets,
 	closeBracketsKeymap,
 } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { javascript } from "@codemirror/lang-javascript";
 import {
+	bracketMatching,
+	foldGutter,
 	HighlightStyle,
+	indentOnInput,
 	syntaxHighlighting,
 	// indentOnInput,
 	// bracketMatching, foldGutter, foldKeymap
 } from "@codemirror/language";
+import { highlightSelectionMatches } from "@codemirror/search";
 import { Compartment, EditorState, Extension } from "@codemirror/state";
 import {
+	crosshairCursor,
 	Decoration,
 	DecorationSet,
 	drawSelection,
+	dropCursor,
 	EditorView,
 	highlightActiveLine,
+	highlightActiveLineGutter,
+	highlightSpecialChars,
 	keymap,
 	lineNumbers,
 	MatchDecorator,
 	placeholder,
+	rectangularSelection,
 	ViewPlugin,
 	ViewUpdate,
 	WidgetType,
@@ -36,10 +46,6 @@ import { getGetUrl } from "@/media/util";
 import { cursorPlugin } from "./codemirror-editor-cursors";
 import { useScript } from "./context";
 import { highlight, theme } from "./theme";
-
-// import {
-//   searchKeymap, highlightSelectionMatches
-// } from "@codemirror/search";
 // import {lintKeymap} from "@codemirror/lint"
 
 export const CodeEditor = (props: {
@@ -79,33 +85,23 @@ export const CodeEditor = (props: {
 
 	onMount(() => {
 		const extensions = [
-			lineNumbers(),
-			// foldGutter(),
-			// highlightSpecialChars(),
 			drawSelection(),
-			// dropCursor(),
+			lineNumbers(),
+			foldGutter(),
+			highlightSpecialChars(),
+			dropCursor(),
 			EditorState.allowMultipleSelections.of(true),
 			history(),
-			// // Show a drop cursor when dragging over the editor
-			// // Allow multiple cursors/selections
-			// // Re-indent lines when typing specific input
-			// indentOnInput(),
-			// // Highlight syntax with a default style
-			// // Highlight matching brackets near cursor
-			// bracketMatching(),
-			// // Automatically close brackets
-			// closeBrackets(),
-			// // Load the autocompletion system
-			// autocompletion(),
-			// // Allow alt-drag to select rectangular regions
+			indentOnInput(),
+			bracketMatching(),
+			closeBrackets(),
+			autocompletion(),
+			// FIXME: rectangular selection
 			// rectangularSelection(),
-			// // Change the cursor to a crosshair when holding alt
 			// crosshairCursor(),
 			highlightActiveLine(),
-			// // Style the gutter for current line specially
-			// highlightActiveLineGutter(),
-			// // Highlight text that matches the selected text
-			// highlightSelectionMatches(),
+			highlightSelectionMatches(),
+			drawSelection(),
 			keymap.of([
 				...closeBracketsKeymap,
 				...defaultKeymap,
@@ -116,7 +112,7 @@ export const CodeEditor = (props: {
 				// ...lintKeymap
 			]),
 			theme,
-			javascript(),
+			javascript(), // TODO(future): swap this depending on language
 			syntaxHighlighting(highlight),
 			stateConfigCompartment.of([
 				EditorView.editable.of(!loading()),

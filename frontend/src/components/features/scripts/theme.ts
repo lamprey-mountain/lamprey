@@ -13,10 +13,6 @@ export const theme = EditorView.theme(
 		".cm-content": {
 			caretColor: "#ff0000",
 		},
-		"&.cm-focused .cm-selectionBackground, ::selection": {
-			// backgroundColor: "#3fa9c9",
-			backgroundColor: "#f00",
-		},
 		".cm-gutters": {
 			backgroundColor: "oklch(var(--color-bg1))",
 			color: "oklch(var(--color-fg4))",
@@ -24,6 +20,13 @@ export const theme = EditorView.theme(
 		},
 		".cm-activeLine": {
 			backgroundColor: "oklch(var(--color-bg1))",
+		},
+		// ".cm-selectionBackground, ::selection": {
+		// 	// backgroundColor: "#3fa9c9",
+		// 	backgroundColor: "#f00",
+		// },
+		".cm-selectionMatch": {
+			backgroundColor: "oklch(var(--color-green) / 0.2)",
 		},
 	},
 	{ dark: true },
