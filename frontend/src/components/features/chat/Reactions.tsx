@@ -57,7 +57,7 @@ export const Reactions = (props: ReactionsProps) => {
 				ctx.setPopout({
 					id: "emoji",
 					ref: addEl,
-					placement: "top-start",
+					placement: "right-end",
 					props: {
 						selected: (emoji: string | null, keepOpen: boolean) => {
 							if (emoji) {
