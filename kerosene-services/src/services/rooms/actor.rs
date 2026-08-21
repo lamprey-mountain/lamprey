@@ -6,16 +6,16 @@ use kerosene_core::error::ApiError;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
-use tokio::sync::watch;
+use tokio::sync::{broadcast, watch};
 use tokio::time::Duration;
-use tracing::Instrument;
+use tracing::{Instrument, debug};
 
 use super::{
     CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, LoadedRoom,
     RoomSnapshot, RoomUnavailable,
 };
 use crate::prelude::*;
-use crate::services::member_lists::actor::MemberList;
+use crate::services::member_lists::actor::{MemberList, MemberListCommand, MemberListEvent};
 use crate::services::member_lists::util::MemberListKey;
 use crate::services::rooms::types::RoomMembers;
 use crate::types::PermissionBits;
@@ -370,6 +370,7 @@ impl RoomActor {
     #[message]
     pub async fn sync_message(&mut self, sync: MessageSync) -> Result<()> {
         let span = tracing::info_span!(parent: &self.span, "SyncMessage");
+        debug!(?sync, "handling sync");
         async {
             self.last_active = Instant::now();
             self.handle_sync(sync).await
@@ -381,8 +382,8 @@ impl RoomActor {
     #[message]
     pub async fn member_list_command_msg(
         &mut self,
-        key: crate::services::member_lists::util::MemberListKey,
-        cmd: crate::services::member_lists::actor::MemberListCommand,
+        key: MemberListKey,
+        cmd: MemberListCommand,
     ) -> Result<Option<MessageSync>> {
         let span = tracing::info_span!(parent: &self.span, "MemberListCommandMsg");
         async {
@@ -400,25 +401,28 @@ impl RoomActor {
     #[message]
     pub async fn member_list_subscribe_msg(
         &mut self,
-        key: crate::services::member_lists::util::MemberListKey,
-        events_tx: tokio::sync::broadcast::Sender<
-            crate::services::member_lists::actor::MemberListEvent,
-        >,
-    ) -> Result<()> {
+        key: MemberListKey,
+    ) -> Result<broadcast::Sender<MemberListEvent>> {
         self.last_active = Instant::now();
-        if !self.member_lists.contains_key(&key) {
-            if self
-                .snapshot
-                .get_data()
-                .map_or(false, |d| matches!(d.members, RoomMembers::Loading))
-            {
-                self.load_members().await?;
-            }
-            let mut list = MemberList::new(self.state.clone(), key.clone(), events_tx);
-            let _ = list.initialize(Arc::clone(&self.snapshot)).await;
-            self.member_lists.insert(key, list);
+
+        if let Some(list) = self.member_lists.get_mut(&key) {
+            list.last_active = tokio::time::Instant::now();
+            return Ok(list.events_tx.clone());
         }
-        Ok(())
+
+        if self
+            .snapshot
+            .get_data()
+            .map_or(false, |d| matches!(d.members, RoomMembers::Loading))
+        {
+            self.load_members().await?;
+        }
+
+        let (events_tx, _) = broadcast::channel(100);
+        let mut list = MemberList::new(self.state.clone(), key.clone(), events_tx.clone());
+        let _ = list.initialize(Arc::clone(&self.snapshot)).await;
+        self.member_lists.insert(key, list);
+        Ok(events_tx)
     }
 
     #[message]

@@ -1,3 +1,4 @@
+use common::v2::types::ConnectionId;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use tokio::time::Instant;
@@ -12,10 +13,12 @@ use crate::consts::IDLE_TIMEOUT_MEMBER_LIST;
 use crate::prelude::*;
 use crate::services::cache::permissions::PermissionsCalculator;
 use crate::services::member_lists::util::{MemberGroupInfo, MemberKey, MemberListKey};
+use crate::services::rooms::actor::MemberListCommandMsg;
 use crate::services::rooms::types::RoomMembers;
-use crate::services::rooms::{LoadedRoom, RoomSnapshot};
+use crate::services::rooms::{LoadedRoom, RoomActor, RoomSnapshot};
 
 /// member list state machine, now owned by RoomActor
+// TODO: make these not pub
 pub struct MemberList {
     pub(super) s: Globals,
     pub(super) key: MemberListKey,
@@ -32,22 +35,22 @@ pub struct MemberList {
     /// count of members in each group
     pub(super) group_counts: BTreeMap<MemberGroupInfo, u32>,
 
-    pub(super) events_tx: broadcast::Sender<MemberListEvent>,
+    pub(crate) events_tx: broadcast::Sender<MemberListEvent>,
 
-    pub(super) last_active: Instant,
+    pub(crate) last_active: Instant,
 }
 
 pub enum MemberListCommand {
     GetInitialRanges {
         ranges: Vec<(u64, u64)>,
-        conn_id: Uuid,
+        conn_id: ConnectionId,
     },
 }
 
 #[derive(Debug, Clone)]
 pub enum MemberListEvent {
     Broadcast(MessageSync),
-    Unicast(Uuid, MessageSync),
+    Unicast(ConnectionId, MessageSync),
 }
 
 impl MemberList {
@@ -405,6 +408,7 @@ impl MemberList {
                     _ => true,
                 });
 
+                // moving between online/offline groups or joined for the first time
                 if is_online_old != presence.is_online() || old_key.is_none() {
                     if let Ok(mut user) = self.s.services().cache.user_get(user_id).await {
                         user.presence = presence.clone();
@@ -561,7 +565,7 @@ impl MemberList {
         let _ = self
             .events_tx
             .send(MemberListEvent::Broadcast(MessageSync::MemberListSync {
-                user_id: UserId::new(), // dummy
+                user_id: uuid::Uuid::nil().into(), // dummy
                 room_id: self.key.room_id(),
                 channel_id: match &self.key {
                     MemberListKey::RoomThread(_, _, id) => Some(*id),
@@ -642,5 +646,28 @@ impl MemberList {
         }
 
         Ok(ops)
+    }
+}
+
+// TODO: make fields private
+pub struct MemberListHandle {
+    pub(crate) actor_ref: kameo::prelude::ActorRef<RoomActor>,
+    pub(crate) key: MemberListKey,
+    pub(crate) events_tx: broadcast::Sender<MemberListEvent>,
+}
+
+impl MemberListHandle {
+    pub async fn send_command(&self, cmd: MemberListCommand) -> Result<()> {
+        self.actor_ref
+            .tell(MemberListCommandMsg {
+                key: self.key.clone(),
+                cmd,
+            })
+            .await
+            .map_err(|_| crate::Error::Internal("failed to send member list command".to_string()))
+    }
+
+    pub fn subscribe(&self) -> broadcast::Receiver<MemberListEvent> {
+        self.events_tx.subscribe()
     }
 }

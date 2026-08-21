@@ -6,14 +6,14 @@ use std::collections::HashSet;
 
 /// Minimal calculated visibility for member lists
 #[derive(Debug, Default, Clone, Hash, PartialEq, Eq)]
-pub struct MemberListVisibility {
+pub struct ListVisibility {
     /// flat list of minimal permission overwrites in application order
-    overwrites: Vec<VisibilityPermission>,
+    overwrites: Vec<ListVisibilityPerm>,
 }
 
 /// Minimal permission overwrite for ViewChannel
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-struct VisibilityPermission {
+struct ListVisibilityPerm {
     /// ID of role or user
     id: PermissionOverwriteId,
 
@@ -24,7 +24,7 @@ struct VisibilityPermission {
     allowed: bool,
 }
 
-impl MemberListVisibility {
+impl ListVisibility {
     /// Create visibility from permission overwrites
     pub fn from_overwrites(room_id: RoomId, levels: Vec<Vec<PermissionOverwrite>>) -> Self {
         let mut sequence = Vec::new();
@@ -36,72 +36,77 @@ impl MemberListVisibility {
                     continue;
                 }
                 if ow.allow.contains(&Permission::ChannelView) {
-                    sequence.push(VisibilityPermission {
+                    sequence.push(ListVisibilityPerm {
                         id: ow.id,
                         ty: ow.ty,
                         allowed: true,
                     });
                 }
             }
+
             // 2. everyone deny
             for ow in &ow_set {
                 if *ow.id != *room_id {
                     continue;
                 }
                 if ow.deny.contains(&Permission::ChannelView) {
-                    sequence.push(VisibilityPermission {
+                    sequence.push(ListVisibilityPerm {
                         id: ow.id,
                         ty: ow.ty,
                         allowed: false,
                     });
                 }
             }
+
             // 3. role allow
             for ow in &ow_set {
                 if ow.ty != PermissionOverwriteType::Role || *ow.id == *room_id {
                     continue;
                 }
                 if ow.allow.contains(&Permission::ChannelView) {
-                    sequence.push(VisibilityPermission {
+                    sequence.push(ListVisibilityPerm {
                         id: ow.id,
                         ty: ow.ty,
                         allowed: true,
                     });
                 }
             }
+
             // 4. role deny
             for ow in &ow_set {
                 if ow.ty != PermissionOverwriteType::Role || *ow.id == *room_id {
                     continue;
                 }
                 if ow.deny.contains(&Permission::ChannelView) {
-                    sequence.push(VisibilityPermission {
+                    sequence.push(ListVisibilityPerm {
                         id: ow.id,
                         ty: ow.ty,
                         allowed: false,
                     });
                 }
             }
+
             // 5. user allow
             for ow in &ow_set {
                 if ow.ty != PermissionOverwriteType::User {
                     continue;
                 }
                 if ow.allow.contains(&Permission::ChannelView) {
-                    sequence.push(VisibilityPermission {
+                    sequence.push(ListVisibilityPerm {
                         id: ow.id,
                         ty: ow.ty,
                         allowed: true,
                     });
                 }
             }
+
             // 6. user deny
             for ow in &ow_set {
                 if ow.ty != PermissionOverwriteType::User {
                     continue;
                 }
                 if ow.deny.contains(&Permission::ChannelView) {
-                    sequence.push(VisibilityPermission {
+                    sequence.push(ListVisibilityPerm {
                         id: ow.id,
                         ty: ow.ty,
                         allowed: false,

@@ -247,7 +247,7 @@ impl ConnectionSubscriptions {
                     };
 
                     if let Some(t) = target {
-                        let mut syncer = srv.member_lists.create_syncer(self.conn_id.into());
+                        let mut syncer = srv.member_lists.create_syncer(self.conn_id);
                         syncer.set_user_id(Some(user_id)).await;
                         syncer.set_query(t, &ml.ranges).await?;
 

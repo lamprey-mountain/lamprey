@@ -1546,7 +1546,10 @@ impl ServiceChannels {
         let mut overwrites = vec![top.permission_overwrites.clone()];
         while let Some(parent_id) = top.parent_id {
             let chan = srv.channels.get(parent_id, None).await?;
-            overwrites.push(chan.permission_overwrites.clone());
+            let mut ows = chan.permission_overwrites.clone();
+            // sort overwrites into a canonical ordering
+            ows.sort_by_key(|o| o.id);
+            overwrites.push(ows);
             top = chan;
         }
         overwrites.reverse();

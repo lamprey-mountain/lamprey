@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use common::v1::types::{ChannelId, MemberListGroupId, RoleId, RoomId, UserId};
 
-use crate::services::member_lists::visibility::MemberListVisibility;
+use crate::services::member_lists::visibility::ListVisibility;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MemberListTarget {
@@ -28,10 +28,10 @@ pub enum MemberListKey {
     Room(RoomId),
 
     /// A channel in a room
-    RoomChannel(RoomId, MemberListVisibility),
+    RoomChannel(RoomId, ListVisibility),
 
     /// A thread in a room's channel
-    RoomThread(RoomId, MemberListVisibility, ChannelId),
+    RoomThread(RoomId, ListVisibility, ChannelId),
 
     /// A DM channel
     Dm(ChannelId),

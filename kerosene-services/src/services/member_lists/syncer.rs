@@ -1,7 +1,9 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use common::v1::types::{ChannelId, MemberListOp, MessageSync, RoomId, UserId};
+use common::v2::types::ConnectionId;
 use tokio_stream::{StreamExt, StreamMap, StreamNotifyClose, wrappers::BroadcastStream};
+use tracing::debug;
 use uuid::Uuid;
 
 use crate::prelude::*;
@@ -14,7 +16,7 @@ use crate::services::rooms::actor::MemberListCommandMsg;
 /// Syncer for member list events
 pub struct MemberListSyncer {
     pub(super) s: Globals,
-    pub(super) conn_id: Uuid,
+    pub(super) conn_id: ConnectionId,
     pub(super) outbox: VecDeque<MessageSync>,
     pub(super) subscriptions: HashMap<MemberListKey, HashSet<MemberListKey1>>,
     pub(super) streams:
@@ -28,7 +30,7 @@ pub struct MemberListSyncer {
 
 impl MemberListSyncer {
     /// Create a new member list syncer
-    pub(super) fn new(s: Globals, conn_id: Uuid) -> Self {
+    pub(super) fn new(s: Globals, conn_id: ConnectionId) -> Self {
         Self {
             s,
             conn_id,
@@ -206,6 +208,7 @@ impl MemberListSyncer {
     }
 
     /// Poll for new events
+    #[tracing::instrument(skip(self), fields(connection_id = %self.conn_id, user_id = ?self.user_id))]
     pub async fn poll(&mut self) -> Result<MessageSync> {
         let user_id = match self.user_id {
             Some(uid) => uid,
@@ -225,9 +228,24 @@ impl MemberListSyncer {
                         Some(Ok(MemberListEvent::Unicast(conn_id, msg))) if conn_id == self.conn_id => msg,
                         Some(Ok(_)) => {
                             continue // skip other unicasts
-                            },
+                        },
                         Some(Err(e)) => return Err(Error::Internal(format!("member list stream error: {e}"))),
-                        None => continue, // stream closed, try next
+                        None => {
+                            // stream closed, attempt to resubscribe
+                            debug!("stream closed, attempt to resubscribe");
+                            let srv = self.s.services();
+                            if let Ok(list) = srv.member_lists.ensure(key.clone()).await {
+                                let stream = StreamNotifyClose::new(BroadcastStream::new(list.subscribe()));
+                                self.streams.insert(key.clone(), stream);
+                                debug!("successfully resubscribed to member list");
+                                // TODO: resend GetInitialRanges (resync from scratch since some events may have been missed)
+                            } else {
+                                debug!("could not resubscribe, removing subscription");
+                                self.subscriptions.remove(&key);
+                                // TODO: notify client when the server removes a subscription
+                            }
+                            continue;
+                        },
                     };
 
                     // PERF: maybe don't clone msg multiple times?
@@ -264,6 +282,7 @@ impl MemberListSyncer {
             *uid = user_id;
 
             for op in ops {
+                // NOTE: maybe i should remove from known_users/members when sending a delete op
                 match op {
                     MemberListOp::Sync {
                         room_members,
