@@ -107,10 +107,10 @@ export const OauthAuthorizePrompt = (
 				</div>
 			</div>
 			<menu>
-				<button type="button" class="big" onClick={cancel}>
+				<button type="button" class="button big" onClick={cancel}>
 					cancel
 				</button>
-				<button type="button" class="big primary" onClick={authorize}>
+				<button type="button" class="button big primary" onClick={authorize}>
 					authorize
 				</button>
 			</menu>

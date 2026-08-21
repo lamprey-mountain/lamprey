@@ -2320,6 +2320,7 @@ body.resizing {
 	menu {
 		display: flex;
 		justify-content: end;
+		gap: 8px;
 	}
 
 	button {
@@ -2330,8 +2331,8 @@ body.resizing {
 
 	.description {
 		max-width: 60ch;
-		margin: 4px 0;
-		border: solid #444 1px;
+		margin-block: 8px;
+		border: solid $sep-500 1px;
 		padding: 8px;
 		border-radius: 4px;
 	}
@@ -2342,7 +2343,7 @@ body.resizing {
 	}
 
 	.info {
-		background: #111;
+		background: $bg-100;
 		padding: 8px;
 		margin: 4px 0;
 		border-radius: 4px;
