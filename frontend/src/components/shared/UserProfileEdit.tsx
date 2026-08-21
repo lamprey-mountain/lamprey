@@ -3,6 +3,7 @@ import { debounce } from "@solid-primitives/scheduled";
 import { useNavigate } from "@solidjs/router";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { createStore } from "solid-js/store";
+import { Portal } from "solid-js/web";
 import type { PresenceActivity, UserStatus } from "ts-sdk";
 import { useApi } from "@/api";
 import { Icon } from "@/atoms/Icon";
@@ -272,65 +273,67 @@ export function UserProfileEdit(props: UserProps) {
 					</menu>
 				</div>
 
-				<Show when={editRoles()}>
-					{(ed) => (
-						<Show when={room_member()}>
-							{(member) => (
-								<EditRoles
-									x={ed().x}
-									y={ed().y}
-									user_id={props.user.id}
-									room_id={member().room_id}
-								/>
-							)}
-						</Show>
-					)}
-				</Show>
-				<Show when={statusMenuVisible()}>
-					<menu
-						ref={setStatusMenuRef}
-						class="status-menu"
-						style={{
-							position: statusMenuPosition.strategy,
-							left: `${statusMenuPosition.x}px`,
-							top: `${statusMenuPosition.y}px`,
-							"z-index": 1000,
-						}}
-						onClick={(e) => e.stopPropagation()}
-						onMouseEnter={showStatusMenu}
-						onMouseLeave={hideStatusMenu}
-					>
-						<button class="button" onClick={[setPresenceStatus, "Online"]}>
-							<div class="inner">
-								<Status status="Online" /> Online
-							</div>
-						</button>
-						<button class="button" onClick={[setPresenceStatus, "Away"]}>
-							<div class="inner">
-								<Status status="Away" /> Away
-							</div>
-						</button>
-						<button class="button" onClick={[setPresenceStatus, "Busy"]}>
-							<div class="inner">
-								<Status status="Busy" /> Busy
-							</div>
-						</button>
-						<button class="button" onClick={[setPresenceStatus, "Available"]}>
-							<div class="inner">
-								<Status status="Available" /> Available
-							</div>
-						</button>
-						<button class="button" onClick={[setPresenceStatus, "Offline"]}>
-							<div class="inner">
-								<Status status="Offline" /> Offline
-							</div>
-						</button>
-						<hr />
-						<button class="button" onClick={openPresenceTextPrompt}>
-							<div class="inner">Set status message...</div>
-						</button>
-					</menu>
-				</Show>
+				<Portal mount={document.getElementById("overlay")!}>
+					<Show when={editRoles()}>
+						{(ed) => (
+							<Show when={room_member()}>
+								{(member) => (
+									<EditRoles
+										x={ed().x}
+										y={ed().y}
+										user_id={props.user.id}
+										room_id={member().room_id}
+									/>
+								)}
+							</Show>
+						)}
+					</Show>
+					<Show when={statusMenuVisible()}>
+						<menu
+							ref={setStatusMenuRef}
+							class="status-menu"
+							style={{
+								position: statusMenuPosition.strategy,
+								left: `${statusMenuPosition.x}px`,
+								top: `${statusMenuPosition.y}px`,
+								"z-index": 1000,
+							}}
+							onClick={(e) => e.stopPropagation()}
+							onMouseEnter={showStatusMenu}
+							onMouseLeave={hideStatusMenu}
+						>
+							<button class="button" onClick={[setPresenceStatus, "Online"]}>
+								<div class="inner">
+									<Status status="Online" /> Online
+								</div>
+							</button>
+							<button class="button" onClick={[setPresenceStatus, "Away"]}>
+								<div class="inner">
+									<Status status="Away" /> Away
+								</div>
+							</button>
+							<button class="button" onClick={[setPresenceStatus, "Busy"]}>
+								<div class="inner">
+									<Status status="Busy" /> Busy
+								</div>
+							</button>
+							<button class="button" onClick={[setPresenceStatus, "Available"]}>
+								<div class="inner">
+									<Status status="Available" /> Available
+								</div>
+							</button>
+							<button class="button" onClick={[setPresenceStatus, "Offline"]}>
+								<div class="inner">
+									<Status status="Offline" /> Offline
+								</div>
+							</button>
+							<hr />
+							<button class="button" onClick={openPresenceTextPrompt}>
+								<div class="inner">Set status message...</div>
+							</button>
+						</menu>
+					</Show>
+				</Portal>
 			</div>
 		</div>
 	);
