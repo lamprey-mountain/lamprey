@@ -5,7 +5,7 @@ import { useConfig } from "@/lib/config";
 export const NSFW_KEY = "nsfw";
 export const NSFW_THRESHOLD = 0.5;
 
-export type MediaProps = VoidProps<{ media: Media }>;
+export type MediaProps = VoidProps<{ media: Media; expanded?: boolean }>;
 
 export function formatTime(time: number): string {
 	const t = Math.floor(time);

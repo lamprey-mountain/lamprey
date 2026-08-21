@@ -59,6 +59,7 @@ import {
 	useRoom,
 } from "@/contexts/room.tsx";
 import { flags } from "@/lib/flags";
+import { MediaSidebar } from "@/media/Sidebar";
 import type { RoomT } from "@/types";
 import type { ChannelSearch } from "@/types/chat";
 import { icUser } from "@/utils/icons";
@@ -326,6 +327,18 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 				>
 					<ThreadMembers thread={props.channel} />
 				</Resizable>
+			</Match>
+			<Match when={ch.sidebar_media}>
+				{(media) => (
+					<Resizable
+						storageKey="media-width"
+						initialWidth={400}
+						minWidth={300}
+						maxWidth={600}
+					>
+						<MediaSidebar media={media()} />
+					</Resizable>
+				)}
 			</Match>
 		</Switch>
 	);

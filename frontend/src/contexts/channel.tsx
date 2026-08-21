@@ -1,5 +1,5 @@
 import type { EditorState } from "prosemirror-state";
-import type { Message, Pagination } from "sdk";
+import type { Media, Message, Pagination } from "sdk";
 import { createContext, useContext } from "solid-js";
 import type { SetStoreFunction, Store } from "solid-js/store";
 import {
@@ -41,6 +41,7 @@ export type ChannelState = {
 	voice_chat_sidebar_open: boolean;
 	history_view: boolean;
 	thread_chat_sidebar_thread_id?: string;
+	sidebar_media?: Media; // TODO: support passing attachment here too
 
 	slowmode_expire_at: Date | null;
 	editingMessage?: {

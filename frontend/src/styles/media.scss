@@ -520,3 +520,25 @@
 		align-items: end;
 	}
 }
+
+.media-sidebar {
+	contain: content;
+	overflow: hidden;
+
+	& > .code-block-container {
+		display: flex;
+		flex-direction: column;
+		border: none;
+		margin: 0;
+		height: 100%;
+
+		& > .wrap {
+			flex: 1;
+			overflow-y: auto;
+
+			& > .expand-btn {
+				display: none;
+			}
+		}
+	}
+}

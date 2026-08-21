@@ -9,7 +9,11 @@ import { ThreeView } from "./Three";
 import { is3D } from "./three-util";
 import { VideoView } from "./Video";
 
-export type MediaViewProps = { media: Media; attachment?: Attachment };
+export type MediaViewProps = {
+	media: Media;
+	attachment?: Attachment;
+	expanded?: boolean;
+};
 
 export function MediaView(props: MediaViewProps) {
 	const media = () => props.media;
@@ -38,7 +42,7 @@ export function MediaView(props: MediaViewProps) {
 				<AudioView media={media()} />
 			</Match>
 			<Match when={isText()}>
-				<TextView media={media()} />
+				<TextView media={media()} expanded={props.expanded} />
 			</Match>
 			<Match when={flags.has("media_three") && is3D(media())}>
 				<ThreeView media={media()} />

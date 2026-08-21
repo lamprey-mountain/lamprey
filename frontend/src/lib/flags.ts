@@ -53,6 +53,7 @@ export const allFlags = [
 	{ id: "media_three" },
 	{ id: "code_color_preview" },
 	{ id: "nsfw_blur" },
+	{ id: "media_sidebar" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -85,6 +86,7 @@ const flagsDev: Flag[] = [
 	"code_color_preview",
 	"channel_info",
 	"nsfw_blur",
+	"media_sidebar",
 ];
 
 const flagsProd: Flag[] = [

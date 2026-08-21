@@ -6,6 +6,7 @@ import {
 	For,
 	Show,
 } from "solid-js";
+import { useOptionalChannel } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
 import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
@@ -14,7 +15,6 @@ import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
 const MAX_PREVIEW_SIZE = 16384;
 
 export const TextView = (props: MediaProps) => {
-	const _ty = () => props.media.content_type.split(";")[0];
 	const isHtml = () =>
 		props.media.filename.endsWith(".html") ||
 		props.media.filename.endsWith(".htm") ||
@@ -26,7 +26,7 @@ export const TextView = (props: MediaProps) => {
 		props.media.filename.endsWith(".rs") ||
 		props.media.content_type.includes("rust");
 
-	const [collapsed, setCollapsed] = createSignal(true);
+	const [collapsed, setCollapsed] = createSignal(!(props.expanded ?? false));
 	const [copied, setCopied] = createSignal(false);
 	const [preview, setPreview] = createSignal(false);
 	const [fetchFull, setFetchFull] = createSignal(false);
@@ -113,6 +113,19 @@ export const TextView = (props: MediaProps) => {
 		}
 	});
 
+	const [ch, updateCh] = useOptionalChannel();
+	const openInSidebar = () => {
+		if (!ch) return;
+		const isOpen = ch.sidebar_media?.id === props.media.id;
+
+		// HACK: close media sidebar first, otherwise updateCh seems to try to merge the media objects
+		// i should probably pass sidebar_media_id instead and fetch media from api
+		updateCh("sidebar_media", undefined);
+		if (!isOpen) {
+			updateCh("sidebar_media", props.media);
+		}
+	};
+
 	return (
 		<div class="media-text code-block-container">
 			<div class="code-block-header">
@@ -144,6 +157,11 @@ export const TextView = (props: MediaProps) => {
 					<button type="button" class="copy" onClick={copy}>
 						{copied() ? "copied!" : "copy"}
 					</button>
+					<Show when={flags.has("media_sidebar")}>
+						<button type="button" class="button" onClick={openInSidebar}>
+							sidebar
+						</button>
+					</Show>
 				</div>
 			</div>
 			<div class="wrap" classList={{ collapsed: collapsed() }}>
