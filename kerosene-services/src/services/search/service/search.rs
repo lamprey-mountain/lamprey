@@ -193,24 +193,12 @@ impl ServiceSearch {
     }
 
     // TODO: redesign this?
-    // pub async fn search_channels(
-    //     &self,
-    //     user_id: UserId,
-    //     visibility: SearchChannelsVisibility,
-    //     req: ChannelSearchRequest,
-    // ) -> Result<ChannelSearch> {}
-
     pub async fn search_channels(
         &self,
         user_id: UserId,
         req: ChannelSearchRequest,
     ) -> Result<ChannelSearch> {
-        let srv = self.state.services();
         let mut data = self.state.begin_read().await?;
-        let index = self.get_index().await?;
-        let searcher = index.searcher().await?;
-        let cs = ContentSearcher::new(searcher);
-
         let rooms = data
             .room_list(
                 user_id,
@@ -225,14 +213,29 @@ impl ServiceSearch {
             .await?;
         let room_ids: Vec<RoomId> = rooms.items.iter().map(|r| r.id).collect();
 
+        let visibility = SearchChannelsVisibility::Filtered {
+            user_ids: vec![user_id],
+            room_ids,
+        };
+
+        self.search_channels_inner(user_id, visibility, req).await
+    }
+
+    async fn search_channels_inner(
+        &self,
+        user_id: UserId,
+        visibility: SearchChannelsVisibility,
+        req: ChannelSearchRequest,
+    ) -> Result<ChannelSearch> {
+        let srv = self.state.services();
+        let mut data = self.state.begin_read().await?;
+        let index = self.get_index().await?;
+        let searcher = index.searcher().await?;
+        let cs = ContentSearcher::new(searcher);
+
+        let offset = req.inner.offset;
         let raw_result = cs
-            .search_channels(TantivySearchChannels {
-                req: req.clone(),
-                visibility: SearchChannelsVisibility::Filtered {
-                    user_ids: vec![user_id],
-                    room_ids,
-                },
-            })
+            .search_channels(TantivySearchChannels { req, visibility })
             .await?;
 
         let channel_ids: Vec<ChannelId> = raw_result.items.iter().map(|i| i.id).collect();
@@ -242,7 +245,7 @@ impl ServiceSearch {
             srv.channels.get_many(&channel_ids, Some(user_id)).await?
         };
 
-        let has_more = (req.inner.offset as u64 + channel_ids.len() as u64) < raw_result.total;
+        let has_more = (offset as u64 + channel_ids.len() as u64) < raw_result.total;
 
         Ok(ChannelSearch {
             results: channel_ids,

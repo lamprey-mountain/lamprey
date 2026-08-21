@@ -2,10 +2,11 @@ use std::str::FromStr;
 
 use common::{v1::types::ChannelId, v2::types::RoomId};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// a request to reindex stuff on the server
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Reindex {
     /// reindex only these types of documents
     pub doctypes: Vec<Doctype>,
@@ -52,7 +53,7 @@ pub enum SearchReindexQueueTarget {
 
 /// the type of a tantivy document
 // TODO: remove, use crate-search instead
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum Doctype {
     /// document represents a message
     Message,

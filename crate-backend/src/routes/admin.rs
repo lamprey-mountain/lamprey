@@ -238,9 +238,59 @@ async fn admin_collect_garbage(
     Ok(Json(res))
 }
 
+// TODO: change some admin paths to be under /internal/*?
+
+/// Admin reindex
+///
+/// Reindex some stuff
+#[utoipa::path(
+    post,
+    path = "/admin/reindex",
+    tags = ["admin", "badge.admin_only", "badge.server-perm.Admin", "badge.audit-log.Reindex"],
+    responses((status = ACCEPTED, description = "Reindexing queued")),
+)]
+async fn admin_search_reindex(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Json(reindex): Json<Reindex>,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+
+    let al = auth.audit_log(SERVER_ROOM_ID);
+    let srv = s.services();
+
+    srv.perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::ServerMaintenance)
+        .check()?;
+
+    let mut changes = Changes::new();
+    if !reindex.doctypes.is_empty() {
+        changes = changes.add("doctypes", &reindex.doctypes);
+    }
+    if !reindex.room_ids.is_empty() {
+        changes = changes.add("room_ids", &reindex.room_ids);
+    }
+    if !reindex.channel_ids.is_empty() {
+        changes = changes.add("channel_ids", &reindex.channel_ids);
+    }
+
+    srv.search.reindex(reindex).await?;
+
+    al.commit_success(AuditLogEntryType::Reindex {
+        changes: changes.build(),
+    })
+    .await?;
+
+    Ok(StatusCode::ACCEPTED)
+}
+
 /// Admin reindex channel
 ///
 /// Queue a channel to be reindexed for search
+#[deprecated = "use admin_reindex route instead"]
 #[utoipa::path(
     post,
     path = "/admin/reindex-channel/{channel_id}",
@@ -286,6 +336,7 @@ async fn admin_reindex_channel(
 /// Admin reindex room
 ///
 /// Queue all channels in a room to be reindexed for search
+#[deprecated = "use admin_reindex route instead"]
 #[utoipa::path(
     post,
     path = "/admin/reindex-room/{room_id}",
@@ -331,6 +382,7 @@ async fn admin_reindex_room(
 /// Admin reindex everything
 ///
 /// Queue all channels to be reindexed for search. This deletes all existing search index data first.
+#[deprecated = "use admin_reindex route instead"]
 #[utoipa::path(
     post,
     path = "/admin/reindex-everything",
@@ -636,6 +688,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(admin_register_user))
         .routes(routes!(admin_purge_cache))
         .routes(routes!(admin_collect_garbage))
+        .routes(routes!(admin_search_reindex))
         .routes(routes!(admin_reindex_channel))
         .routes(routes!(admin_reindex_room))
         .routes(routes!(admin_reindex_everything))

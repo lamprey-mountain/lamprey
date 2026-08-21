@@ -289,8 +289,9 @@ impl UnifiedSchema {
 
     /// construct a term that requires `metadata_fast.public` to exist and be true
     pub fn term_public(&self) -> Term {
-        // FIXME: actually check that it equals `true`
-        Term::from_field_json_path(self.metadata_fast, "public", false)
+        let mut t = Term::from_field_json_path(self.metadata_fast, "public", false);
+        t.append_type_and_fast_value(true);
+        t
     }
 
     /// construct a term query that requires `metadata_fast.public` to exist and be true

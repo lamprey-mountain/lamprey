@@ -8,8 +8,8 @@ use http::HeaderMap;
 use tracing::error;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::error::Result;
-use crate::{Error, ServerState};
+use crate::ServerState;
+use crate::prelude::*;
 
 /// Internal rpc
 #[utoipa::path(

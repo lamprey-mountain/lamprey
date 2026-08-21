@@ -22,6 +22,12 @@ pub enum SearchMessagesVisibility {
 
     /// only messages in these filtered channels
     Filtered(Vec<ChannelVisibility>),
+
+    /// public messages + these channels
+    Public(Vec<ChannelVisibility>),
+
+    /// only public messages
+    PublicOnly,
 }
 
 /// what channels to include in the search
@@ -38,6 +44,18 @@ pub enum SearchChannelsVisibility {
         /// for regular channels
         room_ids: Vec<RoomId>,
     },
+
+    /// public channels + these rooms/users
+    Public {
+        /// for dms/gdms
+        user_ids: Vec<UserId>,
+
+        /// for regular channels
+        room_ids: Vec<RoomId>,
+    },
+
+    /// only public channels
+    PublicOnly,
 }
 
 /// what rooms to include in the search
@@ -96,34 +114,44 @@ impl TantivyVisibility for SearchMessagesVisibility {
     fn into_query(self) -> Box<dyn Query> {
         match self {
             SearchMessagesVisibility::Everything => Box::new(AllQuery),
-            SearchMessagesVisibility::Filtered(items) => {
-                let mut channel_terms = vec![];
-                let mut parent_channel_terms = vec![];
-                for item in items {
-                    let id = item.id;
-                    let can_view_private_threads = item.can_view_private_threads;
-                    let id_str = id.to_string();
-                    channel_terms.push(Term::from_field_text(SCHEMA.channel_id, &id_str));
-
-                    if can_view_private_threads {
-                        parent_channel_terms
-                            .push(Term::from_field_text(SCHEMA.parent_channel_id, &id_str));
-                    }
-                }
-
+            SearchMessagesVisibility::PublicOnly => SCHEMA.query_public(),
+            SearchMessagesVisibility::Filtered(items) => Self::filtered_query(items),
+            SearchMessagesVisibility::Public(items) => {
                 let mut q = BqBuilder::new();
-
-                if !channel_terms.is_empty() {
-                    q.should(Box::new(TermSetQuery::new(channel_terms)));
-                }
-
-                if !parent_channel_terms.is_empty() {
-                    q.should(Box::new(TermSetQuery::new(parent_channel_terms)));
-                }
-
+                q.should(SCHEMA.query_public());
+                q.should(Self::filtered_query(items));
                 Box::new(q.build())
             }
         }
+    }
+}
+
+impl SearchMessagesVisibility {
+    fn filtered_query(items: Vec<ChannelVisibility>) -> Box<dyn Query> {
+        let mut channel_terms = vec![];
+        let mut parent_channel_terms = vec![];
+        for item in items {
+            let id = item.id;
+            let can_view_private_threads = item.can_view_private_threads;
+            let id_str = id.to_string();
+            channel_terms.push(Term::from_field_text(SCHEMA.channel_id, &id_str));
+
+            if can_view_private_threads {
+                parent_channel_terms.push(Term::from_field_text(SCHEMA.parent_channel_id, &id_str));
+            }
+        }
+
+        let mut q = BqBuilder::new();
+
+        if !channel_terms.is_empty() {
+            q.should(Box::new(TermSetQuery::new(channel_terms)));
+        }
+
+        if !parent_channel_terms.is_empty() {
+            q.should(Box::new(TermSetQuery::new(parent_channel_terms)));
+        }
+
+        Box::new(q.build())
     }
 }
 
@@ -131,28 +159,41 @@ impl TantivyVisibility for SearchChannelsVisibility {
     fn into_query(self) -> Box<dyn Query> {
         match self {
             SearchChannelsVisibility::Everything => Box::new(AllQuery),
+            SearchChannelsVisibility::PublicOnly => SCHEMA.query_public(),
             SearchChannelsVisibility::Filtered { user_ids, room_ids } => {
+                Self::filtered_query(user_ids, room_ids)
+            }
+            SearchChannelsVisibility::Public { user_ids, room_ids } => {
                 let mut q = BqBuilder::new();
-
-                if !room_ids.is_empty() {
-                    let terms: Vec<_> = room_ids
-                        .iter()
-                        .map(|id| Term::from_field_text(SCHEMA.room_id, &id.to_string()))
-                        .collect();
-                    q.should(Box::new(TermSetQuery::new(terms)));
-                }
-
-                if !user_ids.is_empty() {
-                    let terms: Vec<_> = user_ids
-                        .iter()
-                        .map(|id| Term::from_field_text(SCHEMA.author_id, &id.to_string()))
-                        .collect();
-                    q.should(Box::new(TermSetQuery::new(terms)));
-                }
-
+                q.should(SCHEMA.query_public());
+                q.should(Self::filtered_query(user_ids, room_ids));
                 Box::new(q.build())
             }
         }
+    }
+}
+
+impl SearchChannelsVisibility {
+    fn filtered_query(user_ids: Vec<UserId>, room_ids: Vec<RoomId>) -> Box<dyn Query> {
+        let mut q = BqBuilder::new();
+
+        if !room_ids.is_empty() {
+            let terms: Vec<_> = room_ids
+                .iter()
+                .map(|id| Term::from_field_text(SCHEMA.room_id, &id.to_string()))
+                .collect();
+            q.should(Box::new(TermSetQuery::new(terms)));
+        }
+
+        if !user_ids.is_empty() {
+            let terms: Vec<_> = user_ids
+                .iter()
+                .map(|id| Term::from_field_text(SCHEMA.author_id, &id.to_string()))
+                .collect();
+            q.should(Box::new(TermSetQuery::new(terms)));
+        }
+
+        Box::new(q.build())
     }
 }
 

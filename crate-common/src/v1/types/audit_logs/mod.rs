@@ -567,14 +567,21 @@ pub enum AuditLogEntryType {
         changes: Vec<AuditLogChange>,
     },
 
+    Reindex {
+        changes: Vec<AuditLogChange>,
+    },
+
+    // TODO: remove
     ChannelReindex {
         channel_id: ChannelId,
     },
 
+    // TODO: remove
     RoomReindex {
         room_id: RoomId,
     },
 
+    // TODO: remove
     ReindexEverything,
 
     ServerUpdate {
