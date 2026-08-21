@@ -45,9 +45,3 @@ pub struct UserSearch {
     /// current page cursor
     pub cursor: Option<String>,
 }
-
-// TODO: index these extra fields:
-// puppet: bool,
-// guest: bool,
-// server_role_id: Vec<RoleId>,
-// member_of_room_id: Vec<RoleId>,

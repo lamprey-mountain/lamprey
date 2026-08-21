@@ -275,12 +275,8 @@ impl SearchDocument for SearchUser<'_> {
             doc.add_text(s.content, description);
         }
 
-        if let Some(registered_at) = user.registered_at {
-            doc.add_date(s.created_at, TantivyDT::from_utc(*registered_at));
-        } else {
-            let created_at: Time = user.id.try_into().unwrap();
-            doc.add_date(s.created_at, TantivyDT::from_utc(*created_at));
-        }
+        let created_at: Time = user.id.try_into().unwrap();
+        doc.add_date(s.created_at, TantivyDT::from_utc(*created_at));
 
         if let Some(deleted_at) = user.deleted_at {
             doc.add_date(s.deleted_at, TantivyDT::from_utc(*deleted_at));
@@ -290,7 +286,28 @@ impl SearchDocument for SearchUser<'_> {
         meta_fast.insert("bot".to_string(), user.bot.into());
         meta_fast.insert("system".to_string(), user.system.into());
         meta_fast.insert("suspended".to_string(), user.is_suspended().into());
-        // TODO: insert registered_at into meta_fast, make created_at the actual creation date
+
+        if let Some(registered_at) = user.registered_at {
+            meta_fast.insert(
+                "registered_at".to_string(),
+                TantivyDT::from_utc(*registered_at).into(),
+            );
+        }
+
+        meta_fast.insert("puppet".to_string(), user.puppet.is_some().into());
+        if let Some(puppet) = &user.puppet {
+            meta_fast.insert(
+                "puppet_owner_id".to_string(),
+                puppet.owner_id.to_string().into(),
+            );
+            if let Some(alias_id) = &puppet.alias_id {
+                meta_fast.insert("puppet_alias_id".to_string(), alias_id.to_string().into());
+            }
+        }
+
+        // TODO(future): index these extra fields:
+        // server_role_id: Vec<RoleId>, -- ids of roles in the server room this user has
+        // room_id: Vec<RoomId>, -- ids of rooms this user is in
 
         doc.add_object(s.metadata_fast, meta_fast);
 

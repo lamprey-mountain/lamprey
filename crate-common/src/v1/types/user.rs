@@ -1,13 +1,12 @@
 use lamprey_macros::record;
 use url::Url;
 
+use crate::v1::types::MediaId;
 use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::federation::Remote;
 use crate::v1::types::preferences::PreferencesUser;
 use crate::v1::types::presence::Presence;
-use crate::v1::types::search::Order;
 use crate::v1::types::util::{Diff, Time};
-use crate::v1::types::{MediaId, RoleId};
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
@@ -16,6 +15,7 @@ use super::email::EmailInfo;
 use super::preferences::PreferencesGlobal;
 use super::{ApplicationId, ChannelId, RoomId, UserId, UserVerId};
 
+// TODO: dedicated user.created_at field instead of parsing user.id
 #[record]
 pub struct User {
     pub id: UserId,
