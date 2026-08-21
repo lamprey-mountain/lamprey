@@ -9,7 +9,10 @@ use axum::{
     response::IntoResponse,
 };
 use bytes::Bytes;
-use common::v2::types::media::{MediaCreate, MediaCreateSource};
+use common::{
+    v1::types::misc::Color,
+    v2::types::media::{MediaCreate, MediaCreateSource},
+};
 use common::{
     v1::types::{
         self, EmbedCreate, MessageAttachmentCreate, MessageAttachmentCreateType, MessageCreate,
@@ -221,7 +224,7 @@ fn convert_embed_with_media(
         title: embed.title,
         description: embed.description,
         url: embed.url,
-        color: embed.color.map(|c| format!("#{:06x}", c)),
+        color: embed.color.and_then(|c| format!("#{:06x}", c).parse().ok()),
         author_name: embed.author.as_ref().map(|a| a.name.clone()),
         author_url: embed.author.and_then(|a| a.url),
         media: image_media,

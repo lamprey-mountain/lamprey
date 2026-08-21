@@ -1209,6 +1209,60 @@ impl MessageCreate {
             && self.attachments.is_empty()
             && self.embeds.is_empty()
     }
+
+    /// set the content of the message
+    pub fn content<S: Into<String>>(mut self, content: S) -> Self {
+        self.content = Some(content.into());
+        self
+    }
+
+    /// set the id of the message to reply to
+    pub fn reply_id(mut self, reply_id: MessageId) -> Self {
+        self.reply_id = Some(reply_id);
+        self
+    }
+
+    /// add an embed to the message
+    pub fn embed(mut self, embed: EmbedCreate) -> Self {
+        self.embeds.push(embed);
+        self
+    }
+
+    /// set the embeds for the message
+    pub fn embeds(mut self, embeds: Vec<EmbedCreate>) -> Self {
+        self.embeds = embeds;
+        self
+    }
+
+    /// add an attachment to the message
+    pub fn attachment(mut self, attachment: MessageAttachmentCreate) -> Self {
+        self.attachments.push(attachment);
+        self
+    }
+
+    /// set the attachments for the message
+    pub fn attachments(mut self, attachments: Vec<MessageAttachmentCreate>) -> Self {
+        self.attachments = attachments;
+        self
+    }
+
+    /// set the metadata for the message
+    pub fn metadata(mut self, metadata: Metadata) -> Self {
+        self.metadata = Some(metadata);
+        self
+    }
+
+    /// set the components for the message
+    pub fn components(mut self, components: Components<components::Create>) -> Self {
+        self.components = Some(components);
+        self
+    }
+
+    /// set the mentions for the message
+    pub fn mentions(mut self, mentions: ParseMentions) -> Self {
+        self.mentions = mentions;
+        self
+    }
 }
 
 impl From<String> for MessageCreate {

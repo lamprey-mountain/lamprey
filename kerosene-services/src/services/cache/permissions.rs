@@ -394,7 +394,9 @@ impl PermissionsCalculator {
         }
     }
 
-    /// get the rank of this user, the position of the highest role this user has
+    /// get the rank of a user
+    ///
+    /// a user's rank is their highest role's position
     pub fn rank(&self, user_id: UserId) -> u64 {
         if self.owner_id == Some(user_id) {
             return u64::MAX;

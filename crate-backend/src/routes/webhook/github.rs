@@ -121,9 +121,9 @@ fn handle_push_event(event: PushEvent) -> Result<MessageCreate> {
 fn handle_issues_event(event: IssuesEvent) -> Result<MessageCreate> {
     let action = event.action;
     let color = match action.as_str() {
-        "opened" | "reopened" => Some("#28a745"), // green
-        "closed" => Some("#d73a49"),              // red
-        _ => Some("#6a737d"),                     // gray
+        "opened" | "reopened" => "#28a745", // green
+        "closed" => "#d73a49",              // red
+        _ => "#6a737d",                     // gray
     };
 
     let embed = EmbedCreate {
@@ -133,7 +133,7 @@ fn handle_issues_event(event: IssuesEvent) -> Result<MessageCreate> {
         )),
         description: Some(format!("Issue {} by {}", action, event.issue.user.login)),
         url: Some(event.issue.html_url.parse()?),
-        color: color.map(String::from),
+        color: color.parse().ok(),
         author_name: Some(event.sender.login.clone()),
         ..Default::default()
     };
@@ -147,9 +147,9 @@ fn handle_issues_event(event: IssuesEvent) -> Result<MessageCreate> {
 fn handle_pull_request_event(event: PullRequestEvent) -> Result<MessageCreate> {
     let action = event.action;
     let color = match action.as_str() {
-        "opened" | "reopened" => Some("#28a745"), // green
-        "closed" => Some("#d73a49"),              // red
-        _ => Some("#6a737d"),                     // gray
+        "opened" | "reopened" => "#28a745", // green
+        "closed" => "#d73a49",              // red
+        _ => "#6a737d",                     // gray
     };
 
     let embed = EmbedCreate {
@@ -159,7 +159,7 @@ fn handle_pull_request_event(event: PullRequestEvent) -> Result<MessageCreate> {
         )),
         description: Some(format!("Pull Request {} by {}", action, event.sender.login)),
         url: Some(event.pull_request.html_url.parse()?),
-        color: color.map(String::from),
+        color: color.parse().ok(),
         author_name: Some(event.sender.login.clone()),
         ..Default::default()
     };

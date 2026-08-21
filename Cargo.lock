@@ -5270,6 +5270,7 @@ dependencies = [
  "futures",
  "futures-util",
  "headers",
+ "http",
  "lamprey-backend-core",
  "lamprey-common",
  "lamprey-hakari",

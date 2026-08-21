@@ -99,7 +99,7 @@ pub struct EmbedCreate {
     pub description: Option<String>,
 
     /// the theme color of the site, as a hex string (`#rrggbb`)
-    pub color: Option<String>,
+    pub color: Option<Color>,
     pub media: Option<MediaReference>,
     pub thumbnail: Option<MediaReference>,
 
@@ -112,7 +112,67 @@ pub struct EmbedCreate {
     pub author_avatar: Option<MediaReference>,
 }
 
+impl EmbedCreate {
+    /// set the title of the embed
+    pub fn title<S: Into<String>>(mut self, title: S) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    /// set the color of the embed
+    pub fn color<C: Into<Color>>(mut self, color: C) -> Self {
+        self.color = Some(color.into());
+        self
+    }
+
+    /// set the description of the embed
+    pub fn description<S: Into<String>>(mut self, description: S) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    /// set the media of the embed
+    pub fn media(mut self, media_ref: MediaReference) -> Self {
+        self.media = Some(media_ref);
+        self
+    }
+
+    /// set the url of the embed
+    pub fn url(mut self, url: Url) -> Self {
+        self.url = Some(url);
+        self
+    }
+
+    /// set the thumbnail of the embed
+    pub fn thumbnail(mut self, thumbnail: MediaReference) -> Self {
+        self.thumbnail = Some(thumbnail);
+        self
+    }
+
+    /// set the author name of the embed
+    pub fn author_name<S: Into<String>>(mut self, author_name: S) -> Self {
+        self.author_name = Some(author_name.into());
+        self
+    }
+
+    /// set the author url of the embed
+    pub fn author_url(mut self, author_url: Url) -> Self {
+        self.author_url = Some(author_url);
+        self
+    }
+
+    /// set the author avatar of the embed
+    pub fn author_avatar(mut self, author_avatar: MediaReference) -> Self {
+        self.author_avatar = Some(author_avatar);
+        self
+    }
+}
+
 impl Embed {
+    pub fn builder() -> EmbedCreate {
+        EmbedCreate::default()
+    }
+
     pub fn truncate(self) -> Self {
         let title = self
             .title
@@ -144,5 +204,31 @@ impl Embed {
             site_avatar: self.site_avatar,
             ..self
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use url::Url;
+
+    #[test]
+    fn test_embed_create_builder() {
+        let url = Url::parse("https://example.com").unwrap();
+        let color: Color = "#FF0000".parse().unwrap();
+        let embed = Embed::builder()
+            .url(url.clone())
+            .title("Test Title")
+            .description("Test Description")
+            .color(color.clone())
+            .author_name("Author Name")
+            .author_url(url.clone());
+
+        assert_eq!(embed.url, Some(url.clone()));
+        assert_eq!(embed.title, Some("Test Title".to_string()));
+        assert_eq!(embed.description, Some("Test Description".to_string()));
+        assert_eq!(embed.color, Some(color));
+        assert_eq!(embed.author_name, Some("Author Name".to_string()));
+        assert_eq!(embed.author_url, Some(url));
     }
 }
