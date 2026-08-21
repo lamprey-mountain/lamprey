@@ -50,18 +50,29 @@
 	}
 
 	.hue-map {
-		--luminance: 70%;
-		--chroma: 50%;
-		background: linear-gradient(
-			to right in var(--colorspace) longer hue,
-			oklch(var(--luminance) var(--chroma) 0),
-			oklch(var(--luminance) var(--chroma) 0)
-		);
-
 		& > .reticle {
 			// PERF: use translate
 			left: calc(var(--hue) / 360 * 100%);
 		}
+	}
+
+	&[data-colorspace="oklch"] .hue-map {
+		--luminance: 70%;
+		--chroma: 50%;
+
+		background: linear-gradient(
+			to right in oklch longer hue,
+			oklch(var(--luminance) var(--chroma) 0),
+			oklch(var(--luminance) var(--chroma) 0)
+		);
+	}
+
+	&[data-colorspace="srgb"] .hue-map {
+		background: linear-gradient(
+			to right in hsl longer hue,
+			hsl(0 100% 50%),
+			hsl(0 100% 50%)
+		);
 	}
 
 	.alpha-map {

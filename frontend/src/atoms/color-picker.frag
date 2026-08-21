@@ -3,6 +3,7 @@ precision highp float;
 
 uniform float u_hue;        // hue in degrees (0.0 to 360.0)
 uniform float u_maxChroma;
+uniform int u_colorSpace;   // 0 for oklch, 1 for hsl (interpreted as hsv for vertical axis)
 in vec2 v_texCoord;
 out vec4 outColor;
 
@@ -39,9 +40,32 @@ vec3 oklch_to_srgb(float L, float C, float hue_degrees) {
     );
 }
 
+vec3 hsv_to_rgb(float h, float s, float v) {
+    float c = v * s;
+    float x = c * (1.0 - abs(mod(h / 60.0, 2.0) - 1.0));
+    float m = v - c;
+
+    vec3 rgb;
+    if (h < 60.0) rgb = vec3(c, x, 0.0);
+    else if (h < 120.0) rgb = vec3(x, c, 0.0);
+    else if (h < 180.0) rgb = vec3(0.0, c, x);
+    else if (h < 240.0) rgb = vec3(0.0, x, c);
+    else if (h < 300.0) rgb = vec3(x, 0.0, c);
+    else rgb = vec3(c, 0.0, x);
+
+    return rgb + m;
+}
+
 void main() {
-    float L = v_texCoord.y;
-    float C = v_texCoord.x * u_maxChroma;
-    vec3 rgb = oklch_to_srgb(L, C, u_hue);
+    vec3 rgb;
+    if (u_colorSpace == 1) {
+        float V = v_texCoord.y;
+        float S = v_texCoord.x;
+        rgb = hsv_to_rgb(u_hue, S, V);
+    } else {
+        float L = v_texCoord.y;
+        float C = v_texCoord.x * u_maxChroma;
+        rgb = oklch_to_srgb(L, C, u_hue);
+    }
     outColor = vec4(rgb, 1.0);
 }

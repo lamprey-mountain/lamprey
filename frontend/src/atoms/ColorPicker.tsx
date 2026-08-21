@@ -23,7 +23,7 @@ import { Icon } from "./Icon";
 // TODO: fine tune this const
 const MAX_CHROMA = 0.4;
 
-type ColorFormat = "hex" | "rgb" | "hsl" | "hsb" | "oklch";
+type ColorFormat = "hex" | "rgb" | "hsl" | "oklch";
 
 export type ColorPickerProps = {
 	onInput?: (color: string) => void;
@@ -43,10 +43,12 @@ export const ColorPicker = (props: ColorPickerProps) => {
 	let uiGl: CanvasRenderingContext2D | null = null;
 	let program: WebGLProgram | null = null;
 	let hueUniformLocation: WebGLUniformLocation | null = null;
+	let colorSpaceUniformLocation: WebGLUniformLocation | null = null;
 
 	const settingsTooltip = createTooltip({ tip: () => "Color settings" });
 
 	const [format, setFormat] = createSignal<ColorFormat>("hex");
+	const [colorSpace, setColorSpace] = createSignal("oklch");
 
 	const [color, setColor] = createSignal<Color>(
 		new Color("oklch(0.5 0.1 200)"),
@@ -170,6 +172,10 @@ export const ColorPicker = (props: ColorPickerProps) => {
 			hueUniformLocation = bgGl.getUniformLocation(program, "u_hue");
 			const maxChromaLoc = bgGl.getUniformLocation(program, "u_maxChroma");
 			bgGl.uniform1f(maxChromaLoc, MAX_CHROMA);
+			colorSpaceUniformLocation = bgGl.getUniformLocation(
+				program,
+				"u_colorSpace",
+			);
 		}
 
 		resizeCanvases();
@@ -178,6 +184,7 @@ export const ColorPicker = (props: ColorPickerProps) => {
 	// render gradient
 	createEffect(() => {
 		const currentHue = oklch().coords[2];
+		const space = colorSpace();
 		if (!bgGl || !program || currentHue === null) return;
 
 		// clear
@@ -187,6 +194,7 @@ export const ColorPicker = (props: ColorPickerProps) => {
 
 		// draw
 		bgGl.uniform1f(hueUniformLocation, currentHue);
+		bgGl.uniform1i(colorSpaceUniformLocation, space === "srgb" ? 1 : 0);
 		bgGl.drawArrays(bgGl.TRIANGLES, 0, 6);
 	});
 
@@ -229,8 +237,8 @@ export const ColorPicker = (props: ColorPickerProps) => {
 	return (
 		<div
 			class="color-picker"
+			data-colorspace={colorSpace()}
 			style={{
-				"--colorspace": "oklch", // TODO: allow switching colorspace
 				"--luminance": oklch().coords[0] ?? 0,
 				"--chroma": oklch().coords[1] ?? 0,
 				"--hue": oklch().coords[2] ?? 0,
@@ -322,7 +330,6 @@ export const ColorPicker = (props: ColorPickerProps) => {
 						{ item: "hex", label: "hex" },
 						{ item: "rgb", label: "rgb" },
 						{ item: "hsl", label: "hsl" },
-						{ item: "hsb", label: "hsb" },
 						{ item: "oklch", label: "oklch" },
 					]}
 					onSelect={(item) => item && setFormat(item)}
@@ -359,8 +366,7 @@ export const ColorPicker = (props: ColorPickerProps) => {
 						menu.setMenu({
 							type: "color_picker_options",
 							onColorSpaceChange: (space) => {
-								console.log("changed colorspace to", space);
-								// TODO: actually implement colorspace switching
+								setColorSpace(space);
 							},
 							x: e.clientX,
 							y: e.clientY,
@@ -379,13 +385,13 @@ export const ColorPicker = (props: ColorPickerProps) => {
 							each={[
 								// TODO: move these into lib/colors.ts
 								{ label: "red", color: "oklch(74.03% 0.1759 13.16)" },
-								{ label: "green", color: "oklch(85.53% 0.1395 130.14)" },
+								{ label: "orange", color: "oklch(80.7% 0.1273 50.56)" },
 								{ label: "yellow", color: "oklch(85.39% 0.1187 92.43)" },
+								{ label: "green", color: "oklch(85.53% 0.1395 130.14)" },
+								{ label: "teal", color: "oklch(80% 0.128 168)" },
+								{ label: "cyan", color: "oklch(80.21% 0.1086 199.72)" },
 								{ label: "blue", color: "oklch(79.29% 0.1636 255.6)" },
 								{ label: "magenta", color: "oklch(80.6% 0.15 299.2)" },
-								{ label: "cyan", color: "oklch(80.21% 0.1086 199.72)" },
-								{ label: "orange", color: "oklch(80.7% 0.1273 50.56)" },
-								{ label: "teal", color: "oklch(80% 0.128 168)" },
 							]}
 						>
 							{(preset) => (
