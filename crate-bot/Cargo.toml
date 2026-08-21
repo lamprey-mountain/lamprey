@@ -20,6 +20,7 @@ figment = { version = "0.10.19", features = ["env", "toml"] }
 futures = "0.3.34"
 futures-util = "0.3.34"
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots", "json"] }
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 sdk = { package = "lamprey-sdk", version = "0.1.0", path = "../crate-sdk", features = ["voice"] }
 serde = { version = "1.0.229", features = ["derive"] }

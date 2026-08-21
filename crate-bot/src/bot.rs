@@ -8,6 +8,7 @@ use common::v1::types::{
 };
 use common::v1::types::{MessageCreate, MessageSync};
 use common::v1::types::{MessagePayload, MessageType};
+use common::v2::types::UserId;
 use futures::StreamExt;
 use sdk::Client;
 use sdk::syncer::SyncerEvent;
@@ -17,6 +18,8 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 pub struct Bot {
+    pub(crate) config: Config,
+    pub(crate) user_id: Option<UserId>, // surely there's a better way to do this?
     pub(crate) client: Client,
     pub(crate) db: BotDatabase,
     control_rx: mpsc::Receiver<BotCommand>,
@@ -68,6 +71,8 @@ impl Bot {
         let client = client.build().await?;
 
         Ok(Self {
+            config,
+            user_id: None,
             client,
             db,
             control_rx,
@@ -128,9 +133,10 @@ impl Bot {
                 MessagePayload::Ready { user, .. } => {
                     if let Some(user) = user {
                         info!("logged in as {}!", user.name);
+                        self.user_id = Some(user.id);
                     } else {
                         error!("no user for this token!");
-                        // TODO: handle this better
+                        // TODO: handle missing token better
                         std::process::exit(1);
                     }
                 }
@@ -230,6 +236,8 @@ impl Bot {
                 .message_create(message.channel_id, &resp)
                 .await?;
         }
+
+        self.handle_llm(&message);
 
         Ok(())
     }
