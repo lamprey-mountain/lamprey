@@ -3,6 +3,7 @@
 use common::v2::types::PermissionOverwriteId;
 use im::HashMap as ImMap;
 use kerosene_core::error::{ApiError, ErrorCode};
+use lamprey_search::visibility::ChannelVisibility;
 use std::sync::Arc;
 use tracing::warn;
 
@@ -10,7 +11,6 @@ use common::v1::types::{
     Channel, ChannelId, MessageSync, Permission, PermissionOverwriteType, Role, RoleId, Room,
     RoomFeature, RoomMember, ThreadMember, User, UserId,
 };
-use lamprey_backend_core::types::search::ChannelVisibility;
 
 use crate::compat::routes::util::auth::Auth4 as Auth;
 use crate::prelude::*;

@@ -1,6 +1,7 @@
 use common::{
     v1::types::{
-        AuditLogEntry, Channel, Message, MessageAttachmentType, MessageType, Room, User, util::Time,
+        AuditLogEntry, Channel, Message, MessageAttachmentType, MessageType, Room, User,
+        search::Doctype, util::Time,
     },
     v2::types::{ChannelId, RoomId, media::Media},
 };
@@ -10,10 +11,7 @@ use tantivy::schema::OwnedValue;
 use tantivy::{DateTime as TantivyDT, TantivyDocument};
 use url::Url;
 
-use crate::{
-    schema::{SCHEMA, UnifiedSchema},
-    util::doctype::Doctype,
-};
+use crate::schema::{SCHEMA, UnifiedSchema};
 
 /// trait for transforming data into tantivy compatible documents
 pub trait SearchDocument {

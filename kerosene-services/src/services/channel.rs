@@ -11,6 +11,7 @@ use common::v1::types::{
 };
 use common::v2::types::MessageVerId;
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
+use lamprey_search::visibility::ChannelVisibility;
 use moka::future::Cache;
 use moka::ops::compute::Op as CacheOp;
 use time::OffsetDateTime;
@@ -20,7 +21,6 @@ use validator::Validate;
 use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
 use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
-use lamprey_backend_core::types::search::ChannelVisibility;
 
 // TODO: split caches more
 // have a cache for public data, per-user data, member counts, etc

@@ -51,3 +51,48 @@ pub struct SearchRequest {
 pub const fn default_limit() -> u16 {
     100
 }
+
+/// the type of a tantivy document
+// NOTE: should this be somewhat internal?
+#[record]
+#[derive(Copy, PartialEq, Eq, strum::AsRefStr, strum::EnumString, strum::Display)]
+pub enum Doctype {
+    /// document represents a message
+    Message,
+
+    /// document represents a channel
+    Channel,
+
+    /// document represents a room
+    Room,
+
+    /// document represents an user
+    User,
+
+    /// document represents a piece of media
+    Media,
+
+    /// document represents an audit log entry
+    AuditLogEntry,
+
+    /// document represents an analytics event
+    AnalyticsEvent,
+
+    /// document represents a change to a document
+    DocumentChange,
+    // TODO: more searching
+    // Document, // branch_id, template, draft, published, view_count(?)(sorting)
+    // Tag, // usage_count(sorting)
+    // Application, // public(admin only), usage_count(sorting)
+    // CalendarEvent, // location, starts_at, ends_at
+    // RoomTemplate, // usage_count(sorting)
+    // Emoji, // animated, usage_count(sorting)
+    // Broadcasts, // member_count(sorting)
+}
+
+impl Doctype {
+    /// get this document type as a string
+    pub fn as_str(&self) -> &str {
+        self.as_ref()
+    }
+}

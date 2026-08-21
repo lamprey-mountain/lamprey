@@ -3,9 +3,7 @@
 use common::v1::types::search::Order;
 use tantivy::query::{BooleanQuery, Occur, Query};
 
-pub mod doctype;
-
-// TODO: copy Reindex types to common
+// TODO: copy Reindex and Doctype types to common
 
 pub trait IntoTantivyOrder {
     fn tantivy(self) -> tantivy::Order;

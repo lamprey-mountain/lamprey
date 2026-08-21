@@ -14,8 +14,8 @@ mod service;
 mod tokenizer;
 mod util;
 
-// TODO: move to crate-search
-pub use util::visibility::{
+// TEMP: re-export
+pub use lamprey_search::visibility::{
     SearchAuditLogVisibility, SearchMediaVisibility, SearchRoomsVisibility,
 };
 

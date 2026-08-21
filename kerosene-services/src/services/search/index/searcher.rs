@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use lamprey_backend_core::types::search::Doctype;
 use tantivy::{
     DocAddress, Score,
     collector::{Count, TopDocs},
@@ -9,15 +8,11 @@ use tantivy::{
 
 use common::v1::types::search::{
     AuditLogSearchOrderField, AuditLogSearchRequest, ChannelSearchOrderField, ChannelSearchRequest,
-    EverythingSearchRequest, MediaSearchOrderField, MediaSearchRequest, MessageSearchOrderField,
-    MessageSearchRequest, RoomSearchOrderField, RoomSearchRequest, UserSearchOrderField,
-    UserSearchRequest,
+    Doctype, EverythingSearchRequest, MediaSearchOrderField, MediaSearchRequest,
+    MessageSearchOrderField, MessageSearchRequest, RoomSearchOrderField, RoomSearchRequest,
+    UserSearchOrderField, UserSearchRequest,
 };
 
-use crate::services::search::util::visibility::{
-    SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
-    SearchMessagesVisibility, SearchRoomsVisibility, TantivyVisibility,
-};
 use crate::services::search::{index::glue::TantivyEverythingItem, util::SCHEMA};
 use crate::services::search::{
     index::glue::{TantivyAuditLogEntry, TantivyChannel, TantivyMedia, TantivyRoom, TantivyUser},
@@ -28,6 +23,10 @@ use crate::services::search::{
     util::IntoTantivyOrder,
 };
 use crate::{Error, Result};
+use lamprey_search::visibility::{
+    SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
+    SearchMessagesVisibility, SearchRoomsVisibility, TantivyVisibility,
+};
 
 /// wrapper around `AsyncSearcher`
 pub struct ContentSearcher {

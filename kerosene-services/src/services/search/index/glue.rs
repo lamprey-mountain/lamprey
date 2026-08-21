@@ -1,9 +1,8 @@
 use std::str::FromStr;
 
 use common::v1::types::{
-    AuditLogEntryId, ChannelId, MediaId, MessageId, RoomId, UserId, util::Time,
+    AuditLogEntryId, ChannelId, MediaId, MessageId, RoomId, UserId, search::Doctype, util::Time,
 };
-use kerosene_core::types::search::Doctype;
 use lamprey_backend_core::Error;
 use tantivy::schema::{
     OwnedValue,

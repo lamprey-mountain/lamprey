@@ -1,8 +1,17 @@
-use once_cell::sync::Lazy;
-use tantivy::schema::{
-    self, FAST, IndexRecordOption, JsonObjectOptions, STORED, STRING, Schema, SchemaBuilder, TEXT,
-    TextFieldIndexing, TextOptions,
+use common::{
+    v1::types::search::Doctype,
+    v2::types::{ChannelId, RoomId, UserId},
 };
+use once_cell::sync::Lazy;
+use tantivy::{
+    Term,
+    query::{Query, TermQuery},
+    schema::{
+        self, FAST, IndexRecordOption, JsonObjectOptions, STORED, STRING, Schema, SchemaBuilder,
+        TEXT, TextFieldIndexing, TextOptions,
+    },
+};
+use uuid::Uuid;
 
 pub static SCHEMA: Lazy<UnifiedSchema> = Lazy::new(|| UnifiedSchema::default());
 
@@ -189,8 +198,6 @@ impl Default for UnifiedSchema {
 }
 
 // utilities for making constructing queries a bit easier
-// TODO
-#[cfg(any())]
 impl UnifiedSchema {
     /// construct a term that requires `id` to match the given uuid
     pub fn term_id(&self, id: Uuid) -> Term {
@@ -269,8 +276,9 @@ impl UnifiedSchema {
 
     /// construct a term that requires `metadata_fast.public` to exist and be true
     pub fn term_public(&self) -> Term {
-        // FIXME: actually check that it equals `true`
-        Term::from_field_json_path(self.metadata_fast, "public", false)
+        let mut t = Term::from_field_json_path(self.metadata_fast, "public", false);
+        t.append_type_and_fast_value(true);
+        t
     }
 
     /// construct a term query that requires `metadata_fast.public` to exist and be true
