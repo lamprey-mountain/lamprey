@@ -19,6 +19,7 @@ pub struct Actions {
     should_push: bool,
     should_add_to_inbox: bool,
     should_increment_mention_count: bool,
+    should_add_to_thread: bool,
     notification: Option<Notification>,
 }
 
@@ -49,6 +50,11 @@ impl Actions {
     /// Whether the mention count should be incremented
     pub fn should_increment_mention_count(&self) -> bool {
         self.should_increment_mention_count
+    }
+
+    /// Whether the user should be added to the thread
+    pub fn should_add_to_thread(&self) -> bool {
+        self.should_add_to_thread
     }
 
     /// Get the notification that should be created for this user
@@ -288,12 +294,15 @@ impl Calculator {
         };
 
         let is_dm = self.channel.as_ref().map_or(false, |c| c.ty.is_dm());
+        let is_thread = self.channel.as_ref().map_or(false, |c| c.ty.is_thread());
         let should_increment_mention_count = !prefs.is_muted() && (mentioned || is_dm);
+        let should_add_to_thread = is_thread && mentioned;
 
         Ok(Actions {
             should_push: action.should_push(),
             should_add_to_inbox: action.should_add_to_inbox(),
             should_increment_mention_count,
+            should_add_to_thread,
             notification: notif,
         })
     }

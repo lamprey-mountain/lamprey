@@ -142,6 +142,8 @@ impl ServiceNotifications {
         };
 
         let mut users_to_increment = vec![];
+        let mut users_to_add_to_thread = vec![];
+        let mut notifs_to_mark_pushed = vec![];
         for target in &targets {
             let action = match calc.calculate(*target).await {
                 Ok(a) => a,
@@ -160,18 +162,30 @@ impl ServiceNotifications {
                     if let Err(err) = data.notification_add(*target, notification.clone()).await {
                         warn!("failed to add notification: {err:?}");
                     }
+                    if !action.should_push() {
+                        notifs_to_mark_pushed.push(notification.id);
+                    }
                 }
             }
 
-            // FIXME: handle action.should_push()
-            // TODO: add action.should_add_to_thread()
+            if action.should_add_to_thread() {
+                users_to_add_to_thread.push(*target);
+            }
+        }
+
+        if !notifs_to_mark_pushed.is_empty() {
+            if let Err(err) = data.notification_set_pushed(&notifs_to_mark_pushed).await {
+                warn!("failed to mark notifications as pushed: {err:?}");
+            }
         }
 
         let mut thread_members = vec![];
-        if channel.ty.is_thread() {
-            let _ = data.thread_member_put_bulk(channel.id, &targets).await;
+        if channel.ty.is_thread() && !users_to_add_to_thread.is_empty() {
+            let _ = data
+                .thread_member_put_bulk(channel.id, &users_to_add_to_thread)
+                .await;
             thread_members = data
-                .thread_member_get_many(channel.id, &targets)
+                .thread_member_get_many(channel.id, &users_to_add_to_thread)
                 .await
                 .unwrap_or_default();
         }
