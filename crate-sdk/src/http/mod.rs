@@ -3,11 +3,16 @@
 use std::sync::Arc;
 
 use crate::prelude::*;
-use common::{v1::types::SessionToken, v2::types::UserId};
+use common::{
+    util::routes::{Endpoint, Request, Response},
+    v1::types::SessionToken,
+    v2::types::UserId,
+};
 use headers::HeaderMapExt;
 use reqwest::header::HeaderMap;
 use url::Url;
 
+mod ratelimiter;
 mod routes;
 
 pub use routes::MessageCreateOptions;
@@ -109,5 +114,23 @@ impl Http {
             client,
             ..self.clone()
         })
+    }
+
+    pub async fn dispatch<E: Endpoint>(&self, req: E::Request) -> Result<E::Response> {
+        let http_req = req.encode();
+        let res = self.client.execute(http_req.try_into()?).await?;
+
+        let status = res.status();
+        let headers = res.headers().clone();
+        let body = res.bytes().await?;
+
+        // PERF: stream body for some routes? (this is only relevant for media.)
+        // TODO: better error handling
+
+        let mut builder = http::Response::builder().status(status);
+        *builder.headers_mut().expect("builder not errored") = headers;
+        let http_res = builder.body(body).unwrap();
+
+        Ok(E::Response::extract(http_res).unwrap())
     }
 }

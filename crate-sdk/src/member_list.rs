@@ -15,8 +15,9 @@ use crate::{Client, cache::Cache};
 /// a list of members, displayed in the sidebar
 pub struct MemberList {
     /// cache for users, members
-    cache: Arc<dyn Cache>,
-
+    cache: Cache,
+    // TODO: don't use cache, use this instead?
+    // room: CachedRoom,
     /// ordered map of members for range queries and position tracking
     members: BTreeMap<MemberKey, UserId>,
 

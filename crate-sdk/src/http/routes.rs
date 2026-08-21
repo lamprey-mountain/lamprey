@@ -3,6 +3,7 @@
 // TODO: somehow use routes from the common crate? maybe with macros?
 
 use anyhow::{Context, Result};
+use common::v1::types::message::flume::FlumeCreate;
 use common::v1::types::misc::ApplicationIdReq;
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::presence::Presence;
@@ -20,10 +21,12 @@ use common::v1::types::{
     RoomBanBulkCreate, RoomCreate, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut, RoomPatch,
     ThreadMember, ThreadMemberPut, User, UserId, UserPatch, UserWithRelationship,
     emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiSearchQuery},
+    flume::FlumeDeltaCreate,
     misc::UserIdReq,
     reaction::{ReactionKeyParam, ReactionListItem},
     role::RoleDeleteQuery,
 };
+
 use common::v1::types::{Message, SearchDlqId};
 use common::v1::types::{
     MessageCreate, MessageMove, RoomBanCreate, SuspendRequest, TransferOwnership, UserCreate,
@@ -34,7 +37,6 @@ use lamprey_backend_core::types::admin::{
     AdminBroadcast, AdminCollectGarbage, AdminCollectGarbageResponse, AdminPurgeCache,
     AdminPurgeCacheResponse, AdminRegisterUser, AdminWhisper, DlqEntry, SearchIndexStats,
 };
-use serde_json::json;
 use tracing::error;
 use uuid::Uuid;
 
@@ -404,6 +406,12 @@ route!(get    "/api/v1/channel/{channel_id}/message/{message_id}" => message_get
 route!(patch  "/api/v1/channel/{channel_id}/message/{message_id}" => message_edit(channel_id: ChannelId, message_id: MessageId) -> Message, MessagePatch);
 route!(delete "/api/v1/channel/{channel_id}/message/{message_id}" => message_delete(channel_id: ChannelId, message_id: MessageId));
 route!(get    "/api/v1/channel/{channel_id}/message/{message_id}/version/{version_id}" => message_version_get(channel_id: ChannelId, message_id: MessageId, version_id: MessageVerId) -> Message);
+
+// flume routes
+route!(post   "/api/v1/channel/{channel_id}/flume"                     => flume_create(channel_id: ChannelId) -> Message, FlumeCreate);
+route!(post   "/api/v1/channel/{channel_id}/flume/{message_id}/ping"   => flume_ping(channel_id: ChannelId, message_id: MessageId));
+route!(put    "/api/v1/channel/{channel_id}/flume/{message_id}/commit" => flume_commit(channel_id: ChannelId, message_id: MessageId) -> Message);
+route!(patch  "/api/v1/channel/{channel_id}/flume/{message_id}/delta"  => flume_delta(channel_id: ChannelId, message_id: MessageId), FlumeDeltaCreate);
 
 // message reaction routes
 route!(put    "/api/v1/channel/{channel_id}/message/{message_id}/reaction/{reaction}/{user_id}" => reaction_create(channel_id: ChannelId, message_id: MessageId, reaction: String, user_id: UserIdReq));

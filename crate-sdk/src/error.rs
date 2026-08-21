@@ -1,3 +1,5 @@
+// NOTE: instead of one giant error type, maybe i'll use many smaller error types instead?
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("missing required builder field: {0}")]

@@ -7,32 +7,35 @@ description.workspace = true
 license.workspace = true
 
 [dependencies]
-async-trait = "0.1.92"
-reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots", "json"] }
-serde_json = "1.0.151"
-tokio = { version = "1.53.1", features = ["fs", "rt-multi-thread", "macros"] }
-rustls = { version = "0.23", default-features = false, features = ["ring"] }
-tokio-tungstenite = { version = "0.27.0", features = ["rustls-tls-webpki-roots"] }
-tracing = "0.1.44"
-common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
 anyhow = "1.0.104"
+async-trait = "0.1.92"
+bytes = "1.12.1"
+common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
+futures = "0.3.34"
 futures-util = "0.3.34"
 headers = "0.4.1"
+http = "1.5.0"
 lamprey-backend-core = { version = "0.1", path = "../crate-backend-core" }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
-uuid = "1.24"
+lru = "0.18.2"
+reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots", "json"] }
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+serde_json = "1.0.151"
 str0m = { version = "0.20.0", optional = true }
-bytes = "1.12.1"
 symphonia = { version = "0.5.5", optional = true }
 thiserror = "2.0.20"
-yrs = { version = "0.25.0", features = ["sync"], optional = true }
-url = "2.5.8"
+tokio = { version = "1.53.1", features = ["fs", "rt-multi-thread", "macros"] }
 tokio-stream = { version = "0.1.19", features = ["sync"] }
-lru = "0.18.2"
-futures = "0.3.34"
+tokio-tungstenite = { version = "0.27.0", features = ["rustls-tls-webpki-roots"] }
+tracing = "0.1.44"
+url = "2.5.8"
+uuid = "1.24"
+yrs = { version = "0.25.0", features = ["sync"], optional = true }
 
 [features]
-default = ["voice", "document", "std"]
+default = ["voice", "document", "std", "flumes", "cache"]
 voice = ["dep:str0m", "dep:symphonia"]
 document = ["dep:yrs"]
+flumes = []
+cache = []
 std = [] # TODO: no_std support

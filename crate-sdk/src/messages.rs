@@ -11,19 +11,33 @@ use futures_util::{Stream, StreamExt};
 use tokio::sync::RwLock;
 
 use crate::Client;
+use crate::cache::Cache;
 use crate::http::Http;
 use crate::prelude::*;
 use crate::syncer::{SyncerEvent, SyncerHandle};
 
 /// the messages in a channel
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Messages {
     channel_id: ChannelId,
     http: Http,
+    cache: Cache,
     inner: Arc<RwLock<MessagesInner>>,
 }
 
-#[derive(Debug)]
+impl core::fmt::Debug for Messages {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // TODO: better debugging
+        f.debug_struct("Messages")
+            .field("channel_id", &self.channel_id)
+            // .field("http", &self.http)
+            // .field("cache", &self.cache)
+            // .field("inner", &self.inner)
+            .finish()
+    }
+}
+
+#[derive(Debug, Default)]
 struct MessagesInner {
     // TODO: message versions
     /// every known message in this channel
@@ -37,7 +51,17 @@ struct MessagesInner {
 
     /// the very first message id in this channel, if it is known
     start: Option<MessageId>,
+
+    /// the very last message id in this channel, if it is known
+    end: Option<MessageId>,
 }
+
+// TODO: use this, rename messages api to timeline api?
+// #[derive(Debug, Clone)]
+// enum TimelineItem {
+//     Message,
+//     Local,
+// }
 
 /// a range of messages that are known to be loaded
 #[derive(Debug, Clone, Copy)]
@@ -63,12 +87,13 @@ struct Local {
     nonce: String,
 }
 
-#[derive(Debug)]
+/// an ordered slice of messages in a channel
+#[derive(Debug, Clone)]
 pub struct MessageSlice {
     messages: Vec<Arc<Message>>,
-    // has_forward: bool,
-    // has_backwards: bool,
-    // stale: bool,
+    has_forward: bool,
+    has_backwards: bool,
+    stale: bool,
 }
 
 // NOTE: maybe allow multiple in flight requests as long as they're deduplicated?
@@ -116,7 +141,14 @@ impl Messages {
                     .map(|(_, m)| m.clone())
                     .collect();
                 if have.len() == limit as usize || Some(range.start) == read.start {
-                    return Ok(MessageSlice { messages: have });
+                    let has_backwards = Some(range.start) != read.start;
+                    return Ok(MessageSlice {
+                        // NOTE: should be false if `id` is in live timeline
+                        has_forward: true,
+                        has_backwards,
+                        stale: range.stale,
+                        messages: have,
+                    });
                 }
             }
         }
@@ -148,7 +180,12 @@ impl Messages {
             write.insert_range(new_range);
         }
 
-        Ok(MessageSlice { messages: msgs })
+        Ok(MessageSlice {
+            messages: msgs,
+            stale: false,
+            has_forward: true,
+            has_backwards: res.has_more,
+        })
     }
 
     pub async fn fetch_after(&self, id: MessageId, limit: u16) -> Result<MessageSlice> {
@@ -162,8 +199,13 @@ impl Messages {
                     .take(limit as usize)
                     .map(|(_, m)| m.clone())
                     .collect();
-                if have.len() == limit as usize {
-                    return Ok(MessageSlice { messages: have });
+                if have.len() == limit as usize || Some(range.end) == read.end {
+                    return Ok(MessageSlice {
+                        messages: have,
+                        has_forward: todo!(),
+                        has_backwards: todo!(),
+                        stale: todo!(),
+                    });
                 }
             }
         }
@@ -187,15 +229,24 @@ impl Messages {
             stale: false,
         };
 
-        {
+        let (has_backwards, has_forward) = {
             let mut write = self.inner.write().await;
             for m in msgs.iter().cloned() {
                 write.insert_message(m);
             }
             write.insert_range(new_range);
-        }
+            (
+                Some(new_range.start) != write.start,
+                Some(new_range.end) != write.end,
+            )
+        };
 
-        Ok(MessageSlice { messages: msgs })
+        Ok(MessageSlice {
+            messages: msgs,
+            has_forward,
+            has_backwards,
+            stale: false,
+        })
     }
 
     pub async fn fetch_context(&self, id: MessageId, limit: u16) -> Result<MessageSlice> {
@@ -230,7 +281,12 @@ impl Messages {
             write.insert_range(new_range);
         }
 
-        Ok(MessageSlice { messages: msgs })
+        Ok(MessageSlice {
+            messages: msgs,
+            has_forward: res.has_after,
+            has_backwards: res.has_before,
+            stale: false,
+        })
     }
 
     pub async fn send(&self, create: MessageCreate) -> Result<&Message> {
@@ -332,38 +388,47 @@ impl Range {
 
 impl MessageSlice {
     pub fn is_empty(&self) -> bool {
-        todo!()
+        self.messages.is_empty()
     }
 
     pub fn start(&self) -> Option<MessageId> {
-        todo!()
+        self.messages.first().map(|m| m.id)
     }
 
     pub fn end(&self) -> Option<MessageId> {
-        todo!()
+        self.messages.last().map(|m| m.id)
     }
 
     pub fn contains(&self, id: MessageId) -> bool {
-        todo!()
+        let (Some(first), Some(last)) = (self.start(), self.end()) else {
+            return false;
+        };
+
+        first <= id && id <= last
     }
 
     pub fn len(&self) -> usize {
-        todo!()
+        self.messages.len()
     }
 
     // TODO: allow using slice syntax? (core::ops::something)
     pub fn slice(&self, start: usize, end: usize) -> MessageSlice {
-        todo!()
+        MessageSlice {
+            messages: self.messages[start..end].to_vec(),
+            has_forward: self.has_forward,
+            has_backwards: self.has_backwards,
+            stale: self.stale,
+        }
     }
 
     /// whether there are more (possibly unloaded) messages before the start of this slice
-    pub fn has_backwads(&self) -> bool {
-        todo!()
+    pub fn has_backwards(&self) -> bool {
+        self.has_backwards
     }
 
     /// whether there are more (possibly unloaded) messages after the end of this slice
     pub fn has_forwards(&self) -> bool {
-        todo!()
+        self.has_forward
     }
 }
 
@@ -421,11 +486,14 @@ async fn spawn_sync_task(syncer: SyncerHandle, inner: Arc<RwLock<MessagesInner>>
 }
 
 impl Client {
-    pub async fn messages(&self, channel_id: ChannelId) -> Messages {
+    pub fn messages(&self, channel_id: ChannelId) -> Messages {
+        // TODO: store an Arc<Client> (or Arc<ClientInner>?) instead of http and cache
         Messages {
             channel_id,
             http: self.http(),
-            inner: todo!(),
+            // TODO: don't panic
+            cache: self.cache().expect("cache is required"),
+            inner: Arc::new(RwLock::new(MessagesInner::default())),
         }
     }
 }
