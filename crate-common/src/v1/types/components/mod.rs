@@ -8,3 +8,4 @@ mod tests;
 
 pub use types::*;
 pub use utils::*;
+pub use validate::FlumeDeltaThin;

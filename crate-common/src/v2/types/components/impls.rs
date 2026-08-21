@@ -9,7 +9,6 @@ use crate::{
         MediaId,
         components::{
             Component, ComponentId,
-            action::ButtonAction,
             types::{ComponentType, Components},
         },
         flume::FlumeDelta,
@@ -27,12 +26,7 @@ impl ComponentType {
     /// Whether this component type itself is interactive.
     fn is_interactive(&self) -> bool {
         match self {
-            ComponentType::Button { action, .. } => {
-                matches!(
-                    action,
-                    ButtonAction::Interaction { .. } | ButtonAction::Submit
-                )
-            }
+            ComponentType::Button { action, .. } => action.is_interactive(),
             ComponentType::Input { .. }
             | ComponentType::Textarea { .. }
             | ComponentType::Select { .. }

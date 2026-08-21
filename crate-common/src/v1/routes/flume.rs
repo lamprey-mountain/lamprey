@@ -107,7 +107,7 @@ pub mod flume_commit {
     response(NOT_MODIFIED, description = "Delta did not cause any change"),
 )]
 pub mod flume_delta {
-    use crate::v1::types::{ChannelId, MessageId, flume::FlumeDelta};
+    use crate::v1::types::{ChannelId, MessageId, flume::FlumeDeltaCreate};
 
     pub struct Request {
         #[path]
@@ -117,7 +117,7 @@ pub mod flume_delta {
         pub message_id: MessageId,
 
         #[json]
-        pub delta: FlumeDelta,
+        pub delta: FlumeDeltaCreate,
     }
 
     pub struct Response {}

@@ -4,10 +4,91 @@ use crate::{
         MediaId,
         components::{IdAllocator, ValidationState},
         error::{ApiError, ErrorCode},
-        flume::FlumeDelta,
+        flume::{
+            FlumeAppendCanonical, FlumeDeltaCanonical, FlumeDeltaCreate, FlumeReplaceCanonical,
+        },
     },
     v2::types::media::{Media, MediaReference},
 };
+
+/// The parsed thin form of a [`FlumeDeltaCreate`], returned by [`Components::apply_create_delta`].
+///
+/// Contains the components parsed from `Create` into `Thin` form, which can then be converted
+/// to `Canonical` by resolving media IDs to full [`Media`] objects.
+pub struct FlumeDeltaThin {
+    /// parsed thin init components, if the delta contained an `init`
+    pub init: Option<Components<Thin>>,
+
+    /// parsed thin append operations: (target_id, thin_components)
+    pub append: Vec<(ComponentId, Vec<Component<Thin>>)>,
+
+    /// parsed thin replace operations: (target_id, thin_components)
+    pub replace: Vec<(ComponentId, Vec<Component<Thin>>)>,
+
+    /// parsed thin delete operations
+    pub delete: Vec<ComponentId>,
+}
+
+impl FlumeDeltaThin {
+    /// Collect all [`MediaId`]s referenced in this delta.
+    pub fn collect_media_ids(&self, ids: &mut Vec<MediaId>) {
+        if let Some(init) = &self.init {
+            init.collect_media_refs(ids);
+        }
+        for (_, comps) in &self.append {
+            for c in comps {
+                c.ty.collect_media_refs(ids);
+            }
+        }
+        for (_, comps) in &self.replace {
+            for c in comps {
+                c.ty.collect_media_refs(ids);
+            }
+        }
+    }
+
+    /// Convert into a [`FlumeDeltaCanonical`] by resolving media IDs, forwarding `delete` as-is.
+    pub fn into_canonical<F, E>(self, resolve_media: &F) -> Result<FlumeDeltaCanonical, E>
+    where
+        F: Fn(MediaId) -> Result<Media, E>,
+    {
+        let init = self
+            .init
+            .map(|c| c.into_canonical(resolve_media))
+            .transpose()?;
+
+        let append = self
+            .append
+            .into_iter()
+            .map(|(target, comps)| {
+                let components = comps
+                    .into_iter()
+                    .map(|c| c.into_canonical(resolve_media))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(FlumeAppendCanonical { target, components })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let replace = self
+            .replace
+            .into_iter()
+            .map(|(target, comps)| {
+                let components = comps
+                    .into_iter()
+                    .map(|c| c.into_canonical(resolve_media))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(FlumeReplaceCanonical { target, components })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(FlumeDeltaCanonical {
+            init,
+            append,
+            replace,
+            delete: self.delete,
+        })
+    }
+}
 
 impl<C: ComponentState> Components<C> {
     pub fn validate(&self) -> Result<(), ApiError> {
@@ -193,6 +274,53 @@ impl Component<Thin> {
             }
             ComponentType::Details { details, .. } => {
                 details.push(other_thin);
+            }
+            _ => {
+                return Err(ApiError::with_message(
+                    ErrorCode::InvalidData,
+                    "cannot append to this component type".to_owned(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// Append an already-parsed [`Component<Thin>`] to this component.
+    ///
+    /// Same rules as [`append`][Self::append], but takes a pre-parsed thin component.
+    pub fn append_thin(&mut self, other: Component<Thin>) -> Result<(), ApiError> {
+        match &mut self.ty {
+            ComponentType::Text { content } => {
+                if let ComponentType::Text {
+                    content: other_content,
+                } = other.ty
+                {
+                    content.push_str(&other_content);
+                } else {
+                    return Err(ApiError::with_message(
+                        ErrorCode::InvalidData,
+                        "only Text can be appended to Text".to_owned(),
+                    ));
+                }
+            }
+            ComponentType::Gallery { items } => {
+                if let ComponentType::Media { items: other_items } = other.ty {
+                    items.extend(other_items);
+                } else {
+                    return Err(ApiError::with_message(
+                        ErrorCode::InvalidData,
+                        "only Media can be appended to Gallery".to_owned(),
+                    ));
+                }
+            }
+            ComponentType::Container { components, .. } => {
+                components.push(other);
+            }
+            ComponentType::Section { components, .. } => {
+                components.push(other);
+            }
+            ComponentType::Details { details, .. } => {
+                details.push(other);
             }
             _ => {
                 return Err(ApiError::with_message(
@@ -575,6 +703,227 @@ impl Components<Canonical> {
     pub fn find_by_id(&self, id: ComponentId) -> Option<&Component<Canonical>> {
         self.inner.iter().find_map(|c| c.find_by_id(id))
     }
+
+    pub fn apply_delta(&mut self, delta: FlumeDeltaCanonical) -> Result<(), ApiError> {
+        // 0. process init (replace entire tree)
+        if let Some(init_components) = delta.init {
+            self.inner = init_components.inner;
+        }
+
+        // 1. process deletes
+        for id in delta.delete {
+            self.delete_by_id(id);
+        }
+
+        // 2. process replacements
+        for r in delta.replace {
+            if !self.replace_by_id(r.target, r.components) {
+                return Err(ApiError::with_message(
+                    ErrorCode::NotFound,
+                    format!("component {} not found for replacement", r.target.0),
+                ));
+            }
+        }
+
+        // 3. process appends
+        for a in delta.append {
+            let parent_id = a.target;
+
+            let Some(parent) = self.get_mut_by_id(parent_id) else {
+                return Err(ApiError::with_message(
+                    ErrorCode::NotFound,
+                    format!("parent component {} not found for append", parent_id.0),
+                ));
+            };
+
+            for c in a.components {
+                parent.append_canonical(c)?;
+            }
+        }
+
+        self.validate()?;
+
+        Ok(())
+    }
+
+    /// delete a component by its id
+    fn delete_by_id(&mut self, target_id: ComponentId) -> bool {
+        Self::recursive_delete(&mut self.inner, target_id)
+    }
+
+    /// helper for delete_by_id
+    fn recursive_delete(
+        components: &mut Vec<Component<Canonical>>,
+        target_id: ComponentId,
+    ) -> bool {
+        if let Some(pos) = components.iter().position(|c| c.id == target_id) {
+            components.remove(pos);
+            return true;
+        }
+
+        for c in components.iter_mut() {
+            let found = match &mut c.ty {
+                ComponentType::Container {
+                    components: children,
+                    ..
+                }
+                | ComponentType::Section {
+                    components: children,
+                    ..
+                } => Self::recursive_delete(children, target_id),
+                ComponentType::Details {
+                    summary, details, ..
+                } => {
+                    Self::recursive_delete(summary, target_id)
+                        || Self::recursive_delete(details, target_id)
+                }
+                _ => false,
+            };
+
+            if found {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// replace component with taret id with a sequence of new ones
+    fn replace_by_id(
+        &mut self,
+        target_id: ComponentId,
+        replacements: Vec<Component<Canonical>>,
+    ) -> bool {
+        Self::recursive_replace(&mut self.inner, target_id, replacements)
+    }
+
+    /// recursively replace/splice a list of components
+    fn recursive_replace(
+        components: &mut Vec<Component<Canonical>>,
+        target_id: ComponentId,
+        replacements: Vec<Component<Canonical>>,
+    ) -> bool {
+        if let Some(pos) = components.iter().position(|c| c.id == target_id) {
+            components.splice(pos..pos + 1, replacements);
+            return true;
+        }
+
+        for c in components.iter_mut() {
+            let found = match &mut c.ty {
+                ComponentType::Container {
+                    components: children,
+                    ..
+                }
+                | ComponentType::Section {
+                    components: children,
+                    ..
+                } => Self::recursive_replace(children, target_id, replacements.clone()),
+                ComponentType::Details {
+                    summary, details, ..
+                } => {
+                    Self::recursive_replace(summary, target_id, replacements.clone())
+                        || Self::recursive_replace(details, target_id, replacements.clone())
+                }
+                _ => false,
+            };
+
+            if found {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// get a mutable reference to a component from its id
+    fn get_mut_by_id(&mut self, target_id: ComponentId) -> Option<&mut Component<Canonical>> {
+        for c in self.inner.iter_mut() {
+            if let Some(res) = c.get_mut_by_id(target_id) {
+                return Some(res);
+            }
+        }
+        None
+    }
+}
+
+impl Component<Canonical> {
+    pub fn append_canonical(&mut self, other: Component<Canonical>) -> Result<(), ApiError> {
+        match &mut self.ty {
+            ComponentType::Text { content } => {
+                if let ComponentType::Text {
+                    content: other_content,
+                } = other.ty
+                {
+                    content.push_str(&other_content);
+                } else {
+                    return Err(ApiError::with_message(
+                        ErrorCode::InvalidData,
+                        "only Text can be appended to Text".to_owned(),
+                    ));
+                }
+            }
+            ComponentType::Gallery { items } => {
+                if let ComponentType::Media { items: other_items } = other.ty {
+                    items.extend(other_items);
+                } else {
+                    return Err(ApiError::with_message(
+                        ErrorCode::InvalidData,
+                        "only Media can be appended to Gallery".to_owned(),
+                    ));
+                }
+            }
+            ComponentType::Container { components, .. } => {
+                components.push(other);
+            }
+            ComponentType::Section { components, .. } => {
+                components.push(other);
+            }
+            ComponentType::Details { details, .. } => {
+                details.push(other);
+            }
+            _ => {
+                return Err(ApiError::with_message(
+                    ErrorCode::InvalidData,
+                    "cannot append to this component type".to_owned(),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// get a mutable reference to a component from its id
+    pub fn get_mut_by_id(&mut self, target_id: ComponentId) -> Option<&mut Component<Canonical>> {
+        if self.id == target_id {
+            return Some(self);
+        }
+
+        match &mut self.ty {
+            ComponentType::Container { components, .. }
+            | ComponentType::Section { components, .. } => {
+                for c in components.iter_mut() {
+                    if let Some(res) = c.get_mut_by_id(target_id) {
+                        return Some(res);
+                    }
+                }
+            }
+            ComponentType::Details {
+                summary, details, ..
+            } => {
+                for c in summary.iter_mut() {
+                    if let Some(res) = c.get_mut_by_id(target_id) {
+                        return Some(res);
+                    }
+                }
+                for c in details.iter_mut() {
+                    if let Some(res) = c.get_mut_by_id(target_id) {
+                        return Some(res);
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        None
+    }
 }
 
 impl Components<Thin> {
@@ -819,28 +1168,38 @@ impl Components<Thin> {
         Ok(Components { inner })
     }
 
-    pub fn apply_delta(
+    /// apply a [`FlumeDeltaCreate`] to this set of Components
+    ///
+    /// Returns a [`FlumeDeltaThin`] containing the parsed thin components that were applied,
+    /// which can be used to build a [`FlumeDeltaCanonical`] for broadcasting to clients.
+    pub fn apply_create_delta(
         &mut self,
-        delta: FlumeDelta,
+        delta: FlumeDeltaCreate,
         resolve_media: impl Fn(MediaReference) -> Result<MediaId, ApiError>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<FlumeDeltaThin, ApiError> {
         let mut id_allocator = IdAllocator::new();
 
         // 0. process init (replace entire tree)
-        if let Some(init_components) = delta.init {
+        let thin_init = if let Some(init_components) = delta.init {
             let mut init_parsed = Vec::with_capacity(init_components.inner.len());
             for c in init_components.inner {
-                init_parsed.push(c.into_thin());
+                init_parsed.push(c.parse_thin_inner(None, &mut id_allocator, &resolve_media)?);
             }
             self.inner = init_parsed;
-        }
+            Some(Components {
+                inner: self.inner.clone(),
+            })
+        } else {
+            None
+        };
 
         // 1. process deletes
-        for id in delta.delete {
+        for id in delta.delete.iter().copied() {
             self.delete_by_id(id);
         }
 
         // 2. process replacements
+        let mut thin_replace = Vec::with_capacity(delta.replace.len());
         for r in delta.replace {
             let target_id = r.target;
             let mut parsed_replacements = Vec::with_capacity(r.components.len());
@@ -851,33 +1210,51 @@ impl Components<Thin> {
                 parsed_replacements.push(thin);
             }
 
-            if !self.replace_by_id(target_id, parsed_replacements) {
+            if !self.replace_by_id(target_id, parsed_replacements.clone()) {
                 return Err(ApiError::with_message(
                     ErrorCode::NotFound,
                     format!("component {} not found for replacement", target_id.0),
                 ));
             }
+            thin_replace.push((target_id, parsed_replacements));
         }
 
         // 3. process appends
+        let mut thin_append = Vec::with_capacity(delta.append.len());
         for a in delta.append {
             let parent_id = a.target;
 
-            let Some(parent) = self.get_mut_by_id(parent_id) else {
-                return Err(ApiError::with_message(
-                    ErrorCode::NotFound,
-                    format!("parent component {} not found for append", parent_id.0),
-                ));
-            };
-
+            // parse create -> thin
+            let mut parsed_for_append = Vec::with_capacity(a.components.len());
             for c in a.components {
-                parent.append(c, &mut id_allocator, &resolve_media)?;
+                let thin = c.parse_thin_inner(Some(self), &mut id_allocator, &resolve_media)?;
+                parsed_for_append.push(thin);
             }
+
+            // append parsed thin components
+            let mut appended = Vec::with_capacity(parsed_for_append.len());
+            for thin in parsed_for_append {
+                let Some(parent) = self.get_mut_by_id(parent_id) else {
+                    return Err(ApiError::with_message(
+                        ErrorCode::NotFound,
+                        format!("parent component {} not found for append", parent_id.0),
+                    ));
+                };
+                parent.append_thin(thin.clone())?;
+                appended.push(thin);
+            }
+
+            thin_append.push((parent_id, appended));
         }
 
         self.validate()?;
 
-        Ok(())
+        Ok(FlumeDeltaThin {
+            init: thin_init,
+            append: thin_append,
+            replace: thin_replace,
+            delete: delta.delete,
+        })
     }
 
     /// delete a component by its id
@@ -893,7 +1270,7 @@ impl Components<Thin> {
         }
 
         for c in components.iter_mut() {
-            match &mut c.ty {
+            let found = match &mut c.ty {
                 ComponentType::Container {
                     components: children,
                     ..
@@ -901,22 +1278,18 @@ impl Components<Thin> {
                 | ComponentType::Section {
                     components: children,
                     ..
-                } => {
-                    if Self::recursive_delete(children, target_id) {
-                        return true;
-                    }
-                }
+                } => Self::recursive_delete(children, target_id),
                 ComponentType::Details {
                     summary, details, ..
                 } => {
-                    if Self::recursive_delete(summary, target_id) {
-                        return true;
-                    }
-                    if Self::recursive_delete(details, target_id) {
-                        return true;
-                    }
+                    Self::recursive_delete(summary, target_id)
+                        || Self::recursive_delete(details, target_id)
                 }
-                _ => {}
+                _ => false,
+            };
+
+            if found {
+                return true;
             }
         }
         false

@@ -5,6 +5,12 @@ use crate::{
     v2::types::components::{Component, ComponentId, ComponentType, Components},
 };
 
+// TODO: more validation
+// - validate text length with both byte length and graphemes
+// - validate that components don't have duplicate ids (ie. two components cant have the same id)
+// - validate that components aren't referenced more than once (ie. the same component cant be in two different containers)
+// - validate that cycles dont exist (ie. components must form an acyclic tree)
+
 pub struct ValidationState<'a> {
     path: Vec<String>,
     // TODO: make this a getter/method
@@ -305,6 +311,7 @@ impl ComponentType {
 }
 
 // TODO: implement and use this
+/// restrictions on a component tree
 #[derive(Debug, Clone)]
 pub struct ComponentsLimits {
     /// maximum number of components in the root
@@ -325,5 +332,12 @@ pub struct ComponentsLimits {
     /// maximum length of text in a component tree
     pub text_total: usize,
 
+    /// whether this tree can contain interactive components
     pub can_be_interactive: bool,
+}
+
+impl Default for ComponentsLimits {
+    fn default() -> Self {
+        todo!()
+    }
 }

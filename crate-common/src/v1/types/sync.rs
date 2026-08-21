@@ -4,7 +4,7 @@ use crate::v1::types::e2ee::E2EEDispatch;
 use crate::v1::types::error::SyncErrorCode;
 
 use crate::v1::types::interactions::{Interaction, InteractionErrorCode};
-use crate::v1::types::message::flume::FlumeDelta;
+use crate::v1::types::message::flume::FlumeDeltaCanonical;
 use crate::v1::types::redex::{Eval, EvalLogEntry, Redex, RedexVersion};
 use crate::v1::types::voice::messages::{SignallingCommand, SignallingEvent};
 use crate::v1::types::{
@@ -990,7 +990,7 @@ pub enum MessageSync {
     FlumeDelta {
         channel_id: ChannelId,
         message_id: MessageId,
-        delta: FlumeDelta,
+        delta: FlumeDeltaCanonical,
     },
 
     ScriptCreate {

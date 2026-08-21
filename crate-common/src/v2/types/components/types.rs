@@ -164,7 +164,7 @@ pub enum ComponentType {
     // NOTE: in the future i could *maybe* add a checkbox grid and/or a linear scale/rating input
     /// a group of other components
     Container {
-        #[cfg_attr(feature = "utoipa", schema(no_recursion))]
+        #[schema(no_recursion)]
         components: Vec<ComponentId>,
         color: Option<Color>,
     },
@@ -175,7 +175,7 @@ pub enum ComponentType {
 
     /// a collapsible section
     Details {
-        #[cfg_attr(feature = "serde", serde(default))]
+        #[serde(default)]
         open: bool,
 
         color: Option<Color>,

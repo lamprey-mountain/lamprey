@@ -12,9 +12,9 @@ use crate::services::messages::create::Author;
 use crate::services::messages::util::MediaRegistry;
 use crate::{Error, Result, routes::util::auth::Auth4, services::messages::ServiceMessages};
 
-use common::v1::types::components::{self, Components, Thin};
+use common::v1::types::components::{self, Components, FlumeDeltaThin, Thin};
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::flume::FlumeDelta;
+use common::v1::types::flume::{FlumeDeltaCanonical, FlumeDeltaCreate};
 use common::v1::types::message::flume::{FlumeCreate, FlumeState, MessageFlume};
 use common::v1::types::message::{MessageDefaultMarkdown, MessageType};
 use common::v1::types::sync::MessageSync;
@@ -47,10 +47,10 @@ impl FlumeContent {
     /// apply a delta, resolving media references
     pub fn apply(
         &mut self,
-        delta: FlumeDelta,
+        delta: FlumeDeltaCreate,
         resolve_media: impl Fn(MediaReference) -> std::result::Result<MediaId, ApiError>,
-    ) -> std::result::Result<(), ApiError> {
-        self.components.apply_delta(delta, resolve_media)
+    ) -> std::result::Result<FlumeDeltaThin, ApiError> {
+        self.components.apply_create_delta(delta, resolve_media)
     }
 }
 
@@ -188,7 +188,7 @@ impl ServiceMessages {
         channel_id: ChannelId,
         message_id: MessageId,
         auth: &Auth4,
-        delta: FlumeDelta,
+        delta: FlumeDeltaCreate,
     ) -> Result<StatusCode> {
         let mut flume_ref = self.flume_lookup(channel_id, message_id).await?;
 
@@ -214,11 +214,52 @@ impl ServiceMessages {
             Ok(media_id)
         };
 
-        flume_ref.content.apply(delta.clone(), resolve_media)?;
+        let delete = delta.delete.clone();
+        let thin_delta: FlumeDeltaThin = flume_ref.content.apply(delta, resolve_media)?;
+
+        // 3. resolve media for delta_canonical
+        let delta_canonical = {
+            // collect media ids referenced in the parsed thin delta
+            let mut delta_media_ids = Vec::new();
+            thin_delta.collect_media_ids(&mut delta_media_ids);
+            delta_media_ids.dedup();
+
+            let media_cache: HashMap<MediaId, _> = if delta_media_ids.is_empty() {
+                HashMap::new()
+            } else {
+                // PERF: consider having a semaphore to limit the number of concurrent transactions
+                let mut futs = FuturesUnordered::new();
+                for &mid in &delta_media_ids {
+                    futs.push(async move {
+                        let data_res = self.globals.begin_read().await;
+                        match data_res {
+                            Ok(mut data) => (mid, data.media_select(mid).await),
+                            Err(e) => (mid, Err(e)),
+                        }
+                    });
+                }
+                let mut cache = HashMap::new();
+                while let Some((mid, result)) = futs.next().await {
+                    if let Ok(media) = result {
+                        cache.insert(mid, media);
+                    }
+                }
+                cache
+            };
+
+            thin_delta
+                .into_canonical(&|media_id: MediaId| {
+                    media_cache.get(&media_id).cloned().ok_or_else(|| {
+                        error!(media_id = ?media_id, "media not found in cache for flume delta");
+                        Error::BadStatic("media not found in cache")
+                    })
+                })
+                .map_err(Error::from)?
+        };
 
         let mut all_media_ids = all_media_ids.into_inner();
 
-        // 3. validate media ownership if there are new media IDs
+        // 4. validate media ownership if there are new media IDs
         if !all_media_ids.known.is_empty() {
             let version_id = (*message_id).into();
             self.validate_media(&all_media_ids, message_id, user_id)
@@ -227,16 +268,16 @@ impl ServiceMessages {
                 .await?;
         }
 
-        // 4. restart timer
+        // 5. restart timer
         flume_ref.expire_handle = self.spawn_autocommit_timer(channel_id, message_id);
 
-        // 5. broadcast delta
+        // 6. broadcast delta
         self.globals
             .messaging()
             .broadcast_global(MessageSync::FlumeDelta {
                 channel_id,
                 message_id,
-                delta,
+                delta: delta_canonical,
             })
             .await?;
 
@@ -447,12 +488,12 @@ impl ServiceMessages {
     }
 
     /// get initial delta for sync
-    pub async fn flume_initial(&self, flume: &Flume) -> Result<FlumeDelta> {
+    pub async fn flume_initial(&self, flume: &Flume) -> Result<FlumeDeltaCanonical> {
         let components_canonical = self
             .resolve_media_and_make_canonical(&flume.content.components)
             .await?;
 
-        Ok(FlumeDelta {
+        Ok(FlumeDeltaCanonical {
             init: Some(components_canonical),
             append: vec![],
             replace: vec![],

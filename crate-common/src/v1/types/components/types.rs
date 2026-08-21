@@ -73,6 +73,11 @@ pub type ComponentCanonical = Component<Canonical>;
 pub type ComponentThin = Component<Thin>;
 pub type ComponentEncrypted = Component<Encrypted>;
 
+pub type ComponentsCreate = Components<Create>;
+pub type ComponentsCanonical = Components<Canonical>;
+pub type ComponentsThin = Components<Thin>;
+pub type ComponentsEncrypted = Components<Encrypted>;
+
 /// top-level container for components
 #[derive(Debug, Clone, PartialEq)]
 pub struct Components<C: ComponentState> {

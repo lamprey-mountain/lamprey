@@ -149,9 +149,12 @@ components(schemas(
     common::v1::types::components::Components<common::v1::types::components::Encrypted>,
     // flume types
     common::v1::types::message::flume::FlumeCreate,
-    common::v1::types::message::flume::FlumeDelta,
-    common::v1::types::message::flume::FlumeAppend,
-    common::v1::types::message::flume::FlumeReplace,
+    common::v1::types::message::flume::FlumeDeltaCreate,
+    common::v1::types::message::flume::FlumeDeltaCanonical,
+    common::v1::types::message::flume::FlumeAppendCreate,
+    common::v1::types::message::flume::FlumeAppendCanonical,
+    common::v1::types::message::flume::FlumeReplaceCreate,
+    common::v1::types::message::flume::FlumeReplaceCanonical,
     common::v1::types::message::flume::FlumeState,
     common::v1::types::message::flume::MessageFlume,
     // script types
