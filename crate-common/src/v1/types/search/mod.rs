@@ -1,32 +1,18 @@
-use lamprey_macros::record;
-
-// TODO: group types by resource type rather than request/response
-
-pub mod request;
-pub mod response;
+pub mod audit_log;
+pub mod channel;
+pub mod common;
+pub mod everything;
+pub mod media;
+pub mod message;
+pub mod room;
 pub mod stats;
+pub mod user;
 
-pub use request::*;
-pub use response::*;
-
-/// what order to return search results in
-#[record]
-#[derive(Default, Copy, PartialEq, Eq)]
-pub enum Order {
-    #[default]
-    #[serde(rename = "asc")]
-    Ascending,
-
-    #[serde(rename = "desc")]
-    Descending,
-}
-
-impl Order {
-    pub fn descending() -> Order {
-        Order::Descending
-    }
-
-    pub fn ascending() -> Order {
-        Order::Ascending
-    }
-}
+pub use audit_log::*;
+pub use channel::*;
+pub use common::*;
+pub use everything::*;
+pub use media::*;
+pub use message::*;
+pub use room::*;
+pub use user::*;

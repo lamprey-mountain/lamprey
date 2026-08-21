@@ -358,8 +358,7 @@ pub mod harvest_download {
     response(OK, body = UserSearch, description = "success"),
 )]
 pub mod user_search {
-    use crate::v1::types::UserSearch;
-    use crate::v1::types::search::UserSearchRequest;
+    use crate::v1::types::search::{UserSearch, UserSearchRequest};
 
     pub struct Request {
         #[json]

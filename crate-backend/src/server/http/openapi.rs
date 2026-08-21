@@ -131,9 +131,6 @@ components(schemas(
     // auth password types
     common::v1::types::auth::PasswordExec,
     common::v1::types::auth::PasswordExecIdent,
-    // user search types
-    common::v1::types::user::UserSearch,
-    common::v1::types::user::UserSearchSortField,
     // relationship types
     common::v1::types::user::RelationshipWithUserId,
     common::v1::types::user::UserWithRelationship,
