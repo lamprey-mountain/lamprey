@@ -1180,6 +1180,27 @@ input[type="url"] {
 	}
 }
 
+.user-popout-animate {
+	animation: user-popout-animate-slide 200ms;
+
+	&[data-placement="left-start"] {
+		--anim-start: -16px;
+	}
+
+	&[data-placement="right-start"] {
+		--anim-start: 16px;
+	}
+}
+
+@keyframes user-popout-animate-slide {
+	from {
+		translate: var(--anim-start) 0;
+	}
+	to {
+		translate: 0 0;
+	}
+}
+
 .status-menu {
 	background-color: $bg-150;
 	border: solid 1px $sep-400;

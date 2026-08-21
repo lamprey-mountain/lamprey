@@ -6,6 +6,7 @@ import {
 	computePosition,
 	flip,
 	offset,
+	type Placement,
 	type ReferenceElement,
 	type Strategy,
 	shift,
@@ -60,7 +61,12 @@ import {
 } from "./mod.tsx";
 import { type Modal, useModals } from "./modal.tsx";
 
-type FloatingPosition = { x: number; y: number; strategy: Strategy };
+type FloatingPosition = {
+	x: number;
+	y: number;
+	strategy: Strategy;
+	placement: Placement;
+};
 
 export function OverlayProvider(props: ParentProps) {
 	const ctx = useCtx();
@@ -80,6 +86,7 @@ export function OverlayProvider(props: ParentProps) {
 		x: 0,
 		y: 0,
 		strategy: "fixed",
+		placement: "top",
 	});
 
 	const [popupRef, setPopupRef] = createSignal<HTMLElement>();
@@ -87,6 +94,7 @@ export function OverlayProvider(props: ParentProps) {
 		x: 0,
 		y: 0,
 		strategy: "absolute",
+		placement: "bottom-start",
 	});
 
 	createEffect(() => {
@@ -98,8 +106,8 @@ export function OverlayProvider(props: ParentProps) {
 			computePosition(reference, floating, {
 				placement: "top",
 				middleware: [offset({ mainAxis: 8 }), flip(), shift({ padding: 8 })],
-			}).then(({ x, y, strategy }) => {
-				setToolbarFloating({ x, y, strategy });
+			}).then(({ x, y, strategy, placement }) => {
+				setToolbarFloating({ x, y, strategy, placement });
 			});
 		});
 		onCleanup(cleanup);
@@ -118,8 +126,8 @@ export function OverlayProvider(props: ParentProps) {
 					flip(),
 					shift({ mainAxis: true, crossAxis: true, padding: 8 }),
 				],
-			}).then(({ x, y, strategy }) => {
-				setPopupFloating({ x, y, strategy });
+			}).then(({ x, y, strategy, placement }) => {
+				setPopupFloating({ x, y, strategy, placement });
 			});
 		});
 		onCleanup(cleanup);
@@ -131,6 +139,7 @@ export function OverlayProvider(props: ParentProps) {
 		x: 0,
 		y: 0,
 		strategy: "absolute",
+		placement: "right-start",
 	});
 
 	createEffect(() => {
@@ -141,8 +150,8 @@ export function OverlayProvider(props: ParentProps) {
 			computePosition(reference, floating, {
 				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 				placement: "right-start",
-			}).then(({ x, y, strategy }) => {
-				setMenuFloating({ x, y, strategy });
+			}).then(({ x, y, strategy, placement }) => {
+				setMenuFloating({ x, y, strategy, placement });
 			});
 		});
 		onCleanup(cleanup);
@@ -154,6 +163,7 @@ export function OverlayProvider(props: ParentProps) {
 			x: 0,
 			y: 0,
 			strategy: "absolute",
+			placement: "top-start",
 		});
 
 	createEffect(() => {
@@ -164,8 +174,8 @@ export function OverlayProvider(props: ParentProps) {
 			computePosition(reference, floating, {
 				middleware: [offset({ mainAxis: 8 })],
 				placement: "top-start",
-			}).then(({ x, y, strategy }) => {
-				setAutocompleteFloating({ x, y, strategy });
+			}).then(({ x, y, strategy, placement }) => {
+				setAutocompleteFloating({ x, y, strategy, placement });
 			});
 		});
 		onCleanup(cleanup);
@@ -177,6 +187,7 @@ export function OverlayProvider(props: ParentProps) {
 			x: 0,
 			y: 0,
 			strategy: "absolute",
+			placement: "right-start",
 		},
 	);
 
@@ -194,8 +205,8 @@ export function OverlayProvider(props: ParentProps) {
 						: v?.source === "user-tray"
 							? "top-start"
 							: "left-start",
-			}).then(({ x, y, strategy }) => {
-				setUserViewFloating({ x, y, strategy });
+			}).then(({ x, y, strategy, placement }) => {
+				setUserViewFloating({ x, y, strategy, placement });
 				if (v?.source === "user-tray") {
 					floating.style.width = `${reference.getBoundingClientRect().width - 16}px`;
 				} else {
@@ -212,6 +223,7 @@ export function OverlayProvider(props: ParentProps) {
 			x: 0,
 			y: 0,
 			strategy: "absolute",
+			placement: "bottom-end",
 		});
 
 	createEffect(() => {
@@ -222,8 +234,8 @@ export function OverlayProvider(props: ParentProps) {
 			computePosition(reference, floating, {
 				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 				placement: "bottom-end",
-			}).then(({ x, y, strategy }) => {
-				setThreadsViewFloating({ x, y, strategy });
+			}).then(({ x, y, strategy, placement }) => {
+				setThreadsViewFloating({ x, y, strategy, placement });
 			});
 		});
 		onCleanup(cleanup);
@@ -236,6 +248,7 @@ export function OverlayProvider(props: ParentProps) {
 			x: 0,
 			y: 0,
 			strategy: "absolute",
+			placement: "bottom-end",
 		});
 
 	createEffect(() => {
@@ -246,8 +259,8 @@ export function OverlayProvider(props: ParentProps) {
 			computePosition(reference, floating, {
 				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
 				placement: "bottom-end",
-			}).then(({ x, y, strategy }) => {
-				setActivityLogViewFloating({ x, y, strategy });
+			}).then(({ x, y, strategy, placement }) => {
+				setActivityLogViewFloating({ x, y, strategy, placement });
 			});
 		});
 		onCleanup(cleanup);
@@ -258,6 +271,7 @@ export function OverlayProvider(props: ParentProps) {
 		x: 0,
 		y: 0,
 		strategy: "absolute",
+		placement: "top",
 	});
 
 	createEffect(() => {
@@ -272,8 +286,8 @@ export function OverlayProvider(props: ParentProps) {
 					flip({ altBoundary: true }),
 				],
 				placement: ctx.popout()?.placement ?? "top",
-			}).then(({ x, y, strategy }) => {
-				setPopoutFloating({ x, y, strategy });
+			}).then(({ x, y, strategy, placement }) => {
+				setPopoutFloating({ x, y, strategy, placement });
 			});
 		});
 		onCleanup(cleanup);
@@ -544,7 +558,7 @@ export function OverlayProvider(props: ParentProps) {
 						</Show>
 					</div>
 				</Show>
-				<Show when={userViewData()?.user()}>
+				<Show when={userViewData()}>
 					<div
 						ref={setUserViewRef}
 						style={{
@@ -555,22 +569,33 @@ export function OverlayProvider(props: ParentProps) {
 							"z-index": 100,
 						}}
 					>
-						<Switch>
-							<Match when={userView()?.source === "user-tray"}>
-								<UserProfileEdit
-									user={userViewData()?.user()!}
-									room_member={userViewData()?.room_member() ?? undefined}
-									thread_member={userViewData()?.thread_member() ?? undefined}
-								/>
-							</Match>
-							<Match when={true}>
-								<UserProfile
-									user={userViewData()?.user()!}
-									room_member={userViewData()?.room_member() ?? undefined}
-									thread_member={userViewData()?.thread_member() ?? undefined}
-								/>
-							</Match>
-						</Switch>
+						<div
+							class="user-popout-animate"
+							data-placement={userViewFloating.placement}
+						>
+							<Show when={userViewData()?.user()}>
+								<Switch>
+									<Match when={userView()?.source === "user-tray"}>
+										<UserProfileEdit
+											user={userViewData()?.user()!}
+											room_member={userViewData()?.room_member() ?? undefined}
+											thread_member={
+												userViewData()?.thread_member() ?? undefined
+											}
+										/>
+									</Match>
+									<Match when={true}>
+										<UserProfile
+											user={userViewData()?.user()!}
+											room_member={userViewData()?.room_member() ?? undefined}
+											thread_member={
+												userViewData()?.thread_member() ?? undefined
+											}
+										/>
+									</Match>
+								</Switch>
+							</Show>
+						</div>
 					</div>
 				</Show>
 			</Portal>
