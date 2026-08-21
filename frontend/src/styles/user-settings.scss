@@ -154,6 +154,68 @@
 			}
 		}
 	}
+
+	.danger-zone {
+		position: relative;
+		border: solid oklch(from $color-red calc(l - 0.2) c h) 1px;
+		/* background-color: oklch(from $color-red l c h / .1); */
+		padding: 0 8px;
+		padding-top: 8px;
+		border-radius: 4px;
+
+		& > .label {
+			position: absolute;
+			top: 0;
+			translate: 0 -50%;
+			font-size: 1em;
+			border: solid oklch(from $color-red calc(l - 0.2) c h) 1px;
+			background-color: color-mix($color-red 30%, $bg-100 70%);
+			padding: 0 4px;
+			border-radius: 2px;
+		}
+
+		& > .item {
+			display: flex;
+			align-items: start;
+			margin: 16px 0;
+
+			& > .info {
+				margin-inline: 4px;
+				margin-top: 4px;
+				flex: 1;
+
+				/* & > .title { */
+				/* font-weight: bold; */
+				/* } */
+
+				& > .description {
+					color: $fg-500;
+				}
+			}
+
+			// make button darker since its on a red background
+			& > .button {
+				white-space: nowrap;
+				border-color: oklch(from $color-red calc(l - 0.3) c h);
+				background-color: oklch(
+					from oklch(var(--color-red))
+					calc(l - 0.35)
+					calc(c - 0.03)
+					h
+				);
+
+				&:hover {
+					border-color: oklch(from $color-red calc(l - 0.35) c h);
+					background-color: oklch(
+						from oklch(var(--color-red))
+						calc(l - 0.40)
+						calc(c - 0.03)
+						h
+					);
+				}
+			}
+		}
+	}
 }
 
 .user-settings-lang {

@@ -41,45 +41,61 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 			<h3>webauthn</h3>
 			<div>todo</div>
 			<br />
-			<div class="danger">
-				<h3>danger zone</h3>
-				<div style="height: 4px"></div>
-				<label>
-					<button type="button" class="button" onClick={sudoEnter}>
+			<div class="danger-zone">
+				<h3 class="label">danger zone</h3>
+				<div class="item">
+					<div class="info">
+						<div class="title">enter sudo mode</div>
+						<div class="description">
+							sudo mode allows you to take dangerous actions on your account. in
+							the future, sudo mode will be prompted for automatically.
+						</div>
+					</div>
+					<button type="button" class="button danger" onClick={sudoEnter}>
 						enter sudo mode
 					</button>
-					<span style="margin-left:8px">
-						sudo mode allows you to take dangerous actions on your account. in
-						the future, sudo mode will be prompted for automatically.
-					</span>
-				</label>
-				<div style="height: 4px"></div>
-				<label>
+				</div>
+				<div class="item">
+					<div class="info">
+						<div class="title">change password</div>
+						<div class="description">change your password</div>
+					</div>
 					<button
 						type="button"
-						class="button"
+						class="button danger"
 						onClick={() => {
 							modalctl.open({ type: "reset_password" });
 						}}
 					>
 						change password
 					</button>
-					<span style="margin-left:8px">change your password</span>
-				</label>
-				<div style="height: 4px"></div>
-				<label>
-					<button type="button" class="button" onClick={() => alert("todo")}>
+				</div>
+				<div class="item">
+					<div class="info">
+						<div class="title">disable account</div>
+						<div class="description">this will disable your account</div>
+					</div>
+					<button
+						type="button"
+						class="button danger"
+						onClick={() => alert("todo")}
+					>
 						disable
 					</button>
-					<span style="margin-left:8px">this will disable your account</span>
-				</label>
-				<div style="height: 4px"></div>
-				<label>
-					<button type="button" class="button" onClick={() => alert("todo")}>
+				</div>
+				<div class="item">
+					<div class="info">
+						<div class="title">delete account</div>
+						<div class="description">this will delete your account</div>
+					</div>
+					<button
+						type="button"
+						class="button danger"
+						onClick={() => alert("todo")}
+					>
 						self destruct
 					</button>
-					<span style="margin-left:8px">this will delete your account</span>
-				</label>
+				</div>
 			</div>
 		</div>
 	);
@@ -156,7 +172,7 @@ function Email(_props: VoidProps<{ user: User }>) {
 								</Show>
 								<button
 									type="button"
-									class="danger"
+									class="button danger"
 									onClick={() => deleteEmail(email.email)}
 								>
 									delete
@@ -167,7 +183,7 @@ function Email(_props: VoidProps<{ user: User }>) {
 				</For>
 			</div>
 			<div class="email-add">
-				<button type="button" class="primary" onClick={addEmail}>
+				<button type="button" class="button primary" onClick={addEmail}>
 					add email
 				</button>
 			</div>
