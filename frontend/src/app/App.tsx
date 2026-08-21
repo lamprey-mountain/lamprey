@@ -203,6 +203,7 @@ export const AppShell: Component<ParentProps> = (props) => {
 				classList={{
 					"underline-links":
 						ctx.preferences().frontend.underline_links === "yes",
+					"reduce-motion": ctx.preferences().frontend.reduced_motion === "yes",
 				}}
 				data-message-style={
 					ctx.preferences().frontend.message_style === "compact"
@@ -245,6 +246,7 @@ export const AppShell: Component<ParentProps> = (props) => {
 				classList={{
 					"underline-links":
 						ctx.preferences().frontend.underline_links === "yes",
+					"reduce-motion": ctx.preferences().frontend.reduced_motion === "yes",
 				}}
 				data-message-style={
 					ctx.preferences().frontend.message_style === "compact"

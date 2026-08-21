@@ -1192,6 +1192,10 @@ input[type="url"] {
 	}
 }
 
+.root.reduce-motion .user-popout-animate {
+	animation: none;
+}
+
 @keyframes user-popout-animate-slide {
 	from {
 		translate: var(--anim-start) 0;
