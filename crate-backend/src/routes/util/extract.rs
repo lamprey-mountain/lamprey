@@ -298,6 +298,13 @@ pub(crate) fn parse_form<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
     Ok(data)
 }
 
-pub(crate) fn parse_msgpack<T: DeserializeOwned>(_bytes: &[u8]) -> Result<T> {
-    todo!()
+pub(crate) fn parse_msgpack<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
+    let data: T = rmp_serde::from_slice(bytes).map_err(|err| {
+        Error::ApiError(ApiError {
+            message: err.to_string(),
+            fields: vec![],
+            ..ApiError::from_code(ErrorCode::InvalidData)
+        })
+    })?;
+    Ok(data)
 }
