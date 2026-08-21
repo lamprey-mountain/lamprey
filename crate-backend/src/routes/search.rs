@@ -4,6 +4,7 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use common::v1::routes;
+use kerosene_services::services::search::SearchRoomsVisibility;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
@@ -45,14 +46,20 @@ pub async fn search_channels(
     Ok(Json(res))
 }
 
-/// Search rooms (TODO)
+/// Search public rooms
 #[handler(routes::search_rooms)]
 pub async fn search_rooms(
-    _auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::search_rooms::Request,
-) -> Result<Json<()>> {
-    Err(Error::Unimplemented)
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::search_rooms::Request,
+) -> Result<impl IntoResponse> {
+    req.search.validate()?;
+    let res = s
+        .services()
+        .search
+        .search_rooms(SearchRoomsVisibility::PublicOnly, req.search)
+        .await?;
+    Ok(Json(res))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
