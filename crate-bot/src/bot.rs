@@ -2,6 +2,7 @@ use crate::database::BotDatabase;
 use crate::prelude::*;
 use crate::{commands::Command, config::Config};
 use clap::Parser;
+use common::v1::types::misc::UserIdReq;
 use common::v1::types::{
     Message, MessageClient,
     presence::{Activity, Presence, Status},
@@ -207,6 +208,22 @@ impl Bot {
 
         if let Some(content) = content {
             debug!("message from {}: {}", message.author_id, content);
+
+            if content.contains("egg") {
+                let http = self.client.http();
+                let channel_id = message.channel_id;
+                let message_id = message.id;
+                tokio::spawn(async move {
+                    _ = http
+                        .reaction_create(
+                            channel_id,
+                            message_id,
+                            "t:\u{1F95A}".to_string(),
+                            UserIdReq::UserSelf,
+                        )
+                        .await;
+                });
+            }
         } else {
             debug!("message from {} without content", message.author_id);
         }
