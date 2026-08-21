@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM realm_member WHERE realm_id = ? AND lamprey_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "c4da6b1030a9eb7f7e7e334aca39cb80a3a39edde3f5722a522c7c76d7316845"
+}

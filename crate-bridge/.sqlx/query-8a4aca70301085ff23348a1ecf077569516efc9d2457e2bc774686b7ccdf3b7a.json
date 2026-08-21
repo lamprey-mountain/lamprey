@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO realm_member (realm_id, lamprey_id, nickname) VALUES (?, ?, ?)\n             ON CONFLICT (realm_id, lamprey_id) DO UPDATE SET nickname = excluded.nickname",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "8a4aca70301085ff23348a1ecf077569516efc9d2457e2bc774686b7ccdf3b7a"
+}

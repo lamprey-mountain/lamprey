@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT nickname FROM realm_member WHERE realm_id = ? AND lamprey_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "nickname",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "d86cd727f5901f4ad72500bf4a3011d138c25dfa88e15dc08afd7d1b03cd95d2"
+}
