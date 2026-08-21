@@ -36,6 +36,8 @@
 		& > .inner {
 			display: flex;
 			align-items: center;
+			height: 100%;
+			width: 100%;
 			padding: 2px;
 			border-radius: 4px;
 
@@ -46,16 +48,17 @@
 				flex: 1;
 				overflow: hidden;
 				gap: 2px;
+				line-height: 1;
 
 				& > .name {
 					@include truncate;
-					line-height: 1;
+					color: $fg-600;
 				}
 
 				& > .status-message {
 					@include truncate;
-					font-size: 0.8em;
-					color: $fg-600;
+					font-size: 0.75em;
+					color: oklch(from $fg-600 calc(l - .1) c h);
 				}
 			}
 
@@ -69,7 +72,7 @@
 
 		&.offline > .inner {
 			& > .text > .name {
-				color: oklch(var(--color-fg5));
+				color: oklch(from $fg-600 calc(l - .2) c h);
 			}
 
 			& > .avatar {
@@ -83,6 +86,10 @@
 
 			& > .text > .name {
 				color: $fg-100;
+			}
+
+			& > .text > .status-message {
+				color: $fg-300;
 			}
 
 			& > .avatar {
