@@ -1,7 +1,7 @@
 use common::{
     v1::types::{
-        AuditLogEntry, Channel, Message, MessageAttachmentType, MessageType, Room, User,
-        search::Doctype, util::Time,
+        AuditLogEntry, Channel, Message, MessageAttachmentType, MessageType, Room, RoomMember,
+        User, search::Doctype, util::Time,
     },
     v2::types::{ChannelId, RoomId, media::Media},
 };
@@ -82,6 +82,10 @@ define_transformer! {
 
     pub struct SearchMedia<'a> {
         pub media: &'a Media,
+    }
+
+    pub struct SearchRoomMember<'a> {
+        pub member: &'a RoomMember,
     }
 
     pub struct SearchAuditLogEntry<'a> {
@@ -508,6 +512,56 @@ impl SearchDocument for SearchAuditLogEntry<'_> {
 
         if let Some(app_id) = ent.application_id {
             meta_fast.insert("application_id".to_string(), app_id.to_string().into());
+        }
+
+        doc.add_object(s.metadata_fast, meta_fast);
+
+        doc
+    }
+}
+
+impl SearchDocument for SearchRoomMember<'_> {
+    fn to_tantivy(&self) -> TantivyDocument {
+        let s = &*SCHEMA;
+        let member = self.member;
+
+        let mut doc = TantivyDocument::new();
+        doc.add_text(s.id, format!("{}:{}", member.user_id, member.room_id));
+        doc.add_text(s.doctype, Doctype::RoomMember);
+        doc.add_text(s.room_id, member.room_id.to_string());
+        doc.add_text(s.author_id, member.user_id.to_string());
+
+        doc.add_date(s.created_at, TantivyDT::from_utc(*member.joined_at));
+
+        let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
+        meta_fast.insert("mute".to_string(), member.mute.into());
+        meta_fast.insert("deaf".to_string(), member.deaf.into());
+        meta_fast.insert("quarantined".to_string(), member.quarantined.into());
+
+        if let Some(o) = &member.override_name {
+            doc.add_text(s.name, o);
+        }
+
+        if let Some(o) = &member.override_description {
+            doc.add_text(s.content, o);
+        }
+
+        if let Some(o) = &member.origin {
+            let val = serde_json::to_value(o.clone()).unwrap();
+            meta_fast.insert("origin".to_string(), val.into());
+        }
+
+        if !member.roles.is_empty() {
+            let roles: Vec<OwnedValue> =
+                member.roles.iter().map(|r| r.to_string().into()).collect();
+            meta_fast.insert("roles".to_string(), OwnedValue::Array(roles));
+        }
+
+        if let Some(timeout) = &member.timeout_until {
+            meta_fast.insert(
+                "timeout_until".to_string(),
+                TantivyDT::from_utc(**timeout).into(),
+            );
         }
 
         doc.add_object(s.metadata_fast, meta_fast);

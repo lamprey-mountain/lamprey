@@ -27,6 +27,7 @@ impl DataSearchQueue for Postgres {
             SearchReindexQueueTarget::Media => (Uuid::nil(), "media"),
             SearchReindexQueueTarget::Users => (Uuid::nil(), "users"),
             SearchReindexQueueTarget::AuditLogEntries(id) => (*id, "audit_log_entries"),
+            SearchReindexQueueTarget::RoomMembers(id) => (*id, "room_members"),
         };
         let mut conn = self.acquire().await?;
         query!(
@@ -51,6 +52,7 @@ impl DataSearchQueue for Postgres {
             SearchReindexQueueTarget::Media => (Uuid::nil(), "media"),
             SearchReindexQueueTarget::Users => (Uuid::nil(), "users"),
             SearchReindexQueueTarget::AuditLogEntries(id) => (*id, "audit_log_entries"),
+            SearchReindexQueueTarget::RoomMembers(id) => (*id, "room_members"),
         };
         let mut conn = self.acquire().await?;
         query!(
@@ -83,6 +85,7 @@ impl DataSearchQueue for Postgres {
                     "audit_log_entries" => {
                         SearchReindexQueueTarget::AuditLogEntries(r.target_id.into())
                     }
+                    "room_members" => SearchReindexQueueTarget::RoomMembers(r.target_id.into()),
                     _ => unreachable!("unknown target type: {}", r.target_type),
                 };
                 SearchReindexQueue {

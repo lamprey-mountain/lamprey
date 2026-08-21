@@ -1,9 +1,10 @@
 use std::{sync::Arc, time::Duration};
 
-use common::v1::types::{AuditLogEntry, Channel, Message, MessageSync, Room, User};
+use common::v1::types::{AuditLogEntry, Channel, Message, MessageSync, Room, RoomMember, User};
 use common::v2::types::media::Media;
 use lamprey_search::transform::{
-    SearchAuditLogEntry, SearchChannel, SearchMedia, SearchMessage, SearchRoom, SearchUser,
+    SearchAuditLogEntry, SearchChannel, SearchMedia, SearchMessage, SearchRoom, SearchRoomMember,
+    SearchUser,
 };
 use tantivy::Term;
 use tokio_stream::StreamExt;
@@ -72,6 +73,8 @@ impl LiveEtl {
                 self.index.delete_term(term).await?;
             }
             MessageSync::AuditLogEntryCreate { entry } => self.index_audit_log(entry).await?,
+            MessageSync::RoomMemberCreate { member, .. } => self.index_room_member(member).await?,
+            MessageSync::RoomMemberUpdate { member, .. } => self.index_room_member(member).await?,
             MessageSync::MediaProcessed { media, .. } => self.index_media(media).await?,
             MessageSync::MediaUpdate { media } => self.index_media(media).await?,
             _ => {}
@@ -124,6 +127,14 @@ impl LiveEtl {
     async fn index_audit_log(&self, entry: AuditLogEntry) -> Result<()> {
         let term = Term::from_field_text(SCHEMA.id, &entry.id.to_string());
         let doc = SearchAuditLogEntry::transform(&entry);
+        self.index.update_document(term, doc).await?;
+        Ok(())
+    }
+
+    async fn index_room_member(&self, member: RoomMember) -> Result<()> {
+        let term =
+            Term::from_field_text(SCHEMA.id, &format!("{}:{}", member.user_id, member.room_id));
+        let doc = SearchRoomMember::transform(&member);
         self.index.update_document(term, doc).await?;
         Ok(())
     }

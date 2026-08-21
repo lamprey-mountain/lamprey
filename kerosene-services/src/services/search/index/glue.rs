@@ -49,6 +49,11 @@ pub struct TantivyRoom {
     pub id: RoomId,
 }
 
+pub struct TantivyRoomMember {
+    pub user_id: UserId,
+    pub room_id: RoomId,
+}
+
 pub struct TantivyAuditLogEntry {
     pub id: AuditLogEntryId,
     pub room_id: RoomId,
@@ -79,6 +84,11 @@ struct TantivyRoomPartial {
 
 struct TantivyAuditLogEntryPartial {
     id: Option<AuditLogEntryId>,
+    room_id: Option<RoomId>,
+}
+
+struct TantivyRoomMemberPartial {
+    user_id: Option<UserId>,
     room_id: Option<RoomId>,
 }
 
@@ -330,6 +340,38 @@ impl DocumentDeserialize for TantivyEverythingItem {
     }
 }
 
+impl DocumentDeserialize for TantivyRoomMember {
+    fn deserialize<'de, D>(mut deserializer: D) -> Result<Self, DeserializeError>
+    where
+        D: DocumentDeserializer<'de>,
+    {
+        let mut member = TantivyRoomMemberPartial {
+            user_id: None,
+            room_id: None,
+        };
+
+        while let Some((field, v)) = deserializer.next_field::<OwnedValue>()? {
+            if field == SCHEMA.author_id {
+                if let OwnedValue::Str(s) = v {
+                    member.user_id =
+                        Some(UserId::from_str(&s).map_err(|_| {
+                            DeserializeError::Custom("invalid user id".to_string())
+                        })?);
+                }
+            } else if field == SCHEMA.room_id {
+                if let OwnedValue::Str(s) = v {
+                    member.room_id =
+                        Some(RoomId::from_str(&s).map_err(|_| {
+                            DeserializeError::Custom("invalid room id".to_string())
+                        })?);
+                }
+            }
+        }
+
+        member.try_into().map_err(DeserializeError::custom)
+    }
+}
+
 impl TryFrom<TantivyMessagePartial> for TantivyMessage {
     type Error = Error;
 
@@ -408,6 +450,21 @@ impl TryFrom<TantivyAuditLogEntryPartial> for TantivyAuditLogEntry {
             id: value
                 .id
                 .ok_or_else(|| Error::Internal("missing id".to_string()))?,
+            room_id: value
+                .room_id
+                .ok_or_else(|| Error::Internal("missing room_id".to_string()))?,
+        })
+    }
+}
+
+impl TryFrom<TantivyRoomMemberPartial> for TantivyRoomMember {
+    type Error = Error;
+
+    fn try_from(value: TantivyRoomMemberPartial) -> Result<Self, Self::Error> {
+        Ok(TantivyRoomMember {
+            user_id: value
+                .user_id
+                .ok_or_else(|| Error::Internal("missing user_id".to_string()))?,
             room_id: value
                 .room_id
                 .ok_or_else(|| Error::Internal("missing room_id".to_string()))?,

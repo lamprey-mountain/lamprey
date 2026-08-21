@@ -5,6 +5,7 @@ pub mod everything;
 pub mod media;
 pub mod message;
 pub mod room;
+pub mod room_member;
 pub mod stats;
 pub mod user;
 
@@ -15,4 +16,6 @@ pub use everything::*;
 pub use media::*;
 pub use message::*;
 pub use room::*;
+pub use room_member::*;
+pub use stats::*;
 pub use user::*;

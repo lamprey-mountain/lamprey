@@ -5300,6 +5300,7 @@ dependencies = [
  "once_cell",
  "opendal",
  "pastey 0.2.3",
+ "serde_json",
  "tantivy",
  "tokio",
  "tracing",

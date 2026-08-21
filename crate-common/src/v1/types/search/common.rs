@@ -75,6 +75,9 @@ pub enum Doctype {
     /// document represents an audit log entry
     AuditLogEntry,
 
+    /// document represents a room member
+    RoomMember,
+
     /// document represents an analytics event
     AnalyticsEvent,
 

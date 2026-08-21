@@ -139,6 +139,13 @@ pub enum SearchAuditLogVisibility {
     Room(RoomId),
 }
 
+/// visibility for room members
+#[derive(Debug, Clone)]
+pub enum SearchRoomMemberVisibility {
+    /// all room members in this room
+    Room(RoomId),
+}
+
 impl TantivyVisibility for SearchMessagesVisibility {
     fn into_query(self) -> Box<dyn Query> {
         match self {
@@ -321,6 +328,14 @@ impl TantivyVisibility for SearchUserVisibility {
 
                 Box::new(q.build())
             }
+        }
+    }
+}
+
+impl TantivyVisibility for SearchRoomMemberVisibility {
+    fn into_query(self) -> Box<dyn Query> {
+        match self {
+            SearchRoomMemberVisibility::Room(room_id) => SCHEMA.query_room_id(room_id),
         }
     }
 }

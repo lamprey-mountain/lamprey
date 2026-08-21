@@ -6,17 +6,24 @@ use tantivy::{
     query::QueryParser,
 };
 
-use common::v1::types::search::{
-    AuditLogSearchOrderField, AuditLogSearchRequest, ChannelSearchOrderField, ChannelSearchRequest,
-    Doctype, EverythingSearchRequest, MediaSearchOrderField, MediaSearchRequest,
-    MessageSearchOrderField, MessageSearchRequest, RoomSearchOrderField, RoomSearchRequest,
-    UserSearchOrderField, UserSearchRequest,
+use common::v1::types::{
+    RoomMember,
+    search::{
+        AuditLogSearchOrderField, AuditLogSearchRequest, ChannelSearchOrderField,
+        ChannelSearchRequest, Doctype, EverythingSearchRequest, MediaSearchOrderField,
+        MediaSearchRequest, MessageSearchOrderField, MessageSearchRequest,
+        RoomMemberSearchOrderField, RoomMemberSearchRequest, RoomSearchOrderField,
+        RoomSearchRequest, UserSearchOrderField, UserSearchRequest,
+    },
 };
 
-use crate::services::search::{index::glue::TantivyEverythingItem, util::SCHEMA};
 use crate::services::search::{
     index::glue::{TantivyAuditLogEntry, TantivyChannel, TantivyMedia, TantivyRoom, TantivyUser},
     util::BqBuilder,
+};
+use crate::services::search::{
+    index::glue::{TantivyEverythingItem, TantivyRoomMember},
+    util::SCHEMA,
 };
 use crate::services::search::{
     index::{AsyncSearcher, glue::TantivyMessage},
@@ -25,7 +32,7 @@ use crate::services::search::{
 use crate::{Error, Result};
 use lamprey_search::visibility::{
     SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
-    SearchMessagesVisibility, SearchRoomsVisibility, TantivyVisibility,
+    SearchMessagesVisibility, SearchRoomMemberVisibility, SearchRoomsVisibility, TantivyVisibility,
 };
 
 /// wrapper around `AsyncSearcher`
@@ -62,6 +69,11 @@ pub struct TantivySearchAuditLogEntries {
     pub visibility: SearchAuditLogVisibility,
 }
 
+pub struct TantivySearchRoomMembers {
+    pub req: RoomMemberSearchRequest,
+    pub visibility: SearchRoomMemberVisibility,
+}
+
 pub struct TantivySearchEverything {
     pub req: EverythingSearchRequest,
 }
@@ -93,6 +105,11 @@ pub struct TantivyMediaItems {
 
 pub struct TantivyAuditLogEntries {
     pub items: Vec<TantivyAuditLogEntry>,
+    pub total: u64,
+}
+
+pub struct TantivyRoomMembers {
+    pub items: Vec<TantivyRoomMember>,
     pub total: u64,
 }
 
@@ -293,12 +310,13 @@ impl ContentSearcher {
             }
         }
 
-        q.must(SCHEMA.query_doctype(Doctype::Room));
+        q.must(SCHEMA.query_doctype(Doctype::RoomMember));
         q.must(msg.visibility.into_query());
         let query = q.build();
 
         let limit = msg.req.inner.limit as usize;
-        let cursor = msg.req.inner.offset as usize;
+        // NOTE: No offset in search struct.
+        let cursor = 0;
 
         let (items_raw, count): (Vec<_>, _) = match msg.req.sort_field {
             RoomSearchOrderField::Members => {
@@ -575,6 +593,53 @@ impl ContentSearcher {
         }
 
         Ok(TantivyAuditLogEntries {
+            items,
+            total: count as u64,
+        })
+    }
+
+    pub async fn search_room_members(
+        &self,
+        msg: TantivySearchRoomMembers,
+    ) -> Result<TantivyRoomMembers> {
+        let mut q = BqBuilder::new();
+
+        if let Some(q_str) = &msg.req.inner.query {
+            if !q_str.is_empty() {
+                let query_parser = QueryParser::for_index(
+                    self.searcher.index(),
+                    vec![SCHEMA.id, SCHEMA.name, SCHEMA.content],
+                );
+
+                let parsed_query = query_parser
+                    .parse_query(q_str)
+                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
+
+                q.must(parsed_query);
+            }
+        }
+
+        q.must(SCHEMA.query_doctype(Doctype::RoomMember));
+        q.must(msg.visibility.into_query());
+        let query = q.build();
+
+        let limit = msg.req.inner.limit as usize;
+        let cursor = msg.req.inner.offset as usize;
+
+        // TODO: sort by msg.req.sort_field
+        let top_docs = TopDocs::with_limit(limit)
+            .and_offset(cursor)
+            .order_by_fast_field("created_at", msg.req.inner.sort_order.tantivy());
+
+        let (docs, count): (Vec<(Option<tantivy::DateTime>, DocAddress)>, usize) =
+            self.searcher.search(&query, &(top_docs, Count)).await?;
+
+        let mut items: Vec<TantivyRoomMember> = Vec::with_capacity(docs.len());
+        for (_, doc_address) in docs {
+            items.push(self.searcher.doc(doc_address).await?);
+        }
+
+        Ok(TantivyRoomMembers {
             items,
             total: count as u64,
         })

@@ -6,7 +6,8 @@ use common::v1::types::{
 use dashmap::DashSet;
 use lamprey_backend_core::types::data::{SearchReindexQueue, SearchReindexQueueTarget};
 use lamprey_search::transform::{
-    SearchAuditLogEntry, SearchChannel, SearchMedia, SearchMessage, SearchRoom, SearchUser,
+    SearchAuditLogEntry, SearchChannel, SearchMedia, SearchMessage, SearchRoom, SearchRoomMember,
+    SearchUser,
 };
 use tantivy::Term;
 use tokio::task::JoinSet;
@@ -96,6 +97,7 @@ impl BackfillEtlInner {
             SearchReindexQueueTarget::Users => self.spawn_users().await,
             SearchReindexQueueTarget::Media => self.spawn_media().await,
             SearchReindexQueueTarget::AuditLogEntries(id) => self.spawn_audit_logs(*id).await,
+            SearchReindexQueueTarget::RoomMembers(id) => self.spawn_room_members(*id).await,
         }
 
         if let Ok(mut data) = self.s.begin().await {
@@ -468,6 +470,72 @@ impl BackfillEtlInner {
             }
 
             if !res.has_more {
+                break;
+            }
+
+            tokio::task::yield_now().await;
+        }
+
+        let _ = self.index.commit().await;
+    }
+
+    async fn spawn_room_members(&self, room_id: RoomId) {
+        let mut data = match self.s.begin_read().await {
+            Ok(d) => d,
+            Err(err) => {
+                error!("failed to begin read: {err}");
+                return;
+            }
+        };
+        let mut last_id: Option<UserId> = None;
+
+        loop {
+            // NOTE: Assuming there's a list function for room members
+            let members = match data
+                .room_member_list(
+                    room_id,
+                    PaginationQuery {
+                        from: last_id,
+                        to: None,
+                        dir: None,
+                        limit: Some(100),
+                    },
+                )
+                .await
+            {
+                Ok(m) => m,
+                Err(err) => {
+                    error!("failed to fetch room members: {err}");
+                    break;
+                }
+            };
+
+            if members.items.is_empty() {
+                break;
+            }
+
+            let mut batch = Vec::with_capacity(members.items.len());
+            for member in &members.items {
+                let doc = SearchRoomMember::transform(member);
+                let term = Term::from_field_text(
+                    SCHEMA.id,
+                    &format!("{}:{}", member.user_id, member.room_id),
+                );
+                batch.push((term, doc));
+            }
+
+            if !batch.is_empty() {
+                if let Err(e) = self.index.update_documents(batch).await {
+                    error!("failed to update index: {e}");
+                }
+                let _ = self.index.lazy_commit().await;
+            }
+
+            if let Some(last) = members.items.last() {
+                last_id = Some(last.user_id);
+            }
+
+            if !members.has_more {
                 break;
             }
 

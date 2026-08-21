@@ -7,10 +7,6 @@ pub struct RoomSearchRequest {
     #[serde(flatten)]
     pub inner: SearchRequest,
 
-    /// what order to return results in
-    #[serde(default)]
-    pub order: RoomSearchOrderField,
-
     /// field to sort by
     #[serde(default)]
     pub sort_field: RoomSearchOrderField,

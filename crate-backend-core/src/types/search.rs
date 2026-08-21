@@ -50,6 +50,9 @@ pub enum SearchReindexQueueTarget {
 
     /// audit log entries in a room
     AuditLogEntries(RoomId),
+
+    /// room members in a room
+    RoomMembers(RoomId),
 }
 
 impl Reindex {
