@@ -54,6 +54,11 @@ pub enum ContentType {
     /// - `application/json`
     Json,
 
+    /// form encoded body
+    ///
+    /// - `application/x-www-form-urlencoded`
+    Form,
+
     /// msgpack request body
     ///
     /// - `application/vnd.msgpack`
@@ -83,6 +88,8 @@ impl HeadersRequest {
             .map(|s| {
                 if s.starts_with("application/json") {
                     ContentType::Json
+                } else if s.starts_with("application/x-www-form-urlencoded") {
+                    ContentType::Form
                 } else if s.starts_with("application/msgpack")
                     || s.starts_with("application/vnd.msgpack")
                     || s.starts_with("application/x-msgpack")

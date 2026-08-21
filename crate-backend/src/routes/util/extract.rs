@@ -145,6 +145,17 @@ where
                     audit_txn_slot,
                 })
             }
+            ContentType::Form => {
+                let body: Req::Body = parse_form(&bytes)?;
+                let req = Req::extract(parts, body).map_err(Error::Response)?;
+                Ok(Self {
+                    auth,
+                    body: req,
+                    media: Default::default(),
+                    reason: headers.reason,
+                    audit_txn_slot,
+                })
+            }
             ContentType::Multipart => {
                 let ct = parts
                     .headers
@@ -272,6 +283,18 @@ pub(crate) fn parse_json<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
         }
     };
 
+    Ok(data)
+}
+
+pub(crate) fn parse_form<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
+    let s = std::str::from_utf8(bytes).map_err(|_| Error::BadStatic("invalid utf-8 form data"))?;
+    let data: T = serde_urlencoded::from_str(s).map_err(|err| {
+        Error::ApiError(ApiError {
+            message: err.to_string(),
+            fields: vec![],
+            ..ApiError::from_code(ErrorCode::InvalidData)
+        })
+    })?;
     Ok(data)
 }
 
