@@ -451,9 +451,11 @@ function RenderInline(props: { inline: SerializedInline }) {
 			<Match when={props.inline.type === "Link" && props.inline}>
 				{(i) => (
 					<a href={i().href} target="_blank" rel="noopener noreferrer">
-						<For each={i().children}>
-							{(child) => <RenderInline inline={child} />}
-						</For>
+						<Show when={i().children.length} fallback={i().href}>
+							<For each={i().children}>
+								{(child) => <RenderInline inline={child} />}
+							</For>
+						</Show>
 					</a>
 				)}
 			</Match>
