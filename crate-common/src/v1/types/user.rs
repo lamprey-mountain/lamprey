@@ -1,12 +1,5 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use lamprey_macros::record;
 use url::Url;
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
-
-#[cfg(feature = "validator")]
-use validator::Validate;
 
 use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::federation::Remote;
@@ -23,24 +16,18 @@ use super::email::EmailInfo;
 use super::preferences::PreferencesGlobal;
 use super::{ApplicationId, ChannelId, RoomId, UserId, UserVerId};
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct User {
     pub id: UserId,
     pub version_id: UserVerId,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
     // TODO: rename to bio?
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub description: Option<String>,
 
     pub avatar: Option<MediaId>,
@@ -69,10 +56,10 @@ pub struct User {
     // skip serializing if is_none; only return for admins
     pub deleted_at: Option<Time>,
 
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub emails: Option<Vec<EmailInfo>>,
     pub preferences: Option<PreferencesUser>,
-    // #[cfg_attr(feature = "validator", validate(length(min = 1, max = 16)))]
+    // #[ validate(length(min = 1, max = 16))]
     // pub fields: Vec<UserField>,
     /// whether this user is considered to have mutifactor authentication enabled on their account
     ///
@@ -86,9 +73,7 @@ pub struct User {
     pub remote: Option<Remote<UserId>>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct UserWebhook {
     pub room_id: Option<RoomId>,
     pub channel_id: ChannelId,
@@ -111,9 +96,7 @@ pub struct UserWebhook {
 //     pub verified: bool,
 // }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Suspended {
     pub created_at: Time,
     pub expires_at: Option<Time>,
@@ -121,18 +104,13 @@ pub struct Suspended {
 }
 
 /// represents a user on another platform
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct Puppet {
     /// the user who created this puppet
     pub owner_id: ApplicationId,
 
     /// an opaque identifier from the other platform
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
     pub external_id: String,
 
     /// a url on the other platform that this account can be reached at
@@ -144,49 +122,36 @@ pub struct Puppet {
     pub alias_id: Option<UserId>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
 pub struct UserWithPrivate {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub inner: User,
     pub config: PreferencesGlobal,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct UserCreate {
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub description: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct PuppetCreate {
     /// display name
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: String,
 
     /// about/bio
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
     pub description: Option<String>,
 
     /// if this is a remote bot
@@ -196,92 +161,72 @@ pub struct PuppetCreate {
     pub system: bool,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq, lamprey_macros::Diff)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default, PartialEq, Eq, lamprey_macros::Diff)]
 pub struct UserPatch {
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 64)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
+    #[schema(required = false, min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub name: Option<String>,
 
-    #[cfg_attr(
-        feature = "utoipa",
-        schema(required = false, min_length = 1, max_length = 8192)
-    )]
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[schema(required = false, min_length = 1, max_length = 8192)]
+    #[validate(length(min = 1, max = 8192))]
+    #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub avatar: Option<Option<MediaId>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub banner: Option<Option<MediaId>>,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct Relationship {
     /// your relationship with this other user
     pub relation: Option<RelationshipType>,
 
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub ignore: Option<Ignore>,
 }
 
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct RelationshipWithUserId {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub inner: Relationship,
     pub user_id: UserId,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct UserWithRelationship {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub inner: User,
     pub relationship: Relationship,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Diff)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record]
+#[derive(PartialEq, Eq, Diff)]
 pub struct RelationshipPatch {
     /// relationship with other user
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub relation: Option<Option<RelationshipType>>,
 
-    #[cfg_attr(feature = "utoipa", schema(required = false))]
-    #[cfg_attr(
-        feature = "serde",
-        serde(default, flatten, deserialize_with = "some_option")
-    )]
+    #[schema(required = false)]
+    #[serde(default, flatten, deserialize_with = "some_option")]
     pub ignore: Option<Option<Ignore>>,
 }
 
 /// how a user is ignoring another user
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct Ignore {
     pub until: Option<Time>,
 }
 
 /// a relationship between two users
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum RelationshipType {
     /// friends :D
     Friend,
@@ -296,33 +241,10 @@ pub enum RelationshipType {
     Block,
 }
 
-impl User {
-    pub fn is_suspended(&self) -> bool {
-        if let Some(s) = &self.suspended {
-            if s.expires_at.is_some_and(|t| *t < *Time::now_utc()) {
-                false
-            } else {
-                true
-            }
-        } else {
-            false
-        }
-    }
-
-    pub fn ensure_unsuspended(&self) -> Result<(), ApiError> {
-        if self.is_suspended() {
-            Err(ApiError::from_code(ErrorCode::UserSuspended))
-        } else {
-            Ok(())
-        }
-    }
-}
-
 // TODO: remove?
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum UserListFilter {
     Guest,
     Registered,
@@ -330,17 +252,18 @@ pub enum UserListFilter {
     Puppet,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
+#[serde(rename_all = "snake_case")]
 pub struct UserListParams {
     pub filter: Option<UserListFilter>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+// TODO: move user search types to search
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct UserSearch {
     /// whether to only return bots or only return non-bots.
     ///
@@ -382,9 +305,8 @@ pub struct UserSearch {
     pub sort_field: UserSearchSortField,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum UserSearchSortField {
     /// the user name
     Name,
@@ -396,14 +318,36 @@ pub enum UserSearchSortField {
     Registered,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct SuspendRequest {
     pub expires_at: Option<Time>,
 }
 
 impl User {
+    /// check if a user is suspended or not
+    pub fn is_suspended(&self) -> bool {
+        if let Some(s) = &self.suspended {
+            if s.expires_at.is_some_and(|t| *t < *Time::now_utc()) {
+                false
+            } else {
+                true
+            }
+        } else {
+            false
+        }
+    }
+
+    /// ensure that this user is not suspended, returning an Err if they are
+    pub fn ensure_unsuspended(&self) -> Result<(), ApiError> {
+        if self.is_suspended() {
+            Err(ApiError::from_code(ErrorCode::UserSuspended))
+        } else {
+            Ok(())
+        }
+    }
+
     /// whether a direct message can be created with this user
     pub fn can_dm(&self) -> bool {
         self.webhook.is_none()
