@@ -42,7 +42,7 @@ httpdate = "1.0.3"
 im = "15.1.0"
 image = { version = "0.25.10", features = ["avif"] }
 infer = "0.22.0"
-jsonwebkey = { version = "0.4.0", features = ["generate"] }
+jsonwebkey = { version = "0.4.0", features = ["generate", "pkcs-convert"] }
 jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
 kameo = "0.19.2"
 kerosene-core = { version = "0.1.1", path = "../kerosene-core" }

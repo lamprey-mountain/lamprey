@@ -16,18 +16,99 @@ use crate::v1::types::{
     error::{ApiError, ErrorCode},
 };
 
-/// openid connect automatic configuration
 #[record]
-pub struct Autoconfig {
+pub struct OidcClaims {
+    pub iss: String,
+    pub sub: String,
+    pub aud: String,
+    pub exp: u64,
+    pub iat: u64,
+    pub nonce: Option<String>,
+}
+
+/// OAuth 2.0 Authorization Server Metadata (RFC 8414)
+#[record]
+pub struct AuthServerMetadata {
+    pub issuer: Url,
+    pub authorization_endpoint: Url,
+    pub token_endpoint: Url,
+    pub jwks_uri: Url,
+    pub scopes_supported: Vec<String>,
+    pub response_types_supported: Vec<String>,
+    pub grant_types_supported: Vec<String>,
+    pub token_endpoint_auth_methods_supported: Vec<String>,
+    pub code_challenge_methods_supported: Vec<String>,
+}
+
+/// OpenID Connect Discovery 1.0 Provider Metadata
+#[record]
+pub struct OidcDiscovery {
     pub issuer: Url,
     pub authorization_endpoint: Url,
     pub token_endpoint: Url,
     pub userinfo_endpoint: Url,
+    pub jwks_uri: Url,
     pub scopes_supported: Vec<String>,
     pub response_types_supported: Vec<String>,
     pub grant_types_supported: Vec<String>,
     pub subject_types_supported: Vec<String>,
+    pub id_token_signing_alg_values_supported: Vec<String>,
     pub token_endpoint_auth_methods_supported: Vec<String>,
+    pub claims_supported: Vec<String>,
+    pub code_challenge_methods_supported: Vec<String>,
+}
+
+/// JSON Web Key Set (RFC 7517)
+#[record]
+pub struct Jwks {
+    pub keys: Vec<Jwk>,
+}
+
+/// JSON Web Key (RFC 7517 §4, RFC 7518 §6 for algorithm-specific params)
+// TODO: remove this and use the jsonwebkey crate instead
+// (jsonwebkey doesn't support utoipa ToSchema, hence why im not using it for now)
+#[record]
+pub struct Jwk {
+    /// Key type, e.g. "RSA", "EC", "OKP"
+    pub kty: String,
+    /// Intended use: "sig" or "enc"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub r#use: Option<String>,
+    /// Key operations, e.g. ["verify"]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_ops: Option<Vec<String>>,
+    /// Algorithm, e.g. "RS256", "ES256"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub alg: Option<String>,
+    /// Key ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kid: Option<String>,
+    /// X.509 URL
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x5u: Option<String>,
+    /// X.509 certificate chain
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x5c: Option<Vec<String>>,
+    /// X.509 certificate SHA-1 thumbprint
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x5t: Option<String>,
+    /// X.509 certificate SHA-256 thumbprint
+    #[serde(rename = "x5t#S256", skip_serializing_if = "Option::is_none")]
+    pub x5t_s256: Option<String>,
+
+    // RSA params
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub n: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub e: Option<String>,
+
+    // EC / OKP params
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub crv: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub y: Option<String>,
 }
 
 /// user info response for openid connect
@@ -56,6 +137,10 @@ pub struct Userinfo {
 
     /// link to the user's avatar. returns the full size image, not a thumbnail.
     pub picture: Option<Url>,
+    // TODO: extra fields?
+    // pub preferred_username: String,
+    // pub nickname: Option<String>,
+    // pub locale: String,
 }
 
 /// information about an application that can be granted access to your account
@@ -88,6 +173,7 @@ pub struct OauthAuthorizeParams {
     pub prompt: Option<String>,
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,
+    pub nonce: Option<String>,
 }
 
 #[record]
@@ -95,8 +181,30 @@ pub struct OauthAuthorizeResponse {
     pub redirect_uri: Url,
 }
 
+// TODO: use this type instead of string
+#[record]
+#[derive(Copy, PartialEq, Eq, strum::EnumString)]
+#[serde(rename_all = "snake_case")]
+pub enum OauthResponseType {
+    Code,
+    // Token,
+    // IdToken,
+}
+
+// TODO: use this type instead of string
+#[record]
+#[derive(Copy, PartialEq, Eq, strum::EnumString)]
+#[serde(rename_all = "snake_case")]
+pub enum OauthGrantType {
+    AuthorizationCode,
+    RefreshToken,
+    // ClientCredentials,
+    // device code(?)
+}
+
 #[record]
 pub struct OauthTokenRequest {
+    // TODO: "You can also pass your client_id and client_secret as basic authentication with client_id as the username and client_secret as the password."
     pub grant_type: String,
     pub code: Option<String>,
     pub redirect_uri: Option<Url>,
@@ -113,6 +221,9 @@ pub struct OauthTokenResponse {
     pub expires_in: u64,
     pub refresh_token: Option<String>,
     pub scope: String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_token: Option<String>,
 }
 
 #[record]
@@ -136,8 +247,10 @@ pub enum Scope {
     /// basic user profle information
     ///
     /// affects user_get and oauth_userinfo
-    #[serde(alias = "openid")]
     Identify,
+
+    /// same as identify
+    Openid,
 
     /// return email address in user profile
     ///
@@ -176,11 +289,12 @@ bitflags::bitflags! {
     #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
     pub struct ScopeBits: u8 {
         const Identify = 1 << 0;
-        const Email = 1 << 1;
-        const Rooms = 1 << 2;
-        const Relationships = 1 << 3;
-        const Full = 1 << 4;
-        const Auth = 1 << 5;
+        const Openid = 1 << 1;
+        const Email = 1 << 2;
+        const Rooms = 1 << 3;
+        const Relationships = 1 << 4;
+        const Full = 1 << 5;
+        const Auth = 1 << 6;
     }
 }
 
@@ -261,6 +375,7 @@ impl Scope {
             return true;
         }
 
+        // NOTE: identify and openid imply each other (they're logically the same scope)
         match self {
             Scope::Auth => true,
             Scope::Full => matches!(
@@ -270,7 +385,8 @@ impl Scope {
             Scope::Relationships => *other == Scope::Identify,
             Scope::Rooms => *other == Scope::Identify,
             Scope::Email => *other == Scope::Identify,
-            Scope::Identify => false,
+            Scope::Identify => *other == Scope::Openid,
+            Scope::Openid => *other == Scope::Identify,
         }
     }
 }
@@ -318,6 +434,7 @@ impl fmt::Display for Scope {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
             Scope::Identify => "identify",
+            Scope::Openid => "openid",
             Scope::Email => "email",
             Scope::Rooms => "rooms",
             Scope::Relationships => "relationships",
@@ -333,7 +450,8 @@ impl FromStr for Scope {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "identify" | "openid" => Ok(Scope::Identify),
+            "identify" => Ok(Scope::Identify),
+            "openid" => Ok(Scope::Openid),
             "email" => Ok(Scope::Email),
             "rooms" => Ok(Scope::Rooms),
             "relationships" => Ok(Scope::Relationships),
@@ -348,6 +466,7 @@ impl From<Scope> for ScopeBits {
     fn from(value: Scope) -> Self {
         match value {
             Scope::Identify => ScopeBits::Identify,
+            Scope::Openid => ScopeBits::Openid,
             Scope::Email => ScopeBits::Email,
             Scope::Rooms => ScopeBits::Rooms,
             Scope::Relationships => ScopeBits::Relationships,
@@ -363,6 +482,7 @@ impl From<&Scopes> for ScopeBits {
         for scope in &value.0 {
             match scope {
                 Scope::Identify => bits |= ScopeBits::Identify,
+                Scope::Openid => bits |= ScopeBits::Openid,
                 Scope::Email => bits |= ScopeBits::Email,
                 Scope::Rooms => bits |= ScopeBits::Rooms,
                 Scope::Relationships => bits |= ScopeBits::Relationships,
@@ -379,6 +499,9 @@ impl From<ScopeBits> for Scopes {
         let mut scopes = Vec::new();
         if value.contains(ScopeBits::Identify) {
             scopes.push(Scope::Identify);
+        }
+        if value.contains(ScopeBits::Openid) {
+            scopes.push(Scope::Openid);
         }
         if value.contains(ScopeBits::Email) {
             scopes.push(Scope::Email);

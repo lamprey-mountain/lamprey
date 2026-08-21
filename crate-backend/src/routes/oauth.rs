@@ -5,19 +5,23 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use common::v1::routes;
+use common::v1::types::oauth::{AuthServerMetadata, Jwk, OauthGrantType};
 use common::v1::types::{
     AuditLogEntryType, SessionStatus, SessionToken, SessionType,
     application::{Application, Scope, Scopes},
     oauth::{
-        Autoconfig, OauthAuthorizeInfo, OauthAuthorizeResponse, OauthIntrospectResponse,
-        OauthTokenResponse, Userinfo,
+        Jwks, OauthAuthorizeInfo, OauthAuthorizeResponse, OauthIntrospectResponse,
+        OauthTokenResponse, OidcClaims, OidcDiscovery, Userinfo,
     },
     util::Time,
 };
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
+use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 use lamprey_macros::handler;
 use sha2::{Digest, Sha256};
+use strum::IntoEnumIterator;
+use subtle::ConstantTimeEq;
 use utoipa_axum::router::OpenApiRouter;
 use uuid::Uuid;
 
@@ -171,11 +175,17 @@ async fn oauth_token(
     }
 
     if app.oauth_confidential {
-        if client_secret != app.oauth_secret.unwrap() {
+        let stored_secret = app
+            .oauth_secret
+            .ok_or(Error::Internal("confidential app missing secret".into()))?;
+        let secrets_match = client_secret.as_bytes().ct_eq(stored_secret.as_bytes());
+        if !bool::from(secrets_match) {
             return Err(Error::InvalidCredentials);
         }
     }
 
+    // TODO: deduplicate/dry up this code
+    // maybe extract this logic into a service? (reuse oauth service?)
     match req.token.grant_type.as_str() {
         "authorization_code" => {
             let code = req
@@ -241,6 +251,43 @@ async fn oauth_token(
             data.oauth_refresh_token_create(refresh_token_string.clone(), session.id)
                 .await?;
 
+            let mut id_token = None;
+            let scope_list = Scopes(scopes.clone().into_iter().collect());
+            if scope_list.has(&Scope::Openid) {
+                // PERF: don't (re)load keys every time
+                let srv = s.services();
+                let c = srv.config.internal_get().await?;
+                let jwk: jsonwebkey::JsonWebKey = serde_json::from_str(&c.oidc_jwk_key)?;
+                let pem = jwk.key.to_pem();
+
+                let (encoding_key, alg) = match jwk.algorithm {
+                    Some(jsonwebkey::Algorithm::ES256) => {
+                        (EncodingKey::from_ec_pem(pem.as_bytes())?, Algorithm::ES256)
+                    }
+                    Some(jsonwebkey::Algorithm::RS256) => {
+                        (EncodingKey::from_rsa_pem(pem.as_bytes())?, Algorithm::RS256)
+                    }
+                    _ => return Err(Error::Internal("unsupported signing alg".into())),
+                };
+
+                let header = Header {
+                    alg,
+                    kid: jwk.key_id.clone(),
+                    ..Default::default()
+                };
+
+                let claims = OidcClaims {
+                    iss: s.config.api_url.to_string(),
+                    sub: user_id.to_string(),
+                    aud: client_id.to_string(),
+                    exp: expires_at.unix_timestamp() as u64,
+                    iat: Time::now_utc().unix_timestamp() as u64,
+                    nonce: None,
+                };
+
+                id_token = Some(encode(&header, &claims, &encoding_key)?);
+            }
+
             let response = OauthTokenResponse {
                 access_token: token.0,
                 token_type: "Bearer".to_string(),
@@ -251,6 +298,7 @@ async fn oauth_token(
                     .map(|s| s.to_string())
                     .collect::<Vec<_>>()
                     .join(" "),
+                id_token,
             };
 
             Ok(Json(response))
@@ -298,6 +346,43 @@ async fn oauth_token(
 
             let connection = data.connection_get(user_id, app.id).await?;
 
+            let mut id_token = None;
+            let scope_list = Scopes(connection.scopes.clone().into_iter().collect());
+            if scope_list.has(&Scope::Openid) {
+                // PERF: don't (re)load keys every time
+                let srv = s.services();
+                let c = srv.config.internal_get().await?;
+                let jwk: jsonwebkey::JsonWebKey = serde_json::from_str(&c.oidc_jwk_key)?;
+                let pem = jwk.key.to_pem();
+
+                let (encoding_key, alg) = match jwk.algorithm {
+                    Some(jsonwebkey::Algorithm::ES256) => {
+                        (EncodingKey::from_ec_pem(pem.as_bytes())?, Algorithm::ES256)
+                    }
+                    Some(jsonwebkey::Algorithm::RS256) => {
+                        (EncodingKey::from_rsa_pem(pem.as_bytes())?, Algorithm::RS256)
+                    }
+                    _ => return Err(Error::Internal("unsupported signing alg".into())),
+                };
+
+                let header = Header {
+                    alg,
+                    kid: jwk.key_id.clone(),
+                    ..Default::default()
+                };
+
+                let claims = OidcClaims {
+                    iss: s.config.api_url.to_string(),
+                    sub: user_id.to_string(),
+                    aud: app.id.to_string(),
+                    exp: expires_at.unix_timestamp() as u64,
+                    iat: Time::now_utc().unix_timestamp() as u64,
+                    nonce: None,
+                };
+
+                id_token = Some(encode(&header, &claims, &encoding_key)?);
+            }
+
             let response = OauthTokenResponse {
                 access_token: token.0,
                 token_type: "Bearer".to_string(),
@@ -309,6 +394,7 @@ async fn oauth_token(
                     .map(|s| s.to_string())
                     .collect::<Vec<_>>()
                     .join(" "),
+                id_token,
             };
 
             Ok(Json(response))
@@ -352,32 +438,77 @@ async fn oauth_revoke(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Oauth autoconfig
-#[handler(routes::oauth_autoconfig)]
-async fn oauth_autoconfig(
+/// Oauth autoconfig auth server
+#[handler(routes::oauth_autoconfig_auth_server)]
+async fn oauth_autoconfig_auth_server(
     State(s): State<Arc<ServerState>>,
-    _req: routes::oauth_autoconfig::Request,
+    _req: routes::oauth_autoconfig_auth_server::Request,
 ) -> Result<impl IntoResponse> {
-    let config = Autoconfig {
+    let config = AuthServerMetadata {
         issuer: s.config.api_url.clone(),
         authorization_endpoint: s.config.html_url.join("/authorize")?,
         token_endpoint: s.config.api_url.join("/api/v1/oauth/token")?,
-        userinfo_endpoint: s.config.api_url.join("/api/v1/oauth/userinfo")?,
-        scopes_supported: vec![
-            "identify".to_string(),
-            "openid".to_string(),
-            "full".to_string(),
-            "auth".to_string(),
-        ],
+        jwks_uri: s.config.api_url.join("/.well-known/jwks.json")?,
+        scopes_supported: Scope::iter().map(|a| a.to_string()).collect(),
         response_types_supported: vec!["code".to_string()],
         grant_types_supported: vec!["authorization_code".to_string()],
-        subject_types_supported: vec!["public".to_string()],
         token_endpoint_auth_methods_supported: vec![
             "client_secret_post".to_string(),
             "client_secret_basic".to_string(),
         ],
+        code_challenge_methods_supported: vec!["S256".to_string(), "plain".to_string()],
     };
     Ok(Json(config))
+}
+
+/// Oauth autoconfig OIDC
+#[handler(routes::oauth_autoconfig_openid)]
+async fn oauth_autoconfig_openid(
+    State(s): State<Arc<ServerState>>,
+    _req: routes::oauth_autoconfig_openid::Request,
+) -> Result<impl IntoResponse> {
+    let config = OidcDiscovery {
+        issuer: s.config.api_url.clone(),
+        authorization_endpoint: s.config.html_url.join("/authorize")?,
+        token_endpoint: s.config.api_url.join("/api/v1/oauth/token")?,
+        userinfo_endpoint: s.config.api_url.join("/api/v1/oauth/userinfo")?,
+        jwks_uri: s.config.api_url.join("/.well-known/jwks.json")?,
+        scopes_supported: Scope::iter().map(|a| a.to_string()).collect(),
+        response_types_supported: vec!["code".to_string()],
+        grant_types_supported: vec!["authorization_code".to_string()],
+        subject_types_supported: vec!["public".to_string()],
+        id_token_signing_alg_values_supported: vec!["ES256".to_string()],
+        token_endpoint_auth_methods_supported: vec![
+            "client_secret_post".to_string(),
+            "client_secret_basic".to_string(),
+        ],
+        claims_supported: vec![
+            "iss".to_string(),
+            "sub".to_string(),
+            "name".to_string(),
+            "email".to_string(),
+            "email_verified".to_string(),
+            "picture".to_string(),
+            "updated_at".to_string(),
+            "profile".to_string(),
+        ],
+        code_challenge_methods_supported: vec!["S256".to_string(), "plain".to_string()],
+    };
+    Ok(Json(config))
+}
+
+/// Oauth JWKS
+#[handler(routes::oauth_jwks)]
+async fn oauth_jwks(
+    State(s): State<Arc<ServerState>>,
+    _req: routes::oauth_jwks::Request,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let c = srv.config.internal_get().await?;
+    // NOTE: this json is originally a jsonwebkey::JsonWebKey
+    let jwk: Jwk = serde_json::from_str(&c.oidc_jwk_key)?;
+    let jwks = Jwks { keys: vec![jwk] };
+    Ok(Json(jwks))
 }
 
 /// Oauth userinfo
@@ -389,12 +520,22 @@ async fn oauth_userinfo(
 ) -> Result<impl IntoResponse> {
     let srv = s.services();
     let mut data = s.data();
+
+    // NOTE: currently i assume every session has Identify
+    // in the future, i'll either require every client to have Identify or require Identify to access this endpoint
+
     let user = srv.users.get(auth.user.id, None).await?;
-    let email = data
-        .user_email_list(auth.user.id)
-        .await?
-        .into_iter()
-        .find(|e| e.is_primary);
+
+    let has_email_scope = auth.scopes.has(&Scope::Email);
+    let email = if has_email_scope {
+        data.user_email_list(auth.user.id)
+            .await?
+            .into_iter()
+            .find(|e| e.is_primary)
+    } else {
+        None
+    };
+
     let info = Userinfo {
         iss: srv.state.config().api_url.clone(),
         sub: user.id,
@@ -419,5 +560,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(oauth_introspect))
         .routes(routes2!(oauth_revoke))
         .routes(routes2!(oauth_userinfo))
-        .routes(routes2!(oauth_autoconfig))
+        .routes(routes2!(oauth_autoconfig_auth_server))
+        .routes(routes2!(oauth_autoconfig_openid))
+        .routes(routes2!(oauth_jwks))
 }

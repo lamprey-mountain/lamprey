@@ -4457,11 +4457,13 @@ checksum = "ba781c43eb46c3bbf5bfda541139eed9a52b78d7c3aa74d516918885ecd63c40"
 dependencies = [
  "base64 0.22.1",
  "bitflags 2.13.1",
+ "num-bigint",
  "p256",
  "rand 0.9.5",
  "serde",
  "serde_json",
  "thiserror 2.0.20",
+ "yasna 0.5.2",
  "zeroize",
 ]
 
@@ -4995,6 +4997,7 @@ dependencies = [
  "bytes",
  "ed25519-dalek",
  "http",
+ "jsonwebkey",
  "lamprey-macros",
  "mediatype",
  "pastey 0.1.1",
@@ -7704,7 +7707,7 @@ dependencies = [
  "rustls-pki-types",
  "time",
  "x509-parser",
- "yasna",
+ "yasna 0.6.0",
 ]
 
 [[package]]
@@ -11754,6 +11757,15 @@ name = "yansi"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cfe53a6657fd280eaa890a3bc59152892ffa3e30101319d168b781ed6529b049"
+
+[[package]]
+name = "yasna"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e17bb3549cc1321ae1296b9cdc2698e2b6cb1992adfa19a8c72e5b7a738f44cd"
+dependencies = [
+ "num-bigint",
+]
 
 [[package]]
 name = "yasna"

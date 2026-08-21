@@ -148,7 +148,7 @@ pub mod oauth_revoke {
     pub struct Response {}
 }
 
-/// Oauth autoconfig
+/// Oauth config authorization server
 ///
 /// Retrieve the OpenID Connect discovery document for automatic client configuration.
 // NOTE: should this be at the root? nesting it under `/api/v1` feels wrong but seems to work.
@@ -156,15 +156,55 @@ pub mod oauth_revoke {
     get,
     path = "/.well-known/oauth-authorization-server",
     tags = ["oauth"],
-    response(OK, body = Autoconfig, description = "success"),
+    response(OK, body = AuthServerMetadata, description = "success"),
 )]
-pub mod oauth_autoconfig {
-    use crate::v1::types::oauth::Autoconfig;
+pub mod oauth_autoconfig_auth_server {
+    use crate::v1::types::oauth::AuthServerMetadata;
 
     pub struct Request {}
 
     pub struct Response {
         #[json]
-        pub autoconfig: Autoconfig,
+        pub autoconfig: AuthServerMetadata,
+    }
+}
+
+/// Oauth config OpenID Connect
+///
+/// Retrieve the OpenID Connect discovery document.
+#[endpoint(
+    get,
+    path = "/.well-known/openid-configuration",
+    tags = ["oauth"],
+    response(OK, body = OidcDiscovery , description = "success"),
+)]
+pub mod oauth_autoconfig_openid {
+    use crate::v1::types::oauth::OidcDiscovery;
+
+    pub struct Request {}
+
+    pub struct Response {
+        #[json]
+        pub config: OidcDiscovery,
+    }
+}
+
+/// Oauth JWKS
+///
+/// Retrieve the JSON Web Key Set.
+#[endpoint(
+    get,
+    path = "/.well-known/jwks.json",
+    tags = ["oauth"],
+    response(OK, body = Jwks, description = "success"),
+)]
+pub mod oauth_jwks {
+    use crate::v1::types::oauth::Jwks;
+
+    pub struct Request {}
+
+    pub struct Response {
+        #[json]
+        pub jwks: Jwks,
     }
 }

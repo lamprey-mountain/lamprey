@@ -96,7 +96,7 @@ impl ServiceMemberLists {
             .await;
 
         let actual_tx = match result {
-            Ok(Ok(tx)) => tx,
+            Ok(tx) => tx,
             _ => {
                 // Actor is dead or failed, evict it
                 self.globals.services().rooms.unload_cache(room_id).await;
@@ -111,7 +111,7 @@ impl ServiceMemberLists {
                     .await
                     .map_err(|_| {
                         crate::Error::Internal("failed to subscribe to member list".to_string())
-                    })??
+                    })?
             }
         };
 

@@ -194,6 +194,25 @@ pub enum SessionType {
     Access,
 }
 
+// TODO: use this
+#[cfg(any())]
+#[record]
+pub enum SessionType2 {
+    /// an user token
+    // NOTE: i might remove this and switch to purely oauth2
+    User {
+        imprint: SessionImprint,
+        push_enabled: bool,
+    },
+
+    /// a session created via oauth2
+    #[serde(alias = "Access")]
+    Oauth2 {
+        expires_at: Time,
+        app_id: ApplicationId,
+    },
+}
+
 impl fmt::Display for SessionType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
