@@ -830,11 +830,19 @@ async fn spawn_portal_inner(
                                 .get_message(discord_cfg.channel_id, discord_msg_id)
                                 .await?;
                             let reply_content = format_discord_reply_content(&discord_msg);
+
+                            let author_display = if discord_msg.webhook_id.is_some() {
+                                discord_msg.author.name.clone()
+                            } else {
+                                discord_msg.author.mention().to_string()
+                            };
+
                             let description = format!(
-                                "**[replying to](https://canary.discord.com/channels/{}/{}/{})**\n{}",
+                                "**[replying to](https://canary.discord.com/channels/{}/{}/{})** {} \n{}",
                                 discord_cfg.guild_id,
                                 discord_cfg.channel_id,
                                 discord_msg_id,
+                                author_display,
                                 reply_content,
                             );
                             content = format!("{} {}", discord_msg.author.mention(), content);
