@@ -54,11 +54,6 @@ export const Home = () => {
 			<A target="_self" href="/api/docs">
 				api docs
 			</A>
-			<br />
-			<Show when={flags.has("dev")}>
-				<A href="/debug">debug</A>
-				<br />
-			</Show>
 		</div>
 	);
 };
