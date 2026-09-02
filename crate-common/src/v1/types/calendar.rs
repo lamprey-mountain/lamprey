@@ -460,9 +460,11 @@ impl Recurrence {
             }
             RecurrenceRange::Until { time } => {
                 let dt = time.to_offset(time::UtcOffset::UTC);
-                let fmt =
-                    time::format_description::parse("[year][month][day]T[hour][minute][second]Z")
-                        .unwrap();
+                // TODO: use new version when parsing
+                let fmt = time::format_description::parse_borrowed::<1>(
+                    "[year][month][day]T[hour][minute][second]Z",
+                )
+                .unwrap();
                 rrule.push(format!("UNTIL={}", dt.format(&fmt).unwrap()));
             }
             RecurrenceRange::Infinite => {}
