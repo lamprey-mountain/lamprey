@@ -228,7 +228,7 @@ impl Ffmpeg {
         }
     }
 
-    pub async fn generate_thumb(&self, path: &Path) -> Result<Vec<u8>, FfmpegError> {
+    pub async fn extract_or_generate_video_thumbnail(&self, path: &Path) -> Result<Vec<u8>, FfmpegError> {
         // TODO: better thumbnail generation logic for videos
         // eg. skip solid black/white frames at start of video, get thumb x% of the way through the video
         let output = Command::new(self.resolved_ffmpeg_path())

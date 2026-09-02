@@ -254,7 +254,7 @@ impl MediaPipeline {
                 ff.extract_stream(path, thumb.index).await?
             } else if thumb.codec_type == MediaType::Video {
                 debug!("generate thumb from video");
-                ff.generate_thumb(path).await?
+                ff.extract_or_generate_video_thumbnail(path).await?
             } else {
                 debug!("no suitable thumbnail codec");
                 self.poster = Some(None);
