@@ -5,6 +5,7 @@ use crate::prelude::*;
 #[cfg_attr(feature = "serde", derive(serde::Serialize))]
 #[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
 pub struct Decoration {
+    // PERF: consider using/inlining span_start, span_end instead of having a Span here
     pub span: Span,
     pub kind: DecorationKind,
 }
@@ -97,32 +98,5 @@ fn node_to_deco_kind(kind: NodeKind) -> Option<DecorationKind> {
         NodeKind::Text(TextKind::ListPrefix) => Some(DecorationKind::Syntax),
         // NOTE: UnicodeEmoji, CustomEmoji, and Mention have special handling
         _ => None,
-    }
-}
-
-#[cfg(any())]
-#[cfg(feature = "serde")]
-mod _s {
-    use serde::Serialize;
-
-    use crate::{
-        prelude::Len,
-        render::{Decoration, DecorationKind},
-    };
-
-    #[derive(Serialize)]
-    struct Deco {
-        span_start: Len,
-        span_end: Len,
-        kind: DecorationKind,
-    }
-
-    impl Serialize for Decoration {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: serde::Serializer,
-        {
-            todo!()
-        }
     }
 }
