@@ -135,7 +135,7 @@ impl SearchDocument for SearchMessage<'_> {
         let mut meta_text: BTreeMap<String, OwnedValue> = BTreeMap::new();
 
         let reply = match &message.latest_version.message_type {
-            MessageType::DefaultMarkdown(m) => m.reply_id,
+            MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => m.reply_id,
             MessageType::MessagePinned(p) => Some(p.pinned_message_id),
             MessageType::ThreadCreated(m) => m.source_message_id,
             _ => None,
@@ -143,7 +143,9 @@ impl SearchDocument for SearchMessage<'_> {
 
         doc.add_text(s.content, message.latest_version.message_type.to_string());
 
-        if let MessageType::DefaultMarkdown(ref m) = message.latest_version.message_type {
+        if let MessageType::DefaultMarkdown(ref m) | MessageType::ThreadInitial(ref m) =
+            message.latest_version.message_type
+        {
             if !m.attachments.is_empty() {
                 meta_fast.insert("has_attachment".to_string(), true.into());
 

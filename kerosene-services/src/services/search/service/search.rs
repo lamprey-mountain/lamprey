@@ -93,7 +93,9 @@ impl ServiceSearch {
                 let reply_ids: Vec<_> = msgs
                     .iter()
                     .filter_map(|m| match &m.latest_version.message_type {
-                        MessageType::DefaultMarkdown(m) => m.reply_id,
+                        MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => {
+                            m.reply_id
+                        }
                         _ => None,
                     })
                     .collect();

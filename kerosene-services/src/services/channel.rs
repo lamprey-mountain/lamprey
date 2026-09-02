@@ -630,7 +630,7 @@ impl ServiceChannels {
         if let Some(starter_message) = json.starter_message {
             if json.ty.is_thread() {
                 srv.messages
-                    .create(
+                    .create_thread_initial(
                         channel_id,
                         auth,
                         None,

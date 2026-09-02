@@ -46,7 +46,7 @@ impl Bot {
         }
 
         let content = match &message.latest_version.message_type {
-            MessageType::DefaultMarkdown(m) => m.content.as_deref(),
+            MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => m.content.as_deref(),
             _ => None,
         };
 

@@ -51,12 +51,14 @@ pub enum DbMessageType {
     DocumentTag,
     DocumentEdits,
     DocumentMerged,
+    ThreadInitial,
 }
 
 impl From<MessageType> for DbMessageType {
     fn from(value: MessageType) -> Self {
         match value {
             MessageType::DefaultMarkdown(_) => DbMessageType::DefaultMarkdown,
+            MessageType::ThreadInitial(_) => DbMessageType::ThreadInitial,
             MessageType::ChannelRename(_) => DbMessageType::ChannelRename,
             MessageType::MemberAdd(_) => DbMessageType::MemberAdd,
             MessageType::MemberRemove(_) => DbMessageType::MemberRemove,
@@ -562,14 +564,16 @@ pub trait DbMessageExtract {
 impl DbMessageExtract for MessageType {
     fn content(&self) -> Option<String> {
         match self {
-            MessageType::DefaultMarkdown(msg) => msg.content.clone(),
+            MessageType::DefaultMarkdown(msg) | MessageType::ThreadInitial(msg) => {
+                msg.content.clone()
+            }
             _ => None,
         }
     }
 
     fn metadata(&self) -> Option<serde_json::Value> {
         match self {
-            MessageType::DefaultMarkdown(msg) => msg
+            MessageType::DefaultMarkdown(msg) | MessageType::ThreadInitial(msg) => msg
                 .metadata
                 .as_ref()
                 .and_then(|m| serde_json::to_value(m).ok()),
@@ -591,7 +595,7 @@ impl DbMessageExtract for MessageType {
 
     fn reply_id(&self) -> Option<MessageId> {
         match self {
-            MessageType::DefaultMarkdown(msg) => msg.reply_id,
+            MessageType::DefaultMarkdown(msg) | MessageType::ThreadInitial(msg) => msg.reply_id,
             _ => None,
         }
     }

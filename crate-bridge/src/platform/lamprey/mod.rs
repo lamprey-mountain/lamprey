@@ -301,74 +301,76 @@ impl Lamprey {
 
                     // FIXME: allow sending messages containing !accept and !reject if theres no pending link
                     match &message.latest_version.message_type {
-                        MessageType::DefaultMarkdown(m) => match m.content.as_deref() {
-                            Some(c @ "!accept" | c @ "!reject") => {
-                                let accepted = c == "!accept";
-                                let channel =
-                                    self.client.http().channel_get(message.channel_id).await?;
-                                let Some(room_id) = channel.room_id else {
+                        MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => {
+                            match m.content.as_deref() {
+                                Some(c @ "!accept" | c @ "!reject") => {
+                                    let accepted = c == "!accept";
+                                    let channel =
+                                        self.client.http().channel_get(message.channel_id).await?;
+                                    let Some(room_id) = channel.room_id else {
+                                        let _ = self
+                                            .client
+                                            .http()
+                                            .message_create(
+                                                message.channel_id,
+                                                &MessageCreate {
+                                                    content: Some(
+                                                        "Only channels in rooms can be bridged"
+                                                            .to_string(),
+                                                    ),
+                                                    ..Default::default()
+                                                },
+                                            )
+                                            .await;
+                                        return Ok(());
+                                    };
+
+                                    // FIXME: make it clear which request you're `!accept`ing or `!reject`ing (don't accept/reject *everything* at once)
+
+                                    let _ = self
+                                        .bridge
+                                        .commands
+                                        .send(BridgeCommand::RealmLinkResponse {
+                                            lamprey_room_id: room_id,
+                                            accepted,
+                                        })
+                                        .await;
+
+                                    let _ = self
+                                        .bridge
+                                        .commands
+                                        .send(BridgeCommand::PortalLinkResponse {
+                                            lamprey_room_id: room_id,
+                                            lamprey_channel_id: message.channel_id,
+                                            accepted,
+                                            lamprey_last_id: channel
+                                                .last_message_id
+                                                .unwrap_or_default(),
+                                        })
+                                        .await;
+
+                                    // FIXME: send msg on bridge event portal created instead of here
+                                    let msg = if accepted {
+                                        "portal/realm request accepted!"
+                                    } else {
+                                        "portal/realm request denied"
+                                    };
                                     let _ = self
                                         .client
                                         .http()
                                         .message_create(
                                             message.channel_id,
                                             &MessageCreate {
-                                                content: Some(
-                                                    "Only channels in rooms can be bridged"
-                                                        .to_string(),
-                                                ),
+                                                content: Some(msg.to_string()),
                                                 ..Default::default()
                                             },
                                         )
                                         .await;
                                     return Ok(());
-                                };
-
-                                // FIXME: make it clear which request you're `!accept`ing or `!reject`ing (don't accept/reject *everything* at once)
-
-                                let _ = self
-                                    .bridge
-                                    .commands
-                                    .send(BridgeCommand::RealmLinkResponse {
-                                        lamprey_room_id: room_id,
-                                        accepted,
-                                    })
-                                    .await;
-
-                                let _ = self
-                                    .bridge
-                                    .commands
-                                    .send(BridgeCommand::PortalLinkResponse {
-                                        lamprey_room_id: room_id,
-                                        lamprey_channel_id: message.channel_id,
-                                        accepted,
-                                        lamprey_last_id: channel
-                                            .last_message_id
-                                            .unwrap_or_default(),
-                                    })
-                                    .await;
-
-                                // FIXME: send msg on bridge event portal created instead of here
-                                let msg = if accepted {
-                                    "portal/realm request accepted!"
-                                } else {
-                                    "portal/realm request denied"
-                                };
-                                let _ = self
-                                    .client
-                                    .http()
-                                    .message_create(
-                                        message.channel_id,
-                                        &MessageCreate {
-                                            content: Some(msg.to_string()),
-                                            ..Default::default()
-                                        },
-                                    )
-                                    .await;
-                                return Ok(());
+                                }
+                                _ => {}
                             }
-                            _ => {}
-                        },
+                        }
                         _ => {}
                     }
 

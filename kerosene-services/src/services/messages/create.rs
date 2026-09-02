@@ -31,6 +31,7 @@ struct MessageOperation<'a, S> {
     kind: MessageOperationKind,
     stage: S,
     nonce: Option<String>,
+    is_thread_initial: bool,
 
     // TODO: remove 'a once im sure i dont need it anymore
     _ph: PhantomData<&'a ()>,
@@ -139,6 +140,7 @@ impl<'a, S> MessageOperation<'a, S> {
             kind: self.kind,
             nonce: self.nonce,
             stage: new_stage(self.stage),
+            is_thread_initial: self.is_thread_initial,
             _ph: PhantomData,
         }
     }
@@ -173,7 +175,7 @@ impl MessageOperationKind {
                     // we aren't setting any content, but the resulting message
                     // could still have stuff if the original mesage had content
                     match &o.original.latest_version.message_type {
-                        MessageType::DefaultMarkdown(m) => {
+                        MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => {
                             m.content.is_some() || !m.attachments.is_empty() || !m.embeds.is_empty()
                         }
                         _ => false,
@@ -278,6 +280,7 @@ impl ServiceMessages {
                         json,
                         header_timestamp,
                         message_id,
+                        false,
                     ),
                 )
                 .await
@@ -290,6 +293,7 @@ impl ServiceMessages {
                 json,
                 header_timestamp,
                 message_id,
+                false,
             )
             .await
         }
@@ -311,6 +315,7 @@ impl ServiceMessages {
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
             nonce: None,
             stage: New::default(),
+            is_thread_initial: false,
             _ph: PhantomData,
         };
 
@@ -321,6 +326,49 @@ impl ServiceMessages {
         Ok(op.stage.message)
     }
 
+    pub async fn create_thread_initial<A: Auth5>(
+        &self,
+        channel_id: ChannelId,
+        auth: &mut A,
+        nonce: Option<String>,
+        json: MessageCreate,
+        header_timestamp: Option<Time>,
+        message_id: MessageId,
+    ) -> Result<Message> {
+        auth.ensure_user()?;
+        let author = Author::User(auth.identity().clone());
+        if let Some(nonce) = nonce {
+            // FIXME: this won't work with federation
+            let session = auth.ensure_session()?;
+            self.idempotency_keys
+                .try_get_with(
+                    (session.id, nonce.clone()),
+                    self.create_inner(
+                        channel_id,
+                        author,
+                        Some(nonce),
+                        json,
+                        header_timestamp,
+                        message_id,
+                        true,
+                    ),
+                )
+                .await
+                .map_err(|err| err.fake_clone())
+        } else {
+            self.create_inner(
+                channel_id,
+                author,
+                nonce,
+                json,
+                header_timestamp,
+                message_id,
+                true,
+            )
+            .await
+        }
+    }
+
     async fn create_inner(
         &self,
         channel_id: ChannelId,
@@ -329,6 +377,7 @@ impl ServiceMessages {
         json: MessageCreate,
         header_timestamp: Option<Time>,
         id: MessageId,
+        is_thread_initial: bool,
     ) -> Result<Message> {
         let srv = self.globals.services();
         let channel = srv.channels.get(channel_id, None).await?;
@@ -343,6 +392,7 @@ impl ServiceMessages {
                 header_timestamp,
                 interaction: None,
             },
+            is_thread_initial,
             _ph: PhantomData,
         };
 
@@ -395,6 +445,11 @@ impl ServiceMessages {
         let channel = srv.channels.get(channel_id, None).await?;
         let original = self.get(channel_id, message_id, user_id).await?;
 
+        let is_thread_initial = matches!(
+            original.latest_version.message_type,
+            MessageType::ThreadInitial(_)
+        );
+
         let op = MessageOperation {
             channel,
             message_id,
@@ -405,6 +460,7 @@ impl ServiceMessages {
                 header_timestamp,
                 interaction: None,
             },
+            is_thread_initial,
             _ph: PhantomData,
         };
 
@@ -437,6 +493,8 @@ impl ServiceMessages {
                 header_timestamp: None,
                 interaction,
             },
+            // TODO: creating threads from webhooks
+            is_thread_initial: false,
             _ph: PhantomData,
         };
 
@@ -473,6 +531,7 @@ impl ServiceMessages {
             kind: MessageOperationKind::MessageEdit(MessageEditOperation { json, original }),
             nonce: None,
             stage: New::default(),
+            is_thread_initial: false,
             _ph: PhantomData,
         };
 
@@ -848,7 +907,9 @@ impl ServiceMessages {
                         &v.message_type,
                     ) {
                         (Some(s), _) => s,
-                        (None, MessageType::DefaultMarkdown(m)) => m.content.as_deref(),
+                        (None, MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m)) => {
+                            m.content.as_deref()
+                        }
                         (None, _) => None,
                     }
                 } else {
@@ -951,7 +1012,9 @@ impl ServiceMessages {
                     .old_message_version()
                     .as_ref()
                     .and_then(|v| match &v.message_type {
-                        MessageType::DefaultMarkdown(m) => Some(m.components.clone().into_thin()),
+                        MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => {
+                            Some(m.components.clone().into_thin())
+                        }
                         _ => None,
                     });
                 (&o.json.components, old)
@@ -979,39 +1042,44 @@ impl ServiceMessages {
         let attachments = op.kind.attachments();
 
         // NOTE: logic for constructing the MessageType payload should be shared
-        let payload =
-            MessageType::DefaultMarkdown(common::v1::types::message::MessageDefaultMarkdown {
-                content: op.stage.sanitized.content.clone(),
-                metadata: match &op.kind {
-                    MessageOperationKind::MessageCreate(o) => o.json.metadata.clone(),
-                    MessageOperationKind::MessageEdit(o) => {
-                        o.json.metadata.clone().unwrap_or_else(|| {
-                            op.old_message_version()
-                                .as_ref()
-                                .and_then(|v| match &v.message_type {
-                                    MessageType::DefaultMarkdown(m) => m.metadata.clone(),
-                                    _ => None,
-                                })
-                        })
-                    }
-                },
-                reply_id: match &op.kind {
-                    MessageOperationKind::MessageCreate(o) => o.json.reply_id,
-                    MessageOperationKind::MessageEdit(o) => o.json.reply_id.unwrap_or_else(|| {
+        let payload = common::v1::types::message::MessageDefaultMarkdown {
+            content: op.stage.sanitized.content.clone(),
+            metadata: match &op.kind {
+                MessageOperationKind::MessageCreate(o) => o.json.metadata.clone(),
+                MessageOperationKind::MessageEdit(o) => {
+                    o.json.metadata.clone().unwrap_or_else(|| {
                         op.old_message_version()
                             .as_ref()
                             .and_then(|v| match &v.message_type {
-                                MessageType::DefaultMarkdown(m) => m.reply_id,
+                                MessageType::DefaultMarkdown(m) => m.metadata.clone(),
                                 _ => None,
                             })
-                    }),
-                },
+                    })
+                }
+            },
+            reply_id: match &op.kind {
+                MessageOperationKind::MessageCreate(o) => o.json.reply_id,
+                MessageOperationKind::MessageEdit(o) => o.json.reply_id.unwrap_or_else(|| {
+                    op.old_message_version()
+                        .as_ref()
+                        .and_then(|v| match &v.message_type {
+                            MessageType::DefaultMarkdown(m) => m.reply_id,
+                            _ => None,
+                        })
+                }),
+            },
 
-                // these fields are handled in DbMessageCreate and ignored here
-                attachments: vec![],
-                embeds: vec![],
-                components: Components::default(),
-            });
+            // these fields are handled in DbMessageCreate and ignored here
+            attachments: vec![],
+            embeds: vec![],
+            components: Components::default(),
+        };
+
+        let payload = if op.is_thread_initial {
+            MessageType::ThreadInitial(payload)
+        } else {
+            MessageType::DefaultMarkdown(payload)
+        };
 
         match &op.kind {
             MessageOperationKind::MessageCreate(_) => {

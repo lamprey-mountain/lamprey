@@ -169,6 +169,33 @@ impl From<DbMessageVersion> for MessageVersion {
                         components: Components::default(),
                     })
                 }
+                DbMessageType::ThreadInitial => {
+                    let embeds: Vec<Embed> = row
+                        .embeds
+                        .and_then(|e| serde_json::from_value(e).ok())
+                        .unwrap_or_default();
+
+                    let attachments_data: Vec<DbAttachmentJson> =
+                        serde_json::from_value(row.attachments).unwrap_or_default();
+
+                    MessageType::ThreadInitial(MessageDefaultMarkdown {
+                        content: row.content,
+                        attachments: attachments_data
+                            .into_iter()
+                            .map(|att| MessageAttachment {
+                                ty: MessageAttachmentType::Media {
+                                    media: att.media.into(),
+                                },
+                                spoiler: att.spoiler,
+                            })
+                            .collect(),
+                        metadata: row.metadata.and_then(|m| serde_json::from_value(m).ok()),
+                        reply_id: row.reply_id.map(Into::into),
+                        embeds,
+                        // NOTE: actual components are populated in the messages service
+                        components: Components::default(),
+                    })
+                }
                 DbMessageType::ChannelRename => MessageType::ChannelRename(
                     row.metadata
                         .and_then(|m| serde_json::from_value(m).ok())

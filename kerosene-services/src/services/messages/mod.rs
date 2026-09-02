@@ -495,7 +495,9 @@ impl ServiceMessages {
             }
             if let Some(c) = components_data.get(&message.id) {
                 match &mut message.latest_version.message_type {
-                    MessageType::DefaultMarkdown(m) => m.components = c.clone(),
+                    MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => {
+                        m.components = c.clone()
+                    }
                     _ => {}
                 }
             }

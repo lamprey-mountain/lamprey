@@ -269,7 +269,7 @@ impl ServiceEmbed {
 
         let mut message_type = message.latest_version.message_type;
         let (embeds, attachments, components) = match &mut message_type {
-            MessageType::DefaultMarkdown(m) => {
+            MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => {
                 if m.embeds
                     .iter()
                     .any(|e| e.url.as_ref() == embed.url.as_ref())

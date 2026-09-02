@@ -63,7 +63,8 @@ impl MessageTransformer {
         use lamprey_markdown::ast::inline::MentionData;
 
         let source = match &message.latest_version.message_type {
-            common::v1::types::MessageType::DefaultMarkdown(m) => m.content.as_ref()?.to_owned(),
+            common::v1::types::MessageType::DefaultMarkdown(m)
+            | common::v1::types::MessageType::ThreadInitial(m) => m.content.as_ref()?.to_owned(),
             _ => return None,
         };
         let mentions = &message.latest_version.mentions;

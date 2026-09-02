@@ -353,10 +353,10 @@ impl ServiceMessages {
 
         // 3. update version in place with accumulated components
         let content = match &message.latest_version.message_type {
-            MessageType::DefaultMarkdown(m) => m,
+            MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => m,
             _ => {
                 return Err(Error::Internal(
-                    "somehow message became not DefaultMarkdown?".to_string(),
+                    "somehow message became not Markdown compatible?".to_string(),
                 ));
             }
         };

@@ -31,7 +31,7 @@ impl FlumeReader {
                         delta,
                     } if message_id == &flume_message_id => {
                         tx.send_modify(|m| match &mut m.latest_version.message_type {
-                            MessageType::DefaultMarkdown(m) => m
+                            MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => m
                                 .components
                                 .apply_delta(delta.clone())
                                 .expect("TODO: better error handling"),
@@ -68,7 +68,7 @@ impl FlumeReader {
     /// get the flume's current content (components)
     pub fn components(&self) -> Components<Canonical> {
         match self.message().latest_version.message_type {
-            MessageType::DefaultMarkdown(m) => m.components,
+            MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => m.components,
             _ => todo!("handle no components"),
         }
     }

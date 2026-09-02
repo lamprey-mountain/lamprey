@@ -787,7 +787,8 @@ async fn spawn_portal_inner(
                 let webhook = serenity::all::Webhook::from_url(&http, webhook_url.as_str()).await?;
 
                 let msg_inner = match &msg.latest_version.message_type {
-                    common::v1::types::MessageType::DefaultMarkdown(m) => m,
+                    common::v1::types::MessageType::DefaultMarkdown(m)
+                    | common::v1::types::MessageType::ThreadInitial(m) => m,
                     _ => {
                         debug!("unsupported lamprey message type");
                         // TODO: format and send anyways?
@@ -961,7 +962,8 @@ async fn spawn_portal_inner(
 
                 // TODO: deduplicate code with MessageCreate handler
                 let msg_inner = match &msg.latest_version.message_type {
-                    common::v1::types::MessageType::DefaultMarkdown(m) => m,
+                    common::v1::types::MessageType::DefaultMarkdown(m)
+                    | common::v1::types::MessageType::ThreadInitial(m) => m,
                     _ => {
                         debug!("unsupported lamprey message type");
                         // TODO: format and send anyways?
