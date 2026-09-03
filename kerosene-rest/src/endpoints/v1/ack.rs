@@ -65,7 +65,7 @@ async fn bulk(req: Req<routes::ack_bulk::Endpoint>) -> Result<routes::ack_bulk::
             .messaging()
             .broadcast_user(user.id, event)
             .await
-            .cast_internal();
+            .cast_internal()?;
     }
 
     Ok(routes::ack_bulk::Response {})
