@@ -6,6 +6,7 @@ import {
 import type { OauthInfo } from "sdk";
 import {
 	createResource,
+	createSignal,
 	ErrorBoundary,
 	For,
 	type JSX,
@@ -54,9 +55,11 @@ export const OauthAuthorizePrompt = (
 ) => {
 	const ctx = useCtx();
 	const nav = useNavigate();
+	const [authorizing, setAuthorizing] = createSignal(false);
 
 	const authorize = async () => {
 		try {
+			setAuthorizing(true);
 			const { data, error } = await ctx.client.http.POST(
 				`/api/v1/oauth/authorize${p.location.search}` as "/api/v1/oauth/authorize",
 				{} as any,
@@ -67,6 +70,7 @@ export const OauthAuthorizePrompt = (
 				location.href = (data as { redirect_uri: string }).redirect_uri;
 			}
 		} catch (err) {
+			setAuthorizing(false);
 			console.error(err);
 		}
 	};
@@ -107,11 +111,21 @@ export const OauthAuthorizePrompt = (
 				</div>
 			</div>
 			<menu>
-				<button type="button" class="button big" onClick={cancel}>
+				<button
+					type="button"
+					class="button big"
+					onClick={cancel}
+					disabled={authorizing()}
+				>
 					cancel
 				</button>
-				<button type="button" class="button big primary" onClick={authorize}>
-					authorize
+				<button
+					type="button"
+					class="button big primary"
+					onClick={authorize}
+					disabled={authorizing()}
+				>
+					{authorizing() ? "authorizing..." : "authorize"}
 				</button>
 			</menu>
 		</div>
