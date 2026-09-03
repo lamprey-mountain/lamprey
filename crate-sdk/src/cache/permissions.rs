@@ -1,7 +1,7 @@
 use common::v1::types::util::Time;
 use common::v1::types::{
-    Channel, ChannelType, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember,
-    SERVER_USER_ID, UserId,
+    Channel, ChannelType, Permission, PermissionOverwriteType, RoleId, RoomMember, SERVER_USER_ID,
+    UserId,
 };
 use lamprey_backend_core::types::permission::{
     CheckVisibility, MemberState, PermissionBits, Permissions2, Permissions2Metadata,
@@ -19,10 +19,13 @@ impl CachedRoom {
     }
 }
 
+// TODO: make this take a reference
+// TODO: permission calculator for a dm/gdm channel
 pub struct PermissionsCalculator {
     pub room: CachedRoom,
 }
 
+// TODO: remove this, don't return Result for query
 #[derive(Debug, Error)]
 pub enum PermissionsError {
     #[error("other")]
@@ -35,6 +38,7 @@ impl PermissionsCalculator {
     /// - passing in `channel` will calculate permissions in that channel
     /// - using `None` for user_id will calculate the default permissions (public room defaults)
     // TODO(?): use a better (sdk-specific?) type instead of Permissions2
+    // TODO: use CachedChannel
     pub fn query(
         &self,
         user_id: Option<UserId>,
@@ -214,41 +218,16 @@ impl PermissionsCalculator {
             }
         }
 
-        self.apply_channel_overwrites(bits, channel_locked, timed_out, channel, member);
+        self.apply_channel_locked(bits, channel_locked, timed_out, channel, member);
+        self.apply_channel_overwrites(bits, channel, member);
     }
 
     fn apply_channel_overwrites(
         &self,
         bits: &mut PermissionBits,
-        channel_locked: &mut bool,
-        timed_out: &mut bool,
         channel: &Channel,
         member: Option<&RoomMember>,
     ) {
-        // handle locked channels/threads
-        if let Some(locked) = &channel.locked {
-            let is_expired = locked.until.is_some_and(|until| until <= Time::now_utc());
-            if !is_expired {
-                *channel_locked = true;
-
-                // the member has a role that is explicitly allowed by the lock
-                let has_bypass = member.map_or(false, |m| {
-                    m.roles
-                        .iter()
-                        .any(|r| locked.allow_roles.contains(&(*r).into()))
-                });
-
-                // or the member has the Manage Channels permission
-                // or this is a thread and the member has the Manage Threads permission
-                let has_perm = bits.has(Permission::ChannelManage)
-                    || (channel.ty.is_thread() && bits.has(Permission::ThreadManage));
-
-                if !has_bypass && !has_perm {
-                    *timed_out = true;
-                }
-            }
-        }
-
         if channel.permission_overwrites.is_empty() {
             return;
         }
@@ -320,6 +299,39 @@ impl PermissionsCalculator {
         {
             if ow.ty == PermissionOverwriteType::User {
                 bits.remove_all(PermissionBits::from(ow.deny.as_slice()));
+            }
+        }
+    }
+
+    fn apply_channel_locked(
+        &self,
+        bits: &PermissionBits,
+        channel_locked: &mut bool,
+        timed_out: &mut bool,
+        channel: &Channel,
+        member: Option<&RoomMember>,
+    ) {
+        // handle locked channels/threads
+        if let Some(locked) = &channel.locked {
+            let is_expired = locked.until.is_some_and(|until| until <= Time::now_utc());
+            if !is_expired {
+                *channel_locked = true;
+
+                // the member has a role that is explicitly allowed by the lock
+                let has_bypass = member.map_or(false, |m| {
+                    m.roles
+                        .iter()
+                        .any(|r| locked.allow_roles.contains(&(*r).into()))
+                });
+
+                // or the member has the Manage Channels permission
+                // or this is a thread and the member has the Manage Threads permission
+                let has_perm = bits.has(Permission::ChannelManage)
+                    || (channel.ty.is_thread() && bits.has(Permission::ThreadManage));
+
+                if !has_bypass && !has_perm {
+                    *timed_out = true;
+                }
             }
         }
     }
