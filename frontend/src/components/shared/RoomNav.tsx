@@ -1,4 +1,4 @@
-import { A, useParams } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import type { Room } from "sdk";
 import {
 	createMemo,
@@ -17,6 +17,7 @@ import icHome from "@/assets/home.png";
 import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip";
 import { useMenu } from "@/contexts/mod";
+import { useCurrentRoomId } from "@/hooks/useCurrentRoomId";
 import { useRoomDnd } from "@/hooks/useRoomDnd";
 import {
 	type RoomNavFocusItem,
@@ -113,8 +114,6 @@ export const RoomNav = () => {
 		});
 	};
 
-	const params = useParams();
-
 	const navItems = createMemo(() => {
 		const items: RoomNavFocusItem[] = [];
 		items.push({ id: "home", type: "home", folderId: null });
@@ -137,20 +136,22 @@ export const RoomNav = () => {
 		return items;
 	});
 
+	const currentRoomId = useCurrentRoomId();
+
 	const keybinds = useRoomNavKeybinds({
 		items: navItems,
-		selectedId: () => params.room_id ?? "home",
+		selectedId: () => currentRoomId() ?? "home",
 		onToggleFolder: toggleFolder,
 	});
 
 	const isFocused = (id: string) => {
 		const focused = keybinds.focusedId();
 		if (focused !== null) return focused === id;
-		const selected = params.room_id ?? "home";
+		const selected = currentRoomId() ?? "home";
 		return selected === id;
 	};
 
-	const isSelected = createSelector(() => params.room_id ?? "home");
+	const isSelected = createSelector(() => currentRoomId() ?? "home");
 
 	const RoomItem = (props: { room: Room; folderId?: string }) => {
 		const mentionCount = () => getRoomMentionCount(props.room.id);

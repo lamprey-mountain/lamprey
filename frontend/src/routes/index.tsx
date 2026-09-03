@@ -58,6 +58,7 @@ import {
 	RoomContext,
 	useRoom,
 } from "@/contexts/room.tsx";
+import { useCurrentRoomId } from "@/hooks/useCurrentRoomId";
 import { flags } from "@/lib/flags";
 import { MediaSidebar } from "@/media/Sidebar";
 import type { RoomT } from "@/types";
@@ -72,9 +73,7 @@ const Title = (props: { title?: string }) => {
 };
 
 export const AppLayoutMain = (props: ParentProps<RouteSectionProps>) => {
-	const channels = useChannels();
-	const channel = channels.use(() => props.params.channel_id);
-	const roomId = () => props.params.room_id ?? channel()?.room_id ?? undefined;
+	const roomId = useCurrentRoomId();
 
 	return (
 		<>
