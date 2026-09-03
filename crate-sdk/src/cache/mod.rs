@@ -8,7 +8,7 @@ use common::{
 mod permissions;
 mod settings;
 
-pub use permissions::{PermissionsCalculator, PermissionsError};
+pub use permissions::PermissionsCalculator;
 pub use settings::{CacheBuilder, CacheSettings};
 
 // TODO: custom debug impl for Cache

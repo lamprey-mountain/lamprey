@@ -1,13 +1,11 @@
 use common::v1::types::util::Time;
 use common::v1::types::{
-    Channel, ChannelType, Permission, PermissionOverwriteType, RoleId, RoomMember, SERVER_USER_ID,
-    UserId,
+    Channel, ChannelType, Permission, PermissionBits, PermissionOverwriteType, RoleId, RoomMember,
+    SERVER_USER_ID, UserId,
 };
 use lamprey_backend_core::types::permission::{
-    CheckVisibility, MemberState, PermissionBits, Permissions2, Permissions2Metadata,
-    ResourceContext,
+    CheckVisibility, MemberState, Permissions2, Permissions2Metadata, ResourceContext,
 };
-use thiserror::Error;
 use tracing::warn;
 
 use crate::cache::CachedRoom;
