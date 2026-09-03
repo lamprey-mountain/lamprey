@@ -131,7 +131,7 @@ async fn validate_authorize(
         );
     }
 
-    Ok((app, redirect_uri, scopes))
+    Ok((app.strip_private(), redirect_uri, scopes))
 }
 
 /// Oauth exchange token

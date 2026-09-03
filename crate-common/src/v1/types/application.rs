@@ -203,3 +203,21 @@ pub struct Bridge {
 
 // TEMP: compatability
 pub use super::oauth::{Scope, Scopes};
+
+impl Application {
+    /// strip all private information from this application
+    // TODO: create a separate ApplicationPublic type
+    pub fn strip_private(self) -> Self {
+        Self {
+            id: self.id,
+            owner_id: self.owner_id, // NOTE: should this be private?
+            name: self.name,
+            description: self.description,
+            bridge: self.bridge,
+            public: self.public,
+            oauth_secret: None,
+            oauth_redirect_uris: vec![],
+            oauth_confidential: false,
+        }
+    }
+}
