@@ -1,24 +1,16 @@
 //! various admin-only apis
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::{MessageCreate, UserId};
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct AdminWhisper {
     pub user_id: UserId,
     pub message: MessageCreate,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct AdminBroadcast {
     pub message: MessageCreate,
     // TODO: add these
@@ -32,9 +24,7 @@ pub struct AdminBroadcast {
     // server_roles: Vec<RoleId>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct AdminRegisterUser {
     pub user_id: UserId,
 }
