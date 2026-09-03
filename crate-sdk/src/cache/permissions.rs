@@ -12,18 +12,49 @@ use crate::cache::CachedRoom;
 
 impl CachedRoom {
     /// get a permission calculator for this room
-    pub fn permissions(&self) -> PermissionsCalculator {
-        PermissionsCalculator { room: self.clone() }
+    pub fn permissions(&self) -> RoomPermissions<'_> {
+        RoomPermissions { room: self }
     }
 }
 
-// TODO: make this take a reference
-// TODO: permission calculator for a dm/gdm channel
-pub struct PermissionsCalculator {
-    pub room: CachedRoom,
+// TODO: add a permission calculator for a dm/gdm channel?
+// PERF: convert channel overwrites and role perms into bits; cache
+// RoomPermissions in CachedRoom and recalculate it when a relevant sync message is received
+pub struct RoomPermissions<'a> {
+    room: &'a CachedRoom,
 }
 
-impl PermissionsCalculator {
+#[derive(Debug, Clone)]
+pub struct Permissions {
+    // bits: PermissionBits,
+    // visible: bool,
+    // rank: u64,
+    // channel_locked, timed_out, quarantined, etc: bool,
+}
+
+impl Permissions {
+    // /// Check if a specific permission is granted (Admins have all permissions)
+    // pub fn has(&self, perm: Permission) -> bool {
+    //     self.bits.has(Permission::Admin) || self.bits.has(perm)
+    // }
+
+    // pub fn visible(&self) -> bool {
+    //     self.visible
+    // }
+
+    // pub fn rank(&self) -> u64 {
+    //     self.rank
+    // }
+}
+
+// FIXME: handle slowmode for message, thread
+
+impl RoomPermissions<'_> {
+    // TODO: use this?
+    // pub fn query(&self, member: Option<&RoomMember>, channel: Option<&Channel>) -> Permissions {
+    //     todo!()
+    // }
+
     /// query permissions for a user
     ///
     /// - passing in `channel` will calculate permissions in that channel
