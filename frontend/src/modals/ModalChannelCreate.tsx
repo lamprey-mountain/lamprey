@@ -36,7 +36,10 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 
 	const handleSubmit = async (e: SubmitEvent) => {
 		e.preventDefault();
+		createChannel();
+	};
 
+	const createChannel = async () => {
 		const name = channelName().trim();
 		const type = channelType();
 		const me = getMe();
@@ -248,6 +251,7 @@ export const ModalChannelCreate = (props: ModalChannelCreateProps) => {
 								<button
 									type="submit"
 									class="button primary"
+									onClick={createChannel}
 									disabled={loading()}
 								>
 									{loading() ? "Creating..." : "Create"}
