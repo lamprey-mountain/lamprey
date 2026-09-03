@@ -132,14 +132,15 @@ impl Ffmpeg {
                 "webp",
             ]);
         } else {
-            // Generate static AVIF (first frame)
+            // Generate static WebP (first frame)
+            // WebP supports transparency natively, which avoids needing to extract a separate alpha stream for AVIF.
             cmd.args([
                 "-vf",
                 &format!("scale={size}:{size}:force_original_aspect_ratio=decrease"),
                 "-frames:v",
                 "1",
                 "-f",
-                "avif",
+                "webp",
             ]);
         }
 
@@ -228,7 +229,10 @@ impl Ffmpeg {
         }
     }
 
-    pub async fn extract_or_generate_video_thumbnail(&self, path: &Path) -> Result<Vec<u8>, FfmpegError> {
+    pub async fn extract_or_generate_video_thumbnail(
+        &self,
+        path: &Path,
+    ) -> Result<Vec<u8>, FfmpegError> {
         // TODO: better thumbnail generation logic for videos
         // eg. skip solid black/white frames at start of video, get thumb x% of the way through the video
         let output = Command::new(self.resolved_ffmpeg_path())
