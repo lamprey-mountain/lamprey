@@ -103,7 +103,7 @@ export const OauthAuthorizePrompt = (
 			<div class="info">
 				This will grant <b>{p.application.name}</b> access to:
 				<ul>
-					<For each={scopes()}>{(i) => <li>{getScopeInfo(i)}</li>}</For>
+					<For each={scopes()}>{(i) => <li>{getScopeDescription(i)}</li>}</For>
 				</ul>
 				<div style="height:8px" />
 				<div class="dim">
@@ -132,11 +132,17 @@ export const OauthAuthorizePrompt = (
 	);
 };
 
-function getScopeInfo(s: string) {
+function getScopeDescription(s: string) {
 	switch (s) {
 		case "openid":
 		case "identify":
 			return "basic profile information";
+		case "email":
+			return "return email address in user profile";
+		case "rooms":
+			return "list rooms the user is in";
+		case "relationships":
+			return "list friends the user has";
 		case "full":
 			return "full access to your account";
 		case "auth":

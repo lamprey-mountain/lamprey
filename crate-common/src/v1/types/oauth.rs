@@ -413,6 +413,19 @@ impl Scope {
             Scope::Openid => *other == Scope::Identify,
         }
     }
+
+    /// get a human-readable description of the scope
+    // NOTE: keep this in sync with frontend getScopeDescription
+    pub fn description(&self) -> &'static str {
+        match self {
+            Scope::Identify | Scope::Openid => "basic profile information",
+            Scope::Email => "return email address in user profile",
+            Scope::Rooms => "list rooms the user is in",
+            Scope::Relationships => "list friends the user has",
+            Scope::Full => "full access to your account",
+            Scope::Auth => "full access, including authorization information",
+        }
+    }
 }
 
 impl ScopeBits {
