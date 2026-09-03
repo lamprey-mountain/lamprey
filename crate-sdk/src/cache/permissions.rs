@@ -25,13 +25,6 @@ pub struct PermissionsCalculator {
     pub room: CachedRoom,
 }
 
-// TODO: remove this, don't return Result for query
-#[derive(Debug, Error)]
-pub enum PermissionsError {
-    #[error("other")]
-    Other,
-}
-
 impl PermissionsCalculator {
     /// query permissions for a user
     ///
@@ -43,7 +36,7 @@ impl PermissionsCalculator {
         &self,
         user_id: Option<UserId>,
         channel: Option<&Channel>,
-    ) -> Result<Permissions2<CheckVisibility>, PermissionsError> {
+    ) -> Permissions2<CheckVisibility> {
         let member = user_id.and_then(|uid| self.room.members.get(&uid));
 
         let mut bits = PermissionBits::default();
@@ -53,13 +46,13 @@ impl PermissionsCalculator {
         let mut quarantined = false;
 
         if !self.room.inner.public && member.is_none() {
-            return Ok(self.build_permissions2(
+            return self.build_permissions2(
                 bits,
                 rank,
                 channel,
                 channel_locked,
                 MemberState::Lurker,
-            ));
+            );
         }
 
         self.calculate_room_permissions(
@@ -92,13 +85,13 @@ impl PermissionsCalculator {
                         });
 
                         if !is_member {
-                            return Ok(self.build_permissions2(
+                            return self.build_permissions2(
                                 PermissionBits::default(),
                                 rank,
                                 Some(channel),
                                 channel_locked,
                                 MemberState::Lurker,
-                            ));
+                            );
                         }
                     }
                 }
@@ -131,7 +124,7 @@ impl PermissionsCalculator {
             },
         };
 
-        Ok(self.build_permissions2(bits, rank, channel, channel_locked, member_state))
+        self.build_permissions2(bits, rank, channel, channel_locked, member_state)
     }
 
     fn calculate_room_permissions(
