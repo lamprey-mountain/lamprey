@@ -203,7 +203,7 @@ export function Input(props: InputProps) {
 					const msg = ranges.live.items[i];
 					if (
 						msg.author_id === self_id &&
-						((msg as any).type as any) === "DefaultMarkdown"
+						msg.latest_version.type === "DefaultMarkdown"
 					) {
 						chUpdate("editingMessage", {
 							message_id: msg.id,
