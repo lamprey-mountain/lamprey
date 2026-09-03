@@ -268,7 +268,7 @@ async fn oauth_token(
                     nonce: None,
                 };
 
-                id_token = Some(srv.config.sign_oidc_claims(&claims).await?);
+                id_token = Some(srv.oauth_provider.sign_oidc_claims(&claims).await?);
             }
 
             let response = OauthTokenResponse {
@@ -343,7 +343,7 @@ async fn oauth_token(
                     nonce: None,
                 };
 
-                id_token = Some(srv.config.sign_oidc_claims(&claims).await?);
+                id_token = Some(srv.oauth_provider.sign_oidc_claims(&claims).await?);
             }
 
             let response = OauthTokenResponse {

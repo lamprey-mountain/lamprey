@@ -33,6 +33,7 @@ use health::ServiceHealth;
 use ips::ServiceIps;
 use media::ServiceMedia;
 use messages::ServiceMessages;
+use oauth_provider::ServiceOauthProvider;
 use oauth2::ServiceOauth;
 use permissions::ServicePermissions;
 use role::ServiceRoles;
@@ -80,6 +81,7 @@ pub mod member_lists;
 pub mod messages;
 pub mod notifications;
 pub mod oauth2;
+pub mod oauth_provider;
 pub mod permissions;
 pub mod presence;
 pub mod role;
@@ -118,6 +120,7 @@ pub struct Services {
     pub messages: ServiceMessages,
     pub notifications: ServiceNotifications,
     pub oauth: ServiceOauth,
+    pub oauth_provider: ServiceOauthProvider,
     pub perms: ServicePermissions,
     pub presence: ServicePresence,
     pub role: ServiceRoles,
@@ -161,6 +164,7 @@ impl Services {
             notifications: ServiceNotifications::new(globals.clone()),
             scripts: ServiceScripts::new(globals.clone()),
             oauth: ServiceOauth::new(globals.clone()),
+            oauth_provider: ServiceOauthProvider::new(globals.clone()),
             perms: ServicePermissions::new(globals.clone()),
             presence: ServicePresence::new(globals.clone()),
             role: ServiceRoles::new(globals.clone()),
