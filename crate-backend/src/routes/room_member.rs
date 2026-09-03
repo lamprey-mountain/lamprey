@@ -107,7 +107,7 @@ async fn room_member_add(
     let target_user_id = req.user_id.unwrap_or(auth_user.id);
 
     let srv = globals.services();
-    let room_handle = srv.rooms.load2(req.room_id).await;
+    let room_handle = srv.rooms.load2(req.room_id);
     let room = room_handle.ready(true).await?;
     room.room.room_type.ensure_members_manageable()?;
 

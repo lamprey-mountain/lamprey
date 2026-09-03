@@ -70,22 +70,21 @@ impl ServiceMemberLists {
             .room_id()
             .ok_or(crate::Error::BadStatic("DM member lists not yet sharded"))?;
 
-        let get_handle = || async {
+        let get_handle = || {
             self.globals
                 .services()
                 .rooms
                 .actors
-                .try_get_with(room_id, async {
+                .try_get_with(room_id, || {
                     Ok::<RoomHandle, crate::Error>(RoomActor::spawn_room(
                         room_id,
                         self.globals.clone(),
                     ))
                 })
-                .await
                 .map_err(|e| e.fake_clone())
         };
 
-        let mut room_handle = get_handle().await?;
+        let mut room_handle = get_handle()?;
 
         // Try to send the subscribe command; if it fails, the actor is dead
         // Evict the dead actor and retry once
@@ -102,7 +101,7 @@ impl ServiceMemberLists {
                 self.globals.services().rooms.unload_cache(room_id).await;
 
                 // Get a fresh actor
-                room_handle = get_handle().await?;
+                room_handle = get_handle()?;
 
                 room_handle
                     .actor_ref

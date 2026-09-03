@@ -474,7 +474,7 @@ impl ServicePermissions {
                     .unwrap_or(SERVER_ROOM_ID),
             };
 
-            let room_handle = srv.rooms.load2(room_id).await;
+            let room_handle = srv.rooms.load2(room_id);
             let security = &room_handle.ready(false).await?.room.security;
 
             if security.require_mfa || flags.require_mfa() {

@@ -115,7 +115,7 @@ impl ServiceVoice {
         let mut suppress = false;
 
         if let Some(room_id) = chan.room_id {
-            let room_handle = srv.rooms.load2(room_id).await;
+            let room_handle = srv.rooms.load2(room_id);
             let room_data = room_handle.ready(true).await?;
             if let Some(member) = room_data.members.get(&user_id) {
                 mute = member.member.mute;

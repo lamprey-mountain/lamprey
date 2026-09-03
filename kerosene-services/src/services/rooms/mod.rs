@@ -14,6 +14,7 @@ use dashmap::{DashMap, DashSet};
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use lamprey_backend_data_postgres::DbUserCreate;
 use moka::future::Cache;
+use moka::sync::Cache as SyncCache;
 use std::time::Duration;
 use validator::Validate;
 
@@ -38,7 +39,7 @@ pub use types::{
 pub struct ServiceRooms {
     globals: Globals,
     idempotency_keys: Cache<String, Room>,
-    pub(crate) actors: Cache<RoomId, RoomHandle>,
+    pub(crate) actors: SyncCache<RoomId, RoomHandle>,
     /// Keep an in-memory map of UserId -> Set of RoomIds for fast fan-out of presence/user updates
     pub(crate) user_rooms: Arc<DashMap<UserId, DashSet<RoomId>>>,
     // handles: HashMap<RoomId, RoomHandle>,
@@ -51,7 +52,7 @@ impl ServiceRooms {
             idempotency_keys: Cache::builder()
                 .time_to_live(Duration::from_secs(300))
                 .build(),
-            actors: Cache::builder()
+            actors: SyncCache::builder()
                 .max_capacity(MAX_LOADED_ROOMS)
                 .time_to_idle(Duration::from_secs(IDLE_TIMEOUT_ROOM))
                 .support_invalidation_closures()
@@ -119,13 +120,10 @@ impl ServiceRooms {
     }
 
     /// get a handle to a room
-    // TODO: make this not async
-    pub async fn load2(&self, room_id: RoomId) -> RoomHandle {
-        self.actors
-            .get_with(room_id, async {
-                RoomActor::spawn_room(room_id, self.globals.clone())
-            })
-            .await
+    pub fn load2(&self, room_id: RoomId) -> RoomHandle {
+        self.actors.get_with(room_id, || {
+            RoomActor::spawn_room(room_id, self.globals.clone())
+        })
     }
 
     /// load a room snapshot, ensuring members are loaded if requested.
@@ -138,10 +136,9 @@ impl ServiceRooms {
         Box::pin(async move {
             let handle = self
                 .actors
-                .try_get_with(room_id, async {
+                .try_get_with(room_id, || {
                     Ok::<RoomHandle, Error>(RoomActor::spawn_room(room_id, self.globals.clone()))
                 })
-                .await
                 .map_err(|e| e.fake_clone())?;
 
             if ensure_members {
@@ -197,8 +194,9 @@ impl ServiceRooms {
     }
 
     /// mark a room as unavailable
+    // TODO: make not async (move to RoomHandle?)
     pub async fn mark_unavailable(&self, room_id: RoomId, _reason: RoomUnavailable) {
-        if let Some(_handle) = self.actors.get(&room_id).await {
+        if let Some(_handle) = self.actors.get(&room_id) {
             // We can't easily update the watch channel from outside the actor
             // unless we have the Sender.
             // For now, we'll just unload it, which is effectively a "retry soon".
@@ -207,8 +205,9 @@ impl ServiceRooms {
     }
 
     /// unload a single room from cache
+    // TODO: make not async (move to RoomHandle?)
     pub async fn unload_cache(&self, room_id: RoomId) {
-        self.actors.invalidate(&room_id).await;
+        self.actors.invalidate(&room_id);
     }
 
     /// unload all rooms from cache
@@ -287,7 +286,7 @@ impl ServiceRooms {
 
     /// Try to send a sync message to a room actor. Returns Ok(true) if sent, Ok(false) if actor is dead.
     async fn try_send_sync(&self, room_id: RoomId, sync: MessageSync) -> Result<bool> {
-        let handle = self.actors.get(&room_id).await;
+        let handle = self.actors.get(&room_id);
         let Some(handle) = handle else {
             return Ok(false);
         };

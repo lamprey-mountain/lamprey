@@ -522,7 +522,7 @@ impl ServiceCache {
 
         if let Some(room_id) = cache_invalidate_room_id(event) {
             let srv = self.state.services();
-            if let Some(handle) = srv.rooms.actors.get(&room_id).await {
+            if let Some(handle) = srv.rooms.actors.get(&room_id) {
                 let _ = handle
                     .actor_ref
                     .tell(SyncMessage {
@@ -587,7 +587,7 @@ impl ServiceCache {
                 };
 
                 for room_id in rooms_to_notify {
-                    if let Some(handle) = srv.rooms.actors.get(&room_id).await {
+                    if let Some(handle) = srv.rooms.actors.get(&room_id) {
                         let _ = handle
                             .actor_ref
                             .tell(SyncMessage {
@@ -609,7 +609,7 @@ impl ServiceCache {
                 };
 
                 for room_id in rooms_to_notify {
-                    if let Some(handle) = srv.rooms.actors.get(&room_id).await {
+                    if let Some(handle) = srv.rooms.actors.get(&room_id) {
                         let _ = handle
                             .actor_ref
                             .tell(SyncMessage {
