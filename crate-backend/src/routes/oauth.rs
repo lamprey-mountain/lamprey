@@ -5,7 +5,10 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use common::v1::routes;
-use common::v1::types::oauth::{AuthServerMetadata, Jwk, OauthGrantType};
+use common::v1::types::oauth::{
+    AuthServerMetadata, Jwk, OauthAuthMethod, OauthAuthorizeParams, OauthCodeChallengeMethod,
+    OauthGrantType, OauthResponseType,
+};
 use common::v1::types::{
     AuditLogEntryType, SessionStatus, SessionToken, SessionType,
     application::{Application, Scope, Scopes},
@@ -42,6 +45,7 @@ async fn oauth_info(
     let mut data = s.data();
     let srv = s.services();
     let auth_user = srv.users.get(auth.user.id, None).await?;
+    // TODO: skip this if application is not a bot
     let bot_user = srv.users.get(app.id.into_inner().into(), None).await?;
     let authorized = if let Ok(existing) = data.connection_get(auth.user.id, app.id).await {
         HashSet::from_iter(existing.scopes).is_superset(&scopes)
@@ -99,7 +103,7 @@ async fn oauth_authorize(
 async fn validate_authorize(
     s: &Arc<ServerState>,
     auth: &Auth,
-    q: &common::v1::types::oauth::OauthAuthorizeParams,
+    q: &OauthAuthorizeParams,
 ) -> Result<(Application, url::Url, HashSet<Scope>)> {
     let mut data = s.data();
     let app = data.application_get(q.client_id).await?;
@@ -108,7 +112,7 @@ async fn validate_authorize(
             ErrorCode::UnknownApplication,
         )));
     }
-    if q.response_type != "code" {
+    if q.response_type != OauthResponseType::Code {
         return Err(ApiError::from_code(ErrorCode::UnknownResponseType).into());
     }
 
@@ -186,8 +190,8 @@ async fn oauth_token(
 
     // TODO: deduplicate/dry up this code
     // maybe extract this logic into a service? (reuse oauth service?)
-    match req.token.grant_type.as_str() {
-        "authorization_code" => {
+    match req.token.grant_type {
+        OauthGrantType::AuthorizationCode => {
             let code = req
                 .token
                 .code
@@ -209,21 +213,20 @@ async fn oauth_token(
                     .token
                     .code_verifier
                     .ok_or(ApiError::from_code(ErrorCode::MissingCodeVerifier))?;
-                let method = code_challenge_method.unwrap_or_else(|| "plain".to_string());
-                let valid = match method.as_str() {
-                    "S256" => {
+                // NOTE: maybe make db handle from_str for this?
+                let method = OauthCodeChallengeMethod::from_str(
+                    &code_challenge_method.unwrap_or_else(|| "plain".to_string()),
+                )
+                .map_err(|_| ApiError::from_code(ErrorCode::UnsupportedCodeChallengeMethod))?;
+                let valid = match method {
+                    OauthCodeChallengeMethod::S256 => {
                         let mut hasher = Sha256::new();
                         hasher.update(code_verifier.as_bytes());
                         let hash = hasher.finalize();
                         let encoded = BASE64_URL_SAFE_NO_PAD.encode(hash);
                         encoded == code_challenge
                     }
-                    "plain" => code_verifier == code_challenge,
-                    _ => {
-                        return Err(
-                            ApiError::from_code(ErrorCode::UnsupportedCodeChallengeMethod).into(),
-                        );
-                    }
+                    OauthCodeChallengeMethod::Plain => code_verifier == code_challenge,
                 };
                 if !valid {
                     return Err(Error::InvalidCredentials);
@@ -303,7 +306,7 @@ async fn oauth_token(
 
             Ok(Json(response))
         }
-        "refresh_token" => {
+        OauthGrantType::RefreshToken => {
             let refresh_token = req
                 .token
                 .refresh_token
@@ -398,8 +401,7 @@ async fn oauth_token(
             };
 
             Ok(Json(response))
-        }
-        _ => Err(ApiError::from_code(ErrorCode::UnsupportedGrantType).into()),
+        } // _ => Err(ApiError::from_code(ErrorCode::UnsupportedGrantType).into()),
     }
 }
 
@@ -450,13 +452,16 @@ async fn oauth_autoconfig_auth_server(
         token_endpoint: s.config.api_url.join("/api/v1/oauth/token")?,
         jwks_uri: s.config.api_url.join("/api/v1/.well-known/jwks.json")?,
         scopes_supported: Scope::iter().map(|a| a.to_string()).collect(),
-        response_types_supported: vec!["code".to_string()],
-        grant_types_supported: vec!["authorization_code".to_string()],
+        response_types_supported: vec![OauthResponseType::Code],
+        grant_types_supported: vec![OauthGrantType::AuthorizationCode],
         token_endpoint_auth_methods_supported: vec![
-            "client_secret_post".to_string(),
-            "client_secret_basic".to_string(),
+            OauthAuthMethod::ClientSecretPost,
+            OauthAuthMethod::ClientSecretBasic,
         ],
-        code_challenge_methods_supported: vec!["S256".to_string(), "plain".to_string()],
+        code_challenge_methods_supported: vec![
+            OauthCodeChallengeMethod::S256,
+            OauthCodeChallengeMethod::Plain,
+        ],
     };
     Ok(Json(config))
 }
@@ -474,13 +479,13 @@ async fn oauth_autoconfig_openid(
         userinfo_endpoint: s.config.api_url.join("/api/v1/oauth/userinfo")?,
         jwks_uri: s.config.api_url.join("/api/v1/.well-known/jwks.json")?,
         scopes_supported: Scope::iter().map(|a| a.to_string()).collect(),
-        response_types_supported: vec!["code".to_string()],
-        grant_types_supported: vec!["authorization_code".to_string()],
+        response_types_supported: vec![OauthResponseType::Code],
+        grant_types_supported: vec![OauthGrantType::AuthorizationCode],
         subject_types_supported: vec!["public".to_string()],
         id_token_signing_alg_values_supported: vec!["ES256".to_string()],
         token_endpoint_auth_methods_supported: vec![
-            "client_secret_post".to_string(),
-            "client_secret_basic".to_string(),
+            OauthAuthMethod::ClientSecretPost,
+            OauthAuthMethod::ClientSecretBasic,
         ],
         claims_supported: vec![
             "iss".to_string(),
@@ -492,7 +497,10 @@ async fn oauth_autoconfig_openid(
             "updated_at".to_string(),
             "profile".to_string(),
         ],
-        code_challenge_methods_supported: vec!["S256".to_string(), "plain".to_string()],
+        code_challenge_methods_supported: vec![
+            OauthCodeChallengeMethod::S256,
+            OauthCodeChallengeMethod::Plain,
+        ],
     };
     Ok(Json(config))
 }
@@ -536,17 +544,19 @@ async fn oauth_userinfo(
         None
     };
 
+    // TODO: use MediaPaths for picture, some other path calculator for profile?
+    let config = srv.state.config();
     let info = Userinfo {
-        iss: srv.state.config().api_url.clone(),
+        iss: config.api_url.clone(),
         sub: user.id,
         email: email.clone().map(|e| e.email),
         email_verified: email.map(|e| e.is_verified).unwrap_or_default(),
         name: user.name,
-        profile: format!("{}user/{}", srv.state.config().html_url, user.id),
+        profile: format!("{}user/{}", config.html_url, user.id),
         updated_at: user.version_id.get_timestamp().unwrap().to_unix().0,
         picture: user
             .avatar
-            .map(|a| format!("{}media/{}", srv.state.config().cdn_url, a))
+            .map(|a| format!("{}media/{}", config.cdn_url, a))
             .and_then(|u| u.parse().ok()),
     };
     Ok(Json(info))

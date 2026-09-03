@@ -34,10 +34,10 @@ pub struct AuthServerMetadata {
     pub token_endpoint: Url,
     pub jwks_uri: Url,
     pub scopes_supported: Vec<String>,
-    pub response_types_supported: Vec<String>,
-    pub grant_types_supported: Vec<String>,
-    pub token_endpoint_auth_methods_supported: Vec<String>,
-    pub code_challenge_methods_supported: Vec<String>,
+    pub response_types_supported: Vec<OauthResponseType>,
+    pub grant_types_supported: Vec<OauthGrantType>,
+    pub token_endpoint_auth_methods_supported: Vec<OauthAuthMethod>,
+    pub code_challenge_methods_supported: Vec<OauthCodeChallengeMethod>,
 }
 
 /// OpenID Connect Discovery 1.0 Provider Metadata
@@ -49,13 +49,35 @@ pub struct OidcDiscovery {
     pub userinfo_endpoint: Url,
     pub jwks_uri: Url,
     pub scopes_supported: Vec<String>,
-    pub response_types_supported: Vec<String>,
-    pub grant_types_supported: Vec<String>,
+    pub response_types_supported: Vec<OauthResponseType>,
+    pub grant_types_supported: Vec<OauthGrantType>,
     pub subject_types_supported: Vec<String>,
     pub id_token_signing_alg_values_supported: Vec<String>,
-    pub token_endpoint_auth_methods_supported: Vec<String>,
+    pub token_endpoint_auth_methods_supported: Vec<OauthAuthMethod>,
     pub claims_supported: Vec<String>,
-    pub code_challenge_methods_supported: Vec<String>,
+    pub code_challenge_methods_supported: Vec<OauthCodeChallengeMethod>,
+}
+
+#[record]
+#[derive(Copy, PartialEq, Eq, strum::EnumString, strum::Display)]
+#[serde(rename_all = "snake_case")]
+pub enum OauthAuthMethod {
+    #[strum(serialize = "client_secret_post")]
+    ClientSecretPost,
+
+    #[strum(serialize = "client_secret_basic")]
+    ClientSecretBasic,
+}
+
+#[record]
+#[derive(Copy, PartialEq, Eq, strum::EnumString, strum::Display)]
+#[serde(rename_all = "snake_case")]
+pub enum OauthCodeChallengeMethod {
+    #[strum(serialize = "S256")]
+    S256,
+
+    #[strum(serialize = "plain")]
+    Plain,
 }
 
 /// JSON Web Key Set (RFC 7517)
@@ -162,7 +184,7 @@ pub struct OauthAuthorizeInfo {
 #[record]
 #[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct OauthAuthorizeParams {
-    pub response_type: String,
+    pub response_type: OauthResponseType,
     pub client_id: ApplicationId,
     pub scope: String,
     #[allow(unused)]
@@ -181,22 +203,24 @@ pub struct OauthAuthorizeResponse {
     pub redirect_uri: Url,
 }
 
-// TODO: use this type instead of string
 #[record]
 #[derive(Copy, PartialEq, Eq, strum::EnumString)]
 #[serde(rename_all = "snake_case")]
 pub enum OauthResponseType {
+    #[strum(serialize = "code")]
     Code,
     // Token,
     // IdToken,
 }
 
-// TODO: use this type instead of string
 #[record]
 #[derive(Copy, PartialEq, Eq, strum::EnumString)]
 #[serde(rename_all = "snake_case")]
 pub enum OauthGrantType {
+    #[strum(serialize = "authorization_code")]
     AuthorizationCode,
+
+    #[strum(serialize = "refresh_token")]
     RefreshToken,
     // ClientCredentials,
     // device code(?)
@@ -205,7 +229,7 @@ pub enum OauthGrantType {
 #[record]
 pub struct OauthTokenRequest {
     // TODO: "You can also pass your client_id and client_secret as basic authentication with client_id as the username and client_secret as the password."
-    pub grant_type: String,
+    pub grant_type: OauthGrantType,
     pub code: Option<String>,
     pub redirect_uri: Option<Url>,
     pub client_id: Option<ApplicationId>,
