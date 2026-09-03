@@ -257,27 +257,7 @@ async fn oauth_token(
             let mut id_token = None;
             let scope_list = Scopes(scopes.clone().into_iter().collect());
             if scope_list.has(&Scope::Openid) {
-                // PERF: don't (re)load keys every time
                 let srv = s.services();
-                let c = srv.config.internal_get().await?;
-                let jwk: jsonwebkey::JsonWebKey = serde_json::from_str(&c.oidc_jwk_key)?;
-                let pem = jwk.key.to_pem();
-
-                let (encoding_key, alg) = match jwk.algorithm {
-                    Some(jsonwebkey::Algorithm::ES256) => {
-                        (EncodingKey::from_ec_pem(pem.as_bytes())?, Algorithm::ES256)
-                    }
-                    Some(jsonwebkey::Algorithm::RS256) => {
-                        (EncodingKey::from_rsa_pem(pem.as_bytes())?, Algorithm::RS256)
-                    }
-                    _ => return Err(Error::Internal("unsupported signing alg".into())),
-                };
-
-                let header = Header {
-                    alg,
-                    kid: jwk.key_id.clone(),
-                    ..Default::default()
-                };
 
                 let claims = OidcClaims {
                     iss: s.config.api_url.to_string(),
@@ -288,7 +268,7 @@ async fn oauth_token(
                     nonce: None,
                 };
 
-                id_token = Some(encode(&header, &claims, &encoding_key)?);
+                id_token = Some(srv.config.sign_oidc_claims(&claims).await?);
             }
 
             let response = OauthTokenResponse {
@@ -352,27 +332,7 @@ async fn oauth_token(
             let mut id_token = None;
             let scope_list = Scopes(connection.scopes.clone().into_iter().collect());
             if scope_list.has(&Scope::Openid) {
-                // PERF: don't (re)load keys every time
                 let srv = s.services();
-                let c = srv.config.internal_get().await?;
-                let jwk: jsonwebkey::JsonWebKey = serde_json::from_str(&c.oidc_jwk_key)?;
-                let pem = jwk.key.to_pem();
-
-                let (encoding_key, alg) = match jwk.algorithm {
-                    Some(jsonwebkey::Algorithm::ES256) => {
-                        (EncodingKey::from_ec_pem(pem.as_bytes())?, Algorithm::ES256)
-                    }
-                    Some(jsonwebkey::Algorithm::RS256) => {
-                        (EncodingKey::from_rsa_pem(pem.as_bytes())?, Algorithm::RS256)
-                    }
-                    _ => return Err(Error::Internal("unsupported signing alg".into())),
-                };
-
-                let header = Header {
-                    alg,
-                    kid: jwk.key_id.clone(),
-                    ..Default::default()
-                };
 
                 let claims = OidcClaims {
                     iss: s.config.api_url.to_string(),
@@ -383,7 +343,7 @@ async fn oauth_token(
                     nonce: None,
                 };
 
-                id_token = Some(encode(&header, &claims, &encoding_key)?);
+                id_token = Some(srv.config.sign_oidc_claims(&claims).await?);
             }
 
             let response = OauthTokenResponse {
