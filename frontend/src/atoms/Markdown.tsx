@@ -14,6 +14,7 @@ import {
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
+import { useCtx } from "@/app/context";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { useUserPopout } from "@/contexts/mod";
 import { getEmojiHex } from "@/lib/emoji";
@@ -118,12 +119,27 @@ function EveryoneMention() {
 }
 
 function CustomEmoji(props: { id: string; name: string; animated?: boolean }) {
+	const ctx = useCtx();
 	return (
 		<img
-			class="emoji"
+			class="emoji custom-emoji"
 			src={getEmojiUrl(props.id)}
 			alt={`:${props.name}:`}
 			title={`:${props.name}:`}
+			onClick={(e) => {
+				e.stopPropagation();
+				e.preventDefault();
+				ctx.setPopout({
+					id: "custom-emoji-info",
+					ref: e.currentTarget,
+					props: {
+						emoji_id: props.id,
+						emoji_name: props.name,
+						emoji_animated: props.animated ?? false,
+					},
+					placement: "right-start",
+				});
+			}}
 		/>
 	);
 }

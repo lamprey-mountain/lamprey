@@ -4064,3 +4064,24 @@ button.round {
 		}
 	}
 }
+
+.custom-emoji {
+	cursor: pointer;
+}
+
+.custom-emoji-info {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+
+	background: $bg-100;
+	padding: 8px;
+	border-radius: 4px;
+	border: solid $sep-300 1px;
+	box-shadow: 4px 4px 8px #1118;
+}
+
+.emoji.large {
+	height: 4em;
+	width: 4em;
+}

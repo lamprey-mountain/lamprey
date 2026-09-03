@@ -35,6 +35,10 @@ import {
 	PopupEventEditor,
 	useCalendarPopup,
 } from "@/components/shared/Calendar";
+import {
+	CustomEmojiInfo,
+	type CustomEmojiInfoProps,
+} from "@/components/shared/CustomEmojiInfo.tsx";
 import { UserProfile } from "@/components/shared/UserProfile.tsx";
 import { UserProfileEdit } from "@/components/shared/UserProfileEdit.tsx";
 import {
@@ -295,7 +299,11 @@ export function OverlayProvider(props: ParentProps) {
 
 	createEffect(() => {
 		const popout = ctx.popout();
-		if (!popout || popout.id !== "authenticate") return;
+		if (
+			!popout ||
+			(popout.id !== "authenticate" && popout.id !== "custom-emoji-info")
+		)
+			return;
 
 		const handleMouseDown = (e: MouseEvent) => {
 			const target = e.target as HTMLElement;
@@ -460,6 +468,29 @@ export function OverlayProvider(props: ParentProps) {
 								selected: (value: string | null, shiftKey: boolean) => void;
 							})}
 						/>
+					</div>
+				</Show>
+				<Show
+					when={ctx.popout()?.id === "custom-emoji-info" && ctx.popout()?.ref}
+				>
+					<div
+						ref={setPopoutRef}
+						style={{
+							position: popoutFloating.strategy,
+							top: "0px",
+							left: "0px",
+							translate: `${popoutFloating.x}px ${popoutFloating.y}px`,
+							"z-index": 100,
+						}}
+					>
+						<div
+							class="user-popout-animate"
+							data-placement={userViewFloating.placement}
+						>
+							<CustomEmojiInfo
+								{...(ctx.popout()?.props as CustomEmojiInfoProps)}
+							/>
+						</div>
 					</div>
 				</Show>
 				<Show when={ctx.popout()?.id === "authenticate" && ctx.popout()?.ref}>
