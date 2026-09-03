@@ -1,4 +1,3 @@
-use core::fmt;
 use lamprey_macros::record;
 use url::Url;
 
@@ -6,7 +5,6 @@ use crate::v1::types::{
     ApplicationId, User, UserId,
     application::Application,
     email::EmailAddr,
-    error::{ApiError, ErrorCode},
 };
 
 pub mod scope;
