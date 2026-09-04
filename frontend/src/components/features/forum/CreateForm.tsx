@@ -1,6 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
-import type { Channel } from "sdk";
+import type { Channel, ChannelType } from "sdk";
 import { createSignal, For, Show } from "solid-js";
 import { uuidv7 } from "uuidv7";
 import { useChannels } from "@/api";
@@ -10,13 +10,16 @@ import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useChannel } from "@/contexts/mod";
 import { useUploads } from "@/contexts/uploads";
-import { RenderUploadItem } from "../features/chat/Input";
+import { RenderUploadItem } from "../chat/Input";
 
-export const Forum2CreateForm = (props: {
+export type CreateFormProps = {
 	channel: Channel;
+	threadChannelType: ChannelType;
 	onCancel: () => void;
 	onSuccess: () => void;
-}) => {
+};
+
+export const CreateForm = (props: CreateFormProps) => {
 	const channels2 = useChannels();
 	const navigate = useNavigate();
 	const uploads = useUploads();
@@ -60,7 +63,7 @@ export const Forum2CreateForm = (props: {
 		const newChannel = await channels2.create(props.channel.room_id ?? "", {
 			name: title(),
 			parent_id: props.channel.id,
-			type: "ThreadForum2",
+			type: props.threadChannelType,
 			starter_message: {
 				content,
 				attachments: ch.attachments

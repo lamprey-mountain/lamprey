@@ -20,6 +20,7 @@ import { Markdown } from "@/atoms/Markdown";
 import { Search } from "@/atoms/Search";
 import { RenderUploadItem } from "@/components/features/chat/Input.tsx";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
+import { CreateForm } from "@/components/features/forum/CreateForm";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser";
@@ -88,18 +89,6 @@ export const Forum = (props: { channel: Channel }) => {
 			)
 			.sort((a, b) => (a.id < b.id ? 1 : -1));
 	};
-
-	function createThread(room_id: string) {
-		modalctl.prompt("name?", (name) => {
-			if (!name) return;
-			channels2.create(room_id, {
-				name,
-				parent_id: props.channel.id,
-				type:
-					props.channel.type === "Ticket" ? "ThreadPrivate" : "ThreadPublic",
-			});
-		});
-	}
 
 	const user = useCurrentUser();
 	const user_id = () => user()?.id;
@@ -195,6 +184,12 @@ export const Forum = (props: { channel: Channel }) => {
 		);
 	});
 
+	const [showCreateForm, setShowCreateForm] = createSignal(false);
+
+	function createThread() {
+		setShowCreateForm(true);
+	}
+
 	const [columns, setColumns] = createSignal(1);
 	const obs = new ResizeObserver((entries) => {
 		for (const e of entries) {
@@ -249,14 +244,21 @@ export const Forum = (props: { channel: Channel }) => {
 					type="button"
 					class="button primary"
 					style="margin-left: 8px;border-radius:4px"
-					onClick={() => {
-						const rid = room_id();
-						if (rid) createThread(rid);
-					}}
+					onClick={createThread}
 				>
 					create thread
 				</button>
 			</div>
+			<Show when={showCreateForm()}>
+				<CreateForm
+					channel={props.channel}
+					threadChannelType={
+						props.channel.type === "Ticket" ? "ThreadPrivate" : "ThreadPublic"
+					}
+					onCancel={() => setShowCreateForm(false)}
+					onSuccess={() => setShowCreateForm(false)}
+				/>
+			</Show>
 			<div style="display:flex; align-items:center">
 				<h3 style="font-size:1rem; margin-top:8px;flex:1">
 					{activeThreads()?.state.ids.length ?? "loading"} threads

@@ -50,13 +50,13 @@ import {
 	icExpand,
 	icSort,
 } from "@/utils/icons.ts";
-import { Forum2CreateForm } from "../../shared/Forum2CreateForm.tsx";
 import { RenderUploadItem } from "../chat/Input.tsx";
 import { MessageSkeleton } from "../chat/MessageSkeleton.tsx";
 import { MessageToolbarMount } from "../chat/MessageToolbar.tsx";
 import { MessageToolbarProvider } from "../chat/message-toolbar-context.tsx";
 import { Comment } from "./Comment.tsx";
 import { type CommentSort, CommentSorting } from "./CommentSorting.tsx";
+import { CreateForm } from "./CreateForm.tsx";
 import { ThreadCard } from "./ThreadCard.tsx";
 import {
 	type Forum2Sort,
@@ -285,8 +285,9 @@ export const Forum2 = (props: { channel: Channel }) => {
 					</button>
 				</div>
 				<Show when={showCreateForm()}>
-					<Forum2CreateForm
+					<CreateForm
 						channel={props.channel}
+						threadChannelType="ThreadForum2"
 						onCancel={() => setShowCreateForm(false)}
 						onSuccess={() => setShowCreateForm(false)}
 					/>
