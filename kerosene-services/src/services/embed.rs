@@ -245,7 +245,7 @@ impl ServiceEmbed {
         }
 
         // Convert to final embed
-        let embed = generation.to_embed();
+        let embed = generation.into_embed();
 
         debug!("done! {:?}", embed);
         Ok(embed)

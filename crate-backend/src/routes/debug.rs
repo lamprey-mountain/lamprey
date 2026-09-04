@@ -334,7 +334,7 @@ async fn unfurler_debug(
             );
         }
 
-        embeds.push(g.to_embed());
+        embeds.push(g.into_embed());
     }
 
     Ok(Json(DebugResponse {
@@ -392,7 +392,7 @@ async fn unfurler_unfurl(
                 );
             }
 
-            embeds.push(g.to_embed());
+            embeds.push(g.into_embed());
         }
     }
 

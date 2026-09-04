@@ -14,10 +14,12 @@ use url::Url;
 
 use crate::{
     error::UnfurlError,
-    plugin::UnfurlPlugin,
+    plugin::{UnfurlPlugin, html::util::{RobotsImagePreview, TwitterCard}},
     unfurler::EmbedGeneration,
     util::{EmbedGenerationTemplate, EmbedMediaPending},
 };
+
+mod util;
 
 pub struct HtmlStreamPlugin {
     pub max_bytes: usize,
@@ -83,7 +85,7 @@ impl UnfurlPlugin for HtmlStreamPlugin {
 
         drop(tx);
 
-        let data = parse_task.await?;
+        let data = dbg!(parse_task.await?);
 
         let image_mode = determine_image_mode(&data);
 
@@ -129,49 +131,59 @@ impl UnfurlPlugin for HtmlStreamPlugin {
         );
 
         // TODO: parse mime types from url? likely unnecessary if the media importer system autodetects mime anyways
-        if is_media && !data.videos.is_empty() {
-            let video_type = data.video_types.first().and_then(|t| t.as_ref());
-            if video_type.map(|s| s.as_str()) == Some("text/html") {
+        if is_media && !data.videos.entries.is_empty() {
+            // TODO: don't only check the first video, iterate until a usable video is found
+            let video_meta = data.videos.entries.first();
+            if video_meta.and_then(|m| m.ty.as_deref()) == Some("text/html") {
                 // html videos (iframes) aren't allowed
                 tmpl.ty = EmbedType::Link;
             } else {
                 tmpl.ty = EmbedType::Media;
-                if let Ok(v_url) = url.join(&data.videos[0]) {
+                if let Some(v_url) = data.videos.entries[0]
+                    .preferred_url()
+                    .and_then(|u| url.join(u).ok())
+                {
                     tmpl.media = Some(
                         EmbedMediaPending::new(v_url)
                             .mime_guess("video/mp4".parse().unwrap())
                             .into(),
                     );
 
-                    if let Some(img) = data.images.first() {
-                        if let Ok(i_url) = url.join(img) {
+                    // TODO: don't only check the first image, iterate until a usable image is found
+                    if let Some(img) = data.images.entries.first() {
+                        if let Some(img_url) = img.preferred_url() {
+                            if let Ok(i_url) = url.join(img_url) {
+                                tmpl.thumbnail = Some(
+                                    EmbedMediaPending::new(i_url)
+                                        .mime_guess("image/jpeg".parse().unwrap())
+                                        .into(),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        } else if let Some(img) = data.images.entries.first() {
+            // TODO: don't only check the first image, iterate until a usable image is found
+            if let Some(img_url) = img.preferred_url() {
+                if let Ok(i_url) = url.join(img_url) {
+                    // NOTE: there might be cases where i want to include full media *and* a thumbnail?
+                    match image_mode {
+                        ImageMode::Hide => {}
+                        ImageMode::Full => {
+                            tmpl.media = Some(
+                                EmbedMediaPending::new(i_url)
+                                    .mime_guess("image/jpeg".parse().unwrap())
+                                    .into(),
+                            );
+                        }
+                        ImageMode::Thumb => {
                             tmpl.thumbnail = Some(
                                 EmbedMediaPending::new(i_url)
                                     .mime_guess("image/jpeg".parse().unwrap())
                                     .into(),
                             );
                         }
-                    }
-                }
-            }
-        } else if let Some(img) = data.images.first() {
-            if let Ok(i_url) = url.join(img) {
-                // NOTE: there might be cases where i want to include full media *and* a thumbnail?
-                match image_mode {
-                    ImageMode::Hide => {}
-                    ImageMode::Full => {
-                        tmpl.media = Some(
-                            EmbedMediaPending::new(i_url)
-                                .mime_guess("image/jpeg".parse().unwrap())
-                                .into(),
-                        );
-                    }
-                    ImageMode::Thumb => {
-                        tmpl.thumbnail = Some(
-                            EmbedMediaPending::new(i_url)
-                                .mime_guess("image/jpeg".parse().unwrap())
-                                .into(),
-                        );
                     }
                 }
             }
@@ -188,13 +200,16 @@ impl UnfurlPlugin for HtmlStreamPlugin {
 enum ImageMode {
     /// Don't show image
     Hide,
+
     /// Show as full-width main media
     Full,
+
     /// Show as thumbnail
     Thumb,
 }
 
 /// Determine image display mode based on Twitter card and robots directives
+// TODO: move to util
 fn determine_image_mode(data: &ExtractedData) -> ImageMode {
     // Check robots max-image-preview first (takes precedence)
     if let Some(robots) = data.robots_max_image_preview {
@@ -206,11 +221,11 @@ fn determine_image_mode(data: &ExtractedData) -> ImageMode {
     }
 
     // Check Twitter card
-    match data.twitter_card.as_deref() {
-        Some("summary_large_image" | "player") => ImageMode::Full,
-        Some("summary" | "app") => ImageMode::Thumb,
+    match data.twitter_card {
+        Some(TwitterCard::SummaryLargeImage | TwitterCard::Player) => ImageMode::Full,
+        Some(TwitterCard::Summary | TwitterCard::App) => ImageMode::Thumb,
         // Default: use OG type heuristics
-        _ => {
+        None => {
             let og_type = data.og_type.as_deref().unwrap_or("website");
             if is_og_type_probably_thumbnail(og_type) {
                 ImageMode::Thumb
@@ -222,6 +237,7 @@ fn determine_image_mode(data: &ExtractedData) -> ImageMode {
 }
 
 /// Check if an OG type typically uses thumbnail images
+// TODO: move to util
 fn is_og_type_probably_thumbnail(og_type: &str) -> bool {
     matches!(
         og_type,
@@ -237,6 +253,7 @@ fn is_og_type_probably_thumbnail(og_type: &str) -> bool {
 }
 
 /// Parse robots max-image-preview directive from robots meta content
+// TODO: move to util
 fn parse_robots_image_preview(content: &str) -> Option<RobotsImagePreview> {
     // Robots meta can contain multiple comma-separated directives
     // e.g., "noindex, nofollow, max-image-preview:large"
@@ -259,6 +276,7 @@ fn parse_robots_image_preview(content: &str) -> Option<RobotsImagePreview> {
 /// storing any incomplete trailing bytes back into `tail`.
 fn decode_chunk<'a>(tail: &mut Vec<u8>, chunk: &[u8]) -> String {
     let bytes = if tail.is_empty() {
+        // PERF: don't clone chunk
         chunk.to_vec()
     } else {
         let mut b = std::mem::take(tail);
@@ -269,6 +287,10 @@ fn decode_chunk<'a>(tail: &mut Vec<u8>, chunk: &[u8]) -> String {
     match std::str::from_utf8(&bytes) {
         Ok(s) => s.to_string(),
         Err(e) => {
+            // FIXME: handle incomplete vs invalid byte sequences
+            // currently, this code treats all errors as incomplete sequences.
+            // this can cause all data to be stored in tail, rather than be
+            // properly parsed.
             let valid = &bytes[..e.valid_up_to()];
             tail.extend_from_slice(&bytes[e.valid_up_to()..]);
             std::str::from_utf8(valid).unwrap().to_string()
@@ -276,10 +298,14 @@ fn decode_chunk<'a>(tail: &mut Vec<u8>, chunk: &[u8]) -> String {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug, Default)]
 struct ExtractedData {
     in_title: bool,
     current_title: String,
+
+    in_ld_json: bool,
+    current_ld_json: String,
+    ld_json: Vec<String>,
 
     title: Option<String>,
     og_title: Option<String>,
@@ -303,23 +329,87 @@ struct ExtractedData {
     theme_color: Option<String>,
 
     og_type: Option<String>,
-    images: Vec<String>,
-    videos: Vec<String>,
-    video_types: Vec<Option<String>>,
+    images: MediaList,
+    audios: MediaList,
+    videos: MediaList,
 
     feeds: Vec<String>,
     rel_me: Vec<String>,
 
-    twitter_card: Option<String>,
+    twitter_card: Option<TwitterCard>,
     robots_max_image_preview: Option<RobotsImagePreview>,
 }
 
-/// Robots max-image-preview directive
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum RobotsImagePreview {
-    None,
-    Standard,
-    Large,
+#[derive(Debug, Default)]
+struct MediaList {
+    entries: Vec<MediaEntry>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct MediaEntry {
+    url: Option<String>,
+    secure_url: Option<String>,
+    ty: Option<String>,
+    width: Option<String>,
+    height: Option<String>,
+    alt: Option<String>,
+}
+
+impl MediaEntry {
+    pub fn preferred_url(&self) -> Option<&str> {
+        self.secure_url.as_deref().or(self.url.as_deref())
+    }
+}
+
+impl MediaList {
+    /// handle a meta tag
+    ///
+    pub fn handle_meta(&mut self, suffix: &str, content: String) {
+        match suffix {
+            "" | ":url" => {
+                let lm = self.last_media();
+                if lm.url.is_some() {
+                    self.push_media().url = Some(content);
+                } else {
+                    lm.url = Some(content);
+                }
+            }
+            ":secure_url" => {
+                let lm = self.last_media();
+                if lm.secure_url.is_some() {
+                    self.push_media().secure_url = Some(content);
+                } else {
+                    lm.secure_url = Some(content);
+                }
+            }
+            ":type" => {
+                self.last_media().ty = Some(content);
+            }
+            ":alt" => {
+                self.last_media().alt = Some(content);
+            }
+            ":width" => {
+                self.last_media().width = Some(content);
+            }
+            ":height" => {
+                self.last_media().height = Some(content);
+            }
+            _ => {}
+        }
+    }
+
+    /// get the last MediaEntry, creating it if it doesnt exist
+    fn last_media(&mut self) -> &mut MediaEntry {
+        if self.entries.is_empty() {
+            self.push_media();
+        }
+        self.entries.last_mut().unwrap()
+    }
+
+    /// create a new MediaEntry and return it
+    fn push_media(&mut self) -> &mut MediaEntry {
+        self.entries.push_mut(MediaEntry::default())
+    }
 }
 
 struct MetaSink {
@@ -365,45 +455,50 @@ impl TokenSink for MetaSink {
                                 let key = property.or(name).unwrap_or_default().to_lowercase();
                                 let mut data = self.data.borrow_mut();
 
-                                match key.as_str() {
-                                    "og:title" => data.og_title = Some(content),
-                                    "twitter:title" => data.twitter_title = Some(content),
-                                    "twitter:card" => data.twitter_card = Some(content),
-                                    "description" => data.description = Some(content),
-                                    "og:description" => data.og_description = Some(content),
-                                    "twitter:description" => {
-                                        data.twitter_description = Some(content)
-                                    }
-                                    "og:site_name" => data.og_site_name = Some(content),
-                                    "theme-color" => data.theme_color = Some(content),
-                                    "og:url" => data.og_url = Some(content),
-                                    "og:type" => data.og_type = Some(content),
-                                    "robots" => {
-                                        data.robots_max_image_preview =
-                                            parse_robots_image_preview(&content);
-                                    }
-
-                                    "author" => data.author_name = Some(content),
-                                    "article:author" => {
-                                        if data.author_name.is_none() {
-                                            data.author_name = Some(content);
+                                if let Some(s) = key.strip_prefix("og:video") {
+                                    data.videos.handle_meta(s, content);
+                                } else if let Some(s) = key.strip_prefix("og:image") {
+                                    data.images.handle_meta(s, content);
+                                } else if let Some(s) = key.strip_prefix("og:audio") {
+                                    data.audios.handle_meta(s, content);
+                                } else {
+                                    match key.as_str() {
+                                        "og:title" => data.og_title = Some(content),
+                                        "twitter:title" => data.twitter_title = Some(content),
+                                        "twitter:card" => data.twitter_card = content.parse().ok(),
+                                        "description" => data.description = Some(content),
+                                        "og:description" => data.og_description = Some(content),
+                                        "twitter:description" => {
+                                            data.twitter_description = Some(content)
                                         }
-                                    }
-                                    "profile:image" | "twitter:creator:image" => {
-                                        data.author_avatar = Some(content)
-                                    }
-
-                                    "og:image" | "twitter:image" => data.images.push(content),
-                                    "og:video" | "og:video:url" | "og:video:secure_url" => {
-                                        data.videos.push(content);
-                                        data.video_types.push(None);
-                                    }
-                                    "og:video:type" => {
-                                        if let Some(last_video_type) = data.video_types.last_mut() {
-                                            *last_video_type = Some(content);
+                                        "og:site_name" => data.og_site_name = Some(content),
+                                        "theme-color" => data.theme_color = Some(content),
+                                        "og:url" => data.og_url = Some(content),
+                                        "og:type" => data.og_type = Some(content),
+                                        "robots" => {
+                                            data.robots_max_image_preview =
+                                                parse_robots_image_preview(&content);
                                         }
+
+                                        "author" => data.author_name = Some(content),
+                                        "article:author" => {
+                                            if data.author_name.is_none() {
+                                                data.author_name = Some(content);
+                                            }
+                                        }
+
+                                        // NOTE: do i need something like ogp logic for these?
+                                        "profile:image" | "twitter:creator:image" => {
+                                            data.author_avatar = Some(content)
+                                        }
+
+                                        // TODO: make sure image logic is correct?
+                                        "twitter:image" => {
+                                            data.images.last_media().url = Some(content);
+                                        }
+
+                                        _ => {}
                                     }
-                                    _ => {}
                                 }
                             }
                         }
@@ -455,6 +550,17 @@ impl TokenSink for MetaSink {
                                 }
                             }
                         }
+                        local_name!("script") => {
+                            for attr in tag.attrs.iter() {
+                                if attr.name.local == local_name!("type")
+                                    && attr.value.to_lowercase() == "application/ld+json"
+                                {
+                                    let mut data = self.data.borrow_mut();
+                                    data.in_ld_json = true;
+                                    data.current_ld_json.clear();
+                                }
+                            }
+                        }
                         _ => {}
                     }
                 } else if tag.kind == TagKind::EndTag {
@@ -466,6 +572,13 @@ impl TokenSink for MetaSink {
                             let title = data.current_title.trim().to_string();
                             data.title = Some(title);
                         }
+                    } else if tag.name == local_name!("script") {
+                        let mut data = self.data.borrow_mut();
+                        if data.in_ld_json {
+                            data.in_ld_json = false;
+                            let s = data.current_ld_json.clone();
+                            data.ld_json.push(s);
+                        }
                     }
                 }
             }
@@ -473,10 +586,41 @@ impl TokenSink for MetaSink {
                 let mut data = self.data.borrow_mut();
                 if data.in_title {
                     data.current_title.push_str(&s);
+                } else if data.in_ld_json {
+                    data.current_ld_json.push_str(&s);
                 }
             }
             _ => {}
         }
         TokenSinkResult::Continue
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use html5ever::tendril::StrTendril;
+    use html5ever::tokenizer::{Tokenizer, TokenizerOpts};
+
+    #[test]
+    fn test_ld_json_extraction() {
+        let shared_data = Rc::new(RefCell::new(ExtractedData::default()));
+        let sink = MetaSink {
+            data: shared_data.clone(),
+        };
+        let tokenizer = Tokenizer::new(sink, TokenizerOpts::default());
+        let html = r#"<html><script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","name":"John Doe"}</script></html>"#;
+
+        let mut queue = html5ever::tokenizer::BufferQueue::default();
+        queue.push_back(StrTendril::from(html));
+        let _ = tokenizer.feed(&mut queue);
+        tokenizer.end();
+
+        let data = shared_data.borrow();
+        assert_eq!(data.ld_json.len(), 1);
+        assert_eq!(
+            data.ld_json[0],
+            r#"{"@context":"https://schema.org","@type":"Person","name":"John Doe"}"#
+        );
     }
 }

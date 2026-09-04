@@ -125,7 +125,7 @@ impl EmbedGeneration {
     /// converts to a standard embed
     ///
     /// return None for pending or failed media
-    pub fn to_embed(self) -> Embed {
+    pub fn into_embed(self) -> Embed {
         Embed {
             id: EmbedId::new(),
             ty: self.embed.ty,
@@ -144,12 +144,22 @@ impl EmbedGeneration {
         }
     }
 
-    fn iter_media_mut(&mut self) -> impl Iterator<Item = &mut Option<EmbedMedia>> {
+    /// iterates over all mutable media fields
+    pub fn iter_media_mut(&mut self) -> impl Iterator<Item = &mut Option<EmbedMedia>> {
         let t = &mut self.embed;
         std::iter::once(&mut t.media)
             .chain(std::iter::once(&mut t.thumbnail))
             .chain(std::iter::once(&mut t.author_avatar))
             .chain(std::iter::once(&mut t.site_avatar))
+    }
+
+    /// iterates over all immutable media fields
+    pub fn iter_media(&self) -> impl Iterator<Item = &Option<EmbedMedia>> {
+        let t = &self.embed;
+        std::iter::once(&t.media)
+            .chain(std::iter::once(&t.thumbnail))
+            .chain(std::iter::once(&t.author_avatar))
+            .chain(std::iter::once(&t.site_avatar))
     }
 
     pub fn pending_media(&self) -> Vec<EmbedMediaPending> {
