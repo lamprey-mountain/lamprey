@@ -15,6 +15,7 @@ import type { AutocompleteContext } from "@/contexts/autocomplete.tsx";
 import type { FormattingToolbarContextT } from "@/contexts/formatting-toolbar.tsx";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
+import { serializeToEditorHTML } from "./editor-html.ts";
 import {
 	createListContinueCommand,
 	createWrapCommand,
@@ -83,7 +84,8 @@ export const createEditor = (opts: EditorProps): Editor => {
 			const div = document.createElement("div");
 			const parser = new Parser();
 			const parsed = parser.parse(opts.initialContent());
-			div.innerHTML = parsed.toHTML();
+			const html = serializeToEditorHTML(parsed.ast());
+			div.innerHTML = html;
 			doc = DOMParser.fromSchema(schema).parse(div);
 		}
 
