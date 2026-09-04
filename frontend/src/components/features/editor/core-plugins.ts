@@ -1,7 +1,9 @@
+import { Parser } from "@lamprey/markdown";
+import { DOMParser } from "prosemirror-model";
 import type { EditorState, Transaction } from "prosemirror-state";
 import { Plugin, PluginKey, TextSelection } from "prosemirror-state";
 import { initTurndownService } from "@/lib/markdown/turndown";
-import { convertEmojiInText } from "./emoji-plugin.ts";
+import { serializeToEditorHTML } from "./editor-html.ts";
 import { schema } from "./schema.ts";
 import { serializeToMarkdown } from "./serializer.ts";
 
@@ -33,13 +35,10 @@ export function createPastePlugin() {
 					return true;
 				}
 
-				const isInternal = event.clipboardData?.types.includes(
-					"application/x-prosemirror-slice",
-				);
-				if (isInternal) return false;
-
 				const html = event.clipboardData?.getData("text/html");
 				const plainText = event.clipboardData?.getData("text/plain");
+
+				// TODO: return false if this is prosemirror data?
 
 				const str = html
 					? turndown.turndown(html)
@@ -65,24 +64,18 @@ export function createPastePlugin() {
 					return true;
 				}
 
-				const { content, hasEmoji } = convertEmojiInText(schema, str);
-
-				if (hasEmoji) {
-					const { from, to } = view.state.selection;
-					view.dispatch(
-						view.state.tr
-							.replaceWith(from, to, content)
-							.scrollIntoView()
-							.setMeta("paste", true),
-					);
-					return true;
-				}
+				const parser = new Parser();
+				const parsed = parser.parse(str);
+				const div = document.createElement("div");
+				div.innerHTML = serializeToEditorHTML(parsed.ast());
+				const parsedSlice = DOMParser.fromSchema(schema).parseSlice(div);
 
 				view.dispatch(
 					view.state.tr
-						.replaceSelectionWith(schema.text(str))
+						.replaceSelection(parsedSlice)
 						.scrollIntoView()
-						.setMeta("paste", true),
+						.setMeta("paste", true)
+						.setMeta("uiEvent", "paste"),
 				);
 				return true;
 			},
