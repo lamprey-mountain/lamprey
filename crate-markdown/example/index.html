@@ -28,8 +28,10 @@
 		>
 # Hello World!
 *italics* and **bold**</textarea>
-		<h3>Output:</h3>
-		<pre id="output"></pre>
+		<h3>Html:</h3>
+		<pre id="output-html"></pre>
+		<h3>Ast:</h3>
+		<pre id="output-ast"></pre>
 
 		<script type="module">
 			import init, { Parser } from "../pkg/lamprey_markdown.js";
@@ -38,12 +40,14 @@
 				await init();
 				const parser = new Parser();
 				const input = document.getElementById("input");
-				const output = document.getElementById("output");
+				const outputHtml = document.getElementById("output-html");
+				const outputAst = document.getElementById("output-ast");
 
 				function render() {
 					const markdown = input.value;
 					const parsed = parser.parse(markdown);
-					output.innerText = parsed.toHTML();
+					outputHtml.innerText = parsed.toHTML();
+					outputAst.innerText = JSON.stringify(parsed.ast(), null, 2);
 				}
 
 				input.addEventListener("input", render);
