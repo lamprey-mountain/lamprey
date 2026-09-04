@@ -84,7 +84,7 @@ fn test_link_nested_many() {
     let parsed = parser.parse(source);
     assert_eq!(parsed.to_html(), "<p>[a [c](d)](b [e](f))</p>");
     assert_eq!(parsed.to_markdown(), "[a [c](d)](b [e](f))");
-    assert_eq!(parsed.to_plain(), "[a c(d)](b e(f))");
+    assert_eq!(parsed.to_plain(), "a [c](d) (b [e](f))");
 }
 
 #[test]
