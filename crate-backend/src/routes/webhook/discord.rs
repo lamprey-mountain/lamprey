@@ -77,11 +77,12 @@ struct DiscordEmbedAuthor {
     icon_url: Option<Url>,
 }
 
+// TODO: set footer to None if missing text
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]
 struct DiscordEmbedFooter {
     #[schema(min_length = 1, max_length = 2048)]
     #[validate(length(min = 1, max = 2048))]
-    text: String,
+    text: Option<String>,
 
     // TODO: validate length
     icon_url: Option<Url>,
@@ -185,6 +186,7 @@ pub struct DiscordPartialAttachment {
     description: Option<String>,
 }
 
+// PERF: make struct borrow slice instead of copying
 #[derive(Debug, Default, Serialize, Deserialize, Validate, ToSchema)]
 pub struct DiscordWebhookExecuteBody {
     #[validate(length(max = 2000))]
@@ -368,7 +370,7 @@ async fn parse_webhook_body(req: Request, s: &Arc<ServerState>) -> Result<Parsed
     })
 }
 
-/// Webhook execute discord (TODO)
+/// Webhook execute discord
 #[utoipa::path(
     post,
     path = "/webhook/{webhook_id}/{token}/discord",
@@ -390,8 +392,14 @@ pub async fn webhook_execute_discord(
     Query(query): Query<WebhookQuery>,
     req: Request,
 ) -> Result<impl IntoResponse> {
+    let srv = s.services();
+
     let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
     let webhook_user_id: types::UserId = (*webhook.id).into();
+
+    let channel_id = webhook.channel_id;
+    let chan = srv.channels.get(channel_id, None).await?;
+    chan.ensure_has_text()?;
 
     let Parsed {
         message: mut message_create,
@@ -520,8 +528,6 @@ pub async fn webhook_execute_discord(
             "at least one of content, attachments, or embeds must be defined".to_string(),
         ));
     }
-
-    let srv = s.services();
 
     let message = srv
         .messages

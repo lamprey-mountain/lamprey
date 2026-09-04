@@ -1,11 +1,7 @@
 use lamprey_macros::record;
 use url::Url;
 
-use crate::v1::types::{
-    ApplicationId, User, UserId,
-    application::Application,
-    email::EmailAddr,
-};
+use crate::v1::types::{ApplicationId, User, UserId, application::Application, email::EmailAddr};
 
 pub mod scope;
 pub use scope::*;

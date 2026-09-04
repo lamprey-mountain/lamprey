@@ -16,7 +16,7 @@ use common::v1::types::{
     webhook::{Webhook, WebhookCreate, WebhookUpdate},
 };
 use common::{
-    v1::types::application::Scope,
+    v1::{routes, types::application::Scope},
     v2::types::{ChannelId, RoomId},
 };
 use serde_json::Value;
@@ -422,7 +422,7 @@ async fn webhook_update_with_token(
     Ok(Json(updated_webhook))
 }
 
-/// Webhook execute (TODO)
+/// Webhook execute
 #[utoipa::path(
     post,
     path = "/webhook/{webhook_id}/{token}",

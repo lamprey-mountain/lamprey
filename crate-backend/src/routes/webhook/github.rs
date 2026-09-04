@@ -1,6 +1,3 @@
-use std::default::Default;
-use std::sync::Arc;
-
 use axum::{
     Json,
     extract::{Path, State},
@@ -8,13 +5,12 @@ use axum::{
     response::IntoResponse,
 };
 use common::v1::types::{EmbedCreate, MessageCreate, UserId, WebhookId};
+use kerosene_core::error::{ApiError, ErrorCode};
 use serde::Deserialize;
 use tracing::debug;
 
-use crate::{
-    ServerState,
-    error::{Error, Result},
-};
+use crate::ServerState;
+use crate::prelude::*;
 
 #[derive(Debug, Deserialize)]
 struct GitHubUser {
@@ -170,7 +166,7 @@ fn handle_pull_request_event(event: PullRequestEvent) -> Result<MessageCreate> {
     })
 }
 
-/// Webhook execute github (TODO)
+/// Webhook execute github (WIP)
 #[utoipa::path(
     post,
     path = "/webhook/{webhook_id}/{token}/github",
@@ -190,6 +186,16 @@ pub async fn webhook_execute_github(
     headers: HeaderMap,
     Json(body): Json<serde_json::Value>,
 ) -> Result<impl IntoResponse> {
+    let srv = s.services();
+
+    // TODO: use webhook service
+    // let webhook = srv.webhook.get(webhook_id).await?;
+    // if webhook.token != Some(token) {
+    //     return Err(Error::ApiError(ApiError::from_code(
+    //         ErrorCode::UnknownWebhook,
+    //     )));
+    // }
+
     let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
 
     let event_type = headers
@@ -215,18 +221,20 @@ pub async fn webhook_execute_github(
             handle_pull_request_event(event)?
         }
         _ => {
-            return Ok(StatusCode::NO_CONTENT);
+            return Ok(StatusCode::NO_CONTENT.into_response());
         }
     };
 
     let author_id: UserId = (*webhook.id).into();
     let channel_id = webhook.channel_id;
+    let chan = srv.channels.get(channel_id, None).await?;
+    chan.ensure_has_text()?;
 
-    let srv = s.services();
-
-    srv.messages
+    let message = srv
+        .messages
         .create_as_webhook(channel_id, author_id, message_create, None)
         .await?;
 
-    Ok(StatusCode::NO_CONTENT)
+    // NOTE: return 204 for ?wait=false Ok(StatusCode::NO_CONTENT)
+    Ok((StatusCode::CREATED, Json(message)).into_response())
 }
