@@ -5,12 +5,30 @@
 		<link rel="icon" type="image/svg+xml" href="/vite.svg" />
 		<!-- <link rel="preload" as="font" href="./src/assets/fonts/atkinson-hyperlegible/AtkinsonHyperlegible-Regular.woff2" type="font/woff2" /> -->
 		<!-- <link rel="preload" as="font" href="./src/assets/fonts/atkinson-hyperlegible/AtkinsonHyperlegible-Bold.woff2" type="font/woff2" /> -->
+		<link rel="stylesheet" crossorigin href="/src/styles/index.scss">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>chat thing</title>
 		<!-- VITE_JINJA_PLACEHOLDER:script -->
 	</head>
 	<body>
 		<div id="mount"></div>
+		<noscript>
+			<div class="noscript">
+				<div class="noscript-inner">
+					<div class="noscript-icon">
+						&#x26A0;&#xFE0F;
+					</div>
+					<div class="noscript-main">
+						<div class="noscript-title">
+							No javascript!
+						</div>
+						<div class="noscript-content">
+							Sorry, but this site doesn't really work without javascript. Take a look at <a href="https://www.enable-javascript.com/">enable-javascript.com</a> if you don't know how to enable it!
+						</div>
+					</div>
+				</div>
+			</div>
+		</noscript>
 		<script type="module" src="/src/app/index.tsx"></script>
 	</body>
 </html>

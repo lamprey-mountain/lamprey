@@ -1,3 +1,6 @@
+// PERF: split index.scss into a minimal "critical" css file and main styles
+// PERF: lazy load styles for lazy loaded components instead of always loading all styles
+
 @use "sass:color";
 
 // base styles and utilities
@@ -34,6 +37,7 @@
 @use "./voice-debug.scss";
 @use "./voice.scss";
 @use "./color-picker.scss";
+@use "./noscript.scss";
 
 :root {
 	font: 16px/1.3 var(--font-default);

@@ -1,7 +1,6 @@
 /// <reference lib="dom" />
 
 /* @refresh reload */
-import "@/styles/index.scss";
 import { render } from "solid-js/web";
 import { logger } from "@/utils/logger";
 import App from "./App.tsx";
