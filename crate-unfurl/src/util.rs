@@ -40,7 +40,7 @@ pub enum EmbedMedia {
 pub struct EmbedMediaPending {
     pub placeholder_media_id: MediaId,
     pub url: Url,
-    pub mime_guess: Option<Mime>,
+    pub mime_guess: Option<Mime>, // TODO: use or remove this field?
     pub alt: Option<String>,
 }
 

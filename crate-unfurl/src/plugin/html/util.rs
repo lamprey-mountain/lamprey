@@ -17,9 +17,16 @@ pub enum RobotsImagePreview {
 /// Twitter card type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TwitterCard {
+    /// display text with a thumbnail
     Summary,
+
+    /// display text with a full size image
     SummaryLargeImage,
+
+    /// display a media player
     Player,
+
+    /// display a mobile application
     App,
 }
 

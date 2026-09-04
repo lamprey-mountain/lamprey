@@ -14,7 +14,10 @@ use url::Url;
 
 use crate::{
     error::UnfurlError,
-    plugin::{UnfurlPlugin, html::util::{RobotsImagePreview, TwitterCard}},
+    plugin::{
+        UnfurlPlugin,
+        html::util::{RobotsImagePreview, TwitterCard},
+    },
     unfurler::EmbedGeneration,
     util::{EmbedGenerationTemplate, EmbedMediaPending},
 };
@@ -148,18 +151,18 @@ impl UnfurlPlugin for HtmlStreamPlugin {
                             .mime_guess("video/mp4".parse().unwrap())
                             .into(),
                     );
+                }
+            }
 
-                    // TODO: don't only check the first image, iterate until a usable image is found
-                    if let Some(img) = data.images.entries.first() {
-                        if let Some(img_url) = img.preferred_url() {
-                            if let Ok(i_url) = url.join(img_url) {
-                                tmpl.thumbnail = Some(
-                                    EmbedMediaPending::new(i_url)
-                                        .mime_guess("image/jpeg".parse().unwrap())
-                                        .into(),
-                                );
-                            }
-                        }
+            // TODO: don't only check the first image, iterate until a usable image is found
+            if let Some(img) = data.images.entries.first() {
+                if let Some(img_url) = img.preferred_url() {
+                    if let Ok(i_url) = url.join(img_url) {
+                        tmpl.thumbnail = Some(
+                            EmbedMediaPending::new(i_url)
+                                .mime_guess("image/jpeg".parse().unwrap())
+                                .into(),
+                        );
                     }
                 }
             }
@@ -191,7 +194,7 @@ impl UnfurlPlugin for HtmlStreamPlugin {
 
         // TODO: handle rel=me and RSS feeds if needed later...
 
-        Ok(vec![EmbedGeneration { embed: tmpl }])
+        Ok(vec![EmbedGeneration { embed: dbg!(tmpl) }])
     }
 }
 
@@ -261,6 +264,7 @@ fn parse_robots_image_preview(content: &str) -> Option<RobotsImagePreview> {
         let directive = directive.trim().to_lowercase();
         if directive.starts_with("max-image-preview:") {
             let value = directive.strip_prefix("max-image-preview:")?.trim();
+            // TODO: move to FromStr impl
             return Some(match value {
                 "none" => RobotsImagePreview::None,
                 "standard" => RobotsImagePreview::Standard,
@@ -595,6 +599,8 @@ impl TokenSink for MetaSink {
         TokenSinkResult::Continue
     }
 }
+
+// TODO: add more tests
 
 #[cfg(test)]
 mod tests {
