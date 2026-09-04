@@ -394,7 +394,7 @@ export function Input(props: InputProps) {
 			<Show when={reply()}>
 				<InputReply thread={props.channel} reply={reply()!} />
 			</Show>
-			<div class="text">
+			<div class="text" enterkeyhint="send">
 				<label class="upload">
 					<Icon src={icAdd} />
 					<input
