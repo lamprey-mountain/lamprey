@@ -19,8 +19,6 @@ fn test() {
     let parser = Parser::new();
     let mut parsed = parser.parse(source);
 
-    dbg!(parsed.tree());
-
     assert_eq!(
         parsed.to_html(),
         "<p>hello <em>world</em> this <a href=\"https://example.com\">is</a> a <strong>test</strong></p>"

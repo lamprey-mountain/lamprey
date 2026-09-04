@@ -358,12 +358,6 @@ export const RouteChannel = (
 
 	const channelCtx = createMemo(() => getOrCreateChannelContext());
 
-	// TODO: remove
-	const [selectedSeq, setSelectedSeq] = createSignal<ChangesetSelection | null>(
-		null,
-	);
-	const [hoverSeq, setHoverSeq] = createSignal<ChangesetSelection | null>(null);
-
 	// store last viewed channel per room
 	createEffect(() => {
 		const ch = channel();
