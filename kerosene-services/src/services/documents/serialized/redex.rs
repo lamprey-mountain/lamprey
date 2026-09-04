@@ -53,7 +53,7 @@ impl FromDoc for SerializedRedex {
         todo!()
     }
 
-    fn from_doc_lenient(doc: &Doc) -> Result<Self> {
+    fn from_doc_lenient(doc: &Doc) -> Self {
         todo!()
     }
 }

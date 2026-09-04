@@ -4648,6 +4648,7 @@ dependencies = [
  "sqlx",
  "subtle",
  "tantivy",
+ "thiserror 2.0.20",
  "time",
  "tokio",
  "tokio-stream",

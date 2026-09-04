@@ -20,6 +20,8 @@ pub struct DocumentParseError {
     pub fields: Vec<ErrorField>,
 }
 
+// TODO: use From/TryFrom instead of FromDoc, Into instead of ToDoc?
+
 /// trait to deserialize a type from a yrs document
 pub trait FromDoc: Sized {
     type Error;
@@ -32,7 +34,7 @@ pub trait FromDoc: Sized {
     /// deserialize this type from a document
     ///
     /// lenient validation, for loading docs from the database
-    fn from_doc_lenient(doc: &Doc) -> CoreResult<Self, Self::Error>;
+    fn from_doc_lenient(doc: &Doc) -> Self;
 }
 
 /// trait to serialize a type into a yrs document
@@ -44,7 +46,7 @@ pub trait ToDoc: Sized {
 
 #[deprecated]
 pub fn doc_to_serdoc(doc: &Doc) -> Serdoc {
-    let s = SerializedProse::from_doc(doc).unwrap();
+    let s = SerializedProse::from_doc_lenient(doc);
     Serdoc {
         components: s.components,
     }
