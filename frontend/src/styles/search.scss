@@ -348,3 +348,41 @@
 .ProseMirror-focused .ProseMirror-gapcursor {
 	display: block;
 }
+
+.search-page {
+	background-color: $bg-150;
+	overflow-y: auto;
+
+	// TODO: more unique name
+	.search-container {
+		margin: 8px;
+		margin-bottom: 0;
+	}
+
+	.search-input {
+		flex: 1;
+		padding: 4px;
+	}
+
+	.search-results-header {
+		display: flex;
+		align-items: center;
+		padding: 4px 8px;
+		gap: 4px;
+		background: linear-gradient(to bottom, $bg-150, $bg-100);
+		border-bottom: solid $bg-200 1px;
+
+		& > .dropdown-container {
+			width: 8em;
+		}
+	}
+
+	.search-results {
+		padding: 8px;
+	}
+}
+
+// HACK: higher specificity
+.root[data-message-style="cozy"] .search-page .search-results .message.separate {
+	margin-top: 0;
+}

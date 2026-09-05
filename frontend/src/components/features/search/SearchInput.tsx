@@ -3,7 +3,7 @@ import { gapCursor } from "prosemirror-gapcursor";
 import { history, redo, undo } from "prosemirror-history";
 import { keymap } from "prosemirror-keymap";
 import type { Node } from "prosemirror-model";
-import { EditorState, Plugin } from "prosemirror-state";
+import { EditorState, Plugin, TextSelection } from "prosemirror-state";
 import type { EditorView, NodeView } from "prosemirror-view";
 import type { User } from "sdk";
 import { useFloating } from "solid-floating-ui";
@@ -31,10 +31,8 @@ import {
 	createEditor as createBaseEditor,
 	createPlaceholderPlugin,
 } from "@/components/features/editor/mod.tsx";
-import { useOptionalChannel } from "@/contexts/channel";
-import { type RoomSearch, useRoom } from "@/contexts/room";
+import { type SearchState, useSearch } from "@/contexts/search";
 import type { RoomT, ThreadT } from "@/types";
-import type { ChannelSearch } from "@/types/chat";
 import { SEARCH_FILTERS } from "./filters.config";
 import {
 	type ActiveFilter,
@@ -105,6 +103,7 @@ export const SearchInput = (props: {
 	channel?: ThreadT;
 	room?: RoomT;
 	autofocus?: boolean;
+	value?: string;
 }) => {
 	const users = useUsers();
 	const messagesService = useMessages();
@@ -117,6 +116,9 @@ export const SearchInput = (props: {
 	const [hoveredIndex, setHoveredIndex] = createSignal<number>(0);
 	const [editorRef, setEditorRef] = createSignal<HTMLElement>();
 	const [editorFocused, setEditorFocused] = createSignal(false);
+	const [isFirstFocus, setIsFirstFocus] = createSignal(
+		props.autofocus ?? false,
+	);
 
 	const allFilterSuggestions = [
 		"author:",
@@ -272,18 +274,22 @@ export const SearchInput = (props: {
 		return def.getSuggestions(f.query, searchContext()).length > 0;
 	});
 
-	const channelCtx = useOptionalChannel();
-	const roomCtx = useRoom();
+	const { states, setStates } = useSearch();
 
-	const currentSearch = () => {
-		if (props.channel) return channelCtx[0]?.search;
-		if (props.room) return roomCtx?.[0].search;
-		return undefined;
-	};
+	const searchId = createMemo(
+		() => props.channel?.id ?? props.room?.id ?? "global",
+	);
 
-	const updateSearch = (val: ChannelSearch | RoomSearch | undefined) => {
-		if (props.channel && channelCtx[1]) channelCtx[1]("search", val as any);
-		else if (props.room && roomCtx) roomCtx[1]("search", val as any);
+	const currentSearch = () => states[searchId()];
+
+	const updateSearch = (val: SearchState | undefined) => {
+		if (val === undefined) {
+			// HACK: close search results
+			// ideally, i'd delete the property, but solidjs doesnt seem to work with that
+			setStates(searchId(), undefined as any);
+		} else {
+			setStates(searchId(), val);
+		}
 	};
 
 	createEffect(() => {
@@ -323,9 +329,9 @@ export const SearchInput = (props: {
 
 		addRecentSearch(queryString);
 
-		const searchState: ChannelSearch = {
+		const searchState: SearchState = {
 			query: queryString,
-			results: (currentSearch()?.results as any) ?? null,
+			results: currentSearch()?.results,
 			loading: true,
 			// Keep legacy fields for backward compat
 			author: undefined,
@@ -342,7 +348,7 @@ export const SearchInput = (props: {
 		}) as unknown as Record<string, unknown>;
 
 		const res = await messagesService.search(body);
-		updateSearch({ ...searchState, results: res || null, loading: false });
+		updateSearch({ ...searchState, results: res, loading: false });
 	};
 
 	const handleCompletion = (c: Completion) => {
@@ -484,11 +490,12 @@ export const SearchInput = (props: {
 		}),
 		createState: (schema) => {
 			let docContent: Node | undefined;
-			const initialSearch = currentSearch();
+			const query = props.value ?? currentSearch()?.query;
 			const ctx = searchContext();
+			let selection: TextSelection | undefined;
 
-			if (initialSearch?.query) {
-				const nodes = parseQueryToNodes(initialSearch.query, ctx);
+			if (query) {
+				const nodes = parseQueryToNodes(query, ctx);
 				if (nodes.length > 0) {
 					docContent = schema.nodes.doc.create(undefined, [
 						schema.nodes.paragraph.create(undefined, nodes),
@@ -496,9 +503,18 @@ export const SearchInput = (props: {
 				}
 			}
 
+			if (docContent && (props.autofocus || query)) {
+				// NOTE: maybe i want to select all search input content instead of placing the cursor at the end?
+				selection = TextSelection.create(
+					docContent,
+					docContent.content.size - 1,
+				);
+			}
+
 			return EditorState.create({
 				schema: schema as any,
 				doc: docContent,
+				selection,
 				plugins: [
 					createPlaceholderPlugin(),
 					history(),
@@ -582,7 +598,11 @@ export const SearchInput = (props: {
 		},
 		handleDOMEvents: {
 			focus: (view: EditorView) => {
-				setActiveFilter(getFilterFromSelection(view.state));
+				if (isFirstFocus()) {
+					setIsFirstFocus(false);
+				} else {
+					setActiveFilter(getFilterFromSelection(view.state));
+				}
 				setEditorFocused(true);
 				return false;
 			},

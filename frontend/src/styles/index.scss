@@ -1762,13 +1762,17 @@ body.resizing {
 	}
 }
 
-.search-results,
+.search-results-sidebar,
 .pinned-messages-list {
-	padding: 4px 0;
-	background-color: $bg-150;
 	overflow-y: auto;
 	height: 100%;
 	width: 100%;
+	background-color: $bg-150;
+}
+
+.search-results,
+.pinned-messages-list {
+	padding: 4px 0;
 	display: flex;
 	flex-direction: column;
 

@@ -56,17 +56,6 @@ export type AttachmentCreateT = {
 	id: string;
 };
 
-export type ChannelSearch = {
-	query: string;
-	results: MessageSearch | null;
-	loading: boolean;
-	author?: string[];
-	before?: string;
-	after?: string;
-	channel?: string[];
-	sort?: "newest" | "oldest" | "relevancy";
-};
-
 export type ThreadsViewData = {
 	channel_id: string;
 	ref: HTMLElement;

@@ -9,6 +9,7 @@ export default {
 		settings_room: (name: string) => `${name} settings`,
 		settings_user: () => `user settings`,
 		home: "Home",
+		search: "Search",
 	},
 	user_settings: {
 		theme: "Theme",

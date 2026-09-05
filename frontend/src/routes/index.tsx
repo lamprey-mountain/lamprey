@@ -45,6 +45,7 @@ import { RouteInviteInner } from "@/components/shared/Invite";
 import { RoomHome, RoomMembers } from "@/components/shared/Room";
 import { RoomHeader } from "@/components/shared/RoomHeader";
 import { RoomNav } from "@/components/shared/RoomNav";
+import { SearchPage } from "@/components/shared/SearchPage";
 import { UserPage } from "@/components/shared/UserPage";
 import { UserTray } from "@/components/shared/UserTray";
 import {
@@ -53,16 +54,12 @@ import {
 	useChannel,
 } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
-import {
-	createInitialRoomState,
-	RoomContext,
-	useRoom,
-} from "@/contexts/room.tsx";
+import { createInitialRoomState, RoomContext } from "@/contexts/room.tsx";
+import { useSearch } from "@/contexts/search";
 import { useCurrentRoomId } from "@/hooks/useCurrentRoomId";
 import { flags } from "@/lib/flags";
 import { MediaSidebar } from "@/media/Sidebar";
 import type { RoomT } from "@/types";
-import type { ChannelSearch } from "@/types/chat";
 import { icUser } from "@/utils/icons";
 
 export { RouteAuthorize } from "@/components/shared/Oauth";
@@ -99,8 +96,8 @@ export const AppLayoutMain = (props: ParentProps<RouteSectionProps>) => {
 
 const RoomSidebar = (props: { room: RoomT }) => {
 	const ctx = useCtx();
-	const roomCtx = useRoom();
-	const search = () => roomCtx?.[0].search;
+	const { states } = useSearch();
+	const search = () => states[props.room.id];
 
 	const showMembers = () =>
 		flags.has("room_member_list") &&
@@ -110,10 +107,7 @@ const RoomSidebar = (props: { room: RoomT }) => {
 		<Switch>
 			<Match when={search()}>
 				<Resizable storageKey="search-sidebar-width" initialWidth={320}>
-					<SearchResults
-						room={props.room}
-						search={search()! as ChannelSearch}
-					/>
+					<SearchResults room={props.room} search={search()} />
 				</Resizable>
 			</Match>
 			<Match when={showMembers()}>
@@ -266,7 +260,8 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 const ChannelSidebar = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const [ch] = useChannel()!;
-	const search = () => ch.search;
+	const { states } = useSearch();
+	const search = () => states[props.channel.id];
 	const showMembers = () =>
 		props.channel.type !== "Voice" &&
 		flags.has("channel_member_list") &&
@@ -306,10 +301,7 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 			</Match>
 			<Match when={search()}>
 				<Resizable storageKey="search-sidebar-width" initialWidth={320}>
-					<SearchResults
-						channel={props.channel}
-						search={search()! as ChannelSearch}
-					/>
+					<SearchResults channel={props.channel} search={search()} />
 				</Resizable>
 			</Match>
 			<Match when={showPinned()}>
@@ -575,6 +567,17 @@ export function RouteSettings(p: RouteSectionProps): JSX.Element {
 			<Show when={user()}>
 				{(u) => <UserSettings user={u()} page={p.params.page ?? ""} />}
 			</Show>
+		</>
+	);
+}
+
+export function RouteSearch(): JSX.Element {
+	const { t } = useCtx();
+
+	return (
+		<>
+			<Title title={t("page.search")} />
+			<SearchPage />
 		</>
 	);
 }

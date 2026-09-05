@@ -1,5 +1,5 @@
 import type { EditorState } from "prosemirror-state";
-import type { Media, Message, Pagination } from "sdk";
+import type { Media } from "sdk";
 import { createContext, useContext } from "solid-js";
 import type { SetStoreFunction, Store } from "solid-js/store";
 import {
@@ -7,17 +7,6 @@ import {
 	type TimelineState,
 } from "@/components/features/chat/timeline-context";
 import type { Attachment } from "@/types/chat";
-
-export type ChannelSearch = {
-	query: string;
-	results: Pagination<Message> | null;
-	loading: boolean;
-	author?: string[];
-	before?: string;
-	after?: string;
-	channel?: string[];
-	sort?: "newest" | "oldest" | "relevancy";
-};
 
 // TODO: use this (see below)
 // export type ChannelSidebar
@@ -33,7 +22,6 @@ export type ChannelState = {
 	attachments: Array<Attachment>;
 	editor_state?: EditorState;
 	reply_id?: string;
-	search?: ChannelSearch;
 	timelineState: TimelineState;
 
 	// TODO: merge these into sidebar: Sidebar

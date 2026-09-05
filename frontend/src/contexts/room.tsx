@@ -1,21 +1,7 @@
-import type { Message, Pagination } from "sdk";
 import { createContext, useContext } from "solid-js";
 import type { SetStoreFunction, Store } from "solid-js/store";
 
-export type RoomSearch = {
-	query: string;
-	results: Pagination<Message> | null;
-	loading: boolean;
-	author?: string[];
-	before?: string;
-	after?: string;
-	channel?: string[];
-	sort?: "newest" | "oldest" | "relevancy";
-};
-
-export type RoomState = {
-	search?: RoomSearch;
-};
+export type RoomState = {};
 
 export function createInitialRoomState(): RoomState {
 	return {};

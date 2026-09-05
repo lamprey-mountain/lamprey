@@ -8,7 +8,6 @@ export type { Modal } from "@/contexts/modal.tsx";
 export type {
 	Attachment,
 	AttachmentCreateT,
-	ChannelSearch,
 	ChatCtx,
 	Cursor,
 	CursorStats,

@@ -31,6 +31,7 @@ import {
 import { ModalsProvider, useModals } from "@/contexts/modal";
 import { OverlayProvider } from "@/contexts/overlay.tsx";
 import { ReadTrackingProvider } from "@/contexts/read-tracking.tsx";
+import { SearchProvider } from "@/contexts/search";
 import { SlashCommandsProvider } from "@/contexts/slash-commands.tsx";
 import { UploadsProvider } from "@/contexts/uploads.tsx";
 import { useAppConfig } from "@/hooks/useAppConfig.ts";
@@ -51,6 +52,7 @@ import {
 	RouteNotFound,
 	RouteRoom,
 	RouteRoomSettings,
+	RouteSearch,
 	RouteSettings,
 	RouteUser,
 } from "@/routes";
@@ -79,6 +81,7 @@ const App: Component = () => {
 					path="/thread/:channel_id/message/:message_id"
 					component={RouteChannel}
 				/>
+				<Route path="/search" component={RouteSearch} />
 			</Route>
 			<Route path="/settings/:page?" component={RouteSettings} />
 			<Route
@@ -155,21 +158,23 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
 							>
 								<ModalsProvider>
 									<UploadsProvider ctx={ctx}>
-										<VoiceProvider>
-											<SlashCommandsProvider value={ctx.slashCommands}>
-												<MenuProvider>
-													<AutocompleteProvider>
-														<FormattingToolbarProvider>
-															<UserPopoutProvider>
-																<CalendarPopupProvider>
-																	<AppShell>{props.children}</AppShell>
-																</CalendarPopupProvider>
-															</UserPopoutProvider>
-														</FormattingToolbarProvider>
-													</AutocompleteProvider>
-												</MenuProvider>
-											</SlashCommandsProvider>
-										</VoiceProvider>
+										<SearchProvider>
+											<VoiceProvider>
+												<SlashCommandsProvider value={ctx.slashCommands}>
+													<MenuProvider>
+														<AutocompleteProvider>
+															<FormattingToolbarProvider>
+																<UserPopoutProvider>
+																	<CalendarPopupProvider>
+																		<AppShell>{props.children}</AppShell>
+																	</CalendarPopupProvider>
+																</UserPopoutProvider>
+															</FormattingToolbarProvider>
+														</AutocompleteProvider>
+													</MenuProvider>
+												</SlashCommandsProvider>
+											</VoiceProvider>
+										</SearchProvider>
 									</UploadsProvider>
 								</ModalsProvider>
 							</ReadTrackingProvider>
