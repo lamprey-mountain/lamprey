@@ -1,10 +1,6 @@
 use vergen_gix::{CargoBuilder, Emitter, GixBuilder, RustcBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("cargo:rerun-if-changed=../crate-backend-data-postgres/migrations");
-    println!("cargo:rerun-if-changed=sql");
-    println!("cargo:rerun-if-changed=build.rs");
-
     if std::env::var("CARGO_FEATURE_EMBED_FRONTEND").is_ok() {
         println!("cargo:rerun-if-env-changed=FRONTEND_DIST");
         let frontend_dist =
