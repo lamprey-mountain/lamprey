@@ -19,6 +19,7 @@ import { useCurrentUser } from "@/contexts/currentUser";
 import { useChannel } from "@/contexts/mod";
 import {
 	AttachmentView,
+	isMarkdown,
 	MessageTextMarkdown,
 	UserDisplayName,
 } from "../chat/Message";
@@ -51,7 +52,7 @@ export const Comment = (props: {
 
 	const components = createMemo(() => {
 		const v = props.node.message.latest_version;
-		if (v.type !== "DefaultMarkdown") return;
+		if (!isMarkdown(v.type)) return;
 		if (!v.components?.length) return;
 		if (flume()) return;
 		return v.components;
@@ -65,9 +66,7 @@ export const Comment = (props: {
 	const _canEditMessage = () => {
 		const msg = message();
 		return (
-			msg.latest_version.type === "DefaultMarkdown" &&
-			!msg.is_local &&
-			isOwnMessage()
+			isMarkdown(msg.latest_version.type) && !msg.is_local && isOwnMessage()
 		);
 	};
 
@@ -104,7 +103,7 @@ export const Comment = (props: {
 	const [summary] = createResource(
 		() => {
 			const v = message().latest_version;
-			if (v.type === "DefaultMarkdown" && v.content) {
+			if (isMarkdown(v.type) && v.content) {
 				return {
 					content: v.content,
 					channel_id: message().channel_id,
@@ -293,7 +292,7 @@ export const Comment = (props: {
 							<div style="padding: 0 8px">
 								{(() => {
 									const version = message().latest_version;
-									if (version.type !== "DefaultMarkdown") return null;
+									if (!isMarkdown(version.type)) return null;
 									return (
 										<>
 											<Show when={version.attachments?.length}>

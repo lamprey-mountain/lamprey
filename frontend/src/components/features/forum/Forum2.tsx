@@ -30,6 +30,7 @@ import { Icon } from "@/atoms/Icon";
 import { Search } from "@/atoms/Search.tsx";
 import { createTooltip } from "@/atoms/Tooltip";
 import {
+	isMarkdown,
 	MessageView,
 	UserDisplayName,
 } from "@/components/features/chat/Message";
@@ -889,7 +890,7 @@ export function CommentEditor(props: { message: Message; channel: Channel }) {
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
 	const [draft, setDraft] = createSignal(
-		props.message.latest_version.type === "DefaultMarkdown"
+		isMarkdown(props.message.latest_version.type)
 			? (props.message.latest_version.content ?? "")
 			: "",
 	);
@@ -926,10 +927,9 @@ export function CommentEditor(props: { message: Message; channel: Channel }) {
 	});
 
 	const save = (content: string) => {
-		const currentContent =
-			props.message.latest_version.type === "DefaultMarkdown"
-				? (props.message.latest_version.content ?? "")
-				: "";
+		const currentContent = isMarkdown(props.message.latest_version.type)
+			? (props.message.latest_version.content ?? "")
+			: "";
 
 		if (content.trim() === currentContent.trim()) {
 			chUpdate("editingMessage", undefined);

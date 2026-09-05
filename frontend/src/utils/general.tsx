@@ -3,6 +3,7 @@ import type { Message } from "sdk";
 import { createSignal } from "solid-js";
 import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip";
+import { isMarkdown } from "@/components/features/chat/Message";
 import { useModals } from "@/contexts/modal";
 import { icCheck, icCopy } from "./icons";
 
@@ -25,7 +26,7 @@ export const getMsgTs = createWeaklyMemoized(
 
 export function getMessageOverrideName(message: Message | undefined) {
 	if (!message) return undefined;
-	// if (message.latest_version.type === "DefaultMarkdown") {
+	// if (isMarkdown(message.latest_version.type)) {
 	// 	return message.override_name;
 	// }
 	return undefined;
@@ -33,7 +34,7 @@ export function getMessageOverrideName(message: Message | undefined) {
 
 export function getMessageContent(message: Message | undefined) {
 	if (!message) return undefined;
-	if (message.latest_version.type === "DefaultMarkdown") {
+	if (isMarkdown(message.latest_version.type)) {
 		return message.latest_version.content;
 	}
 	return undefined;

@@ -2,7 +2,7 @@ import { diffChars } from "diff";
 import type { Message, MessageVersion } from "sdk";
 import { createMemo, createResource, For, Show } from "solid-js";
 import { useApi, useMessages } from "@/api";
-import { MessageView } from "@/components/features/chat/Message";
+import { isMarkdown, MessageView } from "@/components/features/chat/Message";
 import { MessageToolbarProvider } from "@/components/features/chat/message-toolbar-context";
 import {
 	DEL_END,
@@ -58,14 +58,12 @@ export const ModalMessageEdits = (props: {
 
 									const m = createMemo((): Message => {
 										if (prev) {
-											const prevContent =
-												prev.type === "DefaultMarkdown"
-													? (prev.content ?? "")
-													: "";
-											const versionContent =
-												version.type === "DefaultMarkdown"
-													? (version.content ?? "")
-													: "";
+											const prevContent = isMarkdown(prev.type)
+												? (prev.content ?? "")
+												: "";
+											const versionContent = isMarkdown(version.type)
+												? (version.content ?? "")
+												: "";
 
 											const changes = diffChars(prevContent, versionContent);
 											const content = changes

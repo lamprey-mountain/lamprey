@@ -10,6 +10,7 @@ import { useCurrentUser } from "@/contexts/currentUser";
 import { useMenu } from "@/contexts/menu";
 import type { MessageT } from "@/types";
 import { icEdit, icMore, icReactionAdd, icReply } from "@/utils/icons";
+import { isMarkdown } from "./Message";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
 
 export const MessageToolbar = (props: { message: MessageT }) => {
@@ -62,7 +63,7 @@ export const MessageToolbar = (props: { message: MessageT }) => {
 
 	const canEditMessage = () => {
 		return (
-			props.message.latest_version.type === "DefaultMarkdown" &&
+			isMarkdown(props.message.latest_version.type) &&
 			!props.message.is_local &&
 			isOwnMessage()
 		);

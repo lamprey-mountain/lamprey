@@ -6,6 +6,7 @@ import {
 	getTimestampFromUUID,
 	Media,
 	type Message as MessageT,
+	type MessageVersion,
 	type MessageVersion as MessageVersionT,
 	type Preferences,
 	type ReactionKey,
@@ -88,6 +89,11 @@ import { useVoice } from "../voice/context.tsx";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
 import { Reactions } from "./Reactions.tsx";
 
+// TODO: use this instead of manually checking type
+// TODO: add doc comment
+export const isMarkdown = (ty: MessageVersion["type"]) =>
+	ty === "DefaultMarkdown" || ty === "ThreadInitial";
+
 export type MessageProps = {
 	message: MessageT;
 	separate?: boolean;
@@ -158,10 +164,14 @@ export function MessageTextMarkdown(props: {
 		});
 	};
 
-	const content = () =>
-		props.message.latest_version.type === "DefaultMarkdown"
-			? (props.message.latest_version.content ?? "")
-			: "";
+	const content = createMemo(() => {
+		const ty = props.message.latest_version.type;
+		if (isMarkdown(ty)) {
+			return props.message.latest_version.content ?? "";
+		} else {
+			return "";
+		}
+	});
 
 	const emojiCount = () => countEmojiOnly(content());
 	const isEmojiOnly = () => emojiCount() > 0 && emojiCount() <= 20;
@@ -189,11 +199,15 @@ function MessageEditor(props: { message: MessageT }) {
 	const messagesService = useMessages();
 	const [ch, chUpdate] = useOptionalChannel();
 
-	const [draft, setDraft] = createSignal(
-		props.message.latest_version.type === "DefaultMarkdown"
-			? (props.message.latest_version.content ?? "")
-			: "",
-	);
+	const content = createMemo(() => {
+		const ty = props.message.latest_version.type;
+		if (isMarkdown(ty)) {
+			return props.message.latest_version.content ?? "";
+		} else {
+			return "";
+		}
+	});
+	const [draft, setDraft] = createSignal(content());
 
 	if (!ch || !chUpdate) {
 		return <div class="message-editor">Error: No channel context</div>;
@@ -224,7 +238,7 @@ function MessageEditor(props: { message: MessageT }) {
 
 				for (let i = currentIndex - 1; i >= 0; i--) {
 					const msg = messages[i];
-					if (msg.latest_version.type === "DefaultMarkdown") {
+					if (isMarkdown(msg.latest_version.type)) {
 						chUpdate("editingMessage", {
 							message_id: msg.id,
 							selection: "end",
@@ -249,7 +263,7 @@ function MessageEditor(props: { message: MessageT }) {
 
 				for (let i = currentIndex + 1; i < messages.length; i++) {
 					const msg = messages[i];
-					if (msg.latest_version.type === "DefaultMarkdown") {
+					if (isMarkdown(msg.latest_version.type)) {
 						chUpdate("editingMessage", {
 							message_id: msg.id,
 							selection: "start",
@@ -266,10 +280,9 @@ function MessageEditor(props: { message: MessageT }) {
 	});
 
 	const save = async (content: string) => {
-		const oldContent =
-			props.message.latest_version.type === "DefaultMarkdown"
-				? (props.message.latest_version.content ?? "")
-				: "";
+		const oldContent = isMarkdown(props.message.latest_version.type)
+			? (props.message.latest_version.content ?? "")
+			: "";
 		if (content.trim() === oldContent.trim()) {
 			chUpdate("editingMessage", undefined);
 			return;
@@ -466,7 +479,8 @@ export function ReplyView(props: {
 
 		const v = r.latest_version;
 		switch (v.type) {
-			case "DefaultMarkdown": {
+			case "DefaultMarkdown":
+			case "ThreadInitial": {
 				if (v.content) return v.content;
 				if (v.attachments.length)
 					return `${v.attachments.length} attachment(s)`;
@@ -487,26 +501,24 @@ export function ReplyView(props: {
 		if (!r) return;
 
 		const v = r.latest_version;
-		switch (v.type) {
-			case "DefaultMarkdown": {
-				if (v.attachments.length) {
-					// NOTE: maybe theres a better way to get an icon than only using the first attacment?
-					const m = v.attachments[0].media.content_type.split("/")[0];
-					switch (m) {
-						case "audio":
-							return icFileAudio;
-						case "text":
-							return icFileText;
-						case "image":
-							return icFileImage;
-						case "video":
-							return icFileVideo;
-						default:
-							return icFileGeneric;
-					}
+		if (isMarkdown(v.type)) {
+			if (v.attachments.length) {
+				// NOTE: maybe theres a better way to get an icon than only using the first attacment?
+				const m = v.attachments[0].media.content_type.split("/")[0];
+				switch (m) {
+					case "audio":
+						return icFileAudio;
+					case "text":
+						return icFileText;
+					case "image":
+						return icFileImage;
+					case "video":
+						return icFileVideo;
+					default:
+						return icFileGeneric;
 				}
-				return;
 			}
+			return;
 		}
 	};
 
@@ -753,7 +765,7 @@ export function MessageView(props: MessageProps) {
 			<Match when={props.message.latest_version.type === "ChannelMoved"}>
 				<SystemMessageChannelMoved {...systemProps} />
 			</Match>
-			<Match when={props.message.latest_version.type === "DefaultMarkdown"}>
+			<Match when={isMarkdown(props.message.latest_version.type)}>
 				<DefaultMessage
 					{...systemProps}
 					user={user()}
@@ -782,7 +794,7 @@ function DefaultMessage(
 	const flumes = useFlumes();
 	const toolbar = useMessageToolbar();
 	const version = () =>
-		props.message.latest_version.type === "DefaultMarkdown"
+		isMarkdown(props.message.latest_version.type)
 			? props.message.latest_version
 			: null;
 	const flume = () =>
@@ -822,6 +834,10 @@ function DefaultMessage(
 		if (!e) return false;
 		return e.type === "Media" && v.content === e.url;
 	};
+
+	const thread = () =>
+		props.message.latest_version.type !== "ThreadInitial" &&
+		props.message.thread;
 
 	return (
 		<article
@@ -868,7 +884,7 @@ function DefaultMessage(
 			<aside class="aside">
 				<Avatar user={props.user} animate={props.hovered} />
 				<Time date={props.date} animGroup="message-ts" format="time" />
-				<Show when={props.message.thread}>
+				<Show when={thread()}>
 					<div class="thread-spine"></div>
 				</Show>
 			</aside>
@@ -992,7 +1008,8 @@ function DefaultMessage(
 				</Show>
 
 				{/* thread */}
-				<Show when={props.message.thread}>
+				{/* TODO: should i not include thread for ThreadInitial messages at all? */}
+				<Show when={thread()}>
 					{(thread) => (
 						<Show when={props.channels2.get(props.message.channel_id)}>
 							{(parentChannel) => (

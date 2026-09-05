@@ -1,6 +1,7 @@
 import type { MessageRange } from "@/api/services/MessagesService";
 import type { MessageT } from "@/types";
 import { getMessageOverrideName, getMsgTs } from "@/utils/general";
+import { isMarkdown } from "./Message";
 
 export function highlight(el: Element) {
 	el.getAnimations().forEach((a) => a.cancel());
@@ -33,8 +34,8 @@ export function shouldSplit(a: MessageT, b: MessageT) {
 }
 
 function shouldSplitInner(a: MessageT, b: MessageT) {
-	if (a.latest_version.type !== "DefaultMarkdown") return true;
-	if (b.latest_version.type !== "DefaultMarkdown") return true;
+	if (!isMarkdown(a.latest_version.type)) return true;
+	if (!isMarkdown(b.latest_version.type)) return true;
 	if (a.author_id !== b.author_id) return true;
 	if (a.latest_version.reply_id) return true;
 	if (getMessageOverrideName(a) !== getMessageOverrideName(b)) return true; // TODO: remove?

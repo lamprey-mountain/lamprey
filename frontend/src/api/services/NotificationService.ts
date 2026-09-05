@@ -1,11 +1,12 @@
 import type { Message, MessageVersion } from "sdk";
+import { isMarkdown } from "@/components/features/chat/Message";
 import { generateNotificationIcon } from "@/lib/drawing";
 import { notificationPermission } from "@/lib/notifications";
 import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "@/lib/notifications/util";
 import type { RootStore } from "../core/Store";
 
 function getContentFromVersion(latestVersion: MessageVersion): string {
-	if (latestVersion.type === "DefaultMarkdown") {
+	if (isMarkdown(latestVersion.type)) {
 		return latestVersion.content ?? "";
 	}
 	return "";
@@ -19,11 +20,13 @@ export class NotificationService {
 		let is_mentioned = false;
 		const latestVersion = m.latest_version;
 		const mentions = latestVersion?.mentions;
-		const isDefaultMarkdown = latestVersion?.type === "DefaultMarkdown";
+		const isMarkdownMsg = latestVersion
+			? isMarkdown(latestVersion.type)
+			: false;
 		const content = latestVersion ? getContentFromVersion(latestVersion) : "";
 
 		// Determine if mentioned
-		if (me && m.author_id !== me.id && isDefaultMarkdown && mentions) {
+		if (me && m.author_id !== me.id && isMarkdownMsg && mentions) {
 			if (mentions.users?.some((u) => u.id === me.id)) {
 				is_mentioned = true;
 			}
@@ -114,7 +117,7 @@ export class NotificationService {
 			(ttsMode === "Always" || (ttsMode === "Mentions" && is_mentioned));
 		const isOwnMessage = m.author_id === me?.id;
 
-		if (shouldSpeak && !isOwnMessage && isDefaultMarkdown) {
+		if (shouldSpeak && !isOwnMessage && isMarkdownMsg) {
 			const author = this.store.users.get(m.author_id);
 			const channel = this.store.channels.get(m.channel_id);
 			const rawContent = content;

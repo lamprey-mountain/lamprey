@@ -37,6 +37,7 @@ import { getThumbFromId } from "@/media/util.tsx";
 import type { MessageT, ThreadT } from "@/types";
 import { getMessageOverrideName } from "@/utils/general";
 import { icAdd, icUpload } from "@/utils/icons.ts";
+import { isMarkdown } from "./Message";
 import { useTimeline } from "./timeline-context.tsx";
 
 type InputProps = {
@@ -203,7 +204,7 @@ export function Input(props: InputProps) {
 					const msg = ranges.live.items[i];
 					if (
 						msg.author_id === self_id &&
-						msg.latest_version.type === "DefaultMarkdown"
+						isMarkdown(msg.latest_version.type)
 					) {
 						chUpdate("editingMessage", {
 							message_id: msg.id,
