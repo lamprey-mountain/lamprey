@@ -1,0 +1,39 @@
+name: build
+on:
+  push:
+    branches: [ master ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        derivation:
+          - backend
+          - bridge
+          - voice
+          - media
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build image
+        run: nix build .#${{ matrix.derivation }}-oci -L
+
+      - name: Load image
+        run: ./result | docker load
+
+      - name: Login to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Container
+        run: |
+          docker tag ${{ matrix.derivation }}:latest ghcr.io/${{ github.repository }}/${{ matrix.derivation }}:latest
+          docker push ghcr.io/${{ github.repository }}/${{ matrix.derivation }}:latest
