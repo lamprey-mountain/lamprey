@@ -73,7 +73,8 @@ pub struct AuditLogChange {
 
 // NOTE: maybe i want to also have Channel{Remove,Restore}?
 // NOTE: maybe i want to also have Thread{Create,Update,Etc}?
-// NOTE: maybe i should hoist changes to the top level...?
+// NOTE: maybe i should hoist the `changes` field to the top level...?
+// NOTE: should i split this enum into channel-specific types, {room,server,application,user}-specific?
 #[record]
 #[serde(tag = "type", content = "metadata")]
 pub enum AuditLogEntryType {
@@ -97,6 +98,21 @@ pub enum AuditLogEntryType {
         changes: Vec<AuditLogChange>,
     },
 
+    ChannelReorder {
+        channels: Vec<ChannelReorderItem>,
+    },
+
+    // ChannelRemove {
+    //     channel_id: ChannelId,
+    //     channel_type: ChannelType,
+    //     changes: Vec<AuditLogChange>,
+    // },
+
+    // ChannelRestore {
+    //     channel_id: ChannelId,
+    //     channel_type: ChannelType,
+    //     changes: Vec<AuditLogChange>,
+    // },
     MessageDelete {
         channel_id: ChannelId,
         message_id: MessageId,
@@ -320,6 +336,7 @@ pub enum AuditLogEntryType {
         user_id: UserId,
     },
 
+    // TODO(?): remove {Block,Ignore}{Create,Delete}
     BlockCreate {
         user_id: UserId,
     },
@@ -361,6 +378,7 @@ pub enum AuditLogEntryType {
     },
 
     /// user entered sudo mode
+    // TODO(?): maybe rename to SessionSudo
     AuthSudo {
         session_id: SessionId,
     },
@@ -467,10 +485,6 @@ pub enum AuditLogEntryType {
 
     MessagePinReorder {
         channel_id: ChannelId,
-    },
-
-    ChannelReorder {
-        channels: Vec<ChannelReorderItem>,
     },
 
     CalendarEventCreate {
@@ -663,7 +677,7 @@ pub struct AuditLogFilter {
 
 /// the status of an audit log event
 #[record]
-#[derive(PartialEq, Eq)]
+#[derive(Copy, PartialEq, Eq)]
 pub enum AuditLogEntryStatus {
     /// the operation was successful
     Success,
@@ -702,6 +716,7 @@ pub struct AuditLogPaginationResponse {
 
     // TODO: include calendar events, calendar overwrites, automod rules, integrations, etc...
     /// whether there are more audit log events that can be fetched
+    // TODO: remove has_more
     pub has_more: bool,
 
     /// pagination cursor
@@ -825,6 +840,11 @@ impl AuditLogEntryType {
                 | TagDelete { .. }
         )
     }
+
+    // TODO: impl this
+    // pub fn is_channel(&self) -> bool {
+    //     todo!()
+    // }
 
     /// if this is a server event
     ///

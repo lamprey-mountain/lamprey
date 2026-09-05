@@ -136,6 +136,8 @@ pub enum SearchAuditLogVisibility {
     Everything,
 
     /// only entries from this room
+    // TODO: prevent searching by ip address, session id, or user agent
+    // this can be done if/when i implement a custom query parser
     Room(RoomId),
 }
 
