@@ -663,6 +663,14 @@ impl Connection {
                         old_state,
                     }
                 }
+                MessageSync::AuditLogEntryCreate { mut entry } => {
+                    entry.strip_request_metadata();
+                    if self.session.user_id() != Some(entry.user_id) {
+                        entry.strip_session();
+                    }
+
+                    MessageSync::AuditLogEntryCreate { entry }
+                }
                 m => m,
             };
             self.queue.push_sync(msg, nonce);
