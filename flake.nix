@@ -210,7 +210,7 @@
           name = "frontend";
           pname = name;
           src = ./.;
-          version = "0.0.0";
+          version = (builtins.fromJSON (builtins.readFile ./frontend/package.json)).version;
 
           nativeBuildInputs = with pkgs; [ nodejs pnpm pnpmConfigHook git ];
 
