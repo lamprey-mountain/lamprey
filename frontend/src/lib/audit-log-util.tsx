@@ -88,7 +88,6 @@ function getTimestampFromUUID(uuid: string): Date {
 
 const resolveName = (
 	api2: ReturnType<typeof useApi>,
-	channels2: ReturnType<typeof useChannels>,
 	room_id: string,
 	id: string | undefined,
 	type: "user" | "channel" | "role" | "webhook" | "room",
@@ -106,7 +105,7 @@ const resolveName = (
 			return metadataName ?? id;
 		}
 		case "channel": {
-			const chan = channels2.cache.get(id);
+			const chan = api2.channels.cache.get(id);
 			return chan?.name ?? metadataName ?? id;
 		}
 		case "role": {
@@ -138,17 +137,10 @@ export function formatAuditLogEntry(
 ): string {
 	const { t } = useCtx();
 	const api2 = useApi();
-	const channels2 = useChannels();
 
 	const firstEntry = "entries" in ent ? ent.entries[0] : ent;
 
-	const actor = resolveName(
-		api2,
-		channels2,
-		room_id,
-		firstEntry.user_id,
-		"user",
-	);
+	const actor = resolveName(api2, room_id, firstEntry.user_id, "user");
 
 	// Helper to safely access metadata (some entry types don't have it)
 	const metadata =
@@ -161,7 +153,6 @@ export function formatAuditLogEntry(
 		actor,
 		channel_name: resolveName(
 			api2,
-			channels2,
 			room_id,
 			getMetadata("channel_id") as string | undefined,
 			"channel",
@@ -169,7 +160,6 @@ export function formatAuditLogEntry(
 		),
 		role_name: resolveName(
 			api2,
-			channels2,
 			room_id,
 			getMetadata("role_id") as string | undefined,
 			"role",
@@ -177,7 +167,6 @@ export function formatAuditLogEntry(
 		),
 		webhook_name: resolveName(
 			api2,
-			channels2,
 			room_id,
 			getMetadata("webhook_id") as string | undefined,
 			"webhook",
@@ -185,7 +174,6 @@ export function formatAuditLogEntry(
 		),
 		room_name: resolveName(
 			api2,
-			channels2,
 			room_id,
 			getMetadata("room_id") as string | undefined,
 			"room",
@@ -193,7 +181,6 @@ export function formatAuditLogEntry(
 		),
 		thread_name: resolveName(
 			api2,
-			channels2,
 			room_id,
 			getMetadata("thread_id") as string | undefined,
 			"channel",
@@ -201,7 +188,6 @@ export function formatAuditLogEntry(
 		),
 		target: resolveName(
 			api2,
-			channels2,
 			room_id,
 			(getMetadata("user_id") || getMetadata("overwrite_id")) as
 				| string
@@ -211,7 +197,6 @@ export function formatAuditLogEntry(
 		),
 		bot_name: resolveName(
 			api2,
-			channels2,
 			room_id,
 			getMetadata("bot_id") as string | undefined,
 			"user",
@@ -234,13 +219,11 @@ export function formatChanges(
 ): Array<JSX.Element> {
 	const formatted: Array<JSX.Element> = [];
 	const api2 = useApi();
-	const channels2 = useChannels();
 	const { t } = useCtx();
 
 	const entWithMetadata = ent as { metadata?: Record<string, unknown> };
 	const channelName = resolveName(
 		api2,
-		channels2,
 		room_id,
 		entWithMetadata.metadata?.channel_id as string | undefined,
 		"channel",
@@ -277,7 +260,6 @@ export function formatChanges(
 			const overwriteType = (ent.metadata?.type as string) ?? "unknown";
 			const overwriteName = resolveName(
 				api2,
-				channels2,
 				room_id,
 				ent.metadata?.overwrite_id as string | undefined,
 				(ent.metadata?.type as string) === "Role" ? "role" : "user",
@@ -298,7 +280,6 @@ export function formatChanges(
 					{t("audit_log.changes.role_added", {
 						role_name: resolveName(
 							api2,
-							channels2,
 							room_id,
 							ent.metadata?.role_id as string | undefined,
 							"role",
@@ -314,7 +295,6 @@ export function formatChanges(
 					{t("audit_log.changes.role_removed", {
 						role_name: resolveName(
 							api2,
-							channels2,
 							room_id,
 							ent.metadata?.role_id as string | undefined,
 							"role",
@@ -330,7 +310,6 @@ export function formatChanges(
 					{t("audit_log.changes.bot_added", {
 						bot_name: resolveName(
 							api2,
-							channels2,
 							room_id,
 							ent.metadata?.bot_id as string | undefined,
 							"user",
@@ -346,7 +325,6 @@ export function formatChanges(
 					{t("audit_log.changes.user_kicked", {
 						user_name: resolveName(
 							api2,
-							channels2,
 							room_id,
 							ent.metadata?.user_id as string | undefined,
 							"user",
@@ -362,7 +340,6 @@ export function formatChanges(
 					{t("audit_log.changes.user_banned", {
 						user_name: resolveName(
 							api2,
-							channels2,
 							room_id,
 							ent.metadata?.user_id as string | undefined,
 							"user",
@@ -378,7 +355,6 @@ export function formatChanges(
 					{t("audit_log.changes.user_unbanned", {
 						user_name: resolveName(
 							api2,
-							channels2,
 							room_id,
 							ent.metadata?.user_id as string | undefined,
 							"user",
@@ -394,7 +370,6 @@ export function formatChanges(
 					{t("audit_log.changes.user_added_to_thread", {
 						user_name: resolveName(
 							api2,
-							channels2,
 							room_id,
 							ent.metadata?.user_id as string | undefined,
 							"user",
@@ -407,7 +382,6 @@ export function formatChanges(
 					{t("audit_log.changes.to_thread", {
 						channel_name: resolveName(
 							api2,
-							channels2,
 							room_id,
 							ent.metadata?.thread_id as string | undefined,
 							"channel",
@@ -423,7 +397,6 @@ export function formatChanges(
 					{t("audit_log.changes.user_removed_from_thread", {
 						user_name: resolveName(
 							api2,
-							channels2,
 							room_id,
 							ent.metadata?.user_id as string | undefined,
 							"user",
@@ -436,7 +409,6 @@ export function formatChanges(
 					{t("audit_log.changes.to_thread", {
 						channel_name: resolveName(
 							api2,
-							channels2,
 							room_id,
 							ent.metadata?.thread_id as string | undefined,
 							"channel",
@@ -555,7 +527,7 @@ export function formatChanges(
 					formatted.push(
 						<li>
 							{t("audit_log.changes.role_added", {
-								role_name: resolveName(api2, channels2, room_id, r, "role"),
+								role_name: resolveName(api2, room_id, r, "role"),
 							})}
 						</li>,
 					);
@@ -564,7 +536,7 @@ export function formatChanges(
 					formatted.push(
 						<li>
 							{t("audit_log.changes.role_removed", {
-								role_name: resolveName(api2, channels2, room_id, r, "role"),
+								role_name: resolveName(api2, room_id, r, "role"),
 							})}
 						</li>,
 					);
