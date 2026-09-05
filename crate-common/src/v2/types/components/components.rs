@@ -1,4 +1,5 @@
 use lamprey_macros::record;
+use url::Url;
 
 use crate::{
     v1::types::{metadata::Metadata, misc::Color},
@@ -12,7 +13,7 @@ use crate::{
                 ButtonStyle, Label, SelectDataset, SelectOption, TextareaStyle, Validation,
             },
         },
-        media::Media,
+        media::{Media, MediaReference},
     },
 };
 
@@ -27,11 +28,12 @@ pub struct Components {
     pub items: Vec<Component>,
 
     /// media referenced in the components
+    // NOTE: should i remove this and send a vec of all media in the top level response instead?
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub media: Vec<Media>,
 
     /// application-specific metadata
-    // NOTE: maybe rename to `variables`?
+    // NOTE: maybe rename to `variables`? or have both variables to use with templates later and generic metadata?
     #[serde(default, skip_serializing_if = "Metadata::is_empty")]
     pub metadata: Metadata,
 }
@@ -54,10 +56,80 @@ pub struct Component {
 /// a piece of media used in a component
 #[record]
 pub struct ComponentMedia {
-    pub media_id: MediaId,
+    /// what media is being referenced
+    ///
+    /// clients can use any value, server will always send [`MediaReference::Media`]
+    #[serde(flatten)]
+    pub media_ref: MediaReference,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+
+    #[serde(default, skip_serializing_if = "is_false")]
     pub spoiler: bool,
 }
+
+fn is_false(b: &bool) -> bool {
+    !*b
+}
+
+impl ComponentMedia {
+    pub fn new_media(media_id: MediaId) -> Self {
+        Self {
+            media_ref: MediaReference::Media { media_id },
+            description: None,
+            spoiler: false,
+        }
+    }
+
+    pub fn new_url(source_url: Url) -> Self {
+        Self {
+            media_ref: MediaReference::Url { source_url },
+            description: None,
+            spoiler: false,
+        }
+    }
+
+    #[inline]
+    pub fn media_id(&self) -> Option<MediaId> {
+        self.media_ref.media_id()
+    }
+}
+
+// TODO: impl?
+// impl ComponentMediaBuilder {
+//     pub fn description(mut self, description: impl Into<String>) -> Self {
+//         self.description = Some(description.into());
+//         self
+//     }
+//
+//     pub fn spoiler(mut self) -> Self {
+//         self.spoiler = true;
+//         self
+//     }
+// }
+//
+// impl ComponentBuilder {
+//     pub fn new(ty: ComponentType) -> Self {
+//         Self {
+//             id: None,
+//             ty,
+//             allow: None,
+//         }
+//     }
+//
+//     /// set the id for this component
+//     pub fn id(mut self, id: impl Into<ComponentId>) -> Self {
+//         self.id = Some(id.into());
+//         self
+//     }
+//
+//     /// set the access control for interacting with this component
+//     pub fn allow(mut self, allow: impl Into<Allow>) -> Self {
+//         self.allow = Some(allow.into());
+//         self
+//     }
+// }
 
 /// the type of a component
 ///
@@ -95,6 +167,10 @@ pub struct ComponentMedia {
 // - `Root` pseudo component for the component root
 // - `Show` conditionally render some components depending on variables
 // - `For` render a list of components depending on variables
+//
+// TODO(?): maybe add Column, Grid, etc for more layout?
+// TODO(?): maybe merge Checkbox and Checkboxes
+// TODO(?): maybe add multiple root components, eg. Modal, Sidebar, Message
 #[record]
 #[serde(tag = "type")]
 pub enum ComponentType {
@@ -202,12 +278,8 @@ pub enum ComponentType {
     /// intended for rows of buttons. cannot hold any component type other than `Button`. maximum of 5 components per row.
     Row { components: Vec<ComponentId> },
 
-    // TODO: determine how these are displayed differently
-    // maybe make Media only hold a single item and Gallery holds multiple?
-    /// display media
-    ///
-    /// min 1 max 20 items
-    Media { items: Vec<ComponentMedia> },
+    /// display a single piece of media
+    Media { item: ComponentMedia },
 
     /// display a carousel of media
     ///
@@ -232,4 +304,36 @@ pub enum ComponentType {
         // TODO: implement this
         // template_id: ComponentTemplateId,
     },
+}
+
+// NOTE: in the past, components formed a json tree. now they're flat. maybe its still nice to be able to create components using a tree?
+
+// NOTE: in the past, when creating components, a String could be used as a shorthand to create a Text component with no content.
+// since every component now is required to have an id and the structure is flat, i don't think this is possible? but having shortcuts to save bandwidth would be nice.
+
+#[record]
+#[serde(transparent)]
+pub struct ComponentsCreate {
+    inner: Components,
+}
+
+impl ComponentsCreate {
+    pub fn new(c: Components) -> Self {
+        Self { inner: c }
+    }
+
+    /// get a reference to the underlying [`Components`] without validating
+    pub fn get_unvalidated(&self) -> &Components {
+        &self.inner
+    }
+
+    /// get a mutable reference to the underlying [`Components`] without validating
+    pub fn get_unvalidated_mut(&mut self) -> &mut Components {
+        &mut self.inner
+    }
+
+    /// get the underlying [`Components`] without validating
+    pub fn unwrap_unvalidated(self) -> Components {
+        self.inner
+    }
 }

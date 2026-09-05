@@ -184,6 +184,17 @@ impl Requirements {
         self
     }
 
+    // TODO: impl support for acl Allow
+    // pub fn require_something(
+    //     &mut self,
+    //     allow: common::v2::types::components::acl::Allow,
+    // ) -> &mut Self {
+    //     todo!()
+    // }
+}
+
+// getters
+impl Requirements {
     pub fn get_context(&self) -> RequirementsContext {
         self.context
     }

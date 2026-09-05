@@ -1,8 +1,10 @@
 use crate::{
     v1::types::error::{ApiError, ApiResult, ErrorCode, ErrorField, ErrorFieldType},
-    v2::types::components::ComponentCustomId,
-    v2::types::components::interactive::{Label, Validation},
-    v2::types::components::{Component, ComponentId, ComponentType, Components},
+    v2::types::components::{
+        Component, ComponentCustomId, ComponentId, ComponentType, Components,
+        components::ComponentsCreate,
+        interactive::{Label, Validation},
+    },
 };
 
 // TODO: more validation
@@ -10,14 +12,28 @@ use crate::{
 // - validate that components don't have duplicate ids (ie. two components cant have the same id)
 // - validate that components aren't referenced more than once (ie. the same component cant be in two different containers)
 // - validate that cycles dont exist (ie. components must form an acyclic tree)
+// - validate ComponentType::{is_usable_inline, requires_form}
+// - validate that forms, rows cannot be nested
 
 pub struct ValidationState<'a> {
     path: Vec<String>,
-    // TODO: make this a getter/method
-    pub errors: Vec<ErrorField>,
+    errors: Vec<ErrorField>,
     components: &'a Components,
-    // TODO: limit total number of components
-    // TODO: limit total text length
+    // TODO: use ComponentsLimits
+    // TODO: use ValidationContext
+}
+
+// alternatively, i could have is_inside_row: bool, is_inside_form
+#[derive(Debug, Clone, Copy)]
+enum ValidationContext {
+    /// we're not inside any specific context
+    Root,
+
+    /// we're inside a form
+    Form,
+
+    /// we're inside a row
+    Row,
 }
 
 impl<'a> ValidationState<'a> {
@@ -80,6 +96,7 @@ impl<'a> ValidationState<'a> {
         }
     }
 
+    // TODO: impl validate for ComponentCustomId
     pub fn validate_custom_id(&mut self, custom_id: &ComponentCustomId) {
         if custom_id.0.is_empty() || custom_id.0.len() > 128 {
             self.push_error(
@@ -92,8 +109,13 @@ impl<'a> ValidationState<'a> {
         }
     }
 
-    pub fn validate_validation(&mut self, _validation: &Validation) {
+    pub fn validate_validation(
+        &mut self,
+        _component_type: &ComponentType,
+        _validation: &Validation,
+    ) {
         // TODO: Implement more robust validation for `Validation` struct
+        todo!()
     }
 }
 
@@ -164,7 +186,7 @@ impl ComponentType {
             } => {
                 state.enter("custom_id", |s| s.validate_custom_id(custom_id));
                 state.enter("label", |s| s.validate_label(label));
-                state.enter("validation", |s| s.validate_validation(validation));
+                state.enter("validation", |s| s.validate_validation(self, validation));
             }
             ComponentType::Textarea {
                 custom_id,
@@ -176,7 +198,7 @@ impl ComponentType {
             } => {
                 state.enter("custom_id", |s| s.validate_custom_id(custom_id));
                 state.enter("label", |s| s.validate_label(label));
-                state.enter("validation", |s| s.validate_validation(validation));
+                state.enter("validation", |s| s.validate_validation(self, validation));
             }
             ComponentType::Select {
                 custom_id,
@@ -187,7 +209,7 @@ impl ComponentType {
             } => {
                 state.enter("custom_id", |s| s.validate_custom_id(custom_id));
                 state.enter("label", |s| s.validate_label(label));
-                state.enter("validation", |s| s.validate_validation(validation));
+                state.enter("validation", |s| s.validate_validation(self, validation));
             }
             ComponentType::Upload {
                 custom_id,
@@ -196,7 +218,7 @@ impl ComponentType {
             } => {
                 state.enter("custom_id", |s| s.validate_custom_id(custom_id));
                 state.enter("label", |s| s.validate_label(label));
-                state.enter("validation", |s| s.validate_validation(validation));
+                state.enter("validation", |s| s.validate_validation(self, validation));
             }
             ComponentType::Checkbox {
                 custom_id,
@@ -205,7 +227,7 @@ impl ComponentType {
             } => {
                 state.enter("custom_id", |s| s.validate_custom_id(custom_id));
                 state.enter("option", |s| s.validate_label(&option.label));
-                state.enter("validation", |s| s.validate_validation(validation));
+                state.enter("validation", |s| s.validate_validation(self, validation));
             }
             ComponentType::Checkboxes {
                 custom_id,
@@ -215,7 +237,7 @@ impl ComponentType {
             } => {
                 state.enter("custom_id", |s| s.validate_custom_id(custom_id));
                 state.enter("label", |s| s.validate_label(label));
-                state.enter("validation", |s| s.validate_validation(validation));
+                state.enter("validation", |s| s.validate_validation(self, validation));
             }
             ComponentType::Container {
                 components,
@@ -269,7 +291,10 @@ impl ComponentType {
                 }
                 self.validate_child_ids(components, "components", state);
             }
-            ComponentType::Media { items } | ComponentType::Gallery { items } => {
+            ComponentType::Media { item: _ } => {
+                // nothing to validate
+            }
+            ComponentType::Gallery { items } => {
                 if items.is_empty() || items.len() > 20 {
                     state.push_error(
                         "items must be between 1 and 20".to_owned(),
@@ -310,7 +335,18 @@ impl ComponentType {
     }
 }
 
-// TODO: implement and use this
+pub struct ComponentsParseError {
+    pub data: ComponentsCreate,
+    pub errors: Vec<ErrorField>,
+}
+
+impl ComponentsCreate {
+    /// parse and validate
+    pub fn parse(self) -> Result<Components, ComponentsParseError> {
+        todo!()
+    }
+}
+
 /// restrictions on a component tree
 #[derive(Debug, Clone)]
 pub struct ComponentsLimits {
@@ -326,6 +362,9 @@ pub struct ComponentsLimits {
     /// maximum length of text for labels (eg. buttons)
     pub text_label: usize,
 
+    /// maximum length of text for label descriptions
+    pub text_description: usize,
+
     /// maximum length of text for a text component
     pub text_component: usize,
 
@@ -333,11 +372,27 @@ pub struct ComponentsLimits {
     pub text_total: usize,
 
     /// whether this tree can contain interactive components
-    pub can_be_interactive: bool,
+    pub allow_interactive: bool,
 }
 
-impl Default for ComponentsLimits {
-    fn default() -> Self {
-        todo!()
+impl ComponentsLimits {
+    pub fn default_inert() -> Self {
+        Self {
+            components_root: 16,
+            components_container: 64,
+            components_total: 64,
+            text_label: 256,
+            text_description: 2048,
+            text_component: 8192,
+            text_total: 8192,
+            allow_interactive: false,
+        }
+    }
+
+    pub fn default_interactive() -> Self {
+        Self {
+            allow_interactive: true,
+            ..Self::default_inert()
+        }
     }
 }

@@ -9,9 +9,10 @@ use crate::{
         MediaId,
         components::{
             Component, ComponentId,
-            types::{ComponentType, Components},
+            components::{ComponentType, Components},
         },
         flume::FlumeDelta,
+        media::MediaReference,
     },
 };
 
@@ -36,6 +37,41 @@ impl ComponentType {
             ComponentType::Form { .. } => true,
             _ => false,
         }
+    }
+
+    /// whether this component is usable in an inline context
+    fn is_usable_inline(&self) -> bool {
+        // TODO: allow more inputs? eg. Select?
+        // TODO: allow Section?
+        // TODO: allow Media?
+        // TODO: handle Reference and Template
+
+        matches!(
+            self,
+            ComponentType::Button { .. } | ComponentType::Text { .. }
+        )
+    }
+
+    /// whether this component is usable in a `Row`
+    fn is_usable_in_row(&self) -> bool {
+        self.is_usable_inline()
+    }
+
+    /// whether this component is only usable in a `Form`
+    fn requires_form(&self) -> bool {
+        // TODO: handle Reference and Template
+        // TODO(?): allow Select outside of a form (discord-style)
+        // TODO(?): allow checkbox{,es} and upload with similar behavior to select
+
+        matches!(
+            self,
+            ComponentType::Input { .. }
+                | ComponentType::Textarea { .. }
+                | ComponentType::Select { .. }
+                | ComponentType::Upload { .. }
+                | ComponentType::Checkbox { .. }
+                | ComponentType::Checkboxes { .. }
+        )
     }
 }
 
@@ -133,10 +169,11 @@ impl Components {
     ///
     /// ## rules
     ///
-    /// - Text can be appended to other Text (content is concatenated)
-    /// - Media can be appended to Gallery (added to items)
-    /// - any component can be appended to Container and Section
-    /// - any component can be appended to Details. it will be appended to `details`, not `summary`.
+    /// - `Text` can be appended to other `Text` (content is concatenated)
+    /// - `Media` can be appended to `Gallery` (added to items)
+    /// - any component can be appended to `Container` and `Section`
+    /// - any component can be appended to `Details`. it will be appended to `details`, not `summary`.
+    /// - valid components can be appended to `Row`
     pub fn append(&mut self, target_id: ComponentId, other: Components) -> ApiResult<()> {
         let mut id_allocator = IdAllocator::new();
         for c in &self.items {
@@ -165,8 +202,8 @@ impl Components {
             ComponentType::Gallery { items } => {
                 for their_id in &other.roots {
                     if let Some(c) = other.items.iter().find(|c| c.id == *their_id) {
-                        if let ComponentType::Media { items: other_items } = &c.ty {
-                            items.extend(other_items.clone());
+                        if let ComponentType::Media { item } = &c.ty {
+                            items.push(item.clone());
                         } else {
                             return Err(ApiError::with_message(
                                 ErrorCode::InvalidData,
@@ -342,7 +379,7 @@ impl Components {
 
     /// remove any unused media
     pub fn prune_media(&mut self) {
-        let ids: HashSet<MediaId> = self.referenced_media_ids().into_iter().collect();
+        let ids: HashSet<MediaId> = self.referenced_media_ids().collect();
         self.media.retain(|m| ids.contains(&m.id));
     }
 
@@ -371,31 +408,36 @@ impl Components {
     //     todo!()
     // }
 
-    /// Return a vec of all media ids that are referenced in these components.
-    // PERF: return an iterator?
-    pub fn referenced_media_ids(&self) -> Vec<MediaId> {
-        let mut ids = Vec::new();
-        for comp in &self.items {
-            match &comp.ty {
-                ComponentType::Media { items } | ComponentType::Gallery { items } => {
-                    for item in items {
-                        ids.push(item.media_id);
-                    }
-                }
-                _ => {}
-            }
-        }
-        ids
+    /// Return an iterator over all [`MediaReference`]s that are referenced in these components.
+    pub fn referenced_media(&self) -> impl Iterator<Item = &MediaReference> {
+        self.items.iter().flat_map(|comp| match &comp.ty {
+            ComponentType::Media { item } => vec![&item.media_ref].into_iter(),
+            ComponentType::Gallery { items } => items
+                .iter()
+                .map(|i| &i.media_ref)
+                .collect::<Vec<_>>()
+                .into_iter(),
+            _ => vec![].into_iter(),
+        })
     }
 
-    /// Return a vec of media ids that are referenced but not in `media`.
-    // PERF: return an iterator?
-    pub fn missing_media_ids(&self) -> Vec<MediaId> {
-        let all = self.referenced_media_ids();
+    /// Return an iterator over all [`MediaReference`]s that are referenced but not in `media`.
+    pub fn missing_media(&self) -> impl Iterator<Item = &MediaReference> {
         let existing: HashSet<_> = self.media.iter().map(|m| m.id).collect();
-        all.into_iter()
-            .filter(|id| !existing.contains(id))
-            .collect()
+        self.referenced_media().filter(move |m| match m {
+            MediaReference::Media { media_id } => !existing.contains(media_id),
+            _ => true,
+        })
+    }
+
+    /// Return an iterator over media ids that are referenced but not in `media`.
+    pub fn missing_media_ids(&self) -> impl Iterator<Item = MediaId> + '_ {
+        self.missing_media().filter_map(|m| m.media_id())
+    }
+
+    /// Return an iterator over all `MediaId`s that are explicitly referenced in these components.
+    pub fn referenced_media_ids(&self) -> impl Iterator<Item = MediaId> + '_ {
+        self.referenced_media().filter_map(|m| m.media_id())
     }
 
     /// if this component is a single Text component (ie. deserialized from a single string), return the text

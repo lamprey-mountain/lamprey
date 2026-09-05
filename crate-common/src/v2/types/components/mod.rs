@@ -1,29 +1,22 @@
 pub mod acl;
 pub mod action;
-pub mod builder;
+pub mod components; // TODO: rename? components::components::Components is kinda bad
+mod error; // TODO: make these public?
 pub mod impls;
-pub mod interactive; // TODO: merge into types?
-// pub mod tree; // TODO: implement
-pub mod types; // TODO: rename?
+pub mod interactive;
 pub mod validate;
 
-// TODO: rename?
-pub use crate::v1::types::components::ComponentCustomId;
+// TODO: impl and use this instead of flume delta
+// pub mod delta;
 
-// TODO: rename?
-pub use crate::v1::types::components::ComponentId;
+// TODO: remove these?
+// pub mod builder;
+// pub mod tree;
 
-pub use types::{Component, ComponentType, Components};
+// NOTE: maybe rename id types to be more clear? probably not.
+pub use crate::v1::types::components::{ComponentCustomId, ComponentId};
 
-#[cfg(feature = "serde")]
-mod _serde {
-    // TODO: text or struct for ComponentCreate
-}
-
-#[cfg(feature = "utoipa")]
-mod _utoipa {
-    // TODO: text or struct for ComponentCreate - maybe can be done with utoipa attrs instead of manual impl?
-}
+pub use components::{Component, ComponentType, Components};
 
 #[cfg(test)]
 mod tests;

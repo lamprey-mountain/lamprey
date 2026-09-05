@@ -13,7 +13,7 @@ use crate::v1::types::{
 #[record]
 #[derive(Default, PartialEq, Eq)]
 pub struct Allow {
-    // TODO: deduplicate items in vecs
+    // TODO: deduplicate items in vecs (maybe use HashSet?)
     /// only these users can interact
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub user_ids: Vec<UserId>,
@@ -27,7 +27,87 @@ pub struct Allow {
     pub permissions: Vec<Permission>,
 }
 
+impl Allow {
+    /// deny everyone from using this component
+    pub fn none() -> Self {
+        Self::default()
+    }
+
+    /// allow a user to interact with this component
+    pub fn user_id(mut self, user_id: UserId) -> Self {
+        self.user_ids.push(user_id);
+        self
+    }
+
+    /// allow users with this role to interact with this component
+    pub fn role_id(mut self, role_id: RoleId) -> Self {
+        self.role_ids.push(role_id);
+        self
+    }
+
+    /// allow users with this permission to interact with this component
+    pub fn permission(mut self, permission: Permission) -> Self {
+        self.permissions.push(permission);
+        self
+    }
+}
+
+impl From<UserId> for Allow {
+    fn from(user_id: UserId) -> Self {
+        Self {
+            user_ids: vec![user_id],
+            ..Default::default()
+        }
+    }
+}
+
+impl From<RoleId> for Allow {
+    fn from(role_id: RoleId) -> Self {
+        Self {
+            role_ids: vec![role_id],
+            ..Default::default()
+        }
+    }
+}
+
+impl From<Permission> for Allow {
+    fn from(permission: Permission) -> Self {
+        Self {
+            permissions: vec![permission],
+            ..Default::default()
+        }
+    }
+}
+
+impl From<Vec<UserId>> for Allow {
+    fn from(user_ids: Vec<UserId>) -> Self {
+        Self {
+            user_ids,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<Vec<RoleId>> for Allow {
+    fn from(role_ids: Vec<RoleId>) -> Self {
+        Self {
+            role_ids,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<Vec<Permission>> for Allow {
+    fn from(permissions: Vec<Permission>) -> Self {
+        Self {
+            permissions,
+            ..Default::default()
+        }
+    }
+}
+
 /// utility to check whether an interaction is allowed
+// TODO: merge into Requirements when that gets implemented
 #[derive(Debug)]
 pub struct AllowCheck<'a> {
     pub interaction_create: &'a InteractionCreate,
