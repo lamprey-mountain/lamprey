@@ -47,14 +47,17 @@ pub struct AuditLogEntry {
     /// the ip address that this request came from
     ///
     /// will be None if you do not have permission to see sensitive request metadata or if it is not known
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_addr: Option<String>,
 
     /// the user agent that this request came from
     ///
     /// will be None if you do not have permission to see sensitive request metadata or if it is not known
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub user_agent: Option<String>,
 
     /// if this was done via an oauth app, this is the application id responsible for the request
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub application_id: Option<ApplicationId>,
 }
 
