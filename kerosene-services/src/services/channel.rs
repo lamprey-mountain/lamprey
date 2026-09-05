@@ -277,7 +277,7 @@ impl ServiceChannels {
     }
 
     // FIXME: does this need to be pinboxed?
-    pub async fn create_channel<A: Auth5>(
+    pub async fn create<A: Auth5>(
         &self,
         auth: &mut A,
         room_id: Option<RoomId>,
@@ -288,21 +288,21 @@ impl ServiceChannels {
             self.idempotency_keys
                 .try_get_with(
                     n.clone(),
-                    Box::pin(self.create_channel_inner(auth, room_id, json, nonce.clone())),
+                    Box::pin(self.create_inner(auth, room_id, json, nonce.clone())),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
         } else {
-            Box::pin(self.create_channel_inner(auth, room_id, json, nonce)).await
+            Box::pin(self.create_inner(auth, room_id, json, nonce)).await
         }
     }
 
     // WARNING: this fn is too big and needs to be pinboxed to prevent a stack overflow
-    async fn create_channel_inner<A: Auth5>(
+    async fn create_inner<A: Auth5>(
         &self,
         auth: &mut A,
         room_id: Option<RoomId>,
-        json: ChannelCreate,
+        mut json: ChannelCreate,
         nonce: Option<String>,
     ) -> Result<Channel> {
         json.validate()?;
@@ -333,6 +333,21 @@ impl ServiceChannels {
         let mut data = self.state.begin().await?;
         let user = auth.ensure_user()?;
         let user_id = user.id;
+
+        let parent = if let Some(parent_id) = json.parent_id {
+            Some(srv.channels.get(parent_id, Some(user.id)).await?)
+        } else {
+            None
+        };
+
+        if json.ty.is_thread() {
+            if let Some(parent) = &parent {
+                if json.auto_archive_duration.is_none() {
+                    json.auto_archive_duration = parent.default_auto_archive_duration;
+                }
+            }
+        }
+
         let perms = if let Some(parent_id) = json.parent_id {
             srv.perms.for_channel(user.id, parent_id).await?
         } else if let Some(room_id) = room_id {
@@ -343,13 +358,6 @@ impl ServiceChannels {
             ));
         };
         perms.ensure(Permission::ChannelView)?;
-
-        let parent_id_opt = json.parent_id;
-        let parent = if let Some(parent_id) = parent_id_opt {
-            Some(srv.channels.get(parent_id, Some(user.id)).await?)
-        } else {
-            None
-        };
 
         if !json.ty.can_be_in(parent.as_ref().map(|c| c.ty)) {
             return Err(Error::BadStatic("invalid parent channel type"));
@@ -374,7 +382,7 @@ impl ServiceChannels {
                 perms.ensure(Permission::ThreadCreatePublic)?;
 
                 if !perms.can_bypass_slowmode() {
-                    if let Some(parent_id) = parent_id_opt {
+                    if let Some(parent_id) = json.parent_id {
                         if let Some(thread_slowmode_expire_at) = data
                             .channel_get_thread_slowmode_expire_at(parent_id, user.id)
                             .await?
@@ -402,7 +410,7 @@ impl ServiceChannels {
                 perms.ensure(Permission::ThreadCreatePublic)?;
 
                 if !perms.can_bypass_slowmode() {
-                    if let Some(parent_id) = parent_id_opt {
+                    if let Some(parent_id) = json.parent_id {
                         if let Some(thread_slowmode_expire_at) = data
                             .channel_get_thread_slowmode_expire_at(parent_id, user.id)
                             .await?
@@ -429,7 +437,7 @@ impl ServiceChannels {
                 perms.ensure(Permission::ThreadCreatePrivate)?;
 
                 if !perms.can_bypass_slowmode() {
-                    if let Some(parent_id) = parent_id_opt {
+                    if let Some(parent_id) = json.parent_id {
                         if let Some(thread_slowmode_expire_at) = data
                             .channel_get_thread_slowmode_expire_at(parent_id, user.id)
                             .await?
@@ -627,26 +635,6 @@ impl ServiceChannels {
             .await?;
         let channel = srv.channels.get(channel_id, Some(user.id)).await?;
 
-        if let Some(starter_message) = json.starter_message {
-            if json.ty.is_thread() {
-                srv.messages
-                    .create_thread_initial(
-                        channel_id,
-                        auth,
-                        None,
-                        starter_message,
-                        None,
-                        (*channel_id).into(),
-                    )
-                    .await?;
-            } else {
-                // FIXME: don't return an error after already creating the channel!
-                return Err(Error::BadStatic(
-                    "starter_message can only be used with thread channels",
-                ));
-            }
-        }
-
         let broadcast = Broadcast::sync(MessageSync::ChannelCreate {
             channel: Box::new(channel.clone()),
         })
@@ -664,48 +652,63 @@ impl ServiceChannels {
                 .await?;
         }
 
-        // send a ThreadCreated message in the parent channel
         if json.ty.is_thread() {
-            if let Some(parent_id) = json.parent_id {
-                // TODO: move this to messages service
-                let mut data = self.state.begin().await?;
-                let system_message_id = data
-                    .message_create(DbMessageCreate {
-                        id: None,
-                        channel_id: parent_id,
-                        attachments: vec![],
-                        author_id: user_id,
-                        embeds: vec![],
-                        components: vec![],
-                        message_type: MessageType::ThreadCreated(MessageThreadCreated {
-                            source_message_id: None,
-                            thread_id: Some(channel.id),
-                        })
-                        .into(),
-                        created_at: None,
-                        removed_at: None,
-                        flume: None,
-                        mentions: Default::default(),
-                        interaction: None,
-                        ephemeral: false,
-                    })
-                    .await?;
-                data.commit().await?;
-
-                let system_message = srv
-                    .messages
-                    .get(parent_id, system_message_id, Some(user_id))
-                    .await?;
-
-                self.state
-                    .messaging()
-                    .broadcast_channel(
-                        parent_id,
-                        MessageSync::MessageCreate {
-                            message: system_message,
-                        },
+            // send a ThreadInitial message to the thread (starter_message)
+            if let Some(starter_message) = json.starter_message {
+                srv.messages
+                    .create_thread_initial(
+                        channel_id,
+                        auth,
+                        None,
+                        starter_message,
+                        None,
+                        (*channel_id).into(),
                     )
                     .await?;
+            }
+
+            // send a ThreadCreated message to the parent channel
+            if let Some(parent) = &parent {
+                if parent.ty.has_text() {
+                    let mut data = self.state.begin().await?;
+                    let system_message_id = data
+                        .message_create(DbMessageCreate {
+                            id: None,
+                            channel_id: parent.id,
+                            attachments: vec![],
+                            author_id: user_id,
+                            embeds: vec![],
+                            components: vec![],
+                            message_type: MessageType::ThreadCreated(MessageThreadCreated {
+                                source_message_id: None,
+                                thread_id: Some(channel.id),
+                            })
+                            .into(),
+                            created_at: None,
+                            removed_at: None,
+                            flume: None,
+                            mentions: Default::default(),
+                            interaction: None,
+                            ephemeral: false,
+                        })
+                        .await?;
+                    data.commit().await?;
+
+                    let system_message = srv
+                        .messages
+                        .get(parent.id, system_message_id, Some(user_id))
+                        .await?;
+
+                    self.state
+                        .messaging()
+                        .broadcast_channel(
+                            parent.id,
+                            MessageSync::MessageCreate {
+                                message: system_message,
+                            },
+                        )
+                        .await?;
+                }
             }
         }
 
@@ -757,6 +760,9 @@ impl ServiceChannels {
             ));
         }
 
+        // NOTE: i use source_message_id to be able to easily tell if a thread
+        // ready exists or not. however, it might be a good idea to use a
+        // different id from the message?
         let thread_id: ChannelId = (*source_message_id).into();
         if data.channel_get(thread_id).await.is_ok() {
             return Err(Error::Conflict);
@@ -862,7 +868,7 @@ impl ServiceChannels {
             let ty = AuditLogEntryType::ChannelCreate {
                 channel_id: thread_id,
                 channel_type: channel.ty,
-                changes: common::v1::types::util::Changes::new()
+                changes: Changes::new()
                     .add("name", &channel.name)
                     .add("description", &channel.description)
                     .add("nsfw", &channel.nsfw)

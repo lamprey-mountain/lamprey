@@ -43,22 +43,14 @@ async fn channel_create_room(
     let room = srv.rooms.get(req.room_id, None).await?;
     room.room_type.ensure_channels_manageable()?;
 
-    let mut json = req.channel;
+    let json = req.channel;
     let user = auth.ensure_user()?;
-    if json.ty.is_thread() {
-        if let Some(parent_id) = json.parent_id {
-            let parent_channel = s.services().channels.get(parent_id, Some(user.id)).await?;
-            if json.auto_archive_duration.is_none() {
-                json.auto_archive_duration = parent_channel.default_auto_archive_duration;
-            }
-        }
-    }
 
     json.validate()?;
     let channel = s
         .services()
         .channels
-        .create_channel(&mut auth, Some(req.room_id), json, req.idempotency_key)
+        .create(&mut auth, Some(req.room_id), json, req.idempotency_key)
         .await?;
     Ok((StatusCode::CREATED, Json(channel)))
 }

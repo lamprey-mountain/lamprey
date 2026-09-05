@@ -402,17 +402,13 @@ async fn thread_create(
     let room_id = parent_channel.room_id;
 
     let mut json = req.thread;
-    if json.auto_archive_duration.is_none() {
-        json.auto_archive_duration = parent_channel.default_auto_archive_duration;
-    }
-
     json.parent_id = Some(req.channel_id);
     json.validate()?;
 
     let channel = s
         .services()
         .channels
-        .create_channel(&mut auth, room_id, json, None)
+        .create(&mut auth, room_id, json, None)
         .await?;
 
     Ok(Json(channel))
