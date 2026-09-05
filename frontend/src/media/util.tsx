@@ -94,9 +94,9 @@ export const getThumbFromEmojiId = (emoji_id: string, size?: number) => {
 };
 
 /** get the cdn url for an emoji */
-export const getEmojiUrl = (id: string) => {
+export const getEmojiUrl = (id: string, size: number = 64) => {
 	const config = useConfig();
-	const url = new URL(`/emoji/${id}`, config.cdn_url);
+	const url = new URL(`/emoji/${id}?size=${size}`, config.cdn_url);
 	return url.href;
 };
 
