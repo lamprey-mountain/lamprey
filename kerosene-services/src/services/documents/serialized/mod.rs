@@ -109,7 +109,7 @@ pub fn serdoc_apply_to_doc(doc: &Doc, components: &[ComponentCanonical]) {
 //     fn validate_doc(doc: ());
 // }
 
-// mod serde_doc;
+// mod serde_doc; // TODO: remove this
 mod prose;
 mod redex;
 

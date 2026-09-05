@@ -19,6 +19,14 @@ pub struct SerializedProse {
     pub components: Vec<ComponentCanonical>,
 }
 
+// TODO: rework FromDoc/ToDoc to use this directly(?)
+#[derive(Debug, Default)]
+struct SerializedProse2 {
+    components: Vec<ComponentCanonical>,
+    errors: Vec<SerializedProseError>,
+    next_id: u16,
+}
+
 #[derive(Debug, Error)]
 pub enum SerializedProseError {
     #[error("invalid root ref name")]
@@ -35,31 +43,147 @@ pub enum SerializedProseError {
     InvalidAttributeType,
 }
 
-impl FromDoc for SerializedProse {
-    type Error = SerializedProseError;
-
-    fn from_doc(doc: &Doc) -> CoreResult<Self, Self::Error> {
+impl SerializedProse2 {
+    fn from_doc(doc: &Doc) -> Self {
         // TODO: Implement actual strict validation of the structure,
         // mirroring the logic previously in `validate.rs`
 
         let txn = doc.transact();
-        let mut components = Vec::new();
-        let mut next_id = 0;
+        let mut me = Self::default();
 
         for (name, out) in txn.root_refs() {
-            if name != DOCUMENT_ROOT_NAME {
-                return Err(SerializedProseError::InvalidRootName);
+            if name == DOCUMENT_ROOT_NAME {
+                match out.cast() {
+                    Ok(out) => me.handle_node(&txn, &out),
+                    Err(_) => me.errors.push(SerializedProseError::InvalidYrsType),
+                }
+            } else {
+                me.errors.push(SerializedProseError::InvalidRootName);
             }
-
-            let out: XmlOut = out.cast().unwrap();
-            handle_node(&txn, &out, &mut components, &mut next_id)?;
         }
 
-        Ok(Self { components })
+        me
+    }
+
+    fn handle_node(&mut self, txn: &Transaction<'_>, node: &XmlOut) {
+        // TODO: move into fn validate_element()?
+        // let attrs: Vec<_> = e.attributes(tx).collect();
+        // for attr in e.attributes(tx) { }
+        match node {
+            XmlOut::Element(el) => match &**el.tag() {
+                "root" => {
+                    // TODO(?): enforce that only certain nodes can be in root
+                    // TODO(?): enforce that all documents contain exactly one root
+                    // TODO: enforce that root elements cannot contain other roots (or that root elements must appear at the top level)
+                    for child in el.children(txn) {
+                        self.handle_node(txn, &child);
+                    }
+                }
+
+                // TODO: standardize on one tag name and deprecate the rest
+                "markdown" | "text" | "paragraph" => {
+                    let content = self.xml_to_markdown(txn, el);
+                    self.components.push(Component {
+                        id: ComponentId(self.next_id),
+                        ty: ComponentType::Text { content },
+                        allow: None,
+                    });
+                    self.next_id += 1;
+                }
+
+                "media" => {
+                    // TODO: copy components validation (min 1 max 20 items, etc)
+                    // this element should no content
+                }
+
+                // TODO: handle container, section, details
+                _ => self.errors.push(SerializedProseError::UnknownNodeType),
+            },
+            XmlOut::Text(_) => {
+                // text is allowed here?
+            }
+            XmlOut::Fragment(_) => {
+                unreachable!("fragments cant contain other fragments")
+            }
+        }
+    }
+
+    /// convert a yrs xml node's content into markdown
+    fn xml_to_markdown(&mut self, txn: &Transaction<'_>, el: &XmlElementRef) -> String {
+        let mut out = String::new();
+
+        for child in el.children(txn) {
+            match child {
+                XmlOut::Text(t) => {
+                    out.push_str(&t.get_string(txn));
+                }
+                XmlOut::Element(e) => match &**e.tag() {
+                    "mention" => match e.get_attribute(txn, "user") {
+                        Some(user) => match out_as_str(&user) {
+                            Ok(u) => out.push_str(&format!("<@{}>", u)),
+                            Err(e) => self.errors.push(e),
+                        },
+                        None => self.errors.push(SerializedProseError::MissingAttribute),
+                    },
+                    "mentionChannel" => match e.get_attribute(txn, "channel") {
+                        Some(channel) => match out_as_str(&channel) {
+                            Ok(c) => out.push_str(&format!("<#{}>", c)),
+                            Err(e) => self.errors.push(e),
+                        },
+                        None => self.errors.push(SerializedProseError::MissingAttribute),
+                    },
+                    "mentionRole" => match e.get_attribute(txn, "role") {
+                        Some(role) => match out_as_str(&role) {
+                            Ok(r) => out.push_str(&format!("<@&{}>", r)),
+                            Err(e) => self.errors.push(e),
+                        },
+                        None => self.errors.push(SerializedProseError::MissingAttribute),
+                    },
+                    "mentionEveryone" => {
+                        out.push_str("@everyone");
+                    }
+                    "emojiCustom" => match e.get_attribute(txn, "name") {
+                        Some(name) => match out_as_str(&name) {
+                            Ok(n) => out.push_str(&format!(":{}:", n)),
+                            Err(e) => self.errors.push(e),
+                        },
+                        None => self.errors.push(SerializedProseError::MissingAttribute),
+                    },
+                    "emojiUnicode" => match e.get_attribute(txn, "char") {
+                        Some(char) => match out_as_str(&char) {
+                            Ok(c) => out.push_str(c),
+                            Err(e) => self.errors.push(e),
+                        },
+                        None => self.errors.push(SerializedProseError::MissingAttribute),
+                    },
+                    _ => self.errors.push(SerializedProseError::InvalidInlineNode),
+                },
+                XmlOut::Fragment(_) => unreachable!("fragments cant contain other fragments"),
+            }
+        }
+
+        out
+    }
+}
+
+impl FromDoc for SerializedProse {
+    type Error = SerializedProseError;
+
+    fn from_doc(doc: &Doc) -> CoreResult<Self, Self::Error> {
+        let p = SerializedProse2::from_doc(doc);
+        if p.errors.is_empty() {
+            Ok(Self {
+                components: p.components,
+            })
+        } else {
+            Err(todo!())
+        }
     }
 
     fn from_doc_lenient(doc: &Doc) -> Self {
-        todo!()
+        Self {
+            components: SerializedProse2::from_doc(doc).components,
+        }
     }
 }
 
@@ -69,109 +193,6 @@ impl ToDoc for SerializedProse {
     fn to_doc(&self) -> Self::Out {
         todo!()
     }
-}
-
-fn handle_node(
-    txn: &Transaction<'_>,
-    node: &XmlOut,
-    components: &mut Vec<ComponentCanonical>,
-    next_id: &mut u16,
-) -> CoreResult<(), SerializedProseError> {
-    // TODO: move into fn validate_element()?
-    // let attrs: Vec<_> = e.attributes(tx).collect();
-    // for attr in e.attributes(tx) { }
-    match node {
-        XmlOut::Element(el) => match &**el.tag() {
-            "root" => {
-                // TODO(?): enforce that only certain nodes can be in root
-                // TODO(?): enforce that all documents contain exactly one root
-                // TODO: enforce that root elements cannot contain other roots (or that root elements must appear at the top level)
-                for child in el.children(txn) {
-                    handle_node(txn, &child, components, next_id)?;
-                }
-            }
-
-            // TODO: standardize on one tag name and deprecate the rest
-            "markdown" | "text" | "paragraph" => {
-                let content = xml_to_markdown(txn, el)?;
-                components.push(Component {
-                    id: ComponentId(*next_id),
-                    ty: ComponentType::Text { content },
-                    allow: None,
-                });
-                *next_id += 1;
-            }
-
-            "media" => {
-                // TODO: copy components validation (min 1 max 20 items, etc)
-                // this element should no content
-            }
-
-            // TODO: handle container, section, details
-            _ => return Err(SerializedProseError::UnknownNodeType),
-        },
-        XmlOut::Text(_) => {
-            // text is allowed here?
-        }
-        XmlOut::Fragment(_) => {
-            unreachable!("fragments cant contain other fragments")
-        }
-    }
-
-    Ok(())
-}
-
-/// convert a yrs xml node's content into markdown
-fn xml_to_markdown(
-    txn: &Transaction<'_>,
-    el: &XmlElementRef,
-) -> CoreResult<String, SerializedProseError> {
-    let mut out = String::new();
-    for child in el.children(txn) {
-        match child {
-            XmlOut::Text(t) => {
-                out.push_str(&t.get_string(txn));
-            }
-            XmlOut::Element(e) => match &**e.tag() {
-                "mention" => {
-                    let user = e
-                        .get_attribute(txn, "user")
-                        .ok_or(SerializedProseError::MissingAttribute)?;
-                    out.push_str(&format!("<@{}>", out_as_str(&user)?));
-                }
-                "mentionChannel" => {
-                    let channel = e
-                        .get_attribute(txn, "channel")
-                        .ok_or(SerializedProseError::MissingAttribute)?;
-                    out.push_str(&format!("<#{}>", out_as_str(&channel)?));
-                }
-                "mentionRole" => {
-                    let role = e
-                        .get_attribute(txn, "role")
-                        .ok_or(SerializedProseError::MissingAttribute)?;
-                    out.push_str(&format!("<@&{}>", out_as_str(&role)?));
-                }
-                "mentionEveryone" => {
-                    out.push_str("@everyone");
-                }
-                "emojiCustom" => {
-                    let name = e
-                        .get_attribute(txn, "name")
-                        .ok_or(SerializedProseError::MissingAttribute)?;
-                    out.push_str(&format!(":{}:", out_as_str(&name)?));
-                }
-                "emojiUnicode" => {
-                    let char = e
-                        .get_attribute(txn, "char")
-                        .ok_or(SerializedProseError::MissingAttribute)?;
-                    out.push_str(out_as_str(&char)?);
-                }
-                _ => return Err(SerializedProseError::InvalidInlineNode),
-            },
-            XmlOut::Fragment(_) => unreachable!("fragments cant contain other fragments"),
-        }
-    }
-    Ok(out)
 }
 
 fn out_as_str(a: &Out) -> CoreResult<&str, SerializedProseError> {

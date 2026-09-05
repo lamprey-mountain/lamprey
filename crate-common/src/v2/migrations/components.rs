@@ -1,5 +1,3 @@
-// TODO: conversions between v1 components and v2 components
-
 use crate::v1::types::components as v1;
 use crate::v2::types::components as v2;
 
