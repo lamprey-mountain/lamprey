@@ -468,11 +468,14 @@
 
         devShells.default = craneLib.devShell {
           inputsFrom = [ backend ];
-          packages = with pkgs; [nodejs pnpm chromium wasm-pack];
+          packages = with pkgs; [nodejs pnpm chromium wasm-pack xorg.libxcb libxkbcommon wayland];
           env = {
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
             PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH = "${pkgs.chromium}/bin/chromium";
           };
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
+            vulkan-loader libxkbcommon wayland libGL
+          ]);
         };
       });
 }
