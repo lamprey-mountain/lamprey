@@ -664,10 +664,6 @@ export default {
 				"in ",
 				props.name,
 			],
-			messages_deleted: (count: number): JSX.Element[] => [
-				count,
-				" messages were deleted",
-			],
 			invite_deleted: (props: { invite_code: JSX.Element }): JSX.Element[] => [
 				"invite ",
 				<em class="light">{props.invite_code}</em>,

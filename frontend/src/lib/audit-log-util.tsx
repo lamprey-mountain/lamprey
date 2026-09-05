@@ -259,14 +259,6 @@ export function formatChanges(
 			formatted.push(
 				<li>{t("audit_log.changes.in_channel", { name: channelName })}</li>,
 			);
-			formatted.push(
-				<li>
-					{t(
-						"audit_log.changes.messages_deleted",
-						(entWithMetadata.metadata?.message_ids as string[])?.length ?? 0,
-					)}
-				</li>,
-			);
 			break;
 		}
 		case "InviteDelete": {
