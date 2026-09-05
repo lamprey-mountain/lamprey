@@ -11,11 +11,15 @@ mod server;
 mod tables;
 mod util;
 
+// TODO: benchmark decorations, editing
+
 #[test]
 fn test() {
     let source = "hello *world* this [is](https://example.com) a **test**";
     let parser = Parser::new();
     let mut parsed = parser.parse(source);
+
+    dbg!(parsed.tree());
 
     assert_eq!(
         parsed.to_html(),

@@ -7,6 +7,7 @@ pub mod node;
 
 /// an immutable parsed syntax tree
 // TODO: remove? use rowan types directly?
+#[derive(Debug)]
 pub struct Tree {
     /// the root green node
     pub(crate) root: GreenNode,

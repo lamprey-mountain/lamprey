@@ -36,3 +36,6 @@ pub mod prelude {
 }
 
 pub mod observability;
+
+// NOTE: instead of a generic util module, maybe i should create a dedicated module for each feature
+mod util;

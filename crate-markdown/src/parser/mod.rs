@@ -1,5 +1,6 @@
 use rowan::{GreenNodeBuilder, NodeCache};
 
+use crate::ast::block::Document;
 #[cfg(feature = "serde")]
 use crate::ast::serialized::SerializedDocument;
 use crate::lexer::{Lexer, Source};
@@ -113,15 +114,15 @@ impl Parsed {
         }
     }
 
+    /// get the root as a typed node
+    pub fn document(&self) -> Document {
+        Document::cast(self.tree.root()).expect("root is document")
+    }
+
     /// get the serialized syntax tree
     #[cfg(feature = "serde")]
     pub fn ast(&self) -> SerializedDocument {
-        use crate::ast::block::Document;
-        use crate::ast::serialized::SerializedDocument;
-
-        let doc = Document::cast(self.tree.root()).expect("root is document");
-        let ast = SerializedDocument::from_document(doc);
-        ast
+        SerializedDocument::from_document(self.document())
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::ast::impl_ast;
 use crate::ast::inline::Inline;
 use crate::ast::list::List;
+use crate::ast::table::Table;
 use crate::prelude::*;
 use crate::tree::node::MarkdownLanguage;
 
@@ -15,8 +16,6 @@ pub struct Blockquote(SyntaxNode);
 pub struct Codeblock(SyntaxNode);
 #[derive(Debug)]
 pub struct Header(SyntaxNode);
-
-pub use crate::ast::table::Table;
 
 impl_ast!(Document, NodeKind::Document);
 impl_ast!(Paragraph, NodeKind::Block(BlockKind::Paragraph));

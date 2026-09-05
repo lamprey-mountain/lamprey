@@ -3,6 +3,8 @@ pub mod inline;
 pub mod list;
 pub mod table;
 
+// NOTE(?): maybe i should make above mods private and reexport everything from here instead?
+
 #[cfg(feature = "serde")]
 pub mod serialized;
 
