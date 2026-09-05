@@ -442,9 +442,8 @@ pub struct ListenConfig {
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIter, strum::Display,
 )]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
 #[strum(serialize_all = "snake_case")]
-#[serde(deny_unknown_fields)]
 pub enum ListenComponent {
     /// the main rest api server, websocket sync, and
     Api,
@@ -459,6 +458,7 @@ pub enum ListenComponent {
     // Redex,
     /// metrics for this service
     Metrics,
+    // NOTE: should i add a WellKnown variant? what about a Html/Ui variant?
 }
 
 impl ListenComponent {
