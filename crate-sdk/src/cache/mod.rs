@@ -33,7 +33,19 @@ pub struct CachedRoom {
     pub members: HashMap<UserId, RoomMember>,
     pub channels: HashMap<ChannelId, CachedChannel>, // contains threads
     pub roles: HashMap<RoleId, Role>,
+    // perm_roles: HashMap<RoleId, PermRole>,
+    // perm_overwrites: HashMap<ChannelId, HashMap<PermissionOverwriteId, PermOverwrite>>,
 }
+// struct PermRole {
+//     allow: PermissionBits,
+//     deny: PermissionBits,
+// }
+
+// struct PermOverwrite {
+//     kind: PermissionOverwriteType,
+//     allow: PermissionBits,
+//     deny: PermissionBits,
+// }
 
 #[derive(Debug, Clone)]
 pub struct CachedUser {

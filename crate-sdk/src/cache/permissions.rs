@@ -3,9 +3,6 @@ use common::v1::types::{
     Channel, ChannelType, Permission, PermissionBits, PermissionOverwriteType, RoleId, RoomMember,
     SERVER_USER_ID, UserId,
 };
-use lamprey_backend_core::types::permission::{
-    CheckVisibility, MemberState, Permissions2, Permissions2Metadata, ResourceContext,
-};
 use tracing::warn;
 
 use crate::cache::CachedRoom;
@@ -13,7 +10,7 @@ use crate::cache::CachedRoom;
 impl CachedRoom {
     /// get a permission calculator for this room
     pub fn permissions(&self) -> RoomPermissions<'_> {
-        RoomPermissions { room: self }
+        RoomPermissions::new(self)
     }
 }
 
@@ -26,31 +23,44 @@ pub struct RoomPermissions<'a> {
 
 #[derive(Debug, Clone)]
 pub struct Permissions {
-    // bits: PermissionBits,
-    // visible: bool,
-    // rank: u64,
-    // channel_locked, timed_out, quarantined, etc: bool,
+    bits: PermissionBits,
+    visible: bool,
+    rank: u16,
+    // TODO(?): add channel_locked, timed_out, quarantined, etc fields
 }
 
 impl Permissions {
-    // /// Check if a specific permission is granted (Admins have all permissions)
-    // pub fn has(&self, perm: Permission) -> bool {
-    //     self.bits.has(Permission::Admin) || self.bits.has(perm)
-    // }
+    /// Check if a specific permission is granted
+    ///
+    /// Admins have all permissions
+    pub fn has(&self, perm: Permission) -> bool {
+        self.bits.has(Permission::Admin) || self.bits.has(perm)
+    }
 
-    // pub fn visible(&self) -> bool {
-    //     self.visible
-    // }
+    /// returns whether the user can view this resource
+    pub fn visible(&self) -> bool {
+        self.visible
+    }
 
-    // pub fn rank(&self) -> u64 {
-    //     self.rank
-    // }
+    // TODO: only provide inside rooms
+    /// get the rank of a user
+    ///
+    /// a user's rank is their highest role's position
+    pub fn rank(&self) -> u16 {
+        self.rank
+    }
 }
 
 // FIXME: handle slowmode for message, thread
 
-impl RoomPermissions<'_> {
-    // TODO: use this?
+impl<'a> RoomPermissions<'a> {
+    /// create a new permission calculator
+    pub fn new(room: &'a CachedRoom) -> Self {
+        Self { room }
+    }
+
+    // TODO: pass RoomMember instead of UserId(?)
+    // TODO: pass CachedChannel instead of Channel
     // pub fn query(&self, member: Option<&RoomMember>, channel: Option<&Channel>) -> Permissions {
     //     todo!()
     // }
@@ -59,30 +69,13 @@ impl RoomPermissions<'_> {
     ///
     /// - passing in `channel` will calculate permissions in that channel
     /// - using `None` for user_id will calculate the default permissions (public room defaults)
-    // TODO(?): use a better (sdk-specific?) type instead of Permissions2
-    // TODO: use CachedChannel
-    pub fn query(
-        &self,
-        user_id: Option<UserId>,
-        channel: Option<&Channel>,
-    ) -> Permissions2<CheckVisibility> {
+    pub fn query(&self, user_id: Option<UserId>, channel: Option<&Channel>) -> Permissions {
         let member = user_id.and_then(|uid| self.room.members.get(&uid));
 
         let mut bits = PermissionBits::default();
         let mut rank = 0u16;
-        let mut channel_locked = false;
         let mut timed_out = false;
         let mut quarantined = false;
-
-        if !self.room.inner.public && member.is_none() {
-            return self.build_permissions2(
-                bits,
-                rank,
-                channel,
-                channel_locked,
-                MemberState::Lurker,
-            );
-        }
 
         self.calculate_room_permissions(
             &mut bits,
@@ -95,38 +88,27 @@ impl RoomPermissions<'_> {
 
         if !bits.has(Permission::Admin) {
             if let Some(channel) = channel {
-                self.calculate_channel_permissions(
-                    &mut bits,
-                    &mut channel_locked,
-                    &mut timed_out,
-                    channel,
-                    member,
-                );
+                self.calculate_channel_permissions(&mut bits, &mut timed_out, channel, member);
 
                 // private thread logic
                 if channel.ty == ChannelType::ThreadPrivate {
-                    if !bits.has(Permission::ThreadManage) {
-                        let is_member = user_id.is_some_and(|uid| {
+                    if !bits.has(Permission::ThreadManage) && !bits.has(Permission::Admin) {
+                        let is_thread_member = user_id.is_some_and(|uid| {
                             self.room
                                 .channels
                                 .get(&channel.id)
                                 .map_or(false, |t| t.members.contains_key(&uid))
                         });
 
-                        if !is_member {
-                            return self.build_permissions2(
-                                PermissionBits::default(),
-                                rank,
-                                Some(channel),
-                                channel_locked,
-                                MemberState::Lurker,
-                            );
+                        if !is_thread_member {
+                            bits = PermissionBits::default();
                         }
                     }
                 }
             }
         }
 
+        // mask perms for non-members, even if we have Admin
         if member.is_none() {
             if channel.is_some_and(|c| c.ty == ChannelType::Broadcast) {
                 bits.mask(PermissionBits::BROADCAST_LURKER_PERMS);
@@ -143,17 +125,17 @@ impl RoomPermissions<'_> {
             bits.mask(PermissionBits::VIEW_PERMS);
         }
 
-        let member_state = match member {
-            None => MemberState::Lurker,
-            Some(m) => MemberState::Joined {
-                muted: m.mute,
-                deafened: m.deaf,
-                timed_out,
-                quarantined: m.quarantined,
-            },
+        // NOTE: is this logic correct?
+        let visible = match channel {
+            Some(_) => bits.has(Permission::Admin) || bits.has(Permission::ChannelView),
+            None => self.room.inner.public || member.is_some(),
         };
 
-        self.build_permissions2(bits, rank, channel, channel_locked, member_state)
+        Permissions {
+            visible,
+            bits,
+            rank,
+        }
     }
 
     fn calculate_room_permissions(
@@ -217,20 +199,13 @@ impl RoomPermissions<'_> {
     fn calculate_channel_permissions(
         &self,
         bits: &mut PermissionBits,
-        channel_locked: &mut bool,
         timed_out: &mut bool,
         channel: &Channel,
         member: Option<&RoomMember>,
     ) {
         if let Some(parent_id) = channel.parent_id {
             if let Some(parent_cc) = self.room.channels.get(&parent_id) {
-                self.calculate_channel_permissions(
-                    bits,
-                    channel_locked,
-                    timed_out,
-                    &parent_cc.inner,
-                    member,
-                );
+                self.calculate_channel_permissions(bits, timed_out, &parent_cc.inner, member);
             } else {
                 warn!(
                     channel_id = ?channel.id,
@@ -240,7 +215,7 @@ impl RoomPermissions<'_> {
             }
         }
 
-        self.apply_channel_locked(bits, channel_locked, timed_out, channel, member);
+        self.apply_channel_locked(bits, timed_out, channel, member);
         self.apply_channel_overwrites(bits, channel, member);
     }
 
@@ -325,118 +300,38 @@ impl RoomPermissions<'_> {
         }
     }
 
+    /// handle locked channels/threads
     fn apply_channel_locked(
         &self,
         bits: &PermissionBits,
-        channel_locked: &mut bool,
         timed_out: &mut bool,
         channel: &Channel,
         member: Option<&RoomMember>,
     ) {
-        // handle locked channels/threads
-        if let Some(locked) = &channel.locked {
-            let is_expired = locked.until.is_some_and(|until| until <= Time::now_utc());
-            if !is_expired {
-                *channel_locked = true;
-
-                // the member has a role that is explicitly allowed by the lock
-                let has_bypass = member.map_or(false, |m| {
-                    m.roles
-                        .iter()
-                        .any(|r| locked.allow_roles.contains(&(*r).into()))
-                });
-
-                // or the member has the Manage Channels permission
-                // or this is a thread and the member has the Manage Threads permission
-                let has_perm = bits.has(Permission::ChannelManage)
-                    || (channel.ty.is_thread() && bits.has(Permission::ThreadManage));
-
-                if !has_bypass && !has_perm {
-                    *timed_out = true;
-                }
-            }
-        }
-    }
-
-    fn build_permissions2(
-        &self,
-        bits: PermissionBits,
-        rank: u16,
-        channel: Option<&Channel>,
-        channel_locked: bool,
-        member_state: MemberState,
-    ) -> Permissions2<CheckVisibility> {
-        let room_id = self.room.inner.id;
-        let context = match channel {
-            Some(ch) if ch.is_thread() => ResourceContext::Thread(
-                Some(room_id),
-                ch.parent_id.unwrap_or(room_id.into_inner().into()),
-                ch.id,
-            ),
-            Some(ch) => ResourceContext::Channel(Some(room_id), ch.id),
-            None => ResourceContext::Room(room_id),
+        let Some(locked) = &channel.locked else {
+            return;
         };
 
-        let visible = match channel {
-            Some(_) => bits.has(Permission::Admin) || bits.has(Permission::ChannelView),
-            None => match member_state {
-                MemberState::Lurker => self.room.inner.public,
-                MemberState::Joined { .. } => true,
-            },
-        };
-
-        Permissions2 {
-            visible,
-            context,
-            bits,
-            metadata: Permissions2Metadata {
-                rank,
-                member_state,
-                channel_locked,
-                channel_slowmode_thread_active: false,
-                channel_slowmode_message_active: false,
-            },
-            state: CheckVisibility,
-        }
-    }
-
-    /// get whether a user (or guest) can view this room
-    pub fn can_view_room(&self, user_id: Option<UserId>) -> bool {
-        let is_public = self.room.inner.public;
-        if is_public {
-            // anyone can view public rooms
-            true
-        } else if let Some(user_id) = user_id {
-            // you can view private rooms you're a member of
-            self.room.members.contains_key(&user_id)
-        } else {
-            // otherwise, deny
-            false
-        }
-    }
-
-    /// get the rank of a user
-    ///
-    /// a user's rank is their highest role's position
-    pub fn rank(&self, user_id: UserId) -> u64 {
-        if self.room.inner.owner_id == Some(user_id) {
-            return u64::MAX;
+        let is_expired = locked.until.is_some_and(|until| until <= Time::now_utc());
+        if is_expired {
+            return;
         }
 
-        let Some(member) = self.room.members.get(&user_id) else {
-            // user is not a member, return 0
-            return 0;
-        };
+        // the member has a role that is explicitly allowed by the lock
+        let has_bypass = member.map_or(false, |m| {
+            m.roles
+                .iter()
+                .any(|r| locked.allow_roles.contains(&(*r).into()))
+        });
 
-        let mut rank = 0u64;
-        for role_id in &member.roles {
-            if let Some(role) = self.room.roles.get(role_id) {
-                rank = rank.max(role.position as u64);
-            } else {
-                warn!(user_id = ?user_id, role_id = ?role_id, "user has role that doesnt exist");
-            }
+        // or the member has the Manage Channels permission
+        // or this is a thread and the member has the Manage Threads permission
+        let has_perm = bits.has(Permission::Admin)
+            || bits.has(Permission::ChannelManage)
+            || (channel.ty.is_thread() && bits.has(Permission::ThreadManage));
+
+        if !has_bypass && !has_perm {
+            *timed_out = true;
         }
-
-        rank
     }
 }
