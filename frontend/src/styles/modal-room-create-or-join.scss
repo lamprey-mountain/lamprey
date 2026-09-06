@@ -98,35 +98,11 @@
 				min-height: 72px;
 			}
 
-			&.error {
-				color: $fg-200;
+			&.error-container {
 				border-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h);
 				background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h /
 					.1);
 				align-items: center;
-				min-height: 72px;
-
-				& > .error-message {
-					display: flex;
-					gap: 4px;
-
-					.error-prefix {
-						color: $color-red;
-						font-weight: bold;
-					}
-
-					& .icon2 {
-						background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0)
-							h);
-						height: 24px;
-						width: 24px;
-					}
-				}
-
-				& .error-code {
-					font-size: .8rem;
-					color: $fg-500;
-				}
 			}
 
 			& > .avatar {

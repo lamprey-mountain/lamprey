@@ -41,7 +41,9 @@ import { ChannelNav } from "@/components/shared/ChannelNav";
 import { Friends } from "@/components/shared/Friends";
 import { Home } from "@/components/shared/Home";
 import { Inbox } from "@/components/shared/Inbox";
-import { RouteInviteInner } from "@/components/shared/Invite";
+
+export { RouteInvite } from "@/components/shared/Invite";
+
 import { RoomHome, RoomMembers } from "@/components/shared/Room";
 import { RoomHeader } from "@/components/shared/RoomHeader";
 import { RoomNav } from "@/components/shared/RoomNav";
@@ -482,14 +484,6 @@ export const RouteHome = (
 			<Title title={t("page.home")} />
 			<Home />
 		</>
-	);
-};
-
-export const RouteInvite = (p: ParentProps<RouteSectionProps>): JSX.Element => {
-	return (
-		<Show when={p.params.code}>
-			<RouteInviteInner code={p.params.code!} />
-		</Show>
 	);
 };
 

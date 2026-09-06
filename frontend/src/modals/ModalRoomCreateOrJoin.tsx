@@ -244,7 +244,7 @@ export const ModalRoomCreateOrJoin = (_props: ModalRoomCreateOrJoinProps) => {
 									class="invite"
 									classList={{
 										loading: invite.loading,
-										error: !!matchInviteError(invite()),
+										"error-container": !!matchInviteError(invite()),
 									}}
 								>
 									<Show when={matchInviteError(invite())}>

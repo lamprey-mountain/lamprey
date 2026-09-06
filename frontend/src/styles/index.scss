@@ -4098,3 +4098,37 @@ button.round {
 	border: solid $sep-300 1px;
 	box-shadow: 4px 4px 8px #1118;
 }
+
+.error-container {
+	display: flex;
+	align-items: center;
+	min-height: 72px;
+	padding: 8px;
+	border-radius: 4px;
+	color: $fg-200;
+	border: solid oklch(from $color-red calc(l - 0.2) calc(c + .0) h) 1px;
+	background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0) h /
+		.1);
+
+	.error-message {
+		display: flex;
+		gap: 4px;
+
+		.error-prefix {
+			color: $color-red;
+			font-weight: bold;
+		}
+
+		.icon2 {
+			background-color: oklch(from $color-red calc(l - 0.2) calc(c + .0)
+				h);
+			height: 24px;
+			width: 24px;
+		}
+	}
+
+	.error-code {
+		font-size: .8rem;
+		color: $fg-500;
+	}
+}
