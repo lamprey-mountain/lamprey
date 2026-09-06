@@ -159,6 +159,8 @@ pub struct MessageAutomodExecution {
     /// if the message wasn't blocked, this is the id of it
     pub flagged_message_id: Option<MessageId>,
     // pub completed: Option<AutomodAlertCompleted>,
+
+    // TODO: add flagged_channel_id (reuse flagged_message_id? rename flagged_message_id to flagged_resource_id + flagged_resource_type?)
 }
 
 // struct AutomodAlertCompleted {

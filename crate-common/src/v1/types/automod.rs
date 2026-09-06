@@ -251,9 +251,11 @@ pub enum AutomodTextLocation {
     MessageContent,
 
     /// the title of a thread
+    // TODO: rename to ChannelName
     ThreadTitle,
 
     /// the topic of a thread
+    // TODO: rename to ChannelTopic
     ThreadTopic,
 
     /// the title of an embed

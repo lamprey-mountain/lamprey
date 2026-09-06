@@ -10,6 +10,7 @@ use common::v1::types::{
     ThreadMemberPut, User, UserId,
 };
 use common::v2::types::MessageVerId;
+use kerosene_core::error::{ApiError, ErrorCode};
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use lamprey_search::visibility::ChannelVisibility;
 use moka::future::Cache;
@@ -20,6 +21,7 @@ use validator::Validate;
 
 use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
+use crate::services::automod::AutomodContext;
 use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
 
 // TODO: split caches more
@@ -560,6 +562,28 @@ impl ServiceChannels {
                             "missing permission to apply restricted tag",
                         ));
                     }
+                }
+            }
+        }
+
+        if let Some(room_id) = room_id {
+            let automod = srv.automod.load(room_id).await?;
+            let ctx = AutomodContext {
+                room_id,
+                user_id,
+                channel_id: json.parent_id,
+                message_id: None,
+            };
+            let scan = automod.scan(&json, &ctx).await;
+            if scan.is_triggered() {
+                srv.automod.enforce(&scan, &ctx).await?;
+                scan.ensure_unblocked()?;
+                // NOTE: currently i treat the remove action the same as as block
+                // TODO: remove should behave the same for channels as messages: not deleted, but requires approval from a moderator to appear
+                if scan.should_remove() {
+                    return Err(
+                        ApiError::with_message(ErrorCode::Automod, "(removed)".to_owned()).into(),
+                    );
                 }
             }
         }
@@ -1106,6 +1130,26 @@ impl ServiceChannels {
 
         if patch.auto_archive_duration.is_some() {
             chan_old.ensure_is_thread()?;
+        }
+
+        if let Some(room_id) = chan_old.room_id {
+            let automod = srv.automod.load(room_id).await?;
+            let ctx = AutomodContext {
+                room_id,
+                user_id,
+                channel_id: Some(thread_id),
+                message_id: None,
+            };
+            let scan = automod.scan(&patch, &ctx).await;
+            if scan.is_triggered() {
+                srv.automod.enforce(&scan, &ctx).await?;
+                scan.ensure_unblocked()?;
+                if scan.should_remove() {
+                    return Err(
+                        ApiError::with_message(ErrorCode::Automod, "(removed)".to_owned()).into(),
+                    );
+                }
+            }
         }
 
         // update and refetch
