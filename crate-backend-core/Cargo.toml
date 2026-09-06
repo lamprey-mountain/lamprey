@@ -21,8 +21,7 @@ http = "1.5.0"
 image = { version = "0.25.10", features = ["avif"] }
 ipnet = { version = "2.12.1", features = ["serde"] }
 jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
-lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
-lamprey-macros = { path = "../crate-macros" }
+lamprey-macros = { version = "0.1", path = "../crate-macros" }
 lamprey-script = { package = "lamprey-script", version = "0.1.0", path = "../crate-script" }
 lettre = { version = "0.11.23", default-features = false, features = ["builder", "pool", "smtp-transport", "tokio1-rustls-tls"] }
 maxminddb = "0.28.1"
