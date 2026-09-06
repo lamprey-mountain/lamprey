@@ -5,7 +5,9 @@ use tracing::{info, warn};
 
 use crate::{
     prelude::*,
-    server::http::{create_router_api, create_router_metrics, serve_transport},
+    server::http::{
+        apply_default_middleware, create_router_api, create_router_metrics, serve_transport,
+    },
 };
 
 mod http;
@@ -50,6 +52,7 @@ impl Server {
                 };
                 router = router.merge(component_router);
             }
+            router = apply_default_middleware(self.globals(), router);
             self.listeners
                 .spawn(async move { serve_transport(transport, router).await });
             for c in &l.components {

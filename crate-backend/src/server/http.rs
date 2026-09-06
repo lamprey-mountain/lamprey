@@ -76,10 +76,6 @@ pub fn create_router_api(globals: Globals) -> Router {
             state.clone(),
             routes::util::audit_log_middleware,
         ))
-        .layer(CatchPanicLayer::new())
-        .layer(PropagateHeaderLayer::new(HeaderName::from_static(
-            "x-trace-id",
-        )))
     // .layer(SetRequestIdLayer)
 }
 
@@ -93,21 +89,44 @@ pub fn create_router_metrics(globals: Globals) -> Router {
         .layer(util::cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
         .layer(TraceLayer::new_for_http())
-        .layer(CatchPanicLayer::new())
-        .layer(PropagateHeaderLayer::new(HeaderName::from_static(
-            "x-trace-id",
-        )))
 }
 
 /// create an axum router for the media server
-pub fn create_router_media(_globals: Globals) -> Router {
+pub fn _create_router_media(_globals: Globals) -> Router {
     todo!()
 }
 
 /// create an axum router for redex http handlers
-pub fn create_router_redexes(_globals: Globals) -> Router {
-    // Router::new().layer(middleware::from_fn_with_state(globals, script_http))
-    todo!()
+pub fn create_router_redexes(globals: Globals) -> Router {
+    Router::new()
+        .layer(middleware::from_fn_with_state(globals.clone(), script_http))
+        .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
+        // .layer(util::cors())
+        .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
+        .layer(TraceLayer::new_for_http())
+}
+
+pub fn apply_default_middleware(_globals: Globals, router: Router) -> Router {
+    // TODO: decide what other layers to apply
+    router
+        // .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
+        // .layer(util::cors())
+        // .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
+        // .layer(TraceLayer::new_for_http())
+        // .layer(
+        //     TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {
+        //         let request_id = req
+        //             .headers()
+        //             .get("x-request-id")
+        //             .and_then(|v| v.to_str().ok())
+        //             .unwrap_or("unknown");
+        //         tracing::info_span!("http_request", %request_id, method = %req.method(), uri = %req.uri())
+        //     }),
+        // )
+        .layer(PropagateHeaderLayer::new(HeaderName::from_static(
+            "x-trace-id",
+        )))
+        .layer(CatchPanicLayer::new())
 }
 
 async fn api_fallback() -> impl IntoResponse {
