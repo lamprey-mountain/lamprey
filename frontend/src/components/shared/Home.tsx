@@ -21,7 +21,10 @@ export const Home = () => {
 		await api.logout();
 	}
 
-	const isAuthorized = () => api.session()?.status === "Authorized";
+	const isAuthorized = () => {
+		const s = api.session()?.status;
+		return s === "Authorized" || s === "Sudo";
+	};
 
 	return (
 		<div class="home">
