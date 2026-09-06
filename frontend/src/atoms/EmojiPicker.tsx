@@ -305,7 +305,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 											) : (
 												<img
 													src={getThumbFromId(emoji.media_id!, 64)}
-													class="custom-emoji"
+													class="emoji custom-emoji"
 												/>
 											)}
 										</div>
