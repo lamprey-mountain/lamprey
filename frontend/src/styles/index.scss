@@ -1819,7 +1819,8 @@ body.resizing {
 #root > header {
 	grid-area: header;
 	background: $bg-200;
-	box-shadow: 0 2px 8px $bg-100;
+	// FIXME: box-shadow doesnt work or looks bad due to z-index issues
+	/* box-shadow: 0 2px 8px $bg-100; */
 	border-bottom: solid $sep-300 1px;
 	padding: 8px;
 	@include truncate;

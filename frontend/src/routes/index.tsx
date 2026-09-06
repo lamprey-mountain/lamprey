@@ -41,14 +41,11 @@ import { ChannelNav } from "@/components/shared/ChannelNav";
 import { Friends } from "@/components/shared/Friends";
 import { Home } from "@/components/shared/Home";
 import { Inbox } from "@/components/shared/Inbox";
-
-export { RouteInvite } from "@/components/shared/Invite";
-
 import { RoomHome, RoomMembers } from "@/components/shared/Room";
 import { RoomHeader } from "@/components/shared/RoomHeader";
 import { RoomNav } from "@/components/shared/RoomNav";
 import { SearchPage } from "@/components/shared/SearchPage";
-import { UserPage } from "@/components/shared/UserPage";
+import { Title } from "@/components/shared/Title";
 import { UserTray } from "@/components/shared/UserTray";
 import {
 	ChannelContext,
@@ -64,12 +61,9 @@ import { MediaSidebar } from "@/media/Sidebar";
 import type { RoomT } from "@/types";
 import { icUser } from "@/utils/icons";
 
+export { RouteInvite } from "@/components/shared/Invite";
 export { RouteAuthorize } from "@/components/shared/Oauth";
-
-const Title = (props: { title?: string }) => {
-	createEffect(() => (document.title = props.title ?? ""));
-	return undefined;
-};
+export { RouteUser } from "@/components/shared/UserPage";
 
 export const AppLayoutMain = (props: ParentProps<RouteSectionProps>) => {
 	const roomId = useCurrentRoomId();
@@ -483,33 +477,6 @@ export const RouteHome = (
 		<>
 			<Title title={t("page.home")} />
 			<Home />
-		</>
-	);
-};
-
-export const RouteUser = (p: ParentProps<RouteSectionProps>): JSX.Element => {
-	const api2 = useApi();
-	const user = api2.users.use(() => p.params.user_id!);
-
-	return (
-		<>
-			<Title title={user()?.name ?? "loading..."} />
-			<Show when={user()}>
-				{(u) => (
-					<>
-						<header class="chat-header">
-							<div class="channel-icon">
-								<Icon src={icUser} />
-							</div>
-							<div class="name">
-								<h3 class="name-text">{u().name}</h3>
-							</div>
-							<div class="spacer"></div>
-						</header>
-						<UserPage user={u()} />
-					</>
-				)}
-			</Show>
 		</>
 	);
 };

@@ -12,52 +12,13 @@ import {
 } from "solid-js";
 import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
-import { Icon } from "@/atoms/Icon";
+import { ApiErrorDisplay, isApiError } from "@/atoms/ApiErrorDisplay";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals, useModals2 } from "@/contexts/modal";
-import { icWarning } from "@/utils/icons";
+import { Title } from "./Title";
 import { Avatar, ChannelIconGdm, RoomIcon } from "./User";
 import { Status } from "./UserProfileEdit";
-
-const isApiError = (err: unknown): err is ApiError => {
-	if (typeof err !== "object") return false;
-	if (!err) return false;
-	if (!("code" in err)) return false;
-	if (!("message" in err)) return false;
-	return true;
-};
-
-const renderError = (code: string) => {
-	switch (code) {
-		case "UnknownInvite":
-			return "Invite code not found";
-		default:
-			return code;
-	}
-};
-
-const InviteError = (props: { error: ApiError }) => (
-	<div class="error-container">
-		<div class="error-message">
-			<Icon src={icWarning} />
-			<div>
-				<div>
-					<span class="error-prefix">Error:</span>{" "}
-					{renderError(props.error.code)}
-				</div>
-				<div class="error-code">{props.error.code}</div>
-			</div>
-		</div>
-	</div>
-);
-
-const Title = (props: { title?: string }) => {
-	createEffect(() => {
-		document.title = props.title ?? "";
-	});
-	return undefined;
-};
 
 // Type guard functions for InviteTarget
 function isRoomTarget(
@@ -131,16 +92,18 @@ export const RouteInvite = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 		<div class="invite-wrapper">
 			<Switch>
 				<Match when={matches("loading")}>
-					{/* TODO: fancier invite loading ui */}
+					{/* TODO: fancier invite loading ui (skeleton ui?) */}
 					<div>loading...</div>
 				</Match>
 				<Match when={matches("missingCode")}>
+					{/* TODO: better ui for this */}
 					<div>invalid invite code</div>
 				</Match>
 				<Match when={matches("apiError")}>
-					{(err) => <InviteError error={err().err} />}
+					{(err) => <ApiErrorDisplay error={err().err} />}
 				</Match>
 				<Match when={matches("platformError")}>
+					{/* TODO: better ui for this */}
 					<div>internal error</div>
 				</Match>
 				<Match when={matches("loaded")}>

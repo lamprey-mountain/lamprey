@@ -1,17 +1,20 @@
 import { debounce } from "@solid-primitives/scheduled";
-import { useNavigate } from "@solidjs/router";
+import { type RouteSectionProps, useNavigate } from "@solidjs/router";
 import { type EditorState, Plugin } from "prosemirror-state";
-import type { PreferencesUser, UserWithRelationship } from "sdk";
+import type { ApiError, PreferencesUser, UserWithRelationship } from "sdk";
 import {
 	createEffect,
 	createResource,
 	createSignal,
 	For,
+	type JSX,
 	Match,
+	type ParentProps,
 	Show,
 	Switch,
 } from "solid-js";
 import { useApi } from "@/api";
+import { ApiErrorDisplay, isApiError } from "@/atoms/ApiErrorDisplay";
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown";
 import { createTooltip } from "@/atoms/Tooltip";
@@ -28,14 +31,107 @@ import {
 	icFriendReject,
 	icMemberAdd,
 	icMenu,
+	icUser,
 } from "@/utils/icons";
 import { createEditor } from "../features/editor/Editor";
+import { Title } from "./Title";
 import { RoomIcon } from "./User";
 
 // TODO: redesign
 // TODO: maybe use <svg> for masking
 
-export function UserPage(props: { user: UserWithRelationship }) {
+type UserResult =
+	| { status: "loading" }
+	| { status: "loaded"; user: UserWithRelationship }
+	| { status: "apiError"; err: ApiError }
+	| { status: "platformError"; err: unknown };
+
+export const RouteUser = (p: ParentProps<RouteSectionProps>): JSX.Element => {
+	const api = useApi();
+
+	const [userResource] = createResource<UserResult, string>(
+		() => p.params.user_id,
+		async (id) => {
+			try {
+				const user = await api.users.fetch(id);
+				return { status: "loaded", user };
+			} catch (err) {
+				if (isApiError(err)) {
+					return { status: "apiError", err };
+				}
+				return { status: "platformError", err };
+			}
+		},
+	);
+
+	function matches<T extends UserResult["status"]>(
+		ty: T,
+	): (UserResult & { status: T }) | false {
+		const u = userResource() ?? { status: "loading" };
+		if (u.status === ty) {
+			return u as UserResult & { status: T };
+		} else {
+			return false;
+		}
+	}
+
+	const userName = () => {
+		const u = userResource();
+		switch (u?.status) {
+			case "loaded":
+				return u.user.name;
+			case "apiError":
+			case "platformError":
+				return "???";
+			default:
+				return "...";
+		}
+	};
+
+	return (
+		<>
+			<header class="chat-header">
+				<div class="channel-icon">
+					<Icon src={icUser} />
+				</div>
+				<div class="name">
+					<h3 class="name-text">{userName()}</h3>
+				</div>
+				<div class="spacer"></div>
+			</header>
+			<div class="user-profile-page-wrapper">
+				<Switch>
+					<Match when={matches("loading")}>
+						{/* TODO: skeleton ui for user page */}
+						<div>loading...</div>
+					</Match>
+					<Match when={matches("apiError")}>
+						{(err) => (
+							/* TODO: no inline styles */
+							<div style="display:grid;place-items:center;height:100%">
+								<ApiErrorDisplay error={err().err} />
+							</div>
+						)}
+					</Match>
+					<Match when={matches("platformError")}>
+						{/* TODO: better ui for this */}
+						<div>internal error</div>
+					</Match>
+					<Match when={matches("loaded")}>
+						{(u) => (
+							<>
+								<Title title={u().user.name ?? "user"} />
+								<RouteUserInner user={u().user} />
+							</>
+						)}
+					</Match>
+				</Switch>
+			</div>
+		</>
+	);
+};
+
+export const RouteUserInner = (props: { user: UserWithRelationship }) => {
 	const api = useApi();
 	const { setMenu } = useMenu();
 	const nav = useNavigate();
@@ -68,6 +164,7 @@ export function UserPage(props: { user: UserWithRelationship }) {
 		});
 	};
 
+	// TODO: error handling for if this request fails
 	const sendFriendRequest = () => {
 		api.client.http.PUT("/api/v1/user/@self/friend/{target_id}", {
 			params: { path: { target_id: props.user.id } },
@@ -95,6 +192,7 @@ export function UserPage(props: { user: UserWithRelationship }) {
 
 	const preferences = () => props.user.preferences;
 	const [note, setNote] = createSignal("");
+
 	createEffect(() => {
 		setNote((preferences()?.frontend?.note as string) || "");
 	});
@@ -295,4 +393,4 @@ export function UserPage(props: { user: UserWithRelationship }) {
 			</div>
 		</div>
 	);
-}
+};
