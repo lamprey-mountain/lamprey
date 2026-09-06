@@ -171,6 +171,8 @@ where
 
                 // import media
                 let srv = state.services();
+                // FIXME: use multipart media
+                // theres currently no way to access this media
                 let mut media = UniversalExtractorMedia::default();
                 if !files.is_empty() {
                     let user = auth.ensure_user()?;

@@ -136,6 +136,7 @@ impl RoomMembers {
         }
     }
 
+    // TODO: take UserId, not a reference
     pub fn get(&self, user_id: &UserId) -> Option<&CachedRoomMember> {
         match self {
             Self::Loaded { members } => members.get(user_id),

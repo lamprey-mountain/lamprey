@@ -721,6 +721,7 @@ pub struct DbInvite {
 /// normally one piece of media is linked to exactly one object, but a slightly
 /// awkward thing to note is that media linked to `Message`s also have links to each
 /// `MessageVersion` they're referenced in.
+// TODO: rename to DbMediaLinkType
 #[derive(sqlx::Type, PartialEq, Eq)]
 #[sqlx(type_name = "media_link_type")]
 pub enum MediaLinkType {

@@ -931,7 +931,7 @@ impl ServiceMessages {
             MessageOperationKind::MessageEdit(_) => &ParseMentions::default(),
         };
 
-        let mention_ids = markdown::parse(content, parse_mentions);
+        let mention_ids = markdown::parse_mentions(content, parse_mentions);
         let mentions = self
             .fetch_full_mentions_from_ids(mention_ids, op.channel.room_id)
             .await?;

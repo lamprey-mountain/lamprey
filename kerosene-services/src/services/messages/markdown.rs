@@ -8,7 +8,7 @@ use lamprey_markdown::{
 };
 use url::Url;
 
-pub fn parse(content: &str, options: &ParseMentions) -> MentionsIds {
+pub fn parse_mentions(content: &str, options: &ParseMentions) -> MentionsIds {
     let parser = Parser::new();
     let parsed = parser.parse(content);
 

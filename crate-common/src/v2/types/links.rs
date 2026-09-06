@@ -101,6 +101,10 @@ mod media {
         fn resolve_media(&mut self, resolver: &dyn Fn(&mut MediaRef));
     }
 
+    // pub trait MediaResolvable2 {
+    //     fn media_refs(&mut self) -> &mut [MediaRef];
+    // }
+
     // impl MediaResolvable for MessageCreate {
     //     fn resolve_media(&mut self, resolver: &dyn Fn(&mut MediaRef)) {
     //         for att in &self.attachments {

@@ -5,6 +5,7 @@ use common::v2::types::MessageVerId;
 use common::v2::types::media::{Media, MediaErrorReason, MediaReference};
 use dashmap::DashMap;
 use futures::{StreamExt, stream::FuturesUnordered};
+use futures::{TryFutureExt, try_join};
 use moka::future::Cache;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -801,6 +802,10 @@ impl ServiceMessages {
         let Some(media_ref) = media_ref else {
             return Ok(None);
         };
+        self.fetch_media2(media_ref, user_id).map_ok(Some).await
+    }
+
+    async fn fetch_media2(&self, media_ref: MediaReference, user_id: UserId) -> Result<Media> {
         let Some(media_id) = media_ref.media_id() else {
             return Err(Error::Unimplemented);
         };
@@ -813,13 +818,15 @@ impl ServiceMessages {
         if media.user_id != Some(user_id) {
             return Err(Error::MissingPermissions);
         }
-        Ok(Some(media))
+        Ok(media)
     }
 
     async fn embed_from_create(&self, value: EmbedCreate, user_id: UserId) -> Result<Embed> {
-        let media = self.fetch_media(value.media, user_id).await?;
-        let thumbnail = self.fetch_media(value.thumbnail, user_id).await?;
-        let author_avatar = self.fetch_media(value.author_avatar, user_id).await?;
+        let (media, thumbnail, author_avatar) = try_join!(
+            self.fetch_media(value.media, user_id),
+            self.fetch_media(value.thumbnail, user_id),
+            self.fetch_media(value.author_avatar, user_id),
+        )?;
 
         Ok(Embed {
             id: EmbedId::new(),
