@@ -13,6 +13,7 @@ use common::v1::types::{
 };
 use common::v2::types::media::MediaReference;
 use http::StatusCode;
+use kerosene_core::error::{ApiError, ErrorCode};
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -61,8 +62,7 @@ async fn redex_create(
                 let media = srv.media.get(*media_id).await?;
 
                 if media.media().size > MAX_SCRIPT_FILE_SIZE {
-                    // TODO: better error
-                    return Err(Error::BadStatic("file too large"));
+                    return Err(ApiError::from_code(ErrorCode::MediaTooBig).into());
                 }
 
                 changes = changes
@@ -307,8 +307,7 @@ async fn redex_content_update(
                 let media = srv.media.get(*media_id).await?;
 
                 if media.media().size > MAX_SCRIPT_FILE_SIZE {
-                    // TODO: better error
-                    return Err(Error::BadStatic("file too large"));
+                    return Err(ApiError::from_code(ErrorCode::MediaTooBig).into());
                 }
 
                 changes = changes
