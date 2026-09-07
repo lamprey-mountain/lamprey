@@ -73,5 +73,6 @@ pub const MAX_LOADED_DOCUMENT_BRANCHES: usize = 32;
 // pub const MAX_DOCUMENT_PINS: usize = 32;
 
 /// the maximum file size of a script
-// TODO: raise this, wasm is pretty big
-pub const MAX_SCRIPT_FILE_SIZE: u64 = 64 * 1024; // 64 kb for now
+// TODO: raise this, wasm is pretty big (maybe have a different limit for js/wasm?) (maybe make this configurable in config file?)
+// pub const MAX_SCRIPT_FILE_SIZE: u64 = 64 * 1024; // 64 KiB for now
+pub const MAX_SCRIPT_FILE_SIZE: u64 = 1024 * 1024; // 1 MiB for now
