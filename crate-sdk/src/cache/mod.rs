@@ -2,10 +2,10 @@ use std::{collections::HashMap, sync::Arc};
 
 use common::{
     v1::types::{
-        Channel, Message, MessageSync, PermissionBits, PermissionOverwrite, Relationship, Role,
-        Room, RoomMember, ThreadMember, User,
+        Channel, PermissionBits, PermissionOverwrite, Relationship, Role, Room, RoomMember,
+        ThreadMember, User,
     },
-    v2::types::{ChannelId, MessageId, PermissionOverwriteId, RoleId, RoomId, UserId},
+    v2::types::{ChannelId, RoleId, RoomId, UserId},
 };
 
 mod permissions;
@@ -13,6 +13,8 @@ mod settings;
 
 pub use permissions::RoomPermissions;
 pub use settings::{CacheBuilder, CacheSettings};
+
+use crate::messages::MessagesInner;
 
 // TODO: custom debug impl for Cache
 
@@ -59,11 +61,8 @@ pub struct CachedUser {
 pub struct CachedChannel {
     pub inner: Channel,
     pub members: HashMap<UserId, ThreadMember>,
-    pub messages: HashMap<MessageId, Message>,
-    pub ranges: HashMap<(), ()>,
-    // messages: lru::LruCache<MessageId, Arc<Message>>,
-    // ranges: lru::LruCache<MessageId, Arc<Message>>,
-    // messages: Arc<RwLock<MessagesInner>>,
+    // PERF: don't use Arc<RwLock<_>>? what do i use instead?
+    pub(crate) messages: Arc<RwLock<MessagesInner>>,
     pub(crate) perm_roles: HashMap<RoleId, PermSet>,
     pub(crate) perm_users: HashMap<UserId, PermSet>,
 }
