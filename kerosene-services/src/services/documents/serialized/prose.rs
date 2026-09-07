@@ -102,8 +102,10 @@ impl SerializedProse2 {
             XmlOut::Text(_) => {
                 // text is allowed here?
             }
-            XmlOut::Fragment(_) => {
-                unreachable!("fragments cant contain other fragments")
+            XmlOut::Fragment(frag) => {
+                for child in frag.children(txn) {
+                    self.handle_node(txn, &child);
+                }
             }
         }
     }
