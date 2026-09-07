@@ -1,8 +1,11 @@
 use std::{collections::HashMap, sync::Arc};
 
 use common::{
-    v1::types::{Channel, Message, Relationship, Role, Room, RoomMember, ThreadMember, User},
-    v2::types::{ChannelId, MessageId, RoleId, RoomId, UserId},
+    v1::types::{
+        Channel, Message, MessageSync, PermissionBits, PermissionOverwrite, Relationship, Role,
+        Room, RoomMember, ThreadMember, User,
+    },
+    v2::types::{ChannelId, MessageId, PermissionOverwriteId, RoleId, RoomId, UserId},
 };
 
 mod permissions;
@@ -33,13 +36,8 @@ pub struct CachedRoom {
     pub members: HashMap<UserId, RoomMember>,
     pub channels: HashMap<ChannelId, CachedChannel>, // contains threads
     pub roles: HashMap<RoleId, Role>,
-    // perm_roles: HashMap<RoleId, PermRole>,
-    // perm_overwrites: HashMap<ChannelId, HashMap<PermissionOverwriteId, PermOverwrite>>,
+    pub(crate) perm_roles: HashMap<RoleId, (PermSet, u16)>,
 }
-// struct PermRole {
-//     allow: PermissionBits,
-//     deny: PermissionBits,
-// }
 
 // struct PermOverwrite {
 //     kind: PermissionOverwriteType,
@@ -66,6 +64,32 @@ pub struct CachedChannel {
     // messages: lru::LruCache<MessageId, Arc<Message>>,
     // ranges: lru::LruCache<MessageId, Arc<Message>>,
     // messages: Arc<RwLock<MessagesInner>>,
+    pub(crate) perm_roles: HashMap<RoleId, PermSet>,
+    pub(crate) perm_users: HashMap<UserId, PermSet>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PermSet {
+    pub(crate) allow: PermissionBits,
+    pub(crate) deny: PermissionBits,
+}
+
+impl From<&Role> for PermSet {
+    fn from(value: &Role) -> Self {
+        Self {
+            allow: value.allow.as_slice().into(),
+            deny: value.deny.as_slice().into(),
+        }
+    }
+}
+
+impl From<&PermissionOverwrite> for PermSet {
+    fn from(value: &PermissionOverwrite) -> Self {
+        Self {
+            allow: value.allow.as_slice().into(),
+            deny: value.deny.as_slice().into(),
+        }
+    }
 }
 
 pub struct CacheRef<'a, T> {
