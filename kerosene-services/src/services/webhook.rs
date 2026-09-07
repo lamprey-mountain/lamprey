@@ -12,7 +12,6 @@ use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use moka::future::Cache;
 use validator::Validate;
 
-use crate::compat::routes::util::auth::Auth4 as Auth;
 use crate::prelude::*;
 
 pub struct ServiceWebhooks {

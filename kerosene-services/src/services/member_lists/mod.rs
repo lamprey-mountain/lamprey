@@ -2,16 +2,14 @@
 
 use common::v2::types::{ConnectionId, RoomId};
 use dashmap::DashMap;
-use tokio::sync::broadcast;
 
 use crate::prelude::*;
 use crate::services::member_lists::actor::MemberListHandle;
 use crate::services::member_lists::{
-    actor::{MemberListCommand, MemberListEvent},
     util::{MemberListKey, MemberListKey1},
     visibility::ListVisibility,
 };
-use crate::services::rooms::actor::{MemberListCommandMsg, MemberListSubscribeMsg};
+use crate::services::rooms::actor::MemberListSubscribeMsg;
 use crate::services::rooms::{RoomActor, RoomHandle};
 
 pub mod actor;

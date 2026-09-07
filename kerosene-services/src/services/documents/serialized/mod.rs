@@ -1,12 +1,8 @@
-use std::collections::HashMap;
-
-use common::v1::types::components::{Component, ComponentCanonical, ComponentId, ComponentType};
+use common::v1::types::components::{ComponentCanonical, ComponentType};
 use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::error::ErrorField;
-use serde::Deserialize;
-use serde::de::DeserializeOwned;
 use yrs::types::xml::{XmlElementPrelim, XmlIn};
-use yrs::{Doc, GetString, ReadTxn, Transact, XmlFragment, XmlOut, XmlTextPrelim};
+use yrs::{Doc, Transact, XmlFragment, XmlTextPrelim};
 
 use crate::prelude::*;
 use crate::services::documents::util::DOCUMENT_ROOT_NAME;

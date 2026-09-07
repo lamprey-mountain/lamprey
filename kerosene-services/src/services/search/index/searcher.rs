@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use tantivy::{
     DocAddress, Score,
     collector::{Count, TopDocs},

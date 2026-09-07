@@ -1,4 +1,3 @@
-use common::v1::types::oauth::OidcClaims;
 use lamprey_backend_core::config::ConfigInternal;
 use tokio::sync::RwLock;
 

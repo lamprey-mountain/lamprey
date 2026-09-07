@@ -9,11 +9,10 @@ use futures::{TryFutureExt, try_join};
 use moka::future::Cache;
 use std::collections::HashMap;
 use std::time::Duration;
-use tracing::{error, warn};
+use tracing::warn;
 use uuid::Uuid;
 
 use common::v1::types::message::{Message, MessageType, MessageVersion, RepliesResponse};
-use common::v1::types::misc::Color;
 use common::v1::types::{
     Channel, ChannelId, ContextQuery, ContextResponse, EmbedCreate, EmbedId, Mentions,
     MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser, MessageId, PaginationDirection,

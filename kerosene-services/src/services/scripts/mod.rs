@@ -1,13 +1,9 @@
-use common::v1::types::components::ComponentType;
 use common::v1::types::redex::{
     Eval, EvalInput, EvalStatus, Redex, RedexFormat, RedexLocation, RedexVersion,
     RedexVersionStatus,
 };
 use common::v1::types::util::Time;
-use common::v1::types::{
-    ChannelId, ConnectionId, DocumentBranchId, DocumentId, EvalId, MediaId, MessageSync, RedexId,
-    RedexVerId,
-};
+use common::v1::types::{ChannelId, ConnectionId, EvalId, MessageSync, RedexId, RedexVerId};
 use dashmap::DashMap;
 use futures::TryFutureExt;
 use kerosene_core::error::{ApiError, ErrorCode};

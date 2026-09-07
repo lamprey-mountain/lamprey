@@ -142,9 +142,9 @@ impl MediaItem {
             status => return Err(Error::BadStatic("wrong media status")),
         };
 
-        let (tm, rm) = watch::channel(Arc::new(media));
-        let (ts, rs) = watch::channel(state);
-        let (tr, rr) = watch::channel(true);
+        let (_tm, rm) = watch::channel(Arc::new(media));
+        let (_ts, rs) = watch::channel(state);
+        let (_tr, rr) = watch::channel(true);
 
         let inner = MediaItemInner {
             media: rm,

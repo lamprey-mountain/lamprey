@@ -10,17 +10,13 @@ use common::{
     },
     v2::types::{ConnectionId, UserId},
 };
-use kameo::{
-    Actor,
-    actor::ActorRef,
-    prelude::{Context, Message},
-};
+use kameo::{Actor, actor::ActorRef};
 use lamprey_backend_core::{Error, Result};
 use tokio::sync::broadcast;
 use tracing::{debug, warn};
 use yrs::updates::encoder::Encode;
 use yrs::{
-    DeepObservable, Doc, GetString, Out, ReadTxn, StateVector, Transact, Update, XmlFragment,
+    DeepObservable, Doc, GetString, Out, ReadTxn, StateVector, Transact, Update,
     types::{Delta, Event},
     updates::decoder::Decode,
 };
