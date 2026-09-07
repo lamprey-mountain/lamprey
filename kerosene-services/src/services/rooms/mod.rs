@@ -67,6 +67,7 @@ impl ServiceRooms {
     }
 
     /// create the server user and room if it doesnt exist
+    // TODO: move this to some other setup service or thing?
     pub async fn init_server_room(&self) -> Result<()> {
         let mut txn = self.globals.begin().await?;
         if txn.user_get(SERVER_USER_ID).await.is_err() {
@@ -128,34 +129,17 @@ impl ServiceRooms {
 
     /// load a room snapshot, ensuring members are loaded if requested.
     #[deprecated = "use load2"]
-    pub fn load_room(
+    pub async fn load_room(
         &self,
         room_id: RoomId,
         ensure_members: bool,
-    ) -> BoxFuture<'_, Result<Arc<RoomSnapshot>>> {
-        Box::pin(async move {
-            let handle = self
-                .actors
-                .try_get_with(room_id, || {
-                    Ok::<RoomHandle, Error>(RoomActor::spawn_room(room_id, self.globals.clone()))
-                })
-                .map_err(|e| e.fake_clone())?;
-
-            if ensure_members {
-                handle
-                    .actor_ref
-                    .ask(EnsureMembers)
-                    .send()
-                    .await
-                    .map_err(|e| Error::Internal(format!("Actor mailbox closed: {e}")))?;
-            }
-
-            handle.ready(ensure_members).await?;
-            Ok(handle.snapshot())
-        })
+    ) -> Result<Arc<RoomSnapshot>> {
+        let handle = self.load2(room_id);
+        handle.ready(ensure_members).await?;
+        Ok(handle.snapshot())
     }
 
-    /// load all channels a user is in
+    /// load all rooms a user is in
     pub async fn load_all_for_user(&self, user_id: UserId) -> Vec<Result<Arc<RoomSnapshot>>> {
         let mut room_ids: Vec<RoomId> = self
             .user_rooms
@@ -164,7 +148,10 @@ impl ServiceRooms {
             .unwrap_or_default();
 
         // supplement cache with database to ensure completeness
+        // TODO: better error logging/handling
         if let Ok(mut data) = self.globals.begin_read().await {
+            // PERF: pass data from room_list to spawn_room to avoid n+1 queries
+            // PERF: maybe batch other data fetching as well (members, roles, etc...)
             if let Ok(rooms) = data
                 .room_list(
                     user_id,
@@ -740,12 +727,6 @@ impl ServiceRooms {
 
         Ok(())
     }
-
-    // /// get a handle to a room
-    // pub fn load(&self, _room_id: RoomId) -> RoomHandle {
-    //     // immediately return room handle, spawn background task to load room data then members
-    //     todo!()
-    // }
 
     // pub fn unload(&self, room_id: RoomId);
     // pub fn reload(&self, room_id: RoomId);
