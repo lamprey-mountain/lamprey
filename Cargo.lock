@@ -5252,6 +5252,7 @@ dependencies = [
  "bytes",
  "cpu-time",
  "dashmap 6.2.1",
+ "futures",
  "http",
  "lamprey-common",
  "lamprey-hakari",

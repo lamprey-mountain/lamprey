@@ -17,8 +17,9 @@ use common::v1::types::{
 };
 use cpu_time::ProcessTime;
 use dashmap::DashMap;
+use futures::{FutureExt, future::Shared};
 use rquickjs::{Ctx, Exception, FromJs, async_with};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, oneshot};
 use tracing::error;
 
 use crate::{
@@ -63,7 +64,7 @@ pub struct JsExecutionHandle {
     run: Arc<Eval>,
     stop_signal: Arc<AtomicBool>,
     events: broadcast::Receiver<Arc<ExecutionEvent>>,
-    ext_recv: tokio::sync::watch::Receiver<Option<ScriptExtracted>>,
+    ext_recv: Shared<oneshot::Receiver<ScriptExtracted>>,
 }
 
 impl JsExecutionHandle {
@@ -184,7 +185,7 @@ impl Executor for JsExecutor {
 
         // new events channel per run too
         let (events_sender, events_receiver) = broadcast::channel::<Arc<ExecutionEvent>>(100);
-        let (ext_send, ext_recv) = tokio::sync::watch::channel(None);
+        let (ext_send, ext_recv) = oneshot::channel();
 
         let redex_id = self.script.redex_id;
         let redex_version_id = self.script.redex_version_id;
@@ -270,7 +271,7 @@ impl Executor for JsExecutor {
             run,
             stop_signal,
             events: events_receiver,
-            ext_recv,
+            ext_recv: ext_recv.shared(),
         };
 
         Ok(Box::new(handle))
@@ -298,7 +299,7 @@ async fn exec_inner<'js>(
     input: EvalInput,
     events_sender: broadcast::Sender<Arc<ExecutionEvent>>,
     script: Arc<JsCompiledScript>,
-    ext_send: tokio::sync::watch::Sender<Option<ScriptExtracted>>,
+    ext_send: tokio::sync::oneshot::Sender<ScriptExtracted>,
 ) -> Result<()> {
     setup_environment(&ctx, events_sender.clone(), script_id)?;
 
@@ -446,7 +447,7 @@ async fn exec_inner<'js>(
     }
 
     // TODO: error handling
-    let _ = ext_send.send(Some(extracted));
+    let _ = ext_send.send(extracted);
 
     events_sender
         .send(Arc::new(ExecutionEvent::Status(EvalStatus::Exited)))
@@ -472,17 +473,11 @@ impl ExecutionHandle for JsExecutionHandle {
             .map_err(|e| Error::BroadcastRecv(e.to_string()))
     }
 
-    async fn done(&mut self) -> Result<ScriptExtracted> {
+    async fn done(&self) -> Result<ScriptExtracted> {
         self.ext_recv
-            .changed()
+            .clone()
             .await
-            .map_err(|e| Error::WatchChanged(e.to_string()))?;
-
-        if let Some(e) = &*self.ext_recv.borrow() {
-            Ok(e.clone())
-        } else {
-            Err(Error::ExtractionDataMissing)
-        }
+            .map_err(|e| Error::OneshotRecv(e.to_string()))
     }
 
     fn clone_box(&self) -> Box<dyn ExecutionHandle> {

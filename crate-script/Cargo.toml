@@ -14,6 +14,7 @@ bytes = "1.12.1"
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
 cpu-time = "1.0.0"
 dashmap = "6.2.1"
+futures = "0.3.34"
 http = "1.5.0"
 nanoid = "0.5.0"
 rquickjs = { version = "0.12.2", features = ["futures", "loader", "macro", "parallel"], optional = true }

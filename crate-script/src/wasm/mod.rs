@@ -13,7 +13,9 @@ use common::v1::types::{
     },
     util::Time,
 };
-use tokio::sync::{broadcast, watch};
+use futures::FutureExt;
+use tokio::sync::{broadcast, oneshot, watch};
+use tracing::error;
 use wasmtime::{
     Config, Engine, Store,
     component::{Component, HasSelf, Linker, ResourceTable},
@@ -50,7 +52,7 @@ pub struct WasmHandle {
     run: Arc<Eval>,
     // stop_signal: Arc<AtomicBool>,
     events: broadcast::Receiver<Arc<ExecutionEvent>>,
-    ext_recv: watch::Receiver<Option<ScriptExtracted>>,
+    ext_recv: futures::future::Shared<oneshot::Receiver<ScriptExtracted>>,
 }
 
 // /// a compiled script loaded in memory
@@ -104,7 +106,7 @@ impl Executor for WasmExecutor {
     /// spawn this script
     async fn spawn(&self, input: EvalInput, eval_id: EvalId) -> Result<Box<dyn ExecutionHandle>> {
         let (events_tx, events_rx) = broadcast::channel(100);
-        let (ext_tx, ext_rx) = watch::channel(None);
+        let (ext_tx, ext_rx) = oneshot::channel();
 
         let redex_id = self.redex_id;
         let redex_version_id = self.redex_version_id;
@@ -134,10 +136,17 @@ impl Executor for WasmExecutor {
             let _ = events_tx.send(Arc::new(ExecutionEvent::Status(EvalStatus::Active)));
 
             let result: wasmtime::Result<()> = async {
-                let bindings =
-                    wit::ScriptWorld::instantiate_async(&mut store, &component, &linker).await?;
+                let bindings = wit::ScriptWorld::instantiate_async(&mut store, &component, &linker)
+                    .await
+                    .map_err(|e| {
+                        error!(?e, "Wasm instantiation failed");
+                        e
+                    })?;
 
-                let metadata = bindings.call_get_metadata(&mut store)?;
+                let metadata = bindings.call_get_metadata(&mut store).map_err(|e| {
+                    error!(?e, "Wasm get_metadata failed");
+                    e
+                })?;
                 let extracted = ScriptExtracted {
                     metadata: RedexMetadata {
                         name: metadata.name,
@@ -152,7 +161,7 @@ impl Executor for WasmExecutor {
                     inputs: vec![], // TODO: populate
                 };
 
-                let _ = ext_tx.send(Some(extracted));
+                let _ = ext_tx.send(extracted);
 
                 // // Start a thread that will bump the epoch after 1 second.
                 // let engine_clone = engine.clone();
@@ -166,15 +175,24 @@ impl Executor for WasmExecutor {
                         // no special stuff needed here
                     }
                     EvalInput::Http { request } => {
-                        let res =
-                            bindings.call_handle_http(&mut store, "no_id?", &request.into())?;
+                        let res = bindings
+                            .call_handle_http(&mut store, "no_id?", &request.into())
+                            .map_err(|e| {
+                                error!(?e, "Wasm handle_http failed");
+                                e
+                            })?;
                         let _ = events_tx.send(Arc::new(ExecutionEvent::HttpResponse(res.into())));
                     }
                     EvalInput::Manual { id, .. } => {
-                        bindings.call_handle_trigger(&mut store, &id)?;
+                        bindings.call_handle_trigger(&mut store, &id).map_err(|e| {
+                            error!(?e, "Wasm handle_trigger failed");
+                            e
+                        })?;
                     }
                     EvalInput::Event { .. } => {
-                        return Err(wasmtime::Error::msg("not yet implemented"));
+                        let err = wasmtime::Error::msg("not yet implemented");
+                        error!(?err, "Wasm event handling failed");
+                        return Err(err);
                     }
                 }
 
@@ -194,7 +212,7 @@ impl Executor for WasmExecutor {
         Ok(Box::new(WasmHandle {
             run,
             events: events_rx,
-            ext_recv: ext_rx,
+            ext_recv: ext_rx.shared(),
         }))
     }
 }
@@ -216,19 +234,12 @@ impl ExecutionHandle for WasmHandle {
             .map_err(|e| Error::BroadcastRecv(e.to_string()))
     }
 
-    async fn done(&mut self) -> Result<ScriptExtracted> {
-        if let Some(ext) = self.ext_recv.borrow().clone() {
-            return Ok(ext);
-        }
-
+    async fn done(&self) -> Result<ScriptExtracted> {
+        // TODO: better error if extraction failed instead of just dropping the oneshot channel
         self.ext_recv
-            .changed()
-            .await
-            .map_err(|e| Error::WatchChanged(e.to_string()))?;
-        self.ext_recv
-            .borrow()
             .clone()
-            .ok_or(Error::ExtractionDataMissing)
+            .await
+            .map_err(|e| Error::OneshotRecv(e.to_string()))
     }
 
     fn clone_box(&self) -> Box<dyn ExecutionHandle> {

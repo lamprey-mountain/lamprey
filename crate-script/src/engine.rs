@@ -105,7 +105,7 @@ pub trait ExecutionHandle: Send + Sync {
     async fn poll(&mut self) -> Result<Arc<ExecutionEvent>>;
 
     /// wait for this execution to finish, returning the extraction data if extraction was successful
-    async fn done(&mut self) -> Result<ScriptExtracted>;
+    async fn done(&self) -> Result<ScriptExtracted>;
 
     // /// wait for this execution to finish, returning the returned http response if this used an http input
     // async fn done_http_response(&mut self) -> Result<()>;
@@ -152,4 +152,5 @@ pub enum ExecutionEvent {
     HttpResponse(http::Response<bytes::Bytes>),
 }
 
+// TODO: use Arc instead of Box, remove Clone/clone_box hack
 pub type AnyExecutionHandle = Box<dyn ExecutionHandle>;

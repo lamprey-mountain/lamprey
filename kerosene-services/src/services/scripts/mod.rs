@@ -259,11 +259,8 @@ impl ServiceScripts {
         let latest_version = ver.as_ref().unwrap_or(&script.latest_version);
         let loaded = self.load(&script).await?;
 
-        let mut handle = loaded
-            .spawn(EvalInput::Extraction, EvalId::new())
-            .await
-            .unwrap();
-        let extracted = handle.done().await.unwrap();
+        let handle = loaded.spawn(EvalInput::Extraction, EvalId::new()).await?;
+        let extracted = handle.done().await?;
 
         Ok(extracted)
     }
@@ -310,7 +307,7 @@ impl ServiceScripts {
         )
         .await;
 
-        let handle = loaded.spawn(input, eval_id).await.unwrap();
+        let handle = loaded.spawn(input, eval_id).await?;
         self.handles.insert(eval_id, handle.clone());
         let caller_handle = handle.clone();
         let mut event_handle = handle; // move the original receiver so we don't miss any messages

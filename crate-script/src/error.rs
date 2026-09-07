@@ -25,6 +25,9 @@ pub enum Error {
     #[error("watch channel changed failed: {0}")]
     WatchChanged(String),
 
+    #[error("oneshot channel recv failed: {0}")]
+    OneshotRecv(String),
+
     #[error("extraction data is None")]
     ExtractionDataMissing,
 
