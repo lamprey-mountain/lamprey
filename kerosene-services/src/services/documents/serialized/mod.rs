@@ -41,14 +41,6 @@ pub trait ToDoc: Sized {
 }
 
 #[deprecated]
-pub fn doc_to_serdoc(doc: &Doc) -> Serdoc {
-    let s = SerializedProse::from_doc_lenient(doc);
-    Serdoc {
-        components: s.components,
-    }
-}
-
-#[deprecated]
 // TODO: move into ToDoc
 pub fn serdoc_apply_to_doc(doc: &Doc, components: &[ComponentCanonical]) {
     let mut txn = doc.transact_mut();

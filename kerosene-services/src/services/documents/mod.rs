@@ -17,6 +17,7 @@ use yrs::{Doc, StateVector, Transact, Update, updates::decoder::Decode};
 
 use crate::prelude::*;
 use crate::services::documents::actor::{DocumentActor, DocumentHandle};
+use crate::services::documents::serialized::{FromDoc, SerializedProse};
 use crate::services::documents::syncer::DocumentSyncer;
 use crate::services::documents::util::{DOCUMENT_ROOT_NAME, HistoryPaginationSummary};
 
@@ -276,7 +277,7 @@ impl ServiceDocuments {
         }
         drop(txn);
 
-        Ok(serialized::doc_to_serdoc(&doc))
+        Ok(SerializedProse::from_doc_lenient(&doc).into())
     }
 
     pub async fn set_content(

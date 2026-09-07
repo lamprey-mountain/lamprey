@@ -1,5 +1,6 @@
 use common::{
     v1::types::components::{Component, ComponentCanonical, ComponentType},
+    v1::types::document::serialized::Serdoc,
     v2::types::components::ComponentId,
 };
 use yrs::{
@@ -194,6 +195,14 @@ impl ToDoc for SerializedProse {
 
     fn to_doc(&self) -> Self::Out {
         todo!()
+    }
+}
+
+impl From<SerializedProse> for Serdoc {
+    fn from(value: SerializedProse) -> Self {
+        Self {
+            components: value.components,
+        }
     }
 }
 

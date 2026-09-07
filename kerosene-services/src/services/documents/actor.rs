@@ -21,9 +21,12 @@ use yrs::{
     updates::decoder::Decode,
 };
 
-use crate::prelude::*;
 use crate::services::documents::{
     DOCUMENT_ROOT_NAME, DocumentEvent, EditContextId, util::get_update_len,
+};
+use crate::{
+    prelude::*,
+    services::documents::serialized::{FromDoc, SerializedProse},
 };
 
 /// A pending change to be persisted
@@ -240,9 +243,7 @@ impl DocumentActor {
     /// get the document content as a Serdoc
     #[message]
     pub fn serdoc_get(&self) -> Result<Serdoc> {
-        Ok(crate::services::documents::serialized::doc_to_serdoc(
-            &self.doc,
-        ))
+        Ok(SerializedProse::from_doc_lenient(&self.doc).into())
     }
 
     /// replace the document content from a Serdoc
@@ -255,7 +256,7 @@ impl DocumentActor {
         use crate::services::documents::serialized;
 
         // calculate stats
-        let old_serdoc = serialized::doc_to_serdoc(&self.doc);
+        let old_serdoc: Serdoc = SerializedProse::from_doc_lenient(&self.doc).into();
         let stat_removed = old_serdoc
             .components
             .iter()
