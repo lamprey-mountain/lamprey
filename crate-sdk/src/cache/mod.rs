@@ -13,6 +13,7 @@ mod settings;
 
 pub use permissions::RoomPermissions;
 pub use settings::{CacheBuilder, CacheSettings};
+use tokio::sync::RwLock;
 
 use crate::messages::MessagesInner;
 
@@ -28,7 +29,7 @@ pub struct CacheInner {
     pub(crate) rooms: HashMap<RoomId, CachedRoom>,
     pub(crate) channels: HashMap<ChannelId, CachedChannel>,
     pub(crate) users: HashMap<UserId, CachedUser>,
-    // TODO: use LruCache
+    // TODO: use LruCache and/or Dashmap
     // pub(crate) users: lru::LruCache<UserId, CachedUser>,
 }
 

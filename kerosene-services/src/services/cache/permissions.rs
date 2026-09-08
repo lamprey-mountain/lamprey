@@ -246,8 +246,13 @@ impl PermissionsCalculator {
 
         let everyone_role_id = self.room_id.into_inner().into();
 
-        for role in data.roles.values() {
-            if role.inner.id == everyone_role_id || member.roles.contains(&role.inner.id) {
+        if let Some(role) = data.roles.get(&everyone_role_id) {
+            allowed_bits.add_all(role.allow);
+            denied_bits.add_all(role.deny);
+        }
+
+        for role_id in &member.roles {
+            if let Some(role) = data.roles.get(role_id) {
                 allowed_bits.add_all(role.allow);
                 denied_bits.add_all(role.deny);
                 *rank = (*rank).max(role.inner.position as u16);
@@ -307,42 +312,16 @@ impl PermissionsCalculator {
             }
         }
 
-        self.apply_channel_overwrites(bits, channel_locked, timed_out, cc, member);
+        self.apply_channel_overwrites(bits, cc, member);
+        self.apply_channel_locked(bits, channel_locked, timed_out, cc, member);
     }
 
-    /// apply the permission overwrites for a channel to a permissions set
     fn apply_channel_overwrites(
         &self,
         bits: &mut PermissionBits,
-        channel_locked: &mut bool,
-        timed_out: &mut bool,
         cc: &CachedChannel,
         member: Option<&RoomMember>,
     ) {
-        // handle locked channels/threads
-        if let Some(locked) = &cc.inner.locked {
-            let is_expired = locked.until.is_some_and(|until| until <= Time::now_utc());
-            if !is_expired {
-                *channel_locked = true;
-
-                // the member has a role that is explicitly allowed by the lock
-                let has_bypass = member.map_or(false, |m| {
-                    m.roles
-                        .iter()
-                        .any(|r| locked.allow_roles.contains(&(*r).into()))
-                });
-
-                // or the member has the Manage Channels permission
-                // or this is a thread and the member has the Manage Threads permission
-                let has_perm = bits.has(Permission::ChannelManage)
-                    || (cc.inner.ty.is_thread() && bits.has(Permission::ThreadManage));
-
-                if !has_bypass && !has_perm {
-                    *timed_out = true;
-                }
-            }
-        }
-
         if cc.overwrites.is_empty() {
             return;
         }
@@ -350,47 +329,70 @@ impl PermissionsCalculator {
         let everyone_id = self.room_id.into_inner().into();
 
         // 1. apply everyone allows
-        if let Some(ow) = cc.overwrites.get(&everyone_id) {
-            bits.add_all(ow.allow);
-        }
-
         // 2. apply everyone denies
         if let Some(ow) = cc.overwrites.get(&everyone_id) {
+            bits.add_all(ow.allow);
             bits.remove_all(ow.deny);
         }
 
-        let Some(member) = member else { return };
-
-        // 3. apply role allows
-        for role_id in &member.roles {
-            if let Some(ow) = cc.overwrites.get(&role_id.into_inner().into()) {
-                if ow.ty == PermissionOverwriteType::Role {
-                    bits.add_all(ow.allow);
+        if let Some(member) = member {
+            // 3. apply role allows
+            // 4. apply role denies
+            for role_id in &member.roles {
+                if let Some(ow) = cc.overwrites.get(&role_id.into_inner().into()) {
+                    if ow.ty == PermissionOverwriteType::Role {
+                        bits.add_all(ow.allow);
+                        bits.remove_all(ow.deny);
+                    }
                 }
             }
-        }
 
-        // 4. apply role denies
-        for role_id in &member.roles {
-            if let Some(ow) = cc.overwrites.get(&role_id.into_inner().into()) {
-                if ow.ty == PermissionOverwriteType::Role {
+            // 5. apply user allows
+            // 6. apply user denies
+            if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner().into()) {
+                if ow.ty == PermissionOverwriteType::User {
+                    bits.add_all(ow.allow);
                     bits.remove_all(ow.deny);
                 }
             }
         }
+    }
 
-        // 5. apply user allows
-        if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner().into()) {
-            if ow.ty == PermissionOverwriteType::User {
-                bits.add_all(ow.allow);
-            }
+    /// handle locked channels/threads
+    fn apply_channel_locked(
+        &self,
+        bits: &PermissionBits,
+        channel_locked: &mut bool,
+        timed_out: &mut bool,
+        cc: &CachedChannel,
+        member: Option<&RoomMember>,
+    ) {
+        let Some(locked) = &cc.inner.locked else {
+            return;
+        };
+
+        let is_expired = locked.until.is_some_and(|until| until <= Time::now_utc());
+        if is_expired {
+            return;
         }
 
-        // 6. apply user denies
-        if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner().into()) {
-            if ow.ty == PermissionOverwriteType::User {
-                bits.remove_all(ow.deny);
-            }
+        *channel_locked = true;
+
+        // the member has a role that is explicitly allowed by the lock
+        let has_bypass = member.map_or(false, |m| {
+            m.roles
+                .iter()
+                .any(|r| locked.allow_roles.contains(&(*r).into()))
+        });
+
+        // or the member has the Manage Channels permission
+        // or this is a thread and the member has the Manage Threads permission
+        let has_perm = bits.has(Permission::Admin)
+            || bits.has(Permission::ChannelManage)
+            || (cc.inner.ty.is_thread() && bits.has(Permission::ThreadManage));
+
+        if !has_bypass && !has_perm {
+            *timed_out = true;
         }
     }
 

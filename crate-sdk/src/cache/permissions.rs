@@ -41,7 +41,7 @@ impl Permissions {
         self.visible
     }
 
-    // TODO: only provide inside rooms
+    // TODO: only provide inside rooms?
     /// get the rank of a user
     ///
     /// a user's rank is their highest role's position
@@ -92,12 +92,8 @@ impl<'a> RoomPermissions<'a> {
                 // private thread logic
                 if channel.inner.ty == ChannelType::ThreadPrivate {
                     if !bits.has(Permission::ThreadManage) && !bits.has(Permission::Admin) {
-                        let is_thread_member = user_id.is_some_and(|uid| {
-                            self.room
-                                .channels
-                                .get(&channel.inner.id)
-                                .map_or(false, |t| t.members.contains_key(&uid))
-                        });
+                        let is_thread_member =
+                            user_id.is_some_and(|uid| channel.members.contains_key(&uid));
 
                         if !is_thread_member {
                             bits = PermissionBits::default();
@@ -171,13 +167,13 @@ impl<'a> RoomPermissions<'a> {
         // NOTE: the everyone role should always exist
         if let Some((perms, _)) = self.room.perm_roles.get(&everyone_role_id) {
             allowed_bits.add_all(perms.allow);
-            denied_bits.remove_all(perms.deny);
+            denied_bits.add_all(perms.deny);
         }
 
         for role_id in &member.roles {
             if let Some((perms, role_position)) = self.room.perm_roles.get(role_id) {
                 allowed_bits.add_all(perms.allow);
-                denied_bits.remove_all(perms.deny);
+                denied_bits.add_all(perms.deny);
                 *rank = (*rank).max(*role_position);
             }
         }
@@ -220,8 +216,8 @@ impl<'a> RoomPermissions<'a> {
             }
         }
 
-        self.apply_channel_locked(bits, timed_out, channel, member);
         self.apply_channel_overwrites(bits, channel, member);
+        self.apply_channel_locked(bits, timed_out, channel, member);
     }
 
     fn apply_channel_overwrites(
