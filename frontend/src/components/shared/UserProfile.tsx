@@ -117,7 +117,8 @@ export function UserProfile(props: UserProps) {
 			frontend: {},
 			voice: { mute: false, volume: 1.0 },
 		};
-		const { note: _n, ...restFrontend } = currentConfig.frontend ?? {};
+		const { note: oldNote, ...restFrontend } = currentConfig.frontend ?? {};
+		if (noteToSave === (oldNote ?? "")) return;
 
 		const newConfig: PreferencesUser = {
 			...currentConfig,
