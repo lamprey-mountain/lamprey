@@ -667,6 +667,10 @@ async fn auth_sudo_upgrade(
         )
         .await?;
     s.services().sessions.invalidate(auth.session.id).await;
+    let session = s.services().sessions.get(auth.session.id).await?;
+    s.broadcast(MessageSync::SessionUpdate {
+        session: (*session).clone(),
+    })?;
 
     let al = auth.audit_log(auth.user.id.into_inner().into());
     al.commit_success(AuditLogEntryType::AuthSudo {
@@ -681,11 +685,25 @@ async fn auth_sudo_upgrade(
 #[handler(routes::auth_sudo_delete)]
 async fn auth_sudo_delete(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
+    State(s): State<Arc<ServerState>>,
     _req: routes::auth_sudo_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_sudo()?;
-    // TODO: implement sudo delete
+
+    s.data()
+        .session_set_status(
+            auth.session.id,
+            SessionStatus::Authorized {
+                user_id: auth.user.id,
+            },
+        )
+        .await?;
+    s.services().sessions.invalidate(auth.session.id).await;
+    let session = s.services().sessions.get(auth.session.id).await?;
+    s.broadcast(MessageSync::SessionUpdate {
+        session: (*session).clone(),
+    })?;
+
     Ok(StatusCode::NO_CONTENT)
 }
 
