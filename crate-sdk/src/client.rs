@@ -10,6 +10,7 @@ use crate::syncer::{Syncer, SyncerHandle};
 pub struct Client {
     syncer: SyncerHandle,
     http: Http,
+
     #[cfg(feature = "cache")]
     cache: Option<Cache>,
 }

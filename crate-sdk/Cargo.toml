@@ -11,6 +11,7 @@ anyhow = "1.0.104"
 async-trait = "0.1.92"
 bytes = "1.12.1"
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
+dashmap = "6.2.1"
 futures = "0.3.34"
 futures-util = "0.3.34"
 headers = "0.4.1"

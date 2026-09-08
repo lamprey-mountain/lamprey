@@ -5274,6 +5274,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bytes",
+ "dashmap 6.2.1",
  "futures",
  "futures-util",
  "headers",
