@@ -20,7 +20,6 @@ use common::v1::types::{
 };
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
-use jsonwebtoken::{Algorithm, EncodingKey, Header, encode};
 use lamprey_macros::handler;
 use sha2::{Digest, Sha256};
 use strum::IntoEnumIterator;

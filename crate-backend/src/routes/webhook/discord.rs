@@ -8,11 +8,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use bytes::Bytes;
-use common::{
-    v1::types::misc::Color,
-    v2::types::media::{MediaCreate, MediaCreateSource},
-};
+use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use common::{
     v1::types::{
         self, EmbedCreate, MessageAttachmentCreate, MessageAttachmentCreateType, MessageCreate,
@@ -25,10 +21,8 @@ use url::Url;
 use utoipa::ToSchema;
 use validator::Validate;
 
-use crate::{
-    ServerState,
-    error::{Error, Result},
-};
+use crate::ServerState;
+use crate::prelude::*;
 use kerosene_services::services::media::Import;
 
 #[derive(Debug, Serialize, Deserialize, Validate, ToSchema)]

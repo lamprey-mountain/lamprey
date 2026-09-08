@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -9,10 +7,10 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::{Error, ServerState, routes2};
+use crate::{ServerState, routes2};
 
 use super::util::Auth;
-use crate::error::Result;
+use crate::prelude::*;
 
 /// Search messages
 #[handler(routes::search_messages)]

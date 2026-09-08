@@ -9,8 +9,8 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
-    AuditLogEntryType, MessageSync, PaginationResponse, Permission, RoomMember,
-    RoomMemberSearchResponse, UserId,
+    AuditLogEntryType, MessageSync, PaginationResponse, Permission, RoomMemberSearchResponse,
+    UserId,
 };
 use common::v1::types::{RoleId, RoomMemberOrigin, SERVER_ROOM_ID};
 use common::v2::types::ApplicationId;
