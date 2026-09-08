@@ -35,7 +35,7 @@ import {
 } from "@/utils/icons";
 import { createEditor } from "../features/editor/Editor";
 import { Title } from "./Title";
-import { RoomIcon } from "./User";
+import { RoomIcon, UserStatus } from "./User";
 
 // TODO: redesign
 // TODO: maybe use <svg> for masking
@@ -262,7 +262,9 @@ export const RouteUserInner = (props: { user: UserWithRelationship }) => {
 						<AvatarWithStatus user={props.user} animate={true} />
 					</div>
 					<div class="name-area">
-						<div class="name"> {props.user.name} </div>
+						<UserStatus user={props.user} />
+						<div style="flex:1"></div>
+						<div class="name">{props.user.name}</div>
 					</div>
 				</header>
 

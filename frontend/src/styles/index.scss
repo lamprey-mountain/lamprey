@@ -1027,24 +1027,45 @@ input[type="url"] {
 
 	.header {
 		display: flex;
-		padding: 0 16px;
-		gap: 16px;
+		padding: 0 8px;
+		margin-top: -48px;
 
-		.avatar {
-			height: 80px;
-			width: 80px;
-			margin-top: -48px;
+		& > .avatar-wrap {
+			background-color: $bg-200;
+			border-radius: 8px;
+			padding: 12px;
+
+			& > .avatar {
+				height: 80px;
+				width: 80px;
+			}
 		}
 
 		.name-area {
 			flex: 1;
-			@include truncate;
-		}
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
 
-		.name {
-			font-size: 1.5rem;
-			font-weight: bold;
-			@include truncate;
+			& > .status-message {
+				margin: 0 8px;
+				padding: 8px;
+				background-color: $bg-300;
+				margin-top: 4px;
+				border-radius: 4px;
+				@include truncate;
+			}
+
+			& > .name {
+				display: inline-block;
+				font-size: 1.5rem;
+				font-weight: bold;
+				background-color: $bg-200;
+				border-top-right-radius: 4px;
+				padding: 4px;
+				padding-left: 8px;
+				@include truncate;
+			}
 		}
 	}
 
@@ -2773,12 +2794,13 @@ button.link {
 		grid-area: header;
 		display: flex;
 		padding: 0 16px;
+		margin-top: -48px;
+		overflow: hidden;
 
 		& > .avatar-wrap {
 			background-color: $bg-200;
 			border-radius: 8px;
 			padding: 12px;
-			margin-top: -48px;
 
 			& > .avatar {
 				height: 80px;
@@ -2789,8 +2811,18 @@ button.link {
 		& > .name-area {
 			flex: 1;
 			z-index: 1;
-			margin-top: -16px;
-			@include truncate;
+			display: flex;
+			flex-direction: column;
+			overflow: hidden;
+
+			& > .status-message {
+				margin: 0 8px;
+				padding: 8px;
+				background-color: $bg-300;
+				margin-top: 4px;
+				border-radius: 4px;
+				@include truncate;
+			}
 
 			& > .name {
 				display: inline-block;

@@ -3,6 +3,7 @@ import { useNavigate } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import {
 	createEffect,
+	createMemo,
 	createSignal,
 	For,
 	Match,
@@ -26,7 +27,12 @@ import { getThumbFromId } from "@/media/util";
 import { Copyable } from "@/utils/general";
 import { icDm, icMemberAdd, icMemberRemove, icMore } from "@/utils/icons";
 import { createEditor } from "../features/editor/Editor";
-import { AvatarWithStatus, EditRoles, type UserProps } from "./User";
+import {
+	AvatarWithStatus,
+	EditRoles,
+	type UserProps,
+	UserStatus,
+} from "./User";
 
 export function UserProfile(props: UserProps) {
 	const api = useApi();
@@ -298,8 +304,12 @@ export function UserProfile(props: UserProps) {
 				</menu>
 			</div>
 			<div class="header">
-				<AvatarWithStatus user={props.user} animate={true} />
+				<div class="avatar-wrap">
+					<AvatarWithStatus user={props.user} animate={true} />
+				</div>
 				<div class="name-area">
+					<UserStatus user={props.user} />
+					<div style="flex:1"></div>
 					<div class="name">
 						{name()}
 						<Show when={name() !== props.user.name}>

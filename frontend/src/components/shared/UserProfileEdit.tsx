@@ -4,7 +4,7 @@ import { useNavigate } from "@solidjs/router";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
-import type { PresenceActivity, UserStatus } from "ts-sdk";
+import type { PresenceActivity, UserStatus as UserStatusT } from "ts-sdk";
 import { useApi } from "@/api";
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown.tsx";
@@ -16,7 +16,12 @@ import { useUserPopout } from "@/contexts/user-popout";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getThumbFromId } from "@/media/util";
 import { icCheck, icCopy, icEdit } from "@/utils/icons";
-import { AvatarWithStatus, EditRoles, type UserProps } from "./User";
+import {
+	AvatarWithStatus,
+	EditRoles,
+	type UserProps,
+	UserStatus,
+} from "./User";
 
 // TODO: open user profile in room
 
@@ -159,7 +164,7 @@ export function UserProfileEdit(props: UserProps) {
 		});
 	};
 
-	const setPresenceStatus = (status: UserStatus) => {
+	const setPresenceStatus = (status: UserStatusT) => {
 		api.client.send({
 			type: "Presence",
 			presence: {
@@ -191,8 +196,12 @@ export function UserProfileEdit(props: UserProps) {
 					}}
 				/>
 				<div class="header">
-					<AvatarWithStatus user={props.user} animate={true} />
+					<div class="avatar-wrap">
+						<AvatarWithStatus user={props.user} animate={true} />
+					</div>
 					<div class="name-area">
+						<UserStatus user={props.user} />
+						<div style="flex:1"></div>
 						<div class="name">
 							{name()}
 							<Show when={name() !== props.user.name}>
@@ -340,7 +349,7 @@ export function UserProfileEdit(props: UserProps) {
 }
 
 // TODO: reorganize this
-export const Status = (props: { status: UserStatus }) => {
+export const Status = (props: { status: UserStatusT }) => {
 	return (
 		<svg
 			aria-hidden="true"

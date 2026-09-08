@@ -4,8 +4,21 @@ import {
 	type ReferenceElement,
 	shift,
 } from "@floating-ui/dom";
-import type { Role, RoomMember, ThreadMember, UserWithRelationship } from "sdk";
-import { createEffect, createSignal, For, onCleanup } from "solid-js";
+import type {
+	Role,
+	RoomMember,
+	ThreadMember,
+	User,
+	UserWithRelationship,
+} from "sdk";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	onCleanup,
+	Show,
+} from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi, useRoomMembers } from "@/api";
 import { useCurrentUser } from "@/contexts/currentUser";
@@ -146,3 +159,17 @@ export const EditRoles = (props: {
 export { ChannelIcon, ChannelIconGdm } from "@/avatar/ChannelIcon";
 export { RoomIcon } from "@/avatar/RoomIcon";
 export { Avatar, AvatarWithStatus } from "@/avatar/UserAvatar";
+
+export const UserStatus = (props: { user: User }) => {
+	const statusMessage = createMemo(
+		() => props.user.presence.activities.find((a) => a.type === "Custom")?.text,
+	);
+
+	return (
+		<Show when={statusMessage()}>
+			<div class="status-message" data-tooltip={statusMessage()}>
+				{statusMessage()}
+			</div>
+		</Show>
+	);
+};

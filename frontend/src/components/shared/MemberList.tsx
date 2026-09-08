@@ -14,7 +14,7 @@ import {
 import { useApi } from "@/api";
 import type { MemberListItem } from "@/api/services/MemberListService";
 import { createTooltip } from "@/atoms/Tooltip";
-import { AvatarWithStatus } from "@/components/shared/User";
+import { AvatarWithStatus, UserStatus } from "@/components/shared/User";
 import { useUserPopout } from "@/contexts/mod";
 import { logger } from "@/utils/logger";
 import { MemberListSkeleton } from "./MemberListSkeleton";
@@ -307,15 +307,6 @@ export const MemberList = (props: MemberListProps) => {
 												// TODO: apply .active after clicking a user, while the user popout is open
 												// probably will only apply it when the user popout is opened from the member list
 
-												const statusMessage = createMemo(
-													() =>
-														user()?.presence.activities.find(
-															(a) => a.type === "Custom",
-														)?.text,
-												);
-
-												const tip = createTooltip({ tip: statusMessage });
-
 												return (
 													<button
 														type="button"
@@ -339,16 +330,7 @@ export const MemberList = (props: MemberListProps) => {
 															/>
 															<span class="text">
 																<div class="name">{name()}</div>
-																<Show when={statusMessage()}>
-																	{(t) => (
-																		<div
-																			class="status-message"
-																			ref={tip.content}
-																		>
-																			{t()}
-																		</div>
-																	)}
-																</Show>
+																<UserStatus user={user()} />
 															</span>
 														</div>
 													</button>
