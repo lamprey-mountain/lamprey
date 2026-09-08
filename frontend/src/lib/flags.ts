@@ -54,6 +54,8 @@ export const allFlags = [
 	{ id: "code_color_preview" },
 	{ id: "nsfw_blur" },
 	{ id: "media_sidebar" },
+	{ id: "auth_totp" },
+	{ id: "auth_webauthn" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -87,6 +89,8 @@ const flagsDev: Flag[] = [
 	"channel_info",
 	"nsfw_blur",
 	"media_sidebar",
+	"auth_totp",
+	"auth_webauthn",
 ];
 
 const flagsProd: Flag[] = [

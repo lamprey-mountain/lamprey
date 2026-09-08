@@ -10,20 +10,23 @@ import {
 import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { useModals } from "@/contexts/modal";
+import { flags } from "@/lib/flags";
 import { Modal } from "@/modals/mod";
 
 export function Authentication(props: VoidProps<{ user: User }>) {
 	const [, modalctl] = useModals();
-	const api2 = useApi();
+	const api = useApi();
 
 	const sudoEnter = async () => {
-		await api2.client.http.POST("/api/v1/auth/sudo/upgrade", {});
+		await api.client.http.POST("/api/v1/auth/sudo/upgrade", {});
 	};
 
 	// TODO: make enter sudo button exit sudo if you're in sudo mode
 	const sudoExit = async () => {
-		await api2.client.http.DELETE("/api/v1/auth/sudo");
+		await api.client.http.DELETE("/api/v1/auth/sudo");
 	};
+
+	const isSudo = () => api.session()?.status === "Sudo";
 
 	return (
 		<div class="user-settings-auth">
@@ -35,25 +38,43 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 			<h3>oauth</h3>
 			<Oauth />
 			<br />
-			<h3>totp</h3>
-			<div>todo</div>
-			<br />
-			<h3>webauthn</h3>
-			<div>todo</div>
-			<br />
+			<Show when={flags.has("auth_totp")}>
+				<h3>totp</h3>
+				<div>todo</div>
+				<br />
+			</Show>
+			<Show when={flags.has("auth_webauthn")}>
+				<h3>webauthn</h3>
+				<div>todo</div>
+				<br />
+			</Show>
 			<div class="danger-zone">
 				<h3 class="label">danger zone</h3>
 				<div class="item">
-					<div class="info">
-						<div class="title">enter sudo mode</div>
-						<div class="description">
-							sudo mode allows you to take dangerous actions on your account. in
-							the future, sudo mode will be prompted for automatically.
+					<Show when={!isSudo()}>
+						<div class="info">
+							<div class="title">enter sudo mode</div>
+							<div class="description">
+								sudo mode allows you to take dangerous actions on your account.
+								in the future, sudo mode will be prompted for automatically.
+							</div>
 						</div>
-					</div>
-					<button type="button" class="button danger" onClick={sudoEnter}>
-						enter sudo mode
-					</button>
+						<button type="button" class="button danger" onClick={sudoEnter}>
+							enter sudo mode
+						</button>
+					</Show>
+					<Show when={isSudo()}>
+						<div class="info">
+							<div class="title">exit sudo mode</div>
+							<div class="description">
+								sudo mode allows you to take dangerous actions on your account.
+								in the future, sudo mode will be prompted for automatically.
+							</div>
+						</div>
+						<button type="button" class="button danger" onClick={sudoExit}>
+							exit sudo mode
+						</button>
+					</Show>
 				</div>
 				<div class="item">
 					<div class="info">
@@ -63,6 +84,8 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 					<button
 						type="button"
 						class="button danger"
+						classList={{ disabled: isSudo() }}
+						data-tooltip={isSudo() ? "Requires sudo" : undefined}
 						onClick={() => {
 							modalctl.open({ type: "reset_password" });
 						}}
@@ -72,12 +95,14 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 				</div>
 				<div class="item">
 					<div class="info">
-						<div class="title">disable account</div>
+						<div class="title">disable account (TODO)</div>
 						<div class="description">this will disable your account</div>
 					</div>
 					<button
 						type="button"
 						class="button danger"
+						classList={{ disabled: isSudo() }}
+						data-tooltip={isSudo() ? "Requires sudo" : undefined}
 						onClick={() => alert("todo")}
 					>
 						disable
@@ -85,12 +110,14 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 				</div>
 				<div class="item">
 					<div class="info">
-						<div class="title">delete account</div>
+						<div class="title">delete account (TODO)</div>
 						<div class="description">this will delete your account</div>
 					</div>
 					<button
 						type="button"
 						class="button danger"
+						classList={{ disabled: isSudo() }}
+						data-tooltip={isSudo() ? "Requires sudo" : undefined}
 						onClick={() => alert("todo")}
 					>
 						self destruct
@@ -102,24 +129,21 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 }
 
 function Email(_props: VoidProps<{ user: User }>) {
-	const api2 = useApi();
+	const api = useApi();
 	const [, modalctl] = useModals();
 
 	// TODO: use props.user.emails when sync events are implemented
 	const [emails, { refetch }] = createResource(async () => {
-		const { data } = await api2.client.http.GET(
-			"/api/v1/user/{user_id}/email",
-			{
-				params: { path: { user_id: "@self" } },
-			},
-		);
+		const { data } = await api.client.http.GET("/api/v1/user/{user_id}/email", {
+			params: { path: { user_id: "@self" } },
+		});
 		return data;
 	});
 
 	function addEmail() {
 		modalctl.prompt("email?", (email: string | null) => {
 			if (!email) return;
-			api2.client.http
+			api.client.http
 				.PUT("/api/v1/user/{user_id}/email/{addr}", {
 					params: { path: { user_id: "@self", addr: email } },
 				})
@@ -130,7 +154,7 @@ function Email(_props: VoidProps<{ user: User }>) {
 	function deleteEmail(email: string) {
 		modalctl.confirm("delete email?", (conf: boolean) => {
 			if (!conf) return;
-			api2.client.http
+			api.client.http
 				.DELETE("/api/v1/user/{user_id}/email/{addr}", {
 					params: { path: { user_id: "@self", addr: email } },
 				})
@@ -139,7 +163,7 @@ function Email(_props: VoidProps<{ user: User }>) {
 	}
 
 	function resendVerification(email: string) {
-		api2.client.http.POST(
+		api.client.http.POST(
 			"/api/v1/user/{user_id}/email/{addr}/resend-verification",
 			{
 				params: { path: { user_id: "@self", addr: email } },
@@ -192,12 +216,12 @@ function Email(_props: VoidProps<{ user: User }>) {
 }
 
 function Oauth() {
-	const api2 = useApi();
+	const api = useApi();
 
 	// TODO: dont use debug route for this
 	// add something to sync i guess
 	const [oauthProviders] = createResource(async () => {
-		const { data } = await api2.client.http.GET("/api/v1/debug/info");
+		const { data } = await api.client.http.GET("/api/v1/debug/info");
 		return data &&
 			"features" in data &&
 			data.features &&
@@ -210,12 +234,12 @@ function Oauth() {
 
 	const [enabledOauthProviders, { refetch: refetchOauthProviders }] =
 		createResource(async () => {
-			const { data } = await api2.client.http.GET("/api/v1/auth/state", {});
+			const { data } = await api.client.http.GET("/api/v1/auth/state", {});
 			return (data as any)?.oauth_providers ?? [];
 		});
 
 	const connectOauth = async (id: string) => {
-		const url = await api2.auth.oauthUrl(id);
+		const url = await api.auth.oauthUrl(id);
 		const popup = globalThis.open(url, "oauth_popup");
 		// NOTE: do i want to open as a window?
 		// const popup = globalThis.open(url, "oauth_popup", "width=600,height=800");
@@ -251,11 +275,13 @@ function Oauth() {
 	};
 
 	const disconnectOauth = async (id: string) => {
-		await api2.client.http.DELETE("/api/v1/auth/oauth/{provider}", {
+		await api.client.http.DELETE("/api/v1/auth/oauth/{provider}", {
 			params: { path: { provider: id } },
 		});
 		refetchOauthProviders();
 	};
+
+	const isSudo = () => api.session()?.status === "Sudo";
 
 	return (
 		<div class="oauth">
@@ -263,6 +289,8 @@ function Oauth() {
 				{(provider) => {
 					const connected = () =>
 						enabledOauthProviders()?.includes(provider.id);
+					const requiresSudo = () => connected() && !isSudo();
+
 					return (
 						<div class="provider">
 							<div style="flex:1">{provider.name}</div>
@@ -274,7 +302,8 @@ function Oauth() {
 										? disconnectOauth(provider.id)
 										: connectOauth(provider.id)
 								}
-								classList={{ danger: connected() }}
+								classList={{ danger: connected(), disabled: requiresSudo() }}
+								data-tooltip={requiresSudo() ? "Requires sudo" : undefined}
 							>
 								{connected() ? "disconnect" : "connect"}
 							</button>
