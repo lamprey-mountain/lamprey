@@ -121,20 +121,19 @@ impl ServiceRooms {
     }
 
     /// get a handle to a room
-    pub fn load2(&self, room_id: RoomId) -> RoomHandle {
+    pub fn load(&self, room_id: RoomId) -> RoomHandle {
         self.actors.get_with(room_id, || {
             RoomActor::spawn_room(room_id, self.globals.clone())
         })
     }
 
     /// load a room snapshot, ensuring members are loaded if requested.
-    #[deprecated = "use load2"]
-    pub async fn load_room(
+    pub async fn load_snapshot(
         &self,
         room_id: RoomId,
         ensure_members: bool,
     ) -> Result<Arc<RoomSnapshot>> {
-        let handle = self.load2(room_id);
+        let handle = self.load(room_id);
         handle.ready(ensure_members).await?;
         Ok(handle.snapshot())
     }
@@ -175,7 +174,7 @@ impl ServiceRooms {
 
         let mut out = vec![];
         for room_id in room_ids {
-            out.push(self.load_room(room_id, false).await);
+            out.push(self.load_snapshot(room_id, false).await);
         }
         out
     }
@@ -204,7 +203,7 @@ impl ServiceRooms {
 
     // TODO: make this not require writing room
     pub async fn get(&self, room_id: RoomId, user_id: Option<UserId>) -> Result<Room> {
-        let snapshot = self.load_room(room_id, false).await?;
+        let snapshot = self.load_snapshot(room_id, false).await?;
         let mut room = (*snapshot.get_data().unwrap().room).clone();
 
         if let Some(user_id) = user_id {
@@ -225,7 +224,7 @@ impl ServiceRooms {
         let mut rooms = Vec::with_capacity(room_ids.len());
 
         for room_id in room_ids {
-            let snapshot = self.load_room(*room_id, false).await?;
+            let snapshot = self.load_snapshot(*room_id, false).await?;
             let room = (*snapshot.get_data().unwrap().room).clone();
             rooms.push(room);
         }
@@ -459,7 +458,7 @@ impl ServiceRooms {
             .await?;
         end.preferences = Some(preferences);
 
-        let snapshot = self.load_room(room_id, false).await?;
+        let snapshot = self.load_snapshot(room_id, false).await?;
         let snap = snapshot.get_data().unwrap();
         end.online_count = snap.room.online_count;
         end.member_count = snap.room.member_count;

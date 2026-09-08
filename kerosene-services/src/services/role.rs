@@ -326,7 +326,7 @@ impl ServiceRoles {
             .state
             .services()
             .rooms
-            .load_room(room_id, false)
+            .load_snapshot(room_id, false)
             .await?;
         snapshot
             .get_roles()

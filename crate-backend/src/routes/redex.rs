@@ -45,7 +45,7 @@ async fn redex_create(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     let al = auth.audit_log(room_id);
@@ -149,7 +149,7 @@ async fn redex_list(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     srv.perms
@@ -185,7 +185,7 @@ async fn redex_get(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     srv.perms
@@ -227,7 +227,7 @@ async fn redex_delete(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     let al = auth.audit_log(room_id);
@@ -276,7 +276,7 @@ async fn redex_content_update(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     let al = auth.audit_log(room_id);
@@ -381,7 +381,7 @@ async fn redex_trigger(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     srv.perms
@@ -438,7 +438,7 @@ async fn redex_version_list(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     srv.perms
@@ -474,7 +474,7 @@ async fn redex_version_get(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     srv.perms
@@ -512,7 +512,7 @@ async fn redex_version_delete(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     let al = auth.audit_log(room_id);
@@ -565,7 +565,7 @@ async fn redex_version_restore(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     let _al = auth.audit_log(room_id);
@@ -596,7 +596,7 @@ async fn redex_depends(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     srv.perms
@@ -628,7 +628,7 @@ async fn redex_depends_update(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     let _al = auth.audit_log(room_id);
@@ -655,7 +655,7 @@ async fn redex_eval_list(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     let runs = s
@@ -685,7 +685,7 @@ async fn redex_eval_get(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     let run = s
@@ -717,7 +717,7 @@ async fn redex_eval_stop(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     srv.perms
@@ -753,7 +753,7 @@ async fn redex_eval_log(
         .room_id
         .ok_or(Error::BadStatic("channel is not in a room"))?;
 
-    let room = srv.rooms.load_room(room_id, false).await?;
+    let room = srv.rooms.load_snapshot(room_id, false).await?;
     room.ensure_feature(&RoomFeature::Scripts)?;
 
     srv.perms

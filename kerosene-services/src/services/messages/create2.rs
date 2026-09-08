@@ -495,7 +495,7 @@ impl ServiceMessages {
 
         let users_and_roles = async {
             if let Some(room_id) = room_id {
-                let room_handle = srv.rooms.load2(room_id);
+                let room_handle = srv.rooms.load(room_id);
                 let room = room_handle.ready(true).await?;
 
                 let users = srv

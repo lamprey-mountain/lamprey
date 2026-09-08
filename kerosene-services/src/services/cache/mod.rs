@@ -129,7 +129,7 @@ impl ServiceCache {
         ensure_members: bool,
     ) -> BoxFuture<'_, Result<Arc<RoomSnapshot>>> {
         let srv = self.state.services();
-        Box::pin(async move { srv.rooms.load_room(room_id, ensure_members).await })
+        Box::pin(async move { srv.rooms.load_snapshot(room_id, ensure_members).await })
     }
 
     /// mark a room as unavailable
