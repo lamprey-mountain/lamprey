@@ -124,35 +124,7 @@ pub mod user_room_list {
     }
 }
 
-/// User audit logs
-#[endpoint(
-    get,
-    path = "/user/{user_id}/audit-logs",
-    tags = ["user"],
-    response(OK, body = AuditLogPaginationResponse, description = "success"),
-)]
-pub mod user_audit_logs {
-    use crate::v1::types::{
-        AuditLogEntryId, AuditLogFilter, AuditLogPaginationResponse, PaginationQuery,
-        misc::UserIdReq,
-    };
-
-    pub struct Request {
-        #[path]
-        pub user_id: UserIdReq,
-
-        #[query]
-        pub pagination: PaginationQuery<AuditLogEntryId>,
-
-        #[query]
-        pub filter: AuditLogFilter,
-    }
-
-    pub struct Response {
-        #[json]
-        pub logs: AuditLogPaginationResponse,
-    }
-}
+pub use crate::v1::routes::audit_log::user_audit_logs;
 
 /// Guest create
 ///

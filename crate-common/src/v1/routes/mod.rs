@@ -8,6 +8,7 @@ use serde::de::DeserializeOwned;
 pub mod ack;
 pub mod admin;
 pub mod application;
+pub mod audit_log;
 pub mod auth;
 pub mod automod;
 pub mod calendar;
@@ -55,6 +56,7 @@ pub mod media_proxy;
 
 pub use ack::*;
 pub use application::*;
+pub use audit_log::*;
 pub use auth::*;
 pub use automod::*;
 pub use calendar::*;

@@ -167,36 +167,7 @@ pub mod room_undelete {
     pub struct Response {}
 }
 
-/// Room audit logs
-#[endpoint(
-    get,
-    path = "/room/{room_id}/audit-logs",
-    tags = ["room"],
-    scopes = [Rooms],
-    permissions = [AuditLogView],
-    response(OK, body = AuditLogPaginationResponse, description = "fetch audit logs success"),
-)]
-pub mod room_audit_logs {
-    use crate::v1::types::{
-        AuditLogEntryId, AuditLogFilter, AuditLogPaginationResponse, PaginationQuery, RoomId,
-    };
-
-    pub struct Request {
-        #[path]
-        pub room_id: RoomId,
-
-        #[query]
-        pub pagination: PaginationQuery<AuditLogEntryId>,
-
-        #[query]
-        pub filter: AuditLogFilter,
-    }
-
-    pub struct Response {
-        #[json]
-        pub logs: AuditLogPaginationResponse,
-    }
-}
+pub use crate::v1::routes::audit_log::room_audit_logs;
 
 /// Room ack
 ///
