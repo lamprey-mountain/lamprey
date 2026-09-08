@@ -267,7 +267,10 @@ pub struct ConfigMedia {
     #[serde(default = "default_cache_emoji")]
     pub cache_emoji: u64,
 
-    #[serde(default = "default_thumb_sizes")]
+    #[serde(
+        default = "default_thumb_sizes",
+        deserialize_with = "deserialize_sorted"
+    )]
     pub thumb_sizes: Vec<u32>,
 
     /// the maximum size of media in bytes (default 8MiB)
@@ -293,6 +296,18 @@ fn default_thumb_sizes() -> Vec<u32> {
 
 fn default_max_media_size() -> u64 {
     8 * 1024 * 1024 // 8 MiB
+}
+
+// TODO: dedupliate with crate-common/src/v1/types/util.rs
+fn deserialize_sorted<'de, D, T>(deserializer: D) -> core::result::Result<Vec<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Ord,
+{
+    Vec::<T>::deserialize(deserializer).map(|mut v| {
+        v.sort();
+        v
+    })
 }
 
 impl Default for ConfigMedia {

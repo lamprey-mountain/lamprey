@@ -35,9 +35,19 @@ async fn thumb_response(
     let media = s.ensure_media_ready(media_id, media_query.wait).await?;
     let animate = query.animate;
     if let Some(size) = query.size {
-        if !s.config_media().thumb_sizes.contains(&size) {
-            return Err(Error::BadRequest);
-        }
+        let thumb_sizes = &s.config_media().thumb_sizes;
+        let size = if !thumb_sizes.contains(&size) {
+            thumb_sizes
+                .iter()
+                .find(|&&s| s >= size)
+                .copied()
+                .or_else(|| thumb_sizes.last().copied())
+                // thumbnail generation is disabled
+                // TODO: better error message
+                .ok_or(Error::BadRequest)?
+        } else {
+            size
+        };
 
         let pre_header_info = build_headers(
             &headers,
