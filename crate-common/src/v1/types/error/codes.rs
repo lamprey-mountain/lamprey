@@ -769,4 +769,8 @@ pub enum ErrorCode {
     /// missing or invalid header
     #[error("missing or invalid header")]
     BadHeader,
+
+    /// search query syntax error
+    #[error("search query syntax error")]
+    SearchQuerySyntax,
 }

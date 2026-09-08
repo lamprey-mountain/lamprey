@@ -1,7 +1,8 @@
+use kerosene_core::error::{ApiError, ErrorCode};
 use tantivy::{
     DocAddress, Score,
     collector::{Count, TopDocs},
-    query::QueryParser,
+    query::{Query, QueryParser},
 };
 
 use common::v1::types::{
@@ -121,21 +122,40 @@ impl ContentSearcher {
         Self { searcher }
     }
 
+    fn parse_query(
+        &self,
+        fields: Vec<tantivy::schema::Field>,
+        q_str: &str,
+    ) -> Result<Box<dyn Query>> {
+        self.parse_query_with(fields, q_str, |_| {})
+    }
+
+    fn parse_query_with<F>(
+        &self,
+        fields: Vec<tantivy::schema::Field>,
+        q_str: &str,
+        configure: F,
+    ) -> Result<Box<dyn Query>>
+    where
+        F: FnOnce(&mut QueryParser),
+    {
+        let mut query_parser = QueryParser::for_index(self.searcher.index(), fields);
+        configure(&mut query_parser);
+        let (parsed_query, errs) = query_parser.parse_query_lenient(q_str);
+        if !errs.is_empty() {
+            let err_strs: Vec<_> = errs.into_iter().map(|e| e.to_string()).collect();
+            let message = format!("Error(s) while parsing query:\n\n{}", err_strs.join("\n"));
+            return Err(ApiError::with_message(ErrorCode::SearchQuerySyntax, message).into());
+        }
+        Ok(parsed_query)
+    }
+
     pub async fn search_messages(&self, msg: TantivySearchMessages) -> Result<TantivyMessages> {
         let mut q = BqBuilder::new();
 
         if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
-                let query_parser = QueryParser::for_index(
-                    self.searcher.index(),
-                    vec![SCHEMA.content, SCHEMA.name],
-                );
-
-                let parsed_query = query_parser
-                    .parse_query(q_str)
-                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
-
-                q.must(parsed_query);
+                q.must(self.parse_query(vec![SCHEMA.content, SCHEMA.name], q_str)?);
             }
         }
 
@@ -188,17 +208,13 @@ impl ContentSearcher {
         // Text query on name and content (description)
         if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
-                let mut query_parser = QueryParser::for_index(
-                    self.searcher.index(),
+                q.must(self.parse_query_with(
                     vec![SCHEMA.content, SCHEMA.name],
-                );
-                query_parser.set_field_boost(SCHEMA.name, 2.0);
-
-                let parsed_query = query_parser
-                    .parse_query(q_str)
-                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
-
-                q.must(parsed_query);
+                    q_str,
+                    |parser| {
+                        parser.set_field_boost(SCHEMA.name, 2.0);
+                    },
+                )?);
             }
         }
 
@@ -298,13 +314,7 @@ impl ContentSearcher {
 
         if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
-                let query_parser = QueryParser::for_index(self.searcher.index(), vec![SCHEMA.name]);
-
-                let parsed_query = query_parser
-                    .parse_query(q_str)
-                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
-
-                q.must(parsed_query);
+                q.must(self.parse_query(vec![SCHEMA.name], q_str)?);
             }
         }
 
@@ -384,13 +394,7 @@ impl ContentSearcher {
         // Text query on name
         if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
-                let query_parser = QueryParser::for_index(self.searcher.index(), vec![SCHEMA.name]);
-
-                let parsed_query = query_parser
-                    .parse_query(q_str)
-                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
-
-                q.must(parsed_query);
+                q.must(self.parse_query(vec![SCHEMA.name], q_str)?);
             }
         }
 
@@ -471,16 +475,7 @@ impl ContentSearcher {
         // Text query on name/content
         if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
-                let query_parser = QueryParser::for_index(
-                    self.searcher.index(),
-                    vec![SCHEMA.name, SCHEMA.content],
-                );
-
-                let parsed_query = query_parser
-                    .parse_query(q_str)
-                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
-
-                q.must(parsed_query);
+                q.must(self.parse_query(vec![SCHEMA.name, SCHEMA.content], q_str)?);
             }
         }
 
@@ -551,13 +546,7 @@ impl ContentSearcher {
         // Text query on name
         if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
-                let query_parser = QueryParser::for_index(self.searcher.index(), vec![SCHEMA.name]);
-
-                let parsed_query = query_parser
-                    .parse_query(q_str)
-                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
-
-                q.must(parsed_query);
+                q.must(self.parse_query(vec![SCHEMA.name], q_str)?);
             }
         }
 
@@ -604,16 +593,7 @@ impl ContentSearcher {
 
         if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
-                let query_parser = QueryParser::for_index(
-                    self.searcher.index(),
-                    vec![SCHEMA.id, SCHEMA.name, SCHEMA.content],
-                );
-
-                let parsed_query = query_parser
-                    .parse_query(q_str)
-                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
-
-                q.must(parsed_query);
+                q.must(self.parse_query(vec![SCHEMA.id, SCHEMA.name, SCHEMA.content], q_str)?);
             }
         }
 
@@ -651,16 +631,7 @@ impl ContentSearcher {
 
         if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
-                let query_parser = QueryParser::for_index(
-                    self.searcher.index(),
-                    vec![SCHEMA.id, SCHEMA.name, SCHEMA.content],
-                );
-
-                let parsed_query = query_parser
-                    .parse_query(q_str)
-                    .map_err(|e| Error::Internal(format!("Search syntax error: {e}")))?;
-
-                q.must(parsed_query);
+                q.must(self.parse_query(vec![SCHEMA.id, SCHEMA.name, SCHEMA.content], q_str)?);
             }
         }
 
