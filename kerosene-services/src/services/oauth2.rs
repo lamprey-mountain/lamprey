@@ -183,6 +183,7 @@ impl ServiceOauth {
             _ => self.state.config().user_agent_header_value()?,
         };
 
+        let client_secret = p.client_secret.load()?.to_string();
         let (use_basic_auth, body) = match s.provider.as_str() {
             "github" => (
                 false,
@@ -191,7 +192,7 @@ impl ServiceOauth {
                     code,
                     redirect_uri: redirect_uri.into(),
                     client_id: Some(p.client_id.clone()),
-                    client_secret: Some(p.client_secret.load()?.to_string()),
+                    client_secret: Some(client_secret.clone()),
                 },
             ),
             _ => (
@@ -213,7 +214,7 @@ impl ServiceOauth {
             .form(&body);
 
         let req = if use_basic_auth {
-            req.basic_auth(&p.client_id, Some(&p.client_secret))
+            req.basic_auth(&p.client_id, Some(&client_secret))
         } else {
             req
         };
@@ -237,9 +238,10 @@ impl ServiceOauth {
             token_type_hint: "access_token".to_string(),
             token,
         };
+        let client_secret = p.client_secret.load()?.to_string();
         client
             .post(&p.revocation_url)
-            .basic_auth(&p.client_id, Some(&p.client_secret))
+            .basic_auth(&p.client_id, Some(&client_secret))
             .form(&body)
             .send()
             .await?

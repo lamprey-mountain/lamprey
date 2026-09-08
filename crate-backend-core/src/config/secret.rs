@@ -20,7 +20,7 @@ pub struct Secret {
 }
 
 /// the source to load a secret from
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum SecretSource {
     /// a secret that is included directly in the config file. avoid in production.
@@ -48,9 +48,9 @@ impl Serialize for Secret {
     }
 }
 
-impl fmt::Display for Secret {
+impl fmt::Debug for SecretSource {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.source {
+        match &self {
             SecretSource::Inline(_) => write!(f, "<secret inline>"),
             SecretSource::File { file_path } => write!(f, "<secret file={}>", file_path.display()),
             SecretSource::Env { env_var } => write!(f, "<secret env={env_var}>"),
@@ -60,8 +60,7 @@ impl fmt::Display for Secret {
 
 impl fmt::Debug for Secret {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // reuse Display so the secret value is never accidentally exposed via {:?}
-        fmt::Display::fmt(self, f)
+        fmt::Debug::fmt(&self.source, f)
     }
 }
 

@@ -32,7 +32,8 @@ async fn internal_rpc(
         .ok_or(Error::MissingAuth)?
         .to_str()?;
 
-    if auth != format!("Server {}", v.token) {
+    let token = v.token.load()?;
+    if auth != format!("Server {}", token) {
         return Err(Error::MissingAuth);
     }
 
