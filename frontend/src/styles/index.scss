@@ -2073,6 +2073,10 @@ body.resizing {
 		gap: 6px;
 		max-width: 3em;
 		@include truncate;
+
+		&:hover {
+			background: $bg-300;
+		}
 	}
 
 	.reaction.self {
@@ -2091,6 +2095,7 @@ body.resizing {
 		width: 24px;
 
 		&.prompt {
+			display: flex;
 			cursor: pointer;
 			border: solid $sep-400 1px;
 			background: $bg-200;
@@ -2099,6 +2104,10 @@ body.resizing {
 			padding: 2px 4px;
 			gap: 4px;
 			width: auto;
+
+			&:hover {
+				background: $bg-300;
+			}
 		}
 	}
 
