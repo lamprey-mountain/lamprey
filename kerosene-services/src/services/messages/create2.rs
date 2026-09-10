@@ -5,7 +5,7 @@ use common::{
         Channel, EmbedCreate, Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser,
         Message, MessageAttachment, MessageAttachmentCreate, MessageAttachmentCreateType,
         MessageAttachmentType, MessageCreate, MessageDefaultMarkdown, MessageInteraction,
-        MessagePatch, MessageType, Permission, User,
+        MessagePatch, MessageSync, MessageType, MessageVersion, Permission, User,
         components::{self, Component, ComponentType, Components},
         emoji::EmojiOwner,
         util::Time,
@@ -25,6 +25,7 @@ use lamprey_backend_data_postgres::{DbMessageAttachment, MediaLinkType};
 use validator::Validate;
 
 use crate::{
+    globals::messaging::Broadcast,
     prelude::*,
     services::{
         automod::AutomodContext,
@@ -193,6 +194,53 @@ fn calculate_requirements(create: &Create, channel: &Channel) -> Requirements {
     re
 }
 
+fn message_to_db(m: &Message) -> DbMessageCreate {
+    let (attachments, embeds, components, message_type) = match &m.latest_version.message_type {
+        MessageType::DefaultMarkdown(md) | MessageType::ThreadInitial(md) => (
+            md.attachments
+                .iter()
+                .map(|a| match &a.ty {
+                    MessageAttachmentType::Media { media } => DbMessageAttachment {
+                        media_id: media.id,
+                        spoiler: a.spoiler,
+                    },
+                    // MessageAttachmentType::Forward { .. } => todo!("handle forward"),
+                })
+                .collect(),
+            md.embeds.clone(),
+            md.components.clone().into_thin().inner,
+            m.latest_version.message_type.clone(),
+        ),
+        _ => (
+            vec![],
+            vec![],
+            vec![],
+            m.latest_version.message_type.clone(),
+        ),
+    };
+
+    DbMessageCreate {
+        id: Some(m.id),
+        channel_id: m.channel_id,
+        attachments,
+        author_id: m.author_id,
+        embeds,
+        components,
+        message_type,
+        created_at: Some(m.created_at.into()),
+        removed_at: m.removed_at.map(|t| t.into()),
+        mentions: m.latest_version.mentions.clone(),
+        flume: m.flume.as_ref().and_then(|a| serde_json::to_value(a).ok()),
+        interaction: m
+            .interaction
+            .as_ref()
+            .and_then(|a| serde_json::to_value(a).ok()),
+
+        // NOTE: ephemeral messages are never returned in the db?
+        ephemeral: m.ephemeral,
+    }
+}
+
 impl ServiceMessages {
     pub async fn create2(&self, create: Create) -> Result<Message> {
         let srv = self.globals.services();
@@ -213,9 +261,12 @@ impl ServiceMessages {
             user.id
         };
 
-        // <A: Auth5> auth: &mut A,
-        // TODO: somehow enforce requirements?
-        // srv.perms.enforce(re, auth).await?
+        // let perms = srv
+        //     .perms
+        //     .for_channel3(Some(auth_user_id), channel.id)
+        //     .await?;
+        // TODO: use this instead
+        // let srv.perms.enforce(...).await?;
 
         let removed_at = async {
             let Some(room_id) = channel.room_id else {
@@ -393,39 +444,26 @@ impl ServiceMessages {
             }
         }
 
-        if !ephemeral {
-            // insert message
-            // PERF: avoid cloning, maybe move out of create
-            // PERF: after media validation, have media registry store media ids instead of media so i can move embeds and components into DbMessageCreate
-            txn.message_create(DbMessageCreate {
-                id: Some(create.id),
-                channel_id: channel.id,
-                attachments: attachments
-                    .iter()
-                    .map(|a| match &a.ty {
-                        MessageAttachmentType::Media { media } => DbMessageAttachment {
-                            media_id: media.id,
-                            spoiler: a.spoiler,
-                        },
-                    })
-                    .collect(),
-                author_id: create.user_id,
-                embeds: embeds.clone(),
-                components: components
-                    .clone()
-                    .map(|(c, _)| c.into_thin().inner)
-                    .unwrap_or_default(),
+        // construct message
+        let message = Message {
+            id: create.id,
+            channel_id: channel.id,
+            room_id: channel.room_id,
+            latest_version: MessageVersion {
+                version_id: (*create.id).into(),
+                author_id: None,
                 message_type: match &*create.payload {
                     CreateType::Default(m) | CreateType::ThreadInitial(m) => {
                         let inner = MessageDefaultMarkdown {
                             content: content.as_ref().map(|(s, _)| s.to_owned()),
+                            attachments: attachments.clone(),
                             metadata: m.metadata.clone(),
                             reply_id: m.reply_id,
-
-                            // these fields are handled in DbMessageCreate and ignored here
-                            attachments: vec![],
-                            embeds: vec![],
-                            components: Components::default(),
+                            embeds: embeds.clone(),
+                            components: components
+                                .as_ref()
+                                .map(|(c, _)| c.clone())
+                                .unwrap_or_default(),
                         };
                         if matches!(*create.payload, CreateType::ThreadInitial(_)) {
                             MessageType::ThreadInitial(inner)
@@ -435,20 +473,30 @@ impl ServiceMessages {
                     }
                     CreateType::Custom(m) => m.clone(),
                 },
-                created_at: create.timestamp.map(|t| t.into()),
-                removed_at: removed_at.map(|t| t.into()),
-                flume: None,
                 mentions: content
                     .as_ref()
                     .map(|(_, m)| m.to_owned())
                     .unwrap_or_default(),
-                interaction: create
-                    .interaction
-                    .clone()
-                    .map(|i| serde_json::to_value(i).unwrap()),
-                ephemeral: false,
-            })
-            .await?;
+                created_at: create.timestamp.unwrap_or_else(Time::now_utc),
+                deleted_at: None,
+            },
+            pinned: None,
+            reactions: Default::default(),
+            deleted_at: None,
+            removed_at,
+            created_at: create.timestamp.unwrap_or_else(Time::now_utc),
+            author_id: create.user_id,
+            thread: None,
+            flume: None,
+            interaction: create.interaction.clone(),
+            ephemeral,
+        };
+
+        if !ephemeral {
+            // insert message
+            // PERF: avoid cloning, maybe move out of create
+            // PERF: after media validation, have media registry store media ids instead of media so i can move embeds and components into DbMessageCreate
+            txn.message_create(message_to_db(&message)).await?;
 
             // insert message links
             for media in registry.media() {
@@ -470,14 +518,92 @@ impl ServiceMessages {
         txn.commit().await?;
 
         // 4. finalize
-        // .update_last_message_ids(
-        // self.ensure_thread_unarchived(&mut op).await?;
-        // self.ensure_thread_membership(&mut op).await?;
-        // self.spawn_unfurler_tasks(&mut op).await?;
-        // self.spawn_notification_tasks(&mut op).await?;
-        // broadcast sync event
 
-        todo!()
+        let update_last_message_ids =
+            srv.channels
+                .update_last_message_ids(channel.id, create.id, (*create.id).into());
+
+        let unarchive = async {
+            if channel.is_archived() {
+                // FIXME: unarchive channel
+                // srv.channels
+                //     .update(
+                //         auth,
+                //         op.channel.id,
+                //         ChannelPatch {
+                //             archived: Some(false),
+                //             ..Default::default()
+                //         },
+                //     )
+                //     .await?;
+            }
+        };
+
+        let ensure_member = async {
+            if channel.is_thread() {
+                // FIXME: ensure thread membership
+
+                // let mut txn = self.globals.begin().await?;
+                // if txn.thread_member_get(thread_id, user_id).await.is_err() {
+                //     txn.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
+                //         .await?;
+
+                //     // NOTE: i need to commit this to see the update in next get
+                //     txn.commit().await?;
+
+                //     srv.channels.invalidate(thread_id).await; // NOTE: do i need this? presumably only member count is dirty
+
+                //     let thread_member = self
+                //         .globals
+                //         .begin_read()
+                //         .await?
+                //         .thread_member_get(thread_id, user_id)
+                //         .await?;
+                //     let msg = MessageSync::ThreadMemberUpsert {
+                //         room_id: op.channel.room_id,
+                //         thread_id,
+                //         added: vec![thread_member],
+                //         removed: vec![],
+                //     };
+                //     self.globals
+                //         .messaging()
+                //         .broadcast_channel(thread_id, msg)
+                //         .await?;
+                // } else {
+                //     txn.commit().await?;
+                // }
+            }
+        };
+
+        let unfurl = async {
+            // TODO: inline spawn_unfurler_tasks
+        };
+
+        let send_notifs = srv.notifications.process_message(&channel, &message);
+
+        let broadcast_sync = async {
+            let sync = MessageSync::MessageCreate {
+                message: message.clone(),
+            };
+            let broadcast = Broadcast::sync(sync).with_option_nonce(create.nonce.as_deref());
+
+            self.globals
+                .messaging()
+                .broadcast_channel(channel.id, broadcast)
+                .await
+        };
+
+        // TODO: spawn these tasks in the background
+        let _ = futures::join!(
+            update_last_message_ids,
+            unarchive,
+            ensure_member,
+            unfurl,
+            send_notifs,
+            broadcast_sync
+        );
+
+        Ok(message)
     }
 
     pub async fn edit2(&self, edit: Edit) -> Result<Message> {

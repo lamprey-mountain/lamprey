@@ -1328,7 +1328,7 @@ impl ServiceMessages {
         let channel = op.channel.clone();
         let message = op.stage.message.clone();
         tokio::spawn(async move {
-            srv.notifications.process_message(channel, message).await;
+            srv.notifications.process_message(&channel, &message).await;
         });
         Ok(())
     }

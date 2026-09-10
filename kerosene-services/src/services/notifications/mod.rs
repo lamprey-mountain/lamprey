@@ -100,7 +100,7 @@ impl ServiceNotifications {
 
     // NOTE: should ServiceNotifications *really* be in charge of inserting thread members?
     // TODO: fn process_message_inner -> Result, make process_message do logging
-    pub async fn process_message(&self, channel: Channel, message: Message) {
+    pub async fn process_message(&self, channel: &Channel, message: &Message) {
         //  ephemeral messages dont create notifications (or insert thread members)
         // TODO: move this logic into calculator
         if message.ephemeral {
@@ -108,7 +108,7 @@ impl ServiceNotifications {
         }
 
         let calc =
-            match calculator::Calculator::load_for_message(self.state.clone(), &channel, &message)
+            match calculator::Calculator::load_for_message(self.state.clone(), channel, message)
                 .await
             {
                 Ok(c) => c,
@@ -120,7 +120,7 @@ impl ServiceNotifications {
 
         // PERF: don't get_mentioned_users twice (Calculator::load_for_message also calls this)
         let mentioned_users = self
-            .get_mentioned_users(&channel, &message)
+            .get_mentioned_users(channel, message)
             .await
             .unwrap_or_default(); // TODO: better error logging
 

@@ -446,7 +446,7 @@ impl ServicePermissions {
     }
 
     /// enforce a set of requirements
-    // TODO: finish implementing and use
+    // TODO: return permissions
     pub async fn enforce<A: Auth5>(&self, requirements: Requirements, auth: A) -> Result<()> {
         let identity = auth.identity();
         let flags = requirements.get_flags();
