@@ -63,10 +63,11 @@ function serializeInlineToEditorHTML(inline: SerializedInline): string {
 			return `||${inline.children.map(serializeInlineToEditorHTML).join("")}||`;
 		case "Code":
 			return `\`${inline.children.map(serializeInlineToEditorHTML).join("")}\``;
-		case "Link":
-			return `[${inline.children.map(serializeInlineToEditorHTML).join("")}](${
-				inline.href
-			})`;
+		case "Link": {
+			const text = inline.children.map(serializeInlineToEditorHTML).join("");
+			if (text === inline.href || !text) return inline.href;
+			return `[${text}](${inline.href})`;
+		}
 		case "Text":
 			return escapeHTML(inline.content);
 		case "Mention": {
