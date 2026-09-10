@@ -4,6 +4,35 @@
  */
 
 export interface paths {
+	"/api/v1/.well-known/jwks.json": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Oauth JWKS
+		 * @description Retrieve the JSON Web Key Set.
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/.well-known/oauth-authorization-server": {
 		parameters: {
 			query?: never;
@@ -12,8 +41,37 @@ export interface paths {
 			cookie?: never;
 		};
 		/**
-		 * Oauth autoconfig
+		 * Oauth config authorization server
 		 * @description Retrieve the OpenID Connect discovery document for automatic client configuration.
+		 */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/.well-known/openid-configuration": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Oauth config OpenID Connect
+		 * @description Retrieve the OpenID Connect discovery document.
 		 */
 		get: {
 			parameters: {
@@ -165,6 +223,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/admin/reindex": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Admin reindex
+		 * @description Reindex some stuff
+		 */
+		post: operations["admin_search_reindex"];
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/admin/reindex-channel/{channel_id}": {
 		parameters: {
 			query?: never;
@@ -176,6 +254,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Admin reindex channel
+		 * @deprecated
 		 * @description Queue a channel to be reindexed for search
 		 */
 		post: operations["admin_reindex_channel"];
@@ -196,6 +275,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Admin reindex everything
+		 * @deprecated
 		 * @description Queue all channels to be reindexed for search. This deletes all existing search index data first.
 		 */
 		post: operations["admin_reindex_everything"];
@@ -216,6 +296,7 @@ export interface paths {
 		put?: never;
 		/**
 		 * Admin reindex room
+		 * @deprecated
 		 * @description Queue all channels in a room to be reindexed for search
 		 */
 		post: operations["admin_reindex_room"];
@@ -4600,6 +4681,116 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/pack": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/** Pack create */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/pack/{pack_id}/export": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Pack export */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/pack/{pack_id}/import": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Pack import
+		 * @description adds all of the emoji in the pack to this room
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/pack/{pack_id}/upgrade": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		put?: never;
+		/**
+		 * Pack upgrade
+		 * @description upgrade a room from `type = Pack` to `type = Default`
+		 */
+		post: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/preferences": {
 		parameters: {
 			query?: never;
@@ -5446,6 +5637,32 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/room/{room_id}/ban/search": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Room ban search */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/room/{room_id}/ban/{user_id}": {
 		parameters: {
 			query?: never;
@@ -5903,6 +6120,68 @@ export interface paths {
 			requestBody?: never;
 			responses: never;
 		};
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/pack": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Pack room list */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/room/{room_id}/pack/{pack_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Pack room install */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		put?: never;
+		post?: never;
+		/** Pack room uninstall */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/prune/begin": {
@@ -7575,6 +7854,68 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/user/{user_id}/pack": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Pack user list */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/user/{user_id}/pack/{pack_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/** Pack user install */
+		get: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		put?: never;
+		post?: never;
+		/** Pack user uninstall */
+		delete: {
+			parameters: {
+				query?: never;
+				header?: never;
+				path?: never;
+				cookie?: never;
+			};
+			requestBody?: never;
+			responses: never;
+		};
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/user/{user_id}/presence": {
 		parameters: {
 			query?: never;
@@ -8007,7 +8348,7 @@ export interface paths {
 		/** Webhook get with token */
 		get: operations["webhook_get_with_token"];
 		put?: never;
-		/** Webhook execute (TODO) */
+		/** Webhook execute */
 		post: operations["webhook_execute"];
 		/** Webhook delete with token */
 		delete: operations["webhook_delete_with_token"];
@@ -8026,7 +8367,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Webhook execute discord (TODO) */
+		/** Webhook execute discord */
 		post: operations["webhook_execute_discord"];
 		delete?: never;
 		options?: never;
@@ -8043,7 +8384,7 @@ export interface paths {
 		};
 		get?: never;
 		put?: never;
-		/** Webhook execute github (TODO) */
+		/** Webhook execute github (WIP) */
 		post: operations["webhook_execute_github"];
 		delete?: never;
 		options?: never;
@@ -8409,6 +8750,13 @@ export interface components {
 					};
 					/** @enum {string} */
 					type: "ChannelUpdate";
+			  }
+			| {
+					metadata: {
+						channels: components["schemas"]["ChannelReorderItem"][];
+					};
+					/** @enum {string} */
+					type: "ChannelReorder";
 			  }
 			| {
 					metadata: {
@@ -8972,13 +9320,6 @@ export interface components {
 			  }
 			| {
 					metadata: {
-						channels: components["schemas"]["ChannelReorderItem"][];
-					};
-					/** @enum {string} */
-					type: "ChannelReorder";
-			  }
-			| {
-					metadata: {
 						changes: components["schemas"]["AuditLogChange"][];
 					};
 					/** @enum {string} */
@@ -9122,6 +9463,13 @@ export interface components {
 			  }
 			| {
 					metadata: {
+						changes: components["schemas"]["AuditLogChange"][];
+					};
+					/** @enum {string} */
+					type: "Reindex";
+			  }
+			| {
+					metadata: {
 						channel_id: components["schemas"]["Id"];
 					};
 					/** @enum {string} */
@@ -9242,17 +9590,6 @@ export interface components {
 					/** @enum {string} */
 					type: "SendAlert";
 			  };
-		/** @description matches found in a piece of text */
-		AutomodMatch: {
-			/** @description each individual match */
-			fragments: components["schemas"]["AutomodMatchFragment"][];
-			/** @description where this piece of text was found */
-			location: components["schemas"]["AutomodTextLocation"];
-			/** @description the sanitized text that was matched against */
-			sanitized_text: string;
-			/** @description the original text */
-			text: string;
-		};
 		/** @description a fragment of text that matched */
 		AutomodMatchFragment: components["schemas"]["AutomodMatchKind"] & {
 			end: number;
@@ -9273,6 +9610,17 @@ export interface components {
 					matcher: "Regex";
 					regex: string;
 			  };
+		/** @description matches found in a piece of text */
+		AutomodMatches: {
+			/** @description each individual match */
+			fragments: components["schemas"]["AutomodMatchFragment"][];
+			/** @description where this piece of text was found */
+			location: components["schemas"]["AutomodTextLocation"];
+			/** @description the sanitized text that was matched against */
+			sanitized_text: string;
+			/** @description the original text */
+			text: string;
+		};
 		/** @description an auto moderation rule for a room */
 		AutomodRule: {
 			/** @description when executed, do ALL of these actions */
@@ -9305,24 +9653,29 @@ export interface components {
 			target: components["schemas"]["AutomodTarget"];
 			trigger: components["schemas"]["AutomodTrigger"];
 		};
+		/**
+		 * @description represents an automod rule that was triggered
+		 *
+		 *     multiple `AutomodRuleExecution`s may be fired for a piece of content, if
+		 *     there are multiple rules which matched it
+		 */
 		AutomodRuleExecution: {
 			/** @description deduplicated list of all of the actions that were taken */
 			actions: components["schemas"]["AutomodAction"][];
 			/** @description the id of any automod execution message that was sent due to a SendAlert action */
 			alert_message_id: components["schemas"]["Id"][];
 			channel_id?: null | components["schemas"]["Id"];
-			/** @description the content that was matched */
-			matches: components["schemas"]["AutomodMatch"];
+			matches?: null | components["schemas"]["AutomodMatches"];
 			message_id?: null | components["schemas"]["Id"];
 			/** @description the id of the room that this execution happened in */
 			room_id: components["schemas"]["Id"];
 			/** @description the rule that was executed */
-			rule: components["schemas"]["AutomodRule"];
+			rule: components["schemas"]["AutomodRuleSummary"];
 			/** @description the user who triggered this execution */
 			user_id: components["schemas"]["Id"];
 		};
 		/** @description minimal version of AutomodRule to prevent leaking the rule trigger */
-		AutomodRuleStripped: {
+		AutomodRuleSummary: {
 			enabled: boolean;
 			id: components["schemas"]["Id"];
 			name: string;
@@ -9336,7 +9689,7 @@ export interface components {
 			 *     eg. if one rule times a user out for 60 seconds and another times out for 120 seconds, there would be one action that times out for 120 seconds
 			 */
 			actions: components["schemas"]["AutomodAction"][];
-			matches?: null | components["schemas"]["AutomodMatch"];
+			matches?: null | components["schemas"]["AutomodMatches"];
 			/** @description the rules that matched the text */
 			rules: components["schemas"]["AutomodRule"][];
 		};
@@ -9804,9 +10157,9 @@ export interface components {
 		 */
 		Color: string;
 		/** @description a single component in a tree */
-		Component: components["schemas"]["ComponentType_Create"] & {
+		Component: components["schemas"]["ComponentType_Canonical"] & {
 			allow?: null | components["schemas"]["Allow"];
-			id: components["schemas"]["Option"];
+			id: components["schemas"]["ComponentId"];
 		};
 		/**
 		 * @description A developer-defined identifier for an interactive component.
@@ -9829,16 +10182,12 @@ export interface components {
 			description?: string | null;
 			/** @description encrypted data for media */
 			media: {
-				/** @description the algorithm used for encryption */
-				alg: components["schemas"]["MediaEncryptionAlg"];
 				/** @description the id of the media */
 				id: components["schemas"]["Id"];
-				/** @description initialization vector */
-				iv: components["schemas"]["Binary"];
-				/** @description the key used for encryption */
-				key: components["schemas"]["Binary"];
 				/** @description media struct for decrypted content */
-				media: components["schemas"]["EncryptedMediaInfo"];
+				info: components["schemas"]["EncryptedMediaInfo"];
+				/** @description the algorithm used for encryption */
+				params: components["schemas"]["EncryptedMediaParams"];
 			};
 			spoiler?: boolean;
 		};
@@ -10184,6 +10533,7 @@ export interface components {
 			allow?: null | components["schemas"]["Allow"];
 			id: components["schemas"]["ComponentId"];
 		};
+		Components: components["schemas"]["Component_Canonical"][];
 		Components_Canonical: components["schemas"]["Component_Canonical"][];
 		Components_Create: components["schemas"]["Component_Create"][];
 		Components_Encrypted: components["schemas"]["Component_Encrypted"][];
@@ -10240,6 +10590,20 @@ export interface components {
 			/** Format: uuid */
 			id: string;
 		};
+		/**
+		 * @description the type of a tantivy document
+		 * @enum {string}
+		 */
+		Doctype:
+			| "Message"
+			| "Channel"
+			| "Room"
+			| "User"
+			| "Media"
+			| "AuditLogEntry"
+			| "RoomMember"
+			| "AnalyticsEvent"
+			| "DocumentChange";
 		/**
 		 * @description channel metadata for a document
 		 *
@@ -10437,8 +10801,7 @@ export interface components {
 			author_name?: string | null;
 			/** Format: uri */
 			author_url?: string | null;
-			/** @description the theme color of the site, as a hex string (`#rrggbb`) */
-			color?: string | null;
+			color?: null | components["schemas"]["Color"];
 			description?: string | null;
 			media?: null | components["schemas"]["MediaReference"];
 			thumbnail?: null | components["schemas"]["MediaReference"];
@@ -10482,6 +10845,15 @@ export interface components {
 			size: number;
 			/** Format: uri */
 			source_url?: string | null;
+		};
+		/** @description parameters used to encrypt a piece of media */
+		EncryptedMediaParams: {
+			/** @enum {string} */
+			alg: "A256GCM";
+			/** @description initialization vector (12 bytes) */
+			iv: components["schemas"]["Binary"];
+			/** @description the key used for encryption (32 bytes) */
+			key: components["schemas"]["Binary"];
 		};
 		/**
 		 * @description Error codes for non-fatal errors.
@@ -10666,7 +11038,14 @@ export interface components {
 		 */
 		FetchReason: "Initial" | "Redirect";
 		/** @description append components to an existing component */
-		FlumeAppend: {
+		FlumeAppendCanonical: {
+			/** @description components to append */
+			components: components["schemas"]["Component"][];
+			/** @description target component to append to */
+			target: components["schemas"]["ComponentId"];
+		};
+		/** @description append components to an existing component */
+		FlumeAppendCreate: {
 			/** @description components to append */
 			components: components["schemas"]["Component"][];
 			/** @description target component to append to */
@@ -10675,7 +11054,7 @@ export interface components {
 		/** @description request to create a new flume */
 		FlumeCreate: {
 			/** @description initial components */
-			components: components["schemas"]["Components_Create"];
+			components: components["schemas"]["Components"];
 			/**
 			 * @description mentions to parse from initial components
 			 *
@@ -10685,13 +11064,13 @@ export interface components {
 			metadata?: null | components["schemas"]["Metadata"];
 			reply_id?: null | components["schemas"]["Id"];
 		};
-		/** @description a delta applied to a live flume */
-		FlumeDelta: {
+		/** @description a delta sent to a client to apply to a live flume */
+		FlumeDeltaCanonical: {
 			/** @description append components to an existing component */
-			append?: components["schemas"]["FlumeAppend"][];
+			append?: components["schemas"]["FlumeAppendCanonical"][];
 			/** @description delete some components */
 			delete?: components["schemas"]["ComponentId"][];
-			init?: null | components["schemas"]["Components_Canonical"];
+			init?: null | components["schemas"]["Components"];
 			/**
 			 * @description replace a component with one or more components
 			 *
@@ -10699,10 +11078,33 @@ export interface components {
 			 *     - replacing a component with a single component will always work
 			 *     - replacing a component with multiple components will work if the parent has children (Root, Details, Container, Section)
 			 */
-			replace?: components["schemas"]["FlumeReplace"][];
+			replace?: components["schemas"]["FlumeReplaceCanonical"][];
+		};
+		/** @description a delta sent from a client to apply to a live flume */
+		FlumeDeltaCreate: {
+			/** @description append components to an existing component */
+			append?: components["schemas"]["FlumeAppendCreate"][];
+			/** @description delete some components */
+			delete?: components["schemas"]["ComponentId"][];
+			init?: null | components["schemas"]["Components"];
+			/**
+			 * @description replace a component with one or more components
+			 *
+			 *     - replacing a component with children will delete the children
+			 *     - replacing a component with a single component will always work
+			 *     - replacing a component with multiple components will work if the parent has children (Root, Details, Container, Section)
+			 */
+			replace?: components["schemas"]["FlumeReplaceCreate"][];
 		};
 		/** @description replace a component with one or more components */
-		FlumeReplace: {
+		FlumeReplaceCanonical: {
+			/** @description replacement components */
+			components: components["schemas"]["Component"][];
+			/** @description target component to replace */
+			target: components["schemas"]["ComponentId"];
+		};
+		/** @description replace a component with one or more components */
+		FlumeReplaceCreate: {
 			/** @description replacement components */
 			components: components["schemas"]["Component"][];
 			/** @description target component to replace */
@@ -11193,11 +11595,6 @@ export interface components {
 					 */
 					size?: number | null;
 			  };
-		/**
-		 * @description the algorithm used to encrypt a piece of media
-		 * @enum {string}
-		 */
-		MediaEncryptionAlg: "A256GCM";
 		/** @enum {string} */
 		MediaErrorReason: "NotFound" | "Corrupted";
 		/**
@@ -11383,12 +11780,15 @@ export interface components {
 			| "Uploaded"
 			| "Consumed"
 			| "Errored";
+		/** @description information about a group of members */
 		MemberListGroup: {
 			/** Format: int64 */
 			count: number;
 			id: components["schemas"]["MemberListGroupId"];
 		};
+		/** @description a unique identifier for a member group */
 		MemberListGroupId:
+			| "Connected"
 			| "Online"
 			| "Offline"
 			| {
@@ -11528,9 +11928,9 @@ export interface components {
 			actions: components["schemas"]["AutomodAction"][];
 			channel_id?: null | components["schemas"]["Id"];
 			flagged_message_id?: null | components["schemas"]["Id"];
-			matches?: null | components["schemas"]["AutomodMatch"];
+			matches?: null | components["schemas"]["AutomodMatches"];
 			/** @description the rules that were triggered */
-			rules: components["schemas"]["AutomodRuleStripped"][];
+			rules: components["schemas"]["AutomodRuleSummary"][];
 			/** @description the user who triggered this execution */
 			user_id: components["schemas"]["Id"];
 		};
@@ -11613,6 +12013,7 @@ export interface components {
 					branch_id: components["schemas"]["Id"];
 					/** @description the document thats being edited */
 					channel_id: components["schemas"]["Id"];
+					redex_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "DocumentEdit";
 					/** @description the encoded update to this document */
@@ -11623,6 +12024,7 @@ export interface components {
 					channel_id: components["schemas"]["Id"];
 					cursor_head: string;
 					cursor_tail?: string | null;
+					redex_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "DocumentPresence";
 			  }
@@ -11769,6 +12171,7 @@ export interface components {
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ChannelTyping";
 					until: components["schemas"]["Time"];
@@ -11801,12 +12204,14 @@ export interface components {
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "MessageDelete";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "MessageVersionDelete";
 					version_id: components["schemas"]["Id"];
@@ -11814,18 +12219,21 @@ export interface components {
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_ids: components["schemas"]["Id"][];
+					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "MessageDeleteBulk";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_ids: components["schemas"]["Id"][];
+					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "MessageRemove";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_ids: components["schemas"]["Id"][];
+					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "MessageRestore";
 			  }
@@ -11905,6 +12313,7 @@ export interface components {
 					channel_id: components["schemas"]["Id"];
 					key: components["schemas"]["ReactionKey"];
 					message_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ReactionCreate";
 					user_id: components["schemas"]["Id"];
@@ -11913,6 +12322,7 @@ export interface components {
 					channel_id: components["schemas"]["Id"];
 					key: components["schemas"]["ReactionKey"];
 					message_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ReactionDelete";
 					user_id: components["schemas"]["Id"];
@@ -11921,12 +12331,14 @@ export interface components {
 					channel_id: components["schemas"]["Id"];
 					key: components["schemas"]["ReactionKey"];
 					message_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ReactionDeleteKey";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ReactionDeleteAll";
 			  }
@@ -12254,6 +12666,7 @@ export interface components {
 			| {
 					branch_id: components["schemas"]["Id"];
 					channel_id: components["schemas"]["Id"];
+					document_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "DocumentEdit";
 					/** @description the encoded update to this document */
@@ -12264,6 +12677,7 @@ export interface components {
 					channel_id: components["schemas"]["Id"];
 					cursor_head: string;
 					cursor_tail?: string | null;
+					document_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "DocumentPresence";
 					user_id: components["schemas"]["Id"];
@@ -12273,6 +12687,7 @@ export interface components {
 					channel_id: components["schemas"]["Id"];
 					/** @description the connection ID this subscription confirmation is sent to */
 					connection_id: components["schemas"]["Id"];
+					document_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "DocumentSubscribed";
 			  }
@@ -12324,7 +12739,7 @@ export interface components {
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					delta: components["schemas"]["FlumeDelta"];
+					delta: components["schemas"]["FlumeDeltaCanonical"];
 					message_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "FlumeDelta";
@@ -12434,6 +12849,10 @@ export interface components {
 			| (components["schemas"]["MessageDefaultMarkdown"] & {
 					/** @enum {string} */
 					type: "DefaultMarkdown";
+			  })
+			| (components["schemas"]["MessageDefaultMarkdown"] & {
+					/** @enum {string} */
+					type: "ThreadInitial";
 			  })
 			| (components["schemas"]["MessagePin"] & {
 					/** @enum {string} */
@@ -13088,6 +13507,7 @@ export interface components {
 		 *     Serialized as:
 		 *     - `t:{unicode emoji or text}` for emoji and text
 		 *     - `c:{custom emoji id}` for custom emoji
+		 *     - `a:{tag id}` for thread tags
 		 * @example t:🤔
 		 */
 		ReactionKeyField: string;
@@ -13097,6 +13517,7 @@ export interface components {
 		 *     Serialized as:
 		 *     - `t:{unicode emoji or text}` for emoji and text
 		 *     - `c:{custom emoji id}` for custom emoji
+		 *     - `a:{tag id}` for thread tags
 		 * @example t:🤔
 		 */
 		ReactionKeyParam: string;
@@ -13278,6 +13699,10 @@ export interface components {
 					media: components["schemas"]["Media"];
 					/** @enum {string} */
 					type: "Hosted";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Document";
 			  };
 		/** @description used to set a RedexLocation */
 		RedexLocationUpdate:
@@ -13295,7 +13720,11 @@ export interface components {
 			| (components["schemas"]["MediaReference"] & {
 					/** @enum {string} */
 					type: "Hosted";
-			  });
+			  })
+			| {
+					/** @enum {string} */
+					type: "Document";
+			  };
 		/** @description metadata about a redex */
 		RedexMetadata: {
 			authors?: components["schemas"]["RedexAuthor"][];
@@ -13334,6 +13763,23 @@ export interface components {
 		/** @enum {string} */
 		RedexVersionStatus: "Processing" | "Valid" | "Invalid";
 		Registration: Record<string, never>;
+		/** @description a request to reindex stuff on the server */
+		Reindex: {
+			/**
+			 * @description reindex only documents in these channels
+			 *
+			 *     includes the channel iself. empty vec means no filter.
+			 */
+			channel_ids: components["schemas"]["Id"][];
+			/** @description reindex only these types of documents */
+			doctypes: components["schemas"]["Doctype"][];
+			/**
+			 * @description reindex only documents in these rooms
+			 *
+			 *     includes the room iself. empty vec means no filter.
+			 */
+			room_ids: components["schemas"]["Id"][];
+		};
 		Relationship: (null | components["schemas"]["Ignore"]) & {
 			relation?: null | components["schemas"]["RelationshipType"];
 		};
@@ -13625,7 +14071,16 @@ export interface components {
 		 */
 		RoomSearchOrderField: "Members" | "Created" | "Name" | "Id";
 		RoomSecurity: {
+			/**
+			 * @description mfa must be enabled to access certain endpoints
+			 *
+			 *     you don't need to do any ritual before accessing the endpoints aside
+			 *     from having multifactor authentication of any kind enabled.
+			 *
+			 *     currently the only method of mfa available is totp
+			 */
 			require_mfa: boolean;
+			/** @description sudo mode must be active to access certain endpoints */
 			require_sudo: boolean;
 		};
 		/** @description A template for creating rooms. */
@@ -13679,7 +14134,14 @@ export interface components {
 		 * @description an oauth scope
 		 * @enum {string}
 		 */
-		Scope: "identify" | "email" | "rooms" | "relationships" | "full" | "auth";
+		Scope:
+			| "identify"
+			| "openid"
+			| "email"
+			| "rooms"
+			| "relationships"
+			| "full"
+			| "auth";
 		Scopes: components["schemas"]["Scope"][];
 		/** @description Overall search index statistics */
 		SearchIndexStats: {
@@ -13998,6 +14460,7 @@ export interface components {
 		SyncSubscribeDocument: {
 			branch_id: components["schemas"]["Id"];
 			channel_id: components["schemas"]["Id"];
+			redex_id?: null | components["schemas"]["Id"];
 			state_vector?: null | components["schemas"]["DocumentStateVector"];
 		};
 		SyncSubscribeMemberList: {
@@ -14197,50 +14660,8 @@ export interface components {
 		UserListParams: {
 			filter?: null | components["schemas"]["UserListFilter"];
 		};
-		UserSearch: {
-			/**
-			 * @description whether to only return bots or only return non-bots.
-			 *
-			 *     defaults to allowing both.
-			 */
-			bot?: boolean | null;
-			/**
-			 * @description whether to only return deleted users or only return non-deleted users.
-			 *
-			 *     defaults to only non deleted users.
-			 */
-			deleted?: boolean | null;
-			/**
-			 * @description whether to only return guests (non registered users) or only return non-guests.
-			 *
-			 *     defaults to allowing both.
-			 */
-			guests?: boolean | null;
-			/** @description include users who are members of these rooms */
-			member_of_room_id: components["schemas"]["Id"][];
-			/**
-			 * @description whether to only return puppets or only return non-puppets.
-			 *
-			 *     defaults to allowing both.
-			 */
-			puppet?: boolean | null;
-			/** @description filter by user name, description, and id */
-			query?: string | null;
-			/** @description include users who have these roles in the server room */
-			server_role_id: components["schemas"]["Id"][];
-			sort_field: components["schemas"]["UserSearchSortField"];
-			sort_order: components["schemas"]["Order"];
-			/**
-			 * @description whether to only return suspended users or only return non-suspended users.
-			 *
-			 *     defaults to allowing both.
-			 */
-			suspended?: boolean | null;
-		};
 		/** @enum {string} */
 		UserSearchOrderField: "Name" | "Created" | "Registered" | "Id";
-		/** @enum {string} */
-		UserSearchSortField: "Name" | "Created" | "Registered";
 		UserWebhook: {
 			channel_id: components["schemas"]["Id"];
 			creator_id: components["schemas"]["Id"];
@@ -14455,6 +14876,28 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["AdminPurgeCacheResponse"];
 				};
+			};
+		};
+	};
+	admin_search_reindex: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["Reindex"];
+			};
+		};
+		responses: {
+			/** @description Reindexing queued */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
