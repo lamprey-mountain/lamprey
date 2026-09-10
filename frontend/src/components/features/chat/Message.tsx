@@ -7,14 +7,7 @@ import {
 	type Preferences,
 	type UserWithRelationship,
 } from "sdk";
-import {
-	createMemo,
-	createSignal,
-	For,
-	Match,
-	Show,
-	Switch,
-} from "solid-js";
+import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
 import { useApi, useChannels, useFlumes, useMessages, useUsers } from "@/api";
 import { useCtx } from "@/app/context";
 import icGear from "@/assets/gear.png";
@@ -31,16 +24,9 @@ import { useReadTracking } from "@/contexts/read-tracking.tsx";
 import { colors } from "@/lib/colors.ts";
 import { countEmojiOnly } from "@/lib/markdown";
 import { MediaView } from "@/media/Media.tsx";
+import { getMediaIcon } from "@/media/util.tsx";
 import { openThread } from "@/utils/channel";
-import {
-	icFileAudio,
-	icFileGeneric,
-	icFileImage,
-	icFileText,
-	icFileVideo,
-	icInfo,
-	icSword,
-} from "@/utils/icons.ts";
+import { icInfo, icSword } from "@/utils/icons.ts";
 import { UserDisplayName } from "../../shared/User.tsx";
 import { MessageEditor } from "./MessageEditor.tsx";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
@@ -194,19 +180,7 @@ export function ReplyView(props: {
 		if (isMarkdown2(v)) {
 			if (v.attachments.length) {
 				// NOTE: maybe theres a better way to get an icon than only using the first attacment?
-				const m = v.attachments[0].media.content_type.split("/")[0];
-				switch (m) {
-					case "audio":
-						return icFileAudio;
-					case "text":
-						return icFileText;
-					case "image":
-						return icFileImage;
-					case "video":
-						return icFileVideo;
-					default:
-						return icFileGeneric;
-				}
+				return getMediaIcon(v.attachments[0].media);
 			}
 			return;
 		}

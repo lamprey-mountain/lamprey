@@ -1,6 +1,13 @@
 import type { Media } from "sdk";
 import type { ParentProps, VoidProps } from "solid-js";
 import { useConfig } from "@/lib/config";
+import {
+	icFileAudio,
+	icFileGeneric,
+	icFileImage,
+	icFileText,
+	icFileVideo,
+} from "@/utils/icons";
 
 export const NSFW_KEY = "nsfw";
 export const NSFW_THRESHOLD = 0.5;
@@ -165,4 +172,24 @@ export const Loader = (props: VoidProps<LoaderProps>) => {
 			loading
 		</div>
 	);
+};
+
+export const getMediaIcon = (media: Media) => {
+	// NOTE: maybe theres a better way to get an icon for a media/mime type?
+	const mainCt = media.content_type.split("/")[0];
+	const isText =
+		mainCt === "text" || /^application\/json\b/.test(media.content_type);
+
+	if (isText) return icFileText;
+
+	switch (mainCt) {
+		case "audio":
+			return icFileAudio;
+		case "image":
+			return icFileImage;
+		case "video":
+			return icFileVideo;
+		default:
+			return icFileGeneric;
+	}
 };
