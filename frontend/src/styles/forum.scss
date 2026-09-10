@@ -324,6 +324,7 @@
 
 .forum2 .comment-wrap {
 	position: relative;
+	margin-top: 12px;
 	--offset: calc(36px * var(--depth));
 
 	& > .line {
