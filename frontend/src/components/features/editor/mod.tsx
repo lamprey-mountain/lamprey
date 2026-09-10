@@ -1,49 +1,21 @@
 import { DOMParser } from "prosemirror-model";
-import { type EditorState, Plugin, PluginKey } from "prosemirror-state";
-
-type NodeViewConstructor = any;
-
+import type { EditorState } from "prosemirror-state";
 import {
-	Decoration,
-	DecorationSet,
 	EditorView,
 	type EditorProps as ProsemirrorEditorProps,
 } from "prosemirror-view";
 import { createEffect, onCleanup, onMount } from "solid-js";
 import { pastePluginKey, submitPluginKey } from "./core-plugins.ts";
+import { createPlaceholderPlugin } from "./plugin-placeholder.ts";
 import { schema as defaultSchema } from "./schema";
 
-export const placeholderPluginKey = new PluginKey<string>("placeholder");
+type NodeViewConstructor = any;
 
-export function createPlaceholderPlugin() {
-	return new Plugin<string>({
-		key: placeholderPluginKey,
-		state: {
-			init: () => "",
-			apply(tr, prev) {
-				const meta = tr.getMeta(placeholderPluginKey);
-				if (meta !== undefined) return meta;
-				return prev;
-			},
-		},
-		props: {
-			decorations(state) {
-				const text = placeholderPluginKey.getState(state);
-				if (!text) return DecorationSet.empty;
-				const isEmpty = !state.doc.firstChild?.content.size;
-				if (!isEmpty) return DecorationSet.empty;
-
-				const widget = Decoration.widget(0, () => {
-					const span = document.createElement("div");
-					span.className = "placeholder";
-					span.textContent = text;
-					return span;
-				});
-				return DecorationSet.create(state.doc, [widget]);
-			},
-		},
-	});
-}
+// TEMP: backwards compat
+export {
+	createPlaceholderPlugin,
+	placeholderPluginKey,
+} from "./plugin-placeholder.ts";
 
 export type EditorOptions = {
 	schema?: typeof defaultSchema;
