@@ -1,7 +1,7 @@
+import type { MessageVersion } from "ts-sdk";
 import type { MessageRange } from "@/api/services/MessagesService";
 import type { MessageT } from "@/types";
 import { getMessageOverrideName, getMsgTs } from "@/utils/general";
-import { isMarkdown } from "./Message";
 
 export function highlight(el: Element) {
 	el.getAnimations().forEach((a) => a.cancel());
@@ -34,8 +34,8 @@ export function shouldSplit(a: MessageT, b: MessageT) {
 }
 
 function shouldSplitInner(a: MessageT, b: MessageT) {
-	if (!isMarkdown(a.latest_version.type)) return true;
-	if (!isMarkdown(b.latest_version.type)) return true;
+	if (!isMarkdown2(a.latest_version)) return true;
+	if (!isMarkdown2(b.latest_version)) return true;
 	if (a.author_id !== b.author_id) return true;
 	if (a.latest_version.reply_id) return true;
 	if (getMessageOverrideName(a) !== getMessageOverrideName(b)) return true; // TODO: remove?
@@ -124,3 +124,23 @@ export interface VirtualizerLayout {
 	offsets: Float64Array;
 	totalSize: number;
 }
+
+type MessageVersionWithMarkdown = MessageVersion & {
+	type: "DefaultMarkdown" | "ThreadInitial";
+};
+
+// TODO: add doc comments
+
+export const isMarkdown2 = (
+	v: MessageVersion,
+): v is MessageVersionWithMarkdown =>
+	v.type === "DefaultMarkdown" || v.type === "ThreadInitial";
+
+export const asMarkdown2 = (
+	v: MessageVersion,
+): MessageVersionWithMarkdown | null => (isMarkdown2(v) ? v : null);
+
+export const isMarkdown = (
+	ty: MessageVersion["type"],
+): ty is "DefaultMarkdown" =>
+	ty === "DefaultMarkdown" || ty === "ThreadInitial";

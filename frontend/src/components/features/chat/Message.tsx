@@ -1,82 +1,38 @@
 import { useNavigate } from "@solidjs/router";
 import {
 	type Attachment,
-	type AutomodAction,
 	type Channel as ChannelT,
 	getTimestampFromUUID,
-	Media,
 	type Message as MessageT,
-	type MessageVersion,
-	type MessageVersion as MessageVersionT,
 	type Preferences,
-	type ReactionKey,
 	type UserWithRelationship,
 } from "sdk";
 import {
-	createEffect,
 	createMemo,
 	createSignal,
 	For,
-	type JSX,
 	Match,
-	onCleanup,
-	onMount,
 	Show,
 	Switch,
 } from "solid-js";
-import {
-	useApi,
-	useChannels,
-	useFlumes,
-	useMessages,
-	useRoomMembers,
-	useUsers,
-} from "@/api";
+import { useApi, useChannels, useFlumes, useMessages, useUsers } from "@/api";
 import { useCtx } from "@/app/context";
-import icEdit from "@/assets/edit.png";
 import icGear from "@/assets/gear.png";
-import icMemberAdd from "@/assets/member-add.png";
-import icMemberJoin from "@/assets/member-join.png";
-import icMemberRemove from "@/assets/member-remove.png";
-import icMore from "@/assets/more.png";
-import icPin from "@/assets/pin.png";
-import icReactionAdd from "@/assets/reaction-add.png";
-import icReply from "@/assets/reply.png";
-import icThread from "@/assets/threads.png";
 import { Components } from "@/atoms/Components.tsx";
-import { Duration } from "@/atoms/Duration.tsx";
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { Time } from "@/atoms/Time";
-import { Avatar2 } from "@/avatar/UserAvatar.tsx";
-import { createEditor } from "@/components/features/editor/Editor.tsx";
-import { serializeToMarkdown } from "@/components/features/editor/serializer.ts";
 import { EmbedView } from "@/components/shared/UrlEmbed";
 import { Avatar } from "@/components/shared/User";
-import { useAutocomplete } from "@/contexts/autocomplete";
 import { useOptionalChannel } from "@/contexts/channel";
-import { useCurrentUser } from "@/contexts/currentUser.tsx";
-import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
-import { useMenu, useUserPopout } from "@/contexts/mod.tsx";
+import { useMenu } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
 import { useReadTracking } from "@/contexts/read-tracking.tsx";
 import { colors } from "@/lib/colors.ts";
-import { flags } from "@/lib/flags.ts";
 import { countEmojiOnly } from "@/lib/markdown";
 import { MediaView } from "@/media/Media.tsx";
-import {
-	AudioView,
-	FileView,
-	ImageView,
-	TextView,
-	ThreeView,
-	VideoView,
-} from "@/media/mod.tsx";
-import { is3D } from "@/media/three-util.ts";
 import { openThread } from "@/utils/channel";
 import {
-	icCall,
-	icChannelMove,
 	icFileAudio,
 	icFileGeneric,
 	icFileImage,
@@ -85,71 +41,35 @@ import {
 	icInfo,
 	icSword,
 } from "@/utils/icons.ts";
-import { useVoice } from "../voice/context.tsx";
+import { UserDisplayName } from "../../shared/User.tsx";
+import { MessageEditor } from "./MessageEditor.tsx";
 import { useMessageToolbar } from "./message-toolbar-context.tsx";
 import { Reactions } from "./Reactions.tsx";
+import {
+	SystemMessageAutomodExecution,
+	type SystemMessageBaseProps,
+	SystemMessageCall,
+	SystemMessageChannelIcon,
+	SystemMessageChannelMoved,
+	SystemMessageChannelPingback,
+	SystemMessageChannelRename,
+	SystemMessageMemberAdd,
+	SystemMessageMemberJoin,
+	SystemMessageMemberRemove,
+	SystemMessagePinned,
+	SystemMessageThreadCreated,
+} from "./SystemMessage.tsx";
+import { asMarkdown2, isMarkdown, isMarkdown2 } from "./util.ts";
 
-// TODO: use this instead of manually checking type
-// TODO: add doc comment
-export const isMarkdown = (ty: MessageVersion["type"]) =>
-	ty === "DefaultMarkdown" || ty === "ThreadInitial";
+// TEMP: compat
+export { UserDisplayName } from "../../shared/User.tsx";
+export { isMarkdown } from "./util.ts";
 
 export type MessageProps = {
 	message: MessageT;
 	separate?: boolean;
 	diff?: boolean;
 };
-
-// TODO: move elsewhere
-// TODO: extract user name logic into a hook
-export function UserDisplayName(props: {
-	user_id: string;
-	room_id?: string;
-	thread_id?: string;
-	onClick?: boolean;
-	class?: string;
-}) {
-	const roomMembers2 = useRoomMembers();
-	const users2 = useUsers();
-	const { userView, setUserView } = useUserPopout();
-
-	const room_member = () =>
-		props.room_id
-			? roomMembers2.cache.get(`${props.room_id}:${props.user_id}`)
-			: null;
-	const user = () => users2.cache.get(props.user_id);
-
-	const name = () => room_member()?.override_name ?? user()?.name;
-
-	const handleClick = (e: MouseEvent) => {
-		if (!props.onClick) return;
-		e.stopPropagation();
-		e.preventDefault();
-		const currentTarget = e.currentTarget as HTMLElement;
-		if (userView()?.ref === currentTarget) {
-			setUserView(null);
-		} else {
-			setUserView({
-				user_id: props.user_id,
-				room_id: props.room_id,
-				thread_id: props.thread_id,
-				ref: currentTarget,
-				source: "message",
-			});
-		}
-	};
-
-	return (
-		<span
-			class={`user ${props.class ?? ""}`}
-			classList={{ "menu-user": props.onClick }}
-			data-user-id={props.user_id}
-			onClick={handleClick}
-		>
-			{name()}
-		</span>
-	);
-}
 
 export function MessageTextMarkdown(props: {
 	message: MessageT;
@@ -165,9 +85,9 @@ export function MessageTextMarkdown(props: {
 	};
 
 	const content = createMemo(() => {
-		const ty = props.message.latest_version.type;
-		if (isMarkdown(ty)) {
-			return props.message.latest_version.content ?? "";
+		const v = asMarkdown2(props.message.latest_version);
+		if (v) {
+			return v.content ?? "";
 		} else {
 			return "";
 		}
@@ -191,162 +111,6 @@ export function MessageTextMarkdown(props: {
 				</span>
 			</Show>
 		</Markdown>
-	);
-}
-
-// TODO: move elsewhere
-function MessageEditor(props: { message: MessageT }) {
-	const messagesService = useMessages();
-	const [ch, chUpdate] = useOptionalChannel();
-
-	const content = createMemo(() => {
-		const ty = props.message.latest_version.type;
-		if (isMarkdown(ty)) {
-			return props.message.latest_version.content ?? "";
-		} else {
-			return "";
-		}
-	});
-	const [draft, setDraft] = createSignal(content());
-
-	if (!ch || !chUpdate) {
-		return <div class="message-editor">Error: No channel context</div>;
-	}
-
-	const toolbar = useFormattingToolbar();
-	const autocomplete = useAutocomplete();
-
-	const editor = createEditor({
-		channelId: () => props.message.channel_id ?? "",
-		roomId: () => props.message.room_id ?? "",
-		toolbar,
-		autocomplete,
-		initialContent: () => draft(),
-		initialSelection: ch.editingMessage?.selection,
-		keymap: {
-			ArrowUp: (state) => {
-				if (state.selection.from !== 1) return false;
-
-				const ranges = messagesService._ranges.get(props.message.channel_id);
-				if (!ranges) return false;
-
-				const messages = ranges.live.items;
-				const currentIndex = messages.findIndex(
-					(m) => m.id === props.message.id,
-				);
-				if (currentIndex === -1) return false;
-
-				for (let i = currentIndex - 1; i >= 0; i--) {
-					const msg = messages[i];
-					if (isMarkdown(msg.latest_version.type)) {
-						chUpdate("editingMessage", {
-							message_id: msg.id,
-							selection: "end",
-						});
-						return true;
-					}
-				}
-
-				return false;
-			},
-			ArrowDown: (state) => {
-				if (state.selection.to !== state.doc.content.size - 1) return false;
-
-				const ranges = messagesService._ranges.get(props.message.channel_id);
-				if (!ranges) return false;
-
-				const messages = ranges.live.items;
-				const currentIndex = messages.findIndex(
-					(m) => m.id === props.message.id,
-				);
-				if (currentIndex === -1) return false;
-
-				for (let i = currentIndex + 1; i < messages.length; i++) {
-					const msg = messages[i];
-					if (isMarkdown(msg.latest_version.type)) {
-						chUpdate("editingMessage", {
-							message_id: msg.id,
-							selection: "start",
-						});
-						return true;
-					}
-				}
-
-				chUpdate("editingMessage", undefined);
-				ch.input_focus?.();
-				return true;
-			},
-		},
-	});
-
-	const save = async (content: string) => {
-		const oldContent = isMarkdown(props.message.latest_version.type)
-			? (props.message.latest_version.content ?? "")
-			: "";
-		if (content.trim() === oldContent.trim()) {
-			chUpdate("editingMessage", undefined);
-			return;
-		}
-		if (content.trim().length === 0) {
-			chUpdate("editingMessage", undefined);
-			return;
-		}
-		try {
-			await messagesService.edit(
-				props.message.channel_id,
-				props.message.id,
-				content,
-			);
-		} catch (e) {
-			console.error("failed to edit message", e);
-		}
-		chUpdate("editingMessage", undefined);
-	};
-
-	const cancel = () => {
-		chUpdate("editingMessage", undefined);
-		ch.input_focus?.();
-	};
-
-	let containerRef: HTMLDivElement | undefined;
-	onMount(() => {
-		containerRef?.addEventListener(
-			"keydown",
-			(e) => {
-				if (e.key === "Escape") {
-					e.stopPropagation();
-					cancel();
-				}
-			},
-			{ capture: true },
-		);
-		editor.focus();
-	});
-
-	return (
-		<div class="message-editor" ref={containerRef}>
-			<editor.View
-				placeholder="edit message..."
-				onSubmit={(text) => {
-					save(text);
-					return true;
-				}}
-				onChange={(state) => {
-					const text = serializeToMarkdown(state.doc);
-					setDraft(text);
-				}}
-			/>
-			<div class="edit-info dim">
-				escape to{" "}
-				<button type="button" class="button" onClick={cancel}>
-					cancel
-				</button>{" "}
-				• enter to{" "}
-				<button type="button" class="button" onClick={() => save(draft())}>
-					save
-				</button>
-			</div>
-		</div>
 	);
 }
 
@@ -382,80 +146,6 @@ export function MessageThread(props: {
 				</div>
 			</div>
 		</div>
-	);
-}
-
-type SystemMessageProps = {
-	message: MessageT;
-	date: Date;
-	separate: boolean;
-	toolbarVisible: boolean;
-	handleClick: (e: MouseEvent) => void;
-	onMouseDown: (e: MouseEvent) => void;
-	handleAltClick: (e: MouseEvent) => void;
-	setHovered: (v: boolean) => void;
-	messageArticleRef: (el: HTMLElement | undefined) => void;
-	room_id?: string;
-};
-
-function SystemMessage(
-	props: SystemMessageProps & {
-		icon: string;
-		content: JSX.Element;
-		class?: string;
-	},
-) {
-	const toolbar = useMessageToolbar();
-
-	return (
-		<article
-			ref={props.messageArticleRef}
-			class={`message menu-message oneline ${props.class ?? ""}`}
-			data-message-id={props.message.id}
-			classList={{
-				separate: props.separate,
-			}}
-			onClick={props.handleClick}
-			onMouseDown={(e) => {
-				props.onMouseDown(e);
-				props.handleAltClick(e);
-			}}
-			onMouseEnter={(e) => {
-				props.setHovered(true);
-				toolbar.setTarget({ message: props.message, element: e.currentTarget });
-			}}
-			onMouseLeave={(e) => {
-				props.setHovered(false);
-				const toolbarEl = toolbar.containerRef();
-				if (
-					toolbarEl &&
-					e.relatedTarget instanceof Node &&
-					toolbarEl.contains(e.relatedTarget)
-				) {
-					return;
-				}
-				toolbar.setTarget(null);
-			}}
-		>
-			<aside class="aside">
-				<img class="icon" src={props.icon} />
-			</aside>
-			<div class="content">
-				{props.content}
-				<Time
-					date={props.date}
-					animGroup="message-ts"
-					class="onlytime"
-					format="time"
-				/>
-				<Time
-					date={props.date}
-					animGroup="message-ts"
-					class="full"
-					format="full"
-				/>
-			</div>
-		</article>
 	);
 }
 
@@ -501,7 +191,7 @@ export function ReplyView(props: {
 		if (!r) return;
 
 		const v = r.latest_version;
-		if (isMarkdown(v.type)) {
+		if (isMarkdown2(v)) {
 			if (v.attachments.length) {
 				// NOTE: maybe theres a better way to get an icon than only using the first attacment?
 				const m = v.attachments[0].media.content_type.split("/")[0];
@@ -781,7 +471,7 @@ export function MessageView(props: MessageProps) {
 
 // TODO: move props into DefaultMessageProps
 function DefaultMessage(
-	props: SystemMessageProps & {
+	props: SystemMessageBaseProps & {
 		user: UserWithRelationship | undefined;
 		hovered: boolean;
 		isEditing: boolean;
@@ -793,32 +483,9 @@ function DefaultMessage(
 	const api = useApi();
 	const flumes = useFlumes();
 	const toolbar = useMessageToolbar();
-	const version = () =>
-		isMarkdown(props.message.latest_version.type)
-			? props.message.latest_version
-			: null;
+	const version = () => asMarkdown2(props.message.latest_version);
 	const flume = () =>
 		props.message.flume?.state === "Live" && flumes.get(props.message.id);
-
-	const isCozy = () =>
-		(props.ctx.preferences().frontend.message_style || "cozy") === "cozy";
-
-	const openUserView = (e: MouseEvent) => {
-		e.stopPropagation();
-		const currentTarget = e.currentTarget as HTMLElement;
-		const { userView, setUserView } = useUserPopout();
-		if (userView()?.ref === currentTarget) {
-			setUserView(null);
-		} else {
-			setUserView({
-				user_id: props.message.author_id,
-				room_id: props.room_id,
-				channel_id: props.message.channel_id,
-				ref: currentTarget,
-				source: "message",
-			});
-		}
-	};
 
 	const dismissMessage = () => {
 		api.messages.handleMessageDelete(
@@ -1024,549 +691,5 @@ function DefaultMessage(
 				</Show>
 			</div>
 		</article>
-	);
-}
-
-function SystemMessageMemberAdd(props: SystemMessageProps) {
-	const { t } = useCtx();
-	const version = () =>
-		props.message.latest_version as MessageVersionT & {
-			target_user_id: string;
-		};
-
-	return (
-		<SystemMessage
-			{...props}
-			icon={icMemberAdd}
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.member_add",
-						<span class="author">
-							<UserDisplayName
-								user_id={props.message.author_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-						<span class="author">
-							<UserDisplayName
-								user_id={version().target_user_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-					)}
-				</div>
-			}
-		/>
-	);
-}
-
-function SystemMessageMemberRemove(props: SystemMessageProps) {
-	const { t } = useCtx();
-	const version = () =>
-		props.message.latest_version as MessageVersionT & {
-			target_user_id: string;
-		};
-
-	return (
-		<SystemMessage
-			{...props}
-			icon={icMemberRemove}
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.member_remove",
-						<span class="author">
-							<UserDisplayName
-								user_id={props.message.author_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-						<span class="author">
-							<UserDisplayName
-								user_id={version().target_user_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-					)}
-				</div>
-			}
-		/>
-	);
-}
-
-function SystemMessageMemberJoin(props: SystemMessageProps) {
-	const { t } = useCtx();
-	return (
-		<SystemMessage
-			{...props}
-			icon={icMemberJoin}
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.member_join",
-						<span class="author">
-							<UserDisplayName
-								user_id={props.message.author_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-					)}
-				</div>
-			}
-		/>
-	);
-}
-
-function SystemMessagePinned(props: SystemMessageProps) {
-	const { t } = useCtx();
-	const navigate = useNavigate();
-	const version = () =>
-		props.message.latest_version as MessageVersionT & {
-			pinned_message_id: string;
-		};
-
-	return (
-		<SystemMessage
-			{...props}
-			icon={icPin}
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.message_pinned",
-						<span class="author">
-							<UserDisplayName
-								user_id={props.message.author_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-						(text: string) => (
-							<button
-								type="button"
-								style="color: oklch(var(--color-fg1))"
-								class="link"
-								onClick={(e) => {
-									e.stopPropagation();
-									navigate(
-										`/channel/${props.message.channel_id}/message/${
-											version().pinned_message_id
-										}`,
-									);
-								}}
-							>
-								{text}
-							</button>
-						),
-					)}
-				</div>
-			}
-		/>
-	);
-}
-
-function SystemMessageChannelRename(props: SystemMessageProps) {
-	const { t } = useCtx();
-	const version = () =>
-		props.message.latest_version as MessageVersionT & { name_new: string };
-
-	return (
-		<SystemMessage
-			{...props}
-			icon={icEdit}
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.channel_rename",
-						<span class="author">
-							<UserDisplayName
-								user_id={props.message.author_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-						<b>{version().name_new}</b>,
-					)}
-				</div>
-			}
-		/>
-	);
-}
-
-function SystemMessageCall(props: SystemMessageProps) {
-	const { t } = useCtx();
-	const [voice, voiceActions] = useVoice();
-	const getMe = useCurrentUser();
-	const version = () =>
-		props.message.latest_version as MessageVersionT & {
-			ended_at?: string | null;
-			participants: string[];
-		};
-
-	const participated = createMemo(() =>
-		version().participants.includes(getMe()?.id ?? ""),
-	);
-	const duration = createMemo(() => {
-		const { ended_at } = version();
-		if (!ended_at) return null;
-		return Date.parse(ended_at) - Date.parse(props.message.created_at);
-	});
-
-	const joined = () => voice.joinedChannelId === props.message.channel_id;
-
-	const joinCall = () => {
-		voiceActions.selectChannel(props.message.channel_id);
-	};
-
-	return (
-		<SystemMessage
-			{...props}
-			icon={icCall}
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					<Switch>
-						<Match when={duration() !== null && !participated()}>
-							{t(
-								"message_content.call_missed",
-								<span class="author">
-									<UserDisplayName
-										user_id={props.message.author_id}
-										room_id={props.room_id}
-										onClick
-									/>
-								</span>,
-								<Duration ms={duration()!} dim={false} />,
-							)}
-						</Match>
-						<Match when={duration() !== null}>
-							{t(
-								"message_content.call_ended",
-								<span class="author">
-									<UserDisplayName
-										user_id={props.message.author_id}
-										room_id={props.room_id}
-										onClick
-									/>
-								</span>,
-								<Duration ms={duration()!} dim={false} />,
-							)}
-						</Match>
-						<Match when={true}>
-							{t(
-								"message_content.call_started",
-								<span class="author">
-									<UserDisplayName
-										user_id={props.message.author_id}
-										room_id={props.room_id}
-										onClick
-									/>
-								</span>,
-							)}
-							<Show when={!joined()}>
-								{" - "}
-								<button
-									type="button"
-									class="button link"
-									style="display:inline-block"
-									onClick={joinCall}
-								>
-									{t("message_content.call_join")}
-								</button>
-							</Show>
-						</Match>
-					</Switch>
-				</div>
-			}
-		/>
-	);
-}
-
-function SystemMessageChannelPingback(props: SystemMessageProps) {
-	const { t } = useCtx();
-	return (
-		<SystemMessage
-			{...props}
-			icon={icReply}
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.channel_pingback",
-						<span class="author">
-							<UserDisplayName
-								user_id={props.message.author_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-					)}
-				</div>
-			}
-		/>
-	);
-}
-
-function SystemMessageChannelIcon(props: SystemMessageProps) {
-	const { t } = useCtx();
-	return (
-		<SystemMessage
-			{...props}
-			icon={icEdit}
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.channel_icon",
-						<span class="author">
-							<UserDisplayName
-								user_id={props.message.author_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-					)}
-				</div>
-			}
-		/>
-	);
-}
-
-function SystemMessageThreadCreated(props: SystemMessageProps) {
-	const { t } = useCtx();
-	const navigate = useNavigate();
-	const ctx = useCtx();
-	const channels = useChannels();
-
-	const threadId = () =>
-		(props.message.latest_version as MessageVersionT & { thread_id: string })
-			.thread_id;
-	const thread = channels.use(threadId);
-
-	const link = () => (
-		<button
-			type="button"
-			class="link"
-			onClick={(e) => {
-				e.stopPropagation();
-				if (threadId()) {
-					navigate(`/channel/${threadId()}`);
-				}
-			}}
-		>
-			<Show
-				when={thread()?.name}
-				fallback={<em class="dim">unknown thread</em>}
-			>
-				{(name) => name()}
-			</Show>
-		</button>
-	);
-
-	const viewAll = (text: string) => (
-		<button
-			type="button"
-			class="link"
-			onClick={(e) => {
-				if (!ctx.threadsView()) {
-					e.stopPropagation();
-					const ref = ctx.headerThreadsButtonRef() ?? e.currentTarget;
-					queueMicrotask(() => {
-						ctx.setThreadsView({
-							channel_id: props.message.channel_id,
-							ref,
-						});
-					});
-				}
-			}}
-		>
-			{text}
-		</button>
-	);
-
-	return (
-		<SystemMessage
-			{...props}
-			icon={icThread}
-			class="message-dim-content"
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.thread_created",
-						<span class="author">
-							<UserDisplayName
-								user_id={props.message.author_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-						link,
-						viewAll,
-					)}
-				</div>
-			}
-		/>
-	);
-}
-
-function SystemMessageChannelMoved(props: SystemMessageProps) {
-	const { t } = useCtx();
-	const navigate = useNavigate();
-	const channels = useChannels();
-
-	const m = () =>
-		props.message.latest_version as MessageVersionT & { type: "ChannelMoved" };
-	const oldChan = channels.use(() => m().parent_id_old ?? undefined);
-
-	return (
-		<SystemMessage
-			{...props}
-			icon={icChannelMove}
-			class="message-dim-content"
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.channel_moved",
-						<span class="author">
-							<UserDisplayName
-								user_id={props.message.author_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-						<button
-							type="button"
-							class="link"
-							onClick={(e) => {
-								e.stopPropagation();
-								const oldId = m().parent_id_old;
-								if (oldId) {
-									navigate(`/channel/${oldId}`);
-								}
-							}}
-						>
-							<Show when={oldChan()} fallback={<em>unknown channel</em>}>
-								{(c) => c().name}
-							</Show>
-						</button>,
-					)}
-				</div>
-			}
-		/>
-	);
-}
-
-// TODO: better component for automod executions
-function SystemMessageAutomodExecution(props: SystemMessageProps) {
-	const { t } = useCtx();
-
-	const m = () =>
-		props.message.latest_version as MessageVersionT & {
-			type: "AutomodExecution";
-		};
-
-	// TODO: fix timestamp position
-	// TODO: if automod acted on a message, render pseudo message and highlight phrases that triggered the action
-	// TODO: if its not a message, still highlight matches? (how would the ui look in this case?)
-
-	// m().matches.fragments[0].text
-
-	const renderAction = (action: AutomodAction) => {
-		switch (action.type) {
-			case "Block":
-				return <>Blocked</>;
-			// TODO: better styling for Timeout duration
-			// case "Timeout": return <>Timed out <Duration ms={action.duration} /></>
-			case "Timeout":
-				return <>Timed out</>;
-			case "Remove":
-				return <>Message removed</>;
-			case "SendAlert":
-				return null; // redundant
-		}
-	};
-
-	return (
-		<SystemMessage
-			{...props}
-			icon={icSword}
-			class="message-dim-content"
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.automod_execution",
-						<span class="author">
-							<UserDisplayName
-								user_id={m().user_id}
-								room_id={props.room_id}
-								onClick
-							/>
-						</span>,
-					)}
-					<div class="automod-execution-details">
-						<div class="rules">
-							<strong>Rules: </strong>
-							{m()
-								.rules.map((i) => i.name)
-								.join(", ")}
-						</div>
-						<div class="actions">
-							<strong>Actions: </strong>
-							{m()
-								.actions.map(renderAction)
-								.filter((i) => i)
-								.flatMap((action, i, arr) =>
-									i < arr.length - 1 ? [action, ", "] : [action],
-								)}
-						</div>
-					</div>
-				</div>
-			}
-		/>
 	);
 }

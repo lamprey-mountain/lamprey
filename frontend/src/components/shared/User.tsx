@@ -20,9 +20,60 @@ import {
 	Show,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useApi, useRoomMembers } from "@/api";
+import { useApi, useRoomMembers, useUsers } from "@/api";
 import { useCurrentUser } from "@/contexts/currentUser";
+import { useUserPopout } from "@/contexts/mod.tsx";
 import { usePermissions } from "@/hooks/usePermissions";
+
+// TODO: extract user name logic into a hook
+export function UserDisplayName(props: {
+	user_id: string;
+	room_id?: string;
+	thread_id?: string;
+	onClick?: boolean;
+	class?: string;
+}) {
+	const roomMembers2 = useRoomMembers();
+	const users2 = useUsers();
+	const { userView, setUserView } = useUserPopout();
+
+	const room_member = () =>
+		props.room_id
+			? roomMembers2.cache.get(`${props.room_id}:${props.user_id}`)
+			: null;
+	const user = () => users2.cache.get(props.user_id);
+
+	const name = () => room_member()?.override_name ?? user()?.name;
+
+	const handleClick = (e: MouseEvent) => {
+		if (!props.onClick) return;
+		e.stopPropagation();
+		e.preventDefault();
+		const currentTarget = e.currentTarget as HTMLElement;
+		if (userView()?.ref === currentTarget) {
+			setUserView(null);
+		} else {
+			setUserView({
+				user_id: props.user_id,
+				room_id: props.room_id,
+				thread_id: props.thread_id,
+				ref: currentTarget,
+				source: "message",
+			});
+		}
+	};
+
+	return (
+		<span
+			class={`user ${props.class ?? ""}`}
+			classList={{ "menu-user": props.onClick }}
+			data-user-id={props.user_id}
+			onClick={handleClick}
+		>
+			{name()}
+		</span>
+	);
+}
 
 export type UserProps = {
 	room_member?: RoomMember;
