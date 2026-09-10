@@ -28,7 +28,7 @@ export function MessageMenu(props: MessageMenuProps) {
 		() => props.message_id,
 	);
 	const channelContext = () => ctx.channel_contexts.get(props.channel_id);
-	const [, chUpdate] = channelContext() ?? [null, undefined];
+	const [chState, chUpdate] = channelContext() ?? [null, undefined];
 	const [, modalCtl] = useModals();
 
 	const currentUser = useCurrentUser();
@@ -97,9 +97,18 @@ export function MessageMenu(props: MessageMenuProps) {
 		});
 	};
 
+	const isSelected = () =>
+		chState?.selectedMessages.includes(props.message_id) ?? false;
+
 	const selectMessage = () => {
-		chUpdate?.("selectMode", true);
-		chUpdate?.("selectedMessages", [props.message_id]);
+		if (isSelected()) {
+			chUpdate?.("selectedMessages", (prev) =>
+				prev.filter((id) => id !== props.message_id),
+			);
+		} else {
+			chUpdate?.("selectMode", true);
+			chUpdate?.("selectedMessages", (prev) => [...prev, props.message_id]);
+		}
 	};
 
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(message())));
@@ -188,7 +197,9 @@ export function MessageMenu(props: MessageMenuProps) {
 				<Item onClick={togglePin}>{message()?.pinned ? "unpin" : "pin"}</Item>
 			</Show>
 			<Show when={canSelect()}>
-				<Item onClick={selectMessage}>select</Item>
+				<Item onClick={selectMessage}>
+					{isSelected() ? "deselect" : "select"}
+				</Item>
 			</Show>
 			<Show when={canDelete()}>
 				<Item onClick={deleteMessage} color="danger">
