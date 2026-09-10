@@ -1,4 +1,2 @@
-// mod media;
-// mod unversioned;
-mod v1;
-// mod v2;
+pub mod api;
+pub mod media;

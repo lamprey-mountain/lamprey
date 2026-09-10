@@ -27,6 +27,7 @@ async fn bulk(req: Req<routes::ack_bulk::Endpoint>) -> Result<routes::ack_bulk::
         warn!("unknown auth check for this ack type, allowing");
     }
 
+    // PERF: bulk permissions checking
     for &channel_id in &channel_ids {
         srv.perms
             .for_channel3(Some(user.id), channel_id)
@@ -70,3 +71,5 @@ async fn bulk(req: Req<routes::ack_bulk::Endpoint>) -> Result<routes::ack_bulk::
 
     Ok(routes::ack_bulk::Response {})
 }
+
+export_routes!(bulk);

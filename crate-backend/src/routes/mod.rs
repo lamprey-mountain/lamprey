@@ -60,7 +60,7 @@ pub mod util;
 
 fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
     let mut router = OpenApiRouter::new()
-        .merge(ack::routes())
+        // .merge(ack::routes())
         .merge(admin::routes())
         .merge(application::routes())
         .merge(auth::routes())
@@ -124,11 +124,4 @@ pub async fn well_known(State(s): State<Globals>) -> Result<impl IntoResponse> {
 
 pub fn routes(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new().nest("/v1", routes_v1(s))
-
-    // let kerosene_routes = kerosene_rest::Routes::new_api()
-    //     .into_axum_openapi()
-    //     .with_state(s.globals.clone());
-    // OpenApiRouter::new()
-    //     .nest("/v1", routes_v1(s))
-    //     .merge(kerosene_routes)
 }

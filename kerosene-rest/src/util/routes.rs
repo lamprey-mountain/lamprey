@@ -14,8 +14,6 @@ pub struct Handler {
     pub tag: &'static str,
 }
 
-inventory::collect!(Handler);
-
 // FIXME: v1 routes should be prefixed with /api/v1
 // v2 routes should be prefixed similarly
 // unsuse how to best do this. i might need to rework some macros for this?
@@ -87,11 +85,7 @@ impl Routes {
             last_path: None,
         };
 
-        for handler in inventory::iter::<Handler> {
-            if handler.tag == "api" {
-                (handler.register)(&mut me);
-            }
-        }
+        crate::endpoints::api::register(&mut me);
 
         me
     }
@@ -113,11 +107,8 @@ impl Routes {
             last_path: None,
         };
 
-        for handler in inventory::iter::<Handler> {
-            if handler.tag == "cdn" {
-                (handler.register)(&mut me);
-            }
-        }
+        crate::endpoints::media::register(&mut me);
+
         me
     }
 

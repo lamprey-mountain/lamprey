@@ -8,3 +8,5 @@ async fn media_get(req: Req<r::media_get::Endpoint>) -> Result<r::media_get::Res
 
     Ok(r::media_get::Response {})
 }
+
+export_routes!(media_get);

@@ -11,32 +11,31 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let ep_type = quote! { #metadata_path::Endpoint };
 
     Ok(quote! {
-        #input
+        mod #fn_name {
+            use super::*;
+            use common::util::routes::Endpoint as _;
+            use common::util::routes::Response as _;
+            use crate::util::MethodExt as _;
 
-        ::inventory::submit! {
-            crate::util::routes::Handler {
-                tag: #ep_type::route_tag(),
-                register: |r| {
-                    async fn #handler_name(
-                        req: crate::util::Req<#ep_type>,
-                    ) -> Result<impl ::axum::response::IntoResponse> {
-                        #fn_name(req).await.map(|r| {
-                            use common::util::routes::Response as _;
-                            r.encode().map(::axum::body::Body::from)
-                        })
-                    }
-                    use common::util::routes::Endpoint as _;
-                    let meta = #ep_type::metadata();
-                    use crate::util::MethodExt as _;
-                    r.route(
-                        meta.path,
-                        ::axum::routing::on(meta.method.to_filter(), #handler_name),
-                    );
-                    r.path(
-                        meta.path,
-                        #ep_type::path_item(),
-                    );
-                },
+            #input
+
+            pub fn register(r: &mut crate::Routes) {
+                async fn #handler_name(
+                    req: crate::util::Req<#ep_type>,
+                ) -> Result<impl ::axum::response::IntoResponse> {
+                    #fn_name(req).await.map(|r| {
+                        r.encode().map(::axum::body::Body::from)
+                    })
+                }
+                let meta = #ep_type::metadata();
+                r.route(
+                    meta.path,
+                    ::axum::routing::on(meta.method.to_filter(), #handler_name),
+                );
+                r.path(
+                    meta.path,
+                    #ep_type::path_item(),
+                );
             }
         }
     })

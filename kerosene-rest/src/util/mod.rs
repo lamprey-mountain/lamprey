@@ -27,3 +27,13 @@ impl MethodExt for Method {
 }
 
 pub use lamprey_backend_services::globals::Globals;
+
+macro_rules! export_routes {
+    ($($route:ident),* $(,)?) => {
+        pub fn register(r: &mut crate::Routes) {
+            $($route::register(r);)*
+        }
+    };
+}
+
+pub(crate) use export_routes;

@@ -1,11 +1,11 @@
-mod endpoints;
+pub(crate) mod endpoints;
 mod util;
 
 pub use util::request::Req;
 pub use util::routes::Routes;
 
 pub(crate) mod prelude {
-    pub(crate) use crate::util::{Globals, Req};
+    pub(crate) use crate::util::{Globals, Req, Routes, export_routes};
     pub(crate) use common::util::routes::Endpoint;
     pub(crate) use common::v1::routes;
     pub(crate) use kerosene_core::error::ServerError as Error;
