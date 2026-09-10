@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 
 mod components;
 mod diff;
-mod endpoint_new;
+mod endpoint;
 mod handler;
 mod handlers_new;
 mod ids;
@@ -75,15 +75,8 @@ pub fn handler(args: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn endpoint_new(args: TokenStream, item: TokenStream) -> TokenStream {
-    endpoint_new::expand(args.into(), item.into())
-        .unwrap_or_else(|e| e.to_compile_error())
-        .into()
-}
-
-#[proc_macro_attribute]
 pub fn endpoint(args: TokenStream, item: TokenStream) -> TokenStream {
-    endpoint_new::expand(args.into(), item.into())
+    endpoint::expand(args.into(), item.into())
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }

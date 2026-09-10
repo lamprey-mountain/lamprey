@@ -1,7 +1,7 @@
-use lamprey_macros::{endpoint, endpoint_new};
+use lamprey_macros::endpoint;
 
 /// Get well known
-#[endpoint_new(
+#[endpoint(
     get,
     path = "/.well-known/lamprey-mountain",
     tags = ["federation"],

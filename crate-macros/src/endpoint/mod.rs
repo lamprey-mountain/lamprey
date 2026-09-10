@@ -4,7 +4,7 @@ use proc_macro2::{Span, TokenStream};
 use quote::{format_ident, quote};
 use syn::{Attribute, Fields, Ident, Item, ItemMod, ItemStruct, LitStr, parse2, spanned::Spanned};
 
-use crate::endpoint_new::parse::{
+use crate::endpoint::parse::{
     EndpointArgs, EndpointDocs, EndpointField, EndpointModule, FieldKind,
 };
 
