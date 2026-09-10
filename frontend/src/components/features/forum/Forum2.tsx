@@ -1,3 +1,4 @@
+import { useSearchParams } from "@solidjs/router";
 import { useCtx } from "@/app/context";
 import { useCurrentUser } from "@/contexts/currentUser";
 
@@ -66,6 +67,12 @@ import {
 } from "./ThreadSorting.tsx";
 import { ThreadTags } from "./ThreadTags.tsx";
 
+type ForumQuery = {
+	q?: string;
+	title?: string;
+	body?: string;
+};
+
 // Type guard for Channel with last_version_id
 function hasLastVersionId(
 	ch: Channel,
@@ -103,6 +110,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const channels2 = useChannels();
 	const threads2 = useThreads();
 	const ctx = useCtx();
+	const [params] = useSearchParams<ForumQuery>();
 	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
 	const prefsService = usePreferences();
@@ -112,8 +120,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const [sortBy, setSortBy] = createSignal<Forum2Sort>("new");
 	const [viewAs, setViewAs] = createSignal<Forum2View>("compact");
 	const [showRemoved, setShowRemoved] = createSignal(false);
-	const [searchQuery, setSearchQuery] = createSignal("");
-	const [debouncedSearch, setDebouncedSearch] = createSignal("");
+	const [searchQuery, setSearchQuery] = createSignal(params.q ?? "");
+	const [debouncedSearch, setDebouncedSearch] = createSignal(params.q ?? "");
 
 	const debouncedSetSearch = debounce(
 		(value: string) => setDebouncedSearch(value),
@@ -227,7 +235,9 @@ export const Forum2 = (props: { channel: Channel }) => {
 	}
 
 	const [_bottom, setBottom] = createSignal<Element | undefined>();
-	const [showCreateForm, setShowCreateForm] = createSignal(false);
+	const [showCreateForm, setShowCreateForm] = createSignal(
+		!!(params.title || params.body),
+	);
 
 	const currentUser = useCurrentUser();
 	const user_id = () => currentUser()?.id;
@@ -291,6 +301,8 @@ export const Forum2 = (props: { channel: Channel }) => {
 						threadChannelType="ThreadForum2"
 						onCancel={() => setShowCreateForm(false)}
 						onSuccess={() => setShowCreateForm(false)}
+						initialTitle={params.title}
+						initialBody={params.body}
 					/>
 				</Show>
 				<div style="display:flex; align-items:center">

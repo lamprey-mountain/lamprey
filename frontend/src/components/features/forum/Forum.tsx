@@ -1,6 +1,6 @@
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { debounce } from "@solid-primitives/scheduled";
-import { A, useNavigate } from "@solidjs/router";
+import { A, useNavigate, useSearchParams } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
 import { useFloating } from "solid-floating-ui";
@@ -38,6 +38,15 @@ import {
 	ThreadSorting,
 } from "./ThreadSorting";
 
+type ForumQuery = {
+	// search posts
+	q?: string;
+
+	// prefill post creation form
+	title?: string;
+	body?: string;
+};
+
 export const Forum = (props: { channel: Channel }) => {
 	const api = useApi();
 	const channels2 = useChannels();
@@ -47,6 +56,7 @@ export const Forum = (props: { channel: Channel }) => {
 	const forum_id = () => props.channel.id;
 	const prefsService = usePreferences();
 	const prefs = prefsService.useRead();
+	const [params] = useSearchParams<ForumQuery>();
 
 	// Call the appropriate hook based on filter at component level
 	const activeThreads = threads2.useListForChannel(forum_id);
@@ -109,8 +119,8 @@ export const Forum = (props: { channel: Channel }) => {
 	const [sortBy, setSortBy] = createSignal<Forum2Sort>("new");
 	const [viewAs, setViewAs] = createSignal<Forum2View>("compact");
 	const [showRemoved, setShowRemoved] = createSignal(false);
-	const [searchQuery, setSearchQuery] = createSignal("");
-	const [debouncedSearch, setDebouncedSearch] = createSignal("");
+	const [searchQuery, setSearchQuery] = createSignal(params.q ?? "");
+	const [debouncedSearch, setDebouncedSearch] = createSignal(params.q ?? "");
 
 	const debouncedSetSearch = debounce(
 		(value: string) => setDebouncedSearch(value),
@@ -184,7 +194,9 @@ export const Forum = (props: { channel: Channel }) => {
 		);
 	});
 
-	const [showCreateForm, setShowCreateForm] = createSignal(false);
+	const [showCreateForm, setShowCreateForm] = createSignal(
+		!!(params.title || params.body),
+	);
 
 	function createThread() {
 		setShowCreateForm(true);
@@ -257,6 +269,8 @@ export const Forum = (props: { channel: Channel }) => {
 					}
 					onCancel={() => setShowCreateForm(false)}
 					onSuccess={() => setShowCreateForm(false)}
+					initialTitle={params.title}
+					initialBody={params.body}
 				/>
 			</Show>
 			<div style="display:flex; align-items:center">

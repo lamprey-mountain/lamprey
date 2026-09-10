@@ -17,6 +17,8 @@ export type CreateFormProps = {
 	threadChannelType: ChannelType;
 	onCancel: () => void;
 	onSuccess: () => void;
+	initialTitle?: string;
+	initialBody?: string;
 };
 
 export const CreateForm = (props: CreateFormProps) => {
@@ -26,7 +28,7 @@ export const CreateForm = (props: CreateFormProps) => {
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
 
-	const [title, setTitle] = createSignal("");
+	const [title, setTitle] = createSignal(props.initialTitle ?? "");
 	const [formEditorState, setFormEditorState] = createSignal<EditorState>();
 	const [ch] = useChannel();
 
@@ -36,7 +38,7 @@ export const CreateForm = (props: CreateFormProps) => {
 		toolbar,
 		autocomplete,
 		// TODO: save drafts
-		initialContent: () => "",
+		initialContent: () => props.initialBody ?? "",
 	});
 
 	function handleUpload(file: File) {
