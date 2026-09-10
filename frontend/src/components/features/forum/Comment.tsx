@@ -25,7 +25,8 @@ import {
 } from "../chat/Message";
 import { useMessageToolbar } from "../chat/message-toolbar-context";
 import { Reactions } from "../chat/Reactions";
-import { CommentEditor, type CommentNode } from "./Forum2";
+import { CommentEditor } from "./CommentEditor";
+import type { CommentNode } from "./Forum2";
 
 export const Comment = (props: {
 	collapsed: ReactiveSet<string>;

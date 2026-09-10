@@ -51,7 +51,6 @@ export const Forum = (props: { channel: Channel }) => {
 	const api = useApi();
 	const channels2 = useChannels();
 	const threads2 = useThreads();
-	const [, modalctl] = useModals();
 	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
 	const prefsService = usePreferences();
@@ -66,39 +65,6 @@ export const Forum = (props: { channel: Channel }) => {
 	const [_bottom, setBottom] = createSignal<Element | undefined>();
 
 	// TODO: Implement proper pagination for threads
-
-	const getActiveThreads = () => {
-		const list = activeThreads()?.state.ids || [];
-		return list
-			.map((id) => channels2.cache.get(id))
-			.filter(
-				(t): t is Channel =>
-					t !== undefined && t.parent_id === props.channel.id,
-			)
-			.sort((a, b) => (a.id < b.id ? 1 : -1));
-	};
-
-	const getArchivedThreads = () => {
-		const list = archivedThreads()?.state.ids || [];
-		return list
-			.map((id) => channels2.cache.get(id))
-			.filter(
-				(t): t is Channel =>
-					t !== undefined && t.parent_id === props.channel.id,
-			)
-			.sort((a, b) => (a.id < b.id ? 1 : -1));
-	};
-
-	const getRemovedThreads = () => {
-		const list = removedThreads()?.state.ids || [];
-		return list
-			.map((id) => channels2.cache.get(id))
-			.filter(
-				(t): t is Channel =>
-					t !== undefined && t.parent_id === props.channel.id,
-			)
-			.sort((a, b) => (a.id < b.id ? 1 : -1));
-	};
 
 	const user = useCurrentUser();
 	const user_id = () => user()?.id;
