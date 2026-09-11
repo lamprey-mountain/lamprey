@@ -9,11 +9,18 @@ license.workspace = true
 [dependencies]
 axum = { version = "0.8.9", features = ["macros", "multipart"] }
 common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
+headers = "0.4.1"
+http = "1.5.0"
 kerosene-core = { version = "0.1.1", path = "../kerosene-core" }
 lamprey-backend-core = { path = "../crate-backend-core" }
 lamprey-backend-services = { package = "kerosene-services", version = "0.1.1", path = "../kerosene-services" } # TODO: rename imports
 lamprey-macros = { path = "../crate-macros" }
+rmp-serde = "1.3.1"
 serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+serde_path_to_error = "0.1.20"
+serde_urlencoded = "0.7.1"
+time = "0.3.55"
 tower-http = { version = "0.6.11", features = ["catch-panic", "cors", "limit", "propagate-header", "sensitive-headers", "trace"] }
 tracing = "0.1.44"
 url = "2.5.8"
