@@ -16,12 +16,16 @@ use crate::{
     error::UnfurlError,
     plugin::{
         UnfurlPlugin,
-        html::util::{RobotsImagePreview, TwitterCard},
+        html::{
+            microdata::MicrodataProcessor,
+            util::{RobotsImagePreview, TwitterCard},
+        },
     },
     unfurler::EmbedGeneration,
     util::{EmbedGenerationTemplate, EmbedMediaPending},
 };
 
+mod microdata;
 mod util;
 
 pub struct HtmlStreamPlugin {
@@ -345,6 +349,8 @@ struct ExtractedData {
 
     twitter_card: Option<TwitterCard>,
     robots_max_image_preview: Option<RobotsImagePreview>,
+
+    microdata: MicrodataProcessor,
 }
 
 impl ExtractedData {
@@ -442,19 +448,20 @@ struct MetaSink {
     data: Rc<RefCell<ExtractedData>>,
 }
 
-// TODO: parse microdata (<anything itemprop="foo">)
-// TODO: parse linked json (<script type="application/ld+json">)
-
 impl TokenSink for MetaSink {
     type Handle = ();
 
     fn process_token(&self, token: Token, _line_number: u64) -> TokenSinkResult<()> {
+        let mut data = self.data.borrow_mut();
+
         match token {
             Token::TagToken(tag) => {
+                #[cfg(feature = "microdata")]
+                data.microdata.handle_tag(&tag);
+
                 if tag.kind == TagKind::StartTag {
                     match tag.name {
                         local_name!("title") => {
-                            let mut data = self.data.borrow_mut();
                             data.in_title = true;
                             data.current_title.clear();
                         }
@@ -478,7 +485,6 @@ impl TokenSink for MetaSink {
 
                             if let Some(content) = content {
                                 let key = property.or(name).unwrap_or_default().to_lowercase();
-                                let mut data = self.data.borrow_mut();
 
                                 if let Some(s) = key.strip_prefix("og:video") {
                                     data.videos.handle_meta(s, content);
@@ -542,7 +548,6 @@ impl TokenSink for MetaSink {
                             }
 
                             if let (Some(rel), Some(href)) = (rel, href) {
-                                let mut data = self.data.borrow_mut();
                                 let rels: Vec<&str> = rel.split_whitespace().collect();
 
                                 for r in rels {
@@ -580,7 +585,6 @@ impl TokenSink for MetaSink {
                                 if attr.name.local == local_name!("type")
                                     && attr.value.to_lowercase() == "application/ld+json"
                                 {
-                                    let mut data = self.data.borrow_mut();
                                     data.in_ld_json = true;
                                     data.current_ld_json.clear();
                                 }
@@ -590,7 +594,6 @@ impl TokenSink for MetaSink {
                     }
                 } else if tag.kind == TagKind::EndTag {
                     if tag.name == local_name!("title") {
-                        let mut data = self.data.borrow_mut();
                         data.in_title = false;
                         if data.title.is_none() {
                             // Extract title out to avoid borrow issues
@@ -598,7 +601,6 @@ impl TokenSink for MetaSink {
                             data.title = Some(title);
                         }
                     } else if tag.name == local_name!("script") {
-                        let mut data = self.data.borrow_mut();
                         if data.in_ld_json {
                             data.in_ld_json = false;
                             let s = data.current_ld_json.clone();
@@ -608,7 +610,9 @@ impl TokenSink for MetaSink {
                 }
             }
             Token::CharacterTokens(s) => {
-                let mut data = self.data.borrow_mut();
+                #[cfg(feature = "microdata")]
+                data.microdata.handle_text(&s);
+
                 if data.in_title {
                     data.current_title.push_str(&s);
                 } else if data.in_ld_json {

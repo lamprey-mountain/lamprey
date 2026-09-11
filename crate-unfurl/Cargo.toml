@@ -21,3 +21,6 @@ tracing = "0.1.44"
 url = "2.5.8"
 utoipa = { version = "5.5.0", features = ["url"] }
 lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+
+[features]
+microdata = []
