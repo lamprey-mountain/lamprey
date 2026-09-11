@@ -89,6 +89,9 @@ impl UnfurlPlugin for HtmlStreamPlugin {
         drop(tx);
 
         let data = dbg!(parse_task.await?);
+        if !data.has_meaningful_embed() {
+            return Ok(vec![]);
+        }
 
         let image_mode = determine_image_mode(&data);
 
@@ -342,6 +345,24 @@ struct ExtractedData {
 
     twitter_card: Option<TwitterCard>,
     robots_max_image_preview: Option<RobotsImagePreview>,
+}
+
+impl ExtractedData {
+    pub fn has_meaningful_embed(&self) -> bool {
+        let has_enough_html_meta = self.title.is_some() && self.description.is_some();
+        self.og_title.is_some()
+            || self.og_description.is_some()
+            || self.twitter_title.is_some()
+            || self.twitter_description.is_some()
+            || self.has_media()
+            || has_enough_html_meta
+    }
+
+    pub fn has_media(&self) -> bool {
+        !self.images.entries.is_empty()
+            || !self.videos.entries.is_empty()
+            || !self.audios.entries.is_empty()
+    }
 }
 
 #[derive(Debug, Default)]
