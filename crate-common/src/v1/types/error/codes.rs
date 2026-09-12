@@ -98,7 +98,6 @@ pub enum ErrorCode {
     // channel doesnt have text
     // channel doesnt have voice
 
-    // bitrate is too high
     // cannot set bitrate for non voice thread
     // cannot set user_limit for non voice thread
     // only gdms can have icons

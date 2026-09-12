@@ -22,7 +22,9 @@ use validator::Validate;
 use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
 use crate::services::automod::AutomodContext;
-use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate};
+use crate::types::{
+    DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate, MediaLinkType,
+};
 
 // TODO: split caches more
 // have a cache for public data, per-user data, member counts, etc
@@ -365,6 +367,7 @@ impl ServiceChannels {
         } else if let Some(room_id) = room_id {
             srv.perms.for_room(user.id, room_id).await?
         } else {
+            // TODO: error code for this
             return Err(Error::BadStatic(
                 "Channel must have a parent or be in a room",
             ));
@@ -372,7 +375,7 @@ impl ServiceChannels {
         perms.ensure(Permission::ChannelView)?;
 
         if !json.ty.can_be_in(parent.as_ref().map(|c| c.ty)) {
-            return Err(Error::BadStatic("invalid parent channel type"));
+            return Err(ApiError::from_code(ErrorCode::InvalidParentChannelType).into());
         }
 
         match json.ty {
@@ -391,91 +394,19 @@ impl ServiceChannels {
                 perms.ensure(Permission::ChannelManage)?;
             }
             ChannelType::ThreadPublic => {
+                // TODO: use Permission::MessageCreate in ChannelType::Forum
                 perms.ensure(Permission::ThreadCreatePublic)?;
-
-                if !perms.can_bypass_slowmode() {
-                    if let Some(parent_id) = json.parent_id {
-                        if let Some(thread_slowmode_expire_at) = data
-                            .channel_get_thread_slowmode_expire_at(parent_id, user.id)
-                            .await?
-                        {
-                            if thread_slowmode_expire_at > Time::now_utc() {
-                                return Err(Error::BadStatic("slowmode in effect"));
-                            }
-                        }
-
-                        // parent is checked to be Some above
-                        if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
-                            let next_thread_time =
-                                Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
-                            data.channel_set_thread_slowmode_expire_at(
-                                parent_id,
-                                user.id,
-                                next_thread_time,
-                            )
-                            .await?;
-                        }
-                    }
-                }
             }
             ChannelType::ThreadForum2 => {
+                // TODO: use Permission::MessageCreate in ChannelType::Forum2
                 perms.ensure(Permission::ThreadCreatePublic)?;
-
-                if !perms.can_bypass_slowmode() {
-                    if let Some(parent_id) = json.parent_id {
-                        if let Some(thread_slowmode_expire_at) = data
-                            .channel_get_thread_slowmode_expire_at(parent_id, user.id)
-                            .await?
-                        {
-                            if thread_slowmode_expire_at > Time::now_utc() {
-                                return Err(Error::BadStatic("slowmode in effect"));
-                            }
-                        }
-
-                        if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
-                            let next_thread_time =
-                                Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
-                            data.channel_set_thread_slowmode_expire_at(
-                                parent_id,
-                                user.id,
-                                next_thread_time,
-                            )
-                            .await?;
-                        }
-                    }
-                }
             }
             ChannelType::ThreadPrivate => {
+                // TODO: use Permission::MessageCreate in ChannelType::Ticket
                 perms.ensure(Permission::ThreadCreatePrivate)?;
-
-                if !perms.can_bypass_slowmode() {
-                    if let Some(parent_id) = json.parent_id {
-                        if let Some(thread_slowmode_expire_at) = data
-                            .channel_get_thread_slowmode_expire_at(parent_id, user.id)
-                            .await?
-                        {
-                            if thread_slowmode_expire_at > Time::now_utc() {
-                                return Err(Error::BadStatic("slowmode in effect"));
-                            }
-                        }
-
-                        if let Some(slowmode_delay) = parent.as_ref().unwrap().slowmode_thread {
-                            let next_thread_time =
-                                Time::now_utc() + std::time::Duration::from_secs(slowmode_delay);
-                            data.channel_set_thread_slowmode_expire_at(
-                                parent_id,
-                                user.id,
-                                next_thread_time,
-                            )
-                            .await?;
-                        }
-                    }
-                }
             }
             ChannelType::Dm | ChannelType::Gdm => {
-                return Err(Error::BadStatic(
-                    "can't create a direct message thread in a room",
-                ));
+                return Err(ApiError::from_code(ErrorCode::DmGdmOnlyOutsideRoom).into());
             }
             ChannelType::Document => {
                 if let Some(parent) = parent.as_ref() {
@@ -493,17 +424,44 @@ impl ServiceChannels {
                 perms.ensure(Permission::DocumentComment)?;
             }
             ChannelType::DocumentBranch => {
+                // TODO: error code for this
                 return Err(Error::BadStatic(
                     "can't manually create a document branch thread",
                 ));
             }
         };
+
+        if json.ty.is_thread() && !perms.can_bypass_slowmode() {
+            if let Some(parent) = &parent {
+                if let Some(thread_slowmode_expire_at) = data
+                    .channel_get_thread_slowmode_expire_at(parent.id, user.id)
+                    .await?
+                {
+                    if thread_slowmode_expire_at > Time::now_utc() {
+                        // TODO: include thread_slowmode_expire_at in error (as ratelimit?)
+                        return Err(ApiError::from_code(ErrorCode::SlowmodeThread).into());
+                    }
+                }
+
+                if let Some(slowmode_delay) = parent.slowmode_thread {
+                    let next_thread_time = Time::now_utc() + Duration::from_secs(slowmode_delay);
+                    data.channel_set_thread_slowmode_expire_at(
+                        parent.id,
+                        user.id,
+                        next_thread_time,
+                    )
+                    .await?;
+                }
+            }
+        }
+
         if json
             .bitrate
             .is_some_and(|b| b > self.globals.config().limits.room.max_bitrate as u64)
         {
-            return Err(Error::BadStatic("bitrate is too high"));
+            return Err(ApiError::from_code(ErrorCode::BitrateTooHigh).into());
         }
+
         // TODO: move some of this validation to common
         if json.bitrate.is_some() {
             json.ty.ensure_has_voice()?;
@@ -527,6 +485,7 @@ impl ServiceChannels {
         }
 
         if json.ty == ChannelType::ThreadForum2 && json.starter_message.is_none() {
+            // TODO: error code for this
             return Err(Error::BadStatic(
                 "starter_message is required for Forum2 threads",
             ));
@@ -539,21 +498,23 @@ impl ServiceChannels {
         if let Some(icon) = json.icon {
             let media = data.media_select(icon).await?;
             if !media.metadata.is_image() {
-                return Err(Error::BadStatic("media not an image"));
+                return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
             }
         }
 
         if let Some(tags) = &json.tags {
             if !json.ty.is_taggable() {
-                return Err(Error::BadStatic("channel type is not taggable"));
+                return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
             }
 
+            // TODO: error code for this
             let parent_id = json.parent_id.ok_or(Error::BadStatic(
                 "threads must have a parent channel to have tags",
             ))?;
 
             let available_tags = data.tag_get_many(parent_id, tags).await?;
             if available_tags.len() != tags.len() {
+                // TODO: error code for this
                 return Err(Error::BadStatic("invalid tag(s) for this forum"));
             }
 
@@ -563,14 +524,25 @@ impl ServiceChannels {
             // check permissions for each tag
             for tag_id in tags {
                 let Some(tag) = available_tags_map.get(tag_id) else {
-                    return Err(Error::BadStatic("invalid tag for this forum"));
+                    // TODO: return tag id in error
+                    return Err(ApiError::from_code(ErrorCode::UnknownTag).into());
                 };
 
+                // TODO(?): allow users with ChannelEdit and ChannelManage
                 if tag.restricted {
                     if !perms.has(Permission::ThreadEdit) && !perms.has(Permission::ThreadManage) {
-                        return Err(Error::BadStatic(
-                            "missing permission to apply restricted tag",
-                        ));
+                        return Err(ApiError {
+                            // NOTE: only ONE of these permissions are required. maybe i should add some way to indicate that?
+                            required_permissions: vec![
+                                Permission::ThreadEdit,
+                                Permission::ThreadManage,
+                            ],
+                            ..ApiError::with_message(
+                                ErrorCode::MissingPermissions,
+                                "you don't have permission to apply restricted tags".to_string(),
+                            )
+                        }
+                        .into());
                     }
                 }
             }
@@ -607,11 +579,7 @@ impl ServiceChannels {
                 ty: match json.ty {
                     ChannelType::Dm | ChannelType::Gdm => {
                         // this should be unreachable due to the check above
-                        // TODO: allow creating dm channels?
-                        warn!("unreachable: dm/gdm thread creation in room");
-                        return Err(Error::BadStatic(
-                            "can't create a direct message thread in a room",
-                        ));
+                        unreachable!("dm/gdm thread creation in room");
                     }
                     ty => ty.into(),
                 },
@@ -638,12 +606,8 @@ impl ServiceChannels {
         }
 
         if let Some(icon) = json.icon {
-            data.media_link_create_exclusive(
-                icon,
-                *channel_id,
-                crate::types::MediaLinkType::ChannelIcon,
-            )
-            .await?;
+            data.media_link_create_exclusive(icon, *channel_id, MediaLinkType::ChannelIcon)
+                .await?;
         }
 
         for overwrite in json.permission_overwrites {
@@ -779,6 +743,7 @@ impl ServiceChannels {
 
         let parent_channel = srv.channels.get(parent_channel_id, Some(user.id)).await?;
         if !parent_channel.ty.has_public_threads() && !parent_channel.ty.has_forum2_threads() {
+            // TODO: error code for this
             return Err(Error::BadStatic(
                 "Cannot create a thread in this channel type",
             ));
@@ -789,6 +754,7 @@ impl ServiceChannels {
             .get(parent_channel_id, source_message_id, Some(user.id))
             .await?;
         if !source_message.latest_version.message_type.is_threadable() {
+            // TODO: error code for this
             return Err(Error::BadStatic(
                 "Cannot create a thread from this message type",
             ));
@@ -945,11 +911,11 @@ impl ServiceChannels {
             let has_other_changes = other_changes.changes(&chan_old);
 
             if !can_unarchive || has_other_changes {
-                return Err(Error::BadStatic("thread is archived"));
+                return Err(ApiError::from_code(ErrorCode::ThreadArchived).into());
             }
         }
         if chan_old.is_removed() {
-            return Err(Error::BadStatic("thread is removed"));
+            return Err(ApiError::from_code(ErrorCode::ThreadRemoved).into());
         }
 
         perms.ensure_unlocked()?;
@@ -1001,6 +967,7 @@ impl ServiceChannels {
 
         if let Some(new_ty) = patch.ty {
             if !chan_old.ty.can_change_to(new_ty) {
+                // TODO: error code for this
                 return Err(Error::BadStatic("invalid channel type change"));
             }
 
@@ -1024,7 +991,7 @@ impl ServiceChannels {
             };
 
             if !target_ty.can_be_in(target_parent.map(|c| c.ty)) {
-                return Err(Error::BadStatic("invalid parent channel type"));
+                return Err(ApiError::from_code(ErrorCode::InvalidParentChannelType).into());
             }
         }
 
@@ -1045,7 +1012,7 @@ impl ServiceChannels {
         if patch.bitrate.is_some_and(|b| {
             b.is_some_and(|b| (b as u32) > self.globals.config().limits.room.max_bitrate)
         }) {
-            return Err(Error::BadStatic("bitrate is too high"));
+            return Err(ApiError::from_code(ErrorCode::BitrateTooHigh).into());
         }
         if patch.bitrate.is_some() {
             chan_old.ensure_has_voice()?;
@@ -1074,21 +1041,25 @@ impl ServiceChannels {
             chan_old.ensure_has_icon()?;
             let media = data.media_select(icon).await?;
             if !media.metadata.is_image() {
-                return Err(Error::BadStatic("media not an image"));
+                return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
             }
         }
 
         if let Some(tags) = &patch.tags {
             if !chan_old.is_taggable() {
-                return Err(Error::BadStatic("channel is not taggable"));
+                return Err(ApiError::from_code(ErrorCode::ChannelDoesNotSupportTags).into());
             }
 
             // allow creator to edit tags, otherwise require ThreadEdit or ThreadManage
             if chan_old.creator_id != user.id {
+                // TODO(?): allow users with ChannelEdit and ChannelManage
                 if !perms.has(Permission::ThreadEdit) && !perms.has(Permission::ThreadManage) {
+                    // TODO: return what permissions are missing
                     return Err(Error::MissingPermissions);
                 }
             }
+
+            // TODO: copy channel create errors instead of using BadStatic below
 
             // check if all tags are valid for this forum
             let forum_id = chan_old
@@ -1167,6 +1138,7 @@ impl ServiceChannels {
         if let Some(room_id) = chan_old.room_id {
             data.room_template_mark_dirty(room_id).await?;
         }
+        // FIXME: link icon media
         data.commit().await?;
 
         self.invalidate(thread_id).await;
@@ -1351,6 +1323,7 @@ impl ServiceChannels {
             auth.al_push(ty);
         }
 
+        // TODO: dry up channel update message logic (move stuff to messages service)
         if chan_old.name != chan_new.name {
             // send thread renamed message to thread
             // TODO: move this to messages service
