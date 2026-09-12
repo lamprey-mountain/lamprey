@@ -488,12 +488,6 @@ impl ServiceCache {
                 srv.emoji.cache.invalidate(emoji_id).await;
             }
             MessageSync::PresenceUpdate { user_id, presence } => {
-                // NOTE: this is probably unnecessary, since the user service already patches in presence
-                if let Ok(mut user) = srv.users.get(*user_id, None).await {
-                    user.presence = presence.clone();
-                    srv.users.cache.insert(*user_id, Arc::new(user)).await;
-                }
-
                 // Find all rooms this user is in and notify their actors
                 let rooms_to_notify = if let Some(rooms_set) = srv.rooms.user_rooms.get(user_id) {
                     rooms_set.iter().map(|r| *r).collect::<Vec<_>>()
