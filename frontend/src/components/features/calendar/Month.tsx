@@ -17,7 +17,7 @@ export const CalendarMonth = (props: {
 	channel: Channel;
 	events: Array<CalendarEvent>;
 	onDayClick: (day: number, el: HTMLElement) => void;
-	onEventClick: (event: CalendarEvent, day: number, el: HTMLElement) => void;
+	onEventClick: (event: CalendarEvent, el: HTMLElement) => void;
 }) => {
 	const ctx = useCtx();
 	const calendar = useCalendar();
@@ -185,7 +185,7 @@ export const CalendarMonth = (props: {
 											if (el) {
 												el.addEventListener("click", (e) => {
 													e.stopPropagation();
-													props.onEventClick(event, d().day, el);
+													props.onEventClick(event, el);
 												});
 											}
 										}}

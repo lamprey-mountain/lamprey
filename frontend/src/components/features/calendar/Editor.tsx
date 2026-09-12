@@ -1,3 +1,4 @@
+import type { CalendarEvent } from "sdk";
 import type { CalendarEventCreate, CalendarEventPatch } from "sdk/types";
 import {
 	createContext,
@@ -18,21 +19,7 @@ export type CalendarPopup = {
 	id: "event-editor";
 	props: {
 		channel_id: string;
-		event?: {
-			id?: string;
-			name: string;
-			start: Date;
-			end: Date | null;
-			allDay: boolean;
-			timezone: string;
-			recurrence?: string;
-			location?: string;
-			url?: string;
-			description?: string;
-			reminders?: string[];
-			instances?: string[];
-			participants?: string[];
-		};
+		event?: CalendarEvent;
 	};
 	placement: "bottom-end" | "top-end" | "bottom-start" | "top-start";
 };
@@ -120,37 +107,25 @@ export const useCalendarPopup = (): CalendarPopupContextType => {
 
 export const PopupEventEditor = (props: {
 	channel_id: string;
-	event?: {
-		id?: string;
-		name: string;
-		start: Date;
-		end: Date | null;
-		allDay: boolean;
-		timezone: string;
-		recurrence?: string;
-		location?: string;
-		url?: string;
-		description?: string;
-		reminders?: string[];
-		instances?: string[];
-		participants?: string[];
-	};
+	event?: CalendarEvent;
 	onClose: () => void;
 }) => {
 	const [activeTab, setActiveTab] = createSignal<
 		"event" | "instances" | "participants"
 	>("event");
 	const [formData, setFormData] = createStore({
-		name: props.event?.name || "",
-		start: props.event?.start ? new Date(props.event.start) : new Date(),
-		end: props.event?.end ? new Date(props.event.end) : new Date(),
-		allDay: props.event?.allDay || false,
+		name: props.event?.title || "",
+		start: props.event?.starts_at
+			? new Date(props.event.starts_at)
+			: new Date(),
+		end: props.event?.ends_at ? new Date(props.event.ends_at) : null,
+		allDay: false, // TODO: support in CalendarEvent
 		timezone: props.event?.timezone || "UTC",
-		recurrence: props.event?.recurrence || "",
+		recurrence: "", // TODO: support in CalendarEvent
 		location: props.event?.location || "",
 		url: props.event?.url || "",
 		description: props.event?.description || "",
-		reminders: props.event?.reminders || [],
+		reminders: [] as string[], // TODO: save in user preferences, handle reminders in backend notification service
 	});
 
 	// Handle external updates (e.g. clicking another day in the calendar)
@@ -163,19 +138,19 @@ export const PopupEventEditor = (props: {
 		lastId = event.id;
 
 		setFormData({
-			start: new Date(event.start),
-			end: event.end ?? undefined, // NOTE: check if undefined works
+			start: new Date(event.starts_at),
+			end: event.ends_at ? new Date(event.ends_at) : null,
 			// Only reset other fields if it's a completely different event (different ID)
 			...(!isSameEvent
 				? {
-						name: event.name || "",
-						allDay: event.allDay || false,
+						name: event.title || "",
+						allDay: false, // TODO: support in CalendarEvent
 						timezone: event.timezone || "UTC",
-						recurrence: event.recurrence || "",
+						recurrence: "", // TODO: support in CalendarEvent
 						location: event.location || "",
 						url: event.url || "",
 						description: event.description || "",
-						reminders: event.reminders || [],
+						reminders: [] as string[], // TODO: save in user preferences, handle reminders in backend notification service
 					}
 				: {}),
 		});
@@ -202,7 +177,7 @@ export const PopupEventEditor = (props: {
 					location: formData.location || null,
 					url: formData.url || null,
 					starts_at: formData.start.toISOString(),
-					ends_at: formData.end.toISOString(), // TODO: make optional
+					ends_at: formData.end?.toISOString(), // TODO: make optional
 				} as CalendarEventPatch,
 			});
 		} else {
@@ -216,11 +191,15 @@ export const PopupEventEditor = (props: {
 					timezone: null, // TODO: better timezone input
 					url: formData.url || null,
 					starts_at: formData.start.toISOString(),
-					ends_at: formData.end.toISOString(), // TODO: make optional
+					ends_at: formData.end?.toISOString(), // TODO: make optional
 				} as CalendarEventCreate,
 			});
 		}
 	};
+
+	// TODO: fetch this from api
+	const instances = () => [];
+	const participants = () => [];
 
 	return (
 		<div class="calendar-event-popup">
@@ -248,8 +227,8 @@ export const PopupEventEditor = (props: {
 							class={`popup-tab ${activeTab() === "instances" ? "active" : ""}`}
 							onClick={() => setActiveTab("instances")}
 						>
-							{props.event?.instances && props.event.instances.length > 0
-								? `${props.event.instances.length} instances`
+							{instances().length > 0
+								? `${instances().length} instances`
 								: "Instances"}
 						</button>
 					</Show>
@@ -260,8 +239,8 @@ export const PopupEventEditor = (props: {
 						}`}
 						onClick={() => setActiveTab("participants")}
 					>
-						{props.event?.participants && props.event.participants.length > 0
-							? `${props.event.participants.length} participants`
+						{participants().length > 0
+							? `${participants().length} participants`
 							: "Participants"}
 					</button>
 				</div>
@@ -336,12 +315,12 @@ export const PopupEventEditor = (props: {
 								<input
 									id="calendar-end-input"
 									type="time"
-									value={formData.end.toTimeString().slice(0, 5)}
+									value={formData.end?.toTimeString().slice(0, 5)}
 									onInput={(e) => {
 										const [hours, minutes] = e.currentTarget.value
 											.split(":")
 											.map(Number);
-										const newDate = new Date(formData.end);
+										const newDate = formData.end ?? new Date();
 										newDate.setHours(hours, minutes);
 										handleChange("end", newDate);
 									}}
@@ -433,12 +412,12 @@ export const PopupEventEditor = (props: {
 				<div
 					class={`tab-content ${activeTab() === "instances" ? "active" : ""}`}
 				>
-					{props.event?.instances ? (
+					{instances() ? (
 						<div class="popup-form">
 							<h3>Event Instances</h3>
 							<p>
-								This event has {props.event.instances.length} instances. Click
-								on individual instances to edit them.
+								This event has {instances().length} instances. Click on
+								individual instances to edit them.
 							</p>
 						</div>
 					) : (
@@ -455,12 +434,10 @@ export const PopupEventEditor = (props: {
 						activeTab() === "participants" ? "active" : ""
 					}`}
 				>
-					{props.event?.participants ? (
+					{participants() ? (
 						<div class="popup-form">
 							<h3>Event Participants</h3>
-							<p>
-								This event has {props.event.participants.length} participants.
-							</p>
+							<p>This event has {participants().length} participants.</p>
 						</div>
 					) : (
 						<p>No participants added yet.</p>

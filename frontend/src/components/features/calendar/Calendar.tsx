@@ -63,56 +63,34 @@ export const Calendar = (props: { channel: Channel }) => {
 		}
 
 		const newEvent = {
-			name: "",
-			start: new Date(
+			title: "",
+			starts_at: new Date(
 				currentDate().getFullYear(),
 				currentDate().getMonth(),
 				day,
 				9,
 				0,
-			),
-			end: new Date(
+			).toISOString(),
+			ends_at: new Date(
 				currentDate().getFullYear(),
 				currentDate().getMonth(),
 				day,
 				10,
 				0,
-			),
-			allDay: false,
-			timezone: "UTC",
-		};
+			).toISOString(),
+		} as CalendarEvent;
 		setPopup(el, "bottom-start", newEvent);
 	};
 
 	// Open popup for editing event when clicking an event
-	const handleEventClick = (
-		event: CalendarEvent,
-		day: number, // TODO: remove param
-		el: HTMLElement,
-	) => {
+	const handleEventClick = (event: CalendarEvent, el: HTMLElement) => {
 		const current = calendarPopup();
 		if (current?.ref === el) {
 			closePopup();
 			return;
 		}
 
-		// TODO: use CalendarEvent instead of custom type
-		const existingEvent = {
-			id: event.id,
-			name: event.title,
-			start: new Date(event.starts_at),
-			end: event.ends_at ? new Date(event.ends_at) : null,
-			allDay: false, // TODO: support this
-			timezone: event.timezone ?? "UTC", // TODO: use channel/calendar timezone if null
-			recurrence: "", // TODO: support this
-			location: event.location ?? "",
-			url: event.url ?? "",
-			description: event.description ?? "",
-			reminders: [],
-			instances: [],
-			participants: [],
-		};
-		setPopup(el, "bottom-start", existingEvent);
+		setPopup(el, "bottom-start", event);
 	};
 
 	return (
