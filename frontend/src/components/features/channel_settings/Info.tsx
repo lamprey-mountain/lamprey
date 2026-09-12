@@ -33,9 +33,20 @@ const slowmodePresets: DurationPreset[] = [
 	{ label: "24 hours", seconds: 86400 },
 ];
 
+const autoArchivePresets: DurationPreset[] = [
+	{ label: "disabled", seconds: null as any },
+	{ label: "1 hour", seconds: 3600 },
+	{ label: "6 hours", seconds: 21600 },
+	{ label: "24 hours", seconds: 86400 },
+	{ label: "3 days", seconds: 86400 * 3 },
+	{ label: "7 days", seconds: 86400 * 7 },
+];
+
 type Draft = {
 	name: string;
 	nsfw: boolean;
+	autoArchive: number | null;
+	defaultAutoArchive: number | null;
 	slowmodeMessage: number | null;
 	slowmodeThread: number | null;
 	defaultSlowmodeMessage: number | null;
@@ -48,6 +59,8 @@ type Draft = {
 const toDraft = (c: Channel): Draft => ({
 	name: c.name,
 	nsfw: c.nsfw ?? false,
+	autoArchive: c.auto_archive_duration ?? null,
+	defaultAutoArchive: c.default_auto_archive_duration ?? null,
 	slowmodeMessage: c.slowmode_message ?? null,
 	slowmodeThread: c.slowmode_thread ?? null,
 	defaultSlowmodeMessage: c.default_slowmode_message ?? null,
@@ -119,12 +132,61 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		JSON.stringify(draft) !== JSON.stringify(toDraft(props.channel)) ||
 		description() !== (props.channel.description ?? "");
 
+	const hasThreadSlowmode = () => {
+		return (
+			props.channel.type === "Forum" ||
+			props.channel.type === "Forum2" ||
+			props.channel.type === "Ticket" ||
+			props.channel.type === "Announcement" ||
+			props.channel.type === "Wiki" ||
+			props.channel.type === "Text"
+		);
+		// TODO: (props.channel.type === "Document" || props.channel.parent.type !== "Wiki")
+	};
+
+	const hasTextSlowmode = () => {
+		return (
+			props.channel.type === "ThreadPublic" ||
+			props.channel.type === "ThreadPrivate" ||
+			props.channel.type === "ThreadForum2" ||
+			props.channel.type === "Voice" ||
+			props.channel.type === "Announcement" ||
+			props.channel.type === "Text"
+		);
+	};
+
+	const hasAutoArchive = () => {
+		return (
+			props.channel.type === "ThreadPublic" ||
+			props.channel.type === "ThreadPrivate" ||
+			props.channel.type === "ThreadForum2"
+		);
+	};
+
+	const hasDefaultAutoArchive = () => {
+		return (
+			props.channel.type === "Forum" ||
+			props.channel.type === "Forum2" ||
+			props.channel.type === "Ticket" ||
+			props.channel.type === "Announcement" ||
+			props.channel.type === "Wiki" ||
+			props.channel.type === "Text"
+		);
+		// TODO: (props.channel.type === "Document" || props.channel.parent.type !== "Wiki")
+	};
+
 	const save = async () => {
 		setSaving(true);
 		const updated = await channels.update(props.channel.id, {
 			name: draft.name,
 			description: description() || null,
 			nsfw: draft.nsfw,
+			...(hasAutoArchive() && {
+				auto_archive_duration: draft.autoArchive,
+			}),
+			...(hasDefaultAutoArchive() && {
+				default_auto_archive_duration: draft.defaultAutoArchive,
+			}),
 			slowmode_message: draft.slowmodeMessage,
 			slowmode_thread: draft.slowmodeThread,
 			default_slowmode_message: draft.defaultSlowmodeMessage,
@@ -162,29 +224,6 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		const s = editor.createState();
 		editor.setState(s);
 		setDescription(s.doc.textContent);
-	};
-
-	const hasThreadSlowmode = () => {
-		return (
-			props.channel.type === "Forum" ||
-			props.channel.type === "Forum2" ||
-			props.channel.type === "Ticket" ||
-			props.channel.type === "Announcement" ||
-			props.channel.type === "Wiki" ||
-			props.channel.type === "Text"
-		);
-		// TODO: (props.channel.type === "Document" || props.channel.parent.type !== "Wiki")
-	};
-
-	const hasTextSlowmode = () => {
-		return (
-			props.channel.type === "ThreadPublic" ||
-			props.channel.type === "ThreadPrivate" ||
-			props.channel.type === "ThreadForum2" ||
-			props.channel.type === "Voice" ||
-			props.channel.type === "Announcement" ||
-			props.channel.type === "Text"
-		);
 	};
 
 	return (
@@ -245,6 +284,32 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					</label>
 				</div>
 			</div>
+			<Show when={hasDefaultAutoArchive()}>
+				<label>
+					<h3 class="dim">automatically archive threads after</h3>
+					<DurationInput
+						value={draft.defaultAutoArchive}
+						onInput={(d) =>
+							setDraft("defaultAutoArchive", typeof d === "number" ? d : null)
+						}
+						presets={autoArchivePresets}
+						placeholder="disabled"
+					/>
+				</label>
+			</Show>
+			<Show when={hasAutoArchive()}>
+				<label>
+					<h3 class="dim">automatically archive after</h3>
+					<DurationInput
+						value={draft.autoArchive}
+						onInput={(d) =>
+							setDraft("autoArchive", typeof d === "number" ? d : null)
+						}
+						presets={autoArchivePresets}
+						placeholder="disabled"
+					/>
+				</label>
+			</Show>
 			<Show when={hasTextSlowmode()}>
 				<label>
 					<h3 class="dim">slowmode (messages)</h3>
@@ -270,8 +335,6 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 						placeholder="disabled"
 					/>
 				</label>
-			</Show>
-			<Show when={hasThreadSlowmode()}>
 				<label>
 					<h3 class="dim">slowmode (messages default for threads)</h3>
 					<DurationInput
