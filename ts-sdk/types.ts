@@ -368,3 +368,7 @@ export type ApiError = {
 };
 
 export type UnfurlerLogEntry = components["schemas"]["LogEntry"];
+
+export type CalendarEvent = components["schemas"]["CalendarEvent"];
+export type CalendarEventCreate = components["schemas"]["CalendarEventCreate"];
+export type CalendarEventPatch = components["schemas"]["CalendarEventPatch"];

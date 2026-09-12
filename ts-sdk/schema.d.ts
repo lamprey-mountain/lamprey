@@ -91,32 +91,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/ack": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Ack bulk */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/admin/broadcast": {
 		parameters: {
 			query?: never;
@@ -9806,11 +9780,47 @@ export interface components {
 			/** Format: uri */
 			url?: string | null;
 		};
+		CalendarEventCreate: {
+			description?: string | null;
+			ends_at?: null | components["schemas"]["Time"];
+			location?: string | null;
+			recurrence?: null | components["schemas"]["Recurrence"];
+			starts_at: components["schemas"]["Time"];
+			timezone?: null | components["schemas"]["Timezone"];
+			title: string;
+			/** Format: uri */
+			url?: string | null;
+		};
+		CalendarEventListQuery: {
+			dir?: null | components["schemas"]["PaginationDirection"];
+			from?: null | components["schemas"]["Id"];
+			from_time?: null | components["schemas"]["Time"];
+			/** Format: int32 */
+			limit?: number | null;
+			to?: null | components["schemas"]["Id"];
+			to_time?: null | components["schemas"]["Time"];
+		};
 		CalendarEventParticipant: {
 			member?: null | components["schemas"]["RoomMember"];
 			status: components["schemas"]["CalendarRsvpStatus"];
 			user?: null | components["schemas"]["User"];
 			user_id: components["schemas"]["Id"];
+		};
+		CalendarEventParticipantPut: {
+			status: components["schemas"]["CalendarRsvpStatus"];
+		};
+		CalendarEventParticipantQuery: {
+			/** @description whether to include user and member */
+			include_member?: boolean;
+		};
+		CalendarEventPatch: {
+			description?: string | null;
+			ends_at?: null | components["schemas"]["Time"];
+			location?: string | null;
+			starts_at?: null | components["schemas"]["Time"];
+			title?: string | null;
+			/** Format: uri */
+			url?: string | null;
 		};
 		/** @description an overwrite to a calendar event instance */
 		CalendarOverwrite: {
@@ -9826,6 +9836,18 @@ export interface components {
 			 * @description the sequence number of this instance
 			 */
 			seq: number;
+			starts_at?: null | components["schemas"]["Time"];
+			title?: string | null;
+			/** Format: uri */
+			url?: string | null;
+		};
+		CalendarOverwritePut: {
+			/** @description if this event is cancelled */
+			cancelled?: boolean | null;
+			ends_at?: null | components["schemas"]["Time"];
+			/** @description shown before the description */
+			extra_description?: string | null;
+			location?: string | null;
 			starts_at?: null | components["schemas"]["Time"];
 			title?: string | null;
 			/** Format: uri */
