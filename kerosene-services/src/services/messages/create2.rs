@@ -268,6 +268,11 @@ impl ServiceMessages {
         // TODO: use this instead
         // let srv.perms.enforce(...).await?;
 
+        // TODO: check visibility (ie. ChannelView) first, then check these, then check the rest of the permissions
+        // does the order matter that much? for sensible error messages, probably?
+        channel.ensure_has_text()?;
+        channel.ensure_unremoved()?;
+
         let removed_at = async {
             let Some(room_id) = channel.room_id else {
                 return Ok(None);
