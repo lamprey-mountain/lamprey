@@ -682,25 +682,21 @@ impl ServiceMessages {
                     .collect()
             });
 
-        let emojis = srv
-            .cache
-            .emoji_get_many(&mentions_ids.emojis)
-            .map_ok(|emojis| {
-                emojis
-                    .into_iter()
-                    .filter(|e| {
-                        allow_external_emoji
-                            || room_id.is_some_and(|room_id| {
-                                e.owner == Some(EmojiOwner::Room { room_id })
-                            })
-                    })
-                    .map(|e| MentionsEmoji {
-                        id: e.id,
-                        name: e.name,
-                        animated: e.animated,
-                    })
-                    .collect()
-            });
+        let emojis = srv.emoji.get_many(&mentions_ids.emojis).map_ok(|emojis| {
+            emojis
+                .into_iter()
+                .filter(|e| {
+                    allow_external_emoji
+                        || room_id
+                            .is_some_and(|room_id| e.owner == Some(EmojiOwner::Room { room_id }))
+                })
+                .map(|e| MentionsEmoji {
+                    id: e.id,
+                    name: e.name,
+                    animated: e.animated,
+                })
+                .collect()
+        });
 
         let ((users, roles), channels, emojis) = try_join!(users_and_roles, channels, emojis)?;
 

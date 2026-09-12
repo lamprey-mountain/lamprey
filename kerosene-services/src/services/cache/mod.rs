@@ -269,18 +269,6 @@ impl ServiceCache {
         self.preferences_user.invalidate(&(user_id, other_id)).await;
     }
 
-    /// get an emoji from the cache, loading from the database if not present
-    #[deprecated = "use emoji service directly"]
-    pub async fn emoji_get(&self, emoji_id: EmojiId) -> Result<EmojiCustom> {
-        self.state.services().emoji.get(emoji_id).await
-    }
-
-    /// get multiple emojis from the cache, loading missing ones from the database
-    #[deprecated = "use emoji service directly"]
-    pub async fn emoji_get_many(&self, emoji_ids: &[EmojiId]) -> Result<Vec<EmojiCustom>> {
-        self.state.services().emoji.get_many(emoji_ids).await
-    }
-
     /// get the permission calculator for this room, loading the room if it doesn't exist
     pub async fn permissions(
         &self,
