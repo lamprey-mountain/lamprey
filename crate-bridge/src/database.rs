@@ -6,8 +6,8 @@ use uuid::Uuid;
 
 use crate::{
     bridge_old::{
-        Message, Portal, PortalDiscord, PortalId, PortalLamprey, Realm, RealmDiscord, RealmId,
-        RealmLamprey, RealmMember, User,
+        Message, MessageId, Portal, PortalDiscord, PortalId, PortalLamprey, Realm, RealmDiscord,
+        RealmId, RealmLamprey, RealmMember, User,
     },
     prelude::*,
 };
@@ -405,6 +405,26 @@ impl Database for SqliteDatabase {
                 message_id_str,
                 lamprey_media_str,
                 discord_attachment_str
+            )
+            .execute(&mut *txn)
+            .await?;
+        }
+
+        if let Some(ref l_id) = lamprey_message_id {
+            query!(
+                "UPDATE portal SET lamprey_last_id = MAX(lamprey_last_id, ?) WHERE id = ?",
+                l_id,
+                portal_id_str,
+            )
+            .execute(&mut *txn)
+            .await?;
+        }
+
+        if let Some(ref d_id) = discord_message_id {
+            query!(
+                "UPDATE portal SET discord_last_id = MAX(discord_last_id, ?) WHERE id = ?",
+                d_id,
+                portal_id_str,
             )
             .execute(&mut *txn)
             .await?;

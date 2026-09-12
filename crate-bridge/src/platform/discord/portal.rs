@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use opentelemetry::trace::FutureExt;
 use serenity::all::{
     CreateAllowedMentions, CreateEmbed, EditAttachments, ExecuteWebhook, Mentionable,
 };
 use tokio::sync::broadcast;
-use tracing::{debug, error, warn};
+use tracing::{Instrument, debug, error, warn};
 
 use crate::bridge_old::{MessageData, Portal, PortalEvent, PortalHandle, PortalId};
 use crate::prelude::*;
@@ -43,7 +44,14 @@ impl DiscordPortal {
         let http_client = reqwest::Client::new();
         // TODO: set user-agent header for http_client?
 
-        // TODO: backfill missed messages
+        let discord_cfg = self.portal.discord.as_ref().unwrap();
+        self.backfill()
+            .instrument(tracing::debug_span!(
+                "discord backfill",
+                portal_id = %self.portal_id,
+                channel_id = %discord_cfg.channel_id,
+            ))
+            .await?;
 
         loop {
             let event = match events.recv().await {
@@ -61,6 +69,55 @@ impl DiscordPortal {
         }
 
         Ok(())
+    }
+
+    async fn backfill(&self) -> Result<()> {
+        // TODO: non-blocking backfill (see LampreyPortal comment)
+        let discord_cfg = self.portal.discord.as_ref().unwrap();
+        let mut last_id = discord_cfg.last_id;
+
+        debug!(last_id=%last_id, "start backfill");
+
+        loop {
+            let messages = discord_cfg
+                .channel_id
+                .messages(
+                    &self.http,
+                    serenity::all::GetMessages::new().after(last_id).limit(100),
+                )
+                .await;
+            let messages = match messages {
+                Ok(m) => m,
+                Err(e) => {
+                    warn!(%last_id, "failed to fetch messages: {e:?}");
+                    return Ok(());
+                }
+            };
+
+            debug!(count=%messages.len(), "backfill messages");
+
+            // break if messages is empty
+            if messages.is_empty() {
+                return Ok(());
+            }
+
+            let mut messages = messages;
+            messages.reverse();
+            let messages = messages;
+
+            for message in messages {
+                let message_id = message.id;
+                let event = PortalEvent::MessageCreate(MessageData::Discord {
+                    message: Box::new(message),
+                });
+
+                if self.handle.events.send(Arc::new(event)).is_err() {
+                    error!(%message_id, "portal event queue is full, dropping message");
+                }
+
+                last_id = message_id;
+            }
+        }
     }
 
     async fn handle_event(&self, http_client: &reqwest::Client, event: &PortalEvent) -> Result<()> {
@@ -82,6 +139,18 @@ impl DiscordPortal {
                     } => (&**message, &**user, room_member.as_deref(), &**info),
                     MessageData::Discord { .. } => return Ok(()),
                 };
+
+                // check if message has already been bridged
+                if self
+                    .handle
+                    .bridge
+                    .db
+                    .message_get_by_lamprey_id(self.portal_id, msg.id)
+                    .await?
+                    .is_some()
+                {
+                    return Ok(());
+                }
 
                 // PERF: don't fetch webhook every time, cache it (Webhook::from_url)
                 let discord_cfg = self.portal.discord.as_ref().unwrap();

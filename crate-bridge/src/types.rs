@@ -166,6 +166,8 @@ pub mod may_redesign {
             message: Box<lamprey::Message>,
             user: Box<lamprey::User>,
             room_member: Option<Box<lamprey::RoomMember>>,
+
+            // PERF: maybe don't box this?
             info: Box<LampreyInfo>,
         },
 

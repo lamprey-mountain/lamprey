@@ -10,7 +10,7 @@ use common::{
 use sdk::http::{Http, MessageCreateOptions};
 use time::OffsetDateTime;
 use tokio::sync::broadcast;
-use tracing::{debug, error, warn};
+use tracing::{Instrument, debug, error, warn};
 
 use crate::bridge_old as bridge;
 use crate::{
@@ -57,26 +57,13 @@ impl LampreyPortal {
             self.channel_id,
         );
 
-        // TODO: backfill should be a task that doesn't block the portal
-        // HOWEVER, the portal should bridge messages until backfilling is done
-        let mut last_id = self.portal.lamprey.as_ref().expect("handle None").last_id;
-        loop {
-            let Ok(messages) = ly.fetch_after(last_id).await else {
-                warn!(%last_id, portal_id=%self.portal_id, channel_id=%self.channel_id, "failed to fetch_after messages");
-                break;
-            };
-
-            // break if messages is empty
-            let Some(last) = messages.last() else {
-                break;
-            };
-
-            // try to forward/bridge message. skip if its already bridged.
-
-            // TODO: update db -> portal -> lamprey_last_id
-            last_id = last.id;
-            // TODO: every time i insert/update a row in the "message" table, also update last_id
-        }
+        self.backfill(&ly)
+            .instrument(tracing::debug_span!(
+                "lamprey backfill",
+                portal_id = %self.portal_id,
+                channel_id = %self.channel_id,
+            ))
+            .await?;
 
         loop {
             let event = match events.recv().await {
@@ -98,6 +85,50 @@ impl LampreyPortal {
         Ok(())
     }
 
+    async fn backfill(&self, ly: &LampreyClient) -> Result<()> {
+        // TODO: backfill should be a task that doesn't block the portal
+        // HOWEVER, the portal should bridge messages until backfilling is done
+        let mut last_id = self.portal.lamprey.as_ref().expect("handle None").last_id;
+
+        debug!(last_id=%last_id, "start backfill");
+
+        loop {
+            let messages = match ly.fetch_after(last_id).await {
+                Ok(m) => m,
+                Err(e) => {
+                    warn!(%last_id, "failed to fetch_after messages: {e:?}");
+                    return Ok(());
+                }
+            };
+
+            // break if messages is empty
+            if messages.is_empty() {
+                return Ok(());
+            }
+
+            debug!(count=%messages.len(), "backfill messages");
+
+            for message in messages {
+                let message_id = message.id;
+                let author_id = message.author_id;
+                let event = PortalEvent::MessageCreate(bridge_old::MessageData::Lamprey {
+                    message: Box::new(message),
+                    user: Box::new(ly.http.user_get(UserIdReq::UserId(author_id)).await?.inner),
+                    room_member: None,
+                    info: Box::new(bridge_old::LampreyInfo {
+                        cdn_url: ly.http.cdn_url().clone(),
+                    }),
+                });
+
+                if self.handle.events.send(Arc::new(event)).is_err() {
+                    error!(%message_id, "portal event queue is full, dropping message");
+                }
+
+                last_id = message_id;
+            }
+        }
+    }
+
     async fn handle_event(&self, ly: &LampreyClient, event: &PortalEvent) -> Result<()> {
         match event {
             PortalEvent::Typing(user) => {
@@ -117,6 +148,18 @@ impl LampreyPortal {
                     }
                     bridge_old::MessageData::Discord { message } => message,
                 };
+
+                // check if message has already been bridged
+                if self
+                    .handle
+                    .bridge
+                    .db
+                    .message_get_by_discord_id(self.portal_id, dm.id)
+                    .await?
+                    .is_some()
+                {
+                    return Ok(());
+                }
 
                 let puppet = ly.sync_puppet_discord(dm).await?;
 
@@ -240,7 +283,7 @@ impl LampreyPortal {
                         self.portal_id,
                         bridge_old::Message {
                             id: crate::types::MessageId::new(),
-                            source_platform: Platform::Lamprey,
+                            source_platform: Platform::Discord,
                             attachments: vec![], // FIXME: populate from sent_message
                             portal_id: self.portal_id,
                             lamprey_message_id: Some(sent_message.id),
