@@ -1371,25 +1371,27 @@ impl ChannelType {
     /// whether a channel of this type can be inside a channel of this other type. use None for top level rooms.
     pub fn can_be_in(&self, other: Option<ChannelType>) -> bool {
         match (self, other) {
-            // text channels can have public or priate threads
+            // text, dms, and gdm channels can have public or priate threads
+            // NOTE: why can dms have private threads? i should probably prevent that, since the behavior can be confusing
+            // TODO: dms being able to have threads could be useful, but could also be incredibly buggy. review thread handling code and make sure everything is ok.
             (ChannelType::ThreadPublic, Some(ChannelType::Text)) => true,
-            (ChannelType::ThreadPrivate, Some(ChannelType::Text)) => true,
-
-            // text channels can have public or priate threads
-            (ChannelType::ThreadPublic, Some(ChannelType::Announcement)) => true,
             (ChannelType::ThreadPublic, Some(ChannelType::Dm)) => true,
             (ChannelType::ThreadPublic, Some(ChannelType::Gdm)) => true,
+            (ChannelType::ThreadPrivate, Some(ChannelType::Text)) => true,
+            (ChannelType::ThreadPrivate, Some(ChannelType::Dm)) => true,
+            (ChannelType::ThreadPrivate, Some(ChannelType::Gdm)) => true,
+
+            // announcement channels can have public threads
+            (ChannelType::ThreadPublic, Some(ChannelType::Announcement)) => true,
 
             // forum channels only have public threads
             (ChannelType::ThreadPublic, Some(ChannelType::Forum)) => true,
 
-            // forum2 channels only have a special public threads
+            // forum2 channels only have a special (public) thread type
             (ChannelType::ThreadForum2, Some(ChannelType::Forum2)) => true,
 
             // ticket channels only have private threads
             (ChannelType::ThreadPrivate, Some(ChannelType::Ticket)) => true,
-            (ChannelType::ThreadPrivate, Some(ChannelType::Dm)) => true,
-            (ChannelType::ThreadPrivate, Some(ChannelType::Gdm)) => true,
 
             // rooms and categories can hold non-thread, non-dm channels
             (ChannelType::Text, Some(ChannelType::Category) | None) => true,
