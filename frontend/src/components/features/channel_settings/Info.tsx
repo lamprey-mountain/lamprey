@@ -271,6 +271,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 							type="text"
 							class="name-input"
 							onInput={(e) => setDraft("name", e.target.value)}
+							placeholder="frog"
 						/>
 					</label>
 					<label class="description">
@@ -280,6 +281,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 							channelId={props.channel.id}
 							submitOnEnter={false}
 							autofocus={false}
+							placeholder="post pictures of frogs"
 						/>
 					</label>
 				</div>

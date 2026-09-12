@@ -211,6 +211,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 							type="text"
 							class="name-input"
 							onInput={(e) => setEditingName(e.target.value)}
+							placeholder="clever name"
 						/>
 					</label>
 					<label class="description">

@@ -452,7 +452,6 @@
 				.editor {
 					background: $bg-150;
 					border: solid 1px $sep-300;
-					padding: 2px 4px;
 					border-radius: 2px;
 
 					&:focus-within {
@@ -460,6 +459,7 @@
 					}
 
 					& > .ProseMirror {
+						padding: 2px 4px;
 						min-height: 3lh;
 					}
 				}

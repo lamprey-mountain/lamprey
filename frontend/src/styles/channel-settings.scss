@@ -16,7 +16,20 @@
 				width: 100%;
 			}
 
-			& > .description {}
+			& > .description > .editor {
+				background-color: $bg-150;
+				border: solid 1px $sep-300;
+				border-radius: 2px;
+
+				&:focus-within {
+					border: solid 1px $link-500;
+				}
+
+				& > .ProseMirror {
+					padding: 2px 4px;
+					min-height: 3lh;
+				}
+			}
 		}
 
 		& > .channel-icon {
