@@ -28,14 +28,15 @@ use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCr
 // have a cache for public data, per-user data, member counts, etc
 // then only invalidate (or directly update) that one part of the cache at a time
 // NOTE: should cache_private be Cache<ChannelId, Cache<UserId, ()>> or Cache<UserId, Cache<ChannelId, ()>>?
+// PERF: return arcs instead of cloning channels in get(), etc
 pub struct ServiceChannels {
     globals: Globals,
-    cache: Cache<ChannelId, Channel>,
+    cache: Cache<ChannelId, Arc<Channel>>,
     cache_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
     cache_recipients: Cache<ChannelId, Vec<UserId>>,
     // PERF: remove expired typing entries
     typing: Cache<(ChannelId, UserId), OffsetDateTime>,
-    idempotency_keys: Cache<String, Channel>,
+    idempotency_keys: Cache<String, Arc<Channel>>,
 }
 
 impl ServiceChannels {
@@ -152,10 +153,13 @@ impl ServiceChannels {
             .cache
             .try_get_with(channel_id, async move {
                 let mut data = self.globals.begin_read().await?;
-                data.channel_get(channel_id).await
+                let chan = data.channel_get(channel_id).await?;
+                Result::Ok(Arc::new(chan))
             })
             .await
-            .map_err(|err| err.fake_clone())?;
+            .map_err(|err| err.fake_clone())?
+            .as_ref()
+            .clone();
 
         if let Some(user_id) = user_id {
             self.populate_private(std::slice::from_mut(&mut thread), user_id)
@@ -197,7 +201,7 @@ impl ServiceChannels {
 
         for id in channel_ids {
             if let Some(chan) = self.cache.get(id).await {
-                out.push(chan);
+                out.push((*chan).clone());
             } else {
                 missing.push(*id);
             }
@@ -207,7 +211,7 @@ impl ServiceChannels {
             let mut data = self.globals.begin_read().await?;
             let more_channels = data.channel_get_many(&missing).await?;
             for chan in more_channels {
-                self.cache.insert(chan.id, chan.clone()).await;
+                self.cache.insert(chan.id, Arc::new(chan.clone())).await;
                 out.push(chan);
             }
         }
@@ -254,10 +258,10 @@ impl ServiceChannels {
             .and_compute_with(|entry| async {
                 match entry {
                     Some(e) => {
-                        let mut chan = e.into_value();
+                        let mut chan = (*e.into_value()).clone();
                         chan.last_message_id = Some(message_id);
                         chan.last_version_id = Some(version_id);
-                        CacheOp::Put(chan)
+                        CacheOp::Put(Arc::new(chan))
                     }
                     None => CacheOp::Nop,
                 }
@@ -290,10 +294,16 @@ impl ServiceChannels {
             self.idempotency_keys
                 .try_get_with(
                     n.clone(),
-                    Box::pin(self.create_inner(auth, room_id, json, nonce.clone())),
+                    Box::pin(async move {
+                        let res = self
+                            .create_inner(auth, room_id, json, nonce.clone())
+                            .await?;
+                        Result::Ok(Arc::new(res))
+                    }),
                 )
                 .await
                 .map_err(|err| err.fake_clone())
+                .map(|arc| (*arc).clone())
         } else {
             Box::pin(self.create_inner(auth, room_id, json, nonce)).await
         }
