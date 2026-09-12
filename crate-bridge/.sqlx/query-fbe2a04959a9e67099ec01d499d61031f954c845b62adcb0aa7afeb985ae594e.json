@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE portal SET discord_last_id = MAX(discord_last_id, ?) WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "fbe2a04959a9e67099ec01d499d61031f954c845b62adcb0aa7afeb985ae594e"
+}

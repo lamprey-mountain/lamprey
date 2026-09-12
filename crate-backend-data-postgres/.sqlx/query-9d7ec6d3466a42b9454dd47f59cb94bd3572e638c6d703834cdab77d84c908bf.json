@@ -31,7 +31,8 @@
                 "DocumentTag",
                 "DocumentEdits",
                 "DocumentMerged",
-                "ChannelTagged"
+                "ChannelTagged",
+                "ThreadInitial"
               ]
             }
           }

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE portal SET lamprey_last_id = MAX(lamprey_last_id, ?) WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "509abe31ef6a1f44f79973977db718678d8aae4cad1f3eef0f5bc70a7c0d13e3"
+}
