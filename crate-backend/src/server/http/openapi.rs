@@ -202,6 +202,19 @@ components(schemas(
     // voice types
     common::v1::types::voice::messages::SignallingEvent,
     common::v1::types::voice::messages::SignallingCommand,
+    // calendar types
+    common::v1::types::calendar::Calendar,
+    common::v1::types::calendar::CalendarEvent,
+    common::v1::types::calendar::CalendarEventCreate,
+    common::v1::types::calendar::CalendarEventListQuery,
+    common::v1::types::calendar::CalendarEventParticipant,
+    common::v1::types::calendar::CalendarEventParticipantPut,
+    common::v1::types::calendar::CalendarEventParticipantQuery,
+    common::v1::types::calendar::CalendarEventPatch,
+    common::v1::types::calendar::CalendarOverwrite,
+    common::v1::types::calendar::CalendarOverwritePut,
+    common::v1::types::calendar::CalendarPatch,
+
 )),
 modifiers(&BadgeModifier, &NestedTags),
 info(
