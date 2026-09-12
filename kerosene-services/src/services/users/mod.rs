@@ -3,6 +3,7 @@ use common::v1::types::{Channel, Permission, ThreadMemberPut};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
+use tokio::sync::Mutex;
 use tracing::debug;
 
 use crate::prelude::*;
@@ -14,7 +15,7 @@ mod util;
 
 pub struct ServiceUsers {
     globals: Globals,
-    dm_lock: DashMap<(UserId, UserId), ()>, // TODO: use DmKey
+    dm_lock: DashMap<DmKey, Arc<Mutex<()>>>,
     // TODO: make this not pub
     pub(crate) cache: Cache<UserId, Arc<User>>,
 }
@@ -117,10 +118,18 @@ impl ServiceUsers {
         other_id: UserId,
         locked: bool,
     ) -> Result<(Channel, bool)> {
-        let (user_id, other_id) = DmKey::new(user_id, other_id)?.get_users();
-        let mut txn = self.globals.begin().await?;
+        let key = DmKey::new(user_id, other_id)?;
+        let (user_id, other_id) = key.get_users();
+
+        let lock = self
+            .dm_lock
+            .entry(key)
+            .or_insert_with(|| Arc::new(Mutex::new(())))
+            .clone();
+        let _guard = lock.lock().await;
+
         let srv = self.globals.services();
-        let _lock = self.dm_lock.entry((user_id, other_id)).or_default();
+        let mut txn = self.globals.begin().await?;
         if let Some(thread_id) = txn.dm_get(user_id, other_id).await? {
             debug!("dm thread id {thread_id}");
             let chan = srv.channels.get(thread_id, Some(user_id)).await?;
