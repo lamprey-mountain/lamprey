@@ -639,7 +639,7 @@ pub struct ChannelCreate {
 }
 
 #[record]
-#[derive(Default, PartialEq, Eq)]
+#[derive(Default)]
 pub struct ChannelPatch {
     #[schema(required = false, min_length = 1, max_length = 64)]
     #[validate(length(min = 1, max = 64))]
@@ -764,7 +764,7 @@ pub struct ChannelPatch {
 
 /// indicates that a channel is locked
 #[record]
-#[derive(PartialEq, Eq)]
+#[derive(Default, PartialEq, Eq)]
 pub struct Locked {
     /// if present, the lock automatically expires and is removed at this time
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -777,7 +777,6 @@ pub struct Locked {
 
 /// reorder some channels
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct ChannelReorder {
     /// the channels to reorder
     #[serde(default)]
@@ -786,7 +785,6 @@ pub struct ChannelReorder {
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct ChannelReorderItem {
     pub id: ChannelId,
 
