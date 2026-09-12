@@ -1,13 +1,17 @@
 import type { User } from "sdk";
-import type { VoidProps } from "solid-js";
-import { useApi } from "@/api";
+import { Show, type VoidProps } from "solid-js";
 import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Dropdown } from "@/atoms/Dropdown";
 import { Checkbox } from "@/atoms/icons";
+import { Markdown } from "@/atoms/Markdown";
+import { Time } from "@/atoms/Time";
+import { Avatar } from "@/avatar/UserAvatar";
+import { useCurrentUser } from "@/contexts/currentUser";
+import { flags } from "@/lib/flags";
+import { MessageView, UserDisplayName } from "../chat/Message";
 
 export function Appearance(props: VoidProps<{ user: User }>) {
-	const _api2 = useApi();
 	const ctx = useCtx();
 	const { t } = useCtx();
 
@@ -31,12 +35,23 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 	// TODO: chat font scale
 	// TODO: application scale
 	// TODO: saturation
-	// TODO: reduced motion (sync with computer, autoplay gifs, emoji)
 
 	return (
 		<div class="user-settings-appearance">
 			<h2>{t("user_settings.appearance")}</h2>
 			<br />
+			<Show when={flags.has("themes")}>
+				<div class="themes">
+					<button class="theme-button">
+						<ThemePreview theme="dark" />
+						<div class="dim">dark</div>
+					</button>
+					<button class="theme-button">
+						<ThemePreview theme="light" />
+						<div class="dim">light</div>
+					</button>
+				</div>
+			</Show>
 			<div class="option apart">
 				<div>
 					<div>{t("user_settings.theme")}</div>
@@ -317,3 +332,45 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 		</div>
 	);
 }
+
+const ThemePreview = (props: { theme: string }) => {
+	const getMe = useCurrentUser();
+	const now = new Date();
+
+	return (
+		<div class="theme-preview" data-theme={props.theme}>
+			<article class="message separate">
+				<aside class="aside">
+					<Avatar user={getMe()} animate={false /* TODO: make this work */} />
+					<Time date={now} animGroup="message-ts" format="time" />
+				</aside>
+				<div class="content">
+					<h3 class="header">
+						<UserDisplayName
+							// TODO: dedicated "guest" user id?
+							user_id={getMe()?.id ?? "00000000-0000-7000-0000-0000726f6f74"}
+							class="author"
+						/>
+						<Time
+							date={now}
+							animGroup="message-ts"
+							class="onlytime"
+							format="time"
+						/>
+						<Time
+							date={now}
+							animGroup="message-ts"
+							class="full"
+							format="full"
+						/>
+					</h3>
+					<Markdown
+						class="body"
+						content="hello, world! https://example.com/"
+						kindaInline
+					/>
+				</div>
+			</article>
+		</div>
+	);
+};

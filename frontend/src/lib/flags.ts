@@ -56,6 +56,7 @@ export const allFlags = [
 	{ id: "media_sidebar" },
 	{ id: "auth_totp" },
 	{ id: "auth_webauthn" },
+	{ id: "themes" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -91,6 +92,7 @@ const flagsDev: Flag[] = [
 	"media_sidebar",
 	"auth_totp",
 	"auth_webauthn",
+	"themes",
 ];
 
 const flagsProd: Flag[] = [

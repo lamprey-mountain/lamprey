@@ -389,6 +389,60 @@
 	.apart {
 		justify-content: space-between;
 	}
+
+	.themes {
+		display: grid;
+		// TODO: responsive design
+		grid-template-columns: repeat(3, 1fr);
+		gap: 8px;
+
+		& > .theme-button {
+			display: flex;
+			flex-direction: column;
+			cursor: pointer;
+
+			// TODO: hover styles
+		}
+	}
+
+	.theme-preview {
+		pointer-events: none;
+		border: solid $sep-500 1px;
+		border-radius: 4px;
+		padding: 8px 0;
+
+		&[data-theme="dark"] {
+			background: $bg-200;
+		}
+
+		&[data-theme="light"] {
+			// TODO: actually design a good light theme
+			--color-fg1: 17% 0.008 229.4;
+			--color-fg2: 18.84% 0.009 229.4;
+			--color-fg3: 22.3% 0.01 234.2;
+			--color-fg4: 27.5% 0.011 225.5;
+			--color-fg5: 25.3% 0.01 234.2;
+			--color-fg6: 34% 0.014 217.8;
+			--color-bg1: 100% 0 0;
+			--color-bg1-5: 69.4% 0 0;
+			--color-bg2: 94.9% 0 0;
+			--color-bg2-5: 73.8% 0 0;
+			--color-bg3: 89.8% 0 0;
+			--color-bg4: 84.5% 0 0;
+			--color-link-500: 45.6% 0.25 299.2;
+			background: $bg-200;
+			color: $fg-200;
+		}
+
+		.message.separate {
+			margin-top: 0;
+
+			h3 {
+				margin-top: 0;
+				margin-left: 0;
+			}
+		}
+	}
 }
 
 .user-settings-chat {
