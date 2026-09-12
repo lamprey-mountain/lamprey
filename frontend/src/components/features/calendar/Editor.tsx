@@ -1,16 +1,14 @@
-import type { Channel } from "sdk";
+import type { CalendarEventCreate, CalendarEventPatch } from "sdk/types";
 import {
 	createContext,
 	createEffect,
-	createMemo,
 	createSignal,
-	Match,
 	type ParentProps,
 	Show,
-	Switch,
 	useContext,
 } from "solid-js";
 import { createStore } from "solid-js/store";
+import { useApi } from "@/api";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Dropdown } from "@/atoms/Dropdown";
 import { Checkbox, XMark } from "@/atoms/icons";
@@ -24,7 +22,7 @@ export type CalendarPopup = {
 			id?: string;
 			name: string;
 			start: Date;
-			end: Date;
+			end: Date | null;
 			allDay: boolean;
 			timezone: string;
 			recurrence?: string;
@@ -126,7 +124,7 @@ export const PopupEventEditor = (props: {
 		id?: string;
 		name: string;
 		start: Date;
-		end: Date;
+		end: Date | null;
 		allDay: boolean;
 		timezone: string;
 		recurrence?: string;
@@ -166,7 +164,7 @@ export const PopupEventEditor = (props: {
 
 		setFormData({
 			start: new Date(event.start),
-			end: new Date(event.end),
+			end: event.end ?? undefined, // NOTE: check if undefined works
 			// Only reset other fields if it's a completely different event (different ID)
 			...(!isSameEvent
 				? {
@@ -188,6 +186,40 @@ export const PopupEventEditor = (props: {
 		value: (typeof formData)[K],
 	) => {
 		setFormData(field, value);
+	};
+
+	const api = useApi();
+	const save = async () => {
+		const existingId = props.event?.id;
+		if (existingId) {
+			api.client.http.PATCH("/api/v1/calendar/{channel_id}/event/{event_id}", {
+				params: {
+					path: { channel_id: props.channel_id, event_id: existingId },
+				},
+				body: {
+					title: formData.name, // TODO: require
+					description: formData.description || null,
+					location: formData.location || null,
+					url: formData.url || null,
+					starts_at: formData.start.toISOString(),
+					ends_at: formData.end.toISOString(), // TODO: make optional
+				} as CalendarEventPatch,
+			});
+		} else {
+			api.client.http.POST("/api/v1/calendar/{channel_id}/event", {
+				params: { path: { channel_id: props.channel_id } },
+				body: {
+					title: formData.name, // TODO: require
+					description: formData.description || null,
+					location: formData.location || null,
+					recurrence: null, // TODO: better recurrence input
+					timezone: null, // TODO: better timezone input
+					url: formData.url || null,
+					starts_at: formData.start.toISOString(),
+					ends_at: formData.end.toISOString(), // TODO: make optional
+				} as CalendarEventCreate,
+			});
+		}
 	};
 
 	return (
@@ -436,318 +468,19 @@ export const PopupEventEditor = (props: {
 				</div>
 			</div>
 
+			{/* TODO: make these buttons consistent with other buttons, maybe by copying styles do design.scss? */}
 			<div class="popup-footer">
-				<button type="button" class="popup-cancel-btn" onClick={props.onClose}>
+				<button
+					type="button"
+					class="button popup-cancel-btn"
+					onClick={props.onClose}
+				>
 					Cancel
 				</button>
-				<button type="button" class="popup-save-btn" onClick={props.onClose}>
+				<button type="button" class="button popup-save-btn" onClick={save}>
 					Save
 				</button>
 			</div>
-		</div>
-	);
-};
-
-export const Calendar = (props: { channel: Channel }) => {
-	const [currentDate, setCurrentDate] = createSignal(new Date(2025, 11, 1));
-	const {
-		popup: calendarPopup,
-		setPopup,
-		closePopup,
-		setChannelId,
-	} = useCalendarPopup();
-
-	// Set channel_id when component mounts or channel_id changes
-	createEffect(() => {
-		setChannelId(props.channel.id);
-	});
-
-	const month = () =>
-		currentDate().toLocaleString("default", { month: "long" });
-	const year = () => currentDate().getFullYear();
-
-	const prevMonth = () => {
-		setCurrentDate(
-			new Date(currentDate().setMonth(currentDate().getMonth() - 1)),
-		);
-	};
-
-	const nextMonth = () => {
-		setCurrentDate(
-			new Date(currentDate().setMonth(currentDate().getMonth() + 1)),
-		);
-	};
-
-	const goToToday = () => {
-		setCurrentDate(new Date());
-	};
-
-	const events = new Map([
-		[12, ["foo", "bar"]],
-		[16, ["baz"]],
-	]);
-
-	const [view, setView] = createSignal<"week" | "month" | "timeline">("month");
-
-	// Open popup for new event when clicking a day
-	const handleDayClick = (day: number, el: HTMLElement) => {
-		const current = calendarPopup();
-		if (current?.ref === el) {
-			closePopup();
-			return;
-		}
-
-		const newEvent = {
-			name: "",
-			start: new Date(
-				currentDate().getFullYear(),
-				currentDate().getMonth(),
-				day,
-				9,
-				0,
-			),
-			end: new Date(
-				currentDate().getFullYear(),
-				currentDate().getMonth(),
-				day,
-				10,
-				0,
-			),
-			allDay: false,
-			timezone: "UTC",
-		};
-		setPopup(el, "bottom-start", newEvent);
-	};
-
-	// Open popup for editing event when clicking an event
-	const handleEventClick = (
-		eventName: string,
-		day: number,
-		el: HTMLElement,
-	) => {
-		const current = calendarPopup();
-		if (current?.ref === el) {
-			closePopup();
-			return;
-		}
-
-		const existingEvent = {
-			id: `event-${day}-${eventName}`,
-			name: eventName,
-			start: new Date(
-				currentDate().getFullYear(),
-				currentDate().getMonth(),
-				day,
-				9,
-				0,
-			),
-			end: new Date(
-				currentDate().getFullYear(),
-				currentDate().getMonth(),
-				day,
-				10,
-				0,
-			),
-			allDay: false,
-			timezone: "UTC",
-			recurrence: "",
-			location: "",
-			url: "",
-			description: "",
-			reminders: [],
-			instances: [],
-			participants: [],
-		};
-		setPopup(el, "bottom-start", existingEvent);
-	};
-
-	return (
-		<div class="calendar">
-			<header>
-				<b>
-					{month()} {year()}
-				</b>
-				<div style="flex:1"></div>
-				<menu>
-					<div class="filters">
-						<button
-							type="button"
-							class="button"
-							onClick={() => setView("week")}
-							classList={{ active: view() === "week" }}
-						>
-							week
-						</button>
-						<button
-							type="button"
-							class="button"
-							onClick={() => setView("month")}
-							classList={{ active: view() === "month" }}
-						>
-							month
-						</button>
-						<button
-							type="button"
-							class="button"
-							onClick={() => setView("timeline")}
-							classList={{ active: view() === "timeline" }}
-						>
-							timeline
-						</button>
-					</div>
-					<div class="filters" style="margin-left:4px">
-						<button type="button" class="button" onClick={prevMonth}>
-							prev
-						</button>
-						<button type="button" class="button" onClick={nextMonth}>
-							next
-						</button>
-						<button type="button" class="button primary" onClick={goToToday}>
-							today
-						</button>
-					</div>
-				</menu>
-			</header>
-			<Switch>
-				<Match when={view() === "week"}>
-					<CalendarWeek channel={props.channel} events={events} />
-				</Match>
-				<Match when={view() === "month"}>
-					<CalendarMonth
-						channel={props.channel}
-						events={events}
-						date={currentDate()}
-						onDayClick={handleDayClick}
-						onEventClick={handleEventClick}
-					/>
-				</Match>
-				<Match when={view() === "timeline"}>
-					<CalendarTimeline channel={props.channel} events={events} />
-				</Match>
-			</Switch>
-		</div>
-	);
-};
-
-type EventMap = Map<number, string[]>;
-
-const CalendarMonth = (props: {
-	channel: Channel;
-	events: EventMap;
-	date: Date;
-	onDayClick: (day: number, el: HTMLElement) => void;
-	onEventClick: (eventName: string, day: number, el: HTMLElement) => void;
-}) => {
-	const dayStartsAt = () => 0;
-	const year = () => props.date.getFullYear();
-	const month = () => props.date.getMonth(); // 0-indexed
-
-	const calendarDays = () => {
-		const days = [];
-		const firstDay = new Date(year(), month(), 1);
-
-		const daysInMonth = new Date(year(), month() + 1, 0).getDate();
-		const firstDayWeekday = (firstDay.getDay() - dayStartsAt() + 7) % 7;
-
-		const daysInPrevMonth = new Date(year(), month(), 0).getDate();
-
-		// Days from previous month
-		for (let i = firstDayWeekday; i > 0; i--) {
-			days.push({ day: daysInPrevMonth - i + 1, isOtherMonth: true });
-		}
-
-		// Days from current month
-		for (let i = 1; i <= daysInMonth; i++) {
-			days.push({ day: i, isOtherMonth: false });
-		}
-
-		// Days from next month
-		const totalDays = days.length;
-		const remaining = 42 - totalDays; // Potential 6 weeks
-		for (let i = 1; i <= remaining; i++) {
-			days.push({ day: i, isOtherMonth: true });
-		}
-
-		// Hide last week if all days are from next month
-		const lastWeekStartIndex = days.length - 7;
-		const lastWeek = days.slice(lastWeekStartIndex);
-		if (lastWeek.every((day) => day.isOtherMonth)) {
-			return days.slice(0, lastWeekStartIndex);
-		}
-
-		return days;
-	};
-
-	const today = new Date();
-	const isToday = (day: number) => {
-		return (
-			day === today.getDate() &&
-			month() === today.getMonth() &&
-			year() === today.getFullYear()
-		);
-	};
-
-	const displayDaysOfWeek = createMemo(() => {
-		const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-		const start = dayStartsAt();
-		return [...daysOfWeek.slice(start), ...daysOfWeek.slice(0, start)];
-	});
-
-	return (
-		<div class="month-view">
-			{displayDaysOfWeek().map((i) => (
-				<div class="dayofweek">{i}</div>
-			))}
-			{calendarDays().map((d) => {
-				return (
-					<div
-						class="day"
-						classList={{
-							othermonth: d.isOtherMonth,
-							today: !d.isOtherMonth && isToday(d.day),
-						}}
-						ref={(el) => {
-							if (el && !d.isOtherMonth) {
-								el.addEventListener("click", () => props.onDayClick(d.day, el));
-							}
-						}}
-					>
-						<span class="daynumber">{d.day}</span>
-						{!d.isOtherMonth &&
-							(props.events.get(d.day) ?? []).map((event: string) => (
-								<span
-									class="event"
-									ref={(el) => {
-										if (el) {
-											el.addEventListener("click", (e) => {
-												e.stopPropagation();
-												props.onEventClick(event, d.day, el);
-											});
-										}
-									}}
-								>
-									{event}
-								</span>
-							))}
-					</div>
-				);
-			})}
-		</div>
-	);
-};
-
-const CalendarWeek = (_props: { channel: Channel; events: EventMap }) => {
-	return (
-		<div class="week-view">
-			<p>Week view coming soon...</p>
-		</div>
-	);
-};
-
-const CalendarTimeline = (_props: { channel: Channel; events: EventMap }) => {
-	return (
-		<div class="timeline-view">
-			<p>Timeline view coming soon...</p>
 		</div>
 	);
 };

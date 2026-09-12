@@ -28,13 +28,13 @@ import { useChannels, useRoomMembers, useThreadMembers, useUsers } from "@/api";
 import { useCtx } from "@/app/context";
 import { Autocomplete } from "@/atoms/Autocomplete.tsx";
 import { EmojiPicker } from "@/atoms/EmojiPicker.tsx";
-import { ThreadPopout } from "@/components/features/chat/ThreadPopout.tsx";
-import { ThreadActivity } from "@/components/features/forum/ThreadActivity.tsx";
-import { Authenticate } from "@/components/shared/Authenticate.tsx";
 import {
 	PopupEventEditor,
 	useCalendarPopup,
-} from "@/components/shared/Calendar";
+} from "@/components/features/calendar/Calendar.tsx";
+import { ThreadPopout } from "@/components/features/chat/ThreadPopout.tsx";
+import { ThreadActivity } from "@/components/features/forum/ThreadActivity.tsx";
+import { Authenticate } from "@/components/shared/Authenticate.tsx";
 import {
 	CustomEmojiInfo,
 	type CustomEmojiInfoProps,

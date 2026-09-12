@@ -189,8 +189,8 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 				selecting: isSelecting(),
 				deleted: !!props.channel.deleted_at,
 			}}
-			onMouseEnter={() => setHovered(true)}
-			onMouseLeave={() => setHovered(false)}
+			onMouseEnter={[setHovered, true]}
+			onMouseLeave={[setHovered, false]}
 		>
 			<div class="channel-icon">
 				<ChannelIcon channel={props.channel} animate={hovered()} />

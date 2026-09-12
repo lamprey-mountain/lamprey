@@ -1,31 +1,65 @@
 @use "./util.scss" as *;
 
-.calendar {
+.calendar-channel {
 	grid-area: main;
-	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
 
-	header {
+	& > .calendar-header {
 		display: flex;
 		align-items: center;
 		padding: 8px;
 
 		menu {
 			display: flex;
+
+			.dropdown-container > input {
+				field-sizing: content;
+				padding-right: 24px;
+			}
+		}
+	}
+}
+
+.calendar-channel > .month-view {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	/* overflow-y: auto; */
+
+	& > .days-of-week {
+		display: grid;
+		grid-template-columns: repeat(var(--days-per-week), 1fr);
+
+		position: sticky;
+		top: 0;
+		background: $bg-100;
+		color: $fg-500;
+		font-weight: bold;
+		font-size: 0.9rem;
+
+		& > div {
+			padding: 2px 8px;
 		}
 	}
 
-	.month-view {
-		display: grid;
-		grid-template-columns: repeat(7, 1fr);
-		grid-template-rows: min-content repeat(5, 200px);
-		height: 100%;
+	& > .month {
+		flex: 1;
+		margin-left: -1px;
 
-		.dayofweek {
-			background: $bg-100;
-			padding: 2px 8px;
-			color: $fg-500;
-			font-weight: bold;
-			font-size: 0.9rem;
+		display: grid;
+		grid-template-columns: repeat(var(--days-per-week), 1fr);
+		grid-template-rows: repeat(var(--row-count), calc(100% / 6));
+
+		overflow-y: auto;
+		scroll-snap-type: y mandatory;
+		/* overscroll-behavior-y: none; */
+
+		.month-start {
+			scroll-snap-align: start;
+			scroll-snap-stop: always;
 		}
 
 		.day {
@@ -34,12 +68,30 @@
 			border-left: solid $sep-300 1px;
 			display: flex;
 			flex-direction: column;
-		}
+			cursor: pointer;
 
-		.daynumber {
-			color: $fg-500;
-			font-size: 0.9rem;
-			padding: 2px 4px 0;
+			&:hover {
+				background: #0002;
+			}
+
+			& > .daynumber {
+				color: $fg-500;
+				font-size: 0.9rem;
+				padding: 2px 4px 0;
+			}
+
+			&.today > .daynumber {
+				font-weight: bold;
+				color: $link-500;
+			}
+
+			&.othermonth {
+				background: $bg-100;
+
+				& > .daynumber {
+					color: $sep-500;
+				}
+			}
 		}
 
 		.event {
@@ -49,30 +101,20 @@
 			margin-top: 2px;
 			color: $link-500;
 		}
-
-		.day:hover {
-			background: #0002;
-		}
-
-		.day.othermonth {
-			background: #0008;
-		}
-
-		.day.othermonth:hover {
-			background: #0009;
-		}
-
-		.today .daynumber {
-			font-weight: bold;
-			color: $link-500;
-		}
 	}
 }
 
-// Calendar event popup styles
+.calendar-channel > .week-view {
+	// TODO
+}
+
+.calendar-channel > .timeline-view {
+	// TODO
+}
+
 .calendar-event-popup {
 	width: 440px;
-	height: 540px;
+	height: min(540px, 100vh - 16px);
 	display: flex;
 	flex-direction: column;
 	background-color: $bg-200;

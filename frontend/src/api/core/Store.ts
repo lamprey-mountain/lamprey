@@ -39,6 +39,7 @@ import { type ApiDB, clearApiDatabase } from "@/lib/sync/db";
 import { logger } from "@/utils/logger";
 import { AuditLogService } from "../services/AuditLogService";
 import { AuthService } from "../services/AuthService";
+import { CalendarService } from "../services/CalendarService";
 import { DmsService } from "../services/DmsService";
 import { DocumentBranchService } from "../services/DocumentBranchService";
 import { DocumentsService } from "../services/DocumentsService";
@@ -97,6 +98,7 @@ export class RootStore {
 	tags: TagsService;
 	threads: ThreadsService;
 	webhooks: WebhooksService;
+	calendar: CalendarService;
 	relationships: RelationshipsService;
 	auditLog: AuditLogService;
 	inbox: InboxService;
@@ -175,6 +177,7 @@ export class RootStore {
 		this.auditLog = new AuditLogService(this, getDb);
 		this.auth = new AuthService(this, getDb);
 		this.media = new MediaService(this, getDb);
+		this.calendar = new CalendarService(this, getDb);
 		this.channels = new ChannelsService(this, getDb);
 		this.dms = new DmsService(this, getDb);
 		this.documents = new DocumentsService(this, getDb);
@@ -543,6 +546,13 @@ export class RootStore {
 			);
 		} else if (msg.type === "RelationshipDelete") {
 			this.relationships.delete(msg.target_user_id);
+		} else if (
+			msg.type === "CalendarEventCreate" ||
+			msg.type === "CalendarEventUpdate"
+		) {
+			this.calendar.upsert(msg.event);
+		} else if (msg.type === "CalendarEventDelete") {
+			this.calendar.delete(msg.event_id);
 		} else if (msg.type === "ChannelTyping") {
 			const { channel_id, user_id, until } = msg as any;
 			const untilDate = new Date(until);
