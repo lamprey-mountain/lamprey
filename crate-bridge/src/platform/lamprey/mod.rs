@@ -1069,14 +1069,14 @@ async fn spawn_portal_inner(
                 if let Ok(Some(msg)) = handle.bridge.db.message_get(*message_id).await {
                     if let Some(lamprey_message_id) = msg.lamprey_message_id {
                         let key = match reaction_key {
-                            bridge::ReactionKey::Lamprey(_key) => return Ok(()),
+                            bridge::ReactionKey::Lamprey(_key) => continue,
                             bridge::ReactionKey::Discord(key) => match key {
                                 discord::ReactionType::Unicode(emoji) => {
                                     ReactionKeyParam::Text(emoji.to_owned())
                                 }
                                 // TODO: support custom reactions
                                 // discord::ReactionType::Custom { animated, id, name } => todo!(),
-                                _ => return Ok(()),
+                                _ => continue,
                             },
                         };
                         let _ = ly
@@ -1096,14 +1096,14 @@ async fn spawn_portal_inner(
                 if let Ok(Some(msg)) = handle.bridge.db.message_get(*message_id).await {
                     if let Some(lamprey_message_id) = msg.lamprey_message_id {
                         let key = match reaction_key {
-                            bridge::ReactionKey::Lamprey(_key) => return Ok(()),
+                            bridge::ReactionKey::Lamprey(_key) => continue,
                             bridge::ReactionKey::Discord(key) => match key {
                                 discord::ReactionType::Unicode(emoji) => {
                                     ReactionKeyParam::Text(emoji.to_owned())
                                 }
                                 // TODO: support custom reactions
                                 // discord::ReactionType::Custom { animated, id, name } => todo!(),
-                                _ => return Ok(()),
+                                _ => continue,
                             },
                         };
                         let _ = ly
@@ -1123,14 +1123,14 @@ async fn spawn_portal_inner(
                 if let Ok(Some(msg)) = handle.bridge.db.message_get(*message_id).await {
                     if let Some(lamprey_message_id) = msg.lamprey_message_id {
                         let key = match reaction_key {
-                            bridge::ReactionKey::Lamprey(_key) => return Ok(()),
+                            bridge::ReactionKey::Lamprey(_key) => continue,
                             bridge::ReactionKey::Discord(key) => match key {
                                 discord::ReactionType::Unicode(emoji) => {
                                     ReactionKeyParam::Text(emoji.to_owned())
                                 }
                                 // TODO: support custom reactions
                                 // discord::ReactionType::Custom { animated, id, name } => todo!(),
-                                _ => return Ok(()),
+                                _ => continue,
                             },
                         };
                         let _ = ly
