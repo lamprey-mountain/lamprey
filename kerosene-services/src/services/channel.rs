@@ -29,7 +29,7 @@ use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCr
 // then only invalidate (or directly update) that one part of the cache at a time
 // NOTE: should cache_private be Cache<ChannelId, Cache<UserId, ()>> or Cache<UserId, Cache<ChannelId, ()>>?
 pub struct ServiceChannels {
-    state: Globals,
+    globals: Globals,
     cache: Cache<ChannelId, Channel>,
     cache_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
     cache_recipients: Cache<ChannelId, Vec<UserId>>,
@@ -39,9 +39,9 @@ pub struct ServiceChannels {
 }
 
 impl ServiceChannels {
-    pub fn new(state: Globals) -> Self {
+    pub fn new(globals: Globals) -> Self {
         Self {
-            state,
+            globals,
             cache: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
@@ -70,7 +70,7 @@ impl ServiceChannels {
             return Ok(());
         }
 
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
 
         let channel_ids: Vec<_> = channels.iter().map(|c| c.id).collect();
 
@@ -130,11 +130,11 @@ impl ServiceChannels {
         }
 
         for channel in dm_channels {
-            let srv = self.state.services();
+            let srv = self.globals.services();
             let recipients = self
                 .cache_recipients
                 .try_get_with(channel.id, async {
-                    let mut data = self.state.begin_read().await?;
+                    let mut data = self.globals.begin_read().await?;
                     let members = data.thread_member_list_all(channel.id).await?;
                     let user_ids: Vec<_> = members.into_iter().map(|m| m.user_id).collect();
                     Result::Ok(user_ids)
@@ -151,7 +151,7 @@ impl ServiceChannels {
         let mut thread = self
             .cache
             .try_get_with(channel_id, async move {
-                let mut data = self.state.begin_read().await?;
+                let mut data = self.globals.begin_read().await?;
                 data.channel_get(channel_id).await
             })
             .await
@@ -166,7 +166,7 @@ impl ServiceChannels {
             .await?;
 
         let members = self
-            .state
+            .globals
             .begin_read()
             .await?
             .thread_member_list_all(channel_id)
@@ -174,7 +174,7 @@ impl ServiceChannels {
 
         let mut online_count = 0;
         for member in members {
-            if self.state.services().presence.get(member.user_id).status != Status::Offline {
+            if self.globals.services().presence.get(member.user_id).status != Status::Offline {
                 online_count += 1;
             }
         }
@@ -204,7 +204,7 @@ impl ServiceChannels {
         }
 
         if !missing.is_empty() {
-            let mut data = self.state.begin_read().await?;
+            let mut data = self.globals.begin_read().await?;
             let more_channels = data.channel_get_many(&missing).await?;
             for chan in more_channels {
                 self.cache.insert(chan.id, chan.clone()).await;
@@ -222,11 +222,11 @@ impl ServiceChannels {
 
         for channel in &mut channels {
             // PERF: n+1 query
-            let mut data = self.state.begin_read().await?;
+            let mut data = self.globals.begin_read().await?;
             let members = data.thread_member_list_all(channel.id).await?;
             let mut online_count = 0;
             for member in members {
-                if self.state.services().presence.get(member.user_id).status != Status::Offline {
+                if self.globals.services().presence.get(member.user_id).status != Status::Offline {
                     online_count += 1;
                 }
             }
@@ -331,8 +331,8 @@ impl ServiceChannels {
             // FIXME: don't commit audit log if request failed
         };
 
-        let srv = self.state.services();
-        let mut data = self.state.begin().await?;
+        let srv = self.globals.services();
+        let mut data = self.globals.begin().await?;
         let user = auth.ensure_user()?;
         let user_id = user.id;
 
@@ -490,7 +490,7 @@ impl ServiceChannels {
         };
         if json
             .bitrate
-            .is_some_and(|b| b > self.state.config().limits.room.max_bitrate as u64)
+            .is_some_and(|b| b > self.globals.config().limits.room.max_bitrate as u64)
         {
             return Err(Error::BadStatic("bitrate is too high"));
         }
@@ -652,7 +652,7 @@ impl ServiceChannels {
         data.commit().await?;
 
         let thread_member = self
-            .state
+            .globals
             .begin_read()
             .await?
             .thread_member_get(channel_id, user.id)
@@ -665,12 +665,12 @@ impl ServiceChannels {
         .with_option_nonce(nonce);
 
         if let Some(room_id) = room_id {
-            self.state
+            self.globals
                 .messaging()
                 .broadcast_room(room_id, broadcast)
                 .await?;
         } else if let Some(parent_id) = json.parent_id {
-            self.state
+            self.globals
                 .messaging()
                 .broadcast_channel(parent_id, broadcast)
                 .await?;
@@ -694,7 +694,7 @@ impl ServiceChannels {
             // send a ThreadCreated message to the parent channel
             if let Some(parent) = &parent {
                 if parent.ty.has_text() {
-                    let mut data = self.state.begin().await?;
+                    let mut data = self.globals.begin().await?;
                     let system_message_id = data
                         .message_create(DbMessageCreate {
                             id: None,
@@ -723,7 +723,7 @@ impl ServiceChannels {
                         .get(parent.id, system_message_id, Some(user_id))
                         .await?;
 
-                    self.state
+                    self.globals
                         .messaging()
                         .broadcast_channel(
                             parent.id,
@@ -736,7 +736,7 @@ impl ServiceChannels {
             }
         }
 
-        self.state
+        self.globals
             .messaging()
             .broadcast_channel(
                 channel.id,
@@ -759,8 +759,8 @@ impl ServiceChannels {
         source_message_id: MessageId,
         mut json: ChannelCreate,
     ) -> Result<Channel> {
-        let srv = self.state.services();
-        let mut data = self.state.begin().await?;
+        let srv = self.globals.services();
+        let mut data = self.globals.begin().await?;
         let user = auth.ensure_user()?;
 
         let perms = srv.perms.for_channel(user.id, parent_channel_id).await?;
@@ -836,7 +836,7 @@ impl ServiceChannels {
 
         let channel = srv.channels.get(thread_id, Some(user.id)).await?;
 
-        self.state
+        self.globals
             .messaging()
             .broadcast_channel(
                 parent_channel_id,
@@ -849,7 +849,7 @@ impl ServiceChannels {
         let four_hours_ago = time::OffsetDateTime::now_utc() - time::Duration::hours(4);
         if source_message.created_at.into_inner() < four_hours_ago {
             // TODO: move this to messages service
-            let mut data = self.state.begin().await?;
+            let mut data = self.globals.begin().await?;
             let system_message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -877,7 +877,7 @@ impl ServiceChannels {
                 .messages
                 .get(parent_channel_id, system_message_id, Some(user.id))
                 .await?;
-            self.state
+            self.globals
                 .messaging()
                 .broadcast_channel(
                     parent_channel_id,
@@ -919,14 +919,14 @@ impl ServiceChannels {
         let user_id = user.id;
         // check update perms
         let perms = self
-            .state
+            .globals
             .services()
             .perms
             .for_channel(user.id, thread_id)
             .await?;
         perms.ensure(Permission::ChannelView)?;
-        let mut data = self.state.begin().await?;
-        let srv = self.state.services();
+        let mut data = self.globals.begin().await?;
+        let srv = self.globals.services();
         let chan_old = srv.channels.get(thread_id, None).await?;
         if chan_old.is_archived() {
             let can_unarchive = patch.archived == Some(false);
@@ -1033,7 +1033,7 @@ impl ServiceChannels {
         }
 
         if patch.bitrate.is_some_and(|b| {
-            b.is_some_and(|b| (b as u32) > self.state.config().limits.room.max_bitrate)
+            b.is_some_and(|b| (b as u32) > self.globals.config().limits.room.max_bitrate)
         }) {
             return Err(Error::BadStatic("bitrate is too high"));
         }
@@ -1344,7 +1344,7 @@ impl ServiceChannels {
         if chan_old.name != chan_new.name {
             // send thread renamed message to thread
             // TODO: move this to messages service
-            let mut data = self.state.begin().await?;
+            let mut data = self.globals.begin().await?;
             let rename_message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -1368,7 +1368,7 @@ impl ServiceChannels {
                 .await?;
             let rename_message = data.message_get(thread_id, rename_message_id).await?;
             data.commit().await?;
-            self.state
+            self.globals
                 .messaging()
                 .broadcast_channel(
                     thread_id,
@@ -1382,7 +1382,7 @@ impl ServiceChannels {
         if chan_old.icon != chan_new.icon {
             // send channel icon changed message
             // TODO: move this to messages service
-            let mut data = self.state.begin().await?;
+            let mut data = self.globals.begin().await?;
             let icon_message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -1406,7 +1406,7 @@ impl ServiceChannels {
                 .await?;
             let icon_message = data.message_get(thread_id, icon_message_id).await?;
             data.commit().await?;
-            self.state
+            self.globals
                 .messaging()
                 .broadcast_channel(
                     thread_id,
@@ -1439,7 +1439,7 @@ impl ServiceChannels {
         if !tags_added.is_empty() || !tags_removed.is_empty() {
             // send thread renamed message to thread
             // TODO: move this to messages service
-            let mut data = self.state.begin().await?;
+            let mut data = self.globals.begin().await?;
             let message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -1463,7 +1463,7 @@ impl ServiceChannels {
                 .await?;
             let message = data.message_get(thread_id, message_id).await?;
             data.commit().await?;
-            self.state
+            self.globals
                 .messaging()
                 .broadcast_channel(thread_id, MessageSync::MessageCreate { message })
                 .await?;
@@ -1472,7 +1472,7 @@ impl ServiceChannels {
         if chan_old.parent_id != chan_new.parent_id {
             // send thread moved message to thread
             // TODO: move this to messages service
-            let mut data = self.state.begin().await?;
+            let mut data = self.globals.begin().await?;
             let move_message_id = data
                 .message_create(DbMessageCreate {
                     id: None,
@@ -1496,7 +1496,7 @@ impl ServiceChannels {
                 .await?;
             let move_message = data.message_get(thread_id, move_message_id).await?;
             data.commit().await?;
-            self.state
+            self.globals
                 .messaging()
                 .broadcast_channel(
                     thread_id,
@@ -1511,7 +1511,10 @@ impl ServiceChannels {
             channel: Box::new(chan_new.clone()),
         };
         if let Some(room_id) = chan_new.room_id {
-            self.state.messaging().broadcast_room(room_id, msg).await?;
+            self.globals
+                .messaging()
+                .broadcast_room(room_id, msg)
+                .await?;
         }
 
         Ok(chan_new)
@@ -1529,35 +1532,40 @@ impl ServiceChannels {
     }
 
     pub fn start_background_tasks(&self) {
-        tokio::spawn(Self::spawn_auto_archive_task(self.state.clone()));
+        tokio::spawn(Self::spawn_auto_archive_task(self.globals.clone()));
     }
 
     /// get all channels a user can see that are in rooms, along with whether the user has the ThreadManage permission. does not include dm channels
     pub async fn list_user_room_channels(&self, user_id: UserId) -> Result<Vec<ChannelVisibility>> {
-        let room_snapshots = self.state.services().rooms.load_all_for_user(user_id).await;
+        let room_snapshots = self
+            .globals
+            .services()
+            .rooms
+            .load_all_for_user(user_id)
+            .await;
         let mut out = vec![];
 
         for snapshot_res in room_snapshots {
             let snapshot = snapshot_res?;
-            let vis = snapshot.channel_visibilities(user_id, self.state.clone());
+            let vis = snapshot.channel_visibilities(user_id, self.globals.clone());
             out.extend(vis);
         }
 
         Ok(out)
     }
 
-    pub async fn spawn_auto_archive_task(state: Globals) {
+    pub async fn spawn_auto_archive_task(globals: Globals) {
         let mut interval = tokio::time::interval(Duration::from_secs(60));
         loop {
             interval.tick().await;
-            let mut data = match state.begin().await {
+            let mut data = match globals.begin().await {
                 Ok(d) => d,
                 Err(e) => {
                     error!("Failed to begin transaction for auto-archive: {:?}", e);
                     continue;
                 }
             };
-            let srv = state.services();
+            let srv = globals.services();
 
             match data.thread_auto_archive().await {
                 Ok(archived_thread_ids) => {
@@ -1572,7 +1580,7 @@ impl ServiceChannels {
                                     let msg = MessageSync::ChannelUpdate {
                                         channel: Box::new(channel),
                                     };
-                                    let _ = state.messaging().broadcast_room(room_id, msg).await;
+                                    let _ = globals.messaging().broadcast_room(room_id, msg).await;
                                 }
                             }
                         }
@@ -1591,7 +1599,7 @@ impl ServiceChannels {
         channel_id: ChannelId,
     ) -> Result<Vec<Vec<PermissionOverwrite>>> {
         // TODO: optimize
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let mut top = self.get(channel_id, None).await?;
         let mut overwrites = vec![top.permission_overwrites.clone()];
         while let Some(parent_id) = top.parent_id {
