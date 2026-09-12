@@ -381,7 +381,7 @@ impl MemberList {
                         if !added.is_empty() {
                             for member in added {
                                 if let Ok(user) =
-                                    self.s.services().cache.user_get(member.user_id).await
+                                    self.s.services().users.get(member.user_id, None).await
                                 {
                                     let mut users_map = HashMap::new();
                                     users_map.insert(user.id, user);
@@ -410,7 +410,7 @@ impl MemberList {
 
                 // moving between online/offline groups or joined for the first time
                 if is_online_old != presence.is_online() || old_key.is_none() {
-                    if let Ok(mut user) = self.s.services().cache.user_get(user_id).await {
+                    if let Ok(mut user) = self.s.services().users.get(user_id, None).await {
                         user.presence = presence.clone();
                         if let Some(_room_id) = self.key.room_id() {
                             if let Some(member) = data.members.get(&user_id) {

@@ -14,17 +14,20 @@ use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
 
 pub struct ServiceEmoji {
-    state: Globals,
+    globals: Globals,
     idempotency_keys: Cache<String, EmojiCustom>,
+    // TODO: make this not pub
+    pub(crate) cache: Cache<EmojiId, Arc<EmojiCustom>>,
 }
 
 impl ServiceEmoji {
-    pub fn new(state: Globals) -> Self {
+    pub fn new(globals: Globals) -> Self {
         Self {
-            state,
+            globals,
             idempotency_keys: Cache::builder()
                 .time_to_live(Duration::from_secs(300))
                 .build(),
+            cache: Cache::builder().max_capacity(100_000).build(),
         }
     }
 
@@ -56,8 +59,8 @@ impl ServiceEmoji {
         nonce: Option<String>,
     ) -> Result<EmojiCustom> {
         json.validate()?;
-        let mut data = self.state.begin().await?;
-        let srv = self.state.services();
+        let mut data = self.globals.begin().await?;
+        let srv = self.globals.services();
 
         let user = auth.ensure_user()?;
         let user_id = user.id;
@@ -87,12 +90,14 @@ impl ServiceEmoji {
             emoji: emoji.clone(),
         };
 
+        self.cache.insert(emoji.id, Arc::new(emoji.clone())).await;
+
         let mut broadcast = Broadcast::sync(sync_msg);
         if let Some(n) = nonce {
             broadcast = broadcast.with_nonce(n);
         }
 
-        self.state
+        self.globals
             .messaging()
             .broadcast_room(room_id, broadcast)
             .await?;
@@ -101,7 +106,56 @@ impl ServiceEmoji {
     }
 
     pub async fn get(&self, emoji_id: EmojiId) -> Result<EmojiCustom> {
-        self.state.begin_read().await?.emoji_get(emoji_id).await
+        let emoji = self
+            .cache
+            .try_get_with(emoji_id, async {
+                let emoji = self.globals.begin_read().await?.emoji_get(emoji_id).await?;
+                Result::<Arc<EmojiCustom>>::Ok(Arc::new(emoji))
+            })
+            .await
+            .map_err(|e| e.fake_clone())?;
+        // PERF: don't clone
+        Ok((*emoji).clone())
+    }
+
+    pub async fn get_many(&self, emoji_ids: &[EmojiId]) -> Result<Vec<EmojiCustom>> {
+        if emoji_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut out = Vec::with_capacity(emoji_ids.len());
+        let mut missing = Vec::new();
+
+        for id in emoji_ids {
+            if let Some(emoji) = self.cache.get(id).await {
+                out.push((*emoji).clone());
+            } else {
+                missing.push(*id);
+            }
+        }
+
+        if !missing.is_empty() {
+            let emojis = self
+                .globals
+                .begin_read()
+                .await?
+                .emoji_get_many(&missing)
+                .await?;
+            for emoji in emojis {
+                self.cache.insert(emoji.id, Arc::new(emoji.clone())).await;
+                out.push(emoji);
+            }
+        }
+
+        Ok(out)
+    }
+
+    pub async fn invalidate(&self, emoji_id: EmojiId) {
+        self.cache.invalidate(&emoji_id).await
+    }
+
+    pub fn purge_cache(&self) {
+        self.cache.invalidate_all();
     }
 
     pub async fn update<A: Auth5>(
@@ -111,8 +165,8 @@ impl ServiceEmoji {
         auth: &mut A,
         patch: EmojiCustomPatch,
     ) -> Result<EmojiCustom> {
-        let mut data = self.state.begin().await?;
-        let srv = self.state.services();
+        let mut data = self.globals.begin().await?;
+        let srv = self.globals.services();
 
         let user = auth.ensure_user()?;
         let user_id = user.id;
@@ -132,11 +186,13 @@ impl ServiceEmoji {
 
         data.commit().await?;
 
+        self.cache.insert(emoji.id, Arc::new(emoji.clone())).await;
+
         if let Some(EmojiOwner::Room { room_id }) = emoji.owner {
             let sync_msg = MessageSync::EmojiUpdate {
                 emoji: emoji.clone(),
             };
-            self.state
+            self.globals
                 .messaging()
                 .broadcast_room(room_id, sync_msg)
                 .await?;
@@ -151,13 +207,13 @@ impl ServiceEmoji {
         emoji_id: EmojiId,
         auth: &mut A,
     ) -> Result<()> {
-        let mut data = self.state.begin().await?;
+        let mut data = self.globals.begin().await?;
         let emoji = data.emoji_get(emoji_id).await?;
 
         let user = auth.ensure_user()?;
         let user_id = user.id;
         let perms = self
-            .state
+            .globals
             .services()
             .perms
             .for_room(user_id, room_id)
@@ -178,12 +234,14 @@ impl ServiceEmoji {
 
         data.commit().await?;
 
+        self.cache.invalidate(&emoji_id).await;
+
         if let Some(EmojiOwner::Room { room_id }) = emoji.owner {
             let sync_msg = MessageSync::EmojiDelete {
                 emoji_id: emoji.id,
                 room_id,
             };
-            self.state
+            self.globals
                 .messaging()
                 .broadcast_room(room_id, sync_msg)
                 .await?;
@@ -201,13 +259,13 @@ impl ServiceEmoji {
         let user = auth.ensure_user()?;
         let user_id = user.id;
         let _perms = self
-            .state
+            .globals
             .services()
             .perms
             .for_room(user_id, room_id)
             .await?;
 
-        self.state
+        self.globals
             .begin_read()
             .await?
             .emoji_list(room_id, pagination)
@@ -222,7 +280,7 @@ impl ServiceEmoji {
     ) -> Result<PaginationResponse<EmojiCustom>> {
         let user = auth.ensure_user()?;
         let user_id = user.id;
-        self.state
+        self.globals
             .begin_read()
             .await?
             .emoji_search(user_id, query, pagination)
@@ -230,7 +288,7 @@ impl ServiceEmoji {
     }
 
     pub async fn lookup<A: Auth5>(&self, emoji_id: EmojiId, auth: &A) -> Result<EmojiCustom> {
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
         let mut emoji = data.emoji_get(emoji_id).await?;
 
         let user = auth.ensure_user()?;

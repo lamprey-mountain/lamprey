@@ -27,15 +27,11 @@ use common::v1::types::error::ApiError;
 use common::v1::types::error::ErrorCode;
 pub use permissions::PermissionsCalculator;
 
+// TODO(?): then rename ServiceCache to ServicePreferences, remove all caching logic for other resources
+
 /// service for caching all in-memory data used by the server
-#[derive(Clone)]
 pub struct ServiceCache {
     state: Globals,
-
-    // TODO: make not pub?
-    pub(crate) users: Cache<UserId, User>,
-
-    pub(crate) emojis: Cache<EmojiId, EmojiCustom>,
 
     // preferences caches
     preferences_global: Cache<UserId, PreferencesGlobal>,
@@ -48,11 +44,6 @@ impl ServiceCache {
     pub fn new(state: Globals) -> Self {
         Self {
             state,
-            users: Cache::builder()
-                .max_capacity(100_000)
-                .support_invalidation_closures()
-                .build(),
-            emojis: Cache::builder().max_capacity(100_000).build(),
             preferences_global: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
@@ -73,22 +64,24 @@ impl ServiceCache {
     }
 
     pub fn start_background_tasks(&self) {
-        let this = self.clone();
+        let globals = self.state.clone();
         tokio::spawn(async move {
-            let mut rx = this.state.messaging().subscribe().await.unwrap();
+            let srv = globals.services();
+            let mut rx = globals.messaging().subscribe().await.unwrap();
             while let Some(msg) = rx.next().await {
                 if let Broadcast::Sync(sync) = msg {
-                    this.handle_sync(&sync.message).await;
+                    srv.cache.handle_sync(&sync.message).await;
                 }
             }
         });
 
-        let this = self.clone();
+        let globals = self.state.clone();
         tokio::spawn(async move {
+            let srv = globals.services();
             let mut interval = tokio::time::interval(Duration::from_secs(3600)); // Run every hour
             loop {
                 interval.tick().await;
-                this.janitor_cleanup().await;
+                srv.cache.janitor_cleanup().await;
             }
         });
     }
@@ -172,27 +165,6 @@ impl ServiceCache {
     /// unload all rooms
     pub fn unload_all(&self) {
         self.state.services().rooms.unload_all_cache();
-    }
-
-    /// get a user from the cache, loading from the database if not present
-    pub async fn user_get(&self, user_id: UserId) -> Result<User> {
-        if let Some(user) = self.users.get(&user_id).await {
-            return Ok(user);
-        }
-
-        let user = self.state.begin_read().await?.user_get(user_id).await?;
-        self.users.insert(user_id, user.clone()).await;
-        Ok(user)
-    }
-
-    /// invalidate a user in the cache
-    pub async fn user_invalidate(&self, user_id: UserId) {
-        self.users.invalidate(&user_id).await;
-    }
-
-    /// purge all users from the cache
-    pub fn user_purge(&self) {
-        self.users.invalidate_all();
     }
 
     /// get a user's global config from the cache, loading from the database if not present
@@ -298,55 +270,15 @@ impl ServiceCache {
     }
 
     /// get an emoji from the cache, loading from the database if not present
+    #[deprecated = "use emoji service directly"]
     pub async fn emoji_get(&self, emoji_id: EmojiId) -> Result<EmojiCustom> {
-        if let Some(emoji) = self.emojis.get(&emoji_id).await {
-            return Ok(emoji);
-        }
-
-        self.emojis
-            .try_get_with(emoji_id, async {
-                self.state.begin_read().await?.emoji_get(emoji_id).await
-            })
-            .await
-            .map_err(|err| err.fake_clone())
+        self.state.services().emoji.get(emoji_id).await
     }
 
     /// get multiple emojis from the cache, loading missing ones from the database
+    #[deprecated = "use emoji service directly"]
     pub async fn emoji_get_many(&self, emoji_ids: &[EmojiId]) -> Result<Vec<EmojiCustom>> {
-        if emoji_ids.is_empty() {
-            return Ok(vec![]);
-        }
-
-        let mut out = Vec::with_capacity(emoji_ids.len());
-        let mut missing = Vec::new();
-
-        for id in emoji_ids {
-            if let Some(emoji) = self.emojis.get(id).await {
-                out.push(emoji);
-            } else {
-                missing.push(*id);
-            }
-        }
-
-        if !missing.is_empty() {
-            let emojis = self
-                .state
-                .begin_read()
-                .await?
-                .emoji_get_many(&missing)
-                .await?;
-            for emoji in emojis {
-                self.emojis.insert(emoji.id, emoji.clone()).await;
-                out.push(emoji);
-            }
-        }
-
-        Ok(out)
-    }
-
-    /// invalidate an emoji in the cache
-    pub async fn emoji_invalidate(&self, emoji_id: EmojiId) {
-        self.emojis.invalidate(&emoji_id).await;
+        self.state.services().emoji.get_many(emoji_ids).await
     }
 
     /// get the permission calculator for this room, loading the room if it doesn't exist
@@ -407,11 +339,10 @@ impl ServiceCache {
         let srv = self.state.services();
         let results = futures::stream::iter(room_items.into_iter())
             .map(|room| {
-                let this = self.clone();
                 let srv = srv.clone();
                 async move {
-                    let snapshot = this.load_room(room.id, true).await?;
-                    let member = this
+                    let snapshot = self.load_room(room.id, true).await?;
+                    let member = self
                         .state
                         .begin_read()
                         .await?
@@ -520,8 +451,8 @@ impl ServiceCache {
             return;
         }
 
+        let srv = self.state.services();
         if let Some(room_id) = cache_invalidate_room_id(event) {
-            let srv = self.state.services();
             if let Some(handle) = srv.rooms.actors.get(&room_id) {
                 let _ = handle
                     .actor_ref
@@ -567,19 +498,22 @@ impl ServiceCache {
                     .await;
             }
             MessageSync::EmojiCreate { emoji } | MessageSync::EmojiUpdate { emoji } => {
-                self.emojis.insert(emoji.id, emoji.clone()).await;
+                srv.emoji
+                    .cache
+                    .insert(emoji.id, Arc::new(emoji.clone()))
+                    .await;
             }
             MessageSync::EmojiDelete { emoji_id, .. } => {
-                self.emojis.invalidate(emoji_id).await;
+                srv.emoji.cache.invalidate(emoji_id).await;
             }
             MessageSync::PresenceUpdate { user_id, presence } => {
-                if let Some(mut user) = self.users.get(user_id).await {
+                // NOTE: this is probably unnecessary, since the user service already patches in presence
+                if let Ok(mut user) = srv.users.get(*user_id, None).await {
                     user.presence = presence.clone();
-                    self.users.insert(*user_id, user).await;
+                    srv.users.cache.insert(*user_id, Arc::new(user)).await;
                 }
 
                 // Find all rooms this user is in and notify their actors
-                let srv = self.state.services();
                 let rooms_to_notify = if let Some(rooms_set) = srv.rooms.user_rooms.get(user_id) {
                     rooms_set.iter().map(|r| *r).collect::<Vec<_>>()
                 } else {
@@ -598,10 +532,12 @@ impl ServiceCache {
                 }
             }
             MessageSync::UserUpdate { user } => {
-                self.users.insert(user.id, user.clone()).await;
+                srv.users
+                    .cache
+                    .insert(user.id, Arc::new((*user).clone()))
+                    .await;
 
                 // Find all rooms this user is in and notify their actors
-                let srv = self.state.services();
                 let rooms_to_notify = if let Some(rooms_set) = srv.rooms.user_rooms.get(&user.id) {
                     rooms_set.iter().map(|r| *r).collect::<Vec<_>>()
                 } else {

@@ -261,7 +261,7 @@ impl ServiceMessages {
             });
         }
 
-        let emojis = srv.cache.emoji_get_many(&mentions_ids.emojis).await?;
+        let emojis = srv.emoji.get_many(&mentions_ids.emojis).await?;
         for emoji in emojis {
             mentions.emojis.push(MentionsEmoji {
                 id: emoji.id,
@@ -284,7 +284,7 @@ impl ServiceMessages {
         let mut allowed_emoji = vec![];
 
         let emoji_ids: Vec<_> = m.emojis.iter().map(|e| e.id).collect();
-        let emojis = srv.cache.emoji_get_many(&emoji_ids).await?;
+        let emojis = srv.emoji.get_many(&emoji_ids).await?;
 
         for emoji in emojis {
             let is_room_emoji = emoji.owner == Some(EmojiOwner::Room { room_id });
