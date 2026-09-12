@@ -16,7 +16,7 @@ use lamprey_search::visibility::ChannelVisibility;
 use moka::future::Cache;
 use moka::ops::compute::Op as CacheOp;
 use time::OffsetDateTime;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use validator::Validate;
 
 use crate::globals::messaging::Broadcast;
@@ -1539,39 +1539,47 @@ impl ServiceChannels {
 
     pub async fn spawn_auto_archive_task(globals: Globals) {
         let mut interval = tokio::time::interval(Duration::from_secs(60));
+        let srv = globals.services();
+
         loop {
             interval.tick().await;
-            let mut data = match globals.begin().await {
-                Ok(d) => d,
-                Err(e) => {
-                    error!("Failed to begin transaction for auto-archive: {:?}", e);
-                    continue;
-                }
-            };
-            let srv = globals.services();
 
-            match data.thread_auto_archive().await {
-                Ok(archived_thread_ids) => {
-                    if !archived_thread_ids.is_empty() {
-                        info!("auto-archived {} threads", archived_thread_ids.len());
+            let res = async {
+                let mut txn = globals.begin().await?;
+                let archived_thread_ids = txn.thread_auto_archive().await?;
+                txn.commit().await?;
 
-                        for thread_id in archived_thread_ids {
-                            srv.channels.invalidate(thread_id).await;
+                if !archived_thread_ids.is_empty() {
+                    info!("auto-archived {} threads", archived_thread_ids.len());
 
-                            if let Ok(channel) = srv.channels.get(thread_id, None).await {
-                                if let Some(room_id) = channel.room_id {
-                                    let msg = MessageSync::ChannelUpdate {
-                                        channel: Box::new(channel),
-                                    };
-                                    let _ = globals.messaging().broadcast_room(room_id, msg).await;
-                                }
+                    // PERF: invalidate + broadcast in parallel
+                    for thread_id in archived_thread_ids {
+                        srv.channels.invalidate(thread_id).await;
+
+                        if let Ok(channel) = srv.channels.get(thread_id, None).await {
+                            let room_id = channel.room_id;
+                            let parent_id = channel.parent_id;
+                            let msg = MessageSync::ChannelUpdate {
+                                channel: Box::new(channel),
+                            };
+                            if let Some(room_id) = room_id {
+                                let _ = globals.messaging().broadcast_room(room_id, msg).await;
+                            } else if let Some(parent_id) = parent_id {
+                                let _ = globals.messaging().broadcast_channel(parent_id, msg).await;
+                            } else {
+                                warn!(channel_id = %thread_id, "auto archived thread channel has no room_id or parent_id");
                             }
                         }
                     }
+                } else {
+                    debug!("no threads were auto-archived");
                 }
-                Err(e) => {
-                    warn!("failed to auto-archive threads: {}", e);
-                }
+
+                Result::Ok(())
+            };
+
+            if let Err(err) = res.await {
+                warn!("Failed to auto-archive threads: {:?}", err);
             }
         }
     }
