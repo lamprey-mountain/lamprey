@@ -27,11 +27,13 @@ use crate::types::{DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCr
 // TODO: split caches more
 // have a cache for public data, per-user data, member counts, etc
 // then only invalidate (or directly update) that one part of the cache at a time
+// NOTE: should cache_private be Cache<ChannelId, Cache<UserId, ()>> or Cache<UserId, Cache<ChannelId, ()>>?
 pub struct ServiceChannels {
     state: Globals,
-    cache_thread: Cache<ChannelId, Channel>, // TODO: remove?
-    cache_thread_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
-    cache_thread_recipients: Cache<ChannelId, Vec<User>>,
+    cache: Cache<ChannelId, Channel>,
+    cache_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
+    cache_recipients: Cache<ChannelId, Vec<UserId>>,
+    // PERF: remove expired typing entries
     typing: Cache<(ChannelId, UserId), OffsetDateTime>,
     idempotency_keys: Cache<String, Channel>,
 }
@@ -40,15 +42,15 @@ impl ServiceChannels {
     pub fn new(state: Globals) -> Self {
         Self {
             state,
-            cache_thread: Cache::builder()
+            cache: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
-            cache_thread_private: Cache::builder()
+            cache_private: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
                 .build(),
-            cache_thread_recipients: Cache::builder()
+            cache_recipients: Cache::builder()
                 .max_capacity(10_000)
                 .support_invalidation_closures()
                 .build(),
@@ -128,18 +130,18 @@ impl ServiceChannels {
         }
 
         for channel in dm_channels {
+            let srv = self.state.services();
             let recipients = self
-                .cache_thread_recipients
+                .cache_recipients
                 .try_get_with(channel.id, async {
                     let mut data = self.state.begin_read().await?;
                     let members = data.thread_member_list_all(channel.id).await?;
                     let user_ids: Vec<_> = members.into_iter().map(|m| m.user_id).collect();
-                    let users = data.user_get_many(&user_ids).await?;
-                    Result::Ok(users)
+                    Result::Ok(user_ids)
                 })
                 .await
                 .map_err(|err| err.fake_clone())?;
-            channel.recipients = recipients;
+            channel.recipients = srv.users.get_many(&recipients).await?;
         }
 
         Ok(())
@@ -147,7 +149,7 @@ impl ServiceChannels {
 
     pub async fn get(&self, channel_id: ChannelId, user_id: Option<UserId>) -> Result<Channel> {
         let mut thread = self
-            .cache_thread
+            .cache
             .try_get_with(channel_id, async move {
                 let mut data = self.state.begin_read().await?;
                 data.channel_get(channel_id).await
@@ -194,7 +196,7 @@ impl ServiceChannels {
         let mut missing = Vec::new();
 
         for id in channel_ids {
-            if let Some(chan) = self.cache_thread.get(id).await {
+            if let Some(chan) = self.cache.get(id).await {
                 out.push(chan);
             } else {
                 missing.push(*id);
@@ -205,7 +207,7 @@ impl ServiceChannels {
             let mut data = self.state.begin_read().await?;
             let more_channels = data.channel_get_many(&missing).await?;
             for chan in more_channels {
-                self.cache_thread.insert(chan.id, chan.clone()).await;
+                self.cache.insert(chan.id, chan.clone()).await;
                 out.push(chan);
             }
         }
@@ -235,8 +237,8 @@ impl ServiceChannels {
     }
 
     pub async fn invalidate(&self, thread_id: ChannelId) {
-        self.cache_thread.invalidate(&thread_id).await;
-        self.cache_thread_private
+        self.cache.invalidate(&thread_id).await;
+        self.cache_private
             .invalidate_entries_if(move |(t, _), _| *t == thread_id)
             .expect("failed to invalidate");
     }
@@ -247,7 +249,7 @@ impl ServiceChannels {
         message_id: MessageId,
         version_id: MessageVerId,
     ) {
-        self.cache_thread
+        self.cache
             .entry(thread_id)
             .and_compute_with(|entry| async {
                 match entry {
@@ -267,15 +269,13 @@ impl ServiceChannels {
     // TODO: fn update_last_pin_timestamp
 
     pub async fn invalidate_user(&self, thread_id: ChannelId, user_id: UserId) {
-        self.cache_thread_private
-            .invalidate(&(thread_id, user_id))
-            .await
+        self.cache_private.invalidate(&(thread_id, user_id)).await
     }
 
     pub fn purge_cache(&self) {
-        self.cache_thread.invalidate_all();
-        self.cache_thread_private.invalidate_all();
-        self.cache_thread_recipients.invalidate_all();
+        self.cache.invalidate_all();
+        self.cache_private.invalidate_all();
+        self.cache_recipients.invalidate_all();
     }
 
     // FIXME: does this need to be pinboxed?
