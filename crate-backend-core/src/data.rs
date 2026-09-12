@@ -205,6 +205,11 @@ pub trait DataRoomMember {
         room_id: RoomId,
         user_ids: &[UserId],
     ) -> Result<Vec<RoomMember>>;
+    async fn room_member_get_many_for_user(
+        &mut self,
+        user_id: UserId,
+        room_ids: &[RoomId],
+    ) -> Result<Vec<RoomMember>>;
     async fn room_member_list(
         &mut self,
         room_id: RoomId,

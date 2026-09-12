@@ -230,6 +230,24 @@ impl DataRoomMember for Postgres {
         Ok(())
     }
 
+    async fn room_member_get_many_for_user(
+        &mut self,
+        user_id: UserId,
+        room_ids: &[RoomId],
+    ) -> Result<Vec<RoomMember>> {
+        let mut conn = self.acquire().await?;
+        let room_ids: Vec<Uuid> = room_ids.iter().map(|id| id.into_inner()).collect();
+        let items = query_file_as!(
+            DbRoomMember,
+            "sql/room_member_get_many_for_user.sql",
+            *user_id,
+            &room_ids
+        )
+        .fetch_all(conn.ext())
+        .await?;
+        Ok(items.into_iter().map(Into::into).collect())
+    }
+
     async fn room_member_list(
         &mut self,
         room_id: RoomId,
