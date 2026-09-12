@@ -13,7 +13,7 @@ use lamprey_backend_core::Error;
 use std::collections::HashSet;
 
 use sqlx::{query, query_as, query_scalar};
-use time::PrimitiveDateTime;
+use time::{Date, Month, PrimitiveDateTime, Time};
 use uuid::Uuid;
 
 use crate::{
@@ -170,14 +170,18 @@ impl DataCalendar for Postgres {
             limit: query.limit.unwrap_or(10),
         };
 
-        let from_time = query
-            .from_time
-            .map(Into::into)
-            .unwrap_or(PrimitiveDateTime::MIN);
-        let to_time = query
-            .to_time
-            .map(Into::into)
-            .unwrap_or(PrimitiveDateTime::MAX);
+        let from_time = query.from_time.map(Into::into).unwrap_or_else(|| {
+            PrimitiveDateTime::new(
+                Date::from_calendar_date(1, Month::January, 1).unwrap(),
+                Time::MIDNIGHT,
+            )
+        });
+        let to_time = query.to_time.map(Into::into).unwrap_or_else(|| {
+            PrimitiveDateTime::new(
+                Date::from_calendar_date(9999, Month::December, 31).unwrap(),
+                Time::from_hms(23, 59, 59).unwrap(),
+            )
+        });
 
         gen_paginate!(
             p,
