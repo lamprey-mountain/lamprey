@@ -329,15 +329,6 @@ impl ServiceCache {
             .map(|room| {
                 let srv = srv.clone();
                 async move {
-                    let snapshot = self.load_room(room.id, true).await?;
-                    let member = self
-                        .state
-                        .begin_read()
-                        .await?
-                        .room_member_get(room.id, user_id)
-                        .await
-                        .ok();
-
                     if room.id == SERVER_ROOM_ID {
                         let perms = srv.perms.for_room(user_id, room.id).await?;
                         if !perms.has(Permission::ServerOversee) {
@@ -345,6 +336,8 @@ impl ServiceCache {
                         }
                     }
 
+                    let snapshot = self.load_room(room.id, true).await?;
+                    let member = snapshot.get_member(&user_id).map(|m| m.member.clone());
                     Ok::<Option<(Room, Arc<RoomSnapshot>, Option<RoomMember>)>, Error>(Some((
                         room, snapshot, member,
                     )))
