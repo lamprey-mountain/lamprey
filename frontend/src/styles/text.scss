@@ -247,8 +247,8 @@ kbd {
 		display: inline;
 	}
 
-	:is(p, ol, ul) + :is(p, ol, ul) {
-		margin-top: 1em;
+	& p {
+		min-height: 1em;
 	}
 
 	li + li {
