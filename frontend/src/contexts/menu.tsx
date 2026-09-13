@@ -8,6 +8,9 @@ import {
 	useContext,
 } from "solid-js";
 
+// TODO: add emoji menu
+// TODO: add role menu
+
 export type Menu = {
 	x: number;
 	y: number;

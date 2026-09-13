@@ -13,7 +13,7 @@ import {
 	useContext,
 } from "solid-js";
 import { Dynamic } from "solid-js/web";
-import { useChannels, useRoles, useRoomMembers, useUsers } from "@/api";
+import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { useUserPopout } from "@/contexts/mod";
@@ -27,30 +27,33 @@ import type {
 	SerializedInline,
 } from "@/lib/markdown/ast";
 import { getEmojiUrl } from "@/media/util";
+import { PUA_REGEX } from "@/utils/diff";
 
 // --- Context ---
 
 const MarkdownContext = createContext<{
 	channel?: Channel;
 	allowDiffTags?: boolean;
+	allowMarkTags?: boolean;
 }>();
 
 // --- Components ---
 
 function UserMention(props: { id: string }) {
 	const ctx = useContext(MarkdownContext);
-	const users2 = useUsers();
-	const roomMembers2 = useRoomMembers();
+	const api = useApi();
 	const { userView, setUserView } = useUserPopout();
-	const user = users2.use(() => props.id);
+	const user = api.users.use(() => props.id);
 	const room_member = createMemo(() => {
 		if (!ctx?.channel?.room_id) return null;
-		return roomMembers2.cache.get(`${ctx.channel?.room_id!}:${props.id}`);
+		return api.roomMembers.cache.get(`${ctx.channel?.room_id!}:${props.id}`);
 	});
 
 	return (
 		<span
 			class="mention mention-user"
+			data-user-id={props.id}
+			data-channel-id={ctx?.channel?.id}
 			onClick={(e) => {
 				e.stopPropagation();
 				e.preventDefault();
@@ -75,23 +78,28 @@ function UserMention(props: { id: string }) {
 
 function RoleMention(props: { id: string }) {
 	const ctx = useContext(MarkdownContext);
-	const roles2 = useRoles();
+	const api = useApi();
 	const role = createMemo(() => {
 		if (!ctx?.channel?.room_id) return null;
-		return roles2.cache.get(props.id);
+		return api.roles.cache.get(props.id);
 	});
 
-	return <span class="mention mention-role">@{role()?.name ?? "..."}</span>;
+	return (
+		<span class="mention mention-role menu-role" data-role-id={props.id}>
+			@{role()?.name ?? "..."}
+		</span>
+	);
 }
 
 function ChannelMention(props: { id: string }) {
-	const channels2 = useChannels();
+	const api = useApi();
 	const navigate = useNavigate();
-	const channel = channels2.use(() => props.id);
+	const channel = api.channels.use(() => props.id);
 
 	return (
 		<span
-			class="mention mention-channel"
+			class="mention mention-channel menu-channel"
+			data-channel-id={props.id}
 			onClick={(e) => {
 				e.stopPropagation();
 				e.preventDefault();
@@ -122,7 +130,8 @@ function CustomEmoji(props: { id: string; name: string; animated?: boolean }) {
 	const ctx = useCtx();
 	return (
 		<img
-			class="emoji custom-emoji"
+			class="emoji custom-emoji menu-emoji"
+			data-emoji-id={props.id}
 			src={getEmojiUrl(props.id)}
 			alt={`:${props.name}:`}
 			title={`:${props.name}:`}
@@ -274,6 +283,7 @@ export function CodeBlock(props: {
 function Text(props: { text: string }) {
 	const ctx = useContext(MarkdownContext);
 
+	// see ../utils/diff.ts
 	const escape = (html: string) => {
 		let escaped = html
 			.replace(/&/g, "&amp;")
@@ -282,12 +292,24 @@ function Text(props: { text: string }) {
 			.replace(/"/g, "&quot;")
 			.replace(/'/g, "&#39;");
 
-		if (ctx?.allowDiffTags) {
-			escaped = escaped
-				.replace(/\uE000/g, "<ins>")
-				.replace(/\uE001/g, "</ins>")
-				.replace(/\uE002/g, "<del>")
-				.replace(/\uE003/g, "</del>");
+		// HACK: if either of these are set, the caller probably didn't sanitize the text
+		// TODO(?): maybe i should make this a part of the markdown parser?
+		if (!ctx?.allowDiffTags && !ctx?.allowMarkTags) {
+			escaped = escaped.replace(PUA_REGEX, "");
+		} else {
+			if (ctx?.allowDiffTags) {
+				escaped = escaped
+					.replace(/\uE000/g, "<ins>")
+					.replace(/\uE001/g, "</ins>")
+					.replace(/\uE002/g, "<del>")
+					.replace(/\uE003/g, "</del>");
+			}
+
+			if (ctx?.allowMarkTags) {
+				escaped = escaped
+					.replace(/\uE004/g, "<mark>")
+					.replace(/\uE005/g, "</mark>");
+			}
 		}
 
 		return escaped;
@@ -524,12 +546,13 @@ export type MarkdownProps = {
 	class?: string;
 	classList?: { [k: string]: boolean | undefined };
 	allowDiffFormatting?: boolean;
+	allowMarkFormatting?: boolean;
 	ref?: HTMLElement | ((el: HTMLElement) => void);
 };
 
 export const Markdown = (props: ParentProps<MarkdownProps>) => {
-	const channels2 = useChannels();
-	const channel = channels2.use(() => props.channel_id);
+	const api = useApi();
+	const channel = api.channels.use(() => props.channel_id);
 
 	const [parser, setParser] = createSignal<Parser>();
 	createEffect(() => {
@@ -548,7 +571,11 @@ export const Markdown = (props: ParentProps<MarkdownProps>) => {
 	// TODO: use Suspense here?
 	return (
 		<MarkdownContext.Provider
-			value={{ channel: channel(), allowDiffTags: props.allowDiffFormatting }}
+			value={{
+				channel: channel(),
+				allowDiffTags: props.allowDiffFormatting,
+				allowMarkTags: props.allowMarkFormatting,
+			}}
 		>
 			<Show when={ast()}>
 				<Dynamic

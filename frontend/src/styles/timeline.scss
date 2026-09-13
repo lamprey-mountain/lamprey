@@ -626,11 +626,23 @@
 	}
 }
 
-.automod-execution-details {
-	background: $bg-150;
+.automod-execution {
+	display: inline-block;
+	contain: content;
+	background: $bg-200;
 	border: solid $sep-300 1px;
-	padding: 8px;
 	border-radius: 4px;
+	--mark-background-color: oklch(var(--color-red) / .5);
+
+	& > .automod-execution-header {
+		background: linear-gradient($bg-100, transparent);
+		padding: 8px;
+	}
+
+	& > .automod-execution-details {
+		background: linear-gradient(transparent, $bg-100);
+		padding: 8px;
+	}
 }
 
 .timeline-controls {

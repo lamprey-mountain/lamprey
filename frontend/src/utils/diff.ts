@@ -5,5 +5,7 @@ export const INS_START = "\uE000";
 export const INS_END = "\uE001";
 export const DEL_START = "\uE002";
 export const DEL_END = "\uE003";
+export const MARK_START = "\uE004";
+export const MARK_END = "\uE005";
 
 export const PUA_REGEX = /[\uE000-\uE010]/;

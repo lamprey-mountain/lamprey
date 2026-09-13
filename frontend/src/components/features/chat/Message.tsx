@@ -241,8 +241,7 @@ export function AttachmentView(props: { att: Attachment }) {
 	);
 }
 
-// TODO: rename to Message
-export function MessageView(props: MessageProps) {
+export const MessageView = (props: MessageProps) => {
 	const channels = useChannels();
 	const messagesService = useMessages();
 	const ctx = useCtx();
@@ -441,7 +440,7 @@ export function MessageView(props: MessageProps) {
 			</Match>
 		</Switch>
 	);
-}
+};
 
 // TODO: move props into DefaultMessageProps
 function DefaultMessage(

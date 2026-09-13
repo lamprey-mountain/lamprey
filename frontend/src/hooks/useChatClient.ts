@@ -136,7 +136,7 @@ export function useChatClient(config: Config) {
 		client,
 		data,
 		dataUpdate: update,
-		t: i18n.translator(() => dict()) as i18n.Translator<
+		t: i18n.translator(() => dict(), i18n.resolveTemplate) as i18n.Translator<
 			i18n.Flatten<typeof en>
 		>,
 		events: events as any,

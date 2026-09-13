@@ -4,12 +4,22 @@ import type {
 	Message as MessageT,
 	MessageVersion as MessageVersionT,
 } from "sdk";
-import { createMemo, type JSX, Match, Show, Switch } from "solid-js";
-import { useChannels } from "@/api";
+import {
+	createMemo,
+	type JSX,
+	Match,
+	type ParentProps,
+	Show,
+	Switch,
+} from "solid-js";
+import { useApi, useChannels } from "@/api";
 import { useCtx } from "@/app/context";
 import { Duration } from "@/atoms/Duration.tsx";
+import { Markdown } from "@/atoms/Markdown.tsx";
 import { Time } from "@/atoms/Time";
+import { Avatar } from "@/avatar/UserAvatar.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { MARK_END, MARK_START, PUA_REGEX } from "@/utils/diff.ts";
 import {
 	icCall,
 	icChannelMove,
@@ -45,7 +55,7 @@ export type SystemMessageProps = SystemMessageBaseProps & {
 	class?: string;
 };
 
-export const SystemMessage = (props: SystemMessageProps) => {
+export const SystemMessage = (props: ParentProps<SystemMessageProps>) => {
 	const toolbar = useMessageToolbar();
 
 	return (
@@ -570,9 +580,10 @@ export function SystemMessageChannelMoved(props: SystemMessageBaseProps) {
 	);
 }
 
-// TODO: better component for automod executions
 export function SystemMessageAutomodExecution(props: SystemMessageBaseProps) {
-	const { t } = useCtx();
+	const api = useApi();
+	const navigate = useNavigate();
+	const toolbar = useMessageToolbar();
 
 	const m = () =>
 		props.message.latest_version as MessageVersionT & {
@@ -583,63 +594,157 @@ export function SystemMessageAutomodExecution(props: SystemMessageBaseProps) {
 	// TODO: if automod acted on a message, render pseudo message and highlight phrases that triggered the action
 	// TODO: if its not a message, still highlight matches? (how would the ui look in this case?)
 
-	// m().matches.fragments[0].text
+	const content = createMemo(() => {
+		const matches = m().matches;
+		if (!matches) return "";
+
+		// NOTE: RegExp.escape exists but probably needs a polyfill since its so new
+		const allFragments = new RegExp(
+			matches.fragments
+				.filter((i) => i.text)
+				.map((i) => i.text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+				.join("|"),
+			"g",
+		);
+		return matches.text
+			.replace(PUA_REGEX, "")
+			.replace(allFragments, `${MARK_START}$&${MARK_END}`);
+	});
 
 	const renderAction = (action: AutomodAction) => {
 		switch (action.type) {
 			case "Block":
-				return <>Blocked</>;
+				return "Blocked";
 			// TODO: better styling for Timeout duration
 			// case "Timeout": return <>Timed out <Duration ms={action.duration} /></>
 			case "Timeout":
-				return <>Timed out</>;
+				return "Timed out";
 			case "Remove":
-				return <>Message removed</>;
+				return "Message removed";
 			case "SendAlert":
 				return null; // redundant
 		}
 	};
 
+	const author = api.users.use(() => m().user_id ?? undefined);
+	const channel = api.channels.use(() => m().channel_id ?? undefined);
+	const created = () => new Date(props.message.created_at);
+
+	const fmt = new Intl.ListFormat();
+
 	return (
-		<SystemMessage
-			{...props}
-			icon={icSword}
-			class="message-dim-content"
-			content={
-				<div
-					class="body markdown"
-					classList={{ local: props.message.is_local }}
-				>
-					{/* @ts-ignore */}
-					{t(
-						"message_content.automod_execution",
-						<span class="author">
-							<UserDisplayName
-								user_id={m().user_id}
-								room_id={props.room_id}
-								onClick
+		<article
+			ref={props.messageArticleRef}
+			class="message menu-message"
+			data-message-id={props.message.id}
+			classList={{
+				separate: props.separate,
+			}}
+			onClick={props.handleClick}
+			onMouseDown={(e) => {
+				props.onMouseDown(e);
+				props.handleAltClick(e);
+			}}
+			onMouseEnter={(e) => {
+				props.setHovered(true);
+				toolbar.setTarget({ message: props.message, element: e.currentTarget });
+			}}
+			onMouseLeave={(e) => {
+				props.setHovered(false);
+				const toolbarEl = toolbar.containerRef();
+				if (
+					toolbarEl &&
+					e.relatedTarget instanceof Node &&
+					toolbarEl.contains(e.relatedTarget)
+				) {
+					return;
+				}
+				toolbar.setTarget(null);
+			}}
+		>
+			<div class="content">
+				<div class="automod-execution markdown">
+					<div class="automod-execution-header">
+						<a href={`/room/${props.room_id}/settings/automod`}>automod</a>{" "}
+						execution
+						<Show when={channel()}>
+							{(ch) => (
+								<>
+									{" "}
+									in{" "}
+									<span
+										class="mention mention-channel"
+										onClick={(e) => {
+											e.stopPropagation();
+											e.preventDefault();
+											navigate(`/channel/${ch().id}`);
+										}}
+									>
+										#{ch().name}
+									</span>
+								</>
+							)}
+						</Show>
+					</div>
+					<article class="message separate">
+						<aside class="aside">
+							<Avatar
+								user={author()}
+								animate={false /* TODO: make this work */}
 							/>
-						</span>,
-					)}
+							<Time date={created()} animGroup="message-ts" format="time" />
+						</aside>
+						<div class="content">
+							<h3 class="header">
+								<UserDisplayName
+									// TODO: dedicated "guest" user id?
+									user_id={
+										author()?.id ?? "00000000-0000-7000-0000-0000726f6f74"
+									}
+									class="author"
+								/>
+								<Time
+									date={created()}
+									animGroup="message-ts"
+									class="onlytime"
+									format="time"
+								/>
+								<Time
+									date={created()}
+									animGroup="message-ts"
+									class="full"
+									format="full"
+								/>
+							</h3>
+							<Markdown
+								class="body"
+								content={content()}
+								kindaInline
+								allowMarkFormatting
+							/>
+						</div>
+					</article>
 					<div class="automod-execution-details">
+						<Show when={m().flagged_message_id}>
+							{(mid) => (
+								<a href={`/channel/${m().channel_id}/message/${mid()}`}>jump</a>
+							)}
+						</Show>
 						<div class="rules">
 							<strong>Rules: </strong>
-							{m()
-								.rules.map((i) => i.name)
-								.join(", ")}
+							{fmt.format(m().rules.map((i) => i.name))}
 						</div>
 						<div class="actions">
 							<strong>Actions: </strong>
-							{m()
-								.actions.map(renderAction)
-								.filter((i) => i)
-								.flatMap((action, i, arr) =>
-									i < arr.length - 1 ? [action, ", "] : [action],
-								)}
+							{fmt.format(
+								m()
+									.actions.map(renderAction)
+									.filter((i) => i !== null),
+							)}{" "}
 						</div>
 					</div>
 				</div>
-			}
-		/>
+			</div>
+		</article>
 	);
 }

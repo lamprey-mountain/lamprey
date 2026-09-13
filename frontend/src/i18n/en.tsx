@@ -617,10 +617,6 @@ export default {
 			author,
 			" changed the channel icon",
 		],
-		automod_execution: (author: JSX.Element): JSX.Element[] => [
-			"automod action triggered by ",
-			author,
-		],
 	},
 	audit_log: {
 		ChannelCreate: "{{actor}} created a channel #{{channel_name}}",
