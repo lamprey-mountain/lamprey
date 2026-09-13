@@ -457,11 +457,11 @@ function RenderInline(props: { inline: SerializedInline }) {
 			</Match>
 			<Match when={props.inline.type === "Strikethrough" && props.inline}>
 				{(i) => (
-					<del>
+					<s>
 						<For each={i().children}>
 							{(child) => <RenderInline inline={child} />}
 						</For>
-					</del>
+					</s>
 				)}
 			</Match>
 			<Match when={props.inline.type === "Link" && props.inline}>
