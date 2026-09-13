@@ -197,7 +197,7 @@ pub struct AutomodMatches {
     pub text: String,
 
     /// the sanitized text that was matched against
-    // NOTE: lamprey uses the decancer crate internally
+    // NOTE: kerosene uses the decancer crate internally
     pub sanitized_text: String,
 
     /// each individual match
@@ -216,7 +216,10 @@ pub struct AutomodMatchFragment {
     /// the substring in the sanitized input text that matched
     pub sanitized_text: String,
 
+    /// the byte offset of the start of this fragment
     pub start: usize,
+
+    /// the byte offset of the end this fragment
     pub end: usize,
 
     #[serde(flatten)]

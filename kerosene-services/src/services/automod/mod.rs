@@ -3,8 +3,8 @@ use common::{
         Mentions, MentionsUser, MessageAutomodExecution, MessageSync, MessageType, Permission,
         RoomId, RoomMemberPatch,
         automod::{
-            AutomodAction, AutomodRuleExecution, AutomodRuleSummary, AutomodRuleTest,
-            AutomodRuleTestRequest,
+            AutomodAction, AutomodRuleCreate, AutomodRuleExecution, AutomodRuleSummary,
+            AutomodRuleTest, AutomodRuleTestRequest,
         },
         ids::AUTOMOD_USER_ID,
         util::Time,
@@ -103,7 +103,7 @@ impl AutomodCalculator {
 
         let mut rule_ids = vec![];
 
-        for rule in self.compiled.rules.iter() {
+        for rule in self.compiled.rules() {
             // 1. check RoomManage exemption
             if perms.has(Permission::RoomEdit) && !rule.include_everyone {
                 continue;
@@ -141,7 +141,7 @@ impl AutomodCalculator {
     }
 
     pub fn test(&self, query: &AutomodRuleTestRequest) -> AutomodRuleTest {
-        let relevant_rules: Vec<_> = self.compiled.rules.iter().map(|r| r.id).collect();
+        let relevant_rules: Vec<_> = self.compiled.rules().iter().map(|r| r.id).collect();
         let mut set = compiled::ScannableSet {
             target: query.target(),
             text: vec![],
@@ -160,7 +160,7 @@ impl AutomodCalculator {
         AutomodRuleTest {
             rules: self
                 .compiled
-                .rules
+                .rules()
                 .iter()
                 .filter(|r| scan.rule_ids.contains(&r.id))
                 .map(|r| r.clone().into())
@@ -179,6 +179,30 @@ impl ServiceAutomod {
         }
     }
 
+    // TODO(?): impl these
+    // pub async fn create(&self, room_id: RoomId, create: AutomodRuleCreate) -> Result<()> {
+    //     let mut txn = self.globals.begin().await?;
+    //     txn.automod_rule_create(room_id, create).await?;
+    //     txn.commit().await?;
+    //     self.invalidate(room_id);
+    //     Ok(())
+    // }
+
+    // pub async fn update(
+    //     &self,
+    //     room_id: RoomId,
+    //     rule_id: AutomodRuleId,
+    //     update: AutomodRuleUpdate,
+    // ) -> Result<()> {
+    //     todo!();
+    //     Ok(())
+    // }
+
+    // pub async fn delete(&self, room_id: RoomId, rule_id: AutomodRuleId) -> Result<()> {
+    //     todo!();
+    //     Ok(())
+    // }
+
     /// load an automod calculator for a room
     pub async fn load(&self, room_id: RoomId) -> Result<AutomodCalculator> {
         if let Some(compiled) = self.compiled.get(&room_id) {
@@ -196,7 +220,7 @@ impl ServiceAutomod {
             .automod_rule_list(room_id)
             .await?;
 
-        let compiled = Arc::new(Compiled::new(rules, self.globals.config()));
+        let compiled = Arc::new(self.compile(rules)?);
         self.compiled.insert(room_id, compiled.clone());
         Ok(AutomodCalculator {
             room_id,
@@ -277,7 +301,7 @@ impl ServiceAutomod {
                         .compiled
                         .get(&ctx.room_id)
                         .map(|c| {
-                            c.rules
+                            c.rules()
                                 .iter()
                                 .filter(|r| scan.rule_ids.contains(&r.id))
                                 .map(|r| r.clone().into())
@@ -353,7 +377,7 @@ impl ServiceAutomod {
             let rule = self
                 .compiled
                 .get(&ctx.room_id)
-                .and_then(|c| c.rules.iter().find(|r| &r.id == rule_id).cloned())
+                .and_then(|c| c.rules().iter().find(|r| &r.id == rule_id).cloned())
                 .map(AutomodRuleSummary::from)
                 .expect("rule must exist");
 

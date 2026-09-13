@@ -772,4 +772,14 @@ pub enum ErrorCode {
     /// search query syntax error
     #[error("search query syntax error")]
     SearchQuerySyntax,
+
+    /// regex syntax error
+    #[error("regex syntax error")]
+    RegexSyntax,
+
+    /// regex too complex
+    ///
+    /// the size of the compiled regex is larger than the server's limit
+    #[error("regex too complex")]
+    RegexTooComplex,
 }

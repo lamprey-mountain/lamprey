@@ -13,9 +13,10 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::error::Result;
+use crate::prelude::*;
 use crate::routes::util::Auth;
-use crate::{Error, ServerState, routes2};
+use crate::routes::util::auth::Auth4;
+use crate::{ServerState, routes2};
 
 /// Automod rule list
 #[handler(routes::automod_rule_list)]
@@ -34,55 +35,62 @@ async fn automod_rule_list(
         .check()?;
 
     let rules = s.data().automod_rule_list(req.room_id).await?;
+    // let rules: Vec<_> = srv.automod.load(req.room_id).await?.rules();
     Ok(Json(rules))
 }
 
 /// Automod rule create
 #[handler(routes::automod_rule_create)]
 async fn automod_rule_create(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
+    auth: Auth4,
+    State(globals): State<Globals>,
     req: routes::automod_rule_create::Request,
 ) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     req.rule.validate()?;
 
     // TODO: validate that trigger regexes are valid
     // TODO: validate that action SendAlert channel_id is a text channel that isnt removed or archived
 
-    let srv = s.services();
+    let srv = globals.services();
     srv.perms
-        .for_room3(Some(auth.user.id), req.room_id)
+        .for_room3(Some(user.id), req.room_id)
         .await?
         .ensure_view()?
         .needs(Permission::RoomEdit)
         .check()?;
 
-    let rule = s
-        .data()
+    let mut txn = globals.begin().await?;
+    let rule = txn
         .automod_rule_create(req.room_id, req.rule.clone())
         .await?;
+    txn.commit().await?;
     srv.automod.invalidate(req.room_id);
 
-    let al = auth.audit_log(req.room_id);
-    al.commit_success(AuditLogEntryType::AutomodRuleCreate {
-        rule_id: rule.id,
-        changes: Changes::new()
-            .add("name", &rule.name)
-            .add("enabled", &rule.enabled)
-            .add("except_roles", &rule.except_roles)
-            .add("except_channels", &rule.except_channels)
-            .build(),
-    })
-    .await?;
-
-    s.broadcast_room(
+    auth.begin_audit_log(
         req.room_id,
-        auth.user.id,
-        MessageSync::AutomodRuleCreate { rule: rule.clone() },
+        AuditLogEntryType::AutomodRuleCreate {
+            rule_id: rule.id,
+            changes: Changes::new()
+                .add("name", &rule.name)
+                .add("enabled", &rule.enabled)
+                .add("except_roles", &rule.except_roles)
+                .add("except_channels", &rule.except_channels)
+                .build(),
+        },
     )
-    .await?;
+    .await?
+    .success();
+
+    globals
+        .messaging()
+        .broadcast_room(
+            req.room_id,
+            MessageSync::AutomodRuleCreate { rule: rule.clone() },
+        )
+        .await?;
 
     Ok((StatusCode::CREATED, Json(rule)))
 }

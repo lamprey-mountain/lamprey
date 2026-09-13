@@ -9,16 +9,19 @@ use common::{
     },
     v2::types::{AutomodRuleId, MediaId, media::Media},
 };
-use kerosene_core::config::Config;
-use regex::{Regex, RegexSet};
+use kerosene_core::{
+    config::Config,
+    error::{ApiError, ApiResult, ErrorCode},
+};
+use regex::{Regex, RegexSet, RegexSetBuilder};
 use tracing::warn;
 
-use crate::services::automod::util::AutomodScan;
+use crate::services::automod::{ServiceAutomod, util::AutomodScan};
 use crate::services::messages::links;
 
 /// A compiled and optimized set of automod rules for a room
 pub struct Compiled {
-    pub(super) rules: Vec<AutomodRule>,
+    rules: Vec<AutomodRule>,
     regex_set: RegexSet,
     regex_map: Vec<RegexMapping>,
     link_rules: Vec<usize>,
@@ -30,6 +33,7 @@ struct RegexMapping {
     keyword_idx: usize,
     allowed: bool,
     pattern: regex::Regex,
+    // PERF: don't store these, read from rules?
     kind_is_keyword: bool,
     original_pattern: String,
 }
@@ -40,8 +44,10 @@ struct RuleState {
     fragments: Vec<AutomodMatchFragment>,
 }
 
-impl Compiled {
-    pub fn new(rules: Vec<AutomodRule>, config: &Config) -> Self {
+impl ServiceAutomod {
+    /// compile some automod rules
+    pub fn compile(&self, rules: Vec<AutomodRule>) -> ApiResult<Compiled> {
+        let config = self.globals.config();
         let media_thresholds = config
             .moderation
             .automod_media
@@ -81,7 +87,6 @@ impl Compiled {
             });
         };
 
-        // TODO: validate regexes
         for (rule_idx, rule) in rules.iter().enumerate() {
             match &rule.trigger {
                 AutomodTrigger::TextRegex { deny, allow }
@@ -104,17 +109,37 @@ impl Compiled {
             }
         }
 
-        let regex_set = RegexSet::new(regexes).expect("better error handling");
-        // TODO: better error handling
-        // warn!("Invalid regex pattern in rule {}: {}", rule.id, pat);
+        let regex_set = RegexSetBuilder::new(regexes)
+            // TODO: configurable size limit
+            // .size_limit(1 << 20)
+            // TODO: make these properties configurable via api
+            // .case_insensitive(yes)
+            // .dot_matches_new_line(yes)
+            // NOTE: maybe enable this? if enabled, `\ ` is required to match a literal whitespace and `#` can be used to start a comment
+            // .ignore_whitespace(yes)
+            .build()
+            .map_err(|err| match err {
+                regex::Error::Syntax(err) => ApiError::with_message(ErrorCode::RegexSyntax, err),
+                regex::Error::CompiledTooBig(_) => ApiError::from_code(ErrorCode::RegexTooComplex),
+                _ => ApiError::with_message(
+                    ErrorCode::Internal,
+                    "unknown internal regex error".to_string(),
+                ),
+            })?;
 
-        Self {
+        Ok(Compiled {
             rules,
             regex_set,
             regex_map,
             link_rules,
             media_thresholds,
-        }
+        })
+    }
+}
+
+impl Compiled {
+    pub fn rules(&self) -> &[AutomodRule] {
+        &self.rules
     }
 
     pub(super) fn scan_text(
@@ -152,6 +177,8 @@ impl Compiled {
                     (Some(_), _) => Some(true),
                 };
 
+                // FIXME: regex match iteration is quadratic
+                // see https://docs.rs/regex/latest/regex/#iterating-over-matches
                 for m in meta.pattern.find_iter(scanned_text) {
                     rs.fragments.push(AutomodMatchFragment {
                         // TODO: include both text and sanitized_text for every fragment
