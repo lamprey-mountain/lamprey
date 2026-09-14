@@ -4,7 +4,9 @@ import { ReactiveMap } from "@solid-primitives/map";
 import { useLocation } from "@solidjs/router";
 import { type IDBPDatabase, openDB } from "idb";
 import {
+	type ClientOptions,
 	createClient,
+	createWebtransportClient,
 	type MessageEnvelope,
 	type MessageReady,
 	type MessageSync,
@@ -42,11 +44,14 @@ export function useChatClient(config: Config) {
 		ready: MessageReady;
 	}>();
 	const useMsgpack = flags.has("msgpack");
-	const useDeflate = flags.has("sync_deflate");
+	const useDeflate =
+		flags.has("sync_deflate") && "CompressionStream" in globalThis;
+	const useWebtransport =
+		flags.has("sync_webtransport") && "WebTransport" in globalThis;
 	const recvLog = logger.for("sync").create("debug", colors.blue);
 	const sendLog = logger.for("sync").create("debug", colors.teal);
 	const syncLog = logger.for("cs");
-	const client = createClient({
+	const options: ClientOptions = {
 		apiUrl: config.api_url,
 		token: localStorage.getItem("token") || undefined,
 		format: useMsgpack ? "msgpack" : "json",
@@ -69,7 +74,10 @@ export function useChatClient(config: Config) {
 		onReady(msg) {
 			events.emit("ready", msg);
 		},
-	});
+	};
+	const client = useWebtransport
+		? createWebtransportClient(options)
+		: createClient(options);
 
 	const [db, setDb] = createSignal<IDBPDatabase<ApiDB> | undefined>();
 

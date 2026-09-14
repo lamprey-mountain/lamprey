@@ -57,6 +57,7 @@ export const allFlags = [
 	{ id: "auth_totp" },
 	{ id: "auth_webauthn" },
 	{ id: "themes" },
+	{ id: "sync_webtransport" },
 ] as const;
 
 type Flag = (typeof allFlags)[number]["id"];
@@ -93,6 +94,7 @@ const flagsDev: Flag[] = [
 	"auth_totp",
 	"auth_webauthn",
 	"themes",
+	"sync_webtransport",
 ];
 
 const flagsProd: Flag[] = [
