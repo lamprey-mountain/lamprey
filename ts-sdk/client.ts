@@ -10,6 +10,7 @@ import type {
 	MessageEnvelope,
 	MessageReady,
 	MessageSync,
+	ServerInfo,
 } from "./types.ts";
 
 export * from "./observable.ts";
@@ -47,8 +48,6 @@ export type Client = {
 
 	state: Observer<ClientState>;
 
-	getWebsocket: () => WebSocket;
-
 	/** Send a message to the sync server, queueing if not connected */
 	send: (data: MessageClient) => void;
 
@@ -56,6 +55,9 @@ export type Client = {
 	onSync: (
 		listener: (msg: MessageSync, raw: MessageEnvelope) => void,
 	) => () => void;
+
+	// TODO: isWebtransport: this is WebtransportClient;
+	isWebtransport: boolean;
 };
 
 type Resume = {
@@ -241,7 +243,6 @@ export function createClient(opts: ClientOptions): Client {
 		http,
 		start,
 		stop,
-		getWebsocket: () => ws,
 		send,
 		stopAggressive,
 		onSync: (listener) => {
@@ -249,6 +250,396 @@ export function createClient(opts: ClientOptions): Client {
 			return () => {
 				syncListeners.delete(listener);
 			};
+		},
+		isWebtransport: false,
+	};
+}
+
+export type WebtransportClient = Client & {
+	subscribeDocument(options: DocumentOptions): Stream;
+};
+
+export type DocumentOptions = StreamOptions & {
+	channel_id: string;
+	branch_id: string;
+	state_vector?: string;
+};
+
+export type StreamOptions = {
+	onSync: (event: MessageSync, raw: MessageEnvelope) => void;
+	onError?: (error: Error) => void;
+	onSend?: (data: unknown) => void;
+	onMessage?: (raw: MessageEnvelope) => void;
+};
+
+export type Stream = {
+	close: () => void;
+	send: (data: MessageClient) => void;
+};
+
+export function createWebtransportClient(
+	opts: ClientOptions,
+): WebtransportClient {
+	if (!("WebTransport" in globalThis))
+		throw new Error("WebTransport is not supported by client");
+
+	const http = createFetch<paths>({
+		baseUrl: opts.apiUrl,
+	});
+
+	http.use({
+		onRequest(r) {
+			if (opts.token) {
+				r.request.headers.set("authorization", `Bearer ${opts.token}`);
+			}
+			return r.request;
+		},
+	});
+
+	// TODO: support multiple streams
+	const state = createObservable<ClientState>("stopped");
+	const queue: Array<unknown> = [];
+	let transport: WebTransport | null = null;
+	let bidiStream: WebTransportBidirectionalStream | null = null;
+	let writer: WritableStreamDefaultWriter | null = null;
+	let resume: null | Resume = null;
+	const syncListeners = new Set<
+		(msg: MessageSync, raw: MessageEnvelope) => void
+	>();
+	const format = opts.format ?? "json";
+
+	function handleMessage(msg: MessageEnvelope) {
+		opts.onMessage?.(msg);
+		switch (msg.op) {
+			case "Ping": {
+				send({ type: "Pong" }, true);
+				break;
+			}
+			case "Sync": {
+				if (resume) resume.seq = msg.seq;
+				opts.onSync(msg.data, msg);
+				for (const listener of syncListeners) {
+					listener(msg.data, msg);
+				}
+				break;
+			}
+			case "Ready": {
+				opts.onReady(msg);
+				resume = { conn: msg.conn, seq: msg.seq };
+				state.set("ready");
+				flushQueue();
+				break;
+			}
+			case "Resumed": {
+				state.set("ready");
+				flushQueue();
+				break;
+			}
+			case "Error": {
+				opts.onError?.(new Error(msg.error));
+				break;
+			}
+			case "Reconnect": {
+				if (!msg.can_resume) resume = null;
+				transport?.close();
+				break;
+			}
+		}
+	}
+
+	function send(data: unknown, force = false) {
+		if ((state.get() === "ready" || force) && writer) {
+			const packed =
+				format === "msgpack"
+					? pack(data)
+					: new TextEncoder().encode(JSON.stringify(data));
+			const len = new Uint8Array(4);
+			new DataView(len.buffer).setUint32(0, packed.length, false);
+			writer.write(new Uint8Array([...len, ...packed]));
+			opts.onSend?.(data);
+		} else {
+			queue.push(data);
+		}
+	}
+
+	function flushQueue() {
+		while (queue.length > 0 && state.get() === "ready") {
+			const item = queue.shift();
+			if (item) send(item);
+		}
+	}
+
+	async function connect() {
+		if (state.get() !== "connecting") return;
+
+		try {
+			// TODO: error handling
+			// PERF: cache server info
+			const info: ServerInfo = await http
+				.GET("/api/v1/server/@self")
+				.then(({ data }) => data!);
+
+			const cert = info.features.webtransport?.certificate_hashes[0].value;
+			if (!cert) throw new Error("WebTransport is not supported by server");
+
+			const url = new URL(info.features.webtransport.sync_url);
+			url.searchParams.set("version", "1");
+			url.searchParams.set("format", format);
+			if (opts.compress) {
+				url.searchParams.set("compress", opts.compress);
+			}
+
+			transport = new WebTransport(
+				url,
+				// `https://localhost:4433/api/v1/sync-webtransport?version=1&format=${format}`,
+				{
+					serverCertificateHashes: [
+						{
+							algorithm: "sha-256",
+							value: base64UrlDecode(cert),
+						},
+					],
+				},
+			);
+
+			transport.closed.then((info) => {
+				console.log("closed", info);
+			});
+
+			transport.draining?.then(() => {
+				console.log("draining");
+			});
+
+			await transport.ready;
+			state.set("connected");
+			console.log("selected protocol", transport.protocol);
+
+			bidiStream = await transport.createBidirectionalStream();
+			writer = bidiStream.writable.getWriter();
+
+			// FIXME: handle compression for webtransport stream
+
+			send({ type: "Hello", token: opts.token, ...resume }, true);
+
+			let buffer = new Uint8Array(0);
+			const reader = bidiStream.readable.getReader();
+			try {
+				while (true) {
+					const { value, done } = await reader.read();
+					if (done) break;
+
+					const newBuffer = new Uint8Array(buffer.length + value.length);
+					newBuffer.set(buffer);
+					newBuffer.set(value, buffer.length);
+					buffer = newBuffer;
+
+					while (buffer.length >= 4) {
+						const len = new DataView(
+							buffer.buffer,
+							buffer.byteOffset,
+							4,
+						).getUint32(0, false);
+						if (buffer.length >= 4 + len) {
+							const payload = buffer.subarray(4, 4 + len);
+							const msg =
+								format === "msgpack"
+									? unpack(payload)
+									: JSON.parse(new TextDecoder().decode(payload));
+							handleMessage(msg);
+							buffer = buffer.subarray(4 + len);
+						} else {
+							break;
+						}
+					}
+				}
+			} finally {
+				reader.releaseLock();
+				writer.releaseLock();
+				writer = null;
+			}
+		} catch (err) {
+			console.error("failed to create webtransport syncer", err);
+			if (state.get() === "stopped") return;
+			state.set("connecting");
+			opts.onError?.(err as Error);
+			setTimeout(connect, 1000);
+		}
+	}
+
+	function start(token?: string) {
+		if (token) opts.token = token;
+		state.set("connecting");
+		connect();
+	}
+
+	function stop() {
+		state.set("stopped");
+		writer?.releaseLock();
+		writer = null;
+		transport?.close();
+	}
+
+	function stopAggressive() {
+		opts.token = undefined;
+		state.set("stopped");
+		writer?.releaseLock();
+		writer = null;
+		transport?.close();
+		resume = null;
+	}
+
+	/** open a new stream */
+	const subscribe = (options: StreamOptions): Stream => {
+		// TODO: wait until transport is ready before opening stream (eg. if Hello hasn't been sent yet)
+		if (!transport) throw new Error("transport is closed");
+
+		console.log("AAA subscribe", options);
+
+		let writer: WritableStreamDefaultWriter | null = null;
+		let reader: ReadableStreamDefaultReader | null = null;
+		let closed = false;
+
+		const streamPromise = transport.createBidirectionalStream();
+
+		const queue: Array<unknown> = [];
+		let isQueueDraining = false;
+
+		const drainQueue = async () => {
+			if (isQueueDraining) return;
+			if (!writer) return;
+			isQueueDraining = true;
+
+			while (queue.length > 0 && !closed) {
+				const item = queue.shift();
+				const packed =
+					format === "msgpack"
+						? pack(item)
+						: new TextEncoder().encode(JSON.stringify(item));
+				const len = new Uint8Array(4);
+				new DataView(len.buffer).setUint32(0, packed.length, false);
+				writer.write(new Uint8Array([...len, ...packed]));
+				console.log("AAA send", item);
+				options.onSend?.(item);
+				// PERF: call scheduler.yield() here if it exists?
+			}
+
+			isQueueDraining = false;
+		};
+
+		const send = (data: unknown) => {
+			if (closed) throw new Error("transport closed");
+			queue.push(data);
+			drainQueue();
+		};
+
+		const close = () => {
+			console.log("AAA close");
+			closed = true;
+			reader?.releaseLock();
+			writer?.close();
+			reader = null;
+			writer = null;
+		};
+
+		(async () => {
+			const stream = await streamPromise;
+			if (closed) {
+				// NOTE: maybe i want writable.abort() instead?
+				stream.writable.close();
+				return;
+			}
+
+			writer = stream.writable.getWriter();
+			reader = stream.readable.getReader();
+
+			drainQueue();
+
+			let buffer = new Uint8Array(0);
+			try {
+				while (true) {
+					const { value, done } = await reader.read();
+					if (done) break;
+
+					const newBuffer = new Uint8Array(buffer.length + value.length);
+					newBuffer.set(buffer);
+					newBuffer.set(value, buffer.length);
+					buffer = newBuffer;
+
+					while (buffer.length >= 4) {
+						const len = new DataView(
+							buffer.buffer,
+							buffer.byteOffset,
+							4,
+						).getUint32(0, false);
+						if (buffer.length >= 4 + len) {
+							const payload = buffer.subarray(4, 4 + len);
+							const msg: MessageEnvelope =
+								format === "msgpack"
+									? unpack(payload)
+									: JSON.parse(new TextDecoder().decode(payload));
+							console.log("AAA recv", msg);
+							options.onMessage?.(msg);
+							switch (msg.op) {
+								case "Ping": {
+									send({ type: "Pong" });
+									break;
+								}
+								case "Sync": {
+									options.onSync(msg.data, msg);
+									break;
+								}
+								case "Error": {
+									options.onError?.(new Error(msg.error));
+									break;
+								}
+							}
+							buffer = buffer.subarray(4 + len);
+						} else {
+							break;
+						}
+					}
+				}
+			} catch (err) {
+				console.error("AAA", err);
+				options.onError?.(err as Error);
+			} finally {
+				if (!closed) close();
+			}
+		})();
+
+		return {
+			send,
+			close,
+		};
+	};
+
+	return {
+		opts,
+		http,
+		state: state.observable,
+		start,
+		stop,
+		stopAggressive,
+		send,
+		onSync: (listener) => {
+			syncListeners.add(listener);
+			return () => {
+				syncListeners.delete(listener);
+			};
+		},
+		isWebtransport: true,
+
+		subscribeDocument(options: DocumentOptions): Stream {
+			const stream = subscribe(options);
+
+			stream.send({
+				type: "DocumentSubscribe",
+				channel_id: options.channel_id,
+				branch_id: options.branch_id,
+				state_vector: options.state_vector,
+			});
+
+			return stream;
 		},
 	};
 }
@@ -279,4 +670,24 @@ function createDecompressor(
 	})();
 
 	return stream.writable.getWriter();
+}
+
+// TODO: deduplicate with frontend/src/components/features/editor/editor-utils.ts (extract base64 functions into ts-sdk, make frontend import from sdk)
+/** decode unpadded url safe base64 */
+export function base64UrlDecode(str: string): Uint8Array {
+	str = str.replace(/-/g, "+").replace(/_/g, "/");
+
+	const pad = str.length % 4;
+	if (pad) {
+		str += "=".repeat(4 - pad);
+	}
+
+	const binary = atob(str);
+	const bytes = new Uint8Array(binary.length);
+
+	for (let i = 0; i < binary.length; i++) {
+		bytes[i] = binary.charCodeAt(i);
+	}
+
+	return bytes;
 }
