@@ -181,6 +181,7 @@ pub struct ServerVoiceHealthSfu {
 #[record]
 pub struct ServerWebtransport {
     pub certificate_hashes: Vec<ServerWebtransportCert>,
+    pub sync_url: Url,
 }
 
 #[record]

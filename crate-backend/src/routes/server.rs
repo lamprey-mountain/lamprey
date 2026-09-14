@@ -87,8 +87,13 @@ async fn server_info(
             webtransport: Some({
                 use common::v1::types::server::ServerWebtransport;
                 let cert = s.services.config.webtransport_cert();
+                let mut sync_url = s.config.api_url.clone();
+                sync_url.set_scheme("https").unwrap();
+                sync_url.set_path("/api/v1/sync-webtransport");
+                sync_url.set_port(Some(4433)).unwrap();
                 ServerWebtransport {
                     certificate_hashes: vec![cert],
+                    sync_url,
                 }
             }),
         },
