@@ -3,15 +3,7 @@
 
 use std::collections::HashMap;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-// TODO: add sanity checks
-// #[cfg(feature = "validator")]
-// use validator::Validate;
+use lamprey_macros::record;
 
 use crate::v1::types::{
     misc::Time,
@@ -21,9 +13,8 @@ use crate::v1::types::{
 pub mod room_sidebar;
 
 /// preferences for a user
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct PreferencesGlobal {
     /// global notification config
     pub notifs: NotifsGlobal,
@@ -35,22 +26,20 @@ pub struct PreferencesGlobal {
     pub frontend: PreferencesGlobalFrontend,
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct PreferencesGlobalFrontend {
     /// room navigation sidebar
     pub room_sidebar: room_sidebar::Sidebar,
 
     /// extra implementation defined config
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub extra: HashMap<String, serde_json::Value>,
 }
 
 /// preferences for a user in a room
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct PreferencesRoom {
     /// room notification config
     pub notifs: NotifsRoom,
@@ -59,64 +48,57 @@ pub struct PreferencesRoom {
     pub privacy: PreferencesRoomPrivacy,
 
     /// config specific to frontend
-    pub frontend: HashMap<String, serde_json::Value>,
+    pub frontend: PreferencesRoomFrontend,
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct PreferencesRoomFrontend {
     /// extra implementation defined config
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub extra: HashMap<String, serde_json::Value>,
 }
 
-/// preferences for a user in a thread
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+/// preferences for a user in a channel or thread
+#[record]
+#[derive(Default)]
 pub struct PreferencesChannel {
     /// thread notification config
     pub notifs: NotifsChannel,
 
     /// config specific to frontend
-    pub frontend: HashMap<String, serde_json::Value>,
+    pub frontend: PreferencesChannelFrontend,
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct PreferencesChannelFrontend {
     /// extra implementation defined config
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub extra: HashMap<String, serde_json::Value>,
 }
 
 /// preferences for a user for another user
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct PreferencesUser {
     /// config in voice threads
     pub voice: VoiceConfig,
 
     /// config specific to frontend
-    pub frontend: HashMap<String, serde_json::Value>,
+    pub frontend: PreferencesUserFrontend,
 }
 
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct PreferencesUserFrontend {
     /// extra implementation defined config
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub extra: HashMap<String, serde_json::Value>,
 }
 
 /// voice config the local user can set on someone else
-#[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct VoiceConfig {
     /// whether to mute voice
     pub mute: bool,
@@ -135,9 +117,7 @@ impl Default for VoiceConfig {
 }
 
 /// who can send friend requests
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct PreferencesGlobalFriends {
     /// pause all friend requests
     ///
@@ -157,10 +137,19 @@ pub struct PreferencesGlobalFriends {
     pub allow_mutual_friend: bool,
 }
 
+impl Default for PreferencesGlobalFriends {
+    fn default() -> Self {
+        Self {
+            pause_until: None,
+            allow_everyone: true, // NOTE: probably should disable this if a lot of people join
+            allow_mutual_room: true,
+            allow_mutual_friend: true,
+        }
+    }
+}
+
 /// user privacy settings globally
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct PreferencesGlobalPrivacy {
     pub friends: PreferencesGlobalFriends,
 
@@ -180,10 +169,20 @@ pub struct PreferencesGlobalPrivacy {
     pub exif: bool,
 }
 
+impl Default for PreferencesGlobalPrivacy {
+    fn default() -> Self {
+        // NOTE: maybe i should make it more or less permissive depending on if the room is public
+        Self {
+            friends: Default::default(),
+            dms: true,
+            rpc: true,
+            exif: true,
+        }
+    }
+}
+
 /// user privacy settings for a room
-#[derive(Debug, Default, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct PreferencesRoomPrivacy {
     /// allow dms from room members
     ///
@@ -200,4 +199,15 @@ pub struct PreferencesRoomPrivacy {
     ///
     /// setting to false will strip sensitive exif data
     pub exif: bool,
+}
+
+impl Default for PreferencesRoomPrivacy {
+    fn default() -> Self {
+        Self {
+            dms: true,
+            friends: true,
+            rpc: true,
+            exif: true,
+        }
+    }
 }
