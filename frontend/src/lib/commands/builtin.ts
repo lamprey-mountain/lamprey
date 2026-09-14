@@ -25,6 +25,15 @@ export function registerDefaultSlashCommands(
 
 function messageCommands(_ctx: ChatCtx, api: Api): Command[] {
 	return [
+		command("nudge")
+			.description("nudge your buddy")
+			.requires((b) => b.permission("MessageCreate").channelType("Dm", "Gdm"))
+			.executes(async (ctx) => {
+				await api.client.http.POST("/api/v1/channel/{channel_id}/nudge", {
+					params: { path: { channel_id: ctx.channel.id } },
+				});
+			}),
+
 		command("me")
 			.description("Send a message with emphasis")
 			.option("string", (b) =>
