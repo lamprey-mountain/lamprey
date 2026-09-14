@@ -468,6 +468,15 @@ impl Permissions2<CheckPermissions> {
         self
     }
 
+    pub fn needs_all_bits(&mut self, perms: PermissionBits) -> &mut Self {
+        if perms.is_empty() {
+            return self;
+        }
+        let missing = perms & !self.bits;
+        self.state.missing |= missing;
+        self
+    }
+
     /// the target channel must be unlocked, or the user must be able to bypass it
     pub fn needs_unlocked(&mut self) -> &mut Self {
         if self.metadata.channel_locked && !self.can_bypass_locked() {

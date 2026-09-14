@@ -2,10 +2,11 @@ use std::{collections::HashMap, time::Duration};
 
 use common::{
     v1::types::{
-        Channel, EmbedCreate, Mentions, MentionsChannel, MentionsEmoji, MentionsRole, MentionsUser,
-        Message, MessageAttachment, MessageAttachmentCreate, MessageAttachmentCreateType,
-        MessageAttachmentType, MessageCreate, MessageDefaultMarkdown, MessageInteraction,
-        MessagePatch, MessageSync, MessageType, MessageVersion, Permission, User,
+        Channel, ChannelPatch, EmbedCreate, Mentions, MentionsChannel, MentionsEmoji, MentionsRole,
+        MentionsUser, Message, MessageAttachment, MessageAttachmentCreate,
+        MessageAttachmentCreateType, MessageAttachmentType, MessageCreate, MessageDefaultMarkdown,
+        MessageInteraction, MessagePatch, MessageSync, MessageType, MessageVersion, Permission,
+        User,
         components::{self, Component, ComponentType, Components},
         emoji::EmojiOwner,
         util::Time,
@@ -22,6 +23,9 @@ use kerosene_core::{
     types::permission::requirements::Requirements,
 };
 use lamprey_backend_data_postgres::{DbMessageAttachment, MediaLinkType};
+use lamprey_markdown::{Parser, query::QueryableExt};
+use tracing::error;
+use url::Url;
 use validator::Validate;
 
 use crate::{
@@ -29,17 +33,10 @@ use crate::{
     prelude::*,
     services::{
         automod::AutomodContext,
-        messages::{ServiceMessages, markdown, util::MediaRegistry2},
+        messages::{ServiceMessages, links, markdown, util::MediaRegistry2},
     },
     types::DbMessageCreate,
 };
-
-// remove Author
-// fn arst(user: &User) {
-//     user.id == SERVER_USER_ID;
-//     user.id == AUTOMOD_USER_ID;
-//     user.webhook.is_some();
-// }
 
 /// A request to create a new message.
 #[derive(Debug)]
@@ -251,27 +248,30 @@ impl ServiceMessages {
 
         // 1. authorize
         create.payload.validate()?;
-        let re = calculate_requirements(&create, &channel);
 
         // if message author is a puppet, use the puppeteer's permissions
-        // NOTE: this behavior is intentionally different from before!
+        // NOTE: this behavior is intentionally different from old srv.messages.create()!
         let auth_user_id = if let Some(puppet) = &user.puppet {
             (*puppet.owner_id).into()
         } else {
             user.id
         };
 
-        // let perms = srv
-        //     .perms
-        //     .for_channel3(Some(auth_user_id), channel.id)
-        //     .await?;
-        // TODO: use this instead
-        // let srv.perms.enforce(...).await?;
+        // TODO: use srv.perms.enforce(...) instead
+        let mut perms = srv
+            .perms
+            .for_channel3(Some(auth_user_id), channel.id)
+            .await?
+            .ensure_view()?;
 
-        // TODO: check visibility (ie. ChannelView) first, then check these, then check the rest of the permissions
-        // does the order matter that much? for sensible error messages, probably?
-        channel.ensure_has_text()?;
+        // NOTE: removed channels shouldn't be visible normally in the first place? (make sure this exists in perm calc)
         channel.ensure_unremoved()?;
+        channel.ensure_has_text()?;
+
+        perms.needs_unlocked().needs_slowmode_message_bypass();
+
+        let re = calculate_requirements(&create, &channel);
+        perms.needs_all_bits(re.get_permissions()).check()?;
 
         let removed_at = async {
             let Some(room_id) = channel.room_id else {
@@ -311,7 +311,7 @@ impl ServiceMessages {
                 .message_create()
                 .and_then(|c| c.content.as_deref().map(|a| (a, &c.mentions)))
             {
-                let allow_external_emoji = todo!();
+                let allow_external_emoji = perms.has(Permission::EmojiUseExternal);
                 let mentions_ids = markdown::parse_mentions(content, mentions);
                 let mentions = self
                     .sanitize_mentions2(mentions_ids, channel.room_id, allow_external_emoji)
@@ -336,7 +336,7 @@ impl ServiceMessages {
                         self.fetch_media2(media, create.user_id)
                             .map_ok(move |media| {
                                 MessageAttachment {
-                                    // TODO: add alt, filename fields to MessageAttachmentType::Media
+                                    // TODO: add alt, filename fields to MessageAttachmentType::Media (for overriding alt/name)
                                     ty: MessageAttachmentType::Media { media },
                                     spoiler: att.spoiler,
                                 }
@@ -514,7 +514,7 @@ impl ServiceMessages {
             // upsert slowmode
             if let Some(delay) = channel.slowmode_message {
                 let expires_at = Time::now_utc() + Duration::from_secs(delay);
-                // TODO: rename to expires_at
+                // TODO: rename expires_at -> expire_at
                 txn.channel_set_message_slowmode_expire_at(channel.id, create.user_id, expires_at)
                     .await?;
             }
@@ -529,61 +529,71 @@ impl ServiceMessages {
                 .update_last_message_ids(channel.id, create.id, (*create.id).into());
 
         let unarchive = async {
+            // if we were able to send the message, we can unarchive this thread
             if channel.is_archived() {
-                // FIXME: unarchive channel
-                // srv.channels
-                //     .update(
-                //         auth,
-                //         op.channel.id,
-                //         ChannelPatch {
-                //             archived: Some(false),
-                //             ..Default::default()
-                //         },
-                //     )
-                //     .await?;
+                let mut txn = self.globals.begin().await?;
+                txn.channel_update(
+                    channel.id,
+                    ChannelPatch {
+                        archived: Some(false),
+                        ..Default::default()
+                    },
+                )
+                .await?;
+                txn.commit().await?;
             }
-        };
 
-        let ensure_member = async {
-            if channel.is_thread() {
-                // FIXME: ensure thread membership
-
-                // let mut txn = self.globals.begin().await?;
-                // if txn.thread_member_get(thread_id, user_id).await.is_err() {
-                //     txn.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
-                //         .await?;
-
-                //     // NOTE: i need to commit this to see the update in next get
-                //     txn.commit().await?;
-
-                //     srv.channels.invalidate(thread_id).await; // NOTE: do i need this? presumably only member count is dirty
-
-                //     let thread_member = self
-                //         .globals
-                //         .begin_read()
-                //         .await?
-                //         .thread_member_get(thread_id, user_id)
-                //         .await?;
-                //     let msg = MessageSync::ThreadMemberUpsert {
-                //         room_id: op.channel.room_id,
-                //         thread_id,
-                //         added: vec![thread_member],
-                //         removed: vec![],
-                //     };
-                //     self.globals
-                //         .messaging()
-                //         .broadcast_channel(thread_id, msg)
-                //         .await?;
-                // } else {
-                //     txn.commit().await?;
-                // }
-            }
+            Result::Ok(())
         };
 
         let unfurl = async {
-            // TODO: inline spawn_unfurler_tasks
+            if !perms.has(Permission::MessageEmbeds) {
+                return Ok(());
+            }
+
+            let content = match &message.latest_version.message_type {
+                MessageType::DefaultMarkdown(m) => &m.content,
+                MessageType::ThreadInitial(m) => &m.content,
+                _ => return Ok(()),
+            };
+
+            let content = match content.as_deref() {
+                Some(c) => c,
+                None => return Ok(()),
+            };
+
+            // PERF: reuse parsed markdown (during content sanitization)
+            let parser = Parser::new();
+            let parsed = parser.parse(&content);
+            let tree = parsed.tree();
+            let urls = tree
+                .iter_links()
+                .filter_map(|link| Url::parse(&link.href()).ok());
+
+            // PERF: batch embed queueing; add srv.embed.queue_all fn
+            let srv = self.globals.services();
+            for url in urls {
+                if let Err(e) = srv
+                    .embed
+                    .queue(
+                        Some(crate::types::MessageRef {
+                            thread_id: message.channel_id,
+                            message_id: message.id,
+                            version_id: message.latest_version.version_id,
+                        }),
+                        message.latest_version.author_id,
+                        url,
+                    )
+                    .await
+                {
+                    error!("Failed to queue embed generation: {:?}", e);
+                }
+            }
+
+            Result::Ok(())
         };
 
+        // this sends notifications, adds to inbox, and adds thread members
         let send_notifs = srv.notifications.process_message(&channel, &message);
 
         let broadcast_sync = async {
@@ -602,7 +612,6 @@ impl ServiceMessages {
         let _ = futures::join!(
             update_last_message_ids,
             unarchive,
-            ensure_member,
             unfurl,
             send_notifs,
             broadcast_sync

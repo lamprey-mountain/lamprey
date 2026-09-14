@@ -133,7 +133,7 @@ impl ServiceNotifications {
             return;
         }
 
-        let mut data = match self.state.begin().await {
+        let mut txn = match self.state.begin().await {
             Ok(d) => d,
             Err(err) => {
                 warn!("failed to begin database transaction, skipping: {err:?}");
@@ -159,7 +159,7 @@ impl ServiceNotifications {
 
             if action.should_add_to_inbox() {
                 if let Some(notification) = action.notification() {
-                    if let Err(err) = data.notification_add(*target, notification.clone()).await {
+                    if let Err(err) = txn.notification_add(*target, notification.clone()).await {
                         warn!("failed to add notification: {err:?}");
                     }
                     if !action.should_push() {
@@ -174,24 +174,34 @@ impl ServiceNotifications {
         }
 
         if !notifs_to_mark_pushed.is_empty() {
-            if let Err(err) = data.notification_set_pushed(&notifs_to_mark_pushed).await {
+            if let Err(err) = txn.notification_set_pushed(&notifs_to_mark_pushed).await {
                 warn!("failed to mark notifications as pushed: {err:?}");
             }
         }
 
+        // ensure the message author is a thread member
+        if txn
+            .thread_member_get(channel.id, message.author_id)
+            .await
+            .is_err()
+        {
+            users_to_add_to_thread.push(message.author_id);
+        }
+
         let mut thread_members = vec![];
         if channel.ty.is_thread() && !users_to_add_to_thread.is_empty() {
-            let _ = data
+            // TODO: skip thread_member_get_many if thread_member_put_bulk returns err
+            let _ = txn
                 .thread_member_put_bulk(channel.id, &users_to_add_to_thread)
                 .await;
-            thread_members = data
+            thread_members = txn
                 .thread_member_get_many(channel.id, &users_to_add_to_thread)
                 .await
                 .unwrap_or_default();
         }
 
         if !users_to_increment.is_empty() {
-            if let Err(err) = data
+            if let Err(err) = txn
                 .unread_increment_counts(channel.id, &users_to_increment, &[])
                 .await
             {
@@ -199,7 +209,7 @@ impl ServiceNotifications {
             }
         }
 
-        if let Err(err) = data.commit().await {
+        if let Err(err) = txn.commit().await {
             warn!("failed to commit database transaction: {err:?}");
         }
 

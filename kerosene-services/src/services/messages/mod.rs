@@ -804,22 +804,20 @@ impl ServiceMessages {
         self.fetch_media2(media_ref, user_id).map_ok(Some).await
     }
 
+    // PERF: return Arc<Media>
     async fn fetch_media2(&self, media_ref: MediaReference, user_id: UserId) -> Result<Media> {
         let Some(media_id) = media_ref.media_id() else {
             return Err(Error::Unimplemented);
         };
-        let media = self
-            .globals
-            .begin_read()
-            .await?
-            .media_select(media_id)
-            .await?;
+        let srv = self.globals.services();
+        let media = srv.media.get(media_id).await?.ready().await;
         if media.user_id != Some(user_id) {
             return Err(Error::MissingPermissions);
         }
-        Ok(media)
+        Ok((*media).clone())
     }
 
+    // TODO: move this to embed service?
     async fn embed_from_create(&self, value: EmbedCreate, user_id: UserId) -> Result<Embed> {
         let (media, thumbnail, author_avatar) = try_join!(
             self.fetch_media(value.media, user_id),

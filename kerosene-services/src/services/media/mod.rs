@@ -42,6 +42,7 @@ impl ServiceMedia {
         }
     }
 
+    // TODO(?): make this not async, make MediaItem able to be Loading, rename MediaItem to MediaHandle?
     pub async fn get(&self, media_id: MediaId) -> Result<MediaItem> {
         if let Some(item) = self.cache.get(&media_id).await {
             return Ok(item);
