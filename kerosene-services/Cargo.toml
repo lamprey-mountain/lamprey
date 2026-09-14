@@ -82,4 +82,9 @@ url = "2.5.8"
 utoipa = { version = "5.5.0", features = ["axum_extras", "url", "uuid"] }
 uuid = "1.24.1"
 validator = "0.20.0"
+wtransport = { version = "0.7.2", optional = true }
 yrs = { version = "0.25.0", features = ["sync"] }
+
+[features]
+default = []
+webtransport = ["dep:wtransport"]

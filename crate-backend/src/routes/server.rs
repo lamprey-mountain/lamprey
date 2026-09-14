@@ -81,6 +81,16 @@ async fn server_info(
             web_push: config_internal.map(|c| ServerWebPush {
                 vapid_public_key: c.vapid_public_key,
             }),
+            #[cfg(not(feature = "webtransport"))]
+            webtransport: None,
+            #[cfg(feature = "webtransport")]
+            webtransport: Some({
+                use common::v1::types::server::ServerWebtransport;
+                let cert = s.services.config.webtransport_cert();
+                ServerWebtransport {
+                    certificate_hashes: vec![cert],
+                }
+            }),
         },
         version: ServerVersion {
             implementation: "chat-server".to_string(),

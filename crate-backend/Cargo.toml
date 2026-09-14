@@ -58,6 +58,7 @@ lamprey-script = { package = "lamprey-script", version = "0.1.0", path = "../cra
 lamprey-search = { package = "lamprey-search", version = "0.1.0", path = "../crate-search" }
 lamprey-unfurl = { version = "0.1", path = "../crate-unfurl" }
 lettre = { version = "0.11.23", default-features = false, features = ["builder", "pool", "smtp-transport", "tokio1-rustls-tls"] }
+matchit = {version = "0.9.2", optional = true}
 maxminddb = "0.28.1"
 mediatype = { version = "0.20.0", features = ["serde"] }
 minijinja = "2.24.0"
@@ -104,14 +105,16 @@ utoipa = { version = "5.5.0", features = ["axum_extras", "url", "uuid"] }
 utoipa-axum = "0.2.0"
 uuid = { version = "1.24.1", features = ["v7", "serde", "v4", "fast-rng", "macro-diagnostics"] }
 validator = "0.20.0"
+wtransport = { version = "0.7.2", optional = true }
 yrs = { version = "0.25.0", features = ["sync"] }
 
 [build-dependencies]
 vergen-gix = { version = "9.1.0", features = ["build", "cargo", "rustc"] }
 
 [features]
-default = []
+default = ["webtransport"]
 embed-frontend = ["rust-embed"]
 rust-embed = ["dep:rust-embed"]
 debug = []
 e2ee = []
+webtransport = ["dep:wtransport", "dep:matchit", "kerosene-services/webtransport"]

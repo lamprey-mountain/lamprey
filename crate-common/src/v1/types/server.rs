@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use lamprey_macros::record;
 use url::Url;
 
-use crate::v1::types::{SfuId, misc::Time};
+use crate::v1::types::{
+    SfuId,
+    misc::{Time, binary::Binary},
+};
 
 /// public moderation capabilities for a server
 #[record]
@@ -59,6 +62,9 @@ pub struct ServerFeatures {
 
     /// web push configuration for this server, if supported
     pub web_push: Option<ServerWebPush>,
+
+    /// webtransport configuration for this server, if supported
+    pub webtransport: Option<ServerWebtransport>,
     // TODO: add automod, calendar, documents, federation(?), search
 }
 
@@ -170,4 +176,16 @@ pub struct ServerVoiceHealthSfu {
 
     // /// the zone of this sfu (aka region, datacenter, etc)
     // pub zone: String,
+}
+
+#[record]
+pub struct ServerWebtransport {
+    pub certificate_hashes: Vec<ServerWebtransportCert>,
+}
+
+#[record]
+#[serde(tag = "algorithm")]
+pub enum ServerWebtransportCert {
+    #[serde(rename = "sha-256")]
+    Sha256 { value: Binary<32> },
 }

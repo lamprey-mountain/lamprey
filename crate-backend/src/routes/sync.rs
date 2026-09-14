@@ -22,9 +22,7 @@ use crate::ServerState;
     path = "/sync",
     tags = ["sync"],
     params(SyncParams),
-    responses(
-        (status = UPGRADE_REQUIRED, description = "success"),
-    )
+    responses((status = UPGRADE_REQUIRED, description = "success")),
 )]
 async fn sync(
     State(s): State<Arc<ServerState>>,

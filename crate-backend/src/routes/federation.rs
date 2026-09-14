@@ -12,19 +12,19 @@ use common::v1::types::misc::ServerReq;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::error::Result;
-use crate::routes::util::auth_old::Auth3;
-use crate::{Error, ServerState, routes2};
+use crate::prelude::*;
+use crate::routes::util::auth::Auth4;
+use crate::{ServerState, routes2};
 
 /// Server keys get
 ///
 /// Get the signing keys of a server
 #[handler(routes::server_keys_get)]
 async fn server_keys_get(
-    State(s): State<Arc<ServerState>>,
+    State(globals): State<Globals>,
     req: routes::server_keys_get::Request,
 ) -> Result<impl IntoResponse> {
-    let local_hostname = s.config().hostname2()?;
+    let local_hostname = globals.config().hostname2()?;
 
     let requested = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),
@@ -40,7 +40,8 @@ async fn server_keys_get(
         return Err(Error::Unimplemented);
     }
 
-    let local_keys = s.services().federation.get_all_local_keys().await;
+    let srv = globals.services();
+    let local_keys = srv.federation.get_all_local_keys().await;
 
     let keys: Vec<ServerKey> = local_keys
         .iter()
@@ -56,13 +57,13 @@ async fn server_keys_get(
 /// Server connect
 #[handler(routes::server_connect)]
 async fn server_connect(
-    State(s): State<Arc<ServerState>>,
+    State(globals): State<Globals>,
     req: routes::server_connect::Request,
-    auth: Auth3,
+    auth: Auth4,
 ) -> Result<impl IntoResponse> {
-    let origin = auth.origin()?;
+    let origin = auth.ensure_origin()?;
 
-    let local_hostname = s.config().hostname2()?;
+    let local_hostname = globals.config().hostname2()?;
 
     let target = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),
@@ -77,7 +78,8 @@ async fn server_connect(
     }
 
     // register server by connecting back to establish mutual sync
-    s.services().federation.connect(origin.clone()).await?;
+    let srv = globals.services();
+    srv.federation.connect(origin.clone()).await?;
 
     Ok(Json(ServerConnectResponse {}))
 }
@@ -87,12 +89,13 @@ async fn server_connect(
 /// Handle MessageSync events. used to proxy events to connected clients.
 #[handler(routes::server_sync_handle)]
 async fn server_sync_handle(
-    State(s): State<Arc<ServerState>>,
+    State(globals): State<Globals>,
     req: routes::server_sync_handle::Request,
-    auth: Auth3,
+    auth: Auth4,
 ) -> Result<impl IntoResponse> {
-    let _origin = auth.origin()?;
-    s.services().federation.handle_sync(req.sync).await?;
+    let _origin = auth.ensure_origin()?;
+    let srv = globals.services();
+    srv.federation.handle_sync(req.sync).await?;
     Ok(Json(ServerSyncResponse {
         // TODO: return actual epoch
         epoch: FederationEpoch(0),
@@ -104,14 +107,14 @@ async fn server_sync_handle(
 /// Check if a server is alive.
 #[handler(routes::server_ping)]
 async fn server_ping(
-    State(s): State<Arc<ServerState>>,
+    State(globals): State<Globals>,
     req: routes::server_ping::Request,
-    auth: Auth3,
+    auth: Auth4,
 ) -> Result<impl IntoResponse> {
-    let origin = auth.origin().ok();
+    let origin = auth.origin();
     let is_federated = origin.is_some();
 
-    let local_hostname = s.config().hostname2()?;
+    let local_hostname = globals.config().hostname2()?;
 
     let target = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),
@@ -127,10 +130,11 @@ async fn server_ping(
         }
     };
 
+    let srv = globals.services();
+
     if target != local_hostname.as_ref() {
         // NOTE: federated should always be true since this is a server -> server ping (client -> server -> server)
-        let federated = s
-            .services()
+        let federated = srv
             .federation
             .ping(Hostname::new(target.to_string())?)
             .await?;

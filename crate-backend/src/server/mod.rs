@@ -12,9 +12,14 @@ use crate::{
 
 mod http;
 
+#[cfg(feature = "webtransport")]
+mod webtransport;
+
 pub struct Server {
     globals: GlobalsOwned,
     listeners: JoinSet<Result<()>>,
+    #[cfg(feature = "webtransport")]
+    wt: webtransport::WtServer,
 }
 
 impl Server {
@@ -26,9 +31,14 @@ impl Server {
 
     /// create a server from initialized `Globals`
     pub fn new(globals: GlobalsOwned) -> Result<Self> {
+        #[cfg(feature = "webtransport")]
+        let wt = webtransport::WtServer::new(globals.handle())?;
+
         Ok(Self {
             globals,
             listeners: JoinSet::new(),
+            #[cfg(feature = "webtransport")]
+            wt,
         })
     }
 
@@ -64,6 +74,18 @@ impl Server {
             warn!("no components enabled for any listeners");
         }
 
+        #[cfg(feature = "webtransport")]
+        {
+            // TODO(?): refactor this to not clone WtServer
+            // maybe make serve() for both Servers spawn a background task?
+            let wt = self.wt.clone();
+            tokio::spawn(async move {
+                if let Err(e) = wt.serve().await {
+                    warn!("webtransport server error: {e}");
+                }
+            });
+        }
+
         while let Some(res) = self.listeners.join_next().await {
             res.unwrap()?;
         }
@@ -74,6 +96,8 @@ impl Server {
     /// cleanly shutdown this server
     pub async fn shutdown(&mut self) -> Result<()> {
         self.listeners.shutdown().await;
+        #[cfg(feature = "webtransport")]
+        self.wt.shutdown().await?;
         self.globals().services().shutdown().await;
         Ok(())
     }
