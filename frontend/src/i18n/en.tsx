@@ -617,6 +617,7 @@ export default {
 			author,
 			" changed the channel icon",
 		],
+		nudge: (author: JSX.Element): JSX.Element[] => [author, " nudged you"],
 	},
 	audit_log: {
 		ChannelCreate: "{{actor}} created a channel #{{channel_name}}",

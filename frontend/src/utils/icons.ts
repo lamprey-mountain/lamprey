@@ -98,6 +98,7 @@ export { default as icFullscreent } from "@/assets/fullscreent.png";
 export { default as icMenu } from "@/assets/menu.png";
 export { default as icPause } from "@/assets/pause.png";
 export { default as icPlay } from "@/assets/play.png";
+export { default as icQuestion } from "@/assets/question.png";
 export { default as icSort } from "@/assets/sort.png";
 export { default as icVolumeHigh } from "@/assets/volume-high.png";
 export { default as icVolumeLow } from "@/assets/volume-low.png";

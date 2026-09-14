@@ -28,6 +28,7 @@ import {
 	icMemberJoin,
 	icMemberRemove,
 	icPin,
+	icQuestion,
 	icReply,
 	icSword,
 	icThread,
@@ -746,5 +747,35 @@ export function SystemMessageAutomodExecution(props: SystemMessageBaseProps) {
 				</div>
 			</div>
 		</article>
+	);
+}
+
+export function SystemMessageNudge(props: SystemMessageBaseProps) {
+	const { t } = useCtx();
+
+	return (
+		<SystemMessage
+			{...props}
+			icon={icQuestion} // TODO: better icon
+			class="message-dim-content"
+			content={
+				<div
+					class="body markdown"
+					classList={{ local: props.message.is_local }}
+				>
+					{/* @ts-ignore */}
+					{t(
+						"message_content.nudge",
+						<span class="author">
+							<UserDisplayName
+								user_id={props.message.author_id}
+								room_id={props.room_id}
+								onClick
+							/>
+						</span>,
+					)}
+				</div>
+			}
+		/>
 	);
 }

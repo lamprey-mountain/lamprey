@@ -42,6 +42,7 @@ import {
 	SystemMessageMemberAdd,
 	SystemMessageMemberJoin,
 	SystemMessageMemberRemove,
+	SystemMessageNudge,
 	SystemMessagePinned,
 	SystemMessageThreadCreated,
 } from "./SystemMessage.tsx";
@@ -390,7 +391,9 @@ export const MessageView = (props: MessageProps) => {
 					onMouseEnter={() => setHovered(true)}
 					onMouseLeave={() => setHovered(false)}
 				>
-					unknown message: {props.message.latest_version.type}
+					<div class="content">
+						unknown message: {props.message.latest_version.type}
+					</div>
 					{/* TODO: re-add message toolbar? */}
 				</article>
 			}
@@ -427,6 +430,9 @@ export const MessageView = (props: MessageProps) => {
 			</Match>
 			<Match when={props.message.latest_version.type === "ChannelMoved"}>
 				<SystemMessageChannelMoved {...systemProps} />
+			</Match>
+			<Match when={props.message.latest_version.type === "Nudge"}>
+				<SystemMessageNudge {...systemProps} />
 			</Match>
 			<Match when={isMarkdown(props.message.latest_version.type)}>
 				<DefaultMessage
