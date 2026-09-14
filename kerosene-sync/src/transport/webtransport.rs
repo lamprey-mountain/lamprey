@@ -159,7 +159,9 @@ impl WebtransportReceiver {
 
             // read length
             let mut len_buf = [0u8; 4];
-            me.recv.read_exact(&mut len_buf).await.unwrap();
+            if let Err(_) = me.recv.read_exact(&mut len_buf).await {
+                return None;
+            }
             let len = u32::from_be_bytes(len_buf) as usize;
 
             // TODO: what should the max length be? (currently 1mb)
@@ -170,7 +172,9 @@ impl WebtransportReceiver {
             // read payload
             let mut payload = vec![0u8; len];
             // NOTE: probably should return TransportEvent::Closed(false)
-            me.recv.read_exact(&mut payload).await.unwrap();
+            if let Err(_) = me.recv.read_exact(&mut payload).await {
+                return None;
+            }
 
             if let Some((decompressor, buffer)) = &mut me.decompressor {
                 let mut input_offset = 0;
