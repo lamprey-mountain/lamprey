@@ -176,11 +176,16 @@ fn calculate_requirements(create: &Create, channel: &Channel) -> Requirements {
         re.permission(Permission::MessageCreate);
     }
 
-    if create.payload.attachments().is_some() {
+    if create.payload.attachments().is_some_and(|a| !a.is_empty()) {
         re.permission(Permission::MessageAttachments);
     }
 
-    if create.payload.embeds().is_some() {
+    if create
+        .payload
+        .embeds()
+        .is_some()
+        .is_some_and(|a| !a.is_empty())
+    {
         re.permission(Permission::MessageEmbeds);
     }
 

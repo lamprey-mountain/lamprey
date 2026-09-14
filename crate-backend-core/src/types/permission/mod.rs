@@ -459,7 +459,7 @@ impl Permissions2<CheckPermissions> {
     }
 
     pub fn needs_all(&mut self, perms: &[Permission]) -> &mut Self {
-        if perms.is_empty() {
+        if perms.is_empty() || self.bits.has(Permission::Admin) {
             return self;
         }
         let mask = PermissionBits::from_slice(perms);
@@ -469,7 +469,7 @@ impl Permissions2<CheckPermissions> {
     }
 
     pub fn needs_all_bits(&mut self, perms: PermissionBits) -> &mut Self {
-        if perms.is_empty() {
+        if perms.is_empty() || self.bits.has(Permission::Admin) {
             return self;
         }
         let missing = perms & !self.bits;
