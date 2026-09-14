@@ -234,6 +234,42 @@ async fn handle_stream_inner(
             };
         }
 
+        MessageClient::DocumentSubscribe {
+            channel_id,
+            branch_id,
+            state_vector,
+        } => {
+            let Some(conn_id) = shared.connection_id else {
+                send.send(MessageEnvelope {
+                    payload: MessagePayload::Error {
+                        error: "you need to open and authenticate a sync stream first".into(),
+                        code: Some(SyncErrorCode::Unauthenticated),
+                    },
+                })
+                .await
+                .unwrap();
+                send.close().await.unwrap();
+                return Ok(());
+            };
+
+            let Some(handle) = srv.connections.get(conn_id) else {
+                send.send(MessageEnvelope {
+                    payload: MessagePayload::Error {
+                        error: "connection is somehow expired, despite the webtransport endpoint still being active?".into(),
+                        code: None,
+                    },
+                })
+                .await
+                .unwrap();
+                send.close().await.unwrap();
+                return Ok(());
+            };
+
+            let context_id = EditContextId::from_prose(channel_id, branch_id);
+            let transport = Box::new(WrapperTransport::new(send, recv));
+            handle.attach_document_transport(context_id, transport, state_vector);
+        }
+
         // TODO: subscriptions are replaced with dedicated webtransport streams
         MessageClient::VoiceConnect { .. }
         | MessageClient::MemberListSubscribe { .. }

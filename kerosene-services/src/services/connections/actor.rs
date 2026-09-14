@@ -1,13 +1,16 @@
+use std::collections::HashMap;
+
 use common::{
     v1::types::{
         ChannelId, MessageClient, MessageEnvelope, MessagePayload, MessageSync, Permission,
         Session, SyncSubscribeDocument, SyncSubscribeMemberList, SyncSubscribeScript,
         SyncSubscription,
-        document::DocumentUpdate,
+        document::{DocumentStateVector, DocumentUpdate},
         voice::{VoiceStateUpdate, messages::SignallingCommand},
     },
     v2::types::{ConnectionId, SessionId},
 };
+use futures::{FutureExt, future::BoxFuture};
 use kerosene_core::types::documents::EditContextId;
 use kerosene_sync::{
     error::{ConnectionErrorSeverity, severity},
@@ -25,12 +28,15 @@ use crate::{
 };
 
 // TODO: impl Debug
+// PERF: maybe don't copy globals to every connection?
+// PERF: don't create a mpsc for connection, they can be expensive in terms of memory?
 pub struct Connection {
     id: ConnectionId,
     session: Session,
     queue: ConnectionQueue,
     subscriptions: Box<ConnectionSubscriptions>,
     transport: Option<ConnectionTransport>,
+    document_transports: HashMap<EditContextId, ConnectionTransport>, // webtransport only
     globals: Globals,
     rx: mpsc::Receiver<Command>,
 }
@@ -39,6 +45,7 @@ pub struct ConnectionTransport {
     send: Box<dyn TransportSink>,
     recv: TransportStream,
     timeout: Timeout,
+    queue: ConnectionQueue,
 }
 
 #[derive(Clone)]
@@ -55,10 +62,25 @@ impl std::fmt::Debug for ConnectionHandle {
     }
 }
 
+/// identifier for a webtransport stream
+// TODO: identify streams via webtransport/quic stream id (add id fn to transport traits)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ConnectionStream {
+    Sync,
+    Document(EditContextId),
+}
+
 /// a command for controlling a connection actor
 pub enum Command {
     /// attach a transport to this connection and rewind to a seq
     Attach(Box<dyn Transport>, u64),
+
+    /// attach a dedicated document transport
+    DocumentTransport(
+        EditContextId,
+        Box<dyn Transport>,
+        Option<DocumentStateVector>,
+    ),
 
     /// shutdown this connection
     Shutdown,
@@ -77,6 +99,7 @@ impl Connection {
             queue,
             subscriptions,
             transport: None,
+            document_transports: HashMap::new(),
             globals,
             rx,
         };
@@ -106,18 +129,40 @@ impl Connection {
         loop {
             // transport_futures event
             enum Tfe {
-                Recv(Option<Result<TransportEvent>>),
-                Timeout,
+                Recv(ConnectionStream, Option<Result<TransportEvent>>),
+                Timeout(ConnectionStream),
             }
 
-            let transport_futures = async {
+            let timeout_fut = match self.next_expiring_transport() {
+                Some((stream, t)) => tokio::time::sleep_until(t.get_instant())
+                    .map(move |_| stream)
+                    .boxed(),
+                None => futures_util::future::pending().boxed(),
+            };
+
+            let recv_fut = {
+                let mut recvs = vec![];
+                for (ctx_id, t) in &mut self.document_transports {
+                    let stream = ConnectionStream::Document(*ctx_id);
+                    recvs.push(t.recv.next().map(move |m| (stream, m)).boxed());
+                }
+
                 if let Some(t) = &mut self.transport {
-                    tokio::select! {
-                        event = t.recv.next() => Tfe::Recv(event),
-                        _ = tokio::time::sleep_until(t.timeout.get_instant()) => Tfe::Timeout,
-                    }
+                    let stream = ConnectionStream::Sync;
+                    recvs.push(t.recv.next().map(move |m| (stream, m)).boxed());
+                }
+
+                if recvs.is_empty() {
+                    futures_util::future::pending().boxed()
                 } else {
-                    futures_util::future::pending().await
+                    futures_util::future::select_all(recvs).map(|f| f.0).boxed()
+                }
+            };
+
+            let transport_futures = async move {
+                tokio::select! {
+                    (stream, event) = recv_fut => Tfe::Recv(stream, event),
+                    stream = timeout_fut => Tfe::Timeout(stream),
                 }
             };
 
@@ -125,21 +170,31 @@ impl Connection {
                 // poll transports
                 event = transport_futures => {
                     match event {
-                        Tfe::Recv(Some(Ok(event))) => {
-                            if let Err(err) = self.handle_client(event).await {
+                        Tfe::Recv(stream, Some(Ok(event))) => {
+                            if let Err(err) = self.handle_client(stream, event).await {
                                 error!("handle_client error: {err}");
                                 break;
                             }
                         }
-                        Tfe::Recv(Some(Err(_err))) => {
+                        Tfe::Recv(_stream, Some(Err(_err))) => {
                             // TODO: handle Err
                         }
-                        Tfe::Recv(None) => {
+                        Tfe::Recv(stream, None) => {
                             // unexpected disconnect, disconnect transport
-                            self.transport = None;
+                            match stream {
+                                ConnectionStream::Sync => self.transport = None,
+                                ConnectionStream::Document(ctx_id) => {
+                                    self.document_transports.remove(&ctx_id);
+                                    if let Some(user_id) = self.session.user_id() {
+                                        self.subscriptions
+                                            .remove_document_subscription(ctx_id, user_id)
+                                            .await;
+                                    }
+                                }
+                            }
                         }
-                        Tfe::Timeout => {
-                            if let Err(err) = self.handle_timeout().await {
+                        Tfe::Timeout(stream) => {
+                            if let Err(err) = self.handle_timeout(stream).await {
                                 error!("handle_timeout error: {err}");
                                 break;
                             }
@@ -181,9 +236,17 @@ impl Connection {
                 }
             }
 
+            // drain main queue
             if let Some(t) = &mut self.transport {
                 if let Err(err) = self.queue.drain(&mut *t.send, self.id).await {
                     error!("failed to drain messages: {err}");
+                }
+            }
+
+            // drain document queues
+            for t in self.document_transports.values_mut() {
+                if let Err(err) = t.queue.drain(&mut *t.send, self.id).await {
+                    error!("failed to drain document messages: {err}");
                 }
             }
         }
@@ -301,12 +364,35 @@ impl Connection {
                     send,
                     recv,
                     timeout: Timeout::for_ping(),
+                    queue: ConnectionQueue::new(MAX_QUEUE_LEN),
                 });
                 self.queue.rewind(seq)?;
                 self.globals.services().connections.cancel_cleanup(self.id);
             }
+            Command::DocumentTransport(context_id, transport, sv) => {
+                // FIXME: send errors to transport rather than returning them
+                let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+                self.subscriptions
+                    .add_document_subscription(context_id, sv, user_id)
+                    .await?;
+
+                let (send, recv) = transport.split();
+                self.document_transports.insert(
+                    context_id,
+                    ConnectionTransport {
+                        send,
+                        recv,
+                        timeout: Timeout::for_ping(),
+                        queue: ConnectionQueue::new(MAX_QUEUE_LEN),
+                    },
+                );
+            }
             Command::Shutdown => {
                 if let Some(mut t) = self.transport.take() {
+                    let _ = t.send.close().await;
+                }
+
+                for (_, mut t) in self.document_transports.drain() {
                     let _ = t.send.close().await;
                 }
 
@@ -317,9 +403,14 @@ impl Connection {
         Ok(())
     }
 
-    async fn handle_client(&mut self, event: TransportEvent) -> Result<()> {
+    async fn handle_client(
+        &mut self,
+        stream: ConnectionStream,
+        event: TransportEvent,
+    ) -> Result<()> {
         match event {
             TransportEvent::Message(msg) => {
+                // FIXME: handle document streams. currently this assumes all client messages are sent to the main sync stream.
                 if let Err(err) = self.handle_message_client_inner(msg).await {
                     let t = self
                         .transport
@@ -354,17 +445,24 @@ impl Connection {
                     }
                 }
             }
-            TransportEvent::Closed(clean) => {
-                if clean {
-                    self.teardown().await;
-                } else {
+            TransportEvent::Closed(clean) => match stream {
+                ConnectionStream::Sync if clean => self.teardown().await,
+                ConnectionStream::Sync => {
                     self.globals
                         .services()
                         .connections
                         .schedule_cleanup(self.id);
                     self.transport = None;
                 }
-            }
+                ConnectionStream::Document(ctx_id) => {
+                    self.document_transports.remove(&ctx_id);
+                    if let Some(user_id) = self.session.user_id() {
+                        self.subscriptions
+                            .remove_document_subscription(ctx_id, user_id)
+                            .await;
+                    }
+                }
+            },
         }
 
         Ok(())
@@ -379,6 +477,9 @@ impl Connection {
         };
 
         trace!("{:#?}", msg);
+
+        // TODO: when using webtransport, respond with an error if any subscribe command is sent
+        // TODO: when using webtransport, respond with an error if a document command is sent to a Sync stream or the wrong Document stream
         match msg {
             MessageClient::Hello(_) => return Err(Error::BadStatic("already authenticated")),
             MessageClient::Presence { presence } => {
@@ -673,16 +774,51 @@ impl Connection {
                 }
                 m => m,
             };
-            self.queue.push_sync(msg, nonce);
+
+            // route sync events
+            // try to send document events to the matching document stream, falling back to the default sync stream
+            // NOTE: do i want to drop document events if there is no document stream? if the client closed the stream, they probably don't want to receive events for that document anymore.
+            let context_id = match &msg {
+                MessageSync::DocumentEdit {
+                    channel_id,
+                    branch_id,
+                    ..
+                }
+                | MessageSync::DocumentPresence {
+                    channel_id,
+                    branch_id,
+                    ..
+                }
+                | MessageSync::DocumentSubscribed {
+                    channel_id,
+                    branch_id,
+                    ..
+                } => {
+                    // FIXME: handle redex edit contexts
+                    Some(EditContextId::from_prose(*channel_id, *branch_id))
+                }
+                _ => None,
+            };
+
+            if let Some(ctx) = context_id.and_then(|ctx| self.document_transports.get_mut(&ctx)) {
+                ctx.queue.push_sync(msg, nonce);
+            } else {
+                self.queue.push_sync(msg, nonce);
+            }
         }
 
         Ok(())
     }
 
     /// handle a timeout
-    async fn handle_timeout(&mut self) -> Result<()> {
-        let Some(t) = &mut self.transport else {
-            unreachable!("handle_timeout should never be called without a timeout")
+    async fn handle_timeout(&mut self, stream: ConnectionStream) -> Result<()> {
+        let t = match stream {
+            ConnectionStream::Sync => self.transport.as_mut(),
+            ConnectionStream::Document(ctx) => self.document_transports.get_mut(&ctx),
+        };
+        let Some(t) = t else {
+            // transport had to exist in order to timeout and cause handle_timeout to be called
+            unreachable!("handle_timeout should never be called without a transport")
         };
 
         match &mut t.timeout {
@@ -697,7 +833,21 @@ impl Connection {
             }
             Timeout::Close(_) => {
                 let _ = t.send.close().await;
-                self.teardown().await;
+
+                match stream {
+                    // if the main sync stream dies, shut down EVERYTHING
+                    ConnectionStream::Sync => self.teardown().await,
+
+                    // if a document times out, unsubscribe from it
+                    ConnectionStream::Document(ctx_id) => {
+                        self.document_transports.remove(&ctx_id);
+                        if let Some(user_id) = self.session.user_id() {
+                            self.subscriptions
+                                .remove_document_subscription(ctx_id, user_id)
+                                .await;
+                        }
+                    }
+                }
             }
         };
 
@@ -729,6 +879,19 @@ impl Connection {
         // just to be safe
         self.transport = None;
     }
+
+    /// get the transport that will expire next
+    fn next_expiring_transport(&self) -> Option<(ConnectionStream, Timeout)> {
+        self.document_transports
+            .iter()
+            .map(|(ctx_id, t)| (ConnectionStream::Document(*ctx_id), t.timeout))
+            .chain(
+                self.transport
+                    .as_ref()
+                    .map(|t| (ConnectionStream::Sync, t.timeout)),
+            )
+            .min_by_key(|(_, t)| t.get_instant())
+    }
 }
 
 impl ConnectionHandle {
@@ -743,6 +906,18 @@ impl ConnectionHandle {
     /// attach a transport to this connection and rewind
     pub fn attach(&self, transport: Box<dyn Transport>, seq: u64) {
         let _ = self.tx.try_send(Command::Attach(transport, seq));
+    }
+
+    /// attach a dedicated document transport
+    pub fn attach_document_transport(
+        &self,
+        context_id: EditContextId,
+        transport: Box<dyn Transport>,
+        sv: Option<DocumentStateVector>,
+    ) {
+        let _ = self
+            .tx
+            .try_send(Command::DocumentTransport(context_id, transport, sv));
     }
 
     /// shutdown this connection

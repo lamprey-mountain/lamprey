@@ -1,4 +1,5 @@
 use common::v1::types::SERVER_ROOM_ID;
+use common::v1::types::document::DocumentStateVector;
 use common::v2::types::DocumentId;
 use kerosene_core::types::documents::EditContextId;
 use std::collections::{HashMap, HashSet};
@@ -43,6 +44,101 @@ impl ConnectionSubscriptions {
 
     pub fn is_document_subscribed(&self, edit_context_id: EditContextId) -> bool {
         self.documents.contains_key(&edit_context_id)
+    }
+
+    pub async fn add_document_subscription(
+        &mut self,
+        edit_context_id: EditContextId,
+        state_vector: Option<DocumentStateVector>,
+        user_id: UserId,
+    ) -> Result<()> {
+        if !self.documents.contains_key(&edit_context_id) {
+            self.subscribe_document(
+                edit_context_id,
+                state_vector,
+                edit_context_id.channel_id(),
+                user_id,
+            )
+            .await?;
+        }
+        Ok(())
+    }
+
+    pub async fn remove_document_subscription(
+        &mut self,
+        edit_context_id: EditContextId,
+        user_id: UserId,
+    ) {
+        if let Some(handle) = self.documents.remove(&edit_context_id) {
+            handle.abort();
+            let _ = self
+                .globals
+                .services()
+                .documents
+                .remove_presence(edit_context_id, user_id, self.conn_id)
+                .await;
+        }
+    }
+
+    async fn subscribe_document(
+        &mut self,
+        key: EditContextId,
+        state_vector: Option<DocumentStateVector>,
+        channel_id: ChannelId,
+        user_id: UserId,
+    ) -> Result<()> {
+        let srv = self.globals.services();
+        let perms = srv.perms.for_channel(user_id, channel_id).await?;
+        perms.ensure(Permission::ChannelView)?;
+
+        let branch = self
+            .globals
+            .begin_read()
+            .await?
+            // FIXME: make document_branch_get take a DocumentId
+            .document_branch_get((*key.document_id()).into(), key.branch_id())
+            .await;
+        match branch {
+            Ok(branch) => {
+                if branch.private && branch.creator_id != user_id {
+                    return Err(Error::ApiError(ApiError::from_code(
+                        ErrorCode::UnknownDocumentBranch,
+                    )));
+                }
+            }
+            Err(_) if *key.branch_id() == *key.document_id() => {
+                // this is the default branch
+            }
+            Err(_) => {
+                return Err(Error::ApiError(ApiError::from_code(
+                    ErrorCode::UnknownDocumentBranch,
+                )));
+            }
+        }
+
+        let mut syncer = srv.documents.create_syncer(self.conn_id);
+        syncer.set_user_id(Some(user_id)).await;
+        syncer.set_context_id(key, state_vector).await?;
+
+        let tx = self.event_tx.clone();
+        let handle = tokio::spawn(async move {
+            loop {
+                match syncer.poll().await {
+                    Ok(msg) => {
+                        if tx.send(Ok(msg)).is_err() {
+                            // connection closed
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Err(e));
+                        break;
+                    }
+                }
+            }
+        });
+        self.documents.insert(key, handle);
+        Ok(())
     }
 
     pub async fn disconnect(&mut self, user_id: UserId) {
@@ -91,56 +187,8 @@ impl ConnectionSubscriptions {
                 new_keys.insert(key);
 
                 if !self.documents.contains_key(&key) {
-                    let perms = srv.perms.for_channel(user_id, doc.channel_id).await?;
-                    perms.ensure(Permission::ChannelView)?;
-
-                    let branch = self
-                        .globals
-                        .begin_read()
-                        .await?
-                        // FIXME: make document_branch_get take a DocumentId
-                        .document_branch_get((*key.document_id()).into(), key.branch_id())
-                        .await;
-                    match branch {
-                        Ok(branch) => {
-                            if branch.private && branch.creator_id != user_id {
-                                return Err(Error::ApiError(ApiError::from_code(
-                                    ErrorCode::UnknownDocumentBranch,
-                                )));
-                            }
-                        }
-                        Err(_) if *key.branch_id() == *key.document_id() => {
-                            // this is the default branch
-                        }
-                        Err(_) => {
-                            return Err(Error::ApiError(ApiError::from_code(
-                                ErrorCode::UnknownDocumentBranch,
-                            )));
-                        }
-                    }
-
-                    let mut syncer = srv.documents.create_syncer(self.conn_id);
-                    syncer.set_user_id(Some(user_id)).await;
-                    syncer.set_context_id(key, doc.state_vector).await?;
-
-                    let tx = self.event_tx.clone();
-                    let handle = tokio::spawn(async move {
-                        loop {
-                            match syncer.poll().await {
-                                Ok(msg) => {
-                                    if tx.send(Ok(msg)).is_err() {
-                                        // connection closed
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    let _ = tx.send(Err(e));
-                                    break;
-                                }
-                            }
-                        }
-                    });
-                    self.documents.insert(key, handle);
+                    self.subscribe_document(key, doc.state_vector, doc.channel_id, user_id)
+                        .await?;
                 }
             }
 
