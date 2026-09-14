@@ -14,9 +14,12 @@ use common::{
 use dashmap::DashMap;
 use lamprey_backend_data_postgres::DbMessageCreate;
 
-use crate::services::automod::compiled::Scannable;
-use crate::{prelude::*, services::automod::compiled::Compiled};
+use crate::{
+    prelude::*,
+    services::automod::{compiled::Compiled, scannable::ScannableSet},
+};
 
+pub use crate::services::automod::scannable::{Scannable, ScannableTarget};
 pub use crate::services::automod::util::{AutomodContext, AutomodScan};
 
 mod compiled;
@@ -40,14 +43,10 @@ pub struct AutomodCalculator {
 impl AutomodCalculator {
     // NOTE: should i make this return Result or should it always succeed?
     // TODO: make sure to call srv.automod.enforce() after calc.scan(), check all call sites
-    pub async fn scan<S: Scannable>(&self, item: &S, ctx: &AutomodContext) -> AutomodScan {
+    pub async fn scan<S: ScannableTarget>(&self, item: &S, ctx: &AutomodContext) -> AutomodScan {
         let relevant = self.relevant_rules(ctx).await;
 
-        let mut set = compiled::ScannableSet {
-            target: item.target(),
-            text: vec![],
-            media: vec![],
-        };
+        let mut set = ScannableSet::new(item.target());
         item.scan(&mut set);
 
         let mut scan = AutomodScan::default();
@@ -92,11 +91,12 @@ impl AutomodCalculator {
             .expect("TODO: better error handling");
 
         let channel = if let Some(channel_id) = ctx.channel_id {
-            Some(
-                data.channel_get(channel_id)
-                    .await
-                    .expect("TODO: better error handling"),
-            )
+            let chan = srv
+                .channels
+                .get(channel_id, None)
+                .await
+                .expect("TODO: better error handling");
+            Some(chan)
         } else {
             None
         };
@@ -147,11 +147,7 @@ impl AutomodCalculator {
 
     pub fn test(&self, query: &AutomodRuleTestRequest) -> AutomodRuleTest {
         let relevant_rules: Vec<_> = self.compiled.rules().iter().map(|r| r.id).collect();
-        let mut set = compiled::ScannableSet {
-            target: query.target(),
-            text: vec![],
-            media: vec![],
-        };
+        let mut set = ScannableSet::new(query.target());
         query.scan(&mut set);
 
         let mut scan = AutomodScan::default();

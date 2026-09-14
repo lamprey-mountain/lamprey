@@ -10,6 +10,7 @@ use kerosene_core::error::{ApiError, ErrorCode};
 #[derive(Default)]
 pub struct AutomodScan {
     /// the rules that were triggered
+    // PERF: use hashset
     pub(super) rule_ids: Vec<AutomodRuleId>,
 
     /// the resulting actions that should be done

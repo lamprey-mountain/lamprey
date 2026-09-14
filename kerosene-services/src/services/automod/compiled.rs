@@ -151,11 +151,12 @@ impl Compiled {
     ) -> AutomodScan {
         let mut scan = AutomodScan::default();
 
-        let cured_text = match decancer::cure(&text, decancer::Options::default()) {
-            Ok(s) => s.to_string(),
+        // TODO: allow configuring if decancer should be enabled (maybe disable by default for regex?)
+        let cured_text = match decancer::cure(text, decancer::Options::default()) {
+            Ok(s) => Some(s),
             Err(err) => {
                 warn!("failed to cure string {:?}", err);
-                text.to_string()
+                None
             }
         };
 
@@ -214,7 +215,13 @@ impl Compiled {
         scan_string(text, true);
 
         // scan decancered text
-        scan_string(&cured_text, false);
+        if let Some(s) = &cured_text {
+            scan_string(s, false);
+
+            // TODO: use decancer's find_multiple instead of regex
+            // are the ranges it returns for the decancered string or the raw string?
+            // s.find_multiple(["foo", "bar"]);
+        }
 
         // scan links
         // TODO: populate matches/fragments from link rules (this may need an api change first)
@@ -269,7 +276,7 @@ impl Compiled {
         // collect rules, actions, matches
         let mut text_matches = AutomodMatches {
             text: text.to_string(),
-            sanitized_text: cured_text.clone(),
+            sanitized_text: cured_text.map(|s| s.to_string()).unwrap_or_default(),
             fragments: vec![],
             location,
         };
@@ -323,41 +330,5 @@ impl Compiled {
         }
 
         scan
-    }
-}
-
-// TODO: move below to a separate module
-/// Defines an item that can be scanned by the automod service.
-pub trait Scannable {
-    /// Returns the target type of the scannable item.
-    fn target(&self) -> AutomodTarget;
-
-    /// Visits every piece of scannable text or media within the item.
-    fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S);
-}
-
-/// A visitor trait for handling scanned item fields.
-pub trait Scanner<'a> {
-    /// Handles a piece of text component.
-    fn visit_text(&mut self, text: &'a str, location: AutomodTextLocation);
-
-    /// Handles a media component.
-    fn visit_media(&mut self, media: MediaId, location: AutomodMediaLocation);
-}
-
-/// utility to collect all scannable text from a Scannable
-pub(super) struct ScannableSet<'a> {
-    pub target: AutomodTarget,
-    pub text: Vec<(&'a str, AutomodTextLocation)>,
-    pub media: Vec<(MediaId, AutomodMediaLocation)>,
-}
-
-impl<'a> Scanner<'a> for ScannableSet<'a> {
-    fn visit_text(&mut self, text: &'a str, location: AutomodTextLocation) {
-        self.text.push((text, location));
-    }
-
-    fn visit_media(&mut self, media: MediaId, location: AutomodMediaLocation) {
-        self.media.push((media, location));
     }
 }

@@ -1,18 +1,109 @@
-use common::v1::types::{
-    ChannelCreate, ChannelPatch, MessageCreate, MessagePatch, RoomMember, User,
-    automod::{AutomodMediaLocation, AutomodRuleTestRequest, AutomodTarget, AutomodTextLocation},
-    message::MessageAttachmentCreateType,
+use common::{
+    v1::types::{
+        ChannelCreate, ChannelPatch, MessageCreate, MessagePatch, RoomMember, User,
+        automod::{
+            AutomodMediaLocation, AutomodRuleTestRequest, AutomodTarget, AutomodTextLocation,
+        },
+        message::MessageAttachmentCreateType,
+    },
+    v2::types::{
+        MediaId,
+        media::{Media, MediaCreate, MediaCreateSource, MediaPatch},
+    },
 };
 
-use crate::services::automod::compiled::Scannable;
+/// this is a top level thing that can be scanned by the automod service
+pub trait ScannableTarget: Scannable {
+    /// Returns the target type of the scannable item.
+    fn target(&self) -> AutomodTarget;
+}
 
-use super::compiled::Scanner;
+/// this thing can be scanned
+pub trait Scannable {
+    /// Visits every piece of scannable text or media within the item.
+    fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S);
+}
 
-impl Scannable for MessageCreate {
+/// A visitor trait for handling scanned item fields.
+trait Scanner<'a> {
+    fn visit_scannable<S: Scannable>(&mut self, scannable: &'a S);
+
+    /// Handles a piece of text component.
+    fn visit_text(&mut self, text: &'a str, location: AutomodTextLocation);
+
+    /// Handles a media component.
+    fn visit_media(&mut self, media: MediaId, location: AutomodMediaLocation);
+}
+
+/// utility to collect all scannable text from a Scannable
+// TODO: make all these fields private
+pub struct ScannableSet<'a> {
+    pub(super) target: AutomodTarget,
+    pub(super) text: Vec<(&'a str, AutomodTextLocation)>,
+    pub(super) media: Vec<(MediaId, AutomodMediaLocation)>,
+}
+
+impl ScannableSet<'_> {
+    pub fn new(target: AutomodTarget) -> Self {
+        Self {
+            target,
+            text: vec![],
+            media: vec![],
+        }
+    }
+}
+
+impl<'a> Scanner<'a> for ScannableSet<'a> {
+    fn visit_text(&mut self, text: &'a str, location: AutomodTextLocation) {
+        self.text.push((text, location));
+    }
+
+    fn visit_media(&mut self, media: MediaId, location: AutomodMediaLocation) {
+        self.media.push((media, location));
+    }
+
+    fn visit_scannable<S: Scannable>(&mut self, scannable: &'a S) {
+        scannable.scan(self);
+    }
+}
+
+impl ScannableTarget for MessageCreate {
     fn target(&self) -> AutomodTarget {
         AutomodTarget::Content
     }
+}
 
+impl ScannableTarget for MessagePatch {
+    fn target(&self) -> AutomodTarget {
+        AutomodTarget::Content
+    }
+}
+
+impl ScannableTarget for ChannelCreate {
+    fn target(&self) -> AutomodTarget {
+        AutomodTarget::Content
+    }
+}
+
+impl ScannableTarget for ChannelPatch {
+    fn target(&self) -> AutomodTarget {
+        AutomodTarget::Content
+    }
+}
+
+impl<'a> ScannableTarget for (&'a RoomMember, &'a User) {
+    fn target(&self) -> AutomodTarget {
+        AutomodTarget::Member
+    }
+}
+
+impl ScannableTarget for AutomodRuleTestRequest {
+    fn target(&self) -> AutomodTarget {
+        self.target
+    }
+}
+
+impl Scannable for MessageCreate {
     fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
         if let Some(t) = self.content.as_deref() {
             visitor.visit_text(t, AutomodTextLocation::MessageContent);
@@ -51,10 +142,6 @@ impl Scannable for MessageCreate {
 }
 
 impl Scannable for MessagePatch {
-    fn target(&self) -> AutomodTarget {
-        AutomodTarget::Content
-    }
-
     fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
         if let Some(Some(s)) = self.content.as_ref() {
             visitor.visit_text(s, AutomodTextLocation::MessageContent);
@@ -93,10 +180,6 @@ impl Scannable for MessagePatch {
 }
 
 impl Scannable for ChannelCreate {
-    fn target(&self) -> AutomodTarget {
-        AutomodTarget::Content
-    }
-
     fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
         visitor.visit_text(&self.name, AutomodTextLocation::ThreadTitle);
 
@@ -107,10 +190,6 @@ impl Scannable for ChannelCreate {
 }
 
 impl Scannable for ChannelPatch {
-    fn target(&self) -> AutomodTarget {
-        AutomodTarget::Content
-    }
-
     fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
         if let Some(name) = &self.name {
             visitor.visit_text(name, AutomodTextLocation::ThreadTitle);
@@ -122,10 +201,6 @@ impl Scannable for ChannelPatch {
 }
 
 impl<'a> Scannable for (&'a RoomMember, &'a User) {
-    fn target(&self) -> AutomodTarget {
-        AutomodTarget::Member
-    }
-
     fn scan<'b, S: Scanner<'b>>(&'b self, visitor: &mut S) {
         visitor.visit_text(&self.1.name, AutomodTextLocation::UserName);
 
@@ -145,11 +220,59 @@ impl<'a> Scannable for (&'a RoomMember, &'a User) {
 }
 
 impl Scannable for AutomodRuleTestRequest {
-    fn target(&self) -> AutomodTarget {
-        self.target
-    }
-
     fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
         visitor.visit_text(&self.text, AutomodTextLocation::Test);
+    }
+}
+
+impl Scannable for MediaCreate {
+    fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
+        if let MediaCreateSource::Download {
+            filename: Some(t),
+            size: _,
+            source_url: _,
+        }
+        | MediaCreateSource::Upload {
+            filename: t,
+            size: _,
+        } = &self.source
+        {
+            visitor.visit_text(t, AutomodTextLocation::MediaFilename);
+        }
+
+        if let Some(t) = &self.alt {
+            visitor.visit_text(t, AutomodTextLocation::MediaAlt);
+        }
+    }
+}
+
+impl Scannable for MediaPatch {
+    fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
+        if let Some(Some(t)) = &self.alt {
+            visitor.visit_text(t, AutomodTextLocation::MediaFilename);
+        }
+
+        if let Some(t) = &self.filename {
+            visitor.visit_text(t, AutomodTextLocation::MediaAlt);
+        }
+    }
+}
+
+impl Scannable for Media {
+    fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
+        visitor.visit_text(&self.filename, AutomodTextLocation::MediaFilename);
+
+        if let Some(t) = &self.alt {
+            visitor.visit_text(t, AutomodTextLocation::MediaAlt);
+        }
+
+        // TODO: deny quarantined media
+        // TODO: handle media.scans
+        // if let Some(t) = &self.quarantine {
+        //     visitor.visit_text(t, todo!());
+        // }
+
+        // visitor.visit_media(media, location);
+        // self.scans;
     }
 }

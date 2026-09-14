@@ -276,6 +276,12 @@ pub enum AutomodTextLocation {
     /// the url of an embed
     EmbedUrl,
 
+    /// the filename for a file
+    MediaFilename,
+
+    /// the alt text for a file
+    MediaAlt,
+
     /// a test scan
     Test,
 }
@@ -400,6 +406,42 @@ pub enum AutomodAction {
         // TODO: remove this action when channel is removed
         channel_id: ChannelId,
     },
+}
+
+impl AutomodTextLocation {
+    /// returns whether this location is inside a url embed
+    #[inline]
+    pub fn is_embed(&self) -> bool {
+        matches!(
+            self,
+            Self::EmbedTitle
+                | Self::EmbedDescription
+                | Self::EmbedUrl
+                | Self::EmbedAuthorName
+                | Self::EmbedAuthorUrl
+        )
+    }
+
+    /// returns whether this location is inside of a media
+    #[inline]
+    pub fn is_media(&self) -> bool {
+        matches!(self, Self::MediaFilename | Self::MediaAlt)
+    }
+
+    /// returns whether this location is inside of a channel
+    #[inline]
+    pub fn is_channel(&self) -> bool {
+        matches!(self, Self::ThreadTitle | Self::ThreadTopic)
+    }
+
+    /// returns whether this location is inside of a user profile
+    #[inline]
+    pub fn is_user_profile(&self) -> bool {
+        matches!(
+            self,
+            Self::UserName | Self::UserBio | Self::MemberNickname | Self::MemberDescription
+        )
+    }
 }
 
 #[cfg(feature = "validator")]
