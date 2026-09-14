@@ -7,7 +7,7 @@ use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message,
     MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageChannelTagged, MessageId,
     MessageSync, MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomId,
-    ThreadMemberPut, User, UserId,
+    ThreadMemberPut, UserId,
 };
 use common::v2::types::MessageVerId;
 use kerosene_core::error::{ApiError, ErrorCode};
@@ -16,7 +16,7 @@ use lamprey_search::visibility::ChannelVisibility;
 use moka::future::Cache;
 use moka::ops::compute::Op as CacheOp;
 use time::OffsetDateTime;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 use validator::Validate;
 
 use crate::globals::messaging::Broadcast;

@@ -6,15 +6,9 @@ use common::{
         MentionsUser, Message, MessageAttachment, MessageAttachmentCreate,
         MessageAttachmentCreateType, MessageAttachmentType, MessageCreate, MessageDefaultMarkdown,
         MessageInteraction, MessagePatch, MessageSync, MessageType, MessageVersion, Permission,
-        SessionId, User,
-        components::{self, Component, ComponentType, Components},
-        emoji::EmojiOwner,
-        util::Time,
+        SessionId, emoji::EmojiOwner, util::Time,
     },
-    v2::types::{
-        AUTOMOD_USER_ID, ChannelId, MessageId, RoomId, SERVER_USER_ID, UserId,
-        media::MediaReference,
-    },
+    v2::types::{ChannelId, MessageId, RoomId, UserId},
 };
 use futures::{FutureExt, TryFutureExt, try_join};
 use futures_util::future::try_join_all;
@@ -33,7 +27,7 @@ use crate::{
     prelude::*,
     services::{
         automod::AutomodContext,
-        messages::{ServiceMessages, links, markdown, util::MediaRegistry2},
+        messages::{ServiceMessages, markdown, util::MediaRegistry2},
     },
     types::DbMessageCreate,
 };

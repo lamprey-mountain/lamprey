@@ -3,8 +3,8 @@ use common::{
         Mentions, MentionsUser, MessageAutomodExecution, MessageSync, MessageType, Permission,
         RoomId, RoomMemberPatch,
         automod::{
-            AutomodAction, AutomodRuleCreate, AutomodRuleExecution, AutomodRuleSummary,
-            AutomodRuleTest, AutomodRuleTestRequest,
+            AutomodAction, AutomodRuleExecution, AutomodRuleSummary, AutomodRuleTest,
+            AutomodRuleTestRequest,
         },
         ids::AUTOMOD_USER_ID,
         util::Time,

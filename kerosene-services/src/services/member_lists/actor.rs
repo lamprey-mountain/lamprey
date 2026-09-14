@@ -7,7 +7,6 @@ use common::v1::types::{
     MemberListGroup, MemberListOp, MessageSync, Permission, RoleId, RoomMember, User, UserId,
 };
 use tokio::sync::broadcast;
-use uuid::Uuid;
 
 use crate::consts::IDLE_TIMEOUT_MEMBER_LIST;
 use crate::prelude::*;

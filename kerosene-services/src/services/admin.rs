@@ -6,7 +6,7 @@ use lamprey_backend_core::types::admin::{
     AdminPurgeCacheStat, AdminPurgeCacheTarget,
 };
 use subtle::ConstantTimeEq;
-use tracing::{debug, error};
+use tracing::error;
 
 use crate::prelude::*;
 

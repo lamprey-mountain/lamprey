@@ -1,15 +1,9 @@
 // TODO: share this module with lamprey-sdk (maybe put in common?)
 
-use std::collections::VecDeque;
-
 use async_trait::async_trait;
-use axum::extract::ws::WebSocket;
-use flate2::{Compress, Decompress, FlushCompress, FlushDecompress};
-use futures::{
-    SinkExt, StreamExt,
-    stream::{self, BoxStream, SplitSink, SplitStream},
-};
-use lamprey::v1::types::{MessageClient, MessageEnvelope, SyncFormat, SyncParams};
+use flate2::{Compress, Decompress};
+use futures::stream::BoxStream;
+use lamprey::v1::types::{MessageClient, MessageEnvelope};
 
 use crate::prelude::*;
 

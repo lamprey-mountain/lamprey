@@ -4,7 +4,6 @@ use common::v1::types::{ChannelId, MemberListOp, MessageSync, RoomId, UserId};
 use common::v2::types::ConnectionId;
 use tokio_stream::{StreamExt, StreamMap, StreamNotifyClose, wrappers::BroadcastStream};
 use tracing::debug;
-use uuid::Uuid;
 
 use crate::prelude::*;
 use crate::services::member_lists::{

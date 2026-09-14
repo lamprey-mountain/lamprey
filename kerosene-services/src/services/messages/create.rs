@@ -9,8 +9,8 @@ use common::v1::types::{
     MessageInteraction, MessagePatch, MessageSync, MessageType, MessageVersion, ParseMentions,
     Permission, ThreadMemberPut, User, UserId,
 };
+use common::v2::types::SERVER_USER_ID;
 use common::v2::types::media::MediaReference;
-use common::v2::types::{MediaId, SERVER_USER_ID};
 use http::StatusCode;
 use kerosene_core::types::auth::{Auth5, Auth5Ext, Identity};
 use tracing::error;

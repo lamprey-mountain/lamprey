@@ -7,12 +7,9 @@ use common::{
         AutomodMatchFragment, AutomodMatchKind, AutomodMatches, AutomodMediaLocation, AutomodRule,
         AutomodTarget, AutomodTextLocation, AutomodTrigger,
     },
-    v2::types::{AutomodRuleId, MediaId, media::Media},
+    v2::types::{AutomodRuleId, media::Media},
 };
-use kerosene_core::{
-    config::Config,
-    error::{ApiError, ApiResult, ErrorCode},
-};
+use kerosene_core::error::{ApiError, ApiResult, ErrorCode};
 use regex::{Regex, RegexSet, RegexSetBuilder};
 use tracing::warn;
 

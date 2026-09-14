@@ -7,9 +7,8 @@ use crate::{globals::messaging::Broadcast, prelude::*, services::rooms::actor::S
 
 use common::v1::types::{
     ChannelId, ChannelType, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId,
-    RoomMember, SERVER_ROOM_ID, User, UserId,
-    emoji::{EmojiCustom, EmojiOwner},
-    ids::EmojiId,
+    RoomMember, SERVER_ROOM_ID, UserId,
+    emoji::EmojiOwner,
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
 };
 use futures::{StreamExt, future::BoxFuture};

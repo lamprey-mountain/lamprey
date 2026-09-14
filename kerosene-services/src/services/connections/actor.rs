@@ -10,7 +10,7 @@ use common::{
     },
     v2::types::{ConnectionId, SessionId},
 };
-use futures::{FutureExt, future::BoxFuture};
+use futures::FutureExt;
 use kerosene_core::types::documents::EditContextId;
 use kerosene_sync::{
     error::{ConnectionErrorSeverity, severity},

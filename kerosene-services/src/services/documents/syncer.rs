@@ -18,6 +18,7 @@ use crate::{
 /// This struct manages the lifecycle of document subscriptions for a connection,
 /// including subscribing/unsubscribing from documents, broadcasting updates,
 /// and tracking presence information.
+// NOTE: this should probably be reexported?
 pub struct DocumentSyncer {
     /// Reference to the server state for accessing document services
     pub(super) s: Globals,

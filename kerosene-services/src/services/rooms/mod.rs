@@ -1,8 +1,6 @@
 use crate::consts::IDLE_TIMEOUT_ROOM;
 use crate::globals::messaging::Broadcast;
-use crate::services::rooms::actor::{EnsureMembers, SyncMessage};
-use crate::services::rooms::types::RoomMembers;
-use common::v1::types::error::{ApiError, ErrorCode};
+use crate::services::rooms::actor::SyncMessage;
 use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntryType, ChannelId, ChannelType, MessageSync, MessageType, PaginationQuery, RoleId,
@@ -22,8 +20,6 @@ use crate::consts::MAX_LOADED_ROOMS;
 use crate::prelude::*;
 use crate::services::room_template::builtin;
 use crate::types::{DbMessageCreate, DbRoomCreate, MediaLinkType};
-
-use futures::future::BoxFuture;
 
 pub mod actor;
 pub mod permissions;

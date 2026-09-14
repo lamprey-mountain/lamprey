@@ -1,6 +1,5 @@
 use common::v1::types::SERVER_ROOM_ID;
 use common::v1::types::document::DocumentStateVector;
-use common::v2::types::DocumentId;
 use kerosene_core::types::documents::EditContextId;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::mpsc;

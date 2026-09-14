@@ -1,5 +1,4 @@
 use common::v1::types::components::{ComponentCanonical, ComponentType};
-use common::v1::types::document::serialized::Serdoc;
 use common::v1::types::error::ErrorField;
 use yrs::types::xml::{XmlElementPrelim, XmlIn};
 use yrs::{Doc, Transact, XmlFragment, XmlTextPrelim};

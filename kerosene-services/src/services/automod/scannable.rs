@@ -25,7 +25,7 @@ pub trait Scannable {
 }
 
 /// A visitor trait for handling scanned item fields.
-trait Scanner<'a> {
+pub trait Scanner<'a> {
     fn visit_scannable<S: Scannable>(&mut self, scannable: &'a S);
 
     /// Handles a piece of text component.
