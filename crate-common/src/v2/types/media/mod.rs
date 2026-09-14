@@ -12,6 +12,7 @@ use crate::v1::types::{
     RoomId, UserId, federation::Remote, misc::hashes::Hashes, util::Time,
 };
 
+pub mod links;
 pub mod proxy;
 pub mod scanner;
 
