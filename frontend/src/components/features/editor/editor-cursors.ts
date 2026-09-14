@@ -6,8 +6,8 @@ import {
 	shift,
 } from "@floating-ui/dom";
 import { Plugin, PluginKey } from "prosemirror-state";
-import { Decoration, DecorationSet } from "prosemirror-view";
-import type { MessageSync } from "sdk";
+import { Decoration, DecorationSet, type EditorView } from "prosemirror-view";
+import type { MessageSync, Stream } from "sdk";
 import {
 	absolutePositionToRelativePosition,
 	relativePositionToAbsolutePosition,
@@ -18,7 +18,57 @@ import type { Api } from "@/api";
 import { getColor } from "@/lib/colors";
 import { base64UrlDecode, base64UrlEncode } from "./editor-utils.ts";
 
-const cursorPluginKey = new PluginKey("cursorPlugin");
+export const cursorPluginKey = new PluginKey("cursorPlugin");
+
+export const handleDocumentPresence = (
+	view: EditorView,
+	msg: MessageSync,
+	channelId: string,
+	branchId: string,
+	api: Api,
+) => {
+	if (
+		msg.type === "DocumentPresence" &&
+		msg.channel_id === channelId &&
+		msg.branch_id === branchId
+	) {
+		const currentUser = api.users.cache.get("@self");
+		const selfId = currentUser?.id;
+		if (msg.user_id === selfId) return;
+
+		let cursor = null;
+		if (msg.cursor_head) {
+			try {
+				const head = Y.decodeRelativePosition(base64UrlDecode(msg.cursor_head));
+				const anchor = msg.cursor_tail
+					? Y.decodeRelativePosition(base64UrlDecode(msg.cursor_tail))
+					: head;
+				cursor = {
+					head: Y.relativePositionToJSON(head),
+					anchor: Y.relativePositionToJSON(anchor),
+				};
+			} catch (e) {
+				console.error("failed to decode cursor", e);
+			}
+		}
+
+		// FIXME: use room_member.override_name if it exists
+		// FIXME: update name live
+		const user = api.users.cache.get(msg.user_id);
+		const name = user?.name || "Unknown";
+		const color = getColor(msg.user_id);
+
+		const tr = view.state.tr;
+		tr.setMeta(cursorPluginKey, {
+			type: cursor ? "update" : "remove",
+			userId: msg.user_id,
+			name,
+			color,
+			cursor,
+		});
+		view.dispatch(tr);
+	}
+};
 
 export const cursorPlugin = (
 	api: Api,
@@ -26,6 +76,7 @@ export const cursorPlugin = (
 	branchId: string,
 	isSubscribed: () => boolean,
 	showCursors?: () => boolean,
+	getStream?: () => Stream | null,
 ) => {
 	return new Plugin({
 		key: cursorPluginKey,
@@ -150,49 +201,7 @@ export const cursorPlugin = (
 		view(view) {
 			const onSync = (payload: [MessageSync, unknown]) => {
 				const [msg] = payload;
-				if (
-					msg.type === "DocumentPresence" &&
-					msg.channel_id === channelId &&
-					msg.branch_id === branchId
-				) {
-					const currentUser = api.users.cache.get("@self");
-					const selfId = currentUser?.id;
-					if (msg.user_id === selfId) return;
-
-					let cursor = null;
-					if (msg.cursor_head) {
-						try {
-							const head = Y.decodeRelativePosition(
-								base64UrlDecode(msg.cursor_head),
-							);
-							const anchor = msg.cursor_tail
-								? Y.decodeRelativePosition(base64UrlDecode(msg.cursor_tail))
-								: head;
-							cursor = {
-								head: Y.relativePositionToJSON(head),
-								anchor: Y.relativePositionToJSON(anchor),
-							};
-						} catch (e) {
-							console.error("failed to decode cursor", e);
-						}
-					}
-
-					// FIXME: use room_member.override_name if it exists
-					// FIXME: update name live
-					const user = api.users.cache.get(msg.user_id);
-					const name = user?.name || "Unknown";
-					const color = getColor(msg.user_id);
-
-					const tr = view.state.tr;
-					tr.setMeta(cursorPluginKey, {
-						type: cursor ? "update" : "remove",
-						userId: msg.user_id,
-						name,
-						color,
-						cursor,
-					});
-					view.dispatch(tr);
-				}
+				handleDocumentPresence(view, msg, channelId, branchId, api);
 			};
 
 			const unsubscribe = api.events.on("sync", onSync);
@@ -226,13 +235,20 @@ export const cursorPlugin = (
 						);
 						const headEnc = base64UrlEncode(Y.encodeRelativePosition(headRel));
 
-						api.client.send({
-							type: "DocumentPresence",
+						const data = {
+							type: "DocumentPresence" as const,
 							channel_id: channelId,
 							branch_id: branchId,
 							cursor_head: headEnc,
 							cursor_tail: anchorEnc,
-						});
+						};
+
+						const stream = getStream?.();
+						if (stream) {
+							stream.send(data);
+						} else {
+							api.client.send(data);
+						}
 					}
 				},
 				destroy() {

@@ -29,10 +29,12 @@ export const Document = (props: DocumentProps) => {
 		// NOTE: this unsubscribes from all documents globally. this isnt a problem
 		// right now, but it could be (eg. multiple open documents, lazy unsubscribing
 		// instead of resubscribing every route change, etc...)
-		api.client.send({
-			type: "Subscribe",
-			documents: [],
-		});
+		if (!api.client.isWebtransport) {
+			api.client.send({
+				type: "Subscribe",
+				documents: [],
+			});
+		}
 	});
 
 	// TODO: move this into document context?

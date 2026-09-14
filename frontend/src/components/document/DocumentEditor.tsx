@@ -12,6 +12,12 @@ import { DOMParser } from "prosemirror-model";
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { createEffect, createSignal, onCleanup } from "solid-js";
+import type {
+	MessageEnvelope,
+	MessageSync,
+	Stream,
+	WebtransportClient,
+} from "ts-sdk";
 import {
 	initProseMirrorDoc,
 	redo,
@@ -31,7 +37,10 @@ import {
 	submitPluginKey,
 } from "../features/editor/core-plugins";
 import { createDiffPlugin } from "../features/editor/diff-plugin";
-import { cursorPlugin } from "../features/editor/editor-cursors";
+import {
+	cursorPlugin,
+	handleDocumentPresence,
+} from "../features/editor/editor-cursors";
 import {
 	base64UrlDecode,
 	base64UrlEncode,
@@ -71,37 +80,11 @@ export const DocumentEditor = (props: DocumentEditorProps) => {
 	const api = useApi();
 	const doc = useDocument();
 
-	const ydoc = new Y.Doc();
-	ydoc.on("update", (update, origin) => {
-		if (origin && origin.key === "server") return;
-
-		api.client.send({
-			type: "DocumentEdit",
-			channel_id: props.channelId,
-			branch_id: props.branchId,
-			update: base64UrlEncode(update),
-		});
-	});
-
-	// HACK: unsubscribe from ALL documents, then resubscribe to force the server to resend Document data
-	// if i try to send DocumentSubscribe but im already subscribed the server wont do anything
 	// PERF: reuse ydocs instead of resubscribing from scratch every time
-	api.client.send({
-		type: "Subscribe",
-		documents: [],
-	});
-	api.client.send({
-		type: "Subscribe",
-		documents: [
-			{
-				channel_id: props.channelId,
-				branch_id: props.branchId,
-				state_vector: base64UrlEncode(Y.encodeStateVector(ydoc)),
-			},
-		],
-	});
+	const ydoc = new Y.Doc();
+	let stream: Stream | null = null;
 
-	api.events.on("sync", ([sync]) => {
+	const onSync = (sync: MessageSync, _raw: MessageEnvelope) => {
 		if (sync.type === "DocumentEdit") {
 			if (sync.channel_id !== props.channelId) return;
 			if (sync.branch_id !== props.branchId) return;
@@ -112,10 +95,86 @@ export const DocumentEditor = (props: DocumentEditorProps) => {
 			) as Uint8Array;
 			Y.applyUpdate(ydoc, update, { key: "server" });
 		} else if (sync.type === "DocumentPresence") {
+			const editorView = doc.editor();
+			if (editorView) {
+				handleDocumentPresence(
+					editorView,
+					sync,
+					props.channelId,
+					props.branchId,
+					api,
+				);
+			}
 		} else if (sync.type === "DocumentSubscribed") {
 			if (sync.channel_id !== props.channelId) return;
 			if (sync.branch_id !== props.branchId) return;
 			// setIsSubscribed(true);
+		}
+	};
+
+	// ydoc update listener
+	createEffect(() => {
+		const handler = (update: Uint8Array, origin: any) => {
+			if (origin && origin.key === "server") return;
+
+			const data = {
+				type: "DocumentEdit" as const,
+				channel_id: props.channelId,
+				branch_id: props.branchId,
+				update: base64UrlEncode(update),
+			};
+
+			if (stream) {
+				stream.send(data);
+			} else {
+				api.client.send(data);
+			}
+		};
+		ydoc.on("update", handler);
+		onCleanup(() => ydoc.off("update", handler));
+	});
+
+	// manage subscriptions
+	createEffect(() => {
+		const channelId = props.channelId;
+		const branchId = props.branchId;
+		const stateVector = base64UrlEncode(Y.encodeStateVector(ydoc));
+
+		if (api.client.isWebtransport) {
+			const wt = api.client as WebtransportClient;
+			const newStream = wt.subscribeDocument({
+				channel_id: channelId,
+				branch_id: branchId,
+				state_vector: stateVector,
+				onSync,
+				// TODO: add logging for other onFoo handlers
+			});
+			stream = newStream;
+			onCleanup(() => {
+				newStream.close();
+				stream = null;
+			});
+		} else {
+			// HACK: unsubscribe from ALL documents, then resubscribe to force the server to resend Document data
+			// if i try to send DocumentSubscribe but im already subscribed the server wont do anything
+			api.client.send({
+				type: "Subscribe",
+				documents: [],
+			});
+			api.client.send({
+				type: "Subscribe",
+				documents: [
+					{
+						channel_id: channelId,
+						branch_id: branchId,
+						state_vector: stateVector,
+					},
+				],
+			});
+
+			const listener = (data: [MessageSync, MessageEnvelope]) =>
+				onSync(data[0], data[1]);
+			api.events.on("sync", listener);
 		}
 	});
 
@@ -165,6 +224,7 @@ export const DocumentEditor = (props: DocumentEditorProps) => {
 					// () => !(opts.diffMode?.() ?? false),
 					() => true,
 					() => true,
+					() => stream,
 				),
 				yUndoPlugin(),
 				createPlaceholderPlugin(),
