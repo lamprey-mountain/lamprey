@@ -23,6 +23,15 @@ use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use crate::prelude::*;
 use crate::{ServerStateInner, services::notifications::calculator::Calculator};
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct DbChannelPrivate {
+    pub id: ChannelId,
+    pub ty: DbChannelType,
+    pub last_read_id: Option<Uuid>,
+    pub is_unread: bool,
+    pub mention_count: i64,
+}
+
 pub struct ServiceUnread {
     state: ServerState2,
     cache_channel: DashMap<ChannelId, ChannelAckMetadata>,

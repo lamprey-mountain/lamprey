@@ -11,7 +11,6 @@ use tracing::{info, warn};
 use crate::prelude::*;
 use crate::services::notifications::push::VapidKeys;
 
-pub mod ack;
 pub mod calculator;
 pub mod push;
 

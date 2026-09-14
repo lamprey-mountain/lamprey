@@ -40,6 +40,8 @@ pub enum AckType {
     /// messages get marked as unread whenever a new message is sent. edits and deletes don't have any effect.
     Message {
         channel_id: ChannelId,
+
+        // TODO: make this an option, default to latest message id
         message_id: MessageId,
 
         #[serde(default)]

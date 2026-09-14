@@ -49,14 +49,15 @@ use webhook::ServiceWebhooks;
 use crate::{
     prelude::*,
     services::{
-        admin::ServiceAdmin, audit_logs::ServiceAuditLogs, automod::ServiceAutomod,
-        calendar::ServiceCalendar, documents::ServiceDocuments, http::ServiceHttp,
-        interactions::ServiceInteractions, member_lists::ServiceMemberLists,
+        ack::ServiceAck, admin::ServiceAdmin, audit_logs::ServiceAuditLogs,
+        automod::ServiceAutomod, calendar::ServiceCalendar, documents::ServiceDocuments,
+        http::ServiceHttp, interactions::ServiceInteractions, member_lists::ServiceMemberLists,
         notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch,
         voice::ServiceVoice,
     },
 };
 
+pub mod ack;
 pub mod admin;
 pub mod audit_logs;
 pub mod automod;
@@ -97,6 +98,7 @@ pub mod voice;
 pub mod webhook;
 
 pub struct Services {
+    pub ack: ServiceAck,
     pub admin: ServiceAdmin,
     pub audit_logs: ServiceAuditLogs,
     pub automod: ServiceAutomod,
@@ -140,6 +142,7 @@ pub struct Services {
 impl Services {
     pub fn new(globals: Globals) -> Self {
         Self {
+            ack: ServiceAck::new(globals.clone()),
             admin: ServiceAdmin::new(globals.clone()),
             audit_logs: ServiceAuditLogs::new(globals.clone()),
             automod: ServiceAutomod::new(globals.clone()),
