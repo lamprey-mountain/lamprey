@@ -3,7 +3,11 @@ use crate::prelude::*;
 /// render back to markdown
 ///
 /// this is an identity transformation
-pub struct MarkdownRenderer;
+#[derive(Debug, Default)]
+pub struct MarkdownRenderer {
+    // prevent people from constructing manually
+    _a: (),
+}
 
 impl Renderer for MarkdownRenderer {
     type Output = String;

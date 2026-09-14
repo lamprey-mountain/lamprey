@@ -89,6 +89,9 @@ pub enum TextKind {
     /// other markdown formatting/syntax
     Syntax,
 
+    /// markdown syntax for a (potential) link
+    LinkSyntax,
+
     /// the target url for a markdown link
     LinkUrl,
 

@@ -37,6 +37,10 @@ pub struct Parsed {
 pub struct ParseContext<'a> {
     builder: GreenNodeBuilder<'a>,
     tokenizer: Lexer<'a>,
+
+    // NOTE: adding state to the parser seems like a pretty bad idea, maybe i
+    // should find a better way to implement it?
+    url_bracket_depth: usize,
 }
 
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
@@ -98,18 +102,17 @@ impl Parsed {
     }
 
     /// Apply a transformation to the parsed document.
-    pub fn transform<T: Transform>(&self, transformer: &T) -> Self {
+    pub fn transform<T: Transform>(self, transformer: &T) -> Self {
         let new_green = transformer.apply(self.tree.root());
         let new_syntax_root = SyntaxNode::new_root(new_green.clone());
 
         // PERF: don't create source until needed
         let new_source_text = new_syntax_root.to_string();
 
-        // PERF: reuse cache
         Self {
-            config: self.config.clone(),
+            config: self.config,
             tree: Ref::new(Tree { root: new_green }),
-            cache: NodeCache::default(),
+            cache: self.cache,
             source: Source::new(&new_source_text),
         }
     }
@@ -159,6 +162,7 @@ impl<'a> ParseContext<'a> {
         Self {
             builder: GreenNodeBuilder::with_cache(cache),
             tokenizer: Lexer::new(&source.0),
+            url_bracket_depth: 0,
         }
     }
 }

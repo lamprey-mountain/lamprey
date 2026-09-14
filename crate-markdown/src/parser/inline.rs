@@ -1,6 +1,7 @@
 use crate::lexer::Token;
 use crate::parser::ParseContext;
 use crate::prelude::*;
+use crate::util::is_valid_url;
 
 impl<'a> ParseContext<'a> {
     /// parse inline markdown
@@ -8,9 +9,17 @@ impl<'a> ParseContext<'a> {
     /// the provided `stop` function can return `true` to stop inline parsing
     // PERF: is creating/nesting lots of functions ok or will it cause problems?
     pub(crate) fn parse_inline(&mut self, stop: &dyn Fn(&Token) -> bool) {
-        while let Some(tok) = self.tokenizer.peek() {
+        'a: while let Some(tok) = self.tokenizer.peek() {
             if stop(&tok) {
                 break;
+            }
+
+            if tok.kind == TokenKind::BracketClose && self.url_bracket_depth > 0 {
+                self.url_bracket_depth -= 1;
+                if self.url_bracket_depth == 0 {
+                    // reached the end of the link text
+                    break;
+                }
             }
 
             self.tokenizer.advance();
@@ -147,7 +156,7 @@ impl<'a> ParseContext<'a> {
                 }
 
                 // Url link (automatic)
-                TokenKind::Url => {
+                TokenKind::Url if self.url_bracket_depth == 0 => {
                     self.builder
                         .start_node(NodeKind::Inline(InlineKind::Autolink).into());
                     self.builder.token(
@@ -158,61 +167,110 @@ impl<'a> ParseContext<'a> {
                 }
 
                 // link
-                TokenKind::BracketOpen => {
+                TokenKind::BracketOpen if self.url_bracket_depth == 0 => {
+                    let checkpoint = self.builder.checkpoint();
+
+                    // parse brackets
                     self.builder
-                        .start_node(NodeKind::Inline(InlineKind::Link).into());
-                    self.builder
-                        .token(NodeKind::Text(TextKind::Syntax).into(), "[");
-                    self.parse_inline(&|t| t.kind == TokenKind::BracketClose || stop(t));
+                        .token(NodeKind::Text(TextKind::LinkSyntax).into(), "[");
+                    self.url_bracket_depth += 1;
+                    self.parse_inline(&|tok| stop(tok) || tok.kind == TokenKind::Newline);
+                    self.url_bracket_depth = 0;
+
+                    // match closing bracket
                     if let Some(tok) = self.tokenizer.peek() {
-                        if tok.kind == TokenKind::BracketClose {
-                            self.tokenizer.advance();
-                            self.builder
-                                .token(NodeKind::Text(TextKind::Syntax).into(), "]");
-
-                            // check for (url)
-                            if let Some(tok) = self.tokenizer.peek() {
-                                if tok.kind == TokenKind::ParenOpen {
-                                    self.tokenizer.advance();
-                                    self.builder
-                                        .token(NodeKind::Text(TextKind::Syntax).into(), "(");
-
-                                    while let Some(nt) = self.tokenizer.peek() {
-                                        if nt.kind == TokenKind::ParenClose || stop(&nt) {
-                                            break;
-                                        }
-                                        self.tokenizer.advance();
-                                        let kind = match nt.kind {
-                                            TokenKind::Url => TextKind::LinkUrl,
-                                            // TODO: remove TextKind::Syntax logic?
-                                            // TokenKind::BracketClose | TokenKind::ParenOpen => {
-                                            //     TextKind::Syntax
-                                            // }
-                                            // handle whitespace
-                                            _ => TextKind::Text,
-                                        };
-                                        self.builder.token(
-                                            NodeKind::Text(kind).into(),
-                                            self.tokenizer.text(nt.span),
-                                        );
-                                    }
-
-                                    if let Some(tok) = self.tokenizer.peek() {
-                                        if tok.kind == TokenKind::ParenClose {
-                                            self.tokenizer.advance();
-                                            self.builder.token(
-                                                NodeKind::Text(TextKind::Syntax).into(),
-                                                ")",
-                                            );
-                                        }
-                                    }
-                                } else {
-                                    // TODO: handle syntax error?
-                                }
+                        match tok.kind {
+                            TokenKind::Newline => {
+                                // stopped because of newline, but links can't have newlines
+                                break 'a;
+                            }
+                            TokenKind::BracketClose => {
+                                self.builder
+                                    .token(NodeKind::Text(TextKind::LinkSyntax).into(), "]");
+                                self.tokenizer.advance();
+                            }
+                            _ => {
+                                // stopped by `stop(tok)`
+                                break 'a;
                             }
                         }
+                    } else {
+                        // stopped because of unexpected eof
+                        return;
                     }
-                    self.builder.finish_node();
+
+                    // match open paren
+                    if let Some(tok) = self.tokenizer.peek()
+                        && tok.kind == TokenKind::ParenOpen
+                    {
+                        self.tokenizer.advance();
+                        self.builder
+                            .token(NodeKind::Text(TextKind::LinkSyntax).into(), "(");
+                    } else {
+                        // parse as plain text
+                        break 'a;
+                    }
+
+                    // match url
+                    let mut buffer = String::new();
+                    let mut paren_depth = 1;
+                    while let Some(tok) = self.tokenizer.peek() {
+                        if stop(&tok) {
+                            // abort url parsing
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Text).into(), &buffer);
+                            return;
+                        }
+
+                        match tok.kind {
+                            TokenKind::Newline => {
+                                // links can't span multiple lines
+                                self.builder
+                                    .token(NodeKind::Text(TextKind::Text).into(), &buffer);
+                                self.builder
+                                    .token(NodeKind::Text(TextKind::Newline).into(), "\n");
+                                break 'a;
+                            }
+                            TokenKind::ParenOpen => paren_depth += 1,
+                            TokenKind::ParenClose => {
+                                paren_depth -= 1;
+                                if paren_depth == 0 {
+                                    // finished parsing link
+                                    break;
+                                }
+                            }
+                            _ => {}
+                        }
+
+                        buffer.push_str(self.tokenizer.text(tok.span));
+                        self.tokenizer.advance();
+                    }
+
+                    if is_valid_url(&buffer) && paren_depth == 0 {
+                        self.tokenizer.advance();
+                        self.builder
+                            .start_node_at(checkpoint, NodeKind::Inline(InlineKind::Link).into());
+                        self.builder
+                            .token(NodeKind::Text(TextKind::LinkUrl).into(), &buffer);
+                        self.builder
+                            .token(NodeKind::Text(TextKind::LinkSyntax).into(), ")");
+                        self.builder.finish_node();
+                    } else {
+                        // fallback to text
+                        self.builder
+                            .token(NodeKind::Text(TextKind::Text).into(), &buffer);
+                        if paren_depth == 0 {
+                            self.tokenizer.advance();
+                            self.builder
+                                .token(NodeKind::Text(TextKind::LinkSyntax).into(), ")");
+                        }
+                    }
+                }
+
+                TokenKind::BracketOpen => {
+                    self.url_bracket_depth += 1;
+                    self.builder
+                        .token(NodeKind::Text(TextKind::Text).into(), "[");
                 }
 
                 // link with angle brackets, mention, or custom emoji
@@ -259,7 +317,7 @@ impl<'a> ParseContext<'a> {
                             for _ in 0..tokens.len() + 1 {
                                 self.tokenizer.advance();
                             }
-                        } else if self.is_url(&tokens) {
+                        } else if self.is_autolinkable(&tokens) && self.url_bracket_depth == 0 {
                             self.builder
                                 .start_node(NodeKind::Inline(InlineKind::Autolink).into());
                             self.builder
@@ -395,7 +453,7 @@ impl<'a> ParseContext<'a> {
         }
     }
 
-    fn is_url(&self, tokens: &[Token]) -> bool {
+    fn is_autolinkable(&self, tokens: &[Token]) -> bool {
         matches!(
             tokens,
             [Token {

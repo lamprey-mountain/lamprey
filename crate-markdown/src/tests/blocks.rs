@@ -10,6 +10,15 @@ fn test_headers() {
 }
 
 #[test]
+fn test_header_no_space() {
+    let source = "#not a header";
+    let parser = Parser::new();
+    let parsed = parser.parse(source);
+
+    assert_eq!(parsed.to_html(), "<p>#not a header</p>");
+}
+
+#[test]
 fn test_codeblocks() {
     let source = "```rust\nfn main() {}\n```\n```\nno lang\n```";
     let parser = Parser::new();

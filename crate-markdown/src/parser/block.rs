@@ -31,15 +31,19 @@ impl<'a> ParseContext<'a> {
         match token.kind {
             TokenKind::Hash => {
                 let mut level = 0;
-                let mut hashes = String::new();
-                while let Some(tok) = self.tokenizer.peek() {
-                    if tok.kind == TokenKind::Hash {
-                        level += 1;
-                        hashes.push_str(self.tokenizer.text(tok.span));
-                        self.tokenizer.advance();
-                    } else {
-                        break;
+                let mut lookahead = self.tokenizer.clone();
+                while let Some(tok) = lookahead.peek() {
+                    match tok.kind {
+                        TokenKind::Hash => level += 1,
+                        TokenKind::Whitespace => break,
+                        _ => {
+                            // headers require whitespace between hashes and text
+                            level = 0;
+                            break;
+                        }
                     }
+
+                    lookahead.advance();
                 }
 
                 let kind = match level {
@@ -48,34 +52,48 @@ impl<'a> ParseContext<'a> {
                     3 => BlockKind::Header3,
                     4 => BlockKind::Header4,
                     5 => BlockKind::Header5,
-                    _ => BlockKind::Header6,
+                    6 => BlockKind::Header6,
+                    _ => BlockKind::Paragraph,
                 };
 
                 self.builder.start_node(NodeKind::Block(kind).into());
-                self.builder
-                    .token(NodeKind::Text(TextKind::HeaderHashes).into(), &hashes);
 
-                // skip whitespace if it exists
-                if let Some(tok) = self.tokenizer.peek() {
-                    if tok.kind == TokenKind::Whitespace {
-                        let text = self.tokenizer.text(tok.span).to_string();
-                        self.builder
-                            .token(NodeKind::Text(TextKind::Syntax).into(), &text);
+                if kind == BlockKind::Paragraph {
+                    self.parse_inline(&|t| t.kind == TokenKind::Newline);
+                    self.builder.finish_node();
+                } else {
+                    for _ in 0..level {
                         self.tokenizer.advance();
                     }
-                }
 
-                self.parse_inline(&|t| t.kind == TokenKind::Newline);
+                    let hashes = "#".repeat(level);
+                    self.builder
+                        .token(NodeKind::Text(TextKind::HeaderHashes).into(), &hashes);
+
+                    // skip whitespace if it exists
+                    while let Some(tok) = self.tokenizer.peek() {
+                        if tok.kind == TokenKind::Whitespace {
+                            let space = self.tokenizer.text(tok.span);
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Syntax).into(), space);
+                            self.tokenizer.advance();
+                        } else {
+                            break;
+                        }
+                    }
+
+                    self.parse_inline(&|t| t.kind == TokenKind::Newline);
+
+                    self.builder.finish_node();
+                }
 
                 if let Some(tok) = self.tokenizer.peek() {
                     if tok.kind == TokenKind::Newline {
                         self.builder
-                            .token(NodeKind::Text(TextKind::Padding).into(), "\n");
+                            .token(NodeKind::Text(TextKind::Newline).into(), "\n");
                         self.tokenizer.advance();
                     }
                 }
-
-                self.builder.finish_node();
             }
 
             TokenKind::Backticks(n) if n >= 3 => {
@@ -538,7 +556,14 @@ impl<'a> ParseContext<'a> {
         };
 
         // skip over padding whitespace
-        draft.consume_whitespace(TextKind::Padding)?;
+        if draft.consume_whitespace(TextKind::Padding).is_err() {
+            // possibly an incomplete list
+            if let Some(tok) = draft.peek() {
+                if tok.kind != TokenKind::Newline {
+                    return Err(DraftError::Mismatch);
+                }
+            }
+        }
 
         Ok(draft)
     }

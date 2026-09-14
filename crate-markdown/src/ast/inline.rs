@@ -192,7 +192,7 @@ macro_rules! impl_token {
     };
 }
 
-impl_token!(Text, NodeKind::Text(TextKind::Text));
+impl_token!(Text, NodeKind::Text(TextKind::Text | TextKind::LinkSyntax));
 impl_token!(Mention, NodeKind::Text(TextKind::Mention));
 impl_token!(CustomEmoji, NodeKind::Text(TextKind::CustomEmoji));
 impl_token!(UnicodeEmoji, NodeKind::Text(TextKind::UnicodeEmoji));
@@ -246,7 +246,9 @@ impl Link {
             .filter(move |c| {
                 !matches!(
                     c.kind(),
-                    NodeKind::Text(TextKind::Syntax) | NodeKind::Text(TextKind::LinkUrl)
+                    NodeKind::Text(TextKind::Syntax)
+                        | NodeKind::Text(TextKind::LinkUrl)
+                        | NodeKind::Text(TextKind::LinkSyntax)
                 )
             })
             .filter_map(|child| Inline::cast(child))

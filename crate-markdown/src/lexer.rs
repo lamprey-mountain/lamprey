@@ -56,8 +56,9 @@ pub enum TokenKind {
     Uuid,
 
     // TODO: handle nested parentheses
-    /// url pattern for autolinks and link destinations
-    #[regex(r"https?://[^\s\]\)>]+")]
+    // NOTE: what other link schemes should i autolink?
+    /// url pattern for autolinks
+    #[regex(r"(https?|mailto|tel)://[^\s\]\)>]+")]
     Url,
 
     #[regex("[0-9]+")]

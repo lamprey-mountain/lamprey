@@ -64,3 +64,18 @@ impl Add<Len> for Span {
         (self.start + rhs, self.end + rhs).into()
     }
 }
+
+/// returns whether a given string is a valid link target
+pub fn is_valid_url(s: &str) -> bool {
+    if s.is_empty() {
+        return false;
+    }
+
+    // PERF: Url::parse allocates
+    // TODO(?): add more valid schemes
+    if let Ok(url) = url::Url::parse(s) {
+        matches!(url.scheme(), "http" | "https" | "mailto" | "tel")
+    } else {
+        false
+    }
+}

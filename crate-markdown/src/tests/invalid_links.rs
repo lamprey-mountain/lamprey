@@ -1,6 +1,5 @@
 use crate::parser::Parser;
-use crate::prelude::*;
-use crate::query::{Decoration, DecorationKind, QueryableExt};
+use crate::query::QueryableExt;
 
 #[test]
 fn test_incomplete_link_only_brackets() {
@@ -12,19 +11,7 @@ fn test_incomplete_link_only_brackets() {
     assert_eq!(parsed.to_plain(), "[link]");
 
     let decos: Vec<_> = parsed.tree().iter_decorations(None).collect();
-    assert_eq!(
-        decos,
-        [
-            Decoration {
-                span: Span { start: 0, end: 1 },
-                kind: DecorationKind::Syntax,
-            },
-            Decoration {
-                span: Span { start: 4, end: 5 },
-                kind: DecorationKind::Syntax,
-            }
-        ]
-    )
+    assert_eq!(decos, [])
 }
 
 #[test]
@@ -73,7 +60,7 @@ fn test_link_nested() {
     );
     assert_eq!(
         parsed.to_plain(),
-        "[link https://example.com](https://bad.com)"
+        "link https://example.com (https://bad.com)"
     );
 }
 
@@ -84,7 +71,7 @@ fn test_link_nested_many() {
     let parsed = parser.parse(source);
     assert_eq!(parsed.to_html(), "<p>[a [c](d)](b [e](f))</p>");
     assert_eq!(parsed.to_markdown(), "[a [c](d)](b [e](f))");
-    assert_eq!(parsed.to_plain(), "a [c](d) (b [e](f))");
+    assert_eq!(parsed.to_plain(), "[a [c](d)](b [e](f))");
 }
 
 #[test]

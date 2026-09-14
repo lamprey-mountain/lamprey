@@ -8,7 +8,11 @@ use crate::{
 };
 
 /// render to plain text, stripping any and all formatting
-pub struct PlaintextRenderer;
+#[derive(Debug, Default)]
+pub struct PlaintextRenderer {
+    // prevent people from constructing manually
+    _a: (),
+}
 
 impl Renderer for PlaintextRenderer {
     type Output = String;

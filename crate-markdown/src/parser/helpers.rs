@@ -125,6 +125,10 @@ impl<'source> Draft<'source> {
         self.lexer.advance()
     }
 
+    pub fn peek(&mut self) -> Option<Token> {
+        self.lexer.peek()
+    }
+
     pub fn into_tokens_lexer(self) -> (Vec<(NodeKind, Span)>, Lexer<'source>) {
         (self.tokens, self.lexer)
     }

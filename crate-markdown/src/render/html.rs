@@ -8,7 +8,11 @@ use crate::{
 };
 
 /// render to html
-pub struct HtmlRenderer;
+#[derive(Debug, Default)]
+pub struct HtmlRenderer {
+    // prevent people from constructing manually
+    _a: (),
+}
 
 impl Renderer for HtmlRenderer {
     type Output = String;
