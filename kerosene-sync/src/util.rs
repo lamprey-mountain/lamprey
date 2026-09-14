@@ -10,6 +10,7 @@ pub const HEARTBEAT_TIME: Duration = Duration::from_secs(30);
 pub const CLOSE_TIME: Duration = Duration::from_secs(10);
 
 /// the maximum number of events to retain in the queue before killing the connection
+// TODO: decide how this should work with webtransport streams. letting EVERY stream have MAX_QUEUE_LEN events could result in excessive memory usage...
 pub const MAX_QUEUE_LEN: usize = 256;
 
 // TODO: remove?
@@ -27,6 +28,7 @@ pub enum ConnectionState {
 }
 
 /// utility to calculate deadlines for connection health checks.
+#[derive(Debug, Clone, Copy)]
 pub enum Timeout {
     /// when the server will next send a `Ping`
     Ping(Instant),

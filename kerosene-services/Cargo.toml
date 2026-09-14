@@ -87,4 +87,4 @@ yrs = { version = "0.25.0", features = ["sync"] }
 
 [features]
 default = []
-webtransport = ["dep:wtransport"]
+webtransport = ["dep:wtransport", "kerosene-sync/webtransport"]
