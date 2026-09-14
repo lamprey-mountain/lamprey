@@ -25,43 +25,41 @@ use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 /// Message create
 #[handler(routes::message_create)]
 async fn message_create(
-    State(s): State<Arc<ServerState>>,
+    State(globals): State<Arc<ServerState>>,
     mut req: UniversalExtractor<routes::message_create::Request>,
 ) -> Result<impl IntoResponse> {
     let user = req.auth.ensure_user()?;
     user.ensure_unsuspended()?;
     let user_id = user.id;
+    let channel_id = req.body.channel_id;
     req.auth.ensure_scopes(&[Scope::Full])?;
 
-    let srv = s.services();
-    let chan = srv.channels.get(req.body.channel_id, Some(user.id)).await?;
-    chan.ensure_has_text()?;
-
-    let header_timestamp = req.body.timestamp.and_then(|secs| {
+    let timestamp = req.body.timestamp.and_then(|secs| {
         time::OffsetDateTime::from_unix_timestamp(secs)
             .ok()
             .map(Time::from)
     });
 
+    use kerosene_services::services::messages::create2::Create;
+
+    let srv = globals.services();
     let message = srv
         .messages
-        .create(
-            req.body.channel_id,
-            &mut req.auth,
-            req.body.idempotency_key,
-            req.body.message,
-            header_timestamp,
-            MessageId::new(),
+        .create2(
+            Create::new_default(req.body.message, channel_id, user.id)
+                .timestamp(timestamp)
+                .nonce(req.body.idempotency_key),
         )
         .await?;
 
+    // TODO: move this logic to ServiceNotifications
     // automatically ack the channel for the user who sent the message
-    let mut data = s.data();
+    let mut data = globals.data();
     data.unread_ack_bulk(
         user_id,
         &[AckBulkItem {
             ty: AckType::Message {
-                channel_id: req.body.channel_id,
+                channel_id,
                 message_id: message.id,
                 mention_count: 0,
             },
@@ -70,13 +68,10 @@ async fn message_create(
     .await?;
     data.commit().await?;
 
-    srv.channels
-        .invalidate_user(req.body.channel_id, user_id)
-        .await;
+    srv.channels.invalidate_user(channel_id, user_id).await;
 
-    // Ok(routes::message_create::Response {
-    //     message,
-    // })
+    // TODO: use strongly typed response struct
+    // Ok(routes::message_create::Response { message })
 
     Ok((StatusCode::CREATED, Json(message)))
 }

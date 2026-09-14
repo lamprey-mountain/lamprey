@@ -137,7 +137,8 @@ pub struct Calculator {
 }
 
 impl Calculator {
-    pub async fn load_for_message(
+    // PERF: borrow channel, message instead of cloning
+    pub(super) async fn load_for_message(
         globals: Globals,
         channel: &Channel,
         message: &Message,

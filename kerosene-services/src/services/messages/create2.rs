@@ -41,13 +41,13 @@ use crate::{
 /// A request to create a new message.
 #[derive(Debug)]
 pub struct Create {
-    pub id: MessageId,
-    pub channel_id: ChannelId,
-    pub user_id: UserId,
-    pub payload: Box<CreateType>,
-    pub nonce: Option<String>,
-    pub timestamp: Option<Time>,
-    pub interaction: Option<MessageInteraction>,
+    id: MessageId,
+    channel_id: ChannelId,
+    user_id: UserId,
+    payload: Box<CreateType>,
+    nonce: Option<String>,
+    timestamp: Option<Time>,
+    interaction: Option<MessageInteraction>,
 }
 
 /// What kind of message are we creating?
@@ -86,12 +86,12 @@ impl CreateType {
 /// A request to edit an existing message.
 #[derive(Debug)]
 pub struct Edit {
-    pub id: MessageId,
-    pub channel_id: ChannelId,
-    pub user_id: UserId,
-    pub payload: Box<MessagePatch>,
-    pub nonce: Option<String>,
-    pub timestamp: Option<Time>,
+    id: MessageId,
+    channel_id: ChannelId,
+    user_id: UserId,
+    payload: Box<MessagePatch>,
+    nonce: Option<String>,
+    timestamp: Option<Time>,
 }
 
 impl Create {
@@ -239,6 +239,7 @@ fn message_to_db(m: &Message) -> DbMessageCreate {
 }
 
 impl ServiceMessages {
+    // PERF: return Arc<Message>
     pub async fn create2(&self, create: Create) -> Result<Message> {
         let srv = self.globals.services();
         let (channel, user) = futures::try_join!(
@@ -563,12 +564,17 @@ impl ServiceMessages {
             };
 
             // PERF: reuse parsed markdown (during content sanitization)
-            let parser = Parser::new();
-            let parsed = parser.parse(&content);
-            let tree = parsed.tree();
-            let urls = tree
-                .iter_links()
-                .filter_map(|link| Url::parse(&link.href()).ok());
+            // PERF: don't collect links (some type in lamprey-markdown isn't Send, which requires me to .collect() urls up front)
+            let urls = {
+                let parser = Parser::new();
+                let parsed = parser.parse(&content);
+                let tree = parsed.tree();
+                let urls: Vec<_> = tree
+                    .iter_links()
+                    .filter_map(|link| Url::parse(&link.href()).ok())
+                    .collect();
+                urls
+            };
 
             // PERF: batch embed queueing; add srv.embed.queue_all fn
             let srv = self.globals.services();

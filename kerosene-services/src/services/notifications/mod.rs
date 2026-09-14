@@ -100,7 +100,7 @@ impl ServiceNotifications {
     // NOTE: should ServiceNotifications *really* be in charge of inserting thread members?
     // TODO: fn process_message_inner -> Result, make process_message do logging
     pub async fn process_message(&self, channel: &Channel, message: &Message) {
-        //  ephemeral messages dont create notifications (or insert thread members)
+        // ephemeral messages dont create notifications (or insert thread members)
         // TODO: move this logic into calculator
         if message.ephemeral {
             return;
