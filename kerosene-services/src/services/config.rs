@@ -72,6 +72,7 @@ impl ServiceConfig {
 #[cfg(feature = "webtransport")]
 mod _webtransport {
     use common::v1::types::{misc::binary::Binary, server::ServerWebtransportCert};
+    use sha2::{Digest, Sha256};
     use wtransport::Identity;
 
     use crate::services::config::ServiceConfig;
@@ -86,8 +87,9 @@ mod _webtransport {
             let identity = &self.webtransport_identity;
             let cert_chain = identity.certificate_chain();
             let cert_der = cert_chain.as_slice()[0].der();
+            let hash = Sha256::digest(cert_der.to_vec());
             let cert = ServerWebtransportCert::Sha256 {
-                value: Binary::new(cert_der.to_vec()).unwrap(),
+                value: Binary::new(hash.to_vec()).unwrap(),
             };
             cert
         }
