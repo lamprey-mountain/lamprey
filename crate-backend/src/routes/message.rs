@@ -47,6 +47,7 @@ async fn message_create(
         .messages
         .create2(
             Create::new_default(req.body.message, channel_id, user.id)
+                .session(req.auth.session().map(|s| s.id))
                 .timestamp(timestamp)
                 .nonce(req.body.idempotency_key),
         )
@@ -73,6 +74,7 @@ async fn message_create(
     // TODO: use strongly typed response struct
     // Ok(routes::message_create::Response { message })
 
+    // TODO: return 201 if message was created and 200 if message already existed (idempotency-key)
     Ok((StatusCode::CREATED, Json(message)))
 }
 
@@ -958,6 +960,7 @@ pub async fn message_nudge(
         .messages
         .create2(
             Create::new(CreateType::Custom(MessageType::Nudge), channel_id, user.id)
+                .session(req.auth.session().map(|s| s.id))
                 .nonce(req.body.idempotency_key),
         )
         .await?;

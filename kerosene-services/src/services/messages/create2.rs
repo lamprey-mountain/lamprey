@@ -6,7 +6,7 @@ use common::{
         MentionsUser, Message, MessageAttachment, MessageAttachmentCreate,
         MessageAttachmentCreateType, MessageAttachmentType, MessageCreate, MessageDefaultMarkdown,
         MessageInteraction, MessagePatch, MessageSync, MessageType, MessageVersion, Permission,
-        User,
+        SessionId, User,
         components::{self, Component, ComponentType, Components},
         emoji::EmojiOwner,
         util::Time,
@@ -44,6 +44,7 @@ pub struct Create {
     id: MessageId,
     channel_id: ChannelId,
     user_id: UserId,
+    session_id: Option<SessionId>,
     payload: Box<CreateType>,
     nonce: Option<String>,
     timestamp: Option<Time>,
@@ -104,6 +105,7 @@ impl Create {
             payload: Box::new(payload),
             channel_id,
             user_id,
+            session_id: None,
             id: MessageId::new(),
             nonce: None,
             timestamp: None,
@@ -117,7 +119,15 @@ impl Create {
         self
     }
 
+    /// set the session id
+    pub fn session(mut self, session_id: Option<SessionId>) -> Self {
+        self.session_id = session_id;
+        self
+    }
+
     /// set the nonce (idempotency-key)
+    ///
+    /// session id must also be set to deduplicate/coalesce requests
     pub fn nonce(mut self, nonce: Option<String>) -> Self {
         self.nonce = nonce;
         self
@@ -180,12 +190,7 @@ fn calculate_requirements(create: &Create, channel: &Channel) -> Requirements {
         re.permission(Permission::MessageAttachments);
     }
 
-    if create
-        .payload
-        .embeds()
-        .is_some()
-        .is_some_and(|a| !a.is_empty())
-    {
+    if create.payload.embeds().is_some_and(|a| !a.is_empty()) {
         re.permission(Permission::MessageEmbeds);
     }
 
@@ -246,6 +251,17 @@ fn message_to_db(m: &Message) -> DbMessageCreate {
 impl ServiceMessages {
     // PERF: return Arc<Message>
     pub async fn create2(&self, create: Create) -> Result<Message> {
+        if let (Some(session_id), Some(nonce)) = (create.session_id, create.nonce.clone()) {
+            self.idempotency_keys
+                .try_get_with((session_id, nonce), self.create2_inner(create))
+                .await
+                .map_err(|err| err.fake_clone())
+        } else {
+            self.create2_inner(create).await
+        }
+    }
+
+    async fn create2_inner(&self, create: Create) -> Result<Message> {
         let srv = self.globals.services();
         let (channel, user) = futures::try_join!(
             srv.channels.get(create.channel_id, None),
