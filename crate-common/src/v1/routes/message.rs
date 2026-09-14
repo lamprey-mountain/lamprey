@@ -558,7 +558,7 @@ pub mod message_list_atom {
 
 /// Nudge
 ///
-/// Nudge a user. Can only be used in dms or gdms. Can only be called once every 5 minutes per user.
+/// Nudge a user. Can only be used in dms or gdms.
 #[endpoint(
     post,
     path = "/channel/{channel_id}/nudge",
@@ -574,9 +574,6 @@ pub mod message_nudge {
 
         #[header]
         pub idempotency_key: Option<String>,
-
-        #[header(rename = "x-timestamp")]
-        pub timestamp: Option<i64>,
     }
 
     pub struct Response {

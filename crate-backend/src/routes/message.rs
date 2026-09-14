@@ -931,14 +931,56 @@ async fn message_list_removed(
     Ok(Json(res))
 }
 
-/// Nudge (TODO)
+/// Nudge
+// TODO(?): should i ratelimit this endpoint (somewhat) heavily
 #[handler(routes::message_nudge)]
 pub async fn message_nudge(
-    _auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::message_nudge::Request,
+    State(globals): State<Globals>,
+    mut req: UniversalExtractor<routes::message_nudge::Request>,
 ) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
+    let user = req.auth.ensure_user()?;
+    user.ensure_unsuspended()?;
+    req.auth.ensure_scopes(&[Scope::Full])?;
+
+    let user_id = user.id;
+    let channel_id = req.body.channel_id;
+
+    use kerosene_services::services::messages::create2::{Create, CreateType};
+
+    let srv = globals.services();
+    let chan = srv.channels.get(channel_id, None).await?;
+    if !chan.is_dm() {
+        // TODO: use ApiError
+        return Err(Error::BadStatic("you can only send nudges in dms"));
+    }
+
+    let message = srv
+        .messages
+        .create2(
+            Create::new(CreateType::Custom(MessageType::Nudge), channel_id, user.id)
+                .nonce(req.body.idempotency_key),
+        )
+        .await?;
+
+    // TODO: move this logic to ServiceNotifications
+    // automatically ack the channel for the user who sent the message
+    let mut txn = globals.begin().await?;
+    txn.unread_ack_bulk(
+        user_id,
+        &[AckBulkItem {
+            ty: AckType::Message {
+                channel_id,
+                message_id: message.id,
+                mention_count: 0,
+            },
+        }],
+    )
+    .await?;
+    txn.commit().await?;
+
+    srv.channels.invalidate_user(channel_id, user_id).await;
+
+    Ok((StatusCode::CREATED, Json(message)))
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
