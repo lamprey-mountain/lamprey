@@ -104,12 +104,17 @@ impl AutomodCalculator {
         let mut rule_ids = vec![];
 
         for rule in self.compiled.rules() {
-            // 1. check RoomManage exemption
+            // 1. check if the rule is enabled
+            if !rule.enabled {
+                continue;
+            }
+
+            // 2. check RoomManage exemption
             if perms.has(Permission::RoomEdit) && !rule.include_everyone {
                 continue;
             }
 
-            // 2. check role exemptions
+            // 3. check role exemptions
             if rule
                 .except_roles
                 .iter()
@@ -118,14 +123,14 @@ impl AutomodCalculator {
                 continue;
             }
 
-            // 3. check channel exemptions
+            // 4. check channel exemptions
             if let Some(channel_id) = ctx.channel_id {
                 if rule.except_channels.contains(&channel_id) {
                     continue;
                 }
             }
 
-            // 4. check nsfw exemption
+            // 5. check nsfw exemption
             if rule.except_nsfw {
                 if let Some(channel) = &channel {
                     if channel.nsfw {
