@@ -75,6 +75,10 @@ impl LiveEtl {
             MessageSync::AuditLogEntryCreate { entry } => self.index_audit_log(entry).await?,
             MessageSync::RoomMemberCreate { member, .. } => self.index_room_member(member).await?,
             MessageSync::RoomMemberUpdate { member, .. } => self.index_room_member(member).await?,
+            MessageSync::RoomMemberDelete { room_id, user_id } => {
+                let term = Term::from_field_text(SCHEMA.id, &format!("{user_id}:{room_id}"));
+                self.index.delete_term(term).await?;
+            }
             MessageSync::MediaProcessed { media, .. } => self.index_media(media).await?,
             MessageSync::MediaUpdate { media } => self.index_media(media).await?,
             _ => {}
@@ -134,7 +138,8 @@ impl LiveEtl {
     async fn index_room_member(&self, member: RoomMember) -> Result<()> {
         let term =
             Term::from_field_text(SCHEMA.id, &format!("{}:{}", member.user_id, member.room_id));
-        let doc = SearchRoomMember::transform(&member);
+        let user = self.srv().users.get(member.user_id, None).await?;
+        let doc = SearchRoomMember::transform(&member, &user);
         self.index.update_document(term, doc).await?;
         Ok(())
     }

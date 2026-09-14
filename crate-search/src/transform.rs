@@ -86,6 +86,7 @@ define_transformer! {
 
     pub struct SearchRoomMember<'a> {
         pub member: &'a RoomMember,
+        pub user: &'a User,
     }
 
     pub struct SearchAuditLogEntry<'a> {
@@ -352,6 +353,8 @@ impl SearchDocument for SearchRoom<'_> {
         meta_fast.insert("member_count".to_string(), room.member_count.into());
         meta_fast.insert("quarantined".to_string(), room.quarantined.into());
 
+        // TODO: more puppet fields (external_platform (how?), external_id, external_url, alias_id (when its implemented?))
+
         doc.add_object(s.metadata_fast, meta_fast);
         doc
     }
@@ -526,6 +529,7 @@ impl SearchDocument for SearchRoomMember<'_> {
     fn to_tantivy(&self) -> TantivyDocument {
         let s = &*SCHEMA;
         let member = self.member;
+        let user = self.user;
 
         let mut doc = TantivyDocument::new();
         doc.add_text(s.id, format!("{}:{}", member.user_id, member.room_id));
@@ -539,12 +543,36 @@ impl SearchDocument for SearchRoomMember<'_> {
         meta_fast.insert("mute".to_string(), member.mute.into());
         meta_fast.insert("deaf".to_string(), member.deaf.into());
         meta_fast.insert("quarantined".to_string(), member.quarantined.into());
+        meta_fast.insert("bot".to_string(), user.bot.into());
+        meta_fast.insert("system".to_string(), user.system.into());
 
-        if let Some(o) = &member.override_name {
-            doc.add_text(s.name, o);
+        if let Some(registered_at) = user.registered_at {
+            meta_fast.insert(
+                "registered_at".to_string(),
+                TantivyDT::from_utc(*registered_at).into(),
+            );
         }
 
-        if let Some(o) = &member.override_description {
+        if let Some(deleted_at) = user.deleted_at {
+            doc.add_date(s.deleted_at, TantivyDT::from_utc(*deleted_at));
+        }
+
+        doc.add_text(
+            s.name,
+            member.override_name.as_deref().unwrap_or(&user.name),
+        );
+
+        let bio = match (
+            user.description.as_deref(),
+            member.override_description.as_deref(),
+        ) {
+            (None, None) => None,
+            (None, Some(b)) => Some(b.to_string()),
+            (Some(a), None) => Some(a.to_string()),
+            (Some(a), Some(b)) => Some(a.to_string() + "\n\n" + b),
+        };
+
+        if let Some(o) = bio {
             doc.add_text(s.content, o);
         }
 
@@ -556,7 +584,7 @@ impl SearchDocument for SearchRoomMember<'_> {
         if !member.roles.is_empty() {
             let roles: Vec<OwnedValue> =
                 member.roles.iter().map(|r| r.to_string().into()).collect();
-            meta_fast.insert("roles".to_string(), OwnedValue::Array(roles));
+            meta_fast.insert("role_id".to_string(), OwnedValue::Array(roles));
         }
 
         if let Some(timeout) = &member.timeout_until {
@@ -564,6 +592,18 @@ impl SearchDocument for SearchRoomMember<'_> {
                 "timeout_until".to_string(),
                 TantivyDT::from_utc(**timeout).into(),
             );
+        }
+
+        meta_fast.insert("puppet".to_string(), user.puppet.is_some().into());
+        if let Some(puppet) = &user.puppet {
+            meta_fast.insert(
+                "puppet_owner_id".to_string(),
+                puppet.owner_id.to_string().into(),
+            );
+            if let Some(alias_id) = &puppet.alias_id {
+                meta_fast.insert("puppet_alias_id".to_string(), alias_id.to_string().into());
+            }
+            // TODO: more puppet fields, see SearchUser
         }
 
         doc.add_object(s.metadata_fast, meta_fast);

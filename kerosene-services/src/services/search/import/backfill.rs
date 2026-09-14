@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::{
-    AuditLogFilter, ChannelId, MediaVerId, PaginationDirection, PaginationQuery, RoomId, UserId,
+    AuditLogFilter, ChannelId, MediaVerId, PaginationDirection, PaginationQuery, RoomId, User,
+    UserId,
 };
 use dashmap::DashSet;
 use lamprey_backend_core::types::data::{SearchReindexQueue, SearchReindexQueueTarget};
@@ -515,8 +517,25 @@ impl BackfillEtlInner {
             }
 
             let mut batch = Vec::with_capacity(members.items.len());
+            let user_ids: Vec<UserId> = members.items.iter().map(|m| m.user_id).collect();
+            let users = match self.s.services().users.get_many(&user_ids).await {
+                Ok(u) => u,
+                Err(err) => {
+                    error!("failed to fetch users: {err}");
+                    continue;
+                }
+            };
+            let user_map: HashMap<UserId, User> = users.into_iter().map(|u| (u.id, u)).collect();
+
             for member in &members.items {
-                let doc = SearchRoomMember::transform(member);
+                let user = match user_map.get(&member.user_id) {
+                    Some(u) => u,
+                    None => {
+                        error!("failed to find user {} in batch", member.user_id);
+                        continue;
+                    }
+                };
+                let doc = SearchRoomMember::transform(member, user);
                 let term = Term::from_field_text(
                     SCHEMA.id,
                     &format!("{}:{}", member.user_id, member.room_id),
