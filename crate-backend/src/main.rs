@@ -45,7 +45,17 @@ async fn main() -> Result<()> {
     let globals = server.globals();
 
     match &args.command {
-        cli::Command::Serve {} => server.serve().await?,
+        cli::Command::Serve {} => {
+            tokio::select! {
+                res = server.serve() => {
+                    res?;
+                }
+                _ = tokio::signal::ctrl_c() => {
+                    info!("received ctrl-c, shutting down...");
+                    server.shutdown().await?;
+                }
+            }
+        }
         cli::Command::Config {} => println!("{:#?}", globals.config()),
         cli::Command::GcMedia {} => gc(globals, &[AdminCollectGarbageTarget::Media]).await?,
         cli::Command::GcMessages {} => gc(globals, &[AdminCollectGarbageTarget::Messages]).await?,
