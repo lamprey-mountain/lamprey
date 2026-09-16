@@ -86,6 +86,7 @@ pub enum MessageClient {
     MemberListSubscribe {
         // TODO: rename thread_id -> channel_id
         // EXACTLY one of room_id or thread_id must be provided
+        // TODO: make room_id required?
         room_id: Option<RoomId>,
         thread_id: Option<ChannelId>,
 

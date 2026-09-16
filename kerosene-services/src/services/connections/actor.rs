@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use common::{
     v1::types::{
         ChannelId, MessageClient, MessageEnvelope, MessagePayload, MessageSync, Permission,
-        Session, SyncSubscribeDocument, SyncSubscribeMemberList, SyncSubscribeScript,
-        SyncSubscription,
+        RedexId, RoomId, Session, SyncSubscribeDocument, SyncSubscribeMemberList,
+        SyncSubscribeScript, SyncSubscription,
         document::{DocumentStateVector, DocumentUpdate},
         voice::{VoiceStateUpdate, messages::SignallingCommand},
     },
@@ -32,13 +32,12 @@ use crate::{
 // PERF: don't create a mpsc for connection, they can be expensive in terms of memory?
 pub struct Connection {
     id: ConnectionId,
-    session: Session,
-    queue: ConnectionQueue,
+    session: Session,       // TODO: replace with minimal session object
+    queue: ConnectionQueue, // TODO: remove
     subscriptions: Box<ConnectionSubscriptions>,
-    transport: Option<ConnectionTransport>,
-    document_transports: HashMap<EditContextId, ConnectionTransport>, // webtransport only
+    transports: HashMap<ConnectionStream, ConnectionTransport>,
     globals: Globals,
-    rx: mpsc::Receiver<Command>,
+    rx: mpsc::Receiver<Command>, // TODO: rename field?
 }
 
 pub struct ConnectionTransport {
@@ -54,6 +53,27 @@ pub struct ConnectionHandle {
     id: ConnectionId,
 }
 
+impl std::fmt::Debug for Connection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Connection")
+            .field("id", &self.id)
+            .field("session_id", &self.session.id)
+            .field("user_id", &self.session.user_id())
+            .field("transports", &self.transports)
+            // TODO: subscriptions?
+            .finish()
+    }
+}
+
+impl std::fmt::Debug for ConnectionTransport {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ConnectionTransport")
+            .field("timeout", &self.timeout)
+            .field("queue.len", &self.queue.len())
+            .finish()
+    }
+}
+
 impl std::fmt::Debug for ConnectionHandle {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ConnectionHandle")
@@ -64,26 +84,58 @@ impl std::fmt::Debug for ConnectionHandle {
 
 /// identifier for a webtransport stream
 // TODO: identify streams via webtransport/quic stream id (add id fn to transport traits)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum ConnectionStream {
     Sync,
     Document(EditContextId),
+    Voice(ChannelId),
+    MemberList {
+        room_id: Option<RoomId>,
+        channel_id: Option<ChannelId>,
+    },
+    Script {
+        channel_id: ChannelId,
+        redex_id: RedexId,
+    },
 }
 
 /// a command for controlling a connection actor
 pub enum Command {
     /// attach a transport to this connection and rewind to a seq
-    Attach(Box<dyn Transport>, u64),
-
-    /// attach a dedicated document transport
-    DocumentTransport(
-        EditContextId,
-        Box<dyn Transport>,
-        Option<DocumentStateVector>,
-    ),
+    Attach {
+        transport: Box<dyn Transport>,
+        seq: u64,
+        stream: AttachStream,
+    },
 
     /// shutdown this connection
     Shutdown,
+}
+
+/// what stream to attach to
+pub enum AttachStream {
+    Sync,
+
+    Document {
+        context_id: EditContextId,
+        state_vector: Option<DocumentStateVector>,
+    },
+
+    Voice {
+        voice_state: VoiceStateUpdate,
+        nonce: Option<String>,
+    },
+
+    MemberList {
+        room_id: Option<RoomId>,
+        channel_id: Option<ChannelId>,
+        initial_ranges: Vec<(u64, u64)>,
+    },
+
+    Script {
+        channel_id: ChannelId,
+        script_id: RedexId,
+    },
 }
 
 impl Connection {
@@ -98,8 +150,7 @@ impl Connection {
             session,
             queue,
             subscriptions,
-            transport: None,
-            document_transports: HashMap::new(),
+            transports: HashMap::new(),
             globals,
             rx,
         };
@@ -142,14 +193,8 @@ impl Connection {
 
             let recv_fut = {
                 let mut recvs = vec![];
-                for (ctx_id, t) in &mut self.document_transports {
-                    let stream = ConnectionStream::Document(*ctx_id);
-                    recvs.push(t.recv.next().map(move |m| (stream, m)).boxed());
-                }
-
-                if let Some(t) = &mut self.transport {
-                    let stream = ConnectionStream::Sync;
-                    recvs.push(t.recv.next().map(move |m| (stream, m)).boxed());
+                for (stream, t) in &mut self.transports {
+                    recvs.push(t.recv.next().map(move |m| (*stream, m)).boxed());
                 }
 
                 if recvs.is_empty() {
@@ -181,17 +226,7 @@ impl Connection {
                         }
                         Tfe::Recv(stream, None) => {
                             // unexpected disconnect, disconnect transport
-                            match stream {
-                                ConnectionStream::Sync => self.transport = None,
-                                ConnectionStream::Document(ctx_id) => {
-                                    self.document_transports.remove(&ctx_id);
-                                    if let Some(user_id) = self.session.user_id() {
-                                        self.subscriptions
-                                            .remove_document_subscription(ctx_id, user_id)
-                                            .await;
-                                    }
-                                }
-                            }
+                            self.handle_disconnect(stream, false).await;
                         }
                         Tfe::Timeout(stream) => {
                             if let Err(err) = self.handle_timeout(stream).await {
@@ -236,17 +271,10 @@ impl Connection {
                 }
             }
 
-            // drain main queue
-            if let Some(t) = &mut self.transport {
-                if let Err(err) = self.queue.drain(&mut *t.send, self.id).await {
-                    error!("failed to drain messages: {err}");
-                }
-            }
-
-            // drain document queues
-            for t in self.document_transports.values_mut() {
+            // drain queues
+            for (stream, t) in self.transports.iter_mut() {
                 if let Err(err) = t.queue.drain(&mut *t.send, self.id).await {
-                    error!("failed to drain document messages: {err}");
+                    error!("failed to drain {:?} messages: {err}", stream);
                 }
             }
         }
@@ -358,41 +386,108 @@ impl Connection {
 
     async fn handle_command(&mut self, command: Command) -> Result<()> {
         match command {
-            Command::Attach(transport, seq) => {
+            Command::Attach {
+                transport,
+                seq,
+                stream,
+            } => {
+                // FIXME: send errors to transport rather than returning them
                 let (send, recv) = transport.split();
-                self.transport = Some(ConnectionTransport {
+                let transport = ConnectionTransport {
                     send,
                     recv,
                     timeout: Timeout::for_ping(),
                     queue: ConnectionQueue::new(MAX_QUEUE_LEN),
-                });
-                self.queue.rewind(seq)?;
-                self.globals.services().connections.cancel_cleanup(self.id);
-            }
-            Command::DocumentTransport(context_id, transport, sv) => {
-                // FIXME: send errors to transport rather than returning them
-                let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
-                self.subscriptions
-                    .add_document_subscription(context_id, sv, user_id)
-                    .await?;
+                };
 
-                let (send, recv) = transport.split();
-                self.document_transports.insert(
-                    context_id,
-                    ConnectionTransport {
-                        send,
-                        recv,
-                        timeout: Timeout::for_ping(),
-                        queue: ConnectionQueue::new(MAX_QUEUE_LEN),
-                    },
-                );
+                match stream {
+                    AttachStream::Sync => {
+                        self.transports.insert(ConnectionStream::Sync, transport);
+                        self.queue.rewind(seq)?;
+                        self.globals.services().connections.cancel_cleanup(self.id);
+                    }
+                    AttachStream::Document {
+                        context_id,
+                        state_vector,
+                    } => {
+                        let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+                        self.subscriptions
+                            .add_document_subscription(context_id, state_vector, user_id)
+                            .await?;
+
+                        self.transports
+                            .insert(ConnectionStream::Document(context_id), transport);
+                    }
+                    AttachStream::Voice { voice_state, nonce } => {
+                        let channel_id = voice_state.channel_id;
+                        self.handle_voice_connect(voice_state, nonce).await?;
+                        self.transports
+                            .insert(ConnectionStream::Voice(channel_id), transport);
+                    }
+                    AttachStream::MemberList {
+                        room_id,
+                        channel_id,
+                        initial_ranges,
+                    } => {
+                        let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+
+                        let member_lists = vec![SyncSubscribeMemberList {
+                            room_id,
+                            channel_id,
+                            ranges: initial_ranges,
+                        }];
+
+                        self.subscriptions
+                            .set_subscription(
+                                SyncSubscription {
+                                    member_lists: Some(member_lists),
+                                    documents: None,
+                                    scripts: None,
+                                },
+                                user_id,
+                            )
+                            .await?;
+
+                        self.transports.insert(
+                            ConnectionStream::MemberList {
+                                room_id,
+                                channel_id,
+                            },
+                            transport,
+                        );
+                    }
+                    AttachStream::Script {
+                        channel_id,
+                        script_id,
+                    } => {
+                        let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+
+                        self.subscriptions
+                            .set_subscription(
+                                SyncSubscription {
+                                    scripts: Some(vec![SyncSubscribeScript {
+                                        channel_id,
+                                        script_id,
+                                    }]),
+                                    documents: None,
+                                    member_lists: None,
+                                },
+                                user_id,
+                            )
+                            .await?;
+
+                        self.transports.insert(
+                            ConnectionStream::Script {
+                                channel_id,
+                                redex_id: script_id,
+                            },
+                            transport,
+                        );
+                    }
+                }
             }
             Command::Shutdown => {
-                if let Some(mut t) = self.transport.take() {
-                    let _ = t.send.close().await;
-                }
-
-                for (_, mut t) in self.document_transports.drain() {
+                for (_, mut t) in self.transports.drain() {
                     let _ = t.send.close().await;
                 }
 
@@ -413,8 +508,8 @@ impl Connection {
                 // FIXME: handle document streams. currently this assumes all client messages are sent to the main sync stream.
                 if let Err(err) = self.handle_message_client_inner(msg).await {
                     let t = self
-                        .transport
-                        .as_mut()
+                        .transports
+                        .get_mut(&ConnectionStream::Sync)
                         .ok_or_else(|| Error::BadStatic("transport lost during error handling"))?;
 
                     let code = match &err {
@@ -445,24 +540,7 @@ impl Connection {
                     }
                 }
             }
-            TransportEvent::Closed(clean) => match stream {
-                ConnectionStream::Sync if clean => self.teardown().await,
-                ConnectionStream::Sync => {
-                    self.globals
-                        .services()
-                        .connections
-                        .schedule_cleanup(self.id);
-                    self.transport = None;
-                }
-                ConnectionStream::Document(ctx_id) => {
-                    self.document_transports.remove(&ctx_id);
-                    if let Some(user_id) = self.session.user_id() {
-                        self.subscriptions
-                            .remove_document_subscription(ctx_id, user_id)
-                            .await;
-                    }
-                }
-            },
+            TransportEvent::Closed(clean) => self.handle_disconnect(stream, clean).await,
         }
 
         Ok(())
@@ -470,9 +548,14 @@ impl Connection {
 
     async fn handle_message_client_inner(&mut self, msg: MessageClient) -> Result<()> {
         let (_send, timeout) = {
-            let t = self.transport.as_mut().ok_or_else(|| {
-                Error::BadStatic("how did we receive a client event without an active transport?")
-            })?;
+            let t = self
+                .transports
+                .get_mut(&ConnectionStream::Sync)
+                .ok_or_else(|| {
+                    Error::BadStatic(
+                        "how did we receive a client event without an active transport?",
+                    )
+                })?;
             (&mut *t.send, &mut t.timeout)
         };
 
@@ -800,10 +883,12 @@ impl Connection {
                 _ => None,
             };
 
-            if let Some(ctx) = context_id.and_then(|ctx| self.document_transports.get_mut(&ctx)) {
+            if let Some(ctx) =
+                context_id.and_then(|ctx| self.transports.get_mut(&ConnectionStream::Document(ctx)))
+            {
                 ctx.queue.push_sync(msg, nonce);
-            } else {
-                self.queue.push_sync(msg, nonce);
+            } else if let Some(t) = self.transports.get_mut(&ConnectionStream::Sync) {
+                t.queue.push_sync(msg, nonce);
             }
         }
 
@@ -812,10 +897,7 @@ impl Connection {
 
     /// handle a timeout
     async fn handle_timeout(&mut self, stream: ConnectionStream) -> Result<()> {
-        let t = match stream {
-            ConnectionStream::Sync => self.transport.as_mut(),
-            ConnectionStream::Document(ctx) => self.document_transports.get_mut(&ctx),
-        };
+        let t = self.transports.get_mut(&stream);
         let Some(t) = t else {
             // transport had to exist in order to timeout and cause handle_timeout to be called
             unreachable!("handle_timeout should never be called without a transport")
@@ -840,12 +922,40 @@ impl Connection {
 
                     // if a document times out, unsubscribe from it
                     ConnectionStream::Document(ctx_id) => {
-                        self.document_transports.remove(&ctx_id);
+                        self.transports.remove(&ConnectionStream::Document(ctx_id));
                         if let Some(user_id) = self.session.user_id() {
                             self.subscriptions
                                 .remove_document_subscription(ctx_id, user_id)
                                 .await;
                         }
+                    }
+                    ConnectionStream::Voice(channel_id) => {
+                        self.transports.remove(&ConnectionStream::Voice(channel_id));
+                        let _ = self
+                            .handle_voice_dispatch(channel_id, None, SignallingCommand::Disconnect)
+                            .await;
+                    }
+                    ConnectionStream::MemberList {
+                        room_id,
+                        channel_id,
+                    } => {
+                        self.transports.remove(&ConnectionStream::MemberList {
+                            room_id,
+                            channel_id,
+                        });
+                        self.subscriptions
+                            .remove_member_list_subscription(room_id, channel_id);
+                    }
+                    ConnectionStream::Script {
+                        channel_id,
+                        redex_id,
+                    } => {
+                        self.transports.remove(&ConnectionStream::Script {
+                            channel_id,
+                            redex_id,
+                        });
+                        self.subscriptions
+                            .remove_script_subscription(channel_id, redex_id);
                     }
                 }
             }
@@ -877,20 +987,70 @@ impl Connection {
         }
 
         // just to be safe
-        self.transport = None;
+        self.transports.clear();
     }
 
     /// get the transport that will expire next
     fn next_expiring_transport(&self) -> Option<(ConnectionStream, Timeout)> {
-        self.document_transports
+        self.transports
             .iter()
-            .map(|(ctx_id, t)| (ConnectionStream::Document(*ctx_id), t.timeout))
-            .chain(
-                self.transport
-                    .as_ref()
-                    .map(|t| (ConnectionStream::Sync, t.timeout)),
-            )
+            .map(|(stream, t)| (*stream, t.timeout))
             .min_by_key(|(_, t)| t.get_instant())
+    }
+
+    /// handle a transport being disconnected
+    async fn handle_disconnect(&mut self, stream: ConnectionStream, clean: bool) {
+        match stream {
+            ConnectionStream::Sync => {
+                if clean {
+                    self.teardown().await
+                } else {
+                    self.transports.remove(&ConnectionStream::Sync);
+                    self.globals
+                        .services()
+                        .connections
+                        .schedule_cleanup(self.id);
+                }
+            }
+
+            // TODO: check if below is correct
+            ConnectionStream::Document(ctx_id) => {
+                self.transports.remove(&ConnectionStream::Document(ctx_id));
+                if let Some(user_id) = self.session.user_id() {
+                    self.subscriptions
+                        .remove_document_subscription(ctx_id, user_id)
+                        .await;
+                }
+            }
+            ConnectionStream::Voice(channel_id) => {
+                self.transports.remove(&ConnectionStream::Voice(channel_id));
+                let _ = self
+                    .handle_voice_dispatch(channel_id, None, SignallingCommand::Disconnect)
+                    .await;
+            }
+            ConnectionStream::MemberList {
+                room_id,
+                channel_id,
+            } => {
+                self.transports.remove(&ConnectionStream::MemberList {
+                    room_id,
+                    channel_id,
+                });
+                self.subscriptions
+                    .remove_member_list_subscription(room_id, channel_id);
+            }
+            ConnectionStream::Script {
+                channel_id,
+                redex_id,
+            } => {
+                self.transports.remove(&ConnectionStream::Script {
+                    channel_id,
+                    redex_id,
+                });
+                self.subscriptions
+                    .remove_script_subscription(channel_id, redex_id);
+            }
+        };
     }
 }
 
@@ -899,13 +1059,17 @@ impl ConnectionHandle {
         self.id
     }
 
-    pub fn session_id(&self, session: &Session) -> SessionId {
-        session.id
-    }
-
     /// attach a transport to this connection and rewind
     pub fn attach(&self, transport: Box<dyn Transport>, seq: u64) {
-        let _ = self.tx.try_send(Command::Attach(transport, seq));
+        self.attach_inner(transport, seq, AttachStream::Sync);
+    }
+
+    fn attach_inner(&self, transport: Box<dyn Transport>, seq: u64, stream: AttachStream) {
+        let _ = self.tx.try_send(Command::Attach {
+            transport,
+            seq,
+            stream,
+        });
     }
 
     /// attach a dedicated document transport
@@ -915,9 +1079,60 @@ impl ConnectionHandle {
         transport: Box<dyn Transport>,
         sv: Option<DocumentStateVector>,
     ) {
-        let _ = self
-            .tx
-            .try_send(Command::DocumentTransport(context_id, transport, sv));
+        self.attach_inner(
+            transport,
+            0,
+            AttachStream::Document {
+                context_id,
+                state_vector: sv,
+            },
+        );
+    }
+
+    /// attach a dedicated voice transport
+    pub fn attach_voice(
+        &self,
+        transport: Box<dyn Transport>,
+        voice_state: VoiceStateUpdate,
+        nonce: Option<String>,
+    ) {
+        self.attach_inner(transport, 0, AttachStream::Voice { voice_state, nonce });
+    }
+
+    /// attach a dedicated member list transport
+    pub fn attach_member_list(
+        &self,
+        transport: Box<dyn Transport>,
+        room_id: Option<RoomId>,
+        channel_id: Option<ChannelId>,
+        initial_ranges: Vec<(u64, u64)>,
+    ) {
+        self.attach_inner(
+            transport,
+            0,
+            AttachStream::MemberList {
+                room_id,
+                channel_id,
+                initial_ranges,
+            },
+        );
+    }
+
+    /// attach a dedicated script transport
+    pub fn attach_script(
+        &self,
+        transport: Box<dyn Transport>,
+        channel_id: ChannelId,
+        script_id: RedexId,
+    ) {
+        self.attach_inner(
+            transport,
+            0,
+            AttachStream::Script {
+                channel_id,
+                script_id,
+            },
+        );
     }
 
     /// shutdown this connection

@@ -11,6 +11,7 @@ use common::{
 };
 use flate2::{Compress, Decompress, FlushCompress, FlushDecompress};
 use kerosene_core::types::documents::EditContextId;
+use kerosene_services::services::connections::ConnectionHandle;
 use kerosene_sync::transport::{
     Compression, Transport, TransportEvent, TransportSink, TransportStream, WebtransportTransport,
     WrapperTransport,
@@ -107,6 +108,7 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
     let connection = req.accept().await.unwrap();
 
     let state: WtState = Arc::new(WtStateInner {
+        globals,
         params,
         shared: Mutex::new(WtStateShared::default()),
     });
@@ -114,9 +116,8 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
     loop {
         tokio::select! {
             Ok((send, recv)) = connection.accept_bi() => {
-                let globals = globals.clone();
                 let state = state.clone();
-                spawn(handle_stream(globals, send, recv, state));
+                spawn(handle_stream(send, recv, state));
             }
             reason = connection.closed() => {
                 // TODO: handle reason correctly, return Ok or Err depending on it
@@ -127,8 +128,8 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
     }
 }
 
-async fn handle_stream(globals: Globals, send: SendStream, recv: RecvStream, state: WtState) {
-    if let Err(err) = handle_stream_inner(globals, send, recv, state).await {
+async fn handle_stream(send: SendStream, recv: RecvStream, state: WtState) {
+    if let Err(err) = handle_stream_inner(send, recv, state).await {
         debug!("error while handling stream: {err}");
     }
 }
@@ -137,28 +138,24 @@ async fn handle_stream(globals: Globals, send: SendStream, recv: RecvStream, sta
 type WtState = Arc<WtStateInner>;
 
 struct WtStateInner {
+    globals: Globals,
     params: SyncParams,
     shared: Mutex<WtStateShared>,
 }
 
 #[derive(Debug, Default)]
 struct WtStateShared {
-    connection_id: Option<ConnectionId>,
+    connection: Option<ConnectionHandle>,
 }
 
 impl WtStateShared {
     fn ready(&self) -> bool {
-        self.connection_id.is_some()
+        self.connection.is_some()
     }
 }
 
-async fn handle_stream_inner(
-    globals: Globals,
-    send: SendStream,
-    recv: RecvStream,
-    state: WtState,
-) -> Result<()> {
-    let srv = globals.services();
+async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState) -> Result<()> {
+    let srv = state.globals.services();
 
     // PERF: requiring boxing is probably fine but technically slower than it could be
     let transport = Box::new(WebtransportTransport::new(send, recv, state.params.clone()));
@@ -176,34 +173,20 @@ async fn handle_stream_inner(
         return Ok(());
     };
 
-    let srv = globals.services();
-
     // TODO: use better/stricter types instead of reusing MessageClient
     // TODO: error on MessageClient subscriptions from webtransport, require using bidirectional streams to subscribe
+    // TODO: refactor this code
     let mut shared = state.shared.lock().await;
     match init {
         // the first message of the first stream MUST be a hello
         // no other streams should be created until this handshake is complete
         MessageClient::Hello(hello) => {
-            if shared.ready() {
-                send.send(MessageEnvelope {
-                    payload: MessagePayload::Error {
-                        error: "you already have a sync stream".into(),
-                        // NOTE: do i reuse AlreadyAuthenticated?
-                        // maybe i should let clients have multiple sync
-                        // streams? ie. allow having different priority sync
-                        // streams filtered to different events?
-                        code: None,
-                    },
-                })
-                .await
-                .unwrap();
-                send.close().await.unwrap();
-                return Ok(());
-            }
-
             if let Some(resume) = &hello.resume {
-                let Some(handle) = srv.connections.get(resume.conn) else {
+                let handle = shared
+                    .connection
+                    .as_ref()
+                    .ok_or(SyncErrorCode::Unauthenticated);
+                let Ok(handle) = handle else {
                     // TODO: better error handling (avoid unwraps)
                     // TODO: create sync error code for expired connection
                     send.send(MessageEnvelope {
@@ -225,12 +208,28 @@ async fn handle_stream_inner(
 
                 let transport = Box::new(WrapperTransport::new(send, recv));
                 handle.attach(transport, resume.seq);
-                shared.connection_id = Some(handle.id());
+                shared.connection = Some(handle.clone());
             } else {
+                if shared.ready() {
+                    send.send(MessageEnvelope {
+                        payload: MessagePayload::Error {
+                            error: "you already have a sync stream".into(),
+                            // NOTE: maybe i should let clients have multiple sync
+                            // streams? ie. allow having different priority sync
+                            // streams filtered to different events?
+                            code: Some(SyncErrorCode::AlreadyAuthenticated),
+                        },
+                    })
+                    .await
+                    .unwrap();
+                    send.close().await.unwrap();
+                    return Ok(());
+                }
+
                 let handle = srv.connections.accept(hello).await?;
                 let transport = Box::new(WrapperTransport::new(send, recv));
                 handle.attach(transport, 0);
-                shared.connection_id = Some(handle.id());
+                shared.connection = Some(handle.clone());
             };
         }
 
@@ -239,24 +238,15 @@ async fn handle_stream_inner(
             branch_id,
             state_vector,
         } => {
-            let Some(conn_id) = shared.connection_id else {
+            let handle = shared
+                .connection
+                .as_ref()
+                .ok_or(SyncErrorCode::Unauthenticated);
+            let Ok(handle) = handle else {
                 send.send(MessageEnvelope {
                     payload: MessagePayload::Error {
                         error: "you need to open and authenticate a sync stream first".into(),
                         code: Some(SyncErrorCode::Unauthenticated),
-                    },
-                })
-                .await
-                .unwrap();
-                send.close().await.unwrap();
-                return Ok(());
-            };
-
-            let Some(handle) = srv.connections.get(conn_id) else {
-                send.send(MessageEnvelope {
-                    payload: MessagePayload::Error {
-                        error: "connection is somehow expired, despite the webtransport endpoint still being active?".into(),
-                        code: None,
                     },
                 })
                 .await
@@ -270,10 +260,78 @@ async fn handle_stream_inner(
             handle.attach_document_transport(context_id, transport, state_vector);
         }
 
-        // TODO: subscriptions are replaced with dedicated webtransport streams
-        MessageClient::VoiceConnect { .. }
-        | MessageClient::MemberListSubscribe { .. }
-        | MessageClient::ScriptSubscribe { .. } => return Err(Error::Unimplemented),
+        MessageClient::VoiceConnect { voice_state, nonce } => {
+            let handle = shared
+                .connection
+                .as_ref()
+                .ok_or(SyncErrorCode::Unauthenticated);
+            let Ok(handle) = handle else {
+                send.send(MessageEnvelope {
+                    payload: MessagePayload::Error {
+                        error: "you need to open and authenticate a sync stream first".into(),
+                        code: Some(SyncErrorCode::Unauthenticated),
+                    },
+                })
+                .await
+                .unwrap();
+                send.close().await.unwrap();
+                return Ok(());
+            };
+
+            let transport = Box::new(WrapperTransport::new(send, recv));
+            handle.attach_voice(transport, voice_state, nonce);
+        }
+
+        MessageClient::MemberListSubscribe {
+            room_id,
+            thread_id,
+            ranges,
+        } => {
+            let handle = shared
+                .connection
+                .as_ref()
+                .ok_or(SyncErrorCode::Unauthenticated);
+            let Ok(handle) = handle else {
+                send.send(MessageEnvelope {
+                    payload: MessagePayload::Error {
+                        error: "you need to open and authenticate a sync stream first".into(),
+                        code: Some(SyncErrorCode::Unauthenticated),
+                    },
+                })
+                .await
+                .unwrap();
+                send.close().await.unwrap();
+                return Ok(());
+            };
+
+            let transport = Box::new(WrapperTransport::new(send, recv));
+            handle.attach_member_list(transport, room_id, thread_id, ranges);
+        }
+
+        MessageClient::ScriptSubscribe {
+            channel_id,
+            script_id,
+        } => {
+            let handle = shared
+                .connection
+                .as_ref()
+                .ok_or(SyncErrorCode::Unauthenticated);
+            let Ok(handle) = handle else {
+                send.send(MessageEnvelope {
+                    payload: MessagePayload::Error {
+                        error: "you need to open and authenticate a sync stream first".into(),
+                        code: Some(SyncErrorCode::Unauthenticated),
+                    },
+                })
+                .await
+                .unwrap();
+                send.close().await.unwrap();
+                return Ok(());
+            };
+
+            let transport = Box::new(WrapperTransport::new(send, recv));
+            handle.attach_script(transport, channel_id, script_id);
+        }
 
         _ => return Err(Error::BadStatic("invalid client message")),
     }

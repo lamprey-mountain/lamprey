@@ -1,5 +1,6 @@
 use common::v1::types::SERVER_ROOM_ID;
 use common::v1::types::document::DocumentStateVector;
+use common::v2::types::RoomId;
 use kerosene_core::types::documents::EditContextId;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::mpsc;
@@ -76,6 +77,30 @@ impl ConnectionSubscriptions {
                 .documents
                 .remove_presence(edit_context_id, user_id, self.conn_id)
                 .await;
+        }
+    }
+
+    pub fn remove_member_list_subscription(
+        &mut self,
+        room_id: Option<RoomId>,
+        channel_id: Option<ChannelId>,
+    ) {
+        let key = if let Some(room_id) = room_id {
+            format!("room:{}", room_id)
+        } else if let Some(channel_id) = channel_id {
+            format!("channel:{}", channel_id)
+        } else {
+            return;
+        };
+
+        if let Some((handle, _)) = self.member_lists.remove(&key) {
+            handle.abort();
+        }
+    }
+
+    pub fn remove_script_subscription(&mut self, channel_id: ChannelId, redex_id: RedexId) {
+        if let Some(handle) = self.scripts.remove(&(channel_id, redex_id)) {
+            handle.abort();
         }
     }
 

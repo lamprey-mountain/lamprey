@@ -8,12 +8,11 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio_util::time::{DelayQueue, delay_queue};
 
-use crate::{
-    prelude::*,
-    services::connections::actor::{Connection, ConnectionHandle},
-};
+use crate::prelude::*;
 
 const CONNECTION_RESUME_PERIOD: Duration = Duration::from_secs(60);
+
+pub use crate::services::connections::actor::{Connection, ConnectionHandle};
 
 mod actor;
 mod subscriptions;
