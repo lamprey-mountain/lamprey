@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use common::v1::types::{MessageAttachmentType, MessageSync, MessageType, UserId};
 use common::v2::types::embed::Embed;
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
+use lamprey_unfurl::util::EmbedMedia;
 use lamprey_unfurl::{DirectMediaPlugin, HtmlStreamPlugin, Unfurler};
 use moka::future::Cache;
 use tokio::sync::{Mutex, broadcast};
@@ -220,8 +221,10 @@ impl ServiceEmbed {
             .ok_or(Error::UrlEmbedOther("No embed generated".into()))?;
 
         // Resolve pending media
-        let pending = generation.pending_media();
-        for p in pending {
+        let srv = self.state.services();
+        let futures = generation.pending_media().into_iter().map(|p| {
+            let srv = srv.clone();
+            async move {
             let import = Import::new(user_id).merge(MediaCreate {
                 alt: p.alt,
                 strip_exif: false,
@@ -231,17 +234,23 @@ impl ServiceEmbed {
                     source_url: p.url.clone(),
                 },
             });
-            let mut item = self
-                .state
-                .services()
-                .media
-                .import_from_url(import, &p.url)
-                .await?;
+            let mut item = srv.media.import_from_url(import, &p.url).await?;
             let media = item.ready().await;
-            generation.update_media(
+            Result::Ok((
                 p.placeholder_media_id,
-                lamprey_unfurl::util::EmbedMedia::Finished((*media).clone()),
-            );
+                EmbedMedia::Finished((*media).clone()),
+            ))
+        }});
+
+        for media in futures::future::join_all(futures).await {
+            match media {
+                Ok((id, media)) => {
+                    generation.update_media(id, media);
+                }
+                Err(err) => {
+                    debug!("failed to fetch media: {err}");
+                }
+            }
         }
 
         // Convert to final embed
