@@ -4,6 +4,7 @@ use common::v1::types::{
     ConnectionId, MessageSync, UserId,
     document::{DocumentStateVector, DocumentUpdate},
 };
+use futures::Sink;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::error::RecvError;
 use tracing::{error, warn};
@@ -12,6 +13,8 @@ use crate::{
     prelude::*,
     services::documents::{DocumentEvent, EditContextId, ServiceDocuments},
 };
+
+pub struct DocumentSyncer2 {}
 
 /// Handles document synchronization for a single client connection.
 ///
@@ -231,4 +234,27 @@ impl ServiceDocuments {
             user_id: None,
         }
     }
+
+    // /// start sending document events to a sink
+    // pub fn subscribe<S: Sink<DocumentEvent>>(
+    //     &self,
+    //     conn_id: ConnectionId,
+    //     key: EditContextId,
+    //     state_vector: Option<DocumentStateVector>,
+    //     sink: S,
+    // ) -> SubscriptionHandle {
+    //     // use futures::SinkExt;
+    //     // sink.send()
+    //     todo!()
+    // }
 }
+
+// pub struct SubscriptionHandle {
+//     // ...
+// }
+
+// impl Drop for SubscriptionHandle {
+//     fn drop(&mut self) {
+//         todo!()
+//     }
+// }

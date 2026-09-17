@@ -1,3 +1,4 @@
+use common::util::member_list::MemberGroupKey;
 use common::v2::types::ConnectionId;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
@@ -11,7 +12,7 @@ use tokio::sync::broadcast;
 use crate::consts::IDLE_TIMEOUT_MEMBER_LIST;
 use crate::prelude::*;
 use crate::services::cache::permissions::PermissionsCalculator;
-use crate::services::member_lists::util::{MemberGroupInfo, MemberKey, MemberListKey};
+use crate::services::member_lists::util::{MemberKey, MemberListKey};
 use crate::services::rooms::actor::MemberListCommandMsg;
 use crate::services::rooms::types::RoomMembers;
 use crate::services::rooms::{LoadedRoom, RoomActor, RoomSnapshot};
@@ -32,7 +33,7 @@ pub struct MemberList {
     pub(super) groups: Vec<MemberListGroup>,
 
     /// count of members in each group
-    pub(super) group_counts: BTreeMap<MemberGroupInfo, u32>,
+    pub(super) group_counts: BTreeMap<MemberGroupKey, u32>,
 
     pub(crate) events_tx: broadcast::Sender<MemberListEvent>,
 
@@ -48,8 +49,8 @@ pub enum MemberListCommand {
 
 #[derive(Debug, Clone)]
 pub enum MemberListEvent {
-    Broadcast(MessageSync),
-    Unicast(ConnectionId, MessageSync),
+    Broadcast(MessageSync),             // PERF: arc
+    Unicast(ConnectionId, MessageSync), // PERF: box
 }
 
 impl MemberList {
@@ -74,12 +75,12 @@ impl MemberList {
         self.last_active.elapsed().as_secs() >= IDLE_TIMEOUT_MEMBER_LIST
     }
 
-    fn add_to_group(&mut self, info: MemberGroupInfo) {
+    fn add_to_group(&mut self, info: MemberGroupKey) {
         *self.group_counts.entry(info).or_insert(0) += 1;
         self.rebuild_groups_from_counts();
     }
 
-    fn remove_from_group(&mut self, info: MemberGroupInfo) {
+    fn remove_from_group(&mut self, info: MemberGroupKey) {
         if let std::collections::btree_map::Entry::Occupied(mut e) = self.group_counts.entry(info) {
             *e.get_mut() -= 1;
             if *e.get() == 0 {
@@ -277,15 +278,15 @@ impl MemberList {
             }
 
             if let Some((role_id, role_position)) = best_role {
-                MemberGroupInfo::Hoisted {
+                MemberGroupKey::Hoisted {
                     role_position,
                     role_id,
                 }
             } else {
-                MemberGroupInfo::Online
+                MemberGroupKey::Online
             }
         } else {
-            MemberGroupInfo::Offline
+            MemberGroupKey::Offline
         };
 
         let name = member
@@ -403,7 +404,7 @@ impl MemberList {
             MessageSync::PresenceUpdate { user_id, presence } => {
                 let old_key = self.user_to_key.get(&user_id).cloned();
                 let is_online_old = old_key.as_ref().map_or(false, |key| match key.group {
-                    MemberGroupInfo::Offline => false,
+                    MemberGroupKey::Offline => false,
                     _ => true,
                 });
 

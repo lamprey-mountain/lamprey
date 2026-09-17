@@ -1,7 +1,9 @@
-use std::sync::Arc;
+use common::{
+    util::member_list::MemberGroupKey,
+    v1::types::{ChannelId, MemberListGroupId, RoleId, RoomId, UserId},
+};
 
-use common::v1::types::{ChannelId, MemberListGroupId, RoleId, RoomId, UserId};
-
+use crate::prelude::*;
 use crate::services::member_lists::visibility::ListVisibility;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -37,25 +39,17 @@ pub enum MemberListKey {
     Dm(ChannelId),
 }
 
-/// Member group classification
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum MemberGroupInfo {
-    Hoisted { role_position: u64, role_id: RoleId },
-    Online,
-    Offline,
-}
-
 #[derive(Debug)]
 /// Member group data with users
 pub struct MemberListGroupData {
-    pub info: MemberGroupInfo,
+    pub info: MemberGroupKey,
     pub users: Vec<UserId>,
 }
 
 /// Unique key for sorting members
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MemberKey {
-    pub group: MemberGroupInfo,
+    pub group: MemberGroupKey,
     /// either the override_name or user name
     pub name: Arc<str>,
     pub user_id: UserId,
@@ -111,15 +105,5 @@ impl Ord for MemberKey {
         }
 
         self.user_id.cmp(&other.user_id)
-    }
-}
-
-impl From<MemberGroupInfo> for MemberListGroupId {
-    fn from(value: MemberGroupInfo) -> Self {
-        match value {
-            MemberGroupInfo::Hoisted { role_id, .. } => MemberListGroupId::Role(role_id),
-            MemberGroupInfo::Online => MemberListGroupId::Online,
-            MemberGroupInfo::Offline => MemberListGroupId::Offline,
-        }
     }
 }

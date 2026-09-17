@@ -6,10 +6,6 @@ pub mod queue;
 pub mod transport;
 pub mod util;
 
-// TODO: remove these?
-// pub mod connection_old;
-// pub mod subscriptions_old;
-
 // TODO: implement these?
 pub mod actor;
 pub mod connection;

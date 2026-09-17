@@ -33,7 +33,7 @@ use crate::{
 pub struct Connection {
     id: ConnectionId,
     session: Session,       // TODO: replace with minimal session object
-    queue: ConnectionQueue, // TODO: remove
+    queue: ConnectionQueue, // TODO: move queue into transport, remove this field
     subscriptions: Box<ConnectionSubscriptions>,
     transports: HashMap<ConnectionStream, ConnectionTransport>,
     globals: Globals,
@@ -44,7 +44,7 @@ pub struct ConnectionTransport {
     send: Box<dyn TransportSink>,
     recv: TransportStream,
     timeout: Timeout,
-    queue: ConnectionQueue,
+    queue: ConnectionQueue, // TODO: make all transports able to queue?
 }
 
 #[derive(Clone)]

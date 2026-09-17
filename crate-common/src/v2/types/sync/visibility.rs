@@ -3,6 +3,8 @@ use crate::{
     v2::types::sync::Dispatch,
 };
 
+// TODO: use Requirements?
+
 /// the visibility of this dispatch
 #[derive(Debug)]
 pub enum DispatchVisibility {

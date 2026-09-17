@@ -202,21 +202,21 @@ pub struct MemberListGroup {
 #[record]
 #[derive(Copy, PartialEq, Eq)]
 pub enum MemberListGroupId {
+    /// members connected to the current channel
+    ///
+    /// only exists for voice channels and documents. includes members without a role
+    // TODO: use this in voice channels and documents
+    Connected,
+
     /// online members
     ///
-    /// excludes members with a role
+    /// excludes members with a hoisted role
     Online,
 
     /// offline members
     ///
-    /// includes members without a role
+    /// includes members without a hoisted role
     Offline,
-
-    /// members "connected" to this channel
-    ///
-    /// includes members without a role
-    // TODO: voice channels and documents will use this
-    Connected,
 
     /// hoisted roles
     #[serde(untagged)]

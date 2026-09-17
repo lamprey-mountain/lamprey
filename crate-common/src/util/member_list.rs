@@ -6,7 +6,7 @@ use crate::v2::types::{RoleId, UserId, sync::subscribe::MemberListGroupId};
 
 /// like a MemberListGroupId with extra metadata for sorting
 #[record]
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum MemberGroupKey {
     Connected,
     Hoisted { role_position: u64, role_id: RoleId },

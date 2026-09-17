@@ -70,6 +70,7 @@ pub mod sync_get {
         #[path]
         pub sync_id: SyncId,
     }
+
     pub struct Response {
         #[json]
         pub syncer: Syncer,
@@ -91,6 +92,7 @@ pub mod sync_delete {
         #[path]
         pub sync_id: SyncId,
     }
+
     pub struct Response {}
 }
 

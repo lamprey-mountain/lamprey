@@ -24,6 +24,7 @@ struct ListVisibilityPerm {
     allowed: bool,
 }
 
+// FIXME: sync with crate-sdk/src/cache/permissions.rs
 impl ListVisibility {
     /// Create visibility from permission overwrites
     pub fn from_overwrites(room_id: RoomId, levels: Vec<Vec<PermissionOverwrite>>) -> Self {

@@ -1,6 +1,6 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{ChannelId, RoleId, RoomId, RoomMember, ThreadMember, User, UserId};
+use crate::v1::types::{ChannelId, RoomId, RoomMember, ThreadMember, User, UserId};
 
 #[record]
 #[derive(PartialEq, Eq)]
@@ -54,29 +54,6 @@ pub enum MemberListOp {
     },
 }
 
-/// information about a group of members
-#[record]
-pub struct MemberListGroup {
-    pub id: MemberListGroupId,
-    pub count: u64,
-}
-
-/// a unique identifier for a member group
-#[record]
-#[derive(Copy, PartialEq, Eq)]
-pub enum MemberListGroupId {
-    /// members connected to the current channel
-    ///
-    /// only exists for voice channels and documents
-    Connected,
-
-    /// online members without a hoisted role
-    Online,
-
-    /// offline members, including those with a role
-    Offline,
-
-    /// hoisted roles
-    #[serde(untagged)]
-    Role(RoleId),
-}
+// TODO: reexport more things?
+// reexport for compatibility
+pub use crate::v2::types::sync::subscribe::{MemberListGroup, MemberListGroupId};
