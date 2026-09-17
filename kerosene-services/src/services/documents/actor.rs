@@ -486,10 +486,14 @@ impl DocumentActor {
         let mut txn = self.doc.transact_mut();
         txn.apply_update(update)?;
 
-        if !txn
-            .root_refs()
-            .all(|(name, out)| name == DOCUMENT_ROOT_NAME && matches!(out, Out::YXmlFragment(_)))
-        {
+        if !txn.root_refs().all(|(name, out)| {
+            name == DOCUMENT_ROOT_NAME
+                && if self.context_id.is_prose() {
+                    matches!(out, Out::YXmlFragment(_))
+                } else {
+                    matches!(out, Out::YText(_))
+                }
+        }) {
             warn!("got invalid root ref for document");
             // FIXME: rollback and return error here
             // do NOT rollback if the fragment already existed, only if this update would add it!

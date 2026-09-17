@@ -294,9 +294,9 @@ impl ServiceScripts {
             status: EvalStatus::Creating,
             input: input.clone().into(),
         };
-        let mut data = self.globals.begin().await?;
-        data.script_run_create(&run).await?;
-        data.commit().await?;
+        let mut txn = self.globals.begin().await?;
+        txn.script_run_create(&run).await?;
+        txn.commit().await?;
 
         self.broadcast(
             channel_id,
@@ -311,18 +311,18 @@ impl ServiceScripts {
         self.handles.insert(eval_id, handle.clone());
         let caller_handle = handle.clone();
         let mut event_handle = handle; // move the original receiver so we don't miss any messages
-        let state = self.globals.clone();
+        let globals = self.globals.clone();
 
         // handle execution events, propagate them to api sync events
         tokio::spawn(async move {
             while let Ok(event) = event_handle.poll().await {
                 match &*event {
                     ExecutionEvent::Log(entry) => {
-                        if let Ok(mut data) = state.begin().await {
+                        if let Ok(mut data) = globals.begin().await {
                             let _ = data.script_log_insert(eval_id, entry).await;
                             let _ = data.commit().await;
                         }
-                        state
+                        globals
                             .services()
                             .scripts
                             .broadcast(
@@ -336,7 +336,7 @@ impl ServiceScripts {
                             .await;
                     }
                     ExecutionEvent::Status(status) => {
-                        if let Ok(mut data) = state.begin().await {
+                        if let Ok(mut data) = globals.begin().await {
                             let _ = data.script_run_update_status(eval_id, status.clone()).await;
                             let _ = data.commit().await;
                         }
@@ -351,7 +351,7 @@ impl ServiceScripts {
                             None
                         };
 
-                        state
+                        globals
                             .services()
                             .scripts
                             .broadcast(
@@ -381,7 +381,7 @@ impl ServiceScripts {
             }
 
             // cleanup
-            state.services().scripts.handles.remove(&eval_id);
+            globals.services().scripts.handles.remove(&eval_id);
         });
 
         Ok(caller_handle)
