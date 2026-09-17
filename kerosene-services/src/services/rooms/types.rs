@@ -305,33 +305,18 @@ impl RoomSnapshot {
         }
     }
 
+    // TODO: deprecate and remove
     pub fn channel_visibilities(
         self: Arc<Self>,
         user_id: UserId,
         state: Globals,
     ) -> Vec<ChannelVisibility> {
         let Some(loaded) = self.get_data() else {
+            // TODO(?): error log
             return vec![];
         };
 
-        let calc = loaded.permissions();
-
-        loaded
-            .channels
-            .values()
-            .filter_map(|chan| {
-                let perms = calc.query(Some(user_id), Some(&chan));
-
-                let Ok(perms) = perms.ensure_view() else {
-                    return None;
-                };
-
-                Some(ChannelVisibility {
-                    id: chan.inner.id,
-                    can_view_private_threads: perms.has(Permission::ThreadManage),
-                })
-            })
-            .collect()
+        loaded.channel_visibilities(Some(user_id))
     }
 }
 
@@ -524,15 +509,35 @@ impl LoadedRoom {
         new_room
     }
 
-    // pub fn ensure_sudo_if_needed(&self, auth: &Auth) -> Result<()> {
-    // pub fn ensure_mfa_if_needed(&self, auth: &Auth) -> Result<()> {
-    // pub fn ensure_feature(&self, feature: &RoomFeature) -> Result<()> {
-    // pub fn channel_visibilities()
-
     /// get a permission calculator for this room
     pub fn permissions(&self) -> RoomPermissions<'_> {
         RoomPermissions::new(self)
     }
+
+    /// calculate which channels a user can view
+    // PERF: maybe return an iterator?
+    pub fn channel_visibilities(&self, user_id: Option<UserId>) -> Vec<ChannelVisibility> {
+        let calc = self.permissions();
+
+        self.channels
+            .values()
+            .filter_map(|chan| {
+                let perms = calc.query(user_id, Some(&chan));
+                if perms.visible {
+                    Some(ChannelVisibility {
+                        id: chan.inner.id,
+                        can_view_private_threads: perms.has(Permission::ThreadManage),
+                    })
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    // pub fn ensure_sudo_if_needed(&self, auth: &Auth) -> Result<()> {
+    // pub fn ensure_mfa_if_needed(&self, auth: &Auth) -> Result<()> {
+    // pub fn ensure_feature(&self, feature: &RoomFeature) -> Result<()> {
 }
 
 impl From<Channel> for CachedChannel {

@@ -226,23 +226,25 @@ async fn channel_list(
     req: routes::channel_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let mut data = globals.begin_read().await?;
-    let srv = globals.services();
 
+    let srv = globals.services();
     srv.perms
         .for_room3(auth.user_id(), req.room_id)
         .await?
-        .ensure_view()?
-        .check()?;
-    let channels = data.channel_list(req.room_id).await?;
-    let ids: Vec<_> = channels.iter().map(|t| t.id).collect();
-    let channels = srv.channels.get_many(&ids, auth.user_id()).await?;
-    let mut channels_map: HashMap<_, _> = channels.into_iter().map(|c| (c.id, c)).collect();
-    let channels: Vec<_> = ids
+        .ensure_view()?;
+
+    let room = srv.rooms.load(req.room_id).ready(true).await?;
+    let visible_channel_ids: Vec<_> = room
+        .channel_visibilities(auth.user_id())
         .into_iter()
-        .filter_map(|id| channels_map.remove(&id))
+        .map(|visibility| visibility.id)
         .collect();
+    let channels = srv
+        .channels
+        .get_many(&visible_channel_ids, auth.user_id())
+        .await?;
     let total = channels.len() as u64;
+
     Ok(Json(PaginationResponse {
         items: channels,
         total,
