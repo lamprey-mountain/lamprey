@@ -192,7 +192,7 @@ async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState)
                     send.send(MessageEnvelope {
                         payload: MessagePayload::Error {
                             error: "expired or invalid connection".into(),
-                            code: None,
+                            code: Some(SyncErrorCode::ConnectionExpired),
                         },
                     })
                     .await

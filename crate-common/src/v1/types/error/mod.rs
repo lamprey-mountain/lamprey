@@ -73,11 +73,15 @@ pub enum Warning {
 
 /// an error that may be returned from the sync websocket
 #[record]
-#[derive(Error)]
+#[derive(Copy, Error, PartialEq, Eq)]
 pub enum SyncErrorCode {
     /// invalid sequence number (connection may be too old)
     #[error("invalid sequence number (connection may be too old)")]
     InvalidSeq,
+
+    /// connection expired and can no longer be resumed. start a new connection.
+    #[error("connection expired")]
+    ConnectionExpired,
 
     /// you were sent a `Ping` but didn't respond with a `Pong` in time
     #[error("you were sent a `Ping` but didn't respond with a `Pong` in time")]
@@ -99,11 +103,15 @@ pub enum SyncErrorCode {
     #[error("the token sent in `Hello` or `Resume` is invalid")]
     AuthFailure,
 
-    /// you sent data that i couldn't decode. make sure you're encoding payloads as utf-8 json as text.
-    #[error(
-        "you sent data that i couldn't decode. make sure you're encoding payloads as utf-8 json as text."
-    )]
+    /// you sent invalid data that i couldn't decode
+    ///
+    /// make sure you're encoding payloads correctly, eg. for uncompressed websocket utf-8 json in a text frame
+    #[error("invalid data")]
     InvalidData,
+
+    /// the message you are trying to send is too big
+    #[error("too big")]
+    TooBig,
     // TODO: shard errors
     // TODO: webhook transport errors
 }
@@ -229,6 +237,8 @@ impl SyncErrorCode {
     pub fn code(&self) -> u16 {
         match self {
             SyncErrorCode::InvalidData => 1007,
+            SyncErrorCode::TooBig => 1009,
+            SyncErrorCode::ConnectionExpired => 4009,
             SyncErrorCode::Unauthorized => 3003,
             SyncErrorCode::Unauthenticated => 3000,
             SyncErrorCode::Timeout => 3008,
@@ -236,5 +246,19 @@ impl SyncErrorCode {
             SyncErrorCode::AlreadyAuthenticated => 4005,
             SyncErrorCode::InvalidSeq => 4007,
         }
+    }
+
+    /// whether the server will disconnect
+    #[inline]
+    pub fn will_disconnect(&self) -> bool {
+        matches!(self, Self::TooBig | Self::InvalidData | Self::Timeout) || !self.can_resume()
+    }
+
+    /// whether the client can resume
+    ///
+    /// if false, the client has to start over again
+    #[inline]
+    pub fn can_resume(&self) -> bool {
+        !matches!(self, Self::InvalidSeq | Self::ConnectionExpired)
     }
 }

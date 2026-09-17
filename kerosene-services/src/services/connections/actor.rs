@@ -13,7 +13,6 @@ use common::{
 use futures::FutureExt;
 use kerosene_core::types::documents::EditContextId;
 use kerosene_sync::{
-    error::{ConnectionErrorSeverity, severity},
     permissions::AuthCheck,
     queue::ConnectionQueue,
     transport::{Transport, TransportEvent, TransportSink, TransportStream},
@@ -589,18 +588,12 @@ impl Connection {
                         })
                         .await?;
 
-                    let sev = severity(&err);
-                    if matches!(
-                        sev,
-                        ConnectionErrorSeverity::Reconnect | ConnectionErrorSeverity::Fatal
-                    ) {
-                        t.send
-                            .send(MessageEnvelope {
-                                payload: MessagePayload::Reconnect {
-                                    can_resume: sev == ConnectionErrorSeverity::Reconnect,
-                                },
-                            })
-                            .await?;
+                    if let Some(code) = code {
+                        if code.will_disconnect() {
+                            let can_resume = code.can_resume();
+                            let payload = MessagePayload::Reconnect { can_resume };
+                            t.send.send(MessageEnvelope { payload }).await?;
+                        }
                     }
                 }
             }

@@ -244,6 +244,8 @@ impl Error {
                 SyncErrorCode::AlreadyAuthenticated => StatusCode::BAD_REQUEST,
                 SyncErrorCode::AuthFailure => StatusCode::UNAUTHORIZED,
                 SyncErrorCode::InvalidData => StatusCode::BAD_REQUEST,
+                SyncErrorCode::ConnectionExpired => StatusCode::BAD_REQUEST, // NOTE: surely there's a better status code?
+                SyncErrorCode::TooBig => StatusCode::PAYLOAD_TOO_LARGE,
             },
             Error::MultipartError(_) => StatusCode::BAD_REQUEST,
             Error::MultipartRejection(_) => StatusCode::BAD_REQUEST,
