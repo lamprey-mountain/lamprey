@@ -152,7 +152,14 @@ export const ChannelIconRoom = (props: {
 			</g>
 
 			<Show when={props.nsfw}>
-				<image href={icChanNsfw} />
+				<rect
+					width="64"
+					height="64"
+					x="0"
+					y="0"
+					class="inner"
+					mask={`url(${icChanNsfw})`}
+				/>
 			</Show>
 		</svg>
 	);
