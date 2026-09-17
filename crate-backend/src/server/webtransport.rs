@@ -4,7 +4,7 @@ use crate::prelude::*;
 use async_trait::async_trait;
 use common::{
     v1::types::{
-        MessageClient, MessageEnvelope, MessagePayload, SyncFormat, SyncParams,
+        ChannelType, MessageClient, MessageEnvelope, MessagePayload, SyncFormat, SyncParams,
         error::SyncErrorCode,
     },
     v2::types::ConnectionId,
@@ -255,7 +255,15 @@ async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState)
                 return Ok(());
             };
 
-            let context_id = EditContextId::from_prose(channel_id, branch_id);
+            // HACK: lookup whether this is for a redex
+            let chan = srv.channels.get(channel_id, None).await?;
+            let is_redex = chan.ty == ChannelType::Scripts;
+
+            let context_id = if is_redex {
+                EditContextId::from_redex(channel_id, (*branch_id).into())
+            } else {
+                EditContextId::from_prose(channel_id, branch_id)
+            };
             let transport = Box::new(WrapperTransport::new(send, recv));
             handle.attach_document_transport(context_id, transport, state_vector);
         }

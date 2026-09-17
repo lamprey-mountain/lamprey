@@ -1275,20 +1275,28 @@ fn get_stream_for_sync(sync: &MessageSync) -> StreamSubscription {
         MessageSync::DocumentEdit {
             channel_id,
             branch_id,
+            document_id,
             ..
         }
         | MessageSync::DocumentPresence {
             channel_id,
             branch_id,
+            document_id,
             ..
         }
         | MessageSync::DocumentSubscribed {
             channel_id,
             branch_id,
+            document_id,
             ..
         } => {
-            // FIXME: handle redex edit contexts
-            StreamSubscription::Document(EditContextId::from_prose(*channel_id, *branch_id))
+            // HACK: this is an implementation detail but works
+            let ctx_id = if **channel_id != **document_id {
+                EditContextId::from_redex(*channel_id, (**document_id).into())
+            } else {
+                EditContextId::from_prose(*channel_id, *branch_id)
+            };
+            StreamSubscription::Document(ctx_id)
         }
 
         MessageSync::MemberListSync {

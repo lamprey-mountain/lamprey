@@ -109,15 +109,10 @@ impl DocumentSyncer {
                     Some((context_id, state_vector)) => {
                         // TODO: check that self.user_id is Some
 
-                        let rx = self
-                            .s
-                            .services()
-                            .documents
-                            .subscribe(context_id, self.user_id)
-                            .await?;
+                        let srv = self.s.services();
+                        let rx = srv.documents.subscribe(context_id, self.user_id).await?;
                         self.current_rx = Some((context_id, rx));
 
-                        let srv = self.s.services();
                         let update = if let Some(sv) = state_vector {
                             srv.documents.diff(context_id, self.user_id, &sv).await?
                         } else {
