@@ -108,35 +108,53 @@ export const ChannelIcon = (props: {
 					] as ChannelType[]
 				).includes(props.channel.type)}
 			>
-				<svg
-					aria-hidden="true"
-					class="channel-icon"
-					viewBox="0 0 64 64"
+				<ChannelIconRoom
+					id={props.channel.id}
+					type={props.channel.type}
+					nsfw={props.channel.nsfw}
+					animate={props.animate}
 					style={props.style}
-				>
-					<defs>
-						<mask id="nsfw">
-							<rect width="64" height="64" x="0" y="0" fill="white" />
-							<rect rx="4" width="32" height="32" x="32" y="0" fill="black" />
-						</mask>
-					</defs>
-					<g mask={props.channel.nsfw ? "url(#nsfw)" : undefined}>
-						<rect
-							width="64"
-							height="64"
-							x="0"
-							y="0"
-							class="inner"
-							mask={`url(${channelIcon(props.channel.type, props.channel.id)})`}
-						/>
-					</g>
-
-					<Show when={props.channel.nsfw}>
-						<image href={icChanNsfw} />
-					</Show>
-				</svg>
+				/>
 			</Match>
 		</Switch>
+	);
+};
+
+export const ChannelIconRoom = (props: {
+	id: string;
+	type: ChannelType;
+	nsfw?: boolean;
+	animate?: boolean;
+	style?: string;
+}) => {
+	return (
+		<svg
+			aria-hidden="true"
+			class="channel-icon"
+			viewBox="0 0 64 64"
+			style={props.style}
+		>
+			<defs>
+				<mask id="nsfw">
+					<rect width="64" height="64" x="0" y="0" fill="white" />
+					<rect rx="4" width="32" height="32" x="32" y="0" fill="black" />
+				</mask>
+			</defs>
+			<g mask={props.nsfw ? "url(#nsfw)" : undefined}>
+				<rect
+					width="64"
+					height="64"
+					x="0"
+					y="0"
+					class="inner"
+					mask={`url(${channelIcon(props.type, props.id)})`}
+				/>
+			</g>
+
+			<Show when={props.nsfw}>
+				<image href={icChanNsfw} />
+			</Show>
+		</svg>
 	);
 };
 

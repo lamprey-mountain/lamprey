@@ -1,0 +1,76 @@
+@use "./util.scss" as *;
+
+.room-template-page-wrapper {
+	grid-area: main;
+	overflow-y: auto;
+	display: grid;
+	place-items: center;
+}
+
+.room-template-page {
+	display: flex;
+	max-height: 50%;
+	width: 100%;
+	max-width: min(80%, 800px);
+	border: solid $sep-300 1px;
+	border-radius: 4px;
+	box-shadow: 2px 2px 8px #1114;
+	overflow: hidden;
+
+	& > .main {
+		padding: 8px;
+		background: $bg-150;
+		flex: 1;
+
+		& > .creator {
+			& > .dim {
+				font-size: 1em;
+			}
+
+			& > .avatar {
+				display: inline-block;
+				height: 1em;
+				width: 1em;
+				margin-inline: 4px;
+			}
+
+			& > .user {
+				cursor: pointer;
+
+				&:hover {
+					text-decoration: underline;
+				}
+			}
+		}
+
+		& > .form {
+			display: flex;
+			flex-direction: column;
+			margin-top: 16px;
+			gap: 8px;
+
+			input[type="text"] {
+				width: 100%;
+			}
+
+			& > .menu {
+				display: flex;
+				justify-content: end;
+				gap: 8px;
+			}
+		}
+	}
+
+	& > .details {
+		flex: 1;
+		padding: 8px;
+		overflow-y: auto;
+		background: $bg-100;
+
+		.channel {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+		}
+	}
+}

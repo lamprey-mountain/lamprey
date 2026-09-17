@@ -374,3 +374,7 @@ export type CalendarEventCreate = components["schemas"]["CalendarEventCreate"];
 export type CalendarEventPatch = components["schemas"]["CalendarEventPatch"];
 
 export type ServerInfo = components["schemas"]["ServerInfo"];
+
+export type RoomTemplate = components["schemas"]["RoomTemplate"];
+export type RoomTemplateChannel = components["schemas"]["RoomTemplateChannel"];
+export type RoomTemplateRole = components["schemas"]["RoomTemplateRole"];

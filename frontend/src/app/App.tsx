@@ -52,6 +52,7 @@ import {
 	RouteNotFound,
 	RouteRoom,
 	RouteRoomSettings,
+	RouteRoomTemplate,
 	RouteSearch,
 	RouteSettings,
 	RouteUser,
@@ -65,6 +66,10 @@ const App: Component = () => {
 				<Route path="/inbox" component={RouteInbox} />
 				<Route path="/friends" component={RouteFriends} />
 				<Route path="/room/:room_id" component={RouteRoom} />
+				<Route
+					path="/room-template/:template_id"
+					component={RouteRoomTemplate}
+				/>
 				<Route path="/channel/:channel_id" component={RouteChannel} />
 				<Route
 					path="/channel/:channel_id/message/:message_id"

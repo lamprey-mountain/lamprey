@@ -44,6 +44,7 @@ import { Inbox } from "@/components/shared/Inbox";
 import { RoomHome, RoomMembers } from "@/components/shared/Room";
 import { RoomHeader } from "@/components/shared/RoomHeader";
 import { RoomNav } from "@/components/shared/RoomNav";
+import { RoomTemplatePage } from "@/components/shared/RoomTemplatePage";
 import { SearchPage } from "@/components/shared/SearchPage";
 import { Title } from "@/components/shared/Title";
 import { UserTray } from "@/components/shared/UserTray";
@@ -153,6 +154,8 @@ export const RouteRoom = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 		</Show>
 	);
 };
+
+export const RouteRoomTemplate = RoomTemplatePage;
 
 export const RouteRoomSettings = (
 	p: ParentProps<RouteSectionProps>,

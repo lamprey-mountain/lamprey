@@ -62,6 +62,7 @@ export const RouteUser = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 				return { status: "platformError", err };
 			}
 		},
+		{ initialValue: { status: "loading" } },
 	);
 
 	function matches<T extends UserResult["status"]>(
