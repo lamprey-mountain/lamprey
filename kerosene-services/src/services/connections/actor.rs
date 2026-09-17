@@ -104,10 +104,8 @@ enum StreamSubscription {
         room_id: Option<RoomId>,
         channel_id: Option<ChannelId>,
     },
-    Script {
-        channel_id: ChannelId,
-        redex_id: RedexId,
-    },
+    Script(ChannelId),
+    Room(RoomId),
 }
 
 /// a command for controlling a connection actor
@@ -146,6 +144,10 @@ pub enum StreamAttach {
     Script {
         channel_id: ChannelId,
         script_id: RedexId,
+    },
+
+    Room {
+        room_id: RoomId,
     },
 }
 
@@ -518,17 +520,14 @@ impl Connection {
                     }
                     StreamAttach::Script {
                         channel_id,
-                        script_id,
+                        script_id: _,
                     } => {
                         let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
 
                         self.subscriptions
                             .set_subscription(
                                 SyncSubscription {
-                                    scripts: Some(vec![SyncSubscribeScript {
-                                        channel_id,
-                                        script_id,
-                                    }]),
+                                    scripts: Some(vec![SyncSubscribeScript { channel_id }]),
                                     documents: None,
                                     member_lists: None,
                                 },
@@ -538,10 +537,23 @@ impl Connection {
 
                         let stream = self
                             .streams
-                            .entry(StreamSubscription::Script {
-                                channel_id,
-                                redex_id: script_id,
-                            })
+                            .entry(StreamSubscription::Script(channel_id))
+                            .or_insert_with(|| ConnectionStream {
+                                queue: ConnectionQueue::new(MAX_QUEUE_LEN),
+                                transport: None,
+                            });
+                        stream.transport = Some(transport);
+                    }
+                    StreamAttach::Room { room_id } => {
+                        let srv = self.globals.services();
+                        let perms = srv
+                            .perms
+                            .for_room3(self.session.user_id(), room_id)
+                            .await?
+                            .ensure_view()?;
+                        let stream = self
+                            .streams
+                            .entry(StreamSubscription::Room(room_id))
                             .or_insert_with(|| ConnectionStream {
                                 queue: ConnectionQueue::new(MAX_QUEUE_LEN),
                                 transport: None,
@@ -729,17 +741,14 @@ impl Connection {
             }
             MessageClient::ScriptSubscribe {
                 channel_id,
-                script_id,
+                script_id: _,
             } => {
                 let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
 
                 self.subscriptions
                     .set_subscription(
                         SyncSubscription {
-                            scripts: Some(vec![SyncSubscribeScript {
-                                channel_id,
-                                script_id,
-                            }]),
+                            scripts: Some(vec![SyncSubscribeScript { channel_id }]),
                             documents: None,
                             member_lists: None,
                         },
@@ -980,16 +989,12 @@ impl Connection {
                         self.subscriptions
                             .remove_member_list_subscription(room_id, channel_id);
                     }
-                    StreamSubscription::Script {
-                        channel_id,
-                        redex_id,
-                    } => {
-                        self.streams.remove(&StreamSubscription::Script {
-                            channel_id,
-                            redex_id,
-                        });
-                        self.subscriptions
-                            .remove_script_subscription(channel_id, redex_id);
+                    StreamSubscription::Script(channel_id) => {
+                        self.streams.remove(&StreamSubscription::Script(channel_id));
+                        self.subscriptions.remove_script_subscription(channel_id);
+                    }
+                    StreamSubscription::Room(room_id) => {
+                        self.streams.remove(&StreamSubscription::Room(room_id));
                     }
                 }
             }
@@ -1075,16 +1080,12 @@ impl Connection {
                 self.subscriptions
                     .remove_member_list_subscription(room_id, channel_id);
             }
-            StreamSubscription::Script {
-                channel_id,
-                redex_id,
-            } => {
-                self.streams.remove(&StreamSubscription::Script {
-                    channel_id,
-                    redex_id,
-                });
-                self.subscriptions
-                    .remove_script_subscription(channel_id, redex_id);
+            StreamSubscription::Script(channel_id) => {
+                self.streams.remove(&StreamSubscription::Script(channel_id));
+                self.subscriptions.remove_script_subscription(channel_id);
+            }
+            StreamSubscription::Room(room_id) => {
+                self.streams.remove(&StreamSubscription::Room(room_id));
             }
         };
     }
@@ -1171,6 +1172,10 @@ impl ConnectionHandle {
         );
     }
 
+    pub fn attach_room(&self, transport: Box<dyn Transport>, room_id: RoomId) {
+        self.attach_inner(transport, 0, StreamAttach::Room { room_id });
+    }
+
     /// shutdown this connection
     pub fn shutdown(&self) {
         let _ = self.tx.try_send(Command::Shutdown);
@@ -1199,10 +1204,23 @@ fn get_stream_for_sync(sync: &MessageSync) -> StreamSubscription {
             StreamSubscription::Document(EditContextId::from_prose(*channel_id, *branch_id))
         }
 
-        // TODO: handle these:
-        // ConnectionStream::Voice(()),
-        // ConnectionStream::MemberList(()),
-        // ConnectionStream::Script { channel_id, redex_id },
+        MessageSync::MemberListSync {
+            room_id,
+            channel_id,
+            ..
+        } => StreamSubscription::MemberList {
+            room_id: *room_id,
+            channel_id: *channel_id,
+        },
+
+        MessageSync::VoiceDispatch { channel_id, .. } => StreamSubscription::Voice(*channel_id),
+
+        MessageSync::ScriptLogCreate { channel_id, .. }
+        | MessageSync::ScriptSubscribed { channel_id, .. }
+        | MessageSync::ScriptChannelMetrics { channel_id, .. } => {
+            StreamSubscription::Script(*channel_id)
+        }
+
         _ => StreamSubscription::Sync,
     }
 }

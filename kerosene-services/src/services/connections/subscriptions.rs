@@ -24,7 +24,7 @@ pub struct ConnectionSubscriptions {
     event_rx: mpsc::UnboundedReceiver<Result<MessageSync>>,
 
     documents: HashMap<EditContextId, JoinHandle<()>>,
-    scripts: HashMap<(ChannelId, RedexId), JoinHandle<()>>,
+    scripts: HashMap<ChannelId, JoinHandle<()>>,
     member_lists: HashMap<String, (JoinHandle<()>, Vec<(u64, u64)>)>, // store ranges to detect when ranges are updated
 }
 
@@ -98,8 +98,8 @@ impl ConnectionSubscriptions {
         }
     }
 
-    pub fn remove_script_subscription(&mut self, channel_id: ChannelId, redex_id: RedexId) {
-        if let Some(handle) = self.scripts.remove(&(channel_id, redex_id)) {
+    pub fn remove_script_subscription(&mut self, channel_id: ChannelId) {
+        if let Some(handle) = self.scripts.remove(&channel_id) {
             handle.abort();
         }
     }
@@ -233,7 +233,7 @@ impl ConnectionSubscriptions {
             let mut new_keys = HashSet::new();
 
             for script in scripts {
-                let key = (script.channel_id, script.script_id);
+                let key = script.channel_id;
                 new_keys.insert(key);
 
                 if !self.scripts.contains_key(&key) {
@@ -245,9 +245,7 @@ impl ConnectionSubscriptions {
 
                     let mut syncer = srv.scripts.create_syncer(self.conn_id);
                     syncer.set_user_id(Some(user_id)).await;
-                    syncer
-                        .set_context_id(script.channel_id, script.script_id)
-                        .await?;
+                    syncer.set_context_id(script.channel_id).await?;
 
                     let tx = self.event_tx.clone();
                     let handle = tokio::spawn(async move {

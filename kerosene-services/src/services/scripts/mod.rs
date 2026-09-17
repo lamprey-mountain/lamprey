@@ -90,14 +90,14 @@ impl ServiceScripts {
     pub async fn create_script(&self, script: Redex) -> Result<()> {
         let inputs = self.process(script.clone(), None).await?;
         let extracted_metadata = inputs.metadata;
-        let mut data = self.globals.begin().await?;
+        let mut txn = self.globals.begin().await?;
 
         // persist the script to the database
-        data.script_create(&script).await?;
+        txn.script_create(&script).await?;
 
         // store the extracted inputs as cached_inputs on the version
         let inputs_json = serde_json::to_value(&inputs.inputs).ok();
-        let version_id = data
+        let version_id = txn
             .script_version_create(
                 script.id,
                 script.channel_id,
@@ -110,17 +110,17 @@ impl ServiceScripts {
             .await?;
 
         // update status to Valid
-        data.script_version_update_status(script.id, version_id, RedexVersionStatus::Valid)
+        txn.script_version_update_status(script.id, version_id, RedexVersionStatus::Valid)
             .await?;
 
         // update the script's latest_version metadata with extracted data
         let format = script.latest_version.format.clone();
         let location = script.latest_version.location.clone();
-        data.script_update(script.id, format, location, extracted_metadata)
+        txn.script_update(script.id, format, location, extracted_metadata)
             .await?;
 
         // broadcast the newly created script
-        if let Some(full_script) = data.script_get(script.id).await? {
+        if let Some(full_script) = txn.script_get(script.id).await? {
             self.broadcast(
                 script.channel_id,
                 MessageSync::ScriptCreate {
@@ -130,7 +130,7 @@ impl ServiceScripts {
             .await;
         }
 
-        data.commit().await?;
+        txn.commit().await?;
 
         Ok(())
     }

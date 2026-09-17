@@ -194,7 +194,8 @@ pub struct SyncSubscription {
 #[derive(PartialEq, Eq)]
 pub struct SyncSubscribeScript {
     pub channel_id: ChannelId,
-    pub script_id: RedexId,
+    // TODO: re-add redex id to subscribe to specific redexes
+    // pub script_id: RedexId,
 }
 
 #[record]
@@ -1057,7 +1058,10 @@ pub enum MessageSync {
     /// client is now subscribed to a script
     ScriptSubscribed {
         channel_id: ChannelId,
+
+        #[deprecated = "this doesn't exist anymore and will always be nil!"]
         redex_id: RedexId,
+
         connection_id: ConnectionId,
     },
 

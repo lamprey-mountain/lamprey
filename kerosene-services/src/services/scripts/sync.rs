@@ -19,16 +19,16 @@ pub struct ScriptSyncer {
     /// Sends subscription requests to switch to a different script.
     /// When a client subscribes to a new script, the (channel_id, script_id) tuple is
     /// sent through this channel.
-    query_tx: tokio::sync::watch::Sender<Option<(ChannelId, RedexId)>>,
+    query_tx: tokio::sync::watch::Sender<Option<ChannelId>>,
 
     /// Receives subscription requests from `query_tx`. The poll() loop monitors
     /// this receiver for changes. When a new query arrives, it sets up a
     /// subscription to the requested script and moves the subscription to `current_rx`.
-    query_rx: tokio::sync::watch::Receiver<Option<(ChannelId, RedexId)>>,
+    query_rx: tokio::sync::watch::Receiver<Option<ChannelId>>,
 
     /// The active script subscription. Contains the current (channel_id, script_id) tuple
     /// and a broadcast receiver for receiving script events (logs, metrics, runs).
-    current_rx: Option<((ChannelId, RedexId), broadcast::Receiver<MessageSync>)>,
+    current_rx: Option<(ChannelId, broadcast::Receiver<MessageSync>)>,
 
     /// The connection ID associated with this syncer, used to filter out
     /// self-originated events.
@@ -61,9 +61,9 @@ impl ScriptSyncer {
     }
 
     /// Set the script to subscribe to.
-    pub async fn set_context_id(&self, channel_id: ChannelId, script_id: RedexId) -> Result<()> {
+    pub async fn set_context_id(&self, channel_id: ChannelId) -> Result<()> {
         self.query_tx
-            .send(Some((channel_id, script_id)))
+            .send(Some(channel_id))
             .map_err(|_| Error::Internal("query channel closed".to_string()))?;
         Ok(())
     }
@@ -72,9 +72,7 @@ impl ScriptSyncer {
     pub fn is_subscribed(&self, channel_id: &ChannelId, script_id: &RedexId) -> bool {
         self.current_rx
             .as_ref()
-            .map(|((current_channel, current_script), _)| {
-                current_channel == channel_id && current_script == script_id
-            })
+            .map(|(current_channel, _)| current_channel == channel_id)
             .unwrap_or(false)
     }
 
@@ -89,18 +87,18 @@ impl ScriptSyncer {
                 let query = self.query_rx.borrow().clone();
 
                 match query {
-                    Some((channel_id, script_id)) => {
+                    Some(channel_id) => {
                         let rx = self
                             .globals
                             .services()
                             .scripts
                             .subscribe_channel(channel_id)
                             .await?;
-                        self.current_rx = Some(((channel_id, script_id), rx));
+                        self.current_rx = Some((channel_id, rx));
 
                         return Ok(MessageSync::ScriptSubscribed {
                             channel_id,
-                            redex_id: script_id,
+                            redex_id: Uuid::nil().into(),
                             connection_id: self.conn_id,
                         });
                     }
@@ -111,7 +109,7 @@ impl ScriptSyncer {
                 }
             }
 
-            if let Some(((_channel_id, _script_id), rx)) = &mut self.current_rx {
+            if let Some((_channel_id, rx)) = &mut self.current_rx {
                 tokio::select! {
                     res = rx.recv() => {
                         match res {
