@@ -25,6 +25,8 @@ export type ClientOptions = {
 	onError?: (error: Error) => void;
 	onSend?: (data: unknown) => void;
 	onMessage?: (raw: MessageEnvelope) => void;
+	onStreamOpen?: (stream: StreamInfo) => void;
+	onStreamClose?: (stream: StreamInfo) => void;
 	format?: "json" | "msgpack";
 	compress?: "deflate";
 };
@@ -266,16 +268,18 @@ export type DocumentOptions = StreamOptions & {
 };
 
 export type StreamOptions = {
-	onSync: (event: MessageSync, raw: MessageEnvelope) => void;
-	onError?: (error: Error) => void;
-	onSend?: (data: unknown) => void;
-	onMessage?: (raw: MessageEnvelope) => void;
+	onSync: (event: MessageSync, raw: MessageEnvelope, streamId: number) => void;
+	onError?: (error: Error, streamId: number) => void;
+	onSend?: (data: unknown, streamId: number) => void;
+	onMessage?: (raw: MessageEnvelope, streamId: number) => void;
 };
 
 export type Stream = {
 	close: () => void;
 	send: (data: MessageClient) => void;
 };
+
+export type StreamInfo = unknown;
 
 export function createWebtransportClient(
 	opts: ClientOptions,
@@ -296,7 +300,6 @@ export function createWebtransportClient(
 		},
 	});
 
-	// TODO: support multiple streams
 	const state = createObservable<ClientState>("stopped");
 	const queue: Array<unknown> = [];
 	let transport: WebTransport | null = null;
@@ -403,16 +406,18 @@ export function createWebtransportClient(
 			);
 
 			transport.closed.then((info) => {
+				// TODO(later): make client emit an event for this
 				console.log("closed", info);
 			});
 
 			transport.draining?.then(() => {
+				// TODO(later): make client emit an event for this
 				console.log("draining");
 			});
 
 			await transport.ready;
 			state.set("connected");
-			console.log("selected protocol", transport.protocol);
+			// TODO(later): make client emit an event for when protocol is selected
 
 			bidiStream = await transport.createBidirectionalStream();
 			writer = bidiStream.writable.getWriter();
@@ -458,7 +463,6 @@ export function createWebtransportClient(
 				writer = null;
 			}
 		} catch (err) {
-			console.error("failed to create webtransport syncer", err);
 			if (state.get() === "stopped") return;
 			state.set("connecting");
 			opts.onError?.(err as Error);
@@ -489,11 +493,13 @@ export function createWebtransportClient(
 	}
 
 	/** open a new stream */
+	let streamIdCounter = 0;
 	const subscribe = (options: StreamOptions): Stream => {
 		// TODO: wait until transport is ready before opening stream (eg. if Hello hasn't been sent yet)
 		if (!transport) throw new Error("transport is closed");
 
-		console.log("AAA subscribe", options);
+		const streamId = streamIdCounter++;
+		opts.onStreamOpen?.(streamId);
 
 		let writer: WritableStreamDefaultWriter | null = null;
 		let reader: ReadableStreamDefaultReader | null = null;
@@ -518,8 +524,9 @@ export function createWebtransportClient(
 				const len = new Uint8Array(4);
 				new DataView(len.buffer).setUint32(0, packed.length, false);
 				writer.write(new Uint8Array([...len, ...packed]));
-				console.log("AAA send", item);
-				options.onSend?.(item);
+				// TODO: call opts.onSomething when sending message
+				// console.log("AAA send", item);
+				options.onSend?.(item, streamId);
 				// PERF: call scheduler.yield() here if it exists?
 			}
 
@@ -533,7 +540,8 @@ export function createWebtransportClient(
 		};
 
 		const close = () => {
-			console.log("AAA close");
+			if (closed) return;
+			opts.onStreamClose?.(streamId);
 			closed = true;
 			reader?.releaseLock();
 			writer?.close();
@@ -577,19 +585,20 @@ export function createWebtransportClient(
 								format === "msgpack"
 									? unpack(payload)
 									: JSON.parse(new TextDecoder().decode(payload));
-							console.log("AAA recv", msg);
-							options.onMessage?.(msg);
+							// TODO: call opts.onSomething when receiving message
+							// console.log("AAA recv", msg);
+							options.onMessage?.(msg, streamId);
 							switch (msg.op) {
 								case "Ping": {
 									send({ type: "Pong" });
 									break;
 								}
 								case "Sync": {
-									options.onSync(msg.data, msg);
+									options.onSync(msg.data, msg, streamId);
 									break;
 								}
 								case "Error": {
-									options.onError?.(new Error(msg.error));
+									options.onError?.(new Error(msg.error), streamId);
 									break;
 								}
 							}
@@ -600,8 +609,8 @@ export function createWebtransportClient(
 					}
 				}
 			} catch (err) {
-				console.error("AAA", err);
-				options.onError?.(err as Error);
+				// NOTE: should i also call opts.onError here? should onError take another stream arg?
+				options.onError?.(err as Error, streamId);
 			} finally {
 				if (!closed) close();
 			}

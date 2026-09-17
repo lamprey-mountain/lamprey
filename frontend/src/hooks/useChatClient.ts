@@ -56,23 +56,31 @@ export function useChatClient(config: Config) {
 		token: localStorage.getItem("token") || undefined,
 		format: useMsgpack ? "msgpack" : "json",
 		compress: useDeflate ? "deflate" : undefined,
-		onMessage(raw) {
+		onMessage(raw, stream) {
 			const op = raw.op === "Sync" ? `Sync (${raw.data.type})` : raw.op;
-			recvLog("recv 🢃", `got op ${op}`, raw);
+			const tag = stream ? `recv(${stream}) 🢃` : "recv 🢃";
+			recvLog(tag, `got op ${op}`, raw);
 		},
-		onSend(data) {
+		onSend(data, stream) {
 			if (data && typeof data === "object" && "type" in data) {
-				sendLog("send 🢁", `sent op ${(data as { type: string }).type}`, data);
+				const tag = stream ? `send(${stream}) 🢁` : "send 🢁";
+				sendLog(tag, `sent op ${(data as { type: string }).type}`, data);
 			}
 		},
-		onError(error) {
+		onError(error, stream) {
 			syncLog.error("error", error.message, error);
 		},
-		onSync(msg, raw) {
+		onSync(msg, raw, stream) {
 			events.emit("sync", [msg, raw as MessageEnvelope]);
 		},
 		onReady(msg) {
 			events.emit("ready", msg);
+		},
+		onStreamOpen(stream) {
+			syncLog.debug("stream open", `with id: ${stream}`);
+		},
+		onStreamClose(stream) {
+			syncLog.debug("stream close", `with id: ${stream}`);
 		},
 	};
 	const client = useWebtransport
