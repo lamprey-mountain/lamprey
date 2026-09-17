@@ -333,6 +333,50 @@ async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState)
             handle.attach_script(transport, channel_id, script_id);
         }
 
+        MessageClient::RoomSubscribe { room_id } => {
+            let handle = shared
+                .connection
+                .as_ref()
+                .ok_or(SyncErrorCode::Unauthenticated);
+            let Ok(handle) = handle else {
+                send.send(MessageEnvelope {
+                    payload: MessagePayload::Error {
+                        error: "you need to open and authenticate a sync stream first".into(),
+                        code: Some(SyncErrorCode::Unauthenticated),
+                    },
+                })
+                .await
+                .unwrap();
+                send.close().await.unwrap();
+                return Ok(());
+            };
+
+            let transport = Box::new(WrapperTransport::new(send, recv));
+            handle.attach_room(transport, room_id);
+        }
+
+        MessageClient::ChannelSubscribe { channel_id } => {
+            let handle = shared
+                .connection
+                .as_ref()
+                .ok_or(SyncErrorCode::Unauthenticated);
+            let Ok(handle) = handle else {
+                send.send(MessageEnvelope {
+                    payload: MessagePayload::Error {
+                        error: "you need to open and authenticate a sync stream first".into(),
+                        code: Some(SyncErrorCode::Unauthenticated),
+                    },
+                })
+                .await
+                .unwrap();
+                send.close().await.unwrap();
+                return Ok(());
+            };
+
+            let transport = Box::new(WrapperTransport::new(send, recv));
+            handle.attach_channel(transport, channel_id);
+        }
+
         _ => return Err(Error::BadStatic("invalid client message")),
     }
 

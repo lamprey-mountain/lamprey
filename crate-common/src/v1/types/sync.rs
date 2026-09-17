@@ -137,6 +137,14 @@ pub enum MessageClient {
 
     /// subscribe to some resources
     Subscribe(SyncSubscription),
+
+    /// subscribe to a room (webtransport only)
+    // TEMP: i'll redo MessageClient later
+    RoomSubscribe { room_id: RoomId },
+
+    /// subscribe to a channel (webtransport only)
+    // TEMP: i'll redo MessageClient later
+    ChannelSubscribe { channel_id: ChannelId },
 }
 
 /// metadata for this connection
@@ -403,6 +411,7 @@ pub enum MessageSync {
         room_id: RoomId,
         ack_states: Vec<AckState>,
         voice_states: Vec<VoiceState>,
+        // TODO: fields for {updated,deleted} {ack states, voice states, room members, users, presence}
     },
 
     // ThreadCreate {

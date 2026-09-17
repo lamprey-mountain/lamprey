@@ -106,6 +106,7 @@ enum StreamSubscription {
     },
     Script(ChannelId),
     Room(RoomId),
+    Channel(ChannelId),
 }
 
 /// a command for controlling a connection actor
@@ -148,6 +149,10 @@ pub enum StreamAttach {
 
     Room {
         room_id: RoomId,
+    },
+
+    Channel {
+        channel_id: ChannelId,
     },
 }
 
@@ -344,84 +349,74 @@ impl Connection {
             .queue
             .push(MessageEnvelope { payload: ready });
 
+        // TODO: send some of these events to guests, too
         if let Some(uid) = user_id {
+            let stream = self.streams.get_mut(&StreamSubscription::Sync).unwrap();
+
             // Ambient
             let ambient = srv.cache.generate_ambient_message(uid).await?;
-            self.streams
-                .get_mut(&StreamSubscription::Sync)
-                .unwrap()
-                .queue
-                .push_sync(ambient, None);
+            stream.queue.push_sync(ambient, None);
+
+            // TODO: require subscriptions to receive these events
+            // TODO: only send these when the room is subscribed to (typing in dms are always sent)
 
             // Typing
             let typing_states = srv.channels.typing_list();
             for (channel_id, typing_user_id, until) in typing_states {
-                if let Ok(perms) = srv.perms.for_channel(uid, channel_id).await {
-                    if perms.has(Permission::ChannelView) {
+                if let Ok(perms) = srv.perms.for_channel3(Some(uid), channel_id).await {
+                    if perms.visible {
                         let channel = srv.channels.get(channel_id, None).await?;
-                        self.streams
-                            .get_mut(&StreamSubscription::Sync)
-                            .unwrap()
-                            .queue
-                            .push_sync(
-                                MessageSync::ChannelTyping {
-                                    room_id: channel.room_id,
-                                    channel_id,
-                                    user_id: typing_user_id,
-                                    until: until.into(),
-                                },
-                                None,
-                            );
+                        stream.queue.push_sync(
+                            MessageSync::ChannelTyping {
+                                room_id: channel.room_id,
+                                channel_id,
+                                user_id: typing_user_id,
+                                until: until.into(),
+                            },
+                            None,
+                        );
                     }
                 }
             }
 
             // Voice
+            // TODO: require a room subscription to receive these, send PassiveRoom syncs later
             let voice_states = srv.voice.state_list();
             for voice_state in voice_states {
                 let vs = voice_state.inner();
-                if let Ok(perms) = srv.perms.for_channel(uid, vs.channel_id).await {
-                    let is_ours = self.session.user_id() == Some(vs.user_id);
-                    if perms.has(Permission::ChannelView) || is_ours {
+                if let Ok(perms) = srv.perms.for_channel3(Some(uid), vs.channel_id).await {
+                    let is_ours = user_id == Some(vs.user_id);
+                    if perms.visible || is_ours {
                         let mut vs = vs.to_owned();
                         if !is_ours {
                             vs.session_id = None;
                         }
-                        self.streams
-                            .get_mut(&StreamSubscription::Sync)
-                            .unwrap()
-                            .queue
-                            .push_sync(
-                                MessageSync::VoiceState {
-                                    user_id: vs.user_id,
-                                    state: Some(vs),
-                                    old_state: None,
-                                },
-                                None,
-                            );
+                        stream.queue.push_sync(
+                            MessageSync::VoiceState {
+                                user_id: vs.user_id,
+                                state: Some(vs),
+                                old_state: None,
+                            },
+                            None,
+                        );
                     }
                 }
             }
 
             // Flumes
-            // NOTE: in the future, you will be required to subscribe to receive flumes
             for entry in &srv.messages.flumes {
                 let flume = entry.value();
                 if let Ok(perms) = srv.perms.for_channel3(Some(uid), flume.channel_id).await {
                     if perms.visible {
                         let delta = srv.messages.flume_initial(flume).await?;
-                        self.streams
-                            .get_mut(&StreamSubscription::Sync)
-                            .unwrap()
-                            .queue
-                            .push_sync(
-                                MessageSync::FlumeDelta {
-                                    channel_id: flume.channel_id,
-                                    message_id: *entry.key(),
-                                    delta,
-                                },
-                                None,
-                            );
+                        stream.queue.push_sync(
+                            MessageSync::FlumeDelta {
+                                channel_id: flume.channel_id,
+                                message_id: *entry.key(),
+                                delta,
+                            },
+                            None,
+                        );
                     }
                 }
             }
@@ -559,6 +554,69 @@ impl Connection {
                                 transport: None,
                             });
                         stream.transport = Some(transport);
+
+                        let typing_states = srv.channels.typing_list();
+                        for (channel_id, typing_user_id, until) in typing_states {
+                            if let Ok(perms) = srv
+                                .perms
+                                .for_channel3(self.session.user_id(), channel_id)
+                                .await
+                            {
+                                if perms.visible {
+                                    let channel = srv.channels.get(channel_id, None).await?;
+                                    if channel.room_id == Some(room_id) {
+                                        stream.queue.push_sync(
+                                            MessageSync::ChannelTyping {
+                                                room_id: channel.room_id,
+                                                channel_id,
+                                                user_id: typing_user_id,
+                                                until: until.into(),
+                                            },
+                                            None,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    StreamAttach::Channel { channel_id } => {
+                        let srv = self.globals.services();
+                        let perms = srv
+                            .perms
+                            .for_channel3(self.session.user_id(), channel_id)
+                            .await?
+                            .ensure_view()?;
+                        let stream = self
+                            .streams
+                            .entry(StreamSubscription::Channel(channel_id))
+                            .or_insert_with(|| ConnectionStream {
+                                queue: ConnectionQueue::new(MAX_QUEUE_LEN),
+                                transport: None,
+                            });
+                        stream.transport = Some(transport);
+
+                        for entry in &srv.messages.flumes {
+                            let flume = entry.value();
+                            if flume.channel_id == channel_id {
+                                if let Ok(perms) = srv
+                                    .perms
+                                    .for_channel3(self.session.user_id(), flume.channel_id)
+                                    .await
+                                {
+                                    if perms.visible {
+                                        let delta = srv.messages.flume_initial(flume).await?;
+                                        stream.queue.push_sync(
+                                            MessageSync::FlumeDelta {
+                                                channel_id: flume.channel_id,
+                                                message_id: *entry.key(),
+                                                delta,
+                                            },
+                                            None,
+                                        );
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -757,6 +815,11 @@ impl Connection {
                     .await?;
             }
             MessageClient::Subscribe(subscribe) => self.handle_subscription(subscribe).await?,
+            MessageClient::RoomSubscribe { .. } | MessageClient::ChannelSubscribe { .. } => {
+                return Err(Error::BadStatic(
+                    "{Room,Channel}Subscribe commands must be sent through a separate webtransport stream",
+                ));
+            }
         };
 
         Ok(())
@@ -774,8 +837,11 @@ impl Connection {
         let branch_id = context_id.branch_id();
 
         let srv = self.globals.services();
-        let perms = srv.perms.for_channel(user_id, channel_id).await?;
-        perms.ensure(Permission::ChannelView)?;
+        let perms = srv
+            .perms
+            .for_channel3(Some(user_id), channel_id)
+            .await?
+            .ensure_view()?;
 
         if !self.subscriptions.is_document_subscribed(context_id) {
             return Err(Error::BadStatic("not subscribed to this document"));
@@ -834,9 +900,12 @@ impl Connection {
         let branch_id = context_id.branch_id();
 
         let srv = self.globals.services();
-        let perms = srv.perms.for_channel(user_id, channel_id).await?;
-        perms.ensure(Permission::ChannelView)?;
-        perms.ensure(Permission::DocumentEdit)?;
+        let mut perms = srv
+            .perms
+            .for_channel3(Some(user_id), channel_id)
+            .await?
+            .ensure_view()?;
+        perms.needs(Permission::DocumentEdit).check()?;
 
         if !self.subscriptions.is_document_subscribed(context_id) {
             return Err(Error::BadStatic("not subscribed to this document"));
@@ -902,8 +971,8 @@ impl Connection {
 
                     // if we don't have view perms in the new thread, treat it like a disconnect
                     if let Some(s) = &state {
-                        let perms = srv.perms.for_channel(user_id, s.channel_id).await?;
-                        if !perms.has(Permission::ChannelView) {
+                        let perms = srv.perms.for_channel3(Some(user_id), s.channel_id).await?;
+                        if !perms.visible {
                             state = None;
                         }
                     }
@@ -931,6 +1000,12 @@ impl Connection {
             let s = get_stream_for_sync(&msg);
             if let Some(stream) = self.streams.get_mut(&s) {
                 stream.queue.push_sync(msg, nonce);
+            } else {
+                self.streams
+                    .get_mut(&StreamSubscription::Sync)
+                    .unwrap()
+                    .queue
+                    .push_sync(msg, nonce);
             }
         }
 
@@ -995,6 +1070,10 @@ impl Connection {
                     }
                     StreamSubscription::Room(room_id) => {
                         self.streams.remove(&StreamSubscription::Room(room_id));
+                    }
+                    StreamSubscription::Channel(channel_id) => {
+                        self.streams
+                            .remove(&StreamSubscription::Channel(channel_id));
                     }
                 }
             }
@@ -1087,6 +1166,10 @@ impl Connection {
             StreamSubscription::Room(room_id) => {
                 self.streams.remove(&StreamSubscription::Room(room_id));
             }
+            StreamSubscription::Channel(channel_id) => {
+                self.streams
+                    .remove(&StreamSubscription::Channel(channel_id));
+            }
         };
     }
 }
@@ -1176,6 +1259,10 @@ impl ConnectionHandle {
         self.attach_inner(transport, 0, StreamAttach::Room { room_id });
     }
 
+    pub fn attach_channel(&self, transport: Box<dyn Transport>, channel_id: ChannelId) {
+        self.attach_inner(transport, 0, StreamAttach::Channel { channel_id });
+    }
+
     /// shutdown this connection
     pub fn shutdown(&self) {
         let _ = self.tx.try_send(Command::Shutdown);
@@ -1220,6 +1307,16 @@ fn get_stream_for_sync(sync: &MessageSync) -> StreamSubscription {
         | MessageSync::ScriptChannelMetrics { channel_id, .. } => {
             StreamSubscription::Script(*channel_id)
         }
+
+        MessageSync::ChannelTyping { room_id, .. } => {
+            if let Some(room_id) = room_id {
+                StreamSubscription::Room(*room_id)
+            } else {
+                StreamSubscription::Sync
+            }
+        }
+
+        MessageSync::FlumeDelta { channel_id, .. } => StreamSubscription::Channel(*channel_id),
 
         _ => StreamSubscription::Sync,
     }
