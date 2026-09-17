@@ -9,6 +9,7 @@ use common::v1::types::{
 };
 use common::v2::types::{AUTOMOD_USER_ID, SERVER_ROOM_ID, SERVER_USER_ID};
 use dashmap::{DashMap, DashSet};
+use kerosene_core::error::{ApiError, ErrorCode};
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use lamprey_backend_data_postgres::DbUserCreate;
 use moka::future::Cache;
@@ -34,11 +35,11 @@ pub use types::{
 
 pub struct ServiceRooms {
     globals: Globals,
-    idempotency_keys: Cache<String, Room>,
+    idempotency_keys: Cache<String, RoomHandle>,
     pub(crate) actors: SyncCache<RoomId, RoomHandle>,
-    /// Keep an in-memory map of UserId -> Set of RoomIds for fast fan-out of presence/user updates
+
+    // map of user to rooms they're in for presence/user updates
     pub(crate) user_rooms: Arc<DashMap<UserId, DashSet<RoomId>>>,
-    // handles: HashMap<RoomId, RoomHandle>,
 }
 
 impl ServiceRooms {
@@ -500,7 +501,7 @@ impl ServiceRooms {
         auth: &mut A,
         extra: DbRoomCreate,
         nonce: Option<String>,
-    ) -> Result<Room> {
+    ) -> Result<RoomHandle> {
         if let Some(n) = &nonce {
             self.idempotency_keys
                 .try_get_with(
@@ -520,7 +521,7 @@ impl ServiceRooms {
         create: RoomCreate,
         user_id: UserId,
         extra: DbRoomCreate,
-    ) -> Result<Room> {
+    ) -> Result<RoomHandle> {
         self.create_inner_no_auth(create, user_id, extra, None)
             .await
     }
@@ -532,10 +533,12 @@ impl ServiceRooms {
         auth: &mut A,
         extra: DbRoomCreate,
         nonce: Option<String>,
-    ) -> Result<Room> {
-        let room = self
+    ) -> Result<RoomHandle> {
+        let handle = self
             .create_inner_no_auth(create, creator_id, extra, nonce)
             .await?;
+        let loaded = handle.ready(true).await?;
+        let room = &loaded.room;
         auth.set_room_id(room.id);
         auth.al_push(AuditLogEntryType::RoomCreate {
             changes: Changes::new()
@@ -548,7 +551,7 @@ impl ServiceRooms {
                 .add("type", &room.room_type)
                 .build(),
         });
-        Ok(room)
+        Ok(handle)
     }
 
     async fn create_inner_no_auth(
@@ -557,30 +560,48 @@ impl ServiceRooms {
         creator_id: UserId,
         extra: DbRoomCreate,
         nonce: Option<String>,
-    ) -> Result<Room> {
+    ) -> Result<RoomHandle> {
         create.validate()?;
-        let mut data = self.globals.begin().await?;
         let srv = self.globals.services();
         let welcome_channel_id = extra.welcome_channel_id;
-        let mut room = data.room_create(create.clone(), extra).await?;
-        let room_id = room.id;
 
-        data.room_member_put(
+        let mut txn = self.globals.begin().await?;
+        let mut room = txn.room_create(create.clone(), extra).await?;
+        let room_id = room.id;
+        txn.room_member_put(
             room_id,
             creator_id,
             Some(RoomMemberOrigin::Creator),
             RoomMemberPut::default(),
         )
         .await?;
-        data.room_set_owner(room_id, creator_id).await?;
-        data.commit().await?;
-        room.owner_id = Some(creator_id);
+        txn.room_set_owner(room_id, creator_id).await?;
 
-        self.globals
-            .services()
-            .perms
-            .invalidate_room(creator_id, room_id)
-            .await;
+        if let Some(media_id) = create.icon {
+            // TODO: move check that media is an image to the room service
+            let links = txn.media_link_select(media_id).await?;
+            if !links.is_empty() {
+                return Err(ApiError::from_code(ErrorCode::MediaAlreadyUsed).into());
+            }
+
+            txn.media_link_create_exclusive(media_id, *room_id, MediaLinkType::RoomIcon)
+                .await?;
+        }
+
+        if let Some(media_id) = create.banner {
+            // TODO: move check that media is an image to the room service
+            let links = txn.media_link_select(media_id).await?;
+            if !links.is_empty() {
+                return Err(ApiError::from_code(ErrorCode::MediaAlreadyUsed).into());
+            }
+
+            txn.media_link_create_exclusive(media_id, *room_id, MediaLinkType::RoomBanner)
+                .await?;
+        }
+
+        txn.commit().await?;
+
+        room.owner_id = Some(creator_id);
 
         let mut template_items = None;
 
@@ -598,29 +619,30 @@ impl ServiceRooms {
             );
         }
 
-        // reload room to get updated welcome_channel_id and other stuff set by apply_to_room
-        let mut room = self.globals.begin_read().await?.room_get(room_id).await?;
-        room.owner_id = Some(creator_id);
+        // start up the room actor
+        // after applying a room template, we need to reload the room to get its full state anyways
+        let handle = RoomActor::spawn_room(room.id, self.globals.clone());
+        let loaded = handle.ready(true).await?;
 
-        let broadcast = Broadcast::sync(MessageSync::RoomCreate { room: room.clone() })
-            .with_option_nonce(nonce);
+        let broadcast = Broadcast::sync(MessageSync::RoomCreate {
+            room: (*loaded.room).clone(),
+        })
+        .with_option_nonce(nonce);
 
-        self.globals
-            .messaging()
-            .broadcast_room(room_id, broadcast)
-            .await?;
+        // broadcast events
+        // PERF(?): batch all of this together into Ambient?
+        let messaging = self.globals.messaging();
+        messaging.broadcast_room(room_id, broadcast).await?;
 
         if let Some((roles, channels)) = template_items {
             for role in roles {
-                self.globals
-                    .messaging()
+                messaging
                     .broadcast_room(room_id, MessageSync::RoleCreate { role })
                     .await?;
             }
 
             for channel in channels {
-                self.globals
-                    .messaging()
+                messaging
                     .broadcast_room(
                         room_id,
                         MessageSync::ChannelCreate {
@@ -631,14 +653,31 @@ impl ServiceRooms {
             }
         }
 
+        // broadcast member create for the owner
+        let cached_member = loaded
+            .members
+            .get(&creator_id)
+            .expect("the owner should be a member of the room");
+        // let user = srv.users.get(creator_id, None).await?;
+        messaging
+            .broadcast_room(
+                room_id,
+                MessageSync::RoomMemberCreate {
+                    member: cached_member.member.clone(),
+                    user: todo!(),
+                },
+            )
+            .await?;
+
         // TODO: stricter field validation based on room type
         // eg. error if welcome_channel_id is passed for RoomType::Emoji
 
-        if room.welcome_channel_id.is_some() {
+        // PERF: run this in the background
+        if loaded.room.welcome_channel_id.is_some() {
             self.send_welcome_message(room_id, creator_id).await?;
         }
 
-        Ok(room)
+        Ok(handle)
     }
 
     /// sends a MemberJoin message in the default/welcome thread
@@ -646,8 +685,8 @@ impl ServiceRooms {
         let room = self.get(room_id, None).await?;
 
         if let Some(wti) = room.welcome_channel_id {
-            let mut data = self.globals.begin().await?;
-            let welcome_message_id = data
+            let mut txn = self.globals.begin().await?;
+            let welcome_message_id = txn
                 .message_create(DbMessageCreate {
                     id: None,
                     channel_id: wti,
@@ -664,16 +703,9 @@ impl ServiceRooms {
                     ephemeral: false,
                 })
                 .await?;
-            let welcome_message = data.message_get(wti, welcome_message_id).await?;
+            let welcome_message = txn.message_get(wti, welcome_message_id).await?;
 
-            let mut thread_member = None;
-            let tm = data.thread_member_get(wti, user_id).await;
-            if tm.is_err() {
-                data.thread_member_put(wti, user_id, ThreadMemberPut::default())
-                    .await?;
-                thread_member = Some(data.thread_member_get(wti, user_id).await?);
-            }
-            data.commit().await?;
+            txn.commit().await?;
 
             self.globals
                 .messaging()
@@ -684,16 +716,6 @@ impl ServiceRooms {
                     },
                 )
                 .await?;
-
-            if let Some(tm) = thread_member {
-                let msg = MessageSync::ThreadMemberUpsert {
-                    room_id: Some(room_id),
-                    thread_id: wti,
-                    added: vec![tm],
-                    removed: vec![],
-                };
-                self.globals.messaging().broadcast_channel(wti, msg).await?;
-            }
         }
 
         Ok(())

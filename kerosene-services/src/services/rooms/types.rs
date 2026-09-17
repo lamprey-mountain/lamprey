@@ -164,7 +164,6 @@ impl RoomMembers {
     }
 }
 
-// TODO: rename to LoadedRoomMember
 #[derive(Debug, Clone)]
 pub struct CachedRoomMember {
     /// the room member
@@ -500,6 +499,16 @@ impl LoadedRoom {
                         if let Some(thread) = threads.get_mut(thread_id) {
                             thread.members.remove(user_id);
                         }
+                    }
+                }
+            }
+            MessageSync::UserUpdate { user } => {
+                if let RoomMembers::Loaded { ref mut members } = new_room.members {
+                    if let Some(member) = members.get(&user.id) {
+                        // PERF: don't clone, reuse Arc with users service
+                        let mut new_member = member.clone();
+                        new_member.user = Arc::new(user.clone());
+                        members.insert(user.id, new_member);
                     }
                 }
             }

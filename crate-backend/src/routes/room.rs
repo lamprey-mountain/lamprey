@@ -101,15 +101,12 @@ async fn room_create(
         welcome_channel_id: None,
         remote: None,
     };
-    let room = srv
+    let handle = srv
         .rooms
         .create(req.room, &mut auth, extra, req.idempotency_key)
         .await?;
-    if let Some(media_id) = icon {
-        let mut data = s.data();
-        data.media_link_create_exclusive(media_id, *room.id, MediaLinkType::RoomIcon)
-            .await?;
-    }
+    let loaded = handle.ready(true).await?;
+    let room = (*loaded.room).clone();
 
     Ok((StatusCode::CREATED, Json(room)))
 }

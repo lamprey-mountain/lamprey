@@ -119,29 +119,29 @@ impl RoomActor {
     }
 
     async fn load_initial_state(&mut self) -> Result<()> {
-        let mut data = self.state.begin_read().await?;
         let srv = self.state.services();
 
         let root_span = tracing::info_span!("room_load", room_id = ?self.room_id);
 
         // PERF: fetch these all in parallel
-        let room = data
+        let mut txn = self.state.begin_read().await?;
+        let room = txn
             .room_get(self.room_id)
             .instrument(tracing::info_span!("room_load.query.room"))
             .await?;
-        let room_members = data
+        let room_members = txn
             .room_member_list_all(self.room_id)
             .instrument(tracing::info_span!("room_load.query.members"))
             .await?;
-        let roles_data = data
+        let roles_data = txn
             .role_list(self.room_id)
             .instrument(tracing::info_span!("room_load.query.roles"))
             .await?;
-        let channels_data = data
+        let channels_data = txn
             .channel_list(self.room_id)
             .instrument(tracing::info_span!("room_load.query.channels"))
             .await?;
-        let active_threads_vec = data
+        let active_threads_vec = txn
             .thread_all_active_room(self.room_id)
             .instrument(tracing::info_span!("room_load.query.threads"))
             .await?;
@@ -159,7 +159,7 @@ impl RoomActor {
         let users = srv.users.get_many(&user_ids).await?;
         let mut all_thread_members = Vec::with_capacity(thread_ids.len());
         for tid in thread_ids {
-            let members = data
+            let members = txn
                 .thread_member_list_all(tid)
                 .instrument(tracing::info_span!("room_load.query.thread_members", thread_id = ?tid))
                 .await?;

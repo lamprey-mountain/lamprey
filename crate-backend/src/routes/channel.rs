@@ -659,17 +659,18 @@ async fn channel_typing(
     auth.user.ensure_unsuspended()?;
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
-    let perms_vis = srv
+    let mut perms = srv
         .perms
         .for_channel3(Some(auth.user.id), req.channel_id)
-        .await?;
-    let mut perms = perms_vis.ensure_view()?;
-    perms.needs(Permission::MessageCreate);
+        .await?
+        .ensure_view()?;
+    perms
+        .needs(Permission::MessageCreate)
+        .needs_unlocked()
+        .check()?;
     let thread = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
     thread.ensure_unarchived()?;
     thread.ensure_unremoved()?;
-    perms.needs_unlocked();
-    perms.check()?;
     let until = time::OffsetDateTime::now_utc() + time::Duration::seconds(10);
     srv.channels
         .typing_set(req.channel_id, auth.user.id, until)
@@ -703,9 +704,9 @@ async fn channel_upgrade(
     let user_id = user.id;
     auth.ensure_scopes(&[Scope::Full])?;
 
-    let srv = s.services();
-    let mut data = s.data();
+    // TODO: move gdm upgrade logic to rooms service
 
+    let srv = s.services();
     let chan = srv.channels.get(req.channel_id, Some(user.id)).await?;
 
     if chan.ty != ChannelType::Gdm {
@@ -720,7 +721,15 @@ async fn channel_upgrade(
         return Err(ApiError::from_code(ErrorCode::ThreadAlreadyInRoom).into());
     }
 
-    let room = srv
+    // FIXME: run media_link_delete in the same transaction as the room create
+    let mut txn = s.globals.begin().await?;
+    if let Some(icon) = chan.icon {
+        txn.media_link_delete(*req.channel_id, MediaLinkType::ChannelIcon)
+            .await?;
+    }
+    txn.commit().await?;
+
+    let handle = srv
         .rooms
         .create(
             RoomCreate {
@@ -740,18 +749,14 @@ async fn channel_upgrade(
             None,
         )
         .await?;
+    let loaded = handle.ready(true).await?;
+    let room = &loaded.room;
 
-    if let Some(icon) = chan.icon {
-        data.media_link_delete(*req.channel_id, MediaLinkType::ChannelIcon)
-            .await?;
-        data.media_link_create_exclusive(icon, *room.id, MediaLinkType::RoomIcon)
-            .await?;
-    }
-
+    let mut txn = s.globals.begin().await?;
     let mut members = vec![];
     let mut after: Option<Uuid> = None;
     loop {
-        let page = data
+        let page = txn
             .thread_member_list(
                 req.channel_id,
                 PaginationQuery {
@@ -776,10 +781,10 @@ async fn channel_upgrade(
         }
     }
 
-    data.channel_upgrade_gdm(req.channel_id, room.id).await?;
+    txn.channel_upgrade_gdm(req.channel_id, room.id).await?;
 
     for member in &members {
-        data.room_member_put(
+        txn.room_member_put(
             room.id,
             member.user_id,
             Some(RoomMemberOrigin::GdmUpgrade),
@@ -787,6 +792,13 @@ async fn channel_upgrade(
         )
         .await?;
     }
+    txn.commit().await?;
+
+    // reload room, since we manually updated the database
+    srv.rooms.unload_cache(room.id).await;
+    let handle = srv.rooms.load(room.id);
+    let loaded = handle.ready(true).await?;
+    let room = (*loaded.room).clone();
 
     srv.channels.invalidate(req.channel_id).await;
     let upgraded_thread = srv.channels.get(req.channel_id, Some(user_id)).await?;
@@ -796,14 +808,13 @@ async fn channel_upgrade(
     })?;
 
     for member in members {
-        let room_member = data.room_member_get(room.id, member.user_id).await?;
-        let user = srv.users.get(member.user_id, None).await?;
+        let cached_member = loaded.members.get(&member.user_id).unwrap();
         s.broadcast_room(
             room.id,
-            user.id,
+            cached_member.user.id,
             MessageSync::RoomMemberCreate {
-                member: room_member,
-                user,
+                member: cached_member.member.clone(),
+                user: (*cached_member.user).clone(),
             },
         )
         .await?;
