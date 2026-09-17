@@ -315,9 +315,13 @@ function Text(props: { text: string }) {
 		return escaped;
 	};
 
-	const html = createMemo(() => escape(props.text));
+	const frag = createMemo(() => {
+		const tpl = document.createElement("template");
+		tpl.innerHTML = escape(props.text);
+		return tpl.content;
+	});
 
-	return <span innerHTML={html()} />;
+	return <>{frag()}</>;
 }
 
 function Code(props: { children: SerializedInline[] }) {
