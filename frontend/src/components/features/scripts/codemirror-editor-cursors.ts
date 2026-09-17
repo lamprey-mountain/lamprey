@@ -14,7 +14,7 @@ import {
 	offset,
 	shift,
 } from "@floating-ui/dom";
-import type { MessageSync } from "sdk";
+import type { MessageClient, MessageSync, Stream } from "sdk";
 import * as Y from "yjs";
 import type { Api } from "@/api";
 import { getColor } from "@/lib/colors";
@@ -75,6 +75,7 @@ export const cursorPlugin = (
 	channelId: string,
 	redexId: string,
 	ytext: Y.Text,
+	stream?: () => Stream,
 ) => {
 	const cursorEffect = StateEffect.define<{
 		type: "update" | "remove";
@@ -190,14 +191,20 @@ export const cursorPlugin = (
 				const anchorEnc = base64UrlEncode(Y.encodeRelativePosition(anchorRel));
 				const headEnc = base64UrlEncode(Y.encodeRelativePosition(headRel));
 
-				api.client.send({
+				const data: MessageClient = {
 					type: "DocumentPresence",
 					channel_id: channelId,
 					branch_id: redexId,
 					redex_id: redexId,
 					cursor_head: headEnc,
 					cursor_tail: anchorEnc,
-				});
+				};
+				const s = stream?.();
+				if (s) {
+					s.send(data);
+				} else {
+					api.client.send(data);
+				}
 			}
 
 			buildDecorations(view: EditorView): DecorationSet {

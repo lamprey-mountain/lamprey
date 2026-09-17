@@ -37,12 +37,25 @@ import {
 	ViewUpdate,
 	WidgetType,
 } from "@codemirror/view";
-import { createEffect, createResource, createSignal, onMount } from "solid-js";
-import type { Script } from "ts-sdk";
+import {
+	createEffect,
+	createResource,
+	createSignal,
+	onCleanup,
+	onMount,
+} from "solid-js";
+import type {
+	MessageEnvelope,
+	MessageSync,
+	Script,
+	Stream,
+	WebtransportClient,
+} from "ts-sdk";
 import { yCollab } from "y-codemirror.next";
 import * as Y from "yjs";
 import { useApi } from "@/api";
 import { getGetUrl } from "@/media/util";
+import { base64UrlDecode, base64UrlEncode } from "../editor/editor-utils";
 import { cursorPlugin } from "./codemirror-editor-cursors";
 import { useScript } from "./context";
 import { highlight, theme } from "./theme";
@@ -75,10 +88,97 @@ export const CodeEditor = (props: {
 		},
 	);
 
+	const ydoc = new Y.Doc();
+	let stream: Stream | null = null;
+
+	const onSync = (sync: MessageSync, _raw: MessageEnvelope) => {
+		if (sync.type === "DocumentEdit") {
+			if (sync.channel_id !== scriptContext.channel_id) return;
+			if (sync.branch_id !== props.script.id) return;
+			const update = (
+				(sync.update as unknown) instanceof Uint8Array
+					? sync.update
+					: base64UrlDecode(sync.update as unknown as string)
+			) as Uint8Array;
+			Y.applyUpdate(ydoc, update, { key: "server" });
+		} else if (sync.type === "DocumentPresence") {
+			api.events.emit("sync", [sync, _raw]);
+		} else if (sync.type === "DocumentSubscribed") {
+			if (sync.channel_id !== scriptContext.channel_id) return;
+			if (sync.branch_id !== props.script.id) return;
+			setLoading(false);
+		}
+	};
+
+	// ydoc update listener
 	createEffect(() => {
-		if (props.script.latest_version.location.type === "Document") {
-			setLoading(!scriptContext.isSubscribed(props.script.id));
+		if (props.script.latest_version.location.type !== "Document") return;
+
+		const handler = (update: Uint8Array, origin: any) => {
+			if (origin && origin.key === "server") return;
+
+			const data = {
+				type: "DocumentEdit" as const,
+				channel_id: scriptContext.channel_id,
+				branch_id: props.script.id,
+				redex_id: props.script.id,
+				update: base64UrlEncode(update),
+			};
+
+			if (stream) {
+				stream.send(data);
+			} else {
+				api.client.send(data);
+			}
+		};
+
+		ydoc.on("update", handler);
+		onCleanup(() => ydoc.off("update", handler));
+	});
+
+	// manage subscriptions
+	createEffect(() => {
+		if (props.script.latest_version.location.type !== "Document") return;
+
+		const channelId = scriptContext.channel_id;
+		const branchId = props.script.id;
+		const stateVector = base64UrlEncode(Y.encodeStateVector(ydoc));
+
+		if (api.client.isWebtransport) {
+			const wt = api.client as WebtransportClient;
+			const newStream = wt.subscribeDocument({
+				channel_id: channelId,
+				branch_id: branchId,
+				state_vector: stateVector,
+				onSync,
+			});
+			stream = newStream;
+			onCleanup(() => {
+				newStream.close();
+				stream = null;
+			});
 		} else {
+			api.client.send({
+				type: "Subscribe",
+				documents: [],
+			});
+			api.client.send({
+				type: "Subscribe",
+				documents: [
+					{
+						channel_id: channelId,
+						branch_id: branchId,
+						state_vector: stateVector,
+					},
+				],
+			});
+
+			api.events.on("sync", ([sync, envelope]) => onSync(sync, envelope));
+		}
+	});
+
+	createEffect(() => {
+		if (props.script.latest_version.location.type !== "Document") {
 			setLoading(mediaContent.loading);
 		}
 	});
@@ -125,14 +225,19 @@ export const CodeEditor = (props: {
 			}),
 		];
 
-		const ydoc = scriptContext.acquire(props.script);
-		if (ydoc) {
-			// const ytype = ydoc.get("doc", Y.XmlFragment);
+		// TODO: manage documents/subscriptions in script context
+		if (props.script.latest_version.location.type === "Document") {
 			const ytype = ydoc.getText("doc");
 			const undoManager = new Y.UndoManager(ytype);
 			extensions.push(yCollab(ytype, null, { undoManager }));
 			extensions.push(
-				cursorPlugin(api, scriptContext.channel_id, props.script.id, ytype),
+				cursorPlugin(
+					api,
+					scriptContext.channel_id,
+					props.script.id,
+					ytype,
+					() => stream,
+				),
 			);
 		} else {
 			// TODO(?): move mediaContent-specific logic here
@@ -148,8 +253,7 @@ export const CodeEditor = (props: {
 	createEffect(() => {
 		if (!view) return;
 
-		const ydoc = scriptContext.acquire(props.script);
-		if (ydoc) return;
+		if (props.script.latest_version.location.type === "Document") return;
 
 		// TODO: show indicator when media changes, button to reload mediaContent
 		const nextDoc = mediaContent();

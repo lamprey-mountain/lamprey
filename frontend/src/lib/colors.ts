@@ -1,6 +1,6 @@
 export { default as Color } from "colorjs.io";
 
-export function getColor(id: string) {
+export function getColor(id: string): string {
 	const last = id.at(-1);
 	if (!last) return "#ffffff";
 	switch (parseInt(last, 16) % 8) {
@@ -20,6 +20,8 @@ export function getColor(id: string) {
 			return "oklch(80.7% 0.1273 50.56)"; // orange
 		case 7:
 			return "oklch(80% 0.128 168)"; // teal
+		default:
+			throw new Error("unreachable");
 	}
 }
 
