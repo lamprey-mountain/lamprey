@@ -28,6 +28,7 @@ import { useChannels, useRoomMembers, useThreadMembers, useUsers } from "@/api";
 import { useCtx } from "@/app/context";
 import { Autocomplete } from "@/atoms/Autocomplete.tsx";
 import { EmojiPicker } from "@/atoms/EmojiPicker.tsx";
+import { DocumentComments } from "@/components/document/DocumentComments.tsx";
 import {
 	PopupEventEditor,
 	useCalendarPopup,
@@ -255,6 +256,16 @@ export function OverlayProvider(props: ParentProps) {
 			placement: "bottom-end",
 		});
 
+	const [documentCommentsViewRef, setDocumentCommentsViewRef] =
+		createSignal<HTMLElement>();
+	const [documentCommentsViewFloating, setDocumentCommentsViewFloating] =
+		createStore<FloatingPosition>({
+			x: 0,
+			y: 0,
+			strategy: "absolute",
+			placement: "bottom-end",
+		});
+
 	createEffect(() => {
 		const reference = ctx.activityLogView()?.ref;
 		const floating = activityLogViewRef();
@@ -265,6 +276,21 @@ export function OverlayProvider(props: ParentProps) {
 				placement: "bottom-end",
 			}).then(({ x, y, strategy, placement }) => {
 				setActivityLogViewFloating({ x, y, strategy, placement });
+			});
+		});
+		onCleanup(cleanup);
+	});
+
+	createEffect(() => {
+		const reference = ctx.documentCommentsView()?.ref;
+		const floating = documentCommentsViewRef();
+		if (!reference || !floating) return;
+		const cleanup = autoUpdate(reference, floating, () => {
+			computePosition(reference, floating, {
+				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+				placement: "bottom-end",
+			}).then(({ x, y, strategy, placement }) => {
+				setDocumentCommentsViewFloating({ x, y, strategy, placement });
 			});
 		});
 		onCleanup(cleanup);
@@ -520,6 +546,22 @@ export function OverlayProvider(props: ParentProps) {
 					>
 						<Show when={ctx.threadsView()?.channel_id}>
 							{(cid) => <ThreadPopout channel_id={cid()} />}
+						</Show>
+					</div>
+				</Show>
+				<Show when={ctx.documentCommentsView()}>
+					<div
+						ref={setDocumentCommentsViewRef}
+						style={{
+							position: documentCommentsViewFloating.strategy,
+							top: "0px",
+							left: "0px",
+							translate: `${documentCommentsViewFloating.x}px ${documentCommentsViewFloating.y}px`,
+							"z-index": 100,
+						}}
+					>
+						<Show when={ctx.documentCommentsView()?.channel_id}>
+							{(cid) => <DocumentComments channel_id={cid()} />}
 						</Show>
 					</div>
 				</Show>

@@ -24,6 +24,7 @@ export function useGlobalEventHandlers() {
 		setUserView(null);
 		ctx.setThreadsView(null);
 		ctx.setActivityLogView(null);
+		ctx.setDocumentCommentsView(null);
 
 		// TODO: implement as written
 		// 3. close modal if background clicked

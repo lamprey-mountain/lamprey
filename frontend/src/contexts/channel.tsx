@@ -28,6 +28,7 @@ export type ChannelState = {
 	pinned_view: boolean;
 	voice_chat_sidebar_open: boolean;
 	history_view: boolean;
+	sidebar_document_id?: string;
 	thread_chat_sidebar_thread_id?: string;
 	sidebar_media?: Media; // TODO: support passing attachment here too
 

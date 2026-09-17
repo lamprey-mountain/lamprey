@@ -237,9 +237,6 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 									<Icon src={icX} />
 								</button>
 								<Switch>
-									<Match when={t().type === "Document"}>
-										<Document channel={t()} />
-									</Match>
 									<Match when={t().type === "ThreadForum2"}>
 										<Forum2Thread channel={t()} />
 									</Match>
@@ -247,6 +244,52 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 										<ChatMain channel={t()} />
 									</Match>
 								</Switch>
+							</ChannelContext.Provider>
+						)}
+					</Show>
+				)}
+			</Show>
+		</div>
+	);
+};
+
+const DocumentSidebar = (props: { thread_id: string }) => {
+	const channels2 = useChannels();
+	const thread = channels2.use(() => props.thread_id);
+	const ctx = useCtx();
+	const [_ch, setChannelState] = useChannel()!;
+
+	const getOrCreateChannelContext = () => {
+		const channelId = props.thread_id;
+		if (!channelId) return null;
+
+		if (!ctx.channel_contexts.has(channelId)) {
+			const store = createStore(createInitialChannelState());
+			ctx.channel_contexts.set(channelId, store);
+		}
+
+		return ctx.channel_contexts.get(channelId)!;
+	};
+
+	const channelCtx = createMemo(() => getOrCreateChannelContext());
+
+	const onClose = () => {
+		setChannelState("sidebar_document_id", undefined);
+	};
+
+	return (
+		<div class="thread-chat-sidebar">
+			<Show when={thread()}>
+				{(t) => (
+					<Show when={channelCtx()}>
+						{(cc) => (
+							<ChannelContext.Provider value={cc()}>
+								<button type="button" class="close" onClick={onClose}>
+									<Icon src={icX} />
+								</button>
+								<DocumentProvider initialBranchId={t().id}>
+									<Document channel={t()} />
+								</DocumentProvider>
 							</ChannelContext.Provider>
 						)}
 					</Show>
@@ -270,12 +313,23 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 		props.channel.type === "Voice" && ch.voice_chat_sidebar_open;
 	const showHistory = () =>
 		props.channel.type === "Document" && ch.history_view;
+	const showDocumentSidebar = () => ch.sidebar_document_id;
 	const showThreadChatSidebar = () => ch.thread_chat_sidebar_thread_id;
 
 	// TODO: make document sidebar and thread sidebar use different resizable storage keys
 
 	return (
 		<Switch>
+			<Match when={showDocumentSidebar()}>
+				<Resizable
+					storageKey="document-sidebar-width"
+					initialWidth={400}
+					minWidth={300}
+					maxWidth={600}
+				>
+					<DocumentSidebar thread_id={ch.sidebar_document_id!} />
+				</Resizable>
+			</Match>
 			<Match when={showThreadChatSidebar()}>
 				<Resizable
 					storageKey="thread-chat-sidebar-width"

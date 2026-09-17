@@ -12,6 +12,7 @@ export type {
 	Cursor,
 	CursorStats,
 	Data,
+	DocumentCommentsViewData,
 	Events,
 	MediaCtx,
 	Popout,

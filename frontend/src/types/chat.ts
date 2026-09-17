@@ -61,6 +61,11 @@ export type ThreadsViewData = {
 	ref: HTMLElement;
 };
 
+export type DocumentCommentsViewData = {
+	channel_id: string;
+	ref: HTMLElement;
+};
+
 export type ActivityLogViewData = {
 	channel_id: string;
 	ref: HTMLElement;
@@ -85,6 +90,8 @@ export type ChatCtx = {
 
 	threadsView: Accessor<ThreadsViewData | null>;
 	setThreadsView: Setter<ThreadsViewData | null>;
+	documentCommentsView: Accessor<DocumentCommentsViewData | null>;
+	setDocumentCommentsView: Setter<DocumentCommentsViewData | null>;
 	activityLogView: Accessor<ActivityLogViewData | null>;
 	setActivityLogView: Setter<ActivityLogViewData | null>;
 	headerThreadsButtonRef: Accessor<HTMLElement | null>;

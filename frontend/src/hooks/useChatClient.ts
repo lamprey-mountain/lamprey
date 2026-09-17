@@ -24,6 +24,7 @@ import { RootStore } from "@/api/core/Store.ts";
 import type {
 	ChatCtx,
 	Data,
+	DocumentCommentsViewData,
 	MediaCtx,
 	Popout,
 	ThreadsViewData,
@@ -135,6 +136,8 @@ export function useChatClient(config: Config) {
 	const [threadsView, setThreadsView] = createSignal<ThreadsViewData | null>(
 		null,
 	);
+	const [documentCommentsView, setDocumentCommentsView] =
+		createSignal<DocumentCommentsViewData | null>(null);
 	const [activityLogView, setActivityLogView] =
 		createSignal<ActivityLogViewData | null>(null);
 	const [headerThreadsButtonRef, setHeaderThreadsButtonRef] =
@@ -160,6 +163,8 @@ export function useChatClient(config: Config) {
 		setPopout,
 		threadsView,
 		setThreadsView,
+		documentCommentsView,
+		setDocumentCommentsView,
 		activityLogView,
 		setActivityLogView,
 		headerThreadsButtonRef,

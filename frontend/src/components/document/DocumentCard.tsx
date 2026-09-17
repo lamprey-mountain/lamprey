@@ -26,7 +26,7 @@ export const DocumentCard = (props: DocumentCardProps) => {
 		ctx.setThreadsView(null);
 
 		if (props.openInSidebar) {
-			chUpdate("thread_chat_sidebar_thread_id", props.thread.id);
+			chUpdate("sidebar_document_id", props.thread.id);
 		} else {
 			nav(`/thread/${props.thread.id}`);
 		}

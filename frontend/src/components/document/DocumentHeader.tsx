@@ -253,7 +253,10 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 	// TODO: port membersTooltip to ChatHeader
 	const tocTooltip = createTooltip({ tip: () => "Toggle table of contents" });
 	const commentsTooltip = createTooltip({ tip: () => "View comments" });
-	const threadTooltip = createTooltip({ tip: () => "Toggle chat" });
+	const isChatOpen = () => ch.thread_chat_sidebar_thread_id === doc.branchId();
+	const threadTooltip = createTooltip({
+		tip: () => (isChatOpen() ? "Hide chat" : "Show chat"),
+	});
 	const membersTooltip = createTooltip({
 		tip: () => (showMembers() ? "Hide members" : "Show members"),
 	});
@@ -667,8 +670,18 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				</button>
 				<button
 					type="button"
-					onClick={() => {
-						// TODO: copy ChatHeader ctx.setThreadsView
+					onClick={(e) => {
+						if (!ctx.documentCommentsView()) {
+							const ref = e.currentTarget;
+							setTimeout(() => {
+								ctx.setDocumentCommentsView({
+									channel_id: props.channel.id,
+									ref,
+								});
+							});
+						} else {
+							ctx.setDocumentCommentsView(null);
+						}
 					}}
 					ref={commentsTooltip.content}
 				>
@@ -677,7 +690,10 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 				<button
 					type="button"
 					onClick={() => {
-						/* TODO */
+						setCh(
+							"thread_chat_sidebar_thread_id",
+							isChatOpen() ? undefined : props.channel.id,
+						);
 					}}
 					ref={threadTooltip.content}
 				>
