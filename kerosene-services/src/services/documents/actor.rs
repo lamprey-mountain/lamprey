@@ -135,10 +135,15 @@ impl DocumentActor {
     /// get the document content as plain text
     #[message]
     pub fn get_plain(&self) -> Result<String> {
-        let txn = self.doc.transact();
-        let root = self.doc.get_or_insert_text(DOCUMENT_ROOT_NAME);
-        let text = root.get_string(&txn);
-        Ok(text)
+        if self.context_id.is_prose() {
+            let root = self.doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
+            let txn = self.doc.transact();
+            Ok(root.get_string(&txn))
+        } else {
+            let root = self.doc.get_or_insert_text(DOCUMENT_ROOT_NAME);
+            let txn = self.doc.transact();
+            Ok(root.get_string(&txn))
+        }
     }
 
     /// get a broadcast receiver to the document event stream
@@ -391,46 +396,92 @@ impl DocumentActor {
         let stats = Arc::new(std::sync::Mutex::new((0, 0)));
         let stats_inner = stats.clone();
 
-        let xml = self.doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
-        let _sub = xml.observe_deep(move |txn, events| {
-            let mut stats = stats_inner.lock().unwrap();
-            for e in events.iter() {
-                match e {
-                    Event::Text(e) => {
-                        for change in e.delta(txn) {
-                            match change {
-                                Delta::Inserted(t, _) => stats.0 += get_update_len(t, txn),
-                                Delta::Deleted(len) => stats.1 += (*len) as usize,
-                                Delta::Retain(_, _) => {}
-                            }
-                        }
-                    }
-                    Event::XmlText(e) => {
-                        for change in e.delta(txn) {
-                            match change {
-                                Delta::Inserted(t, _) => stats.0 += get_update_len(t, txn),
-                                Delta::Deleted(len) => stats.1 += (*len) as usize,
-                                Delta::Retain(_, _) => {}
-                            }
-                        }
-                    }
-                    Event::XmlFragment(e) => {
-                        for change in e.delta(txn) {
-                            match change {
-                                yrs::types::Change::Added(values) => {
-                                    for v in values {
-                                        stats.0 += get_update_len(v, txn);
-                                    }
+        let mut _sub_xml = None;
+        let mut _sub_text = None;
+
+        if self.context_id.is_prose() {
+            let xml = self.doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
+            _sub_xml = Some(xml.observe_deep(move |txn, events| {
+                let mut stats = stats_inner.lock().unwrap();
+                for e in events.iter() {
+                    match e {
+                        Event::Text(e) => {
+                            for change in e.delta(txn) {
+                                match change {
+                                    Delta::Inserted(t, _) => stats.0 += get_update_len(t, txn),
+                                    Delta::Deleted(len) => stats.1 += (*len) as usize,
+                                    Delta::Retain(_, _) => {}
                                 }
-                                yrs::types::Change::Removed(len) => stats.1 += (*len) as usize,
-                                yrs::types::Change::Retain(_) => {}
                             }
                         }
+                        Event::XmlText(e) => {
+                            for change in e.delta(txn) {
+                                match change {
+                                    Delta::Inserted(t, _) => stats.0 += get_update_len(t, txn),
+                                    Delta::Deleted(len) => stats.1 += (*len) as usize,
+                                    Delta::Retain(_, _) => {}
+                                }
+                            }
+                        }
+                        Event::XmlFragment(e) => {
+                            for change in e.delta(txn) {
+                                match change {
+                                    yrs::types::Change::Added(values) => {
+                                        for v in values {
+                                            stats.0 += get_update_len(v, txn);
+                                        }
+                                    }
+                                    yrs::types::Change::Removed(len) => stats.1 += (*len) as usize,
+                                    yrs::types::Change::Retain(_) => {}
+                                }
+                            }
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 }
-            }
-        });
+            }));
+        } else {
+            let text = self.doc.get_or_insert_text(DOCUMENT_ROOT_NAME);
+            _sub_text = Some(text.observe_deep(move |txn, events| {
+                let mut stats = stats_inner.lock().unwrap();
+                for e in events.iter() {
+                    match e {
+                        Event::Text(e) => {
+                            for change in e.delta(txn) {
+                                match change {
+                                    Delta::Inserted(t, _) => stats.0 += get_update_len(t, txn),
+                                    Delta::Deleted(len) => stats.1 += (*len) as usize,
+                                    Delta::Retain(_, _) => {}
+                                }
+                            }
+                        }
+                        Event::XmlText(e) => {
+                            for change in e.delta(txn) {
+                                match change {
+                                    Delta::Inserted(t, _) => stats.0 += get_update_len(t, txn),
+                                    Delta::Deleted(len) => stats.1 += (*len) as usize,
+                                    Delta::Retain(_, _) => {}
+                                }
+                            }
+                        }
+                        Event::XmlFragment(e) => {
+                            for change in e.delta(txn) {
+                                match change {
+                                    yrs::types::Change::Added(values) => {
+                                        for v in values {
+                                            stats.0 += get_update_len(v, txn);
+                                        }
+                                    }
+                                    yrs::types::Change::Removed(len) => stats.1 += (*len) as usize,
+                                    yrs::types::Change::Retain(_) => {}
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }));
+        }
 
         let mut txn = self.doc.transact_mut();
         txn.apply_update(update)?;
@@ -441,10 +492,12 @@ impl DocumentActor {
         {
             warn!("got invalid root ref for document");
             // FIXME: rollback and return error here
+            // do NOT rollback if the fragment already existed, only if this update would add it!
         }
 
         drop(txn);
-        drop(_sub);
+        drop(_sub_xml);
+        drop(_sub_text);
 
         let (stat_inserted, stat_deleted) = {
             let s = stats.lock().unwrap();
