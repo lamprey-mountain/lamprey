@@ -1,3 +1,4 @@
+use std::result::Result as StdResult;
 use std::{
     sync::{
         Arc, Mutex,
@@ -10,7 +11,7 @@ use async_trait::async_trait;
 use common::v1::types::{
     EvalId, RedexId, RedexVerId,
     redex::{
-        Eval, EvalInput, EvalStatus, RedexHandlerType,
+        Eval, EvalInput, EvalLogEntry, EvalLogLevel, EvalLogSource, EvalStatus, RedexHandlerType,
         metadata::{License, Semver},
     },
     util::Time,
@@ -64,7 +65,7 @@ pub struct JsExecutionHandle {
     run: Arc<Eval>,
     stop_signal: Arc<AtomicBool>,
     events: broadcast::Receiver<Arc<ExecutionEvent>>,
-    ext_recv: Shared<oneshot::Receiver<ScriptExtracted>>,
+    ext_recv: Shared<oneshot::Receiver<StdResult<ScriptExtracted, Arc<Error>>>>,
 }
 
 impl JsExecutionHandle {
@@ -212,9 +213,9 @@ impl Executor for JsExecutor {
             let _rt_guard = rt.clone();
             let events_sender_clone = events_sender.clone();
 
-            let res = async_with!(context => |ctx| {
-                match exec_inner(ctx.clone(), redex_id, input, events_sender_clone, script, ext_send).await {
-                    Ok(_) => Ok(()),
+            let extracted = async_with!(context => |ctx| {
+                match exec_inner(ctx.clone(), redex_id, input, events_sender_clone, script).await {
+                    Ok(a) => Ok(a),
                     Err(err) => {
                         if let Some(exception) = ctx.catch().into_object().and_then(rquickjs::Exception::from_object) {
                             error!(
@@ -261,10 +262,24 @@ impl Executor for JsExecutor {
                 }
             }
 
-            if let Err(err) = res {
+            if let Err(err) = &extracted {
                 error!("eval runtime error: {:?}", err);
+
+                let log = EvalLogEntry {
+                    id: 0,
+                    created_at,
+                    level: EvalLogLevel::Error,
+                    source: EvalLogSource::Runtime,
+                    content: err.to_string(),
+                    attributes: Default::default(),
+                };
+                let _ = events_sender.send(Arc::new(ExecutionEvent::Log(log)));
+
                 let _ = events_sender.send(Arc::new(ExecutionEvent::Status(EvalStatus::Crashed)));
             }
+
+            // TODO: error handling
+            let _ = ext_send.send(extracted.map_err(Arc::new));
         });
 
         let handle = JsExecutionHandle {
@@ -299,8 +314,7 @@ async fn exec_inner<'js>(
     input: EvalInput,
     events_sender: broadcast::Sender<Arc<ExecutionEvent>>,
     script: Arc<JsCompiledScript>,
-    ext_send: tokio::sync::oneshot::Sender<ScriptExtracted>,
-) -> Result<()> {
+) -> Result<ScriptExtracted> {
     setup_environment(&ctx, events_sender.clone(), script_id)?;
 
     events_sender
@@ -446,14 +460,11 @@ async fn exec_inner<'js>(
         }
     }
 
-    // TODO: error handling
-    let _ = ext_send.send(extracted);
-
     events_sender
         .send(Arc::new(ExecutionEvent::Status(EvalStatus::Exited)))
         .map_err(|e| Error::BroadcastSend(e.to_string()))?;
 
-    Ok(())
+    Ok(extracted)
 }
 
 #[async_trait]
@@ -474,10 +485,17 @@ impl ExecutionHandle for JsExecutionHandle {
     }
 
     async fn done(&self) -> Result<ScriptExtracted> {
-        self.ext_recv
-            .clone()
-            .await
-            .map_err(|e| Error::OneshotRecv(e.to_string()))
+        match self.ext_recv.clone().await {
+            Ok(Ok(extracted)) => Ok(extracted),
+            Ok(Err(err)) => match &*err {
+                Error::RuntimeError { message, stack } => Err(Error::RuntimeError {
+                    message: message.to_string(),
+                    stack: stack.to_string(),
+                }),
+                _ => Err(Error::Other(err.to_string())),
+            },
+            Err(e) => Err(Error::OneshotRecv(e.to_string())),
+        }
     }
 
     fn clone_box(&self) -> Box<dyn ExecutionHandle> {

@@ -28,9 +28,6 @@ pub enum Error {
     #[error("oneshot channel recv failed: {0}")]
     OneshotRecv(String),
 
-    #[error("extraction data is None")]
-    ExtractionDataMissing,
-
     #[error("runtime error: {message}")]
     RuntimeError { message: String, stack: String },
 
@@ -39,6 +36,10 @@ pub enum Error {
 
     #[error("not yet implemented")]
     Unimplemented,
+
+    // TEMP: remove this soon!
+    #[error("{0}")]
+    Other(String),
 }
 
 impl Error {
