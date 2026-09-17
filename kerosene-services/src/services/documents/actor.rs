@@ -497,7 +497,6 @@ impl DocumentHandle {
     pub async fn subscribe(&self) -> Result<broadcast::Receiver<DocumentEvent>> {
         self.actor_ref
             .ask(Subscribe {})
-            .send()
             .await
             // TODO: better error
             .map_err(|e| Error::Internal(e.to_string()))
@@ -507,7 +506,6 @@ impl DocumentHandle {
     pub async fn get_plain(&self) -> Result<String> {
         self.actor_ref
             .ask(GetPlain {})
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -526,7 +524,6 @@ impl DocumentHandle {
                 cursor_head,
                 cursor_tail,
             })
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -537,7 +534,6 @@ impl DocumentHandle {
     ) -> Result<Vec<(UserId, String, Option<String>, ConnectionId)>> {
         self.actor_ref
             .ask(PresenceGet {})
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -545,7 +541,6 @@ impl DocumentHandle {
     pub async fn presence_delete(&self, user_id: UserId, conn_id: ConnectionId) -> Result<()> {
         self.actor_ref
             .ask(PresenceDelete { user_id, conn_id })
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -554,7 +549,6 @@ impl DocumentHandle {
     pub async fn should_unload(&self) -> Result<bool> {
         self.actor_ref
             .ask(ShouldUnload {})
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -563,7 +557,6 @@ impl DocumentHandle {
     pub async fn persist_and_unload(&self) -> Result<()> {
         self.actor_ref
             .ask(PersistAndUnload {})
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -572,7 +565,6 @@ impl DocumentHandle {
     pub async fn get_diff(&self, state_vector: StateVector) -> Result<Vec<u8>> {
         self.actor_ref
             .ask(GetDiff { state_vector })
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -581,7 +573,6 @@ impl DocumentHandle {
     pub async fn get_snapshot(&self) -> Result<Vec<u8>> {
         self.actor_ref
             .ask(GetSnapshot {})
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -590,7 +581,6 @@ impl DocumentHandle {
     pub async fn get_state_vector(&self) -> Result<Vec<u8>> {
         self.actor_ref
             .ask(GetStateVector {})
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -606,7 +596,6 @@ impl DocumentHandle {
                 author_id,
                 components,
             })
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -615,7 +604,6 @@ impl DocumentHandle {
     pub async fn serdoc_get(&self) -> Result<Serdoc> {
         self.actor_ref
             .ask(SerdocGet {})
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
@@ -633,7 +621,6 @@ impl DocumentHandle {
                 origin_conn_id,
                 update_bytes,
             })
-            .send()
             .await
             .map_err(|e| Error::Internal(e.to_string()))
     }
