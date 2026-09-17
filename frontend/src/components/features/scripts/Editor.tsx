@@ -210,6 +210,28 @@ export const CodeEditor = (props: {
 				// ...foldKeymap,
 				// ...completionKeymap,
 				// ...lintKeymap
+				{
+					key: "Mod-s",
+					// preventDefault: true,
+					run(_view) {
+						// const content = view.state.doc.toString();
+
+						api.scripts
+							.updateContentInnerAsync(
+								props.script.channel_id,
+								props.script.id,
+								{
+									format: "Javascript",
+									location: { type: "Document" },
+								},
+							)
+							.then((res) => {
+								console.log("AAAA", res);
+							});
+
+						return true;
+					},
+				},
 			]),
 			theme,
 			javascript(), // TODO(future): swap this depending on language

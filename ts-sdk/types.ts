@@ -173,6 +173,8 @@ export type ScriptSync =
 			run_id: string;
 	  };
 
+export type RedexContentUpdate = components["schemas"]["RedexContentUpdate"];
+
 export type RoomAnalyticsChannel =
 	components["schemas"]["RoomAnalyticsChannel"];
 export type RoomAnalyticsInvites =

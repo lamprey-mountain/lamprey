@@ -1,9 +1,11 @@
 import type {
 	PaginationResponse,
+	RedexContentUpdate,
 	Script,
 	ScriptCreate,
 	ScriptId,
 	ScriptSubscribe,
+	ScriptVersion,
 } from "sdk";
 import { createUpload } from "sdk";
 import { BaseService } from "../core/Service";
@@ -47,6 +49,23 @@ export class ScriptsService extends BaseService<Script> {
 			}),
 		);
 		this.upsert(data);
+		return data;
+	}
+
+	async updateContentInnerAsync(
+		channel_id: string,
+		redex_id: string,
+		body: RedexContentUpdate,
+	): Promise<ScriptVersion> {
+		const data = await this.retryWithBackoff(() =>
+			this.client.http.PUT(
+				"/api/v1/channel/{channel_id}/redex/{redex_id}/content",
+				{
+					params: { path: { channel_id, redex_id }, query: { async: true } },
+					body,
+				},
+			),
+		);
 		return data;
 	}
 

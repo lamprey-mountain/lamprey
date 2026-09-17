@@ -61,6 +61,7 @@ export function createPastePlugin() {
 					return true;
 				}
 
+				// TODO: handle if Parser isn't loaded yet, cache a single Parser for everything
 				const parser = new Parser();
 				const parsed = parser.parse(str);
 				const div = document.createElement("div");

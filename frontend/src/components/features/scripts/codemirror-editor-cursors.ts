@@ -75,7 +75,7 @@ export const cursorPlugin = (
 	channelId: string,
 	redexId: string,
 	ytext: Y.Text,
-	stream?: () => Stream,
+	stream?: () => Stream | null,
 ) => {
 	const cursorEffect = StateEffect.define<{
 		type: "update" | "remove";

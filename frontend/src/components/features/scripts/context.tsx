@@ -1,7 +1,7 @@
 import { debounce } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
 import type { MessageSync, Script } from "sdk";
-import { createContext, createSignal, onCleanup, useContext } from "solid-js";
+import { createContext, onCleanup, useContext } from "solid-js";
 import * as Y from "yjs";
 import { useApi } from "@/api";
 import type { PaneNode } from "@/components/panes/context";
