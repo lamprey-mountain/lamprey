@@ -82,7 +82,10 @@
 
 			&.today > .daynumber {
 				font-weight: bold;
-				color: $link-500;
+				color: $fg-100;
+				background-color: $link-500;
+				align-self: flex-start;
+				border-radius: 1em;
 			}
 
 			&.othermonth {
