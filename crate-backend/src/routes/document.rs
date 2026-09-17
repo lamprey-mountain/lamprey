@@ -69,6 +69,25 @@ async fn wiki_history(
     }))
 }
 
+/// Wiki graph
+#[handler(routes::wiki_graph)]
+async fn wiki_graph(
+    auth: Auth,
+    State(globals): State<Globals>,
+    req: routes::wiki_graph::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = globals.services();
+
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?;
+
+    let graph = srv.documents.query_wiki_graph(req.channel_id, &req.query).await?;
+    Ok(Json(graph))
+}
+
 /// Document branch list
 #[handler(routes::document_branch_list)]
 async fn document_branch_list(
@@ -1125,6 +1144,7 @@ async fn document_media_attach(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(wiki_history))
+        .routes(routes2!(wiki_graph))
         .routes(routes2!(document_branch_list))
         .routes(routes2!(document_branch_get))
         .routes(routes2!(document_branch_update))

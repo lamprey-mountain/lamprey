@@ -29,8 +29,7 @@ pub mod wiki_history {
     }
 }
 
-// TODO: this can be done in the future, its not very high priority right now
-/// Wiki graph (TODO)
+/// Wiki graph (WIP)
 ///
 /// Query links between documents in this wiki
 #[endpoint(

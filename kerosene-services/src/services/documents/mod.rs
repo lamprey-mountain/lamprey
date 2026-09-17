@@ -22,6 +22,7 @@ use crate::services::documents::util::DOCUMENT_ROOT_NAME;
 
 mod actor;
 mod compact;
+mod graph;
 mod history;
 mod serialized;
 mod syncer;

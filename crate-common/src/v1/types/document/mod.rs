@@ -650,7 +650,7 @@ pub struct DocumentMediaAttach {
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
+#[derive(Default)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct WikiGraphQuery {
     /// maximum number of documents to return
@@ -669,13 +669,15 @@ pub struct WikiGraphQuery {
 // maybe i should add a way to filter documents by tag?
 #[record]
 pub struct WikiGraph {
+    // NOTE: maybe use `DocumentId`s instead?
     pub links: Vec<(ChannelId, ChannelId)>,
     pub documents: Vec<WikiGraphDocument>,
 }
 
 #[record]
 pub struct WikiGraphDocument {
-    pub channel_id: ChannelId,
+    // NOTE: maybe use `DocumentId` instead?
+    pub id: ChannelId,
     pub title: String,
     pub weight: u64,
 }
