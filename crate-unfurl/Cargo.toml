@@ -9,18 +9,27 @@ repository.workspace = true
 keywords.workspace = true
 
 [dependencies]
+anyhow = { version = "1.0.104", optional = true }
 async-trait = "0.1.92"
 bytes = "1.12.1"
+clap = { version = "4.6.6", features = ["derive"], optional = true }
 html5ever = "0.39.0"
 lamprey-common = { version = "0.1.1", path = "../crate-common" }
-reqwest = "0.13.4"
+lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
+percent-encoding = "2.3.2"
+reqwest = { version = "0.13.4", features = ["json"] }
 serde = { version = "1.0.229", features = ["derive"] }
 thiserror = "2.0.20"
 tokio = "1.53.1"
 tracing = "0.1.44"
 url = "2.5.8"
 utoipa = { version = "5.5.0", features = ["url"] }
-lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 
 [features]
 microdata = []
+bin = ["dep:clap", "dep:anyhow"]
+
+[[bin]]
+name = "unfurl"
+path = "src/bin/main.rs"
+required-features = ["bin"]

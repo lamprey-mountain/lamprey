@@ -190,3 +190,30 @@ impl EmbedGeneration {
         updated
     }
 }
+
+// TODO: find a better way to debug print without `Url`s taking up a dozen lines of space
+pub struct PrettyEmbedGeneration<'a>(pub &'a EmbedGeneration);
+
+impl std::fmt::Debug for PrettyEmbedGeneration<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let e = &self.0.embed;
+        f.debug_struct("PrettyEmbedGeneration")
+            .field("type", &e.ty)
+            .field("url", &e.url.as_ref().map(|u| u.as_str()))
+            .field(
+                "canonical_url",
+                &e.canonical_url.as_ref().map(|u| u.as_str()),
+            )
+            .field("title", &e.title)
+            .field("description", &e.description)
+            .field("color", &e.color)
+            .field("media ", &e.media)
+            .field("thumbnail", &e.thumbnail)
+            .field("author_name", &e.author_name)
+            .field("author_url", &e.author_url.as_ref().map(|u| u.as_str()))
+            .field("author_avatar", &e.author_avatar)
+            .field("site_name", &e.site_name)
+            .field("site_avatar", &e.site_avatar)
+            .finish()
+    }
+}
