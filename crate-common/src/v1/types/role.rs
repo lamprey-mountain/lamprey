@@ -8,7 +8,6 @@ use crate::v1::types::util::{deserialize_sorted, deserialize_sorted_option, some
 use super::{Permission, RoleId, RoleVerId, RoomId};
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct Role {
     pub id: RoleId,
     pub version_id: RoleVerId,
@@ -34,8 +33,20 @@ pub struct Role {
     pub is_self_applicable: bool,
     pub is_mentionable: bool,
 
-    /// tiebroken by id
-    pub position: u64,
+    // TODO(?): redo types
+    // pub applicable: RoleApplicable,
+    // pub mentionable: RoleMentionable,
+    /// the position of this role
+    ///
+    /// - the everyone/default role has a position of 0
+    /// - during updates, this is tiebroken by role id (newer roles have a higher position)
+    ///
+    /// ## rank
+    ///
+    /// - a room member's rank is `max(role.position)` across all roles they have
+    /// - you must have a strictly higher rank than another room member in order to kick, ban, or timeout them.
+    /// - you can only apply or reorder roles with a lower position than your rank
+    pub position: u16,
 
     /// whether members with this role should be displayed separately
     pub hoist: bool,
@@ -43,7 +54,42 @@ pub struct Role {
     /// whether this role should be retained after a user leaves and rejoins the room
     pub sticky: bool,
 
+    /// the number of members with this role
     pub member_count: u64,
+    // TODO(?): add this
+    // /// the number of online members with this role
+    // pub online_count: u64,
+}
+
+/// who can apply this role
+#[cfg(any())]
+#[record]
+#[derive(Default)]
+pub enum RoleApplicable {
+    /// anyone with a higher rank than this role's position
+    #[default]
+    Default,
+
+    /// anyone in the room
+    Anyone,
+}
+
+/// who can mention this role
+#[cfg(any())]
+#[record]
+#[derive(Default)]
+pub enum RoleMentionable {
+    /// only people with `MessageMassMention`, unless mention all roles is enabled
+    #[default]
+    Restricted,
+
+    /// anyone with `role_id` can mention this role
+    ///
+    /// if role_id is the everyone role, this is mentionable by everyone
+    Role {
+        // TODO: default to everyone
+        role_id: RoleId,
+    },
 }
 
 #[record]
@@ -54,7 +100,6 @@ pub struct RoleDeleteQuery {
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct RoleCreate {
     #[schema(min_length = 1, max_length = 64)]
     #[validate(length(min = 1, max = 64))]
@@ -65,10 +110,10 @@ pub struct RoleCreate {
     #[serde(default)]
     pub description: Option<String>,
 
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_sorted")]
     pub allow: Vec<Permission>,
 
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_sorted")]
     pub deny: Vec<Permission>,
 
     #[serde(default)]
@@ -99,7 +144,7 @@ pub struct RoleCreate {
 }
 
 #[record]
-#[derive(PartialEq, Eq, Diff)]
+#[derive(Default, Diff)]
 pub struct RolePatch {
     #[schema(required = false, min_length = 1, max_length = 64)]
     #[validate(length(min = 1, max = 64))]
@@ -151,12 +196,27 @@ pub struct RoleReorder {
 #[derive(PartialEq, Eq)]
 pub struct RoleReorderItem {
     pub role_id: RoleId,
-    pub position: u64,
+    pub position: u16,
 }
 
 impl Role {
     /// returns if this is the default/everyone role that everyone in a room implicitly has
     pub fn is_default(&self) -> bool {
         *self.id == *self.room_id
+    }
+}
+
+impl RoleCreate {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            description: None,
+            allow: vec![],
+            deny: vec![],
+            is_self_applicable: false,
+            is_mentionable: false,
+            hoist: false,
+            sticky: false,
+        }
     }
 }

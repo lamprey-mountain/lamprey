@@ -14,8 +14,8 @@ impl CachedRoom {
 }
 
 // TODO: add a permission calculator for a dm/gdm channel?
-// PERF: convert channel overwrites and role perms into bits; cache
 // RoomPermissions in CachedRoom and recalculate it when a relevant sync message is received
+// make sure to keep in sync with kerosene-services/src/services/cache/permissions.rs!
 pub struct RoomPermissions<'a> {
     room: &'a CachedRoom,
 }
@@ -76,6 +76,7 @@ impl<'a> RoomPermissions<'a> {
         let mut timed_out = false;
         let mut quarantined = false;
 
+        // calculate base perms (includes mute/deafen)
         self.calculate_room_permissions(
             &mut bits,
             &mut rank,
@@ -251,6 +252,7 @@ impl<'a> RoomPermissions<'a> {
 
             // 5. apply user allows
             // 6. apply user denies
+            // NOTE: should i still apply overwrites even for non members?
             if let Some(ow) = channel.perm_users.get(&member.user_id) {
                 bits.add_all(ow.allow);
                 bits.remove_all(ow.deny);

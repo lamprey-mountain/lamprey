@@ -14,7 +14,7 @@ use common::v1::types::{
 
 use crate::compat::routes::util::auth::Auth4 as Auth;
 use crate::prelude::*;
-use crate::services::cache::PermissionsCalculator;
+use crate::services::cache::permissions::RoomPermissions;
 use crate::services::rooms::utils::sync_room_id;
 use crate::types::PermissionBits;
 
@@ -191,6 +191,9 @@ pub struct CachedChannel {
 
     /// channel permission overwrites as bitfields
     pub overwrites: ImMap<PermissionOverwriteId, CachedPermissionOverwrite>,
+    // TODO: replace overwrites field with this
+    // pub overwrites_roles: HashMap<RoleId, PermSet>,
+    // pub overwrites_users: HashMap<UserId, PermSet>,
 }
 
 #[derive(Clone, Debug)]
@@ -307,24 +310,17 @@ impl RoomSnapshot {
         user_id: UserId,
         state: Globals,
     ) -> Vec<ChannelVisibility> {
-        let Some(data) = self.get_data() else {
+        let Some(loaded) = self.get_data() else {
             return vec![];
         };
 
-        let calc = PermissionsCalculator {
-            state,
-            room_id: data.room.id,
-            owner_id: data.room.owner_id,
-            public: data.room.public,
-            room: Arc::clone(&self),
-        };
+        let calc = loaded.permissions();
 
-        data.channels
+        loaded
+            .channels
             .values()
             .filter_map(|chan| {
-                let perms = calc
-                    .query2(Some(user_id), Some(&chan.inner))
-                    .expect("room has data");
+                let perms = calc.query(Some(user_id), Some(&chan));
 
                 let Ok(perms) = perms.ensure_view() else {
                     return None;
@@ -336,18 +332,6 @@ impl RoomSnapshot {
                 })
             })
             .collect()
-    }
-
-    /// get a permission calculator for this room
-    pub fn permissions(self: &Arc<Self>, state: Globals) -> Option<PermissionsCalculator> {
-        let data = self.get_data()?;
-        Some(PermissionsCalculator {
-            state: state.clone(),
-            room_id: data.room.id,
-            owner_id: data.room.owner_id,
-            public: data.room.public,
-            room: Arc::clone(&self),
-        })
     }
 }
 
@@ -544,7 +528,11 @@ impl LoadedRoom {
     // pub fn ensure_mfa_if_needed(&self, auth: &Auth) -> Result<()> {
     // pub fn ensure_feature(&self, feature: &RoomFeature) -> Result<()> {
     // pub fn channel_visibilities()
-    // pub fn permissions() -> RoomPermissions {}
+
+    /// get a permission calculator for this room
+    pub fn permissions(&self) -> RoomPermissions<'_> {
+        RoomPermissions::new(self)
+    }
 }
 
 impl From<Channel> for CachedChannel {

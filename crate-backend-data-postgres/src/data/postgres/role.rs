@@ -41,7 +41,7 @@ impl From<DbRole> for Role {
             is_self_applicable: row.is_self_applicable,
             is_mentionable: row.is_mentionable,
             member_count: row.member_count as u64,
-            position: row.position as u64,
+            position: row.position.try_into().unwrap(),
             hoist: row.hoist,
             sticky: row.sticky,
         }

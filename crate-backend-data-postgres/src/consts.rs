@@ -1,5 +1,5 @@
 /// the maximum number of roles per room. clients should be able to fetch everything in one request.
-pub const MAX_ROLE_COUNT: u32 = 1024;
+pub const MAX_ROLE_COUNT: u32 = 256;
 
 /// the maximum number of active channels per room. clients should be able to fetch everything in one request.
 pub const MAX_CHANNEL_COUNT: u32 = 1024;

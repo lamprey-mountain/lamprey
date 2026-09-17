@@ -11,7 +11,6 @@ use tokio::sync::broadcast;
 
 use crate::consts::IDLE_TIMEOUT_MEMBER_LIST;
 use crate::prelude::*;
-use crate::services::cache::permissions::PermissionsCalculator;
 use crate::services::member_lists::util::{MemberKey, MemberListKey};
 use crate::services::rooms::actor::MemberListCommandMsg;
 use crate::services::rooms::types::RoomMembers;
@@ -102,7 +101,7 @@ impl MemberList {
     }
 
     pub async fn initialize(&mut self, snapshot: Arc<RoomSnapshot>) -> Result<()> {
-        let Some(data) = snapshot.get_data() else {
+        let Some(loaded) = snapshot.get_data() else {
             return Ok(());
         };
 
@@ -133,7 +132,7 @@ impl MemberList {
             let user_ids: Vec<_> = if let Some(ref tm) = thread_members {
                 tm.keys().copied().collect()
             } else {
-                match &data.members {
+                match &loaded.members {
                     RoomMembers::Loaded { members } => members.keys().copied().collect(),
                     RoomMembers::Loading => vec![],
                 }
@@ -143,37 +142,24 @@ impl MemberList {
             let users = self.s.services().users.get_many(&user_ids).await?;
             let users_map: HashMap<_, _> = users.into_iter().map(|u| (u.id, u)).collect();
 
-            let perms_calc = PermissionsCalculator {
-                state: self.s.clone(),
-                room_id: data.room.id,
-                owner_id: data.room.owner_id,
-                public: data.room.public,
-                room: Arc::clone(&snapshot),
-            };
-
             self.members.clear();
             self.user_to_key.clear();
             self.group_counts.clear();
 
             for user_id in user_ids {
                 if let Some(_user) = users_map.get(&user_id) {
-                    if let Some(cached_member) = data.members.get(&user_id) {
+                    if let Some(cached_member) = loaded.members.get(&user_id) {
                         let is_thread_member = thread_members
                             .as_ref()
                             .map_or(true, |tm| tm.contains_key(&user_id));
                         if is_thread_member
-                            && self.should_include(
-                                &user_id,
-                                &cached_member.member,
-                                &perms_calc,
-                                data,
-                            )
+                            && self.should_include(&user_id, &cached_member.member, loaded)
                         {
                             let key = self.calculate_key(
                                 &user_id,
                                 &cached_member.member,
                                 &users_map,
-                                data,
+                                loaded,
                             );
                             self.members.insert(key.clone(), user_id);
                             self.user_to_key.insert(user_id, key.clone());
@@ -188,20 +174,14 @@ impl MemberList {
         Ok(())
     }
 
-    fn should_include(
-        &self,
-        user_id: &UserId,
-        member: &RoomMember,
-        perms_calc: &PermissionsCalculator,
-        data: &LoadedRoom,
-    ) -> bool {
+    fn should_include(&self, user_id: &UserId, member: &RoomMember, loaded: &LoadedRoom) -> bool {
         match &self.key {
             MemberListKey::Room(_) => true,
             MemberListKey::RoomChannel(_, visibility) => {
-                if Some(*user_id) == perms_calc.owner_id {
+                if Some(*user_id) == loaded.room.owner_id {
                     return true;
                 }
-                let (has_admin, has_view) = self.calc_view_base(member, perms_calc, data);
+                let (has_admin, has_view) = self.calc_view_base(member, loaded);
                 if has_admin {
                     return true;
                 }
@@ -209,7 +189,8 @@ impl MemberList {
             }
             MemberListKey::RoomThread(_, _, channel_id) => {
                 // for threads, usually only thread members are shown
-                data.threads
+                loaded
+                    .threads
                     .as_ref()
                     .and_then(|t| t.get(channel_id))
                     .map_or(false, |t| t.members.contains_key(user_id))
@@ -218,20 +199,15 @@ impl MemberList {
         }
     }
 
-    fn calc_view_base(
-        &self,
-        member: &RoomMember,
-        perms_calc: &PermissionsCalculator,
-        data: &LoadedRoom,
-    ) -> (bool, bool) {
+    fn calc_view_base(&self, member: &RoomMember, data: &LoadedRoom) -> (bool, bool) {
         let mut has_admin = false;
         let mut has_view_allow = false;
         let mut has_view_deny = false;
 
-        let everyone_role_id = perms_calc.room_id.into_inner().into();
+        let everyone_role_id = data.room.id.into_inner().into();
 
-        for role in data.roles.values() {
-            if role.inner.id == everyone_role_id || member.roles.contains(&role.inner.id) {
+        for role_id in std::iter::once(&everyone_role_id).chain(member.roles.iter()) {
+            if let Some(role) = data.roles.get(role_id) {
                 if role.allow.has(Permission::Admin) {
                     has_admin = true;
                     break;
@@ -266,12 +242,12 @@ impl MemberList {
 
         let group = if is_online {
             // find highest hoisted role
-            let mut best_role: Option<(RoleId, u64)> = None;
+            let mut best_role: Option<(RoleId, u16)> = None;
             for role_id in &member.roles {
                 if let Some(role) = data.roles.get(role_id) {
                     if role.inner.hoist {
                         if best_role.is_none() || role.inner.position < best_role.unwrap().1 {
-                            best_role = Some((*role_id, role.inner.position as u64));
+                            best_role = Some((*role_id, role.inner.position));
                         }
                     }
                 }
@@ -481,24 +457,17 @@ impl MemberList {
         users_map: &HashMap<UserId, User>,
         snapshot: Arc<RoomSnapshot>,
     ) -> Result<()> {
-        let Some(data) = snapshot.get_data() else {
+        let Some(loaded) = snapshot.get_data() else {
             return Ok(());
         };
 
         if let Some(_room_id) = self.key.room_id() {
-            let perms_calc = PermissionsCalculator {
-                state: self.s.clone(),
-                room_id: data.room.id,
-                owner_id: data.room.owner_id,
-                public: data.room.public,
-                room: Arc::clone(&snapshot),
-            };
-            let included = self.should_include(&user_id, member, &perms_calc, data);
+            let included = self.should_include(&user_id, member, loaded);
 
             let old_key = self.user_to_key.get(&user_id).cloned();
 
             if included {
-                let new_key = self.calculate_key(&user_id, member, users_map, data);
+                let new_key = self.calculate_key(&user_id, member, users_map, loaded);
 
                 // If the member key hasn't changed, no need to emit delete+insert no-op
                 if Some(&new_key) == old_key.as_ref() {

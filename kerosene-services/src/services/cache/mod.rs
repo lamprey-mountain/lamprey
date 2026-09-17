@@ -3,7 +3,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::{globals::messaging::Broadcast, prelude::*, services::rooms::actor::SyncMessage};
+use crate::{
+    globals::messaging::Broadcast,
+    prelude::*,
+    services::rooms::{LoadedRoom, actor::SyncMessage},
+};
 
 use common::v1::types::{
     ChannelId, ChannelType, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId,
@@ -24,7 +28,7 @@ pub use crate::services::rooms::{
 
 use common::v1::types::error::ApiError;
 use common::v1::types::error::ErrorCode;
-pub use permissions::PermissionsCalculator;
+pub use permissions::RoomPermissions;
 
 // TODO(?): then rename ServiceCache to ServicePreferences, remove all caching logic for other resources
 
@@ -268,25 +272,6 @@ impl ServiceCache {
         self.preferences_user.invalidate(&(user_id, other_id)).await;
     }
 
-    /// get the permission calculator for this room, loading the room if it doesn't exist
-    pub async fn permissions(
-        &self,
-        room_id: RoomId,
-        ensure_members: bool,
-    ) -> Result<PermissionsCalculator> {
-        let snapshot = self.load_room(room_id, ensure_members).await?;
-        let data = snapshot
-            .get_data()
-            .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))?;
-        Ok(PermissionsCalculator {
-            state: self.state.clone(),
-            room_id,
-            owner_id: data.room.owner_id,
-            public: data.room.public,
-            room: snapshot,
-        })
-    }
-
     /// generate an ambient message for a user containing all their initial state
     // PERF: fetch in parallel
     pub async fn generate_ambient_message(&self, user_id: UserId) -> Result<MessageSync> {
@@ -356,26 +341,24 @@ impl ServiceCache {
         let mut all_threads = Vec::new();
 
         for (room, snapshot, member) in results {
-            let cached_room = snapshot
+            let loaded = snapshot
                 .get_data()
                 .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRoom)))?;
-            let perm_calc = snapshot
-                .permissions(self.state.clone())
-                .expect("room should always be loaded");
+            let perm_calc = loaded.permissions();
 
             if let Some(member) = member {
                 room_members.push(member);
             }
 
-            for role in cached_room.roles.values() {
+            for role in loaded.roles.values() {
                 all_roles.push(role.inner.clone());
             }
 
-            for channel in cached_room.channels.values() {
+            for channel in loaded.channels.values() {
                 all_channels.push(channel.inner.clone());
             }
 
-            for thread in cached_room
+            for thread in loaded
                 .threads
                 .as_ref()
                 .map(|t| t.values())
@@ -385,9 +368,8 @@ impl ServiceCache {
                 let thread_inner = &thread.thread;
 
                 if thread_inner.ty == ChannelType::ThreadPrivate {
-                    let perms = perm_calc
-                        .query2(Some(user_id), Some(&thread_inner))
-                        .expect("room should always be loaded");
+                    // PERF: don't convert thread_inner into a CachedChannel every time
+                    let perms = perm_calc.query(Some(user_id), Some(&thread_inner.clone().into()));
 
                     if !perms.visible {
                         continue;

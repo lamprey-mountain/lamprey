@@ -26,17 +26,17 @@ use crate::prelude::*;
 // cache_is_mutual *might* be better in ServiceUsers, and mutual could have more data
 
 pub struct ServicePermissions {
-    state: Globals,
+    globals: Globals,
     cache_is_mutual: Cache<(UserId, UserId), bool>,
     timeout_tasks: DashMap<(UserId, RoomId), JoinHandle<()>>,
 }
 
 impl ServicePermissions {
-    pub fn new(state: Globals) -> Self {
+    pub fn new(globals: Globals) -> Self {
         // not sure what the best way to configure these caches are
         // (userid, roomid) seems a bit inefficient, maybe caching roles would be better
         Self {
-            state,
+            globals,
             cache_is_mutual: Cache::builder()
                 .max_capacity(100_000)
                 .support_invalidation_closures()
@@ -61,7 +61,7 @@ impl ServicePermissions {
 
         if let Some(timeout_until) = timeout_until {
             if timeout_until > Time::now_utc() {
-                let state = self.state.clone();
+                let state = self.globals.clone();
                 let handle = tokio::spawn(async move {
                     let duration = (timeout_until.into_inner() - Time::now_utc().into_inner())
                         .try_into()
@@ -80,16 +80,18 @@ impl ServicePermissions {
 
     /// calculate the permissions a user has in a room
     pub async fn for_room(&self, user_id: UserId, room_id: RoomId) -> Result<Permissions> {
-        let srv = self.state.services();
-        let calc = srv.cache.permissions(room_id, true).await?;
-        let perms2 = calc.query(user_id, None)?;
+        let srv = self.globals.services();
+        let room = srv.rooms.load(room_id).ready(true).await?;
+        let calc = room.permissions();
+        let perms2 = calc.query(Some(user_id), None);
         Ok(perms2.into())
     }
 
     pub async fn for_room2(&self, user_id: Option<UserId>, room_id: RoomId) -> Result<Permissions> {
-        let srv = self.state.services();
-        let calc = srv.cache.permissions(room_id, true).await?;
-        let perms2 = calc.query2(user_id, None)?;
+        let srv = self.globals.services();
+        let room = srv.rooms.load(room_id).ready(true).await?;
+        let calc = room.permissions();
+        let perms2 = calc.query(user_id, None);
         Ok(perms2.into())
     }
 
@@ -99,9 +101,10 @@ impl ServicePermissions {
         user_id: Option<UserId>,
         room_id: RoomId,
     ) -> Result<Permissions2<CheckVisibility>> {
-        let srv = self.state.services();
-        let calc = srv.cache.permissions(room_id, true).await?;
-        Ok(calc.query2(user_id, None)?)
+        let srv = self.globals.services();
+        let room = srv.rooms.load(room_id).ready(true).await?;
+        let calc = room.permissions();
+        Ok(calc.query(user_id, None))
     }
 
     /// calculate the permissions a user has on this server
@@ -115,18 +118,20 @@ impl ServicePermissions {
         user_id: Option<UserId>,
         channel_id: ChannelId,
     ) -> Result<Permissions2<CheckVisibility>> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let chan = srv.channels.get(channel_id, user_id).await?;
 
         if let Some(room_id) = chan.room_id {
-            let calc = srv.cache.permissions(room_id, true).await?;
-            let mut perms = calc.query2(user_id, Some(&chan))?;
+            let is_thread = chan.is_thread();
+            let room = srv.rooms.load(room_id).ready(true).await?;
+            let calc = room.permissions();
+            let mut perms = calc.query(user_id, Some(&chan.into()));
 
             // load slowmode fields
             if let Some(uid) = user_id {
-                let mut data = self.state.begin_read().await?;
+                let mut txn = self.globals.begin_read().await?;
 
-                if let Some(expire_at) = data
+                if let Some(expire_at) = txn
                     .channel_get_message_slowmode_expire_at(channel_id, uid)
                     .await?
                 {
@@ -135,8 +140,8 @@ impl ServicePermissions {
                     }
                 }
 
-                if chan.is_thread() {
-                    if let Some(expire_at) = data
+                if is_thread {
+                    if let Some(expire_at) = txn
                         .channel_get_thread_slowmode_expire_at(channel_id, uid)
                         .await?
                     {
@@ -213,7 +218,7 @@ impl ServicePermissions {
 
     pub async fn invalidate_room(&self, user_id: UserId, room_id: RoomId) {
         let _ = self
-            .state
+            .globals
             .services()
             .cache
             .reload_member(room_id, user_id)
@@ -227,10 +232,10 @@ impl ServicePermissions {
     }
 
     pub async fn invalidate_thread(&self, _user_id: UserId, thread_id: ChannelId) {
-        if let Ok(c) = self.state.services().channels.get(thread_id, None).await {
+        if let Ok(c) = self.globals.services().channels.get(thread_id, None).await {
             if let Some(rid) = c.room_id {
                 let _ = self
-                    .state
+                    .globals
                     .services()
                     .cache
                     .reload_channel(rid, thread_id)
@@ -250,7 +255,7 @@ impl ServicePermissions {
             return Ok(true);
         }
         let (a, b) = if a < b { (a, b) } else { (b, a) };
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
         self.cache_is_mutual
             .try_get_with((a, b), data.permission_is_mutual(a, b))
             .await
@@ -271,7 +276,7 @@ impl ServicePermissions {
         allow: Vec<Permission>,
         deny: Vec<Permission>,
     ) -> Result<()> {
-        let mut data = self.state.begin().await?;
+        let mut data = self.globals.begin().await?;
         data.permission_overwrite_upsert(thread_id.into(), overwrite_id, ty, allow, deny)
             .await?;
         data.commit().await?;
@@ -286,7 +291,7 @@ impl ServicePermissions {
         thread_id: ChannelId,
         overwrite_id: Uuid,
     ) -> Result<()> {
-        let mut data = self.state.begin().await?;
+        let mut data = self.globals.begin().await?;
         data.permission_overwrite_delete(thread_id, overwrite_id)
             .await?;
         data.commit().await?;
@@ -299,10 +304,10 @@ impl ServicePermissions {
     async fn invalidate_thread_all(&self, thread_id: ChannelId) {
         // Permission caches removed - permissions are recalculated on-demand
 
-        if let Ok(t) = self.state.services().channels.get(thread_id, None).await {
+        if let Ok(t) = self.globals.services().channels.get(thread_id, None).await {
             if let Some(room_id) = t.room_id {
                 let _ = self
-                    .state
+                    .globals
                     .services()
                     .cache
                     .reload_channel(room_id, thread_id)
@@ -312,10 +317,11 @@ impl ServicePermissions {
         }
     }
 
-    pub async fn get_user_rank(&self, room_id: RoomId, user_id: UserId) -> Result<u64> {
-        let srv = self.state.services();
-        let calc = srv.cache.permissions(room_id, true).await?;
-        Ok(calc.rank(user_id))
+    pub async fn get_user_rank(&self, room_id: RoomId, user_id: UserId) -> Result<u16> {
+        let srv = self.globals.services();
+        let room = srv.rooms.load(room_id).ready(true).await?;
+        let calc = room.permissions();
+        Ok(calc.query(Some(user_id), None).rank())
     }
 
     /// get default permissions for the @everyone role
@@ -323,7 +329,7 @@ impl ServicePermissions {
     /// for public room joining
     // TODO: move to permissions cache
     pub async fn default_for_room(&self, room_id: RoomId) -> Result<Permissions> {
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
 
         let everyone_role_id = room_id.into_inner().into();
         let role = data.role_select(room_id, everyone_role_id).await?;
@@ -343,7 +349,7 @@ impl ServicePermissions {
         &self,
         room_id: RoomId,
     ) -> Result<Permissions2<CheckVisibility>> {
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
 
         let everyone_role_id = room_id.into_inner().into();
         let role = data.role_select(room_id, everyone_role_id).await?;
@@ -369,7 +375,7 @@ impl ServicePermissions {
         source_user_id: UserId,
         target_user_id: UserId,
     ) -> Result<bool> {
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
         data.permission_allows_dm_from_user(source_user_id, target_user_id)
             .await
     }
@@ -380,7 +386,7 @@ impl ServicePermissions {
         source_user_id: UserId,
         target_user_id: UserId,
     ) -> Result<bool> {
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
         data.permission_allows_friend_request_from_user(source_user_id, target_user_id)
             .await
     }
@@ -395,9 +401,10 @@ impl ServicePermissions {
         let should_send = match auth_check {
             AuthCheck::Room(room_id) => {
                 // Use can_view_room directly on calculator for efficiency
-                let srv = self.state.services();
-                let perms_calc = srv.cache.permissions(*room_id, true).await?;
-                perms_calc.can_view_room(uid)
+                let srv = self.globals.services();
+                let room = srv.rooms.load(*room_id).ready(true).await?;
+                let perms_calc = room.permissions();
+                perms_calc.query(uid, None).visible
             }
             AuthCheck::RoomPerm(room_id, perm) => {
                 // Use service method that returns old Permissions for compatibility
@@ -459,7 +466,7 @@ impl ServicePermissions {
 
         // mfa and sudo checks
         if flags.require_mfa() || flags.require_sudo() {
-            let srv = self.state.services();
+            let srv = self.globals.services();
             let user_id = identity.user_id();
 
             // PERF: only match on RequirementsContext once
@@ -479,7 +486,7 @@ impl ServicePermissions {
 
             if security.require_mfa || flags.require_mfa() {
                 if let Some(uid) = user_id {
-                    let mut data = self.state.begin_read().await?;
+                    let mut data = self.globals.begin_read().await?;
                     let totp = data.auth_totp_get(uid).await?;
                     if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
                         return Err(ApiError::from_code(ErrorCode::MfaRequired).into());

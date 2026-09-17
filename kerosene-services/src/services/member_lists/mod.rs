@@ -66,24 +66,12 @@ impl ServiceMemberLists {
     async fn ensure(&self, key: MemberListKey) -> Result<Arc<MemberListHandle>> {
         let room_id = key
             .room_id()
-            .ok_or(crate::Error::BadStatic("DM member lists not yet sharded"))?;
+            .ok_or(Error::BadStatic("DM member lists not yet sharded"))?;
 
-        let get_handle = || {
-            self.globals
-                .services()
-                .rooms
-                .actors
-                .try_get_with(room_id, || {
-                    Ok::<RoomHandle, crate::Error>(RoomActor::spawn_room(
-                        room_id,
-                        self.globals.clone(),
-                    ))
-                })
-                .map_err(|e| e.fake_clone())
-        };
+        let srv = self.globals.services();
+        let room_handle = srv.rooms.load(room_id);
 
-        let mut room_handle = get_handle()?;
-
+        // TODO: don't access actor_ref directly
         // Try to send the subscribe command; if it fails, the actor is dead
         // Evict the dead actor and retry once
         let result = room_handle
@@ -98,16 +86,14 @@ impl ServiceMemberLists {
                 // Actor is dead or failed, evict it
                 self.globals.services().rooms.unload_cache(room_id).await;
 
-                // Get a fresh actor
-                room_handle = get_handle()?;
-
+                let room_handle = srv.rooms.load(room_id);
                 room_handle
                     .actor_ref
                     .ask(MemberListSubscribeMsg { key: key.clone() })
                     .send()
                     .await
                     .map_err(|_| {
-                        crate::Error::Internal("failed to subscribe to member list".to_string())
+                        Error::Internal("failed to subscribe to member list".to_string())
                     })?
             }
         };

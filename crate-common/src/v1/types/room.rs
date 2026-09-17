@@ -215,7 +215,6 @@ pub struct RoomPatch {
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct RoomSecurityUpdate {
     pub require_mfa: Option<bool>,
     pub require_sudo: Option<bool>,
@@ -271,7 +270,7 @@ pub enum RoomFeature {
 pub struct RoomFeatures(pub Vec<RoomFeature>);
 
 #[record]
-#[derive(Default, PartialEq, Eq)]
+#[derive(PartialEq, Eq)]
 pub struct TransferOwnership {
     pub owner_id: UserId,
 }

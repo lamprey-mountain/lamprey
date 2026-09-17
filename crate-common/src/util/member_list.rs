@@ -9,7 +9,7 @@ use crate::v2::types::{RoleId, UserId, sync::subscribe::MemberListGroupId};
 #[derive(Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum MemberGroupKey {
     Connected,
-    Hoisted { role_position: u64, role_id: RoleId },
+    Hoisted { role_position: u16, role_id: RoleId },
     Online,
     Offline,
 }
