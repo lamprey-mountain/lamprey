@@ -12,7 +12,7 @@ use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 use validator::Validate;
 
-use crate::error::{Error, Result};
+use crate::prelude::*;
 use crate::routes::util::Auth;
 use crate::{ServerState, routes2};
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
@@ -28,8 +28,8 @@ async fn room_template_create(
     auth.user.ensure_unsuspended()?;
     req.template.validate()?;
 
-    let mut perms: Permissions2<CheckPermissions> = s
-        .services()
+    let srv = s.services();
+    let mut perms: Permissions2<CheckPermissions> = srv
         .perms
         .for_room3(Some(auth.user.id), req.template.room_id)
         .await?
@@ -37,8 +37,7 @@ async fn room_template_create(
     perms.needs(Permission::RoomEdit);
     perms.check()?;
 
-    let template = s
-        .services()
+    let template = srv
         .room_templates
         .create(auth.user.id, req.template)
         .await?;
@@ -56,8 +55,8 @@ async fn room_template_list(
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
 
-    let response = s
-        .services()
+    let srv = s.services();
+    let response = srv
         .room_templates
         .list(auth.user.id, req.pagination)
         .await?;
@@ -90,16 +89,13 @@ async fn room_template_edit(
     auth.user.ensure_unsuspended()?;
     req.patch.validate()?;
 
-    let template = s.services().room_templates.get(req.code.clone()).await?;
+    let srv = s.services();
+    let template = srv.room_templates.get(req.code.clone()).await?;
     if template.creator.id != auth.user.id {
         return Err(Error::MissingPermissions);
     }
 
-    let updated = s
-        .services()
-        .room_templates
-        .update(req.code, req.patch)
-        .await?;
+    let updated = srv.room_templates.update(req.code, req.patch).await?;
     Ok(Json(updated))
 }
 

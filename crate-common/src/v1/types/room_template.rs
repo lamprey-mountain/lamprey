@@ -1,14 +1,12 @@
 use std::fmt;
 
+use lamprey_macros::record;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
-
-#[cfg(feature = "validator")]
-use validator::Validate;
 
 use super::{
     PaginationKey,
@@ -43,9 +41,7 @@ impl PaginationKey for RoomTemplateCode {
 }
 
 /// A template for creating rooms.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RoomTemplate {
     /// unique identifier for this template
     pub code: RoomTemplateCode,
@@ -53,31 +49,61 @@ pub struct RoomTemplate {
     /// name for this template
     pub name: String,
     pub description: String,
+
+    /// when this template was created
     pub created_at: Time,
 
-    /// updated whenever template is edited or synced
+    /// when this template was last edited or synced
     pub updated_at: Time,
 
-    /// user who created this template
+    /// the user who created this template
     pub creator: User,
 
-    // only returned for the creator
     /// the room this template was created from
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    ///
+    /// returned for the creator and anyone who can view the room
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_room_id: Option<RoomId>,
 
-    // only returned for the creator
     /// if the source room and the template have diverged
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    ///
+    /// only returned for the creator if they have `RoomEdit`
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dirty: Option<bool>,
 
     pub snapshot: RoomTemplateSnapshot,
+    // // TODO: add?
+    // /// the number of times this room template has been used
+    // pub uses: u64,
+}
+
+#[record]
+pub struct RoomTemplateCreate {
+    /// the id of the room to turn into a template
+    ///
+    /// the caller must have the `RoomEdit` permission in the room
+    // TODO(?): allow uploading RoomTemplateSnapshot directly without creating a room first? probably not, i dont want to recreate every endpoint on room for room templates.
+    // though, maybe i could have a special RoomType::Template? has an associated room template, automatically syncs changes to template, not returned in ambient, ...?
+    pub room_id: RoomId,
+
+    #[validate(length(min = 1, max = 64))]
+    pub name: String,
+
+    #[validate(length(min = 1, max = 8192))]
+    pub description: String,
+}
+
+#[record]
+pub struct RoomTemplatePatch {
+    #[validate(length(min = 1, max = 64))]
+    pub name: Option<String>,
+
+    #[validate(length(min = 1, max = 8192))]
+    pub description: Option<String>,
 }
 
 /// a snapshot of a room
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RoomTemplateSnapshot {
     pub channels: Vec<RoomTemplateChannel>,
     pub roles: Vec<RoomTemplateRole>,
@@ -86,52 +112,24 @@ pub struct RoomTemplateSnapshot {
     pub afk_channel_timeout: u64,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct RoomTemplateCreate {
-    // user must be able to view the room
-    pub room_id: RoomId,
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
-    pub name: String,
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    pub description: String,
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "validator", derive(Validate))]
-pub struct RoomTemplatePatch {
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
-    pub name: Option<String>,
-    #[cfg_attr(feature = "validator", validate(length(min = 1, max = 8192)))]
-    pub description: Option<String>,
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RoomTemplateChannel {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub inner: ChannelCreate,
 
     /// temporary placeholder id, for use in parent_id
     pub id: Uuid,
+
+    pub position: u16,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RoomTemplateRole {
-    #[cfg_attr(feature = "serde", serde(flatten))]
+    #[serde(flatten)]
     pub inner: RoleCreate,
 
-    /// temporary placeholder id, for use in permission overwrites
+    /// placeholder id, for use in permission overwrites
     pub id: Uuid,
 
-    pub default: bool,
-
-    pub position: u64,
+    pub position: u16,
 }

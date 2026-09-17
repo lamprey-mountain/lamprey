@@ -9,113 +9,32 @@ use common::v1::types::room_template::{
 use common::v1::types::{Channel, ChannelId, ChannelType, PermissionOverwriteType, Role, RoleId};
 use common::v1::types::{PaginationQuery, PaginationResponse};
 use common::v1::types::{RoomId, RoomPatch, UserId, channel::ChannelCreate, role::RoleCreate};
+use kerosene_core::types::permission::requirements::Requirements;
+use tracing::warn;
 use uuid::Uuid;
 
-use crate::Error;
-use crate::error::Result;
 use crate::prelude::*;
 use crate::types::{DbChannelCreate, DbChannelType, DbRoleCreate, DbRoomTemplate};
 
-pub mod builtin {
-    use super::*;
-
-    pub fn public_room() -> RoomTemplateSnapshot {
-        room_snapshot(true)
-    }
-
-    pub fn private_room() -> RoomTemplateSnapshot {
-        room_snapshot(false)
-    }
-
-    fn room_snapshot(public: bool) -> RoomTemplateSnapshot {
-        let everyone_id = Uuid::now_v7();
-        let general_id = Uuid::now_v7();
-
-        RoomTemplateSnapshot {
-            roles: vec![
-                RoomTemplateRole {
-                    id: Uuid::now_v7(),
-                    inner: RoleCreate {
-                        name: "admin".to_string(),
-                        description: None,
-                        allow: ADMIN_ROOM.to_vec(),
-                        deny: vec![],
-                        is_self_applicable: false,
-                        is_mentionable: false,
-                        hoist: false,
-                        sticky: false,
-                    },
-                    default: false,
-                    position: 2,
-                },
-                RoomTemplateRole {
-                    id: Uuid::now_v7(),
-                    inner: RoleCreate {
-                        name: "moderator".to_string(),
-                        description: None,
-                        allow: MODERATOR.to_vec(),
-                        deny: vec![],
-                        is_self_applicable: false,
-                        is_mentionable: false,
-                        hoist: false,
-                        sticky: false,
-                    },
-                    default: false,
-                    position: 1,
-                },
-                RoomTemplateRole {
-                    id: everyone_id,
-                    inner: RoleCreate {
-                        name: "everyone".to_string(),
-                        description: Some("Default role".to_string()),
-                        allow: if public {
-                            EVERYONE_UNTRUSTED.to_vec()
-                        } else {
-                            EVERYONE_TRUSTED.to_vec()
-                        },
-                        deny: vec![],
-                        is_self_applicable: false,
-                        is_mentionable: false,
-                        hoist: false,
-                        sticky: false,
-                    },
-                    default: true,
-                    position: 0,
-                },
-            ],
-            channels: vec![RoomTemplateChannel {
-                id: general_id,
-                inner: ChannelCreate {
-                    name: "general".to_string(),
-                    ty: ChannelType::Text,
-                    ..Default::default()
-                },
-            }],
-            welcome_channel_id: Some(general_id.into()),
-            afk_channel_id: None,
-            afk_channel_timeout: 300000,
-        }
-    }
-}
+pub mod builtin;
 
 pub struct ServiceRoomTemplates {
-    state: Globals,
+    globals: Globals,
 }
 
 impl ServiceRoomTemplates {
-    pub fn new(state: Globals) -> Self {
-        Self { state }
+    pub fn new(globals: Globals) -> Self {
+        Self { globals }
     }
 
     async fn hydrate(&self, db: DbRoomTemplate) -> Result<RoomTemplate> {
-        let creator = self
-            .state
-            .services()
-            .users
-            .get(db.creator_id.into(), None)
-            .await?;
+        let srv = self.globals.services();
+        let creator = srv.users.get(db.creator_id.into(), None).await?;
         let snapshot: RoomTemplateSnapshot =
             serde_json::from_value(db.snapshot).map_err(|e| Error::Internal(e.to_string()))?;
+        // FIXME: convert strip dirty and source_room_id if needed
+        // let creator = srv.perms.for_room3(None, room_id);
+        // .get(db.creator_id.into(), None).await?;
 
         Ok(RoomTemplate {
             code: RoomTemplateCode(db.code),
@@ -139,7 +58,7 @@ impl ServiceRoomTemplates {
         let snapshot = self.generate_room_snapshot(create.room_id).await?;
         let snapshot_json = serde_json::to_value(snapshot)?;
 
-        let mut data = self.state.begin().await?;
+        let mut data = self.globals.begin().await?;
         let db = data
             .room_template_create(creator_id, snapshot_json, create)
             .await?;
@@ -154,7 +73,7 @@ impl ServiceRoomTemplates {
         user_id: UserId,
         pagination: PaginationQuery<RoomTemplateCode>,
     ) -> Result<PaginationResponse<RoomTemplate>> {
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
         let res = data.room_template_list(user_id, pagination).await?;
 
         let mut items = Vec::with_capacity(res.items.len());
@@ -172,7 +91,7 @@ impl ServiceRoomTemplates {
 
     /// Get a room template by code
     pub async fn get(&self, code: RoomTemplateCode) -> Result<RoomTemplate> {
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
         let db = data.room_template_get(code).await?;
         self.hydrate(db).await
     }
@@ -183,7 +102,7 @@ impl ServiceRoomTemplates {
         code: RoomTemplateCode,
         patch: RoomTemplatePatch,
     ) -> Result<RoomTemplate> {
-        let mut data = self.state.begin().await?;
+        let mut data = self.globals.begin().await?;
         let db = data.room_template_update(code, patch).await?;
         data.commit().await?;
 
@@ -192,14 +111,14 @@ impl ServiceRoomTemplates {
 
     /// Delete a room template
     pub async fn delete(&self, code: RoomTemplateCode) -> Result<()> {
-        let mut data = self.state.begin().await?;
+        let mut data = self.globals.begin().await?;
         data.room_template_delete(code).await?;
         data.commit().await
     }
 
     /// Sync a room template with its source room
     pub async fn sync(&self, code: RoomTemplateCode) -> Result<RoomTemplate> {
-        let mut data = self.state.begin().await?;
+        let mut data = self.globals.begin().await?;
         let template = data.room_template_get(code.clone()).await?;
         let source_room_id =
             template
@@ -225,7 +144,7 @@ impl ServiceRoomTemplates {
         creator_id: UserId,
         snapshot: RoomTemplateSnapshot,
     ) -> Result<(Vec<Role>, Vec<Channel>)> {
-        let mut data = self.state.begin().await?;
+        let mut data = self.globals.begin().await?;
         let mut role_map = HashMap::new();
         let mut channel_map = HashMap::new();
         let mut created_roles = Vec::new();
@@ -233,7 +152,7 @@ impl ServiceRoomTemplates {
 
         // Create roles
         for template_role in &snapshot.roles {
-            let role_id = if template_role.default {
+            let role_id = if template_role.position == 0 {
                 RoleId::from(room_id.into_inner())
             } else {
                 RoleId::new()
@@ -253,7 +172,7 @@ impl ServiceRoomTemplates {
                         hoist: template_role.inner.hoist,
                         sticky: template_role.inner.sticky,
                     },
-                    template_role.position,
+                    template_role.position as u64,
                 )
                 .await?;
 
@@ -357,65 +276,54 @@ impl ServiceRoomTemplates {
 
     /// Generate a room template snapshot from an existing room using cached data
     async fn generate_room_snapshot(&self, room_id: RoomId) -> Result<RoomTemplateSnapshot> {
-        use common::v1::types::channel::ChannelType;
+        let srv = self.globals.services();
+        let handle = srv.rooms.load(room_id);
+        let r = handle.ready(false).await?;
 
-        let snapshot = self
-            .state
-            .services()
-            .cache
-            .load_room(room_id, false)
-            .await?;
-        let data = snapshot.get_data().unwrap();
+        let mut channels: HashMap<ChannelId, RoomTemplateChannel> = HashMap::new();
+        let mut roles: HashMap<RoleId, RoomTemplateRole> = HashMap::new();
 
-        let mut template_channels: Vec<RoomTemplateChannel> = Vec::new();
-        let mut channel_map: HashMap<ChannelId, Uuid> = HashMap::new();
+        // collect channels
+        for (id, cc) in &r.channels {
+            let chan = &cc.inner;
 
-        for channel_id in data.channels.keys() {
-            let temp_id = Uuid::now_v7();
-            channel_map.insert(*channel_id, temp_id);
-        }
-
-        for cc in data.channels.values() {
-            let channel = &cc.inner;
-
-            if matches!(
-                channel.ty,
-                ChannelType::ThreadPublic | ChannelType::ThreadPrivate
-            ) {
+            if chan.is_thread() {
                 continue;
             }
 
-            let temp_id = channel_map[&channel.id];
-
-            let channel_create = ChannelCreate {
-                name: channel.name.clone(),
-                description: channel.description.clone(),
-                ty: channel.ty,
-                nsfw: channel.nsfw,
-                parent_id: channel.parent_id,
-                permission_overwrites: channel.permission_overwrites.clone(),
+            let create = ChannelCreate {
+                name: chan.name.clone(),
+                description: chan.description.clone(),
+                ty: chan.ty,
+                nsfw: chan.nsfw,
+                parent_id: chan.parent_id,
+                permission_overwrites: chan.permission_overwrites.clone(),
+                url: chan.url.clone(),
+                bitrate: chan.bitrate,
+                user_limit: chan.user_limit,
+                default_auto_archive_duration: chan.default_auto_archive_duration,
+                slowmode_thread: chan.slowmode_thread,
+                slowmode_message: chan.slowmode_message,
+                default_slowmode_message: chan.default_slowmode_message,
                 ..Default::default()
             };
 
-            template_channels.push(RoomTemplateChannel {
-                inner: channel_create,
-                id: temp_id,
-            });
+            channels.insert(
+                *id,
+                RoomTemplateChannel {
+                    inner: create,
+                    id: Uuid::now_v7(),
+                    // TODO: warn!() if None
+                    position: chan.position.unwrap_or_default(),
+                },
+            );
         }
 
-        let mut template_roles: Vec<RoomTemplateRole> = Vec::new();
-
-        for cr in data.roles.values() {
+        // collect roles
+        for (id, cr) in &r.roles {
             let role = &cr.inner;
 
-            if role.room_id != room_id {
-                continue;
-            }
-
-            let temp_id = Uuid::now_v7();
-            let is_default = role.id.into_inner() == room_id.into_inner();
-
-            let role_create = RoleCreate {
+            let create = RoleCreate {
                 name: role.name.clone(),
                 description: role.description.clone(),
                 allow: role.allow.clone(),
@@ -426,32 +334,42 @@ impl ServiceRoomTemplates {
                 sticky: role.sticky,
             };
 
-            template_roles.push(RoomTemplateRole {
-                inner: role_create,
-                id: temp_id,
-                default: is_default,
-                position: role.position,
-            });
+            roles.insert(
+                *id,
+                RoomTemplateRole {
+                    inner: create,
+                    id: Uuid::now_v7(),
+                    position: role.position,
+                },
+            );
         }
 
-        let welcome_channel_id = data
-            .channels
-            .values()
-            .find(|cc| {
-                if let Some(wc) = data.room.welcome_channel_id {
-                    cc.inner.id == wc
-                } else {
-                    false
+        // rewrite to use temporary ids
+        let channel_map: HashMap<ChannelId, Uuid> =
+            channels.iter().map(|(id, c)| (*id, c.id)).collect();
+        let role_map: HashMap<RoleId, Uuid> = roles.iter().map(|(id, r)| (*id, r.id)).collect();
+
+        for chan in channels.values_mut() {
+            if let Some(parent_id) = &mut chan.inner.parent_id {
+                *parent_id = channel_map[&(*parent_id).into()].into();
+            }
+
+            for ow in &mut chan.inner.permission_overwrites {
+                if ow.ty == PermissionOverwriteType::Role {
+                    ow.id = role_map[&ow.id.into()].into();
                 }
-            })
-            .map(|cc| cc.inner.id);
+            }
+        }
+
+        let welcome_channel_id = r.room.welcome_channel_id.map(|id| channel_map[&id].into());
+        let afk_channel_id = r.room.afk_channel_id.map(|id| channel_map[&id].into());
 
         Ok(RoomTemplateSnapshot {
-            channels: template_channels,
-            roles: template_roles,
+            channels: channels.into_values().collect(),
+            roles: roles.into_values().collect(),
             welcome_channel_id,
-            afk_channel_id: data.room.afk_channel_id,
-            afk_channel_timeout: data.room.afk_channel_timeout,
+            afk_channel_id,
+            afk_channel_timeout: r.room.afk_channel_timeout,
         })
     }
 }

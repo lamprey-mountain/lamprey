@@ -1,6 +1,8 @@
 use lamprey_macros::endpoint;
 
 /// Room template create
+///
+/// Create a new room template from an existing room
 #[endpoint(
     post,
     path = "/room-template",
@@ -23,6 +25,8 @@ pub mod room_template_create {
 }
 
 /// Room template list
+///
+/// List room templates that the current user has created
 #[endpoint(
     get,
     path = "/room-template",
