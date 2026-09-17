@@ -3039,11 +3039,6 @@ button.link {
 		}
 	}
 
-	.emoji-img {
-		height: 1em;
-		width: 1em;
-	}
-
 	.mention-user {
 		display: flex;
 		align-items: center;
@@ -3657,18 +3652,6 @@ img.custom-emoji {
 	height: 1em;
 	width: 1em;
 	margin: 0 0.05em 0 0.1em;
-}
-
-.markdown.emoji-only {
-	font-size: 1.5rem !important;
-	line-height: 1.5;
-
-	& .emoji,
-	& img.emoji,
-	& img.custom-emoji {
-		width: 1.5em !important;
-		height: 1.5em !important;
-	}
 }
 
 .modal-emoji-upload {

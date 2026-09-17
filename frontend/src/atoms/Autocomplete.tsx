@@ -11,7 +11,7 @@ import { getEmojiUrl } from "@/media/util";
 function isEmojiWithChar(
 	item: AutocompleteItem,
 ): item is AutocompleteItem & { char: string } {
-	return "char" in item;
+	return "char" in item && !!item.char;
 }
 
 function isCommand(
@@ -90,7 +90,12 @@ export const Autocomplete = () => {
 											AutocompleteItem,
 											{ type: "emoji" }
 										> & { char: string };
-										return <UnicodeEmoji hex={getEmojiHex(emoji.char)} />;
+										return (
+											<>
+												<UnicodeEmoji hex={getEmojiHex(emoji.char)} />
+												{emoji.name}
+											</>
+										);
 									})()}
 								</Match>
 								<Match
@@ -104,7 +109,14 @@ export const Autocomplete = () => {
 											{ type: "emoji" }
 										>;
 										return (
-											<img src={getEmojiUrl(emoji.id)} class="emoji-img" />
+											<>
+												<img
+													class="emoji custom-emoji"
+													data-emoji-id={emoji.id}
+													src={getEmojiUrl(emoji.id)}
+												/>
+												{emoji.name}
+											</>
 										);
 									})()}
 								</Match>

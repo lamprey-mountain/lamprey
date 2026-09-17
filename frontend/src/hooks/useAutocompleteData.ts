@@ -8,22 +8,15 @@ import type {
 	User,
 } from "sdk";
 import { createEffect, createMemo, createSignal } from "solid-js";
-import {
-	useApi,
-	useChannels,
-	useEmoji,
-	useRoles,
-	useRoomMembers,
-	useThreadMembers,
-	useUsers,
-} from "@/api";
+import { useApi } from "@/api";
 import type {
 	AutocompleteItem,
 	AutocompleteMentionItem,
 } from "@/contexts/autocomplete";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useCurrentUser } from "@/contexts/currentUser";
-import { type Command, useSlashCommands } from "@/contexts/slash-commands";
+import { useSlashCommands } from "@/contexts/slash-commands";
+import type { Command } from "@/lib/commands/types";
 import { type EmojiData, emojiResource } from "@/lib/emoji";
 import { usePermissions } from "./usePermissions";
 
@@ -34,21 +27,14 @@ type AutocompleteSearchResult = {
 };
 
 export const useAutocompleteData = () => {
-	const api2 = useApi();
-	const channels2 = useChannels();
-	const store = useApi();
-	const rolesApi = useRoles();
-	const threadMembers2 = useThreadMembers();
-	const roomMembers2 = useRoomMembers();
-	const users2 = useUsers();
-	const emoji2 = useEmoji();
+	const api = useApi();
 	const currentUser = useCurrentUser();
 	const { state, setResults } = useAutocomplete();
 
 	// Get permissions for @everyone/@room mentions
 	const channelForPerms = () => {
 		if (state.kind?.type === "mention") {
-			return channels2.cache.get(state.kind.channelId);
+			return api.channels.cache.get(state.kind.channelId);
 		}
 		return null;
 	};
@@ -65,17 +51,17 @@ export const useAutocompleteData = () => {
 	const [allCommands, setAllCommands] = createSignal<Command[]>([]);
 	const [allRoles, setAllRoles] = createSignal<Role[]>([]);
 
-	const threadMembersResource = threadMembers2.useList(() =>
+	const threadMembersResource = api.threadMembers.useList(() =>
 		state.kind?.type === "mention" ? state.kind.channelId : undefined,
 	);
 
-	const roomMembersResource = roomMembers2.useList(() => {
+	const roomMembersResource = api.roomMembers.useList(() => {
 		if (state.kind?.type !== "mention") return;
-		const channel = channels2.cache.get(state.kind.channelId);
+		const channel = api.channels.cache.get(state.kind.channelId);
 		return state.kind.roomId ?? channel?.room_id ?? undefined;
 	});
 
-	const channel = () => channels2.get(state.kind?.channelId ?? "");
+	const channel = () => api.channels.get(state.kind?.channelId ?? "");
 
 	// Fetch data based on autocomplete type
 	createEffect(() => {
@@ -89,27 +75,27 @@ export const useAutocompleteData = () => {
 			const userIds = new Set<string>();
 			// Access ids from PaginatedList state and fetch members from cache
 			threadMembers?.state.ids.forEach((id: string) => {
-				const member = threadMembers2.cache.get(id);
+				const member = api.threadMembers.cache.get(id);
 				if (member?.user_id) userIds.add(member.user_id);
 			});
 			roomMembers?.state.ids.forEach((id: string) => {
-				const member = roomMembers2.cache.get(id);
+				const member = api.roomMembers.cache.get(id);
 				if (member?.user_id) userIds.add(member.user_id);
 			});
 
 			// Build user list from cache or use member data as fallback
 			const users = [...userIds].map((id) => {
-				const cachedUser = users2.cache.get(id);
+				const cachedUser = api.users.cache.get(id);
 				if (cachedUser?.id) {
 					return cachedUser;
 				}
 				// Fallback: create a minimal user object from the member data
 				// Find the member to get any available name info
 				const threadMember = threadMembers?.state.ids
-					.map((id: string) => threadMembers2.cache.get(id))
+					.map((id: string) => api.threadMembers.cache.get(id))
 					.find((m) => m?.user_id === id);
 				const roomMember = roomMembers?.state.ids
-					.map((id: string) => roomMembers2.cache.get(id))
+					.map((id: string) => api.roomMembers.cache.get(id))
 					.find((m) => m?.user_id === id);
 				const member: RoomMember | ThreadMember | undefined =
 					threadMember || roomMember;
@@ -128,27 +114,27 @@ export const useAutocompleteData = () => {
 			// Also fetch mentionable roles for combined autocomplete
 			const roomId = kind.roomId ?? channel()?.room_id;
 			if (roomId) {
-				const mentionableRoles = [...rolesApi.cache.values()].filter(
+				const mentionableRoles = [...api.roles.cache.values()].filter(
 					(r) => r.room_id === roomId && r.is_mentionable && r.id !== roomId,
 				);
 				setAllRoles(mentionableRoles);
 			}
 		} else if (kind.type === "channel") {
-			const channel = channels2.cache.get(kind.channelId);
+			const channel = api.channels.cache.get(kind.channelId);
 			const roomId = channel?.room_id;
 
-			const channels = [...channels2.cache.values()].filter(
+			const channels = [...api.channels.cache.values()].filter(
 				(c) => c.type !== "Category" && c.room_id === roomId,
 			);
 			setAllChannels(channels);
 		} else if (kind.type === "emoji") {
-			const channel = channels2.cache.get(kind.channelId);
+			const channel = api.channels.cache.get(kind.channelId);
 			const roomId = channel?.room_id;
 
 			const combined: (EmojiCustom | EmojiData)[] = [];
 			if (roomId) {
 				// Get custom emoji from cache for this room
-				const roomEmoji = [...emoji2.cache.values()].filter(
+				const roomEmoji = [...api.emoji.cache.values()].filter(
 					(e) => e.owner?.owner === "Room" && e.owner.room_id === roomId,
 				);
 				combined.push(...roomEmoji);
@@ -161,11 +147,11 @@ export const useAutocompleteData = () => {
 		} else if (kind.type === "command") {
 			const slashCommands = useSlashCommands();
 			const allCommands = slashCommands.getAll();
-			const channel = channels2.cache.get(kind.channelId);
+			const channel = api.channels.cache.get(kind.channelId);
 			if (!channel) return;
 
 			const filteredCommands = allCommands.filter((cmd) => {
-				return cmd.canUse(api2, channel);
+				return cmd.canUse(api, channel);
 			});
 
 			setAllCommands(filteredCommands);
