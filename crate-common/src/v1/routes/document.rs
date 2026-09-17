@@ -561,7 +561,6 @@ pub mod document_content_revert {
     pub struct Response {}
 }
 
-// TODO: implement
 /// Document media attach
 ///
 /// Attach a piece of media to a document. This **MUST** be called when uploading media to a document, otherwise the media may be garbage collected.

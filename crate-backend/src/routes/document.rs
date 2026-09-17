@@ -6,14 +6,23 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::document::{DocumentBranchState, DocumentRevisionRef, HistoryPagination};
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::{MessageSync, Permission};
+use common::v1::types::{
+    MessageChannelRename, MessageDocumentMerged, MessageDocumentTag, MessageSync,
+    MessageThreadCreated, MessageType, Permission, ThreadMemberPut,
+};
+use common::v2::types::ChannelId;
 use kerosene_core::types::documents::EditContextId;
+use lamprey_backend_data_postgres::DbMessageCreate;
+use lamprey_backend_data_postgres::types::DbChannelType;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::prelude::*;
 use crate::routes::util::Auth;
+use crate::types::MediaLinkType;
 use crate::{ServerState, routes2};
+
+// TODO: insert thread member and broadcast MessageSync::ThreadMemberUpsert after each message creation
 
 /// Wiki history
 #[handler(routes::wiki_history)]
@@ -159,6 +168,51 @@ async fn document_branch_update(
         branch: branch.clone(),
     })?;
 
+    if branch_before.name != branch.name {
+        let _ = async {
+            let channel_id: ChannelId = (*branch.id).into();
+            let name_old = branch_before
+                .name
+                .unwrap_or_else(|| "unnamed branch".to_string());
+            let name_new = branch
+                .name
+                .clone()
+                .unwrap_or_else(|| "unnamed branch".to_string());
+
+            let mut txn = s.globals.begin().await?;
+            let message_id = txn
+                .message_create(DbMessageCreate {
+                    id: None,
+                    channel_id,
+                    attachments: vec![],
+                    author_id: auth.user.id,
+                    embeds: vec![],
+                    components: vec![],
+                    message_type: MessageType::ChannelRename(MessageChannelRename {
+                        name_new,
+                        name_old,
+                    }),
+                    created_at: None,
+                    removed_at: None,
+                    flume: None,
+                    mentions: Default::default(),
+                    interaction: None,
+                    ephemeral: false,
+                })
+                .await?;
+            let message = txn.message_get(channel_id, message_id).await?;
+            txn.commit().await?;
+
+            s.globals
+                .messaging()
+                .broadcast_channel(channel_id, MessageSync::MessageCreate { message })
+                .await?;
+
+            Result::Ok(())
+        }
+        .await;
+    }
+
     Ok(Json(branch))
 }
 
@@ -236,7 +290,7 @@ async fn document_branch_fork(
         .for_channel3(Some(user_id), req.channel_id)
         .await?
         .ensure_view()?;
-    perms.needs(Permission::DocumentEdit);
+    perms.needs(Permission::DocumentEdit).check()?;
 
     let parent_branch = data
         .document_branch_get(req.channel_id, req.parent_id)
@@ -251,7 +305,7 @@ async fn document_branch_fork(
         .document_fork(
             EditContextId::from_prose(req.channel_id, req.parent_id),
             user_id,
-            req.branch,
+            req.branch.clone(),
         )
         .await?;
 
@@ -276,6 +330,79 @@ async fn document_branch_fork(
         branch: branch.clone(),
     })?;
 
+    // create a DocumentBranch channel
+    // send ThreadCreate message pointing to the new branch
+    let _ = async {
+        let channel_id: ChannelId = (*branch.id).into();
+        let document_channel = srv.channels.get(req.channel_id, None).await?;
+
+        let mut txn = s.globals.begin().await?;
+        txn.channel_create_with_id(
+            channel_id,
+            lamprey_backend_data_postgres::DbChannelCreate {
+                room_id: document_channel.room_id.map(|id| id.into_inner()),
+                creator_id: user_id,
+                owner_id: None,
+                name: req
+                    .branch
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| "Branch".to_string()),
+                description: None,
+                url: None,
+                icon: None,
+                ty: DbChannelType::DocumentBranch,
+                nsfw: document_channel.nsfw,
+                bitrate: None,
+                user_limit: None,
+                parent_id: Some(*req.channel_id),
+                invitable: false,
+                auto_archive_duration: None,
+                default_auto_archive_duration: None,
+                slowmode_thread: None,
+                slowmode_message: None,
+                default_slowmode_message: None,
+                locked: false,
+                tags: None,
+            },
+        )
+        .await?;
+
+        txn.thread_member_put(channel_id, user_id, ThreadMemberPut {})
+            .await?;
+
+        let message_id = txn
+            .message_create(DbMessageCreate {
+                id: None,
+                channel_id: req.channel_id,
+                attachments: vec![],
+                author_id: user_id,
+                embeds: vec![],
+                components: vec![],
+                message_type: MessageType::ThreadCreated(MessageThreadCreated {
+                    source_message_id: None,
+                    thread_id: Some(channel_id),
+                }),
+                created_at: None,
+                removed_at: None,
+                flume: None,
+                mentions: Default::default(),
+                interaction: None,
+                ephemeral: false,
+            })
+            .await?;
+        let message = txn.message_get(req.channel_id, message_id).await?;
+        txn.commit().await?;
+
+        s.globals
+            .messaging()
+            .broadcast_channel(req.channel_id, MessageSync::MessageCreate { message })
+            .await?;
+
+        Result::Ok(())
+    }
+    .await;
+
     Ok(Json(branch))
 }
 
@@ -290,7 +417,7 @@ async fn document_branch_merge(
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();
-    let mut data = s.data();
+    let mut data = s.globals.begin().await?;
     let user_id = auth.user.id;
 
     let perms = &srv.perms;
@@ -319,6 +446,8 @@ async fn document_branch_merge(
             ErrorCode::CannotMergeDefaultBranch,
         )));
     }
+
+    perms.check()?;
 
     let parent_id = branch
         .parent_id
@@ -359,6 +488,42 @@ async fn document_branch_merge(
     s.broadcast(MessageSync::DocumentBranchUpdate {
         branch: branch.clone(),
     })?;
+
+    // try to send a DocumentMerged message
+    let _ = async {
+        let channel_id: ChannelId = (*target_branch_id).into();
+
+        let mut txn = s.globals.begin().await?;
+        let message_id = txn
+            .message_create(DbMessageCreate {
+                id: None,
+                channel_id,
+                attachments: vec![],
+                author_id: user_id,
+                embeds: vec![],
+                components: vec![],
+                message_type: MessageType::DocumentMerged(MessageDocumentMerged {
+                    branch_id: req.branch_id,
+                }),
+                created_at: None,
+                removed_at: None,
+                flume: None,
+                mentions: Default::default(),
+                interaction: None,
+                ephemeral: false,
+            })
+            .await?;
+        let message = txn.message_get(channel_id, message_id).await?;
+        txn.commit().await?;
+
+        s.globals
+            .messaging()
+            .broadcast_channel(channel_id, MessageSync::MessageCreate { message })
+            .await?;
+
+        Result::Ok(())
+    }
+    .await;
 
     Ok(Json(branch))
 }
@@ -492,6 +657,40 @@ async fn document_tag_create(
         channel_id: req.channel_id,
         tag: tag.clone(),
     })?;
+
+    // send DocumentTag message when tag is created
+    let _ = async {
+        let channel_id: ChannelId = (*tag.branch_id).into();
+
+        let mut txn = s.globals.begin().await?;
+        let message_id = txn
+            .message_create(DbMessageCreate {
+                id: None,
+                channel_id,
+                attachments: vec![],
+                author_id: user_id,
+                embeds: vec![],
+                components: vec![],
+                message_type: MessageType::DocumentTag(MessageDocumentTag { tag: tag.clone() }),
+                created_at: None,
+                removed_at: None,
+                flume: None,
+                mentions: Default::default(),
+                interaction: None,
+                ephemeral: false,
+            })
+            .await?;
+        let message = txn.message_get(channel_id, message_id).await?;
+        txn.commit().await?;
+
+        s.globals
+            .messaging()
+            .broadcast_channel(channel_id, MessageSync::MessageCreate { message })
+            .await?;
+
+        Result::Ok(())
+    }
+    .await;
 
     Ok(Json(tag))
 }
@@ -882,12 +1081,6 @@ async fn document_content_put(
 }
 
 /// Document media attach
-///
-/// Attach a piece of media to a document. This **MUST** be called when uploading media to a document, otherwise the media may be garbage collected.
-///
-/// Note that the current system is very dumb, and will only garbage collect media when the document is deleted.
-///
-/// In the future, document-media linking will be maintained automatically as the crdt is edited.
 #[handler(routes::document_media_attach)]
 async fn document_media_attach(
     auth: Auth,
@@ -921,12 +1114,8 @@ async fn document_media_attach(
         )));
     }
 
-    txn.media_link_insert(
-        req.body.media_id,
-        req.channel_id.into_inner(),
-        crate::types::MediaLinkType::Document,
-    )
-    .await?;
+    txn.media_link_insert(req.body.media_id, *req.channel_id, MediaLinkType::Document)
+        .await?;
 
     txn.commit().await?;
 
