@@ -386,3 +386,35 @@
 .root[data-message-style="cozy"] .search-page .search-results .message.separate {
 	margin-top: 0;
 }
+
+.search2-container {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	background-color: $bg-300;
+	border: solid 1px $sep-500;
+
+	& > .icon,
+	& > .icon2 {
+		position: absolute;
+		right: 4px;
+	}
+
+	& > .search2-input {
+		position: relative;
+		flex: 1;
+		white-space: pre-wrap;
+		caret-color: $fg-400;
+
+		& > .ProseMirror {
+			padding: 4px;
+
+			& > .placeholder {
+				position: absolute;
+				color: $fg-600;
+				@include truncate;
+			}
+		}
+	}
+}

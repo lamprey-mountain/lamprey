@@ -5,6 +5,7 @@ import { AnimatedText } from "@/atoms/AnimatedText";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
+import { Search2Testing } from "../features/search2/Testing";
 
 export const Home = () => {
 	const api = useApi();
@@ -57,6 +58,10 @@ export const Home = () => {
 			<A target="_self" href="/api/docs">
 				api docs
 			</A>
+
+			<Show when={flags.has("search_refactor")}>
+				<Search2Testing />
+			</Show>
 		</div>
 	);
 };
