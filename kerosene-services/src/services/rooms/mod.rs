@@ -658,13 +658,12 @@ impl ServiceRooms {
             .members
             .get(&creator_id)
             .expect("the owner should be a member of the room");
-        // let user = srv.users.get(creator_id, None).await?;
         messaging
             .broadcast_room(
                 room_id,
                 MessageSync::RoomMemberCreate {
                     member: cached_member.member.clone(),
-                    user: todo!(),
+                    user: (*cached_member.user).clone(),
                 },
             )
             .await?;
