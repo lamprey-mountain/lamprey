@@ -3,13 +3,7 @@ import { useNavigate } from "@solidjs/router";
 import fuzzysort from "fuzzysort";
 import { type Channel, createUpload, type Media, type Script } from "sdk";
 import { useFloating } from "solid-floating-ui";
-import {
-	createEffect,
-	createResource,
-	createSignal,
-	For,
-	Show,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { useApi } from "@/api";
 import { Search } from "@/atoms/Search";
@@ -23,26 +17,29 @@ import { RunLogs, ScriptCode, ScriptInputs, ScriptPreview } from "./Panes";
 
 export const Scripts = (props: { channel: Channel }) => {
 	const api = useApi();
+	const navigate = useNavigate();
 	const s = createScriptContext(props.channel.id);
 
-	const [scriptsResource] = createResource(
-		() => props.channel.id,
-		(id) => api.scripts.list(id),
-	);
+	createEffect(() => {
+		api.scripts.list(props.channel.id);
+	});
 
 	const [search, setSearch] = createSignal("");
-	const navigate = useNavigate();
 
-	const filteredScripts = () => {
-		const items = scriptsResource()?.items ?? [];
+	const filteredScripts = createMemo(() => {
+		// read from the cache for reactivity
+		const items = Array.from(api.scripts.cache.values()).filter(
+			(s) => s.channel_id === props.channel.id,
+		);
+
 		const query = search();
 		if (!query) return items;
 		const results = fuzzysort.go(query, items, {
-			key: "name",
+			key: "latest_version.metadata.name",
 			threshold: -10000,
 		});
 		return results.map((r) => r.obj);
-	};
+	});
 
 	const openScript = (script: Script) => {
 		navigate(`/channel/${props.channel.id}/script/${script.id}`);
@@ -65,8 +62,7 @@ export const Scripts = (props: { channel: Channel }) => {
 		const scriptId = ch.script_id;
 		if (!scriptId) return;
 
-		const items = scriptsResource()?.items ?? [];
-		const script = items.find((s) => s.id === scriptId);
+		const script = api.scripts.cache.get(scriptId);
 		if (!script) return;
 
 		panes.closeAll();
