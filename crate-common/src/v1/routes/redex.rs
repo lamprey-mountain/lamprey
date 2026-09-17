@@ -127,7 +127,7 @@ pub mod redex_delete {
 pub mod redex_content_update {
     use crate::v1::types::{
         ChannelId, RedexId,
-        redex::{RedexContentUpdate, RedexVersion},
+        redex::{RedexContentUpdate, RedexContentUpdateQuery, RedexVersion},
     };
 
     pub struct Request {
@@ -136,6 +136,9 @@ pub mod redex_content_update {
 
         #[path]
         pub redex_id: RedexId,
+
+        #[query]
+        pub query: RedexContentUpdateQuery,
 
         #[json]
         pub content: RedexContentUpdate,

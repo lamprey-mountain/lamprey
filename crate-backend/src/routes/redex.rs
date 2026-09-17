@@ -15,6 +15,7 @@ use common::v2::types::media::MediaReference;
 use http::StatusCode;
 use kerosene_core::error::{ApiError, ErrorCode};
 use lamprey_macros::handler;
+use tracing::warn;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::consts::MAX_SCRIPT_FILE_SIZE;
@@ -342,19 +343,47 @@ async fn redex_content_update(
         status: RedexVersionStatus::Processing,
     };
 
-    srv.scripts
-        .create_script_version(script.clone(), new_version.clone())
+    if req.query.process_async {
+        let new_version2 = new_version.clone();
+
+        tokio::spawn(async move {
+            let result = async {
+                srv.scripts
+                    .create_script_version(script.clone(), new_version2)
+                    .await?;
+
+                al.commit_success(AuditLogEntryType::RedexVersionCreate {
+                    channel_id: req.channel_id,
+                    redex_id: req.redex_id,
+                    redex_version_id: version_id,
+                    changes: changes.build(),
+                })
+                .await?;
+
+                Result::Ok(())
+            };
+
+            if let Err(err) = result.await {
+                warn!("error while processing redex content update: {err}");
+            }
+        });
+
+        Ok((StatusCode::ACCEPTED, Json(new_version)))
+    } else {
+        srv.scripts
+            .create_script_version(script.clone(), new_version.clone())
+            .await?;
+
+        al.commit_success(AuditLogEntryType::RedexVersionCreate {
+            channel_id: req.channel_id,
+            redex_id: req.redex_id,
+            redex_version_id: version_id,
+            changes: changes.build(),
+        })
         .await?;
 
-    al.commit_success(AuditLogEntryType::RedexVersionCreate {
-        channel_id: req.channel_id,
-        redex_id: req.redex_id,
-        redex_version_id: version_id,
-        changes: changes.build(),
-    })
-    .await?;
-
-    Ok((StatusCode::OK, Json(new_version)))
+        Ok((StatusCode::OK, Json(new_version)))
+    }
 }
 
 /// Redex trigger

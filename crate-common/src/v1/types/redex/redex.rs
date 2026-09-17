@@ -256,6 +256,14 @@ pub struct RedexContentUpdate {
     pub location: RedexLocationUpdate,
 }
 
+#[record]
+#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
+pub struct RedexContentUpdateQuery {
+    /// Whether to process this redex asynchronously.
+    #[serde(default, rename = "async")]
+    pub process_async: bool,
+}
+
 /// a single redex dependency
 #[record]
 pub struct RedexDependency {
