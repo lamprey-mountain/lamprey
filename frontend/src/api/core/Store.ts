@@ -553,6 +553,12 @@ export class RootStore {
 			this.calendar.upsert(msg.event);
 		} else if (msg.type === "CalendarEventDelete") {
 			this.calendar.delete(msg.event_id);
+		} else if (msg.type === "EmojiCreate") {
+			this.emoji.upsert(msg.emoji);
+		} else if (msg.type === "EmojiUpdate") {
+			this.emoji.upsert(msg.emoji);
+		} else if (msg.type === "EmojiDelete") {
+			this.emoji.cache.delete(msg.emoji_id);
 		} else if (msg.type === "ChannelTyping") {
 			const { channel_id, user_id, until } = msg as any;
 			const untilDate = new Date(until);

@@ -1,7 +1,7 @@
 import fuzzysort from "fuzzysort";
 import type { Room } from "sdk";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
-import { useEmoji, useRooms } from "@/api";
+import { useApi } from "@/api";
 import { Icon } from "@/atoms/Icon";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { RoomIcon } from "@/components/shared/User";
@@ -128,23 +128,21 @@ type EmojiPickerProps = {
 };
 
 export const EmojiPicker = (props: EmojiPickerProps) => {
-	const rooms2 = useRooms();
-	const emoji2 = useEmoji();
+	const api = useApi();
 	const [search, setSearch] = createSignal("");
 	const [hover, setHover] = createSignal<UnifiedEmoji>();
 
-	const rooms = rooms2.useList();
 	const standardGroups = createMemo(() => parseEmoji());
 
 	const [customGroupsResource] = createResource(
-		() => rooms.ids,
+		() => [...api.rooms.cache.keys()],
 		async (roomIds) => {
-			await emoji2.listAllCustom(roomIds);
+			await api.emoji.listAllCustom(roomIds);
 			return roomIds
-				.map((id) => rooms2.cache.get(id))
+				.map((id) => api.rooms.cache.get(id))
 				.filter((r): r is Room => r !== undefined)
 				.map((room) => {
-					const emojis = [...emoji2.cache.values()].filter((e) => {
+					const emojis = [...api.emoji.cache.values()].filter((e) => {
 						if (e.owner?.owner === "Room") {
 							return e.owner.room_id === room.id;
 						}

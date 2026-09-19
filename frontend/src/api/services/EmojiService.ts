@@ -10,6 +10,7 @@ export class EmojiService extends BaseService<EmojiCustom> {
 	protected cacheName = "emoji";
 
 	private _roomLists = new Map<string, PaginatedList>();
+	private _fetchedRooms = new Set<string>();
 
 	getKey(item: EmojiCustom): string {
 		return item.id;
@@ -95,8 +96,14 @@ export class EmojiService extends BaseService<EmojiCustom> {
 	}
 
 	async listAllCustom(roomIds: string[]): Promise<EmojiCustom[]> {
-		const results = await Promise.all(
-			roomIds.map(async (room_id) => {
+		const roomsToFetch = roomIds.filter((id) => !this._fetchedRooms.has(id));
+
+		if (roomsToFetch.length === 0) {
+			return [...this.cache.values()];
+		}
+
+		await Promise.all(
+			roomsToFetch.map(async (room_id) => {
 				try {
 					const data = await this.retryWithBackoff<Pagination<EmojiCustom>>(
 						() =>
@@ -107,14 +114,13 @@ export class EmojiService extends BaseService<EmojiCustom> {
 							}),
 					);
 					this.upsertBulk(data.items);
-					return data.items;
+					this._fetchedRooms.add(room_id);
 				} catch (e) {
 					log.error(String(e));
-					return [];
 				}
 			}),
 		);
-		return results.flat();
+		return [...this.cache.values()];
 	}
 
 	clear() {
@@ -123,5 +129,6 @@ export class EmojiService extends BaseService<EmojiCustom> {
 			list.clear();
 		}
 		this._roomLists.clear();
+		this._fetchedRooms.clear();
 	}
 }
