@@ -24,7 +24,7 @@ use common::v1::types::{
 };
 use common::v1::types::{ChannelSeq, RoomFeature};
 use common::v2::types::HarvestId;
-use common::v2::types::embed::Embed;
+use common::v1::types::embed::Embed;
 use common::v2::types::media::{Media, MediaPatch};
 use lamprey_backend_core::data::DataScript;
 pub use lamprey_backend_core::data::{

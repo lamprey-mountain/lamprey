@@ -20,7 +20,7 @@ use common::v1::types::{
     RoomId, SessionId, User,
 };
 use common::v1::types::{MediaId, UserId};
-use common::v2::types::embed::{Embed, EmbedType};
+use common::v1::types::embed::{Embed, EmbedType};
 
 use crate::prelude::*;
 use crate::types::{MentionsIds, MessageWithCounts};

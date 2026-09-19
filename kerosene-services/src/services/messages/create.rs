@@ -90,7 +90,7 @@ struct Prepared {
     permissions: MessagePermissions,
     sanitized: MessageSanitized,
     all_media_ids: MediaRegistry,
-    embeds: Vec<common::v2::types::embed::Embed>,
+    embeds: Vec<common::v1::types::embed::Embed>,
     components: Vec<components::Component<components::Thin>>,
     created_at: Option<Time>,
     removed_at: Option<Time>,
@@ -959,7 +959,7 @@ impl ServiceMessages {
     async fn process_embeds(
         &self,
         op: &mut MessageOperation<'_, Authorized>,
-    ) -> Result<Vec<common::v2::types::embed::Embed>> {
+    ) -> Result<Vec<common::v1::types::embed::Embed>> {
         let embeds_create = match &op.kind {
             MessageOperationKind::MessageCreate(o) => o.json.embeds.clone(),
             MessageOperationKind::MessageEdit(o) => o.json.embeds.clone().unwrap_or_default(),

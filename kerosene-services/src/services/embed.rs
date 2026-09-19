@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::{MessageAttachmentType, MessageSync, MessageType, UserId};
-use common::v2::types::embed::Embed;
+use common::v1::types::embed::Embed;
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use lamprey_unfurl::util::EmbedMedia;
 use lamprey_unfurl::{DirectMediaPlugin, HtmlStreamPlugin, Unfurler};

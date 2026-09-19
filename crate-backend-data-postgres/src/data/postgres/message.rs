@@ -14,7 +14,7 @@ use common::v1::types::reaction::{ReactionCounts, ReactionKey};
 use common::v1::types::util::Time;
 use common::v1::types::{ChannelSeq, ChannelType, Mentions, UserId};
 use common::v2::types::RoomId;
-use common::v2::types::embed::Embed;
+use common::v1::types::embed::Embed;
 use sqlx::{query, query_as, query_file_as, query_file_scalar, query_scalar};
 use tracing::info;
 use uuid::Uuid;
