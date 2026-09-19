@@ -154,10 +154,12 @@ impl ConnectionQueue {
         Ok(())
     }
 
+    #[inline]
     pub fn len(&self) -> usize {
         self.queue.len()
     }
 
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.queue.is_empty()
     }

@@ -4556,6 +4556,7 @@ version = "0.1.4"
 dependencies = [
  "async-trait",
  "axum",
+ "bytes",
  "http",
  "lamprey-backend-core",
  "lamprey-common",
@@ -4576,6 +4577,7 @@ name = "kerosene-rest"
 version = "0.1.4"
 dependencies = [
  "axum",
+ "bytes",
  "futures",
  "headers",
  "http",
@@ -4687,6 +4689,7 @@ version = "0.1.4"
 dependencies = [
  "async-trait",
  "axum",
+ "bytes",
  "flate2",
  "futures",
  "futures-util",

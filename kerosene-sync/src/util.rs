@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use lamprey::v1::types::Session;
 use tokio::time::Instant;
 
 /// send a heartbeat every so often
@@ -13,20 +12,6 @@ pub const CLOSE_TIME: Duration = Duration::from_secs(10);
 // TODO: decide how this should work with webtransport streams. letting EVERY stream have MAX_QUEUE_LEN events could result in excessive memory usage...
 pub const MAX_QUEUE_LEN: usize = 256;
 
-// TODO: remove?
-/// where this connection is in the handshake
-#[derive(Debug, Clone)]
-pub enum ConnectionState {
-    /// not yet authenticated; waiting for a `Hello` message
-    Unauthed,
-
-    /// successfully authenticated to this session
-    Authenticated { session: Session },
-
-    /// was authenticated to this session, but is no longer connected
-    Disconnected { session: Session },
-}
-
 /// utility to calculate deadlines for connection health checks.
 #[derive(Debug, Clone, Copy)]
 pub enum Timeout {
@@ -35,16 +20,6 @@ pub enum Timeout {
 
     /// the client must respond with a `Pong` before this deadline, otherwise the connection will be closed.
     Close(Instant),
-}
-
-impl ConnectionState {
-    pub fn session(&self) -> Option<&Session> {
-        match self {
-            ConnectionState::Unauthed => None,
-            ConnectionState::Authenticated { session } => Some(session),
-            ConnectionState::Disconnected { session } => Some(session),
-        }
-    }
 }
 
 impl Timeout {
