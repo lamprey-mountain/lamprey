@@ -1,4 +1,5 @@
 pub mod member_list;
+pub mod registry;
 pub mod routes;
 
 // PERF: use a streamable body?

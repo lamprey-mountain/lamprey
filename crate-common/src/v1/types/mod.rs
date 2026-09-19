@@ -78,3 +78,7 @@ pub use user::*;
 
 // TEMP: reexport
 pub use mirror::ChannelSync;
+
+use crate::util::registry::export_models;
+
+export_models!(use ids, use message);

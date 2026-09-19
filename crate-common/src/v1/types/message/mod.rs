@@ -10,6 +10,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::util::registry::export_models;
 use crate::v1::types::components::{self, Components};
 use crate::v1::types::e2ee::MlsEpoch;
 use crate::v1::types::e2ee::media::EncryptedMedia;
@@ -141,9 +142,10 @@ pub struct MessageVersion {
 }
 
 impl MessageVersion {
+    /// remove all content from this message version, for deletion
     pub fn strip(mut self) -> Self {
         self.message_type = match self.message_type {
-            MessageType::DefaultMarkdown(m) => {
+            MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => {
                 MessageType::DefaultMarkdown(MessageDefaultMarkdown {
                     content: None,
                     attachments: vec![],
@@ -573,3 +575,5 @@ impl MessageDefaultMarkdown {
         self.embeds = vec![];
     }
 }
+
+export_models!(Message, MessageVersion, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, use create, use edit, use message_type);

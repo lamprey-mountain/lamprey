@@ -10,6 +10,7 @@ use uuid::Uuid;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{PaginationKey, util::Time};
 
 #[cfg(not(feature = "utoipa"))]
@@ -358,3 +359,7 @@ pub const SERVER_ADMIN_ROLE_ID: RoleId = role_id!("00000000-0000-0000-0000-00616
 /// server room role id for registered users
 // hex translates to "registered"
 pub const SERVER_REGISTERED_ROLE_ID: RoleId = role_id!("00000000-0000-7265-6769-737465726564");
+
+export_models!(
+    UserId, RoomId, ChannelId, MessageId, MediaId, SessionId, EmojiId
+);

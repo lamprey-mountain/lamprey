@@ -1,28 +1,42 @@
+use std::mem;
+
 use axum::{
     Json, Router,
     routing::{MethodRouter, get},
 };
-use utoipa::openapi::{
-    Components, Info, OpenApi, OpenApiBuilder, PathItem, Tag, extensions::Extensions,
+use common::util::registry::Registry;
+use utoipa::{
+    ToSchema,
+    openapi::{
+        Components, ComponentsBuilder, Info, OpenApi, OpenApiBuilder, PathItem, Tag,
+        extensions::Extensions,
+    },
 };
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::util::Globals;
-
-pub struct Handler {
-    pub register: fn(&mut Routes),
-    pub tag: &'static str,
-}
-
-// FIXME: v1 routes should be prefixed with /api/v1
-// v2 routes should be prefixed similarly
-// unsuse how to best do this. i might need to rework some macros for this?
+use crate::prelude::*;
 
 pub struct Routes {
     openapi: OpenApi,
     router: Option<Router<Globals>>,
     prefix: String,
     last_path: Option<String>,
+}
+
+#[derive(Default)]
+struct UtoipaRegistry(ComponentsBuilder);
+
+impl Registry for UtoipaRegistry {
+    fn register<T: ToSchema>(&mut self) {
+        self.0 = mem::take(&mut self.0).schema_from::<T>();
+    }
+}
+
+impl UtoipaRegistry {
+    #[inline]
+    pub fn build(self) -> Components {
+        self.0.build()
+    }
 }
 
 impl Routes {
@@ -37,20 +51,13 @@ impl Routes {
             // .contact(contact)
             .build();
 
+        // collect all types/models/openapi schemas
+        let mut registry = UtoipaRegistry::default();
+        common::v1::types::register(&mut registry);
+
         let openapi = OpenApiBuilder::new()
             .info(info)
-            .components(Some(
-                // NOTE: im not sure which schemas i need to add to componnts and what will be automatically added
-                // see crate-backend/src/serve/mod.rs for what i currently manually add
-                // however, i dont know if i'll need to manually add more or less components with this system
-                Components::builder()
-                    .schema_from::<common::v1::types::ids::UserId>()
-                    .schema_from::<common::v1::types::ids::RoomId>()
-                    .schema_from::<common::v1::types::ids::ChannelId>()
-                    .schema_from::<common::v1::types::ids::MessageId>()
-                    .schema_from::<common::v1::types::message::Message>()
-                    .build(),
-            ))
+            .components(Some(registry.build()))
             // copy crate-backend/src/serve/utoipa_utils.rs here
             .tags(Some([Tag::builder()
                 .name("auth")
@@ -93,10 +100,14 @@ impl Routes {
     /// create a new Routes for all media/cdn routes
     pub fn new_media() -> Self {
         let info = Info::builder()
-            .title("Lamprey Mountain API")
+            .title("Lamprey Mountain CDN")
             .version(env!("CARGO_PKG_VERSION"))
             .description(Some("documentation for the cdn")) // TODO: write more docs
             .build();
+
+        // TODO: collect all types/models/openapi schemas for the cdn
+        // let mut registry = UtoipaRegistry::default();
+        // common::v1::types::register(r);
 
         let openapi = OpenApiBuilder::new().info(info).build();
 

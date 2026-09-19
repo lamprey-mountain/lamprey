@@ -4,13 +4,16 @@ use lamprey_macros::record;
 
 #[cfg(feature = "feat_e2ee")]
 use crate::v1::types::MessageEncrypted;
-use crate::v1::types::{
-    AuditLogEntry, ChannelId, DocumentBranchId, MediaId, MessageDefaultMarkdown, MessageId, RoomId,
-    TagId, UserId,
-    automod::{AutomodAction, AutomodMatches, AutomodRuleSummary},
-    document::{DocumentRevisionId, DocumentTag},
-    misc::Time,
-    moderation::Report,
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        AuditLogEntry, ChannelId, DocumentBranchId, MediaId, MessageDefaultMarkdown, MessageId,
+        RoomId, TagId, UserId,
+        automod::{AutomodAction, AutomodMatches, AutomodRuleSummary},
+        document::{DocumentRevisionId, DocumentTag},
+        misc::Time,
+        moderation::Report,
+    },
 };
 
 // NOTE: utoipa doesnt seem to like #[deprecated] here
@@ -51,7 +54,6 @@ pub enum MessageType {
     ChannelRename(MessageChannelRename),
 
     /// (TODO) someone mentioned this thread
-    // TODO: rename to ChannelPingback
     // needs some sort of antispam system. again, see github.
     // doesnt necessarily reference a thread in the same room, but usually should
     // maybe don't include in log?
@@ -506,3 +508,5 @@ impl MessageType {
         }
     }
 }
+
+export_models!(MessageType, MessagePin, MessageMember, MessageCall);

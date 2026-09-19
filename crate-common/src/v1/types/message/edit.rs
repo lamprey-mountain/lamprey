@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::components::{self, Components};
 use crate::v1::types::metadata::Metadata;
 use crate::v1::types::util::{Diff, some_option};
@@ -163,3 +164,5 @@ impl Diff for MessagePatch {
         other
     }
 }
+
+export_models!(MessagePatch);

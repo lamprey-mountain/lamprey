@@ -1,6 +1,7 @@
 use lamprey_macros::record;
 
 use crate::{
+    util::registry::export_models,
     v1::types::{
         EmbedCreate, MessageId, ParseMentions,
         components::{self, Components},
@@ -197,3 +198,9 @@ impl From<String> for MessageCreate {
         }
     }
 }
+
+export_models!(
+    MessageCreate,
+    MessageAttachmentCreate,
+    MessageAttachmentCreateType
+);
