@@ -25,6 +25,7 @@ serde_path_to_error = "0.1.20"
 serde_urlencoded = "0.7.1"
 thiserror = "2.0.20"
 time = "0.3.55"
+tokio = { version = "1.53.1", features = ["sync"] }
 tower-http = { version = "0.6.11", features = ["catch-panic", "cors", "limit", "propagate-header", "sensitive-headers", "trace"] }
 tracing = "0.1.44"
 url = "2.5.8"

@@ -1,6 +1,7 @@
 use axum::routing::MethodFilter;
 use common::util::routes::Method;
 
+pub mod audit_log;
 pub mod auth;
 pub mod error;
 pub mod headers;

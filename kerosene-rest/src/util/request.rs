@@ -3,6 +3,7 @@ use std::{collections::HashMap, error::Error, sync::Arc};
 use crate::{
     prelude::*,
     util::{
+        audit_log::{ActorInfo, AuditLoggerHandle, AuditLoggerSlot},
         error::{ExtractorError, ExtractorRejection},
         headers::{ContentType, HeadersRequest},
         multipart::MultipartCollector,
@@ -45,9 +46,11 @@ pub struct Req<E: Endpoint> {
     /// resolved media
     media: HashMap<MediaReference, MediaItem>,
 
-    reason: Option<String>,
-    // headers: (),
-    // audit_txn_slot: AuditTxnSlot,
+    /// request headers
+    headers: Box<HeadersRequest>,
+
+    /// an audit logger slot
+    audit_logger: AuditLoggerSlot,
 }
 
 impl<E> FromRequest<Globals> for Req<E>
@@ -65,7 +68,13 @@ where
         let headers = HeadersRequest::from_parts(&parts)?;
         let identity = super::auth::calculate(&headers, globals).await?;
 
-        // FIXME: federation
+        let audit_logger: &AuditLoggerSlot = parts
+            .extensions
+            .get()
+            .expect("audit logger slot should always exist");
+        let audit_logger = Arc::clone(audit_logger);
+
+        // FIXME: support federation
         let body = axum::body::to_bytes(body, usize::MAX)
             .await
             .map_err(|err| {
@@ -151,7 +160,8 @@ where
             globals: globals.clone(),
             identity,
             media,
-            reason: headers.reason,
+            headers: Box::new(headers),
+            audit_logger,
         })
     }
 }
@@ -183,17 +193,31 @@ impl<E: Endpoint> Req<E> {
         self.inner
     }
 
+    /// access request headers
+    #[inline]
+    pub fn headers(&self) -> &HeadersRequest {
+        &self.headers
+    }
+
     pub fn get_media(&self, media_ref: &MediaReference) -> Option<&MediaItem> {
         self.media.get(media_ref)
     }
 
-    // /// begin an audit log transaction
-    // #[must_use = "must call commit() to save a successful audit log entry"]
-    // pub async fn begin_audit_log(
-    //     &self,
-    //     room_id: RoomId,
-    //     ty: AuditLogEntryType,
-    // ) -> Result<AuditTxnHandle> {
-    //     todo!()
-    // }
+    /// obtain a handle to the current audit logger
+    pub fn audit_log(&self) -> AuditLoggerHandle {
+        let identity = self.identity();
+        let session = identity.session().unwrap(); // FIXME: Handle missing session
+        let user_id = identity.user_id().unwrap();
+
+        let actor = Arc::new(ActorInfo {
+            user_id,
+            session_id: session.id,
+            application_id: session.app_id,
+            user_agent: session.imprint.user_agent.clone(),
+            ip_addr: session.imprint.ip_addr.clone(),
+        });
+
+        let slot = self.audit_logger.clone();
+        AuditLoggerHandle::new(actor, slot)
+    }
 }
