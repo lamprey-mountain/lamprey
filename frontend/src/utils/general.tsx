@@ -20,8 +20,30 @@ export function createWeaklyMemoized<T extends object, U>(
 	};
 }
 
-export const getMsgTs = createWeaklyMemoized(
-	(m: Message) => new Date(m.created_at),
+/** parse a date from the api */
+export const getDate = (date: string | Uint8Array): Date => {
+	if (date instanceof Uint8Array) {
+		let nanos = 0n;
+
+		// big endian
+		for (const byte of date) {
+			nanos = (nanos << 8n) | BigInt(byte);
+		}
+
+		// sign-extend (two's complement, 16 bytes = 128 bits)
+		if (date.length === 16 && date[0] & 0x80) {
+			nanos -= 1n << 128n;
+		}
+
+		const millis = nanos / 1_000_000n;
+		return new Date(Number(millis));
+	} else {
+		return new Date(date);
+	}
+};
+
+export const getMsgTs = createWeaklyMemoized((m: Message) =>
+	getDate(m.created_at),
 );
 
 export function getMessageOverrideName(message: Message | undefined) {

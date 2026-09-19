@@ -6,6 +6,7 @@ import { Time } from "@/atoms/Time.tsx";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import { Avatar } from "@/components/shared/User";
 import type { RoomT } from "@/types";
+import { getDate } from "@/utils/general";
 
 export function Bans(props: VoidProps<{ room: RoomT }>) {
 	const _ctx = useCtx();
@@ -63,11 +64,11 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 										</div>
 									</div>
 									<div class="created">
-										<Time date={new Date(ban.created_at)} />
+										<Time date={getDate(ban.created_at)} />
 									</div>
 									<div class="expires">
 										<Show when={ban.expires_at}>
-											{(exp) => <Time date={new Date(exp())} />}
+											{(exp) => <Time date={getDate(exp())} />}
 										</Show>
 									</div>
 									<div class="reason">{ban.reason}</div>

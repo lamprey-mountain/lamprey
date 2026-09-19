@@ -13,6 +13,7 @@ import { useApi } from "@/api";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Dropdown } from "@/atoms/Dropdown";
 import { Checkbox, XMark } from "@/atoms/icons";
+import { getDate } from "@/utils/general";
 
 export type CalendarPopup = {
 	ref: HTMLElement | null;
@@ -115,10 +116,8 @@ export const PopupEventEditor = (props: {
 	>("event");
 	const [formData, setFormData] = createStore({
 		name: props.event?.title || "",
-		start: props.event?.starts_at
-			? new Date(props.event.starts_at)
-			: new Date(),
-		end: props.event?.ends_at ? new Date(props.event.ends_at) : null,
+		start: props.event?.starts_at ? getDate(props.event.starts_at) : new Date(),
+		end: props.event?.ends_at ? getDate(props.event.ends_at) : null,
 		allDay: false, // TODO: support in CalendarEvent
 		timezone: props.event?.timezone || "UTC",
 		recurrence: "", // TODO: support in CalendarEvent
@@ -138,8 +137,8 @@ export const PopupEventEditor = (props: {
 		lastId = event.id;
 
 		setFormData({
-			start: new Date(event.starts_at),
-			end: event.ends_at ? new Date(event.ends_at) : null,
+			start: getDate(event.starts_at),
+			end: event.ends_at ? getDate(event.ends_at) : null,
 			// Only reset other fields if it's a completely different event (different ID)
 			...(!isSameEvent
 				? {

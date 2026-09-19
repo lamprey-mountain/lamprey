@@ -7,6 +7,7 @@ import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Checkbox } from "@/atoms/icons";
 import { Time } from "@/atoms/Time";
 import { MessageView } from "@/components/features/chat/Message.tsx";
+import { getDate } from "@/utils/general";
 import { MessageToolbarProvider } from "../features/chat/message-toolbar-context";
 
 // TODO: skeletons for inbox items
@@ -202,7 +203,7 @@ const NotificationItem = (props: {
 				</Show>
 				<A href={`/channel/${channel()?.id}`}>{channel()?.name ?? "..."}</A>
 				&nbsp;&bull;&nbsp;
-				<Time date={new Date(props.notification.added_at)} />
+				<Time date={getDate(props.notification.added_at)} />
 				<div class="spacer"></div>
 				<div class="label">{ty()}</div>
 				<Show

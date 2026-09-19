@@ -18,6 +18,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useModals } from "@/contexts/modal";
 import { useReadTracking } from "@/contexts/read-tracking.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
+import { getDate } from "@/utils/general.tsx";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for channels
@@ -392,7 +393,7 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 		const c = channelConfig();
 		if (!c?.notifs.mute) return false;
 		if (!c.notifs.mute.expires_at) return true;
-		return Date.parse(c.notifs.mute.expires_at) > Date.now();
+		return getDate(c.notifs.mute.expires_at) > Date.now();
 	};
 
 	const fifteen_mins = 15 * 60 * 1000;
@@ -522,9 +523,7 @@ function ChannelNotificationMenu(props: { channel: Channel }) {
 					<Show when={channelConfig()?.notifs.mute?.expires_at}>
 						<div class="subtext">
 							unmutes{" "}
-							{timeAgo(
-								new Date(Date.parse(channelConfig()?.notifs.mute?.expires_at!)),
-							)}
+							{timeAgo(getDate(channelConfig()?.notifs.mute?.expires_at!))}
 						</div>
 					</Show>
 				</Item>

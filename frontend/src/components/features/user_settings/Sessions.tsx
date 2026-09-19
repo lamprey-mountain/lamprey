@@ -5,7 +5,7 @@ import { useCtx } from "@/app/context";
 import { Time } from "@/atoms/Time.tsx";
 import { useModals } from "@/contexts/modal";
 import type { Pagination, SessionT, UserT } from "@/types";
-import { Copyable } from "@/utils/general";
+import { Copyable, getDate } from "@/utils/general";
 
 function parseUA(ua: string) {
 	if (/iPhone|iPad/.test(ua)) return { icon: "mobile", label: "iOS" };
@@ -79,7 +79,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 	const isSudoActive = (s: SessionT) => {
 		if (s.status !== "Sudo") return false;
 		if (!s.sudo_expires_at) return false;
-		return new Date(s.sudo_expires_at) > new Date();
+		return getDate(s.sudo_expires_at) > new Date();
 	};
 
 	return (
@@ -120,7 +120,7 @@ export function Sessions(props: VoidProps<{ user: UserT }>) {
 									</menu>
 								</div>
 								<div class="meta">
-									<Time date={new Date(s.imprint.last_seen_at)} />
+									<Time date={getDate(s.imprint.last_seen_at)} />
 									<span class="bullet"></span>
 									{s.imprint.user_agent ? (
 										parseUA(s.imprint.user_agent).label

@@ -4,6 +4,7 @@ import { Icon } from "@/atoms/Icon";
 import { Time } from "@/atoms/Time";
 import { createTooltip } from "@/atoms/Tooltip";
 import { useModals2 } from "@/contexts/modal";
+import { getDate } from "@/utils/general";
 import { icDelete, icEdit } from "@/utils/icons";
 import type { ApplicationDraft } from "./context";
 
@@ -116,7 +117,7 @@ export const Sessions = (props: { draft: ApplicationDraft }) => {
 												</menu>
 											</div>
 											<div class="meta">
-												<Time date={new Date(session.imprint.last_seen_at)} />
+												<Time date={getDate(session.imprint.last_seen_at)} />
 											</div>
 										</div>
 									</li>

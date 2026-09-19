@@ -9,6 +9,7 @@ import { timeAgo } from "@/atoms/Time.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useModals } from "@/contexts/modal";
 import { usePermissions } from "@/hooks/usePermissions.ts";
+import { getDate } from "@/utils/general.tsx";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
 // the context menu for rooms
@@ -152,7 +153,7 @@ function RoomNotificationMenu(props: { room: Room }) {
 		const c = roomConfig();
 		if (!c?.notifs.mute) return false;
 		if (!c.notifs.mute.expires_at) return true;
-		return Date.parse(c.notifs.mute.expires_at) > Date.now();
+		return getDate(c.notifs.mute.expires_at) > Date.now();
 	};
 
 	const fifteen_mins = 15 * 60 * 1000;
@@ -320,10 +321,7 @@ function RoomNotificationMenu(props: { room: Room }) {
 					<div>unmute</div>
 					<Show when={roomConfig()?.notifs.mute?.expires_at}>
 						<div class="subtext">
-							unmutes{" "}
-							{timeAgo(
-								new Date(Date.parse(roomConfig()?.notifs.mute?.expires_at!)),
-							)}
+							unmutes {timeAgo(getDate(roomConfig()?.notifs.mute?.expires_at!))}
 						</div>
 					</Show>
 				</Item>

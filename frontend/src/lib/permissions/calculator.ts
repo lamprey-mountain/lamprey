@@ -1,5 +1,6 @@
 import type { Channel, Permission, Role, RoomMember } from "sdk";
 import type { RootStore } from "@/api";
+import { getDate } from "@/utils/general";
 
 export interface PermissionContext {
 	api: RootStore;
@@ -356,7 +357,7 @@ export function calculatePermissions(
 
 	// Check if user is timed out
 	const isTimedOut = member.timeout_until
-		? new Date(member.timeout_until).getTime() > Date.now()
+		? getDate(member.timeout_until).valueOf() > Date.now()
 		: false;
 
 	// Apply timeout restrictions
@@ -475,7 +476,7 @@ function applyChannelOverwrites(
 	if (channel.locked && typeof channel.locked === "object") {
 		const locked = channel.locked;
 		const isExpired = locked.until
-			? new Date(locked.until).getTime() <= Date.now()
+			? getDate(locked.until).valueOf() <= Date.now()
 			: false;
 
 		if (!isExpired) {

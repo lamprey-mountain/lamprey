@@ -3,6 +3,7 @@ import type { Scope } from "sdk";
 import { createResource, createSignal, For, onCleanup } from "solid-js";
 import { useApi } from "@/api";
 import { Time } from "@/atoms/Time";
+import { getDate } from "@/utils/general";
 
 export function Connections() {
 	const api2 = useApi();
@@ -89,7 +90,7 @@ export function Connections() {
 								</button>
 							</div>
 							<div class="dim">
-								authorized <Time date={new Date(c.created_at)} />
+								authorized <Time date={getDate(c.created_at)} />
 							</div>
 						</header>
 						<div class="info">

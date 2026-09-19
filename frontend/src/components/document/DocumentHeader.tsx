@@ -21,6 +21,7 @@ import { createTooltip } from "@/atoms/Tooltip";
 import { useChannel, useModals } from "@/contexts/mod";
 import { flags } from "@/lib/flags";
 import type { ChannelT } from "@/types";
+import { getDate } from "@/utils/general";
 import {
 	icBranch,
 	icBranchDefault,
@@ -344,7 +345,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 																	</>
 																)}
 																{branch.created_at && (
-																	<> · {timeAgo(new Date(branch.created_at))}</>
+																	<> · {timeAgo(getDate(branch.created_at))}</>
 																)}
 															</div>
 														</div>

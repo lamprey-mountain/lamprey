@@ -36,6 +36,7 @@ import type { IDBPDatabase } from "idb";
 import type { UserWithRelationship, VoiceState } from "sdk";
 import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "@/lib/notifications/util";
 import { type ApiDB, clearApiDatabase } from "@/lib/sync/db";
+import { getDate } from "@/utils/general";
 import { logger } from "@/utils/logger";
 import { AuditLogService } from "../services/AuditLogService";
 import { AuthService } from "../services/AuthService";
@@ -560,8 +561,8 @@ export class RootStore {
 		} else if (msg.type === "EmojiDelete") {
 			this.emoji.cache.delete(msg.emoji_id);
 		} else if (msg.type === "ChannelTyping") {
-			const { channel_id, user_id, until } = msg as any;
-			const untilDate = new Date(until);
+			const { channel_id, user_id, until } = msg;
+			const untilDate = getDate(until);
 			const now = new Date();
 			const delay = untilDate.getTime() - now.getTime();
 

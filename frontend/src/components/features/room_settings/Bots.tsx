@@ -20,6 +20,7 @@ import { useMenu } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import type { RoomT } from "@/types";
+import { getDate } from "@/utils/general";
 
 export function Bots(props: VoidProps<{ room: RoomT }>) {
 	const _ctx = useCtx();
@@ -131,7 +132,7 @@ export function Bots(props: VoidProps<{ room: RoomT }>) {
 										{i.mute && <div>mute</div>}
 									</div> */}
 									<div class="joined">
-										<Time date={new Date(i.joined_at)} />
+										<Time date={getDate(i.joined_at)} />
 										<div class="dim">{formatOrigin(i.origin)}</div>
 									</div>
 									<div style="flex:1"></div>

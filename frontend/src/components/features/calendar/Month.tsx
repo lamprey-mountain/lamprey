@@ -170,7 +170,7 @@ export const CalendarMonth = (props: {
 							<For
 								// PERF: dont filter every event for every day
 								each={props.events.filter((e) => {
-									const d_start = new Date(e.starts_at);
+									const d_start = getDate(e.starts_at);
 									return (
 										d_start.getDate() === d().day &&
 										d_start.getMonth() === d().month &&

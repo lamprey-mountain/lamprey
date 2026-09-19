@@ -26,6 +26,7 @@ import { countEmojiOnly } from "@/lib/markdown";
 import { MediaView } from "@/media/Media.tsx";
 import { getMediaIcon } from "@/media/util.tsx";
 import { openThread } from "@/utils/channel";
+import { getDate } from "@/utils/general.tsx";
 import { icInfo, icSword } from "@/utils/icons.ts";
 import { UserDisplayName } from "../../shared/User.tsx";
 import { MessageEditor } from "./MessageEditor.tsx";
@@ -337,10 +338,10 @@ export const MessageView = (props: MessageProps) => {
 	};
 
 	const date = createMemo(() => {
-		return new Date(
+		return getDate(
 			props.message.latest_version.created_at ??
 				props.message.created_at ??
-				new Date().toString(),
+				new Date().toISOString(),
 		);
 	});
 

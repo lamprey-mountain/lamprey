@@ -35,7 +35,7 @@ import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { getThumbFromId } from "@/media/util.tsx";
 import type { MessageT, ThreadT } from "@/types";
-import { getMessageOverrideName } from "@/utils/general";
+import { getDate, getMessageOverrideName } from "@/utils/general";
 import { icAdd, icUpload } from "@/utils/icons.ts";
 import { isMarkdown } from "./Message";
 import { useTimeline } from "./timeline-context.tsx";
@@ -243,7 +243,7 @@ export function Input(props: InputProps) {
 		const expireAt = props.channel.slowmode_message_expire_at;
 		if (expireAt) {
 			const currentExpireAt = ch.slowmode_expire_at;
-			const newExpireAt = new Date(expireAt);
+			const newExpireAt = getDate(expireAt);
 			if (
 				!currentExpireAt ||
 				currentExpireAt.getTime() !== newExpireAt.getTime()

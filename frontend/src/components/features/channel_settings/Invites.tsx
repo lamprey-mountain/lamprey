@@ -3,7 +3,7 @@ import { For, Show, type VoidProps } from "solid-js";
 import { useApi, useInvites, useUsers } from "@/api";
 import { Time } from "@/atoms/Time.tsx";
 import { Avatar } from "@/components/shared/User";
-import { Copyable } from "@/utils/general";
+import { Copyable, getDate } from "@/utils/general";
 
 export function Invites(props: VoidProps<{ channel: Channel }>) {
 	const api2 = useApi();
@@ -60,7 +60,7 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 											<Avatar user={i.creator} pad={0} />
 											<div class="info">
 												<div class="name">{creatorName()}</div>
-												<Time date={new Date(i.created_at)} />
+												<Time date={getDate(i.created_at)} />
 											</div>
 										</div>
 										<div class="uses">
@@ -75,7 +75,7 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 												when={i.expires_at}
 												fallback={<span class="dim">never</span>}
 											>
-												<Time date={new Date(i.expires_at!)} />
+												<Time date={getDate(i.expires_at!)} />
 											</Show>
 										</div>
 										<div>

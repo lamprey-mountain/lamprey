@@ -18,6 +18,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useReadTracking } from "@/contexts/read-tracking";
 import { useUploads } from "@/contexts/uploads.tsx";
 import { usePermissions } from "@/hooks/usePermissions";
+import { getDate } from "@/utils/general.tsx";
 import { Input } from "./Input.tsx";
 import { MessageToolbarProvider } from "./message-toolbar-context.tsx";
 import { Timeline } from "./Timeline.tsx";
@@ -223,7 +224,7 @@ export const TimelineControls = (props: ChatProps) => {
 		const lastReadId = props.channel.last_read_id;
 		if (!lastReadId) return new Date();
 		const message = messagesService.cache.get(lastReadId);
-		return message ? new Date(message.created_at) : new Date();
+		return message ? getDate(message.created_at) : new Date();
 	});
 
 	return (

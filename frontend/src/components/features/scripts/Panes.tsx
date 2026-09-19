@@ -10,6 +10,7 @@ import {
 import { useApi } from "@/api";
 import { Time } from "@/atoms/Time";
 import { usePanes } from "@/components/panes/context";
+import { getDate } from "@/utils/general";
 import { type ScriptPane, useScript } from "./context";
 import { LazyCodeEditor } from "./LazyEditor";
 
@@ -185,7 +186,7 @@ export const ScriptInputs = (props: {
 										<span class="status" data-status={run.status}>
 											{run.status}
 										</span>
-										<Time date={new Date(run.created_at)} />
+										<Time date={getDate(run.created_at)} />
 									</div>
 									<menu>
 										<button type="button" onClick={() => openLogs(run.id)}>
@@ -329,7 +330,7 @@ export const RunLogs = (props: {
 							>
 								<div class="main">
 									<span class="time">
-										<Time date={new Date(entry.created_at)} />
+										<Time date={getDate(entry.created_at)} />
 									</span>
 									<span class="level" data-level={entry.level}>
 										{entry.level}

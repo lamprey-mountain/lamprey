@@ -4,6 +4,7 @@ import { useApi } from "@/api";
 import { Time } from "@/atoms/Time.tsx";
 import { Avatar } from "@/avatar/UserAvatar.tsx";
 import { useChannel } from "@/contexts/channel.tsx";
+import { getDate } from "@/utils/general";
 import { useDocument } from "./context";
 
 type DocumentHistoryProps = {
@@ -166,7 +167,7 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 										}
 									>
 										<div class="history-item-header">
-											<Time date={new Date(changeset.start_time)} />
+											<Time date={getDate(changeset.start_time)} />
 											<div style="flex:1"></div>
 											<div class="history-item-stat history-item-stat-added">
 												+{changeset.stat_added}

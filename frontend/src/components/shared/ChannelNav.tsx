@@ -39,6 +39,7 @@ import {
 	calculatePermissions,
 	type PermissionContext,
 } from "@/lib/permissions/calculator";
+import { getDate } from "@/utils/general";
 import { useVoice } from "../features/voice/context";
 import { Avatar, ChannelIcon } from "./User";
 
@@ -640,8 +641,8 @@ export const ChannelNav = (props: { room_id?: string }) => {
 														.filter((i) => i.channel_id === channel.id)
 														.sort(
 															(a, b) =>
-																Date.parse(a.joined_at) -
-																Date.parse(b.joined_at),
+																getDate(a.joined_at).valueOf() -
+																getDate(b.joined_at).valueOf(),
 														)}
 												>
 													{(s) => {

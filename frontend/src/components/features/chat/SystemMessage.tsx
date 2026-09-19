@@ -20,6 +20,7 @@ import { Time } from "@/atoms/Time";
 import { Avatar } from "@/avatar/UserAvatar.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { MARK_END, MARK_START, PUA_REGEX } from "@/utils/diff.ts";
+import { getDate } from "@/utils/general.tsx";
 import {
 	icCall,
 	icChannelMove,
@@ -629,7 +630,7 @@ export function SystemMessageAutomodExecution(props: SystemMessageBaseProps) {
 
 	const author = api.users.use(() => m().user_id ?? undefined);
 	const channel = api.channels.use(() => m().channel_id ?? undefined);
-	const created = () => new Date(props.message.created_at);
+	const created = () => getDate(props.message.created_at);
 
 	const fmt = new Intl.ListFormat();
 

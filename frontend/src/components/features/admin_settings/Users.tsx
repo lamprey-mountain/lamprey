@@ -5,6 +5,7 @@ import { useUsers } from "@/api";
 import { Time } from "@/atoms/Time.tsx";
 import { Avatar } from "@/components/shared/User";
 import { useMenu } from "@/contexts/mod.tsx";
+import { getDate } from "@/utils/general";
 
 export function Users() {
 	const { setMenu } = useMenu();
@@ -80,7 +81,7 @@ export function Users() {
 								</div>
 								<div class="joined">
 									<Show when={user.registered_at}>
-										<Time date={new Date(user.registered_at!)} />
+										<Time date={getDate(user.registered_at!)} />
 									</Show>
 								</div>
 								<div style="flex:1"></div>

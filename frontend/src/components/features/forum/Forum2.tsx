@@ -43,6 +43,7 @@ import { useUploads } from "@/contexts/uploads";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
+import { getDate } from "@/utils/general.tsx";
 import {
 	icAdd,
 	icChevron,
@@ -613,7 +614,7 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 		const expireAt = props.channel.slowmode_message_expire_at;
 		if (expireAt) {
 			const currentExpireAt = ch.slowmode_expire_at;
-			const newExpireAt = new Date(expireAt);
+			const newExpireAt = getDate(expireAt);
 			if (
 				!currentExpireAt ||
 				currentExpireAt.getTime() !== newExpireAt.getTime()
