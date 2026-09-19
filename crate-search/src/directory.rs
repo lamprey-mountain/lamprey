@@ -66,6 +66,7 @@ struct ObjectFile {
     path: String,
     len: usize,
     cache_path: PathBuf,
+    cache_ext: String,
     fully_cached: bool,
     handle: OnceCell<std::fs::File>,
 }
@@ -138,12 +139,19 @@ impl Directory for ObjectDirectory {
             }
         }
 
+        let cache_ext = cache_file
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("data")
+            .to_string();
+
         Ok(Arc::new(ObjectFile {
             rt: self.rt.clone(),
             blobs: self.blobs.clone(),
             path: self.path_str(path),
             len: metadata.len,
             cache_path: cache_file.clone(),
+            cache_ext,
             fully_cached: cache_file.exists(),
             handle,
         }))
@@ -427,18 +435,16 @@ impl ObjectFile {
         let mut bytes_written = 0;
 
         for idx in start_block..=end_block {
-            let block_data = std::fs::read(self.block_path(idx))?;
+            let file = std::fs::File::open(self.block_path(idx))?;
             let b_start_offset = idx * BLOCK_SIZE;
             let read_start = range.start.max(b_start_offset) - b_start_offset;
-            let read_end = range
-                .end
-                .min((idx + 1) * BLOCK_SIZE)
-                .min(b_start_offset + block_data.len())
-                - b_start_offset;
+            let read_end = range.end.min((idx + 1) * BLOCK_SIZE).min(self.len) - b_start_offset;
             let len = read_end.saturating_sub(read_start);
 
-            out_buf[bytes_written..bytes_written + len]
-                .copy_from_slice(&block_data[read_start..read_end]);
+            file.read_exact_at(
+                &mut out_buf[bytes_written..bytes_written + len],
+                read_start as u64,
+            )?;
             bytes_written += len;
         }
 
@@ -448,8 +454,7 @@ impl ObjectFile {
     /// get the path for a specific block of this file
     fn block_path(&self, block_idx: usize) -> PathBuf {
         let mut p = self.cache_path.clone();
-        let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("data");
-        p.set_extension(format!("{block_idx}.{ext}.chunk"));
+        p.set_extension(format!("{block_idx}.{}.chunk", self.cache_ext));
         p
     }
 }
