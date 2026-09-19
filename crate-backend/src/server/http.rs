@@ -28,20 +28,17 @@ mod frontend;
 mod openapi;
 mod util;
 
-// TODO: copy from crate-backend/src/serve/mod.rs
-
 /// create an axum router for the api
 pub fn create_router_api(globals: Globals) -> Router {
-    // let kerosene_routes = kerosene_rest::Routes::new_api()
-    //     .into_axum_openapi()
-    //     .with_state(globals.clone());
+    let kerosene_routes = kerosene_rest::Routes::new_api()
+        .into_axum_openapi()
+        .with_state(globals.clone());
 
     let state = Arc::new(globals.to_server_state());
     let (router, api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
         .nest("/api", routes::routes(state.clone()).fallback(api_fallback))
-        .route("/.well-known/lamprey-mountain", get(routes::well_known))
         .with_state(state.clone())
-        // .merge(kerosene_routes)
+        .merge(kerosene_routes)
         .split_for_parts();
 
     let router = router

@@ -4576,6 +4576,7 @@ name = "kerosene-rest"
 version = "0.1.4"
 dependencies = [
  "axum",
+ "futures",
  "headers",
  "http",
  "kerosene-core",
@@ -4583,11 +4584,13 @@ dependencies = [
  "lamprey-backend-core",
  "lamprey-common",
  "lamprey-macros",
+ "multer",
  "rmp-serde",
  "serde",
  "serde_json",
  "serde_path_to_error",
  "serde_urlencoded",
+ "thiserror 2.0.20",
  "time",
  "tower-http",
  "tracing",

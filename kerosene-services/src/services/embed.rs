@@ -225,22 +225,23 @@ impl ServiceEmbed {
         let futures = generation.pending_media().into_iter().map(|p| {
             let srv = srv.clone();
             async move {
-            let import = Import::new(user_id).merge(MediaCreate {
-                alt: p.alt,
-                strip_exif: false,
-                source: MediaCreateSource::Download {
-                    filename: None,
-                    size: None,
-                    source_url: p.url.clone(),
-                },
-            });
-            let mut item = srv.media.import_from_url(import, &p.url).await?;
-            let media = item.ready().await;
-            Result::Ok((
-                p.placeholder_media_id,
-                EmbedMedia::Finished((*media).clone()),
-            ))
-        }});
+                let import = Import::new(user_id).merge(MediaCreate {
+                    alt: p.alt,
+                    strip_exif: false,
+                    source: MediaCreateSource::Download {
+                        filename: None,
+                        size: None,
+                        source_url: p.url.clone(),
+                    },
+                });
+                let mut item = srv.media.import_from_url(import, &p.url).await?;
+                let media = item.ready().await;
+                Result::Ok((
+                    p.placeholder_media_id,
+                    EmbedMedia::Finished((*media).clone()),
+                ))
+            }
+        });
 
         for media in futures::future::join_all(futures).await {
             match media {

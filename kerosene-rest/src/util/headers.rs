@@ -12,6 +12,7 @@ use headers::{ETag, HeaderMapExt, IfMatch, IfModifiedSince, IfNoneMatch, LastMod
 use http::request::Parts;
 use kerosene_core::error::ErrorCode;
 
+/// raw request headers for a request
 pub struct HeadersRequest {
     pub authorization: Option<Authorization<Bearer>>,
 
@@ -40,13 +41,13 @@ pub struct HeadersRequest {
     pub ip_addr: Option<IpAddr>,
 }
 
+/// raw response headers for a request
 pub struct HeadersResponse {
     pub etag: Option<ETag>,
     pub last_modified: Option<LastModified>,
 }
 
 /// parsed content type header
-// TODO: maybe support application/x-www-form-urlencoded as well?
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContentType {
     /// json body
@@ -119,6 +120,9 @@ impl HeadersRequest {
             }
         }
 
+        // TODO: handle x-real-ip
+
+        // get the first ip address if they are comma separated
         let ip_addr = parts
             .headers
             .get("x-forwarded-for")

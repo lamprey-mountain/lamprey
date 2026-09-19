@@ -1,4 +1,4 @@
-pub(crate) mod endpoints;
+pub mod endpoints;
 mod util;
 
 pub use util::request::Req;

@@ -84,7 +84,10 @@ async fn wiki_graph(
         .await?
         .ensure_view()?;
 
-    let graph = srv.documents.query_wiki_graph(req.channel_id, &req.query).await?;
+    let graph = srv
+        .documents
+        .query_wiki_graph(req.channel_id, &req.query)
+        .await?;
     Ok(Json(graph))
 }
 

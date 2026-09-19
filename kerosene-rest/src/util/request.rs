@@ -1,19 +1,34 @@
+use std::{collections::HashMap, error::Error, sync::Arc};
+
 use crate::{
     prelude::*,
-    util::headers::{ContentType, HeadersRequest},
+    util::{
+        error::{ExtractorError, ExtractorRejection},
+        headers::{ContentType, HeadersRequest},
+        multipart::MultipartCollector,
+        parse::{parse_form, parse_json, parse_msgpack},
+    },
 };
 
-use axum::extract::FromRequest;
+use axum::{
+    extract::{FromRequest, rejection::LengthLimitError},
+    response::IntoResponse,
+};
 use common::{
     util::routes::Endpoint,
     v1::{
         routes::ExtractableRequest,
         types::error::{ErrorField, ErrorFieldType},
     },
+    v2::types::media::{Media, MediaReference},
 };
+use futures::stream;
+use http::StatusCode;
 use kerosene_core::{error::ErrorCode, types::auth::Identity};
-use lamprey_backend_services::services::Services;
-use serde::de::DeserializeOwned;
+use lamprey_backend_services::services::{
+    Services,
+    media::{Import, MediaItem},
+};
 
 /// the current state for a request
 ///
@@ -28,7 +43,7 @@ pub struct Req<E: Endpoint> {
     identity: Identity,
 
     /// resolved media
-    media: (),
+    media: HashMap<MediaReference, MediaItem>,
 
     reason: Option<String>,
     // headers: (),
@@ -38,11 +53,14 @@ pub struct Req<E: Endpoint> {
 impl<E> FromRequest<Globals> for Req<E>
 where
     E: Endpoint + Send,
-    E::Request: Send,
+    E::Request: ExtractableRequest + Send,
 {
-    type Rejection = ServerError;
+    type Rejection = ExtractorRejection;
 
-    async fn from_request(req: axum::extract::Request, globals: &Globals) -> ServerResult<Self> {
+    async fn from_request(
+        req: axum::extract::Request,
+        globals: &Globals,
+    ) -> CoreResult<Self, ExtractorRejection> {
         let (parts, body) = req.into_parts();
         let headers = HeadersRequest::from_parts(&parts)?;
         let identity = super::auth::calculate(&headers, globals).await?;
@@ -50,40 +68,96 @@ where
         // FIXME: federation
         let body = axum::body::to_bytes(body, usize::MAX)
             .await
-            // TODO: better errors
-            .map_err(|err| Error::Internal(Box::new(err)))?;
+            .map_err(|err| {
+                if err.source().is_some_and(|s| s.is::<LengthLimitError>()) {
+                    ExtractorRejection::ExtractorError(ExtractorError::BodyTooLarge)
+                } else {
+                    ExtractorRejection::ServerError(ServerError::Internal(Box::new(err)))
+                }
+            })?;
 
-        match headers.content_type {
+        let (inner, media) = match headers.content_type {
             ContentType::Json => {
-                // let body: Req::Body = parse_json(&bytes)?;
-                // let req = Req::extract(parts, body).map_err(Error::Response)?;
-                // Ok(Self {
-                //     auth,
-                //     body: req,
-                //     media: Default::default(),
-                //     reason: headers.reason,
-                //     audit_txn_slot,
-                // })
-                todo!()
+                let deserialized: <E::Request as ExtractableRequest>::Body = parse_json(&body)?;
+                (E::Request::extract(parts, deserialized)?, HashMap::new())
             }
-            ContentType::Form => todo!(),
-            ContentType::Msgpack => todo!(),
-            ContentType::Multipart => todo!(),
-            ContentType::Invalid => todo!(),
-            ContentType::Missing => todo!(),
+            ContentType::Form => {
+                let deserialized: <E::Request as ExtractableRequest>::Body = parse_form(&body)?;
+                (E::Request::extract(parts, deserialized)?, HashMap::new())
+            }
+            ContentType::Msgpack => {
+                let deserialized: <E::Request as ExtractableRequest>::Body = parse_msgpack(&body)?;
+                (E::Request::extract(parts, deserialized)?, HashMap::new())
+            }
+            ContentType::Multipart => {
+                let ct = parts
+                    .headers
+                    .get("content-type")
+                    .expect("must have existed earlier")
+                    .to_str()
+                    .map_err(|_| {
+                        ExtractorRejection::ExtractorError(ExtractorError::InvalidContentType)
+                    })?;
+                let boundary = multer::parse_boundary(ct).map_err(|e| {
+                    // TODO: custom error for bad multipart boundary
+                    ExtractorRejection::ServerError(ServerError::Internal(Box::new(e)))
+                })?;
+                let stream = stream::once(async move { Ok::<Bytes, std::io::Error>(body) });
+                let multipart = multer::Multipart::new(stream, boundary);
+                let collector = MultipartCollector::collect(multipart).await?;
+                let (body, files) = collector.parse()?;
+                let inner = E::Request::extract(parts, body)?;
+
+                // import media
+                let srv = globals.services();
+                let mut media = HashMap::new();
+                if !files.is_empty() {
+                    let user = identity.ensure_user().map_err(|e| {
+                        ExtractorRejection::ServerError(ServerError::Api(Box::new(e)))
+                    })?;
+
+                    // PERF: import in parallel
+                    for (num, file) in files {
+                        let import = Import::new(user.id);
+                        let item = srv
+                            .media
+                            .import_from_multipart(import, file)
+                            .await
+                            .map_err(|e| {
+                                ExtractorRejection::ServerError(ServerError::Internal(Box::new(e)))
+                            })?;
+                        media.insert(MediaReference::Attachment { media_index: num }, item);
+                    }
+                }
+                (inner, media)
+            }
+            ContentType::Invalid => {
+                return Err(ExtractorError::InvalidContentType.into());
+            }
+            ContentType::Missing => {
+                if body.is_empty() {
+                    // try to deserialize from "null" for endpoints with no body (Body == ())
+                    let deserialized =
+                        serde_json::from_str("null").map_err(|_| ExtractorError::MissingBody)?;
+                    (E::Request::extract(parts, deserialized)?, HashMap::new())
+                } else {
+                    return Err(ExtractorError::MissingContentType.into());
+                }
+            }
         };
 
         Ok(Self {
-            inner: todo!(),
+            inner,
             globals: globals.clone(),
             identity,
-            media: todo!(),
+            media,
             reason: headers.reason,
         })
     }
 }
 
 impl<E: Endpoint> Req<E> {
+    /// access server global state
     #[inline]
     pub fn globals(&self) -> Globals {
         self.globals.clone()
@@ -104,9 +178,9 @@ impl<E: Endpoint> Req<E> {
         &self.inner
     }
 
-    // pub fn get_media(&self, media_ref: &MediaReference) -> &Media {
-    //     todo!()
-    // }
+    pub fn get_media(&self, media_ref: &MediaReference) -> Option<&MediaItem> {
+        self.media.get(media_ref)
+    }
 
     // /// begin an audit log transaction
     // #[must_use = "must call commit() to save a successful audit log entry"]
@@ -117,49 +191,4 @@ impl<E: Endpoint> Req<E> {
     // ) -> Result<AuditTxnHandle> {
     //     todo!()
     // }
-}
-
-fn parse_json<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
-    let jd = &mut serde_json::Deserializer::from_slice(bytes);
-    let data: T = match serde_path_to_error::deserialize(jd) {
-        Ok(data) => data,
-        Err(err) => {
-            // TODO: multiple error fields
-            return Err(ApiError {
-                message: err.to_string(),
-                fields: vec![ErrorField {
-                    key: err.path().iter().map(|s| s.to_string()).collect(),
-                    message: err.to_string(),
-                    ty: ErrorFieldType::Other,
-                }],
-                ..ApiError::from_code(ErrorCode::InvalidData)
-            }
-            .into());
-        }
-    };
-
-    Ok(data)
-}
-
-fn parse_form<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
-    let s = std::str::from_utf8(bytes).map_err(|err| ApiError {
-        message: err.to_string(),
-        fields: vec![],
-        ..ApiError::from_code(ErrorCode::InvalidData)
-    })?;
-    let data: T = serde_urlencoded::from_str(s).map_err(|err| ApiError {
-        message: err.to_string(),
-        fields: vec![],
-        ..ApiError::from_code(ErrorCode::InvalidData)
-    })?;
-    Ok(data)
-}
-
-fn parse_msgpack<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
-    let data: T = rmp_serde::from_slice(bytes).map_err(|err| ApiError {
-        message: err.to_string(),
-        fields: vec![],
-        ..ApiError::from_code(ErrorCode::InvalidData)
-    })?;
-    Ok(data)
 }

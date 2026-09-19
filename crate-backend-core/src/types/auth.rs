@@ -9,8 +9,6 @@ use common::{
     v2::types::{RoomId, UserId},
 };
 
-use crate::prelude::*;
-
 /// the identity of someone making a request
 // TODO: use Arc<Session>
 #[derive(Debug, Clone)]

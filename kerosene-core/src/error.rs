@@ -10,7 +10,7 @@ pub use lamprey::v1::types::error::{ApiError, ApiResult, ErrorCode};
 pub enum ServerError {
     /// an internal error has occured
     #[error("Internal error: {0}")]
-    Internal(Box<dyn std::error::Error>),
+    Internal(Box<dyn std::error::Error + Send + Sync>),
 
     /// an api error
     #[error("{0}")]
@@ -26,7 +26,9 @@ pub enum ServerError {
     Unavailable,
 }
 
-pub type ServerResult<T> = std::result::Result<T, ServerError>;
+pub type ServerResult<T> = ::core::result::Result<T, ServerError>;
+pub use ::core::result::Result as CoreResult;
+pub type Result<T, E = ServerError> = ::core::result::Result<T, E>;
 
 impl ServerError {
     pub fn http_status(&self) -> StatusCode {

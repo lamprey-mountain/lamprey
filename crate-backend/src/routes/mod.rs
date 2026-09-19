@@ -7,7 +7,6 @@ use utoipa_axum::router::OpenApiRouter;
 
 use crate::prelude::*;
 
-mod ack;
 mod admin;
 mod application;
 mod auth;
@@ -60,7 +59,6 @@ pub mod util;
 
 fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
     let mut router = OpenApiRouter::new()
-        // .merge(ack::routes())
         .merge(admin::routes())
         .merge(application::routes())
         .merge(auth::routes())

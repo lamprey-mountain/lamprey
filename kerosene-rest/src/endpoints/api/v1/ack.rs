@@ -6,7 +6,7 @@ use tracing::warn;
 use crate::prelude::*;
 
 #[handler(routes::ack_bulk)]
-async fn bulk(req: Req<routes::ack_bulk::Endpoint>) -> Result<routes::ack_bulk::Response> {
+pub async fn bulk(req: Req<routes::ack_bulk::Endpoint>) -> Result<routes::ack_bulk::Response> {
     let user = req.identity().ensure_user()?;
     req.identity().ensure_scopes(&[Scope::Full])?;
 

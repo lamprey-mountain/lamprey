@@ -2,7 +2,10 @@ use axum::routing::MethodFilter;
 use common::util::routes::Method;
 
 pub mod auth;
+pub mod error;
 pub mod headers;
+pub mod multipart;
+pub mod parse;
 pub mod request;
 pub mod routes;
 
