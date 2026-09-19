@@ -6,7 +6,7 @@ use common::v2::types::SERVER_ROOM_ID;
 use http::StatusCode;
 use kerosene_core::error::{ApiError, ErrorCode};
 use kerosene_services::globals::server_state::ServerState;
-use lamprey_backend_data_postgres::{DbRoomCreate, MediaLinkType};
+use lamprey_backend_data_postgres::DbRoomCreate;
 use lamprey_macros::handler;
 use tracing::debug;
 

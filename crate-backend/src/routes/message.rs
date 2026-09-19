@@ -8,7 +8,6 @@ use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Time;
 use common::v1::types::{AuditLogEntryType, MessagePin, MessageType, ThreadMemberPut};
-use common::v2::types::MessageId;
 use kerosene_services::globals::server_state::ServerState;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;

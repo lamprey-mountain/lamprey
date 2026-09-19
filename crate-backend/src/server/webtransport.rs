@@ -1,28 +1,20 @@
-use std::{collections::VecDeque, time::Duration};
+use std::time::Duration;
 
 use crate::prelude::*;
-use async_trait::async_trait;
-use common::{
-    v1::types::{
-        ChannelType, MessageClient, MessageEnvelope, MessagePayload, SyncFormat, SyncParams,
-        error::SyncErrorCode,
-    },
-    v2::types::ConnectionId,
+use common::v1::types::{
+    ChannelType, MessageClient, MessageEnvelope, MessagePayload, SyncParams, error::SyncErrorCode,
 };
 use flate2::{Compress, Decompress, FlushCompress, FlushDecompress};
 use kerosene_core::types::documents::EditContextId;
 use kerosene_services::services::connections::ConnectionHandle;
 use kerosene_sync::transport::{
-    Compression, Transport, TransportEvent, TransportSink, TransportStream, WebtransportTransport,
+    Compression, Transport, TransportEvent, TransportStream, WebtransportTransport,
     WrapperTransport,
 };
-use tokio::{io::AsyncWriteExt, spawn, sync::Mutex, task::JoinSet};
+use tokio::{spawn, sync::Mutex, task::JoinSet};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info};
-use wtransport::{
-    Endpoint, Identity, RecvStream, SendStream, ServerConfig,
-    endpoint::{IncomingSession, SessionRequest},
-};
+use wtransport::{Endpoint, RecvStream, SendStream, ServerConfig, endpoint::IncomingSession};
 
 // TODO: impl better error handling instead of unwrapping everywhere
 
