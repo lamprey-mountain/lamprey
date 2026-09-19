@@ -178,6 +178,11 @@ impl<E: Endpoint> Req<E> {
         &self.inner
     }
 
+    #[inline]
+    pub fn into_inner(self) -> E::Request {
+        self.inner
+    }
+
     pub fn get_media(&self, media_ref: &MediaReference) -> Option<&MediaItem> {
         self.media.get(media_ref)
     }

@@ -43,11 +43,20 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         .iter()
         .find(|f| matches!(f.kind, FieldKind::Json | FieldKind::Form | FieldKind::Body));
 
-    let route_tag = if args.tags.iter().any(|t| t.value() == "cdn") {
-        "cdn"
-    } else {
-        "api"
-    };
+    // TODO: move logic to EndpointDocs
+    let (summary, description) = parse_doc_attrs(&module.module.attrs);
+    let mut endpoint_docs = quote!();
+    if !summary.is_empty() {
+        endpoint_docs.extend(quote!(#[doc = #summary]));
+    }
+    if let Some(desc) = description {
+        // add a newline
+        if !summary.is_empty() {
+            endpoint_docs.extend(quote!(#[doc = ""]));
+        }
+
+        endpoint_docs.extend(quote!(#[doc = #desc]));
+    }
 
     let extract_request_impl = {
         // TODO: better errors
@@ -144,6 +153,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
         #mod_vis mod #mod_name {
             use super::*;
 
+            #endpoint_docs
             pub struct Endpoint;
 
             #request_clean
@@ -173,12 +183,6 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             #extract_request_impl
 
             #(#preserved_items)*
-
-            impl Endpoint {
-                pub const fn route_tag() -> &'static str {
-                    #route_tag
-                }
-            }
         }
     };
 
@@ -189,7 +193,12 @@ fn build_encode_response_fn(
     args: &EndpointArgs,
     fields: &[EndpointField],
 ) -> syn::Result<TokenStream> {
-    let status_code = if let Some(spec) = args.responses.first() {
+    let status_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Status));
+
+    let status_code = if let Some(f) = status_field {
+        let ident = &f.ident;
+        quote! { self.#ident.clone() }
+    } else if let Some(spec) = args.responses.first() {
         let s = &spec.status;
         quote! { ::http::StatusCode::from_u16(#s).unwrap_or(::http::StatusCode::OK) }
     } else {
@@ -211,7 +220,7 @@ fn build_encode_response_fn(
             }
         })
     } else {
-        let status_code = if args.responses.first().is_some() {
+        let status_code = if args.responses.first().is_some() || status_field.is_some() {
             quote! { #status_code }
         } else {
             quote! { ::http::StatusCode::NO_CONTENT }
@@ -246,6 +255,14 @@ fn build_extract_response_fn(
                 return Err(resp);
             }
         }
+    };
+
+    let status_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Status));
+    let status_field_assignment = if let Some(f) = status_field {
+        let ident = &f.ident;
+        quote! { #ident: status, }
+    } else {
+        quote! {}
     };
 
     let json_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
@@ -320,7 +337,7 @@ fn build_extract_response_fn(
                             ))
                             .unwrap()
                     })?;
-                Ok(Response { #ident, #(#header_idents,)* })
+                Ok(Response { #ident, #(#header_idents,)* #status_field_assignment })
             }
         })
     } else {
@@ -330,7 +347,7 @@ fn build_extract_response_fn(
                 #status_check
                 let (parts, _body) = resp.into_parts();
                 #(#header_extraction)*
-                Ok(Response { #(#header_idents,)* })
+                Ok(Response { #(#header_idents,)* #status_field_assignment })
             }
         })
     }
@@ -653,6 +670,7 @@ fn build_path_match_pattern(template: &str) -> syn::Result<(TokenStream, TokenSt
     Ok((pattern, bindings))
 }
 
+// TODO: move logic to EndpointDocs
 fn parse_doc_attrs(attrs: &[Attribute]) -> (String, Option<String>) {
     let mut doc_lines: Vec<String> = Vec::new();
 
@@ -937,6 +955,7 @@ fn build_clean_struct(mut original: ItemStruct) -> syn::Result<TokenStream> {
                 && !attr.path().is_ident("json")
                 && !attr.path().is_ident("form")
                 && !attr.path().is_ident("body")
+                && !attr.path().is_ident("status")
         });
     }
     Ok(quote! { #original })
@@ -985,36 +1004,34 @@ fn extract_field_kind(attrs: &[Attribute], ident: &Ident) -> syn::Result<FieldKi
                 try_parse_rename_arg(attr)?
             };
             return Ok(FieldKind::Path(rename));
-        }
-        if path.is_ident("query") {
+        } else if path.is_ident("query") {
             let rename = if matches!(attr.meta, syn::Meta::Path(_)) {
                 None
             } else {
                 try_parse_rename_arg(attr)?
             };
             return Ok(FieldKind::Query(rename));
-        }
-        if path.is_ident("header") {
+        } else if path.is_ident("header") {
             let rename = if matches!(attr.meta, syn::Meta::Path(_)) {
                 None
             } else {
                 try_parse_rename_arg(attr)?
             };
             return Ok(FieldKind::Header(rename));
-        }
-        if path.is_ident("json") {
+        } else if path.is_ident("json") {
             return Ok(FieldKind::Json);
-        }
-        if path.is_ident("form") {
+        } else if path.is_ident("form") {
             return Ok(FieldKind::Form);
-        }
-        if path.is_ident("body") {
+        } else if path.is_ident("body") {
             return Ok(FieldKind::Body);
+        } else if path.is_ident("status") {
+            return Ok(FieldKind::Status);
         }
     }
+
     Err(syn::Error::new(
         ident.span(),
-        "field must have one of: #[path], #[query], #[header], #[json], #[form], #[body]",
+        "field must be one of: #[path], #[query], #[header], #[json], #[form], #[body], #[status]",
     ))
 }
 

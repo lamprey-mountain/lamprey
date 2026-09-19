@@ -84,6 +84,7 @@ pub struct Edit {
     id: MessageId,
     channel_id: ChannelId,
     user_id: UserId,
+    session_id: Option<SessionId>,
     payload: Box<MessagePatch>,
     nonce: Option<String>,
     timestamp: Option<Time>,
@@ -151,10 +152,17 @@ impl Edit {
             id: message_id,
             channel_id,
             user_id,
+            session_id: None,
             payload: Box::new(body),
             nonce: None,
             timestamp: None,
         }
+    }
+
+    /// set the session id
+    pub fn session(mut self, session_id: Option<SessionId>) -> Self {
+        self.session_id = session_id;
+        self
     }
 
     /// set the nonce (idempotency-key)
@@ -170,7 +178,7 @@ impl Edit {
     }
 }
 
-fn calculate_requirements(create: &Create, channel: &Channel) -> Requirements {
+fn calculate_requirements_create(create: &Create, channel: &Channel) -> Requirements {
     let mut re = Requirements::new_channel(create.channel_id);
     re.slowmode_message();
 
@@ -189,6 +197,26 @@ fn calculate_requirements(create: &Create, channel: &Channel) -> Requirements {
     }
 
     if create.timestamp.is_some() {
+        re.permission(Permission::IntegrationsBridge);
+    }
+
+    re
+}
+
+fn calculate_requirements_edit(edit: &Edit, channel: &Channel, message: &Message) -> Requirements {
+    let mut re = Requirements::new_channel(edit.channel_id);
+
+    if channel.is_thread() {
+        re.permission(Permission::MessageCreateThread);
+    } else {
+        re.permission(Permission::MessageCreate);
+    }
+
+    // FIXME: require MessageAttachments if and only if attachments are being added
+    // FIXME: require MessageEmbeds if and only if embeds are being added
+    // how do i detect if an embed hasn't changed? do i need an id?
+
+    if edit.timestamp.is_some() {
         re.permission(Permission::IntegrationsBridge);
     }
 
@@ -256,6 +284,7 @@ impl ServiceMessages {
     }
 
     async fn create2_inner(&self, create: Create) -> Result<Message> {
+        // PERF: the caller likely already has the channel/user; maybe pass via Create?
         let srv = self.globals.services();
         let (channel, user) = futures::try_join!(
             srv.channels.get(create.channel_id, None),
@@ -286,7 +315,7 @@ impl ServiceMessages {
 
         perms.needs_unlocked().needs_slowmode_message_bypass();
 
-        let re = calculate_requirements(&create, &channel);
+        let re = calculate_requirements_create(&create, &channel);
         perms.needs_all_bits(re.get_permissions()).check()?;
 
         let removed_at = async {
@@ -642,7 +671,45 @@ impl ServiceMessages {
     }
 
     pub async fn edit2(&self, edit: Edit) -> Result<Message> {
+        todo!()
+    }
+
+    async fn edit2_inner(&self, edit: Edit) -> Result<Message> {
         let srv = self.globals.services();
+        let (channel, user, message) = futures::try_join!(
+            srv.channels.get(edit.channel_id, None),
+            srv.users.get(edit.user_id, None),
+            srv.messages.get(edit.channel_id, edit.id, None),
+        )?;
+
+        // 1. authorize
+        edit.payload.validate()?;
+
+        // if message author is a puppet, use the puppeteer's permissions
+        // NOTE: this behavior is intentionally different from old srv.messages.create()!
+        let auth_user_id = if let Some(puppet) = &user.puppet {
+            (*puppet.owner_id).into()
+        } else {
+            user.id
+        };
+
+        // TODO: use srv.perms.enforce(...) instead
+        let mut perms = srv
+            .perms
+            .for_channel3(Some(auth_user_id), channel.id)
+            .await?
+            .ensure_view()?;
+
+        // NOTE: removed channels shouldn't be visible normally in the first place? (make sure this exists in perm calc)
+        channel.ensure_unremoved()?;
+        channel.ensure_has_text()?;
+
+        // slowmode not needed to edit messages
+        perms.needs_unlocked();
+
+        let re = calculate_requirements_edit(&edit, &channel, &message);
+        perms.needs_all_bits(re.get_permissions()).check()?;
+
         todo!()
     }
 

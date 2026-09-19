@@ -987,7 +987,7 @@ pub async fn message_nudge(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes2!(message_create))
+        // .routes(routes2!(message_create))
         .routes(routes2!(message_get))
         .routes(routes2!(message_list))
         .routes(routes2!(message_list_deleted))

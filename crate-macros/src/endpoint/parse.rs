@@ -51,6 +51,7 @@ pub enum FieldKind {
     Json,
     Form,
     Body,
+    Status,
 }
 
 #[derive(Clone)]

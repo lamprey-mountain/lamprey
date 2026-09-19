@@ -10,10 +10,13 @@ use lamprey_macros::endpoint;
     scopes = [Full],
     permissions = [MessageCreate],
     permissions_optional = [MessageAttachments, MessageEmbeds, IntegrationsBridge],
-    response(CREATED, body = Message, description = "Create message success"),
+    response(CREATED, body = Message, description = "Message created"),
+    response(OK, body = Message, description = "Message already created"),
 )]
 pub mod message_create {
-    use crate::v1::types::{ChannelId, Message, MessageCreate};
+    use http::StatusCode;
+
+use crate::v1::types::{ChannelId, Message, MessageCreate};
 
     pub struct Request {
         #[path]
@@ -32,6 +35,9 @@ pub mod message_create {
     pub struct Response {
         #[json]
         pub message: Message,
+
+        #[status]
+        pub status: StatusCode,
     }
 }
 
