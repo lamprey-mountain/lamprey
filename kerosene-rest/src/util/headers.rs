@@ -6,19 +6,26 @@ use axum::{
     response::{IntoResponseParts, ResponseParts},
 };
 use common::v1::types::{UserId, util::Time};
-use headers::Authorization;
 use headers::authorization::Bearer;
+use headers::{
+    AcceptRanges, Authorization, CacheControl, ContentDisposition, ContentLength, ETag, IfRange,
+    LastModified,
+};
 use headers::{ETag, HeaderMapExt, IfMatch, IfModifiedSince, IfNoneMatch, LastModified};
 use http::request::Parts;
 use kerosene_core::error::ErrorCode;
 
 /// raw request headers for a request
+// PERF: find some way to make this struct smaller?
+#[derive(Debug, Default)]
 pub struct HeadersRequest {
+    /// authorization
     pub authorization: Option<Authorization<Bearer>>,
 
     /// x-reason
     pub reason: Option<String>,
 
+    /// idempotency-key
     pub idempotency_key: Option<String>,
 
     /// x-puppet-id
@@ -27,11 +34,19 @@ pub struct HeadersRequest {
     /// x-timestamp
     pub timestamp: Option<Time>,
 
+    /// if-match
     pub if_match: Option<IfMatch>,
+
+    /// if-none-match
     pub if_none_match: Option<IfNoneMatch>,
 
+    /// if-modified-since
     pub if_modified_since: Option<IfModifiedSince>,
 
+    /// if-range
+    pub if_range: Option<IfRange>,
+
+    /// content-type
     pub content_type: ContentType,
 
     /// user-agent
@@ -39,16 +54,35 @@ pub struct HeadersRequest {
 
     /// x-forwarded-for
     pub ip_addr: Option<IpAddr>,
+
+    /// range
+    pub range: Option<headers::Range>,
+    // TODO: handle these headers
+    // accept
+    // accept-encoding (probably not, this should be handled by the reverse proxy?)
+    // origin
 }
 
 /// raw response headers for a request
+#[derive(Debug, Default)]
 pub struct HeadersResponse {
     pub etag: Option<ETag>,
     pub last_modified: Option<LastModified>,
+    pub accept_ranges: Option<AcceptRanges>,
+    pub cache_control: Option<CacheControl>,
+    pub content_disposition: Option<ContentDisposition>,
+    pub content_length: Option<ContentLength>,
+    pub content_type: Option<headers::ContentType>,
+    pub etag: Option<ETag>,
+    pub last_modified: Option<LastModified>,
+    // TODO: handle these headers
+    // content-security-policy
+    // permissions-policy
+    // vary
 }
 
 /// parsed content type header
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ContentType {
     /// json body
     ///
@@ -76,6 +110,7 @@ pub enum ContentType {
     Invalid,
 
     /// missing content type header
+    #[default]
     Missing,
 }
 

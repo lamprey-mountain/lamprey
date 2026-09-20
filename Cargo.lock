@@ -5022,6 +5022,7 @@ dependencies = [
  "bitflags 2.13.1",
  "bytes",
  "ed25519-dalek",
+ "headers",
  "http",
  "jsonwebkey",
  "lamprey-macros",

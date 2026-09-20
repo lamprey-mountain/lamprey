@@ -1,12 +1,12 @@
 use crate::prelude::*;
-use routes::media_proxy as r;
 
-#[handler(r::media_get)]
-async fn media_get(req: Req<r::media_get::Endpoint>) -> Result<r::media_get::Response> {
-    // req.auth.ensure_scopes(&[Scope::Full])?;
-    // TODO
+// mod emoji;
+// mod gifv;
+pub mod media;
+// mod stream;
+// mod thumb;
+// mod trickplay;
 
-    Ok(r::media_get::Response {})
+pub fn register(r: &mut crate::Routes) {
+    media::register(r);
 }
-
-export_routes!(media_get);

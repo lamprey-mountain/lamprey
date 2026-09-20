@@ -16,7 +16,7 @@ use lamprey_macros::endpoint;
 pub mod message_create {
     use http::StatusCode;
 
-use crate::v1::types::{ChannelId, Message, MessageCreate};
+    use crate::v1::types::{ChannelId, Message, MessageCreate};
 
     pub struct Request {
         #[path]

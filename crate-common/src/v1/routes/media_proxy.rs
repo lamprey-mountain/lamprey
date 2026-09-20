@@ -13,6 +13,8 @@ use lamprey_macros::endpoint;
     response(OK, description = "success"),
 )]
 pub mod media_head {
+    use http::StatusCode;
+
     use crate::{v1::types::MediaId, v2::types::media::proxy::MediaQuery};
 
     pub struct Request {
@@ -23,7 +25,11 @@ pub mod media_head {
         pub query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        // TODO: return headers
+        #[status]
+        pub status: StatusCode,
+    }
 }
 
 /// Fetch media

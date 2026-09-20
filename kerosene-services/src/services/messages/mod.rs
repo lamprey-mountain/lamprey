@@ -12,6 +12,7 @@ use std::time::Duration;
 use tracing::warn;
 use uuid::Uuid;
 
+use common::v1::types::embed::{Embed, EmbedType};
 use common::v1::types::message::{Message, MessageType, MessageVersion, RepliesResponse};
 use common::v1::types::{
     Channel, ChannelId, ContextQuery, ContextResponse, EmbedCreate, EmbedId, Mentions,
@@ -20,7 +21,6 @@ use common::v1::types::{
     RoomId, SessionId, User,
 };
 use common::v1::types::{MediaId, UserId};
-use common::v1::types::embed::{Embed, EmbedType};
 
 use crate::prelude::*;
 use crate::types::{MentionsIds, MessageWithCounts};
