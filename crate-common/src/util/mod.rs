@@ -1,8 +1,10 @@
+pub mod body;
 pub mod member_list;
 pub mod registry;
 pub mod routes;
 
 // PERF: use a streamable body?
+// TODO: move to mod body?
 /// wrapper for body bytes
 #[derive(Clone)]
 pub struct FederationBody(pub ::bytes::Bytes);

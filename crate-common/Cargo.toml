@@ -11,8 +11,11 @@ base64 = "0.22.1"
 bitflags = { version = "2.13.1", features = ["serde"] }
 bytes = { version = "1.12.1", features = ["serde"] }
 ed25519-dalek = "2.2.0"
+futures = "0.3.34"
 headers = "0.4.1"
 http = "1.5.0"
+http-body = "1.1.0"
+http-body-util = "0.1.5"
 jsonwebkey = { version = "0.4.0", features = [] }
 lamprey-macros = { version = "0.1", path = "../crate-macros" }
 mediatype = { version = "0.20.0", features = ["serde"] }

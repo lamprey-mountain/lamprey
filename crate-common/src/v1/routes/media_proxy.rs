@@ -48,7 +48,7 @@ pub mod media_get {
     use bytes::Bytes;
     use http::{HeaderMap, StatusCode};
 
-    use crate::{v1::types::MediaId, v2::types::media::proxy::MediaQuery};
+    use crate::{util::body::Body, v1::types::MediaId, v2::types::media::proxy::MediaQuery};
 
     pub struct Request {
         #[path]
@@ -65,9 +65,8 @@ pub mod media_get {
         #[headers]
         pub headers: HeaderMap,
 
-        // PERF: use axum::body::Body
         #[body]
-        pub body: Bytes,
+        pub body: Body,
     }
 }
 
@@ -118,7 +117,7 @@ pub mod media_get_filename {
     use bytes::Bytes;
     use http::{HeaderMap, StatusCode};
 
-    use crate::{v1::types::MediaId, v2::types::media::proxy::MediaQuery};
+    use crate::{util::body::Body, v1::types::MediaId, v2::types::media::proxy::MediaQuery};
 
     pub struct Request {
         #[path]
@@ -138,9 +137,8 @@ pub mod media_get_filename {
         #[headers]
         pub headers: HeaderMap,
 
-        // PERF: use axum::body::Body
         #[body]
-        pub body: Bytes,
+        pub body: Body,
     }
 }
 

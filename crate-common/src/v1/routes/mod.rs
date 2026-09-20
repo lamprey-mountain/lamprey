@@ -1,4 +1,5 @@
-use bytes::Bytes;
+use crate::util::body::Body;
+use crate::v1::types::error::ApiError;
 use serde::de::DeserializeOwned;
 
 // export all routes
@@ -102,10 +103,10 @@ pub use path_param::{PathParam, PathParamError};
 
 /// Create an error response for invalid path matches
 // TODO: better error response
-pub fn invalid_path_error() -> http::Response<bytes::Bytes> {
+pub fn invalid_path_error() -> http::Response<Body> {
     http::Response::builder()
         .status(http::StatusCode::NOT_FOUND)
-        .body(bytes::Bytes::from("invalid path"))
+        .body(Body::from("invalid path"))
         .unwrap()
 }
 
@@ -132,8 +133,5 @@ pub trait ExtractableRequest: Sized {
     type Body: DeserializeOwned;
 
     /// extract full request from parts and deserialized Body
-    fn extract(
-        parts: http::request::Parts,
-        body: Self::Body,
-    ) -> Result<Self, http::Response<Bytes>>;
+    fn extract(parts: http::request::Parts, body: Self::Body) -> Result<Self, ApiError>;
 }

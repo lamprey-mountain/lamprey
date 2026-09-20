@@ -61,17 +61,10 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let extract_request_impl = {
         // TODO: better errors
         let error_expr = quote! {
-            ::http::Response::builder()
-                .status(::http::StatusCode::BAD_REQUEST)
-                .header(::http::header::CONTENT_TYPE, "application/json")
-                .body(::bytes::Bytes::from(
-                    ::serde_json::to_vec(&crate::v1::types::error::ApiError::with_message(
-                        crate::v1::types::error::ErrorCode::InvalidData,
-                        "extraction failed".to_string(),
-                    ))
-                    .unwrap(),
-                ))
-                .unwrap()
+            return Err(crate::v1::types::error::ApiError::with_message(
+                crate::v1::types::error::ErrorCode::InvalidData,
+                "extraction failed".to_string(),
+            ))
         };
         let (path_extraction, query_extraction, header_extraction) =
             build_parts_extraction(&args, &req_fields, &error_expr)?;
@@ -86,10 +79,10 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                 impl crate::v1::routes::ExtractableRequest for Request {
                     type Body = #ty;
 
-                    fn extract(
+                    async fn extract(
                         parts: ::http::request::Parts,
                         body: Self::Body,
-                    ) -> Result<Self, ::http::Response<::bytes::Bytes>> {
+                    ) -> crate::v1::types::error::ApiResult<Self> {
                         let path = parts.uri.path();
                         let query_str = parts.uri.query().unwrap_or("");
 
@@ -110,10 +103,10 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                 impl crate::v1::routes::ExtractableRequest for Request {
                     type Body = ();
 
-                    fn extract(
+                    async fn extract(
                         parts: ::http::request::Parts,
                         _body: Self::Body,
-                    ) -> Result<Self, http::Response<::bytes::Bytes>> {
+                    ) -> crate::v1::types::error::ApiResult<Self> {
                         let path = parts.uri.path();
                         let query_str = parts.uri.query().unwrap_or("");
 
@@ -223,26 +216,26 @@ fn build_encode_response_fn(
     if let Some(json_field) = json_field {
         let ident = &json_field.ident;
         Ok(quote! {
-            fn encode(self) -> ::http::Response<::bytes::Bytes> {
+            fn encode(self) -> ::http::Response<crate::util::body::Body> {
                 let json = ::serde_json::to_string(&self.#ident).unwrap();
                 let mut builder = ::http::Response::builder()
                     .status(#status_code)
                     .header(::http::header::CONTENT_TYPE, "application/json");
                 #headers_insertion
                 builder
-                    .body(::bytes::Bytes::from(json))
+                    .body(crate::util::body::Body::from(json))
                     .unwrap()
             }
         })
     } else if let Some(body_field) = body_field {
         let ident = &body_field.ident;
         Ok(quote! {
-            fn encode(self) -> ::http::Response<::bytes::Bytes> {
+            fn encode(self) -> ::http::Response<crate::util::body::Body> {
                 let mut builder = ::http::Response::builder()
                     .status(#status_code);
                 #headers_insertion
                 builder
-                    .body(::bytes::Bytes::from(self.#ident))
+                    .body(crate::util::body::Body::new(self.#ident))
                     .unwrap()
             }
         })
@@ -254,12 +247,12 @@ fn build_encode_response_fn(
         };
 
         Ok(quote! {
-            fn encode(self) -> ::http::Response<::bytes::Bytes> {
+            fn encode(self) -> ::http::Response<crate::util::body::Body> {
                 let mut builder = ::http::Response::builder()
                     .status(#status_code);
                 #headers_insertion
                 builder
-                    .body(::bytes::Bytes::new())
+                    .body(crate::util::body::Body::empty())
                     .unwrap()
             }
         })
@@ -356,17 +349,30 @@ fn build_extract_response_fn(
         let ty = &json_field.ty;
 
         Ok(quote! {
-            fn extract(resp: ::http::Response<::bytes::Bytes>) -> ::core::result::Result<Self, ::http::Response<::bytes::Bytes>> {
+            fn extract(resp: ::http::Response<crate::util::body::Body>) -> ::core::result::Result<Self, ::http::Response<crate::util::body::Body>> {
                 let status = resp.status();
                 #status_check
                 let (parts, body) = resp.into_parts();
                 #(#header_extraction)*
-                let #ident: #ty = ::serde_json::from_slice(&body)
+                let body_bytes = body.buffer().await.map_err(|_| {
+                        ::http::Response::builder()
+                            .status(::http::StatusCode::INTERNAL_SERVER_ERROR)
+                            .header(::http::header::CONTENT_TYPE, "application/json")
+                            .body(crate::util::body::Body::from(
+                                ::serde_json::to_vec(&crate::v1::types::error::ApiError::with_message(
+                                    crate::v1::types::error::ErrorCode::InvalidData,
+                                    "failed to buffer response body".to_string(),
+                                ))
+                                .unwrap(),
+                            ))
+                            .unwrap()
+                })?;
+                let #ident: #ty = ::serde_json::from_slice(&body_bytes)
                     .map_err(|e| {
                         ::http::Response::builder()
                             .status(::http::StatusCode::INTERNAL_SERVER_ERROR)
                             .header(::http::header::CONTENT_TYPE, "application/json")
-                            .body(::bytes::Bytes::from(
+                            .body(crate::util::body::Body::from(
                                 ::serde_json::to_vec(&crate::v1::types::error::ApiError::with_message(
                                     crate::v1::types::error::ErrorCode::InvalidData,
                                     format!("failed to parse response json: {}", e),
@@ -381,7 +387,7 @@ fn build_extract_response_fn(
     } else if let Some(body_field) = body_field {
         let ident = &body_field.ident;
         Ok(quote! {
-            fn extract(resp: ::http::Response<::bytes::Bytes>) -> ::core::result::Result<Self, ::http::Response<::bytes::Bytes>> {
+            fn extract(resp: ::http::Response<crate::util::body::Body>) -> ::core::result::Result<Self, ::http::Response<crate::util::body::Body>> {
                 let status = resp.status();
                 #status_check
                 let (parts, body) = resp.into_parts();
@@ -392,7 +398,7 @@ fn build_extract_response_fn(
         })
     } else {
         Ok(quote! {
-            fn extract(resp: ::http::Response<::bytes::Bytes>) -> ::core::result::Result<Self, ::http::Response<::bytes::Bytes>> {
+            fn extract(resp: ::http::Response<crate::util::body::Body>) -> ::core::result::Result<Self, ::http::Response<crate::util::body::Body>> {
                 let status = resp.status();
                 #status_check
                 let (parts, _body) = resp.into_parts();
@@ -513,33 +519,30 @@ fn build_encode_request_fn(
     let body_build = if let Some(f) = json_field {
         let ident = &f.ident;
         quote! {
-            let body: ::bytes::Bytes = ::serde_json::to_vec(&self.#ident)
-                .unwrap_or_else(|e| panic!("json serialization failed: {}", e))
-                .into();
+            let body = crate::util::body::Body::from(::serde_json::to_vec(&self.#ident)
+                .unwrap_or_else(|e| panic!("json serialization failed: {}", e)));
             req_builder = req_builder.header(::http::header::CONTENT_TYPE, "application/json");
         }
     } else if let Some(f) = form_field {
         let ident = &f.ident;
         quote! {
-            let body: ::bytes::Bytes = ::serde_urlencoded::to_string(&self.#ident)
-                .unwrap_or_else(|e| panic!("form serialization failed: {}", e))
-                .into_bytes()
-                .into();
+            let body = crate::util::body::Body::from(::serde_urlencoded::to_string(&self.#ident)
+                .unwrap_or_else(|e| panic!("form serialization failed: {}", e)));
             req_builder = req_builder.header(::http::header::CONTENT_TYPE, "application/x-www-form-urlencoded");
         }
     } else if let Some(f) = body_field {
         let ident = &f.ident;
         quote! {
-            let body: ::bytes::Bytes = self.#ident;
+            let body = crate::util::body::Body::new(self.#ident);
         }
     } else {
         quote! {
-            let body = ::bytes::Bytes::new();
+            let body = crate::util::body::Body::empty();
         }
     };
 
     Ok(quote! {
-        fn encode(self) -> ::http::Request<::bytes::Bytes> {
+        fn encode(self) -> ::http::Request<crate::util::body::Body> {
             #path_build
             #query_build
 
@@ -574,15 +577,17 @@ fn build_extract_request_fn(
         let ident = &f.ident;
         let ty = &f.ty;
         quote! {
-            let #ident: #ty = ::serde_json::from_slice(&body)
+            let body_bytes = body.buffer().await.map_err(|_| original_req.clone())?;
+            let #ident: #ty = ::serde_json::from_slice(&body_bytes)
                 .map_err(|_| original_req.clone())?;
         }
     } else if let Some(f) = form_field {
         let ident = &f.ident;
         let ty = &f.ty;
         quote! {
+            let body_bytes = body.buffer().await.map_err(|_| original_req.clone())?;
             let #ident: #ty = ::serde_urlencoded::from_str::<#ty>(
-                &std::str::from_utf8(&body).map_err(|_| original_req.clone())?
+                &std::str::from_utf8(&body_bytes).map_err(|_| original_req.clone())?
             ).map_err(|_| original_req.clone())?;
         }
     } else if let Some(f) = body_field {
@@ -597,7 +602,7 @@ fn build_extract_request_fn(
     let all_idents: Vec<_> = fields.iter().map(|f| &f.ident).collect();
 
     Ok(quote! {
-        fn extract(req: ::http::Request<::bytes::Bytes>) -> ::core::result::Result<Self, ::http::Request<::bytes::Bytes>> {
+        fn extract(req: ::http::Request<crate::util::body::Body>) -> ::core::result::Result<Self, ::http::Request<crate::util::body::Body>> {
             if req.method() != ::http::Method::#method_ident {
                 return Err(req);
             }

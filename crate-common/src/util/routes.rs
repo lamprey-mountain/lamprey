@@ -1,6 +1,9 @@
-use bytes::Bytes;
+use core::future::Future;
 
-use crate::v1::types::{Permission, oauth::Scope};
+use crate::{
+    util::body::Body,
+    v1::types::{Permission, error::ApiResult, oauth::Scope},
+};
 
 /// an http endpoint
 pub trait Endpoint {
@@ -73,20 +76,20 @@ pub enum Method {
 
 pub trait Request: Sized {
     /// encode this into an http request
-    fn encode(self) -> http::Request<Bytes>;
+    fn encode(self) -> http::Request<Body>;
 
     /// extract this from an http request
     ///
     /// on failure, returns the original http request
-    fn extract(req: http::Request<Bytes>) -> Result<Self, http::Request<Bytes>>;
+    fn extract(req: http::Request<Body>) -> impl Future<Output = ApiResult<Self>> + Send;
 }
 
 pub trait Response: Sized {
     /// encode this into an http response
-    fn encode(self) -> http::Response<Bytes>;
+    fn encode(self) -> http::Response<Body>;
 
     /// extract this from an http response
     ///
     /// on failure, returns the original http response
-    fn extract(req: http::Response<Bytes>) -> Result<Self, http::Response<Bytes>>;
+    fn extract(req: http::Response<Body>) -> impl Future<Output = ApiResult<Self>> + Send;
 }
