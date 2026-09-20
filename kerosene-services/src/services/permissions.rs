@@ -1,3 +1,5 @@
+use std::mem::needs_drop;
+
 use common::v1::types::defaults::EVERYONE_TRUSTED;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::oauth::ScopeBits;
@@ -29,6 +31,26 @@ pub struct ServicePermissions {
     globals: Globals,
     cache_is_mutual: Cache<(UserId, UserId), bool>,
     timeout_tasks: DashMap<(UserId, RoomId), JoinHandle<()>>,
+}
+
+/// how a syncer should route this event
+#[derive(Debug, Default, Clone)]
+pub enum AuthCheckResult {
+    /// don't send this event to the client
+    #[default]
+    Drop,
+
+    /// forward this event to the client
+    Forward,
+
+    /// client must be subscribed to one of these two resources
+    Subscribed {
+        /// if some, client must be explicitly subscribed to this room
+        room_id: Option<RoomId>,
+
+        /// if some, client must be explicitly subscribed to this channel
+        channel_id: Option<ChannelId>,
+    },
 }
 
 impl ServicePermissions {
@@ -177,7 +199,16 @@ impl ServicePermissions {
                     bits,
                     metadata: Permissions2Metadata {
                         rank: 0,
-                        member_state: MemberState::Lurker,
+                        member_state: if flags.can_view() {
+                            MemberState::Joined {
+                                muted: false,
+                                deafened: false,
+                                timed_out: false,
+                                quarantined: false,
+                            }
+                        } else {
+                            MemberState::Lurker
+                        },
                         channel_locked: false,
                         channel_slowmode_thread_active: false,
                         channel_slowmode_message_active: false,
@@ -391,65 +422,141 @@ impl ServicePermissions {
             .await
     }
 
+    /// evaluate authorization checks for a sync event
     pub async fn auth_check(
         &self,
         auth_check: &AuthCheck,
         session: &Session,
         connection_id: ConnectionId,
-    ) -> Result<bool> {
+    ) -> Result<AuthCheckResult> {
+        // PERF: surely there are ways to optimize this?
         let uid = session.user_id();
-        let should_send = match auth_check {
+        let srv = self.globals.services();
+        match auth_check {
             AuthCheck::Room(room_id) => {
-                // Use can_view_room directly on calculator for efficiency
-                let srv = self.globals.services();
-                let room = srv.rooms.load(*room_id).ready(true).await?;
-                let perms_calc = room.permissions();
-                perms_calc.query(uid, None).visible
+                let perms = self.for_room3(uid, *room_id).await?;
+                if !perms.visible {
+                    Ok(AuthCheckResult::Drop)
+                } else if perms.metadata.member_state != MemberState::Lurker {
+                    Ok(AuthCheckResult::Forward)
+                } else {
+                    Ok(AuthCheckResult::Subscribed {
+                        room_id: Some(*room_id),
+                        channel_id: None,
+                    })
+                }
             }
             AuthCheck::RoomPerm(room_id, perm) => {
-                // Use service method that returns old Permissions for compatibility
-                self.for_room2(uid, *room_id).await?.has(*perm)
+                let perms = self.for_room3(uid, *room_id).await?;
+                if !perms.visible || !perms.has(*perm) {
+                    Ok(AuthCheckResult::Drop)
+                } else if perms.metadata.member_state != MemberState::Lurker {
+                    Ok(AuthCheckResult::Forward)
+                } else {
+                    Ok(AuthCheckResult::Subscribed {
+                        room_id: Some(*room_id),
+                        channel_id: None,
+                    })
+                }
             }
             AuthCheck::Channel(channel_id) => {
-                let perms = self.for_channel2(uid, *channel_id).await?;
-                perms.has(Permission::ChannelView)
+                let chan = srv.channels.get(*channel_id, None).await?;
+                let perms = self.for_channel3(uid, *channel_id).await?;
+                if !perms.visible {
+                    Ok(AuthCheckResult::Drop)
+                } else if perms.metadata.member_state != MemberState::Lurker {
+                    Ok(AuthCheckResult::Forward)
+                } else {
+                    Ok(AuthCheckResult::Subscribed {
+                        room_id: chan.room_id,
+                        channel_id: Some(*channel_id),
+                    })
+                }
             }
             AuthCheck::ChannelPerm(channel_id, perm) => {
-                let perms = self.for_channel2(uid, *channel_id).await?;
-                perms.has(*perm)
+                let chan = srv.channels.get(*channel_id, None).await?;
+                let perms = self.for_channel3(uid, *channel_id).await?;
+                if !perms.visible || !perms.has(*perm) {
+                    Ok(AuthCheckResult::Drop)
+                } else if perms.metadata.member_state != MemberState::Lurker {
+                    Ok(AuthCheckResult::Forward)
+                } else {
+                    Ok(AuthCheckResult::Subscribed {
+                        room_id: chan.room_id,
+                        channel_id: Some(*channel_id),
+                    })
+                }
             }
             AuthCheck::User(target_user_id) => {
                 if let Some(user_id) = session.user_id() {
-                    user_id == *target_user_id
+                    if user_id == *target_user_id {
+                        Ok(AuthCheckResult::Forward)
+                    } else {
+                        Ok(AuthCheckResult::Drop)
+                    }
                 } else {
-                    false
+                    Ok(AuthCheckResult::Drop)
                 }
             }
             AuthCheck::UserVisible(target_user_id) => {
                 if let Some(user_id) = session.user_id() {
                     if user_id == *target_user_id {
-                        true
+                        Ok(AuthCheckResult::Forward)
+                    } else if self.is_mutual(user_id, *target_user_id).await? {
+                        Ok(AuthCheckResult::Forward)
                     } else {
-                        self.is_mutual(user_id, *target_user_id).await?
+                        Ok(AuthCheckResult::Drop)
                     }
                 } else {
-                    false
+                    Ok(AuthCheckResult::Drop)
                 }
             }
-            AuthCheck::Session(session_id) => session.id == *session_id,
-            AuthCheck::Connection(target_conn_id) => connection_id == *target_conn_id,
+            AuthCheck::Session(session_id) => {
+                if session.id == *session_id {
+                    Ok(AuthCheckResult::Forward)
+                } else {
+                    Ok(AuthCheckResult::Drop)
+                }
+            }
+            AuthCheck::Connection(target_conn_id) => {
+                if connection_id == *target_conn_id {
+                    Ok(AuthCheckResult::Forward)
+                } else {
+                    Ok(AuthCheckResult::Drop)
+                }
+            }
             AuthCheck::Any(checks) => {
-                // PERF: optimize; two `AuthCheck::Room`s should only fetch the room once
+                let mut needs_sub = None;
                 for check in checks {
-                    if Box::pin(self.auth_check(check, session, connection_id)).await? {
-                        return Ok(true);
+                    let result = Box::pin(self.auth_check(check, session, connection_id)).await?;
+                    match result {
+                        AuthCheckResult::Forward => {
+                            return Ok(AuthCheckResult::Forward);
+                        }
+                        AuthCheckResult::Subscribed {
+                            room_id,
+                            channel_id,
+                        } => {
+                            // TODO: handle this somehow?
+                            if needs_sub.is_some() {
+                                panic!("auth check doesn't support multiple needs_subs");
+                            }
+
+                            needs_sub = Some((room_id, channel_id));
+                        }
+                        AuthCheckResult::Drop => {}
                     }
                 }
-                false
+                if let Some((r, c)) = needs_sub {
+                    Ok(AuthCheckResult::Subscribed {
+                        room_id: r,
+                        channel_id: c,
+                    })
+                } else {
+                    Ok(AuthCheckResult::Drop)
+                }
             }
-        };
-
-        Ok(should_send)
+        }
     }
 
     /// enforce a set of requirements

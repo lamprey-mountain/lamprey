@@ -246,10 +246,7 @@ impl ConnectionSubscriptions {
                 new_keys.insert(key);
 
                 if !self.scripts.contains_key(&key) {
-                    let perms = srv
-                        .perms
-                        .for_channel2(user_id, script.channel_id)
-                        .await?;
+                    let perms = srv.perms.for_channel2(user_id, script.channel_id).await?;
                     perms.ensure(Permission::ChannelView)?;
 
                     let mut syncer = srv.scripts.create_syncer(self.conn_id);

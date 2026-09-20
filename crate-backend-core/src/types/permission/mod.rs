@@ -266,7 +266,7 @@ impl IntoIterator for Permissions {
 
 // --- NEW API ---
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MemberState {
     Lurker,
     Joined {

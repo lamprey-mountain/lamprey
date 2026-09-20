@@ -22,11 +22,11 @@ use tokio::sync::mpsc;
 use tracing::{Instrument, error, trace};
 
 use crate::{
-    globals::messaging::Broadcast, prelude::*,
-    services::connections::subscriptions::ConnectionSubscriptions,
+    globals::messaging::Broadcast,
+    prelude::*,
+    services::{connections::subscriptions::ConnectionSubscriptions, permissions::AuthCheckResult},
 };
 
-// TODO: impl Debug
 // PERF: maybe don't copy globals to every connection?
 // PERF: don't create a mpsc for connection, they can be expensive in terms of memory?
 pub struct Connection {
@@ -926,10 +926,35 @@ impl Connection {
     ) -> Result<()> {
         let srv = self.globals.services();
         let auth_check = AuthCheck::for_message(&msg);
-        let should_send = srv
+        let rule = srv
             .perms
             .auth_check(&auth_check, &self.session, self.id)
             .await?;
+
+        let should_send = match rule {
+            AuthCheckResult::Forward => true,
+            AuthCheckResult::Drop => false,
+            AuthCheckResult::Subscribed {
+                room_id,
+                channel_id,
+            } => {
+                let sub_room = if let Some(room_id) = room_id {
+                    self.streams
+                        .contains_key(&StreamSubscription::Room(room_id))
+                } else {
+                    false
+                };
+
+                let sub_channel = if let Some(channel_id) = channel_id {
+                    self.streams
+                        .contains_key(&StreamSubscription::Channel(channel_id))
+                } else {
+                    false
+                };
+
+                sub_room || sub_channel
+            }
+        };
 
         if should_send {
             let msg = match *msg {

@@ -27,6 +27,8 @@ pub enum AuthCheck {
     Channel(ChannelId),
 
     /// must have this permission in this channel
+    ///
+    /// allows lurkers
     ChannelPerm(ChannelId, Permission),
 
     /// must be this user
@@ -272,7 +274,9 @@ impl AuthCheck {
             MessageSync::AutomodRuleExecute { execution } => {
                 AuthCheck::RoomPerm(execution.room_id, Permission::RoomEdit)
             }
-            MessageSync::MemberListSync { connection_id, .. } => AuthCheck::Connection(*connection_id),
+            MessageSync::MemberListSync { connection_id, .. } => {
+                AuthCheck::Connection(*connection_id)
+            }
             MessageSync::InboxNotificationCreate { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxMarkRead { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxMarkUnread { user_id, .. } => AuthCheck::User(*user_id),
