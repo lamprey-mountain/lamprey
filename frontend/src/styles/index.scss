@@ -2777,6 +2777,57 @@ button.link {
 	height: 48px;
 }
 
+.media-page-wrapper {
+	grid-area: main;
+	overflow-y: auto;
+	display: grid;
+	place-items: center;
+}
+
+.media-page {
+	padding-bottom: 80px;
+}
+
+.media-page-details {
+	width: 100%;
+	height: 100%;
+	flex: 1;
+	min-height: 0;
+	background-color: $bg-150;
+	overflow-y: auto;
+	overflow-x: hidden;
+
+	& > .field {
+		margin: 8px;
+
+		.user {
+			cursor: pointer;
+
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+
+		.avatar {
+			display: inline-block;
+			height: 1em;
+			width: 1em;
+			margin: 0;
+			margin-right: 4px;
+			vertical-align: center;
+		}
+
+		.missing {
+			color: $fg-600;
+			font-style: italic;
+		}
+
+		.dim-1em {
+			color: $fg-600;
+		}
+	}
+}
+
 .user-profile-page-wrapper {
 	grid-area: main;
 	overflow-y: auto;

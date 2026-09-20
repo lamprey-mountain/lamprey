@@ -1,14 +1,7 @@
 import type { RouteSectionProps } from "@solidjs/router";
 import type { Channel } from "sdk";
 import type { JSX, ParentProps } from "solid-js";
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	Match,
-	Show,
-	Switch,
-} from "solid-js";
+import { createEffect, createMemo, Match, Show, Switch } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi, useChannels, useRooms } from "@/api";
 import { useCtx } from "@/app/context";
@@ -60,7 +53,6 @@ import { useCurrentRoomId } from "@/hooks/useCurrentRoomId";
 import { flags } from "@/lib/flags";
 import { MediaSidebar } from "@/media/Sidebar";
 import type { RoomT } from "@/types";
-import { icUser } from "@/utils/icons";
 
 export { RouteInvite } from "@/components/shared/Invite";
 export { RouteAuthorize } from "@/components/shared/Oauth";
@@ -82,7 +74,7 @@ export const AppLayoutMain = (props: ParentProps<RouteSectionProps>) => {
 			>
 				<div class="nav-tray">
 					<RoomNav />
-					<ChannelNav room_id={roomId()} />
+					<ChannelNav room_id={roomId() ?? undefined} />
 					<UserTray />
 				</div>
 			</Resizable>
@@ -195,11 +187,6 @@ export const RouteChannelSettings = (
 			</Show>
 		</>
 	);
-};
-
-type ChangesetSelection = {
-	start_seq: number;
-	end_seq: number;
 };
 
 const ThreadChatSidebar = (props: { thread_id: string }) => {
@@ -538,7 +525,7 @@ export const RouteHome = (
 	);
 };
 
-export function RouteInbox(p: RouteSectionProps): JSX.Element {
+export function RouteInbox(_p: RouteSectionProps): JSX.Element {
 	return (
 		<>
 			<Title title="inbox" />

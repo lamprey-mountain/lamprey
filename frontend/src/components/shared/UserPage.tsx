@@ -1,6 +1,6 @@
 import { debounce } from "@solid-primitives/scheduled";
 import { type RouteSectionProps, useNavigate } from "@solidjs/router";
-import { type EditorState, Plugin } from "prosemirror-state";
+import type { EditorState } from "prosemirror-state";
 import type { ApiError, PreferencesUser, UserWithRelationship } from "sdk";
 import {
 	createEffect,
@@ -29,7 +29,6 @@ import {
 	icDm,
 	icFriendAdd,
 	icFriendReject,
-	icMemberAdd,
 	icMenu,
 	icUser,
 } from "@/utils/icons";

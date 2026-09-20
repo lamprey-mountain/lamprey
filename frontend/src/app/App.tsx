@@ -1,25 +1,14 @@
 import type { RouteSectionProps } from "@solidjs/router";
 import { Route, Router } from "@solidjs/router";
-import {
-	type Component,
-	createEffect,
-	For,
-	from,
-	type JSX,
-	type ParentProps,
-	Show,
-} from "solid-js";
+import { type Component, type ParentProps, Show } from "solid-js";
 import { RootStoreContext } from "@/api";
 import { chatctx, useCtx } from "@/app/context";
 import { CalendarPopupProvider } from "@/components/features/calendar/Calendar";
-import { UserSettings } from "@/components/features/user_settings/index";
-import { useVoice, VoiceProvider } from "@/components/features/voice/context";
+import { VoiceProvider } from "@/components/features/voice/context";
 import { VoiceStreams } from "@/components/features/voice/VoiceStreams";
+import { RouteMedia } from "@/components/shared/MediaPage";
 import { RouteVerifyEmail } from "@/components/shared/VerifyEmail";
-import {
-	CurrentUserProvider,
-	useCurrentUser,
-} from "@/contexts/currentUser.tsx";
+import { CurrentUserProvider } from "@/contexts/currentUser.tsx";
 import { DisplayProvider } from "@/contexts/display.tsx";
 import {
 	AutocompleteProvider,
@@ -87,6 +76,7 @@ const App: Component = () => {
 					component={RouteChannel}
 				/>
 				<Route path="/search" component={RouteSearch} />
+				<Route path="/media/:media_id" component={RouteMedia} />
 			</Route>
 			<Route path="/settings/:page?" component={RouteSettings} />
 			<Route

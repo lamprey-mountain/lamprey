@@ -15,7 +15,7 @@ export type MediaViewProps = {
 	expanded?: boolean;
 };
 
-export function MediaView(props: MediaViewProps) {
+export const MediaView = (props: MediaViewProps) => {
 	const media = () => props.media;
 	const contentType = createMemo(() => props.media?.content_type);
 	const mainCt = createMemo(() => contentType()?.split("/")[0]);
@@ -52,4 +52,4 @@ export function MediaView(props: MediaViewProps) {
 			</Match>
 		</Switch>
 	);
-}
+};

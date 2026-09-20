@@ -203,7 +203,11 @@ export function OverlayProvider(props: ParentProps) {
 		const cleanup = autoUpdate(reference, floating, () => {
 			const v = userView();
 			computePosition(reference, floating, {
-				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+				middleware: [
+					flip(),
+					shift({ mainAxis: true, crossAxis: true, padding: 8 }),
+					offset({ mainAxis: 4 }),
+				],
 				placement:
 					v?.source === "message"
 						? "right-start"

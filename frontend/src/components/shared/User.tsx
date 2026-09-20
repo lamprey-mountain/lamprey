@@ -20,28 +20,29 @@ import {
 	Show,
 } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useApi, useRoomMembers, useUsers } from "@/api";
+import { useApi } from "@/api";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useUserPopout } from "@/contexts/mod.tsx";
 import { usePermissions } from "@/hooks/usePermissions";
+import type { UserT } from "@/types";
 
 // TODO: extract user name logic into a hook
 export function UserDisplayName(props: {
 	user_id: string;
 	room_id?: string;
 	thread_id?: string;
+	user?: UserT;
 	onClick?: boolean;
 	class?: string;
 }) {
-	const roomMembers2 = useRoomMembers();
-	const users2 = useUsers();
+	const api = useApi();
 	const { userView, setUserView } = useUserPopout();
 
 	const room_member = () =>
 		props.room_id
-			? roomMembers2.cache.get(`${props.room_id}:${props.user_id}`)
+			? api.room_members.cache.get(`${props.room_id}:${props.user_id}`)
 			: null;
-	const user = () => users2.cache.get(props.user_id);
+	const user = () => api.users.cache.get(props.user_id);
 
 	const name = () => room_member()?.override_name ?? user()?.name;
 
@@ -88,8 +89,9 @@ export const EditRoles = (props: {
 	room_id: string;
 }) => {
 	const api = useApi();
-	const roomMembers = useRoomMembers();
-	const member = roomMembers.use(() => `${props.room_id}:${props.user_id}`);
+	const member = api.room_members.use(
+		() => `${props.room_id}:${props.user_id}`,
+	);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
 	const [menuFloating, setMenuFloating] = createStore({
