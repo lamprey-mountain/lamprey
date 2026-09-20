@@ -294,7 +294,8 @@ impl MemberList {
                     .await
                     .unwrap_or_default();
                 return Some(MessageSync::MemberListSync {
-                    user_id: UserId::new(), // dummy
+                    // dummy connection_id, syncers will patch in the correct id
+                    connection_id: ConnectionId::new(),
 
                     room_id: match &self.key {
                         MemberListKey::Room(id) => Some(*id),
@@ -534,7 +535,9 @@ impl MemberList {
         let _ = self
             .events_tx
             .send(MemberListEvent::Broadcast(MessageSync::MemberListSync {
-                user_id: uuid::Uuid::nil().into(), // dummy
+                // dummy connection_id, syncers will patch in the correct id
+                connection_id: ConnectionId::new(),
+
                 room_id: self.key.room_id(),
                 channel_id: match &self.key {
                     MemberListKey::RoomThread(_, _, id) => Some(*id),

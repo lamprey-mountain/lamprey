@@ -776,8 +776,9 @@ pub enum MessageSync {
     // TODO: rename to MemberListDispatch
     // "Dispatch" should be the term for when MessageSync is wrapping another enum
     MemberListSync {
-        /// which user this list sync is for
-        user_id: UserId,
+        /// where to route this list sync to
+        connection_id: ConnectionId,
+
         room_id: Option<RoomId>,
         channel_id: Option<ChannelId>,
         ops: Vec<MemberListOp>,

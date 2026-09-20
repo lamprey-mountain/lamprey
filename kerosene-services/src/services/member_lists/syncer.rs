@@ -209,14 +209,9 @@ impl MemberListSyncer {
     /// Poll for new events
     #[tracing::instrument(skip(self), fields(connection_id = %self.conn_id, user_id = ?self.user_id))]
     pub async fn poll(&mut self) -> Result<MessageSync> {
-        let user_id = match self.user_id {
-            Some(uid) => uid,
-            None => std::future::pending().await,
-        };
-
         loop {
             if let Some(mut msg) = self.outbox.pop_front() {
-                self.patch_msg(&mut msg, user_id);
+                self.patch_msg(&mut msg);
                 return Ok(msg);
             }
 
@@ -269,16 +264,16 @@ impl MemberListSyncer {
         }
     }
 
-    fn patch_msg(&mut self, msg: &mut MessageSync, user_id: UserId) {
+    fn patch_msg(&mut self, msg: &mut MessageSync) {
         if let MessageSync::MemberListSync {
-            user_id: uid,
+            connection_id,
             room_id,
             channel_id,
             ops,
             ..
         } = msg
         {
-            *uid = user_id;
+            *connection_id = self.conn_id;
 
             for op in ops {
                 // NOTE: maybe i should remove from known_users/members when sending a delete op

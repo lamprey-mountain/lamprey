@@ -195,10 +195,19 @@ impl ConnectionSubscriptions {
         subscription: SyncSubscription,
         user_id: UserId,
     ) -> Result<()> {
+        self.set_subscription2(subscription, Some(user_id)).await
+    }
+
+    pub async fn set_subscription2(
+        &mut self,
+        subscription: SyncSubscription,
+        user_id: Option<UserId>,
+    ) -> Result<()> {
         let srv = self.globals.services();
 
         // document subscriptions
         if let Some(docs) = subscription.documents {
+            let user_id = user_id.ok_or(Error::UnauthSession)?;
             let mut new_keys: HashSet<EditContextId> = HashSet::new();
 
             for doc in docs {
@@ -239,12 +248,12 @@ impl ConnectionSubscriptions {
                 if !self.scripts.contains_key(&key) {
                     let perms = srv
                         .perms
-                        .for_channel2(Some(user_id), script.channel_id)
+                        .for_channel2(user_id, script.channel_id)
                         .await?;
                     perms.ensure(Permission::ChannelView)?;
 
                     let mut syncer = srv.scripts.create_syncer(self.conn_id);
-                    syncer.set_user_id(Some(user_id)).await;
+                    syncer.set_user_id(user_id).await;
                     syncer.set_context_id(script.channel_id).await?;
 
                     let tx = self.event_tx.clone();
@@ -303,13 +312,13 @@ impl ConnectionSubscriptions {
 
                 if !self.member_lists.contains_key(&key) {
                     let target = if let Some(room_id) = ml.room_id {
-                        let perms = srv.perms.for_room2(Some(user_id), room_id).await?;
+                        let perms = srv.perms.for_room2(user_id, room_id).await?;
                         if room_id == SERVER_ROOM_ID {
                             perms.ensure(Permission::ServerOversee)?;
                         }
                         Some(MemberListTarget::Room(room_id))
                     } else if let Some(channel_id) = ml.channel_id {
-                        let perms = srv.perms.for_channel2(Some(user_id), channel_id).await?;
+                        let perms = srv.perms.for_channel2(user_id, channel_id).await?;
                         perms.ensure(Permission::ChannelView)?;
                         Some(MemberListTarget::Channel(channel_id))
                     } else {
@@ -318,7 +327,7 @@ impl ConnectionSubscriptions {
 
                     if let Some(t) = target {
                         let mut syncer = srv.member_lists.create_syncer(self.conn_id);
-                        syncer.set_user_id(Some(user_id)).await;
+                        syncer.set_user_id(user_id).await;
                         syncer.set_query(t, &ml.ranges).await?;
 
                         let tx = self.event_tx.clone();

@@ -482,7 +482,7 @@ impl Connection {
                         channel_id,
                         initial_ranges,
                     } => {
-                        let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+                        let user_id = self.session.user_id();
 
                         let member_lists = vec![SyncSubscribeMemberList {
                             room_id,
@@ -491,7 +491,7 @@ impl Connection {
                         }];
 
                         self.subscriptions
-                            .set_subscription(
+                            .set_subscription2(
                                 SyncSubscription {
                                     member_lists: Some(member_lists),
                                     documents: None,
@@ -712,7 +712,7 @@ impl Connection {
                 thread_id,
                 ranges,
             } => {
-                let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
+                let user_id = self.session.user_id();
 
                 let member_lists = if room_id.is_some() || thread_id.is_some() {
                     vec![SyncSubscribeMemberList {
@@ -725,7 +725,7 @@ impl Connection {
                 };
 
                 self.subscriptions
-                    .set_subscription(
+                    .set_subscription2(
                         SyncSubscription {
                             member_lists: Some(member_lists),
                             documents: None,

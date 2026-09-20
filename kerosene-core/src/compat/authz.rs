@@ -272,7 +272,7 @@ impl AuthCheck {
             MessageSync::AutomodRuleExecute { execution } => {
                 AuthCheck::RoomPerm(execution.room_id, Permission::RoomEdit)
             }
-            MessageSync::MemberListSync { user_id, .. } => AuthCheck::User(*user_id),
+            MessageSync::MemberListSync { connection_id, .. } => AuthCheck::Connection(*connection_id),
             MessageSync::InboxNotificationCreate { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxMarkRead { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::InboxMarkUnread { user_id, .. } => AuthCheck::User(*user_id),
