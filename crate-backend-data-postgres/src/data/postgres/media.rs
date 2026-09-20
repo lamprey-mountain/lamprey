@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::federation::{FederationEpoch, Hostname, Remote};
@@ -197,6 +199,8 @@ impl DataMedia for Postgres {
 
         let mut parsed: MediaV2 = media.parse();
 
+        // PERF: don't do so many queries every time. maybe cache extra metadata in the db?
+        // ideally each piece of media (including links) only takes one query
         let links = query_as!(
             MediaLink,
             r#"
@@ -209,6 +213,82 @@ impl DataMedia for Postgres {
         .fetch_all(conn.ext())
         .await?;
 
+        let mut message_ids = Vec::new();
+        let mut message_version_ids = Vec::new();
+        let mut script_ids = Vec::new();
+        let mut script_version_ids = Vec::new();
+        for link in &links {
+            use crate::types::MediaLinkType as DbMediaLinkType;
+            match link.link_type {
+                DbMediaLinkType::Message => message_ids.push(link.target_id),
+                DbMediaLinkType::MessageVersion => message_version_ids.push(link.target_id),
+                DbMediaLinkType::Script => script_ids.push(link.target_id),
+                DbMediaLinkType::ScriptVersion => script_version_ids.push(link.target_id),
+                _ => {}
+            }
+        }
+
+        let mut message_map = HashMap::new();
+        if !message_ids.is_empty() {
+            let rows = query!(
+                "SELECT id, channel_id FROM message WHERE id = ANY($1)",
+                &message_ids
+            )
+            .fetch_all(conn.ext())
+            .await?;
+            for row in rows {
+                message_map.insert(row.id, row.channel_id);
+            }
+        }
+
+        let mut message_version_map = HashMap::new();
+        if !message_version_ids.is_empty() {
+            let rows = query!(
+                r#"
+                SELECT v.version_id, v.message_id, m.channel_id
+                FROM message_version v
+                JOIN message m ON v.message_id = m.id
+                WHERE v.version_id = ANY($1)
+                "#,
+                &message_version_ids
+            )
+            .fetch_all(conn.ext())
+            .await?;
+            for row in rows {
+                message_version_map.insert(row.version_id, (row.message_id, row.channel_id));
+            }
+        }
+
+        let mut script_map = HashMap::new();
+        if !script_ids.is_empty() {
+            let rows = query!(
+                "SELECT id, channel_id FROM redex WHERE id = ANY($1)",
+                &script_ids
+            )
+            .fetch_all(conn.ext())
+            .await?;
+            for row in rows {
+                script_map.insert(row.id, row.channel_id);
+            }
+        }
+
+        let mut script_version_map = HashMap::new();
+        if !script_version_ids.is_empty() {
+            let rows = query!(
+                r#"
+                SELECT version_id, script_id, channel_id
+                FROM redex_version
+                WHERE version_id = ANY($1)
+                "#,
+                &script_version_ids
+            )
+            .fetch_all(conn.ext())
+            .await?;
+            for row in rows {
+                script_version_map.insert(row.version_id, (row.script_id, row.channel_id));
+            }
+        }
+
         parsed.links = links
             .into_iter()
             .filter_map(|link| {
@@ -216,15 +296,29 @@ impl DataMedia for Postgres {
                 use common::v2::types::media::MediaLinkType as MediaLinkTypeV2;
 
                 match link.link_type {
-                    DbMediaLinkType::Message => match parsed.channel_id {
-                        Some(channel_id) => Some(MediaLinkTypeV2::Message {
-                            message_id: link.target_id.into(),
-                            channel_id,
-                        }),
-                        // FIXME: populate channel_id for old media
-                        None => None,
-                    },
-                    DbMediaLinkType::MessageVersion => None,
+                    DbMediaLinkType::Message => {
+                        let channel_id = parsed
+                            .channel_id
+                            .or_else(|| message_map.get(&link.target_id).copied().map(Into::into));
+                        match channel_id {
+                            Some(channel_id) => Some(MediaLinkTypeV2::Message {
+                                message_id: link.target_id.into(),
+                                channel_id,
+                            }),
+                            None => None,
+                        }
+                    }
+                    DbMediaLinkType::MessageVersion => {
+                        if let Some((message_id, channel_id)) = message_version_map.get(&link.target_id) {
+                            Some(MediaLinkTypeV2::MessageVersion {
+                                message_id: (*message_id).into(),
+                                channel_id: (*channel_id).into(),
+                                version_id: link.target_id.into(),
+                            })
+                        } else {
+                            None
+                        }
+                    }
                     DbMediaLinkType::UserAvatar => Some(MediaLinkTypeV2::UserAvatar {
                         user_id: link.target_id.into(),
                     }),
@@ -246,15 +340,29 @@ impl DataMedia for Postgres {
                     DbMediaLinkType::CustomEmoji => Some(MediaLinkTypeV2::CustomEmoji {
                         room_id: link.target_id.into(),
                     }),
-                    DbMediaLinkType::Script => match parsed.channel_id {
-                        Some(channel_id) => Some(MediaLinkTypeV2::Script {
-                            channel_id,
-                            script_id: link.target_id.into(),
-                        }),
-                        // FIXME: populate channel_id for old media
-                        None => None,
-                    },
-                    DbMediaLinkType::ScriptVersion => None,
+                    DbMediaLinkType::Script => {
+                        let channel_id = parsed
+                            .channel_id
+                            .or_else(|| script_map.get(&link.target_id).copied().map(Into::into));
+                        match channel_id {
+                            Some(channel_id) => Some(MediaLinkTypeV2::Script {
+                                channel_id,
+                                script_id: link.target_id.into(),
+                            }),
+                            None => None,
+                        }
+                    }
+                    DbMediaLinkType::ScriptVersion => {
+                        if let Some((script_id, channel_id)) = script_version_map.get(&link.target_id) {
+                            Some(MediaLinkTypeV2::ScriptVersion {
+                                script_id: (*script_id).into(),
+                                channel_id: (*channel_id).into(),
+                                version_id: link.target_id.into(),
+                            })
+                        } else {
+                            None
+                        }
+                    }
                     DbMediaLinkType::Document => Some(MediaLinkTypeV2::Document {
                         channel_id: link.target_id.into(),
                         document_id: link.target_id.into(),

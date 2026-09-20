@@ -8,6 +8,7 @@ use common::v1::types::document::{
     DocumentBranchState, DocumentPatch, DocumentTag, Wiki, WikiPatch,
 };
 use common::v1::types::email::EmailAddr;
+use common::v1::types::embed::Embed;
 use common::v1::types::federation::{Hostname, Remote, RemoteReq};
 use common::v1::types::harvest::Harvest;
 use common::v1::types::message::{Message, MessageVersion};
@@ -24,7 +25,6 @@ use common::v1::types::{
 };
 use common::v1::types::{ChannelSeq, RoomFeature};
 use common::v2::types::HarvestId;
-use common::v1::types::embed::Embed;
 use common::v2::types::media::{Media, MediaPatch};
 use lamprey_backend_core::data::DataScript;
 pub use lamprey_backend_core::data::{
@@ -178,6 +178,7 @@ pub trait DataRole {
 
 #[async_trait]
 pub trait DataMedia {
+    // TODO: add bulk fetch query
     async fn media_insert(&mut self, media: Media) -> Result<()>;
     async fn media_select(&mut self, media_id: MediaId) -> Result<Media>;
     async fn media_update(&mut self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
