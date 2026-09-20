@@ -1,5 +1,6 @@
-use crate::v1::types::{
-    ChannelId, EmbedId, MessageId, MessageVerId, RedexId, RedexVerId, RoomId, UserId,
+use crate::{
+    v1::types::{ChannelId, EmbedId, MessageId, MessageVerId, RedexId, RedexVerId, RoomId, UserId},
+    v2::types::EmojiId,
 };
 use lamprey_macros::record;
 
@@ -56,10 +57,7 @@ pub enum MediaLinkType {
     },
 
     /// this piece of media is used as a custom emoji
-    CustomEmoji {
-        room_id: RoomId,
-        // TODO: add emoji_id: EmojiId,
-    },
+    CustomEmoji { room_id: RoomId, emoji_id: EmojiId },
 
     /// this piece of media is a script
     ///

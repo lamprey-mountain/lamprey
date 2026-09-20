@@ -52,7 +52,9 @@ impl From<&MediaLinkType> for MediaCompatible {
             MediaLinkType::RoomIcon { room_id } => (DbMediaLinkType::RoomIcon, **room_id),
             MediaLinkType::RoomBanner { room_id } => (DbMediaLinkType::RoomBanner, **room_id),
             MediaLinkType::Embed { id } => (DbMediaLinkType::Embed, **id),
-            MediaLinkType::CustomEmoji { room_id } => (DbMediaLinkType::CustomEmoji, **room_id),
+            MediaLinkType::CustomEmoji { emoji_id, .. } => {
+                (DbMediaLinkType::CustomEmoji, **emoji_id)
+            }
             MediaLinkType::Script { script_id, .. } => (DbMediaLinkType::Script, **script_id),
             MediaLinkType::ScriptVersion { version_id, .. } => {
                 (DbMediaLinkType::ScriptVersion, **version_id)
@@ -269,7 +271,7 @@ fn link_room_id(link: &MediaLinkType) -> Option<RoomId> {
     match link {
         MediaLinkType::RoomIcon { room_id }
         | MediaLinkType::RoomBanner { room_id }
-        | MediaLinkType::CustomEmoji { room_id } => Some(*room_id),
+        | MediaLinkType::CustomEmoji { room_id, .. } => Some(*room_id),
         _ => None,
     }
 }

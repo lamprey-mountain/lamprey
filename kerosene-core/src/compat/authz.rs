@@ -355,7 +355,7 @@ impl AuthCheck {
                                 // For now, fall back to user who uploaded
                                 continue;
                             }
-                            MediaLinkType::CustomEmoji { room_id } => AuthCheck::Room(*room_id),
+                            MediaLinkType::CustomEmoji { room_id, .. } => AuthCheck::Room(*room_id),
                             MediaLinkType::RoomBanner { room_id } => AuthCheck::Room(*room_id),
                             MediaLinkType::Script { channel_id, .. } => {
                                 AuthCheck::Channel(*channel_id)

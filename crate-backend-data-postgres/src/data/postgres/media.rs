@@ -218,6 +218,7 @@ impl DataMedia for Postgres {
         let mut message_version_ids = Vec::new();
         let mut script_ids = Vec::new();
         let mut script_version_ids = Vec::new();
+        let mut custom_emoji_ids = Vec::new();
         for link in &links {
             use crate::types::MediaLinkType as DbMediaLinkType;
             match link.link_type {
@@ -225,6 +226,7 @@ impl DataMedia for Postgres {
                 DbMediaLinkType::MessageVersion => message_version_ids.push(link.target_id),
                 DbMediaLinkType::Script => script_ids.push(link.target_id),
                 DbMediaLinkType::ScriptVersion => script_version_ids.push(link.target_id),
+                DbMediaLinkType::CustomEmoji => custom_emoji_ids.push(link.target_id),
                 _ => {}
             }
         }
@@ -290,6 +292,21 @@ impl DataMedia for Postgres {
             }
         }
 
+        let mut custom_emoji_map = HashMap::new();
+        if !custom_emoji_ids.is_empty() {
+            let rows = query!(
+                "SELECT id, room_id FROM custom_emoji WHERE id = ANY($1)",
+                &custom_emoji_ids
+            )
+            .fetch_all(conn.ext())
+            .await?;
+            for row in rows {
+                if let Some(room_id) = row.room_id {
+                    custom_emoji_map.insert(row.id, room_id);
+                }
+            }
+        }
+
         parsed.links = links
             .into_iter()
             .filter_map(|link| {
@@ -340,9 +357,16 @@ impl DataMedia for Postgres {
                     DbMediaLinkType::Embed => Some(MediaLinkTypeV2::Embed {
                         id: link.target_id.into(),
                     }),
-                    DbMediaLinkType::CustomEmoji => Some(MediaLinkTypeV2::CustomEmoji {
-                        room_id: link.target_id.into(),
-                    }),
+                    DbMediaLinkType::CustomEmoji => {
+                        if let Some(room_id) = custom_emoji_map.get(&link.target_id) {
+                            Some(MediaLinkTypeV2::CustomEmoji {
+                                room_id: (*room_id).into(),
+                                emoji_id: link.target_id.into(),
+                            })
+                        } else {
+                            None
+                        }
+                    }
                     DbMediaLinkType::Script => {
                         let channel_id = parsed
                             .channel_id
