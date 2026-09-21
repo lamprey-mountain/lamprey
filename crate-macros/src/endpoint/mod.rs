@@ -206,16 +206,43 @@ fn build_encode_response_fn(
     };
 
     let json_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
+    let body_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Body));
+    let headers_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Headers));
+
+    let headers_insertion = if let Some(h) = headers_field {
+        let h_ident = &h.ident;
+        quote! {
+            for (name, value) in &self.#h_ident {
+                builder = builder.header(name, value);
+            }
+        }
+    } else {
+        quote! {}
+    };
 
     if let Some(json_field) = json_field {
         let ident = &json_field.ident;
         Ok(quote! {
             fn encode(self) -> ::http::Response<::bytes::Bytes> {
                 let json = ::serde_json::to_string(&self.#ident).unwrap();
-                ::http::Response::builder()
+                let mut builder = ::http::Response::builder()
                     .status(#status_code)
-                    .header(::http::header::CONTENT_TYPE, "application/json")
+                    .header(::http::header::CONTENT_TYPE, "application/json");
+                #headers_insertion
+                builder
                     .body(::bytes::Bytes::from(json))
+                    .unwrap()
+            }
+        })
+    } else if let Some(body_field) = body_field {
+        let ident = &body_field.ident;
+        Ok(quote! {
+            fn encode(self) -> ::http::Response<::bytes::Bytes> {
+                let mut builder = ::http::Response::builder()
+                    .status(#status_code);
+                #headers_insertion
+                builder
+                    .body(::bytes::Bytes::from(self.#ident))
                     .unwrap()
             }
         })
@@ -228,8 +255,10 @@ fn build_encode_response_fn(
 
         Ok(quote! {
             fn encode(self) -> ::http::Response<::bytes::Bytes> {
-                ::http::Response::builder()
-                    .status(#status_code)
+                let mut builder = ::http::Response::builder()
+                    .status(#status_code);
+                #headers_insertion
+                builder
                     .body(::bytes::Bytes::new())
                     .unwrap()
             }
@@ -266,6 +295,8 @@ fn build_extract_response_fn(
     };
 
     let json_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
+    let body_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Body));
+    let headers_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Headers));
     let header_fields: Vec<_> = fields
         .iter()
         .filter(|f| matches!(f.kind, FieldKind::Header(_)))
@@ -313,6 +344,13 @@ fn build_extract_response_fn(
 
     let header_idents: Vec<_> = header_fields.iter().map(|f| &f.ident).collect();
 
+    let headers_field_assignment = if let Some(h) = headers_field {
+        let ident = &h.ident;
+        quote! { #ident: parts.headers, }
+    } else {
+        quote! {}
+    };
+
     if let Some(json_field) = json_field {
         let ident = &json_field.ident;
         let ty = &json_field.ty;
@@ -337,7 +375,19 @@ fn build_extract_response_fn(
                             ))
                             .unwrap()
                     })?;
-                Ok(Response { #ident, #(#header_idents,)* #status_field_assignment })
+                Ok(Response { #ident, #(#header_idents,)* #headers_field_assignment #status_field_assignment })
+            }
+        })
+    } else if let Some(body_field) = body_field {
+        let ident = &body_field.ident;
+        Ok(quote! {
+            fn extract(resp: ::http::Response<::bytes::Bytes>) -> ::core::result::Result<Self, ::http::Response<::bytes::Bytes>> {
+                let status = resp.status();
+                #status_check
+                let (parts, body) = resp.into_parts();
+                #(#header_extraction)*
+                let #ident = body;
+                Ok(Response { #ident, #(#header_idents,)* #headers_field_assignment #status_field_assignment })
             }
         })
     } else {
@@ -347,7 +397,7 @@ fn build_extract_response_fn(
                 #status_check
                 let (parts, _body) = resp.into_parts();
                 #(#header_extraction)*
-                Ok(Response { #(#header_idents,)* #status_field_assignment })
+                Ok(Response { #(#header_idents,)* #headers_field_assignment #status_field_assignment })
             }
         })
     }
@@ -952,6 +1002,7 @@ fn build_clean_struct(mut original: ItemStruct) -> syn::Result<TokenStream> {
             !attr.path().is_ident("path")
                 && !attr.path().is_ident("query")
                 && !attr.path().is_ident("header")
+                && !attr.path().is_ident("headers")
                 && !attr.path().is_ident("json")
                 && !attr.path().is_ident("form")
                 && !attr.path().is_ident("body")
@@ -1018,6 +1069,8 @@ fn extract_field_kind(attrs: &[Attribute], ident: &Ident) -> syn::Result<FieldKi
                 try_parse_rename_arg(attr)?
             };
             return Ok(FieldKind::Header(rename));
+        } else if path.is_ident("headers") {
+            return Ok(FieldKind::Headers);
         } else if path.is_ident("json") {
             return Ok(FieldKind::Json);
         } else if path.is_ident("form") {

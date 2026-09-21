@@ -48,6 +48,7 @@ pub enum FieldKind {
     Path(Option<String>),
     Query(Option<String>),
     Header(Option<String>),
+    Headers,
     Json,
     Form,
     Body,

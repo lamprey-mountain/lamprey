@@ -13,7 +13,7 @@ use lamprey_macros::endpoint;
     response(OK, description = "success"),
 )]
 pub mod media_head {
-    use http::StatusCode;
+    use http::{HeaderMap, StatusCode};
 
     use crate::{v1::types::MediaId, v2::types::media::proxy::MediaQuery};
 
@@ -26,9 +26,11 @@ pub mod media_head {
     }
 
     pub struct Response {
-        // TODO: return headers
         #[status]
         pub status: StatusCode,
+
+        #[headers]
+        pub headers: HeaderMap,
     }
 }
 
@@ -42,6 +44,9 @@ pub mod media_head {
     response(OK, description = "success"),
 )]
 pub mod media_get {
+    use bytes::Bytes;
+    use http::{HeaderMap, StatusCode};
+
     use crate::{v1::types::MediaId, v2::types::media::proxy::MediaQuery};
 
     pub struct Request {
@@ -52,7 +57,17 @@ pub mod media_get {
         pub query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
+        #[headers]
+        pub headers: HeaderMap,
+
+        // PERF: use axum::body::Body
+        #[body]
+        pub body: Bytes,
+    }
 }
 
 /// Head media with filename
@@ -78,7 +93,10 @@ pub mod media_head_filename {
         pub query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Fetch media with filename
@@ -104,7 +122,10 @@ pub mod media_get_filename {
         pub query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Fetch thumbnail
@@ -133,7 +154,10 @@ pub mod thumb_get {
         pub media_query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Head thumbnail
@@ -162,7 +186,10 @@ pub mod thumb_head {
         pub media_query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Fetch gifv
@@ -185,7 +212,10 @@ pub mod gifv_get {
         pub query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Head gifv
@@ -208,7 +238,10 @@ pub mod gifv_head {
         pub query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Fetch emoji
@@ -237,7 +270,10 @@ pub mod emoji_get {
         pub media_query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Head emoji
@@ -266,7 +302,10 @@ pub mod emoji_head {
         pub media_query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Fetch trickplay
@@ -293,7 +332,10 @@ pub mod trickplay_get {
         pub media_query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Head trickplay
@@ -320,7 +362,10 @@ pub mod trickplay_head {
         pub media_query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Fetch stream
@@ -347,7 +392,10 @@ pub mod stream_get {
         pub media_query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
 
 /// Head stream
@@ -374,5 +422,8 @@ pub mod stream_head {
         pub media_query: MediaQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[headers]
+        pub headers: http::HeaderMap,
+    }
 }
