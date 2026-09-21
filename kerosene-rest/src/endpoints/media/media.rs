@@ -98,6 +98,7 @@ async fn head_filename(
 async fn get_filename(
     req: Req<routes::media_get_filename::Endpoint>,
 ) -> Result<routes::media_get_filename::Response> {
+    let globals = req.globals();
     let srv = req.services();
     let media_id = req.inner().media_id;
     let filename = &req.inner().filename;
@@ -109,11 +110,35 @@ async fn get_filename(
     }
 
     let meta = calculate_response_metadata(req.headers(), &MediaInfo::Media(&media))?;
+    let body = if meta.unmodified {
+        Body::empty()
+    } else {
+        // TODO: better errors
+        // PERF: cache MediaPaths
+        let paths = MediaPaths::new("media/");
+        let reader = globals
+            .blobs()
+            .reader(&paths.file(media.id))
+            .await
+            .map_err(|err| ServerError::Internal(Box::new(err)))?;
+        let stream = if let Some(range) = meta.range {
+            reader
+                .into_bytes_stream(range)
+                .await
+                .map_err(|err| ServerError::Internal(Box::new(err)))?
+        } else {
+            reader
+                .into_bytes_stream(..)
+                .await
+                .map_err(|err| ServerError::Internal(Box::new(err)))?
+        };
+        Body::from_stream(stream)
+    };
 
     Ok(routes::media_get_filename::Response {
         status: meta.status(),
         headers: meta.headers.into(),
-        body: todo!(),
+        body,
     })
 }
 
