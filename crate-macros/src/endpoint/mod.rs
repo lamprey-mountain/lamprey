@@ -714,6 +714,9 @@ fn build_path_match_pattern(template: &str) -> syn::Result<(TokenStream, TokenSt
     let mut bindings: Vec<TokenStream> = Vec::new();
 
     for segment in template.split('/') {
+        if segment.is_empty() {
+            continue;
+        }
         if let Some(param_name) = segment.strip_prefix('{').and_then(|s| s.strip_suffix('}')) {
             let raw_name = format_ident!("{}_raw", param_name);
             pattern_items.push(quote! { #raw_name });
@@ -723,7 +726,7 @@ fn build_path_match_pattern(template: &str) -> syn::Result<(TokenStream, TokenSt
         }
     }
 
-    let pattern = quote! { [#(#pattern_items),*] };
+    let pattern = quote! { [.., #(#pattern_items),*] };
     let bindings = quote! { (#(#bindings),*) };
 
     Ok((pattern, bindings))
