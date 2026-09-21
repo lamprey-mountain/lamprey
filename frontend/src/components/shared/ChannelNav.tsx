@@ -1,4 +1,4 @@
-import { A,  useParams } from "@solidjs/router";
+import { A, useParams } from "@solidjs/router";
 import type { Channel, ChannelType } from "sdk";
 import {
 	createEffect,
@@ -27,6 +27,7 @@ import { Icon } from "@/atoms/Icon";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useDisplay, useMenu } from "@/contexts/mod";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { useChannelDnd } from "@/hooks/useChannelDnd";
 import {
 	type NavItem,
@@ -42,7 +43,6 @@ import {
 import { getDate } from "@/utils/general";
 import { useVoice } from "../features/voice/context";
 import { Avatar, ChannelIcon } from "./User";
-import { useNavigate } from "@/contexts/router";
 
 type ChannelWithThreads = Channel & { threads?: Channel[] };
 

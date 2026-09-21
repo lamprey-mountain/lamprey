@@ -1,7 +1,15 @@
 import { Navigate, type RouteSectionProps } from "@solidjs/router";
-import type { Channel } from "sdk";
+import type { Channel, WebtransportClient } from "sdk";
 import type { JSX, ParentProps } from "solid-js";
-import { createEffect, createMemo, Match, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	Match,
+	on,
+	onCleanup,
+	Show,
+	Switch,
+} from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi, useChannels, useRooms } from "@/api";
 import { useCtx } from "@/app/context";
@@ -133,6 +141,31 @@ export const RouteRoom = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 	};
 
 	const roomCtx = getOrCreateRoomContext();
+
+	if (api.client.isWebtransport) {
+		const c = api.client as WebtransportClient;
+
+		// PERF: have a stream connection pool, close stream based on lru instead of immediately
+		createEffect(
+			on(
+				() => p.params.room_id,
+				(room_id) => {
+					if (!room_id) return;
+
+					const stream = c.subscribeRoom({
+						room_id,
+						onSync(_sync) {
+							// TODO: handle sync
+						},
+					});
+
+					onCleanup(() => {
+						stream.close();
+					});
+				},
+			),
+		);
+	}
 
 	return (
 		<Show when={roomCtx} fallback={<div>Loading room...</div>}>
@@ -400,6 +433,45 @@ export const RouteChannel = (
 
 		return room() && ch.room_id ? `${ch.name} - ${room()?.name}` : ch.name;
 	};
+
+	if (api.client.isWebtransport) {
+		const c = api.client as WebtransportClient;
+
+		// PERF: have a stream connection pool, close stream based on lru instead of immediately
+		createEffect(
+			on(
+				() => channel(),
+				(channel) => {
+					if (!channel) return;
+
+					const room_id = channel.room_id;
+					if (room_id) {
+						const roomStream = c.subscribeRoom({
+							room_id,
+							onSync(_sync) {
+								// TODO: handle sync
+							},
+						});
+
+						onCleanup(() => {
+							roomStream.close();
+						});
+					}
+
+					const channelStream = c.subscribeChannel({
+						channel_id: channel.id,
+						onSync(_sync) {
+							// TODO: handle sync
+						},
+					});
+
+					onCleanup(() => {
+						channelStream.close();
+					});
+				},
+			),
+		);
+	}
 
 	return (
 		<Show when={channelCtx()} fallback={<div>Loading channel...</div>}>

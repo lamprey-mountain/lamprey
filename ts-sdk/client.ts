@@ -259,12 +259,22 @@ export function createClient(opts: ClientOptions): Client {
 
 export type WebtransportClient = Client & {
 	subscribeDocument(options: DocumentOptions): Stream;
+	subscribeChannel(options: SubscribeChannelOptions): Stream;
+	subscribeRoom(options: SubscribeRoomOptions): Stream;
 };
 
 export type DocumentOptions = StreamOptions & {
 	channel_id: string;
 	branch_id: string;
 	state_vector?: string;
+};
+
+export type SubscribeChannelOptions = StreamOptions & {
+	channel_id: string;
+};
+
+export type SubscribeRoomOptions = StreamOptions & {
+	room_id: string;
 };
 
 export type StreamOptions = {
@@ -646,6 +656,28 @@ export function createWebtransportClient(
 				channel_id: options.channel_id,
 				branch_id: options.branch_id,
 				state_vector: options.state_vector,
+			});
+
+			return stream;
+		},
+
+		subscribeChannel(options: SubscribeChannelOptions): Stream {
+			const stream = subscribe(options);
+
+			stream.send({
+				type: "ChannelSubscribe",
+				channel_id: options.channel_id,
+			});
+
+			return stream;
+		},
+
+		subscribeRoom(options: SubscribeRoomOptions): Stream {
+			const stream = subscribe(options);
+
+			stream.send({
+				type: "RoomSubscribe",
+				room_id: options.room_id,
 			});
 
 			return stream;
