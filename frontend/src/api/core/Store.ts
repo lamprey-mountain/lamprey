@@ -33,7 +33,7 @@ export { MemberListService } from "../services/MemberListService";
 import type { Emitter } from "@solid-primitives/event-bus";
 import { ReactiveMap } from "@solid-primitives/map";
 import type { IDBPDatabase } from "idb";
-import type { UserWithRelationship, VoiceState } from "sdk";
+import type { UserWithRelationship, VoiceState, WebtransportClient } from "sdk";
 import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "@/lib/notifications/util";
 import { type ApiDB, clearApiDatabase } from "@/lib/sync/db";
 import { getDate } from "@/utils/general";
@@ -59,6 +59,7 @@ import { TagsService } from "../services/TagsService";
 import { ThreadsService } from "../services/ThreadsService";
 import { WebhooksService } from "../services/WebhooksService";
 import { BaseService } from "./Service";
+import { StreamManager } from "./StreamManager";
 
 const storeLog = logger.for("api/rooms");
 
@@ -111,6 +112,7 @@ export class RootStore {
 	scripts: ScriptsService;
 	scriptRuns: ScriptRunsService;
 	scriptLogs: ScriptLogsService;
+	streams: StreamManager | undefined;
 	voiceStates: ReactiveMap<string, VoiceState>;
 	typing: ReactiveMap<string, Set<string>>;
 	private typingTimeouts: Map<string, ReturnType<typeof setTimeout>> =
@@ -209,6 +211,9 @@ export class RootStore {
 		this.scripts = new ScriptsService(this, getDb);
 		this.scriptRuns = new ScriptRunsService(this, getDb);
 		this.scriptLogs = new ScriptLogsService(this, getDb);
+		if (this.client.isWebtransport) {
+			this.streams = new StreamManager(this.client as WebtransportClient);
+		}
 
 		this.voiceStates = new ReactiveMap();
 		this.typing = new ReactiveMap();

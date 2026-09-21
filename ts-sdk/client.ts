@@ -320,6 +320,8 @@ export function createWebtransportClient(
 		(msg: MessageSync, raw: MessageEnvelope) => void
 	>();
 	const format = opts.format ?? "json";
+	let clientReady: Promise<void> = new Promise(() => {});
+	let clientReadyRes: () => void;
 
 	function handleMessage(msg: MessageEnvelope) {
 		opts.onMessage?.(msg);
@@ -341,6 +343,7 @@ export function createWebtransportClient(
 				resume = { conn: msg.conn, seq: msg.seq };
 				state.set("ready");
 				flushQueue();
+				clientReadyRes();
 				break;
 			}
 			case "Resumed": {
@@ -414,6 +417,8 @@ export function createWebtransportClient(
 					],
 				},
 			);
+
+			clientReady = new Promise((res) => (clientReadyRes = res));
 
 			transport.closed.then((info) => {
 				// TODO(later): make client emit an event for this
@@ -505,17 +510,12 @@ export function createWebtransportClient(
 	/** open a new stream */
 	let streamIdCounter = 0;
 	const subscribe = (options: StreamOptions): Stream => {
-		// TODO: wait until transport is ready before opening stream (eg. if Hello hasn't been sent yet)
-		if (!transport) throw new Error("transport is closed");
-
 		const streamId = streamIdCounter++;
 		opts.onStreamOpen?.(streamId);
 
 		let writer: WritableStreamDefaultWriter | null = null;
 		let reader: ReadableStreamDefaultReader | null = null;
 		let closed = false;
-
-		const streamPromise = transport.createBidirectionalStream();
 
 		const queue: Array<unknown> = [];
 		let isQueueDraining = false;
@@ -560,7 +560,8 @@ export function createWebtransportClient(
 		};
 
 		(async () => {
-			const stream = await streamPromise;
+			await clientReady;
+			const stream = await transport!.createBidirectionalStream();
 			if (closed) {
 				// NOTE: maybe i want writable.abort() instead?
 				stream.writable.close();

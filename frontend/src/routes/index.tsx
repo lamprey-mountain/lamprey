@@ -130,25 +130,15 @@ export const RouteRoom = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 
 	const roomCtx = getOrCreateRoomContext();
 
-	if (api.client.isWebtransport) {
-		const c = api.client as WebtransportClient;
-
-		// PERF: have a stream connection pool, close stream based on lru instead of immediately
+	if (api.streams) {
 		createEffect(
 			on(
 				() => p.params.room_id,
 				(room_id) => {
 					if (!room_id) return;
 
-					const stream = c.subscribeRoom({
-						room_id,
-						onSync(_sync) {
-							// TODO: handle sync
-						},
-					});
-
-					onCleanup(() => {
-						stream.close();
+					api.streams.subscribeRoom(room_id, (_sync) => {
+						// TODO: handle sync
 					});
 				},
 			),
@@ -422,42 +412,22 @@ export const RouteChannel = (
 		return room() && ch.room_id ? `${ch.name} - ${room()?.name}` : ch.name;
 	};
 
-	if (api.client.isWebtransport) {
-		const c = api.client as WebtransportClient;
-
-		// PERF: have a stream connection pool, close stream based on lru instead of immediately
+	if (api.streams) {
 		createEffect(
-			on(
-				() => channel(),
-				(channel) => {
-					if (!channel) return;
+			on(channel, (channel) => {
+				if (!channel) return;
 
-					const room_id = channel.room_id;
-					if (room_id) {
-						const roomStream = c.subscribeRoom({
-							room_id,
-							onSync(_sync) {
-								// TODO: handle sync
-							},
-						});
-
-						onCleanup(() => {
-							roomStream.close();
-						});
-					}
-
-					const channelStream = c.subscribeChannel({
-						channel_id: channel.id,
-						onSync(_sync) {
-							// TODO: handle sync
-						},
+				const room_id = channel.room_id;
+				if (room_id) {
+					api.streams.subscribeRoom(room_id, (_sync) => {
+						// TODO: handle sync
 					});
+				}
 
-					onCleanup(() => {
-						channelStream.close();
-					});
-				},
-			),
+				api.streams.subscribeChannel(channel.id, (_sync) => {
+					// TODO: handle sync
+				});
+			}),
 		);
 	}
 
