@@ -54,7 +54,7 @@ impl Portal {
             return Ok(());
         };
 
-        let patch = types::RoomMemberPatch {
+        let patch = types::RoomMemberUpdate {
             override_name: Some(nick),
             override_description: None,
             mute: None,

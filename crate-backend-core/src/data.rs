@@ -10,9 +10,9 @@ use common::v1::types::{
     Channel, ChannelId, EmojiId, InviteCode, InvitePatch, InviteWithMetadata, MediaId, MessageId,
     MessageVerId, NotificationId, PaginationQuery, PaginationResponse, Permission,
     PermissionOverwriteType, Relationship, RelationshipPatch, RelationshipWithUserId, RoleId,
-    RoomBan, RoomId, RoomMember, RoomMemberOrigin, RoomMemberPatch, RoomMemberPut,
-    RoomMemberSearchAdvanced, RoomMemberSearchResponse, SearchDlqId, TagId, ThreadMember,
-    ThreadMemberPut, UserId, WebhookId,
+    RoomBan, RoomId, RoomMember, RoomMemberOrigin, RoomMemberPut, RoomMemberSearchAdvanced,
+    RoomMemberSearchResponse, RoomMemberUpdate, SearchDlqId, TagId, ThreadMember,
+    ThreadMemberCreate, UserId, WebhookId,
     application::{Application, Connection, Scopes},
     automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate},
     calendar::{
@@ -183,7 +183,7 @@ pub trait DataRoomMember {
         &mut self,
         room_id: RoomId,
         user_id: UserId,
-        patch: RoomMemberPatch,
+        patch: RoomMemberUpdate,
     ) -> Result<()>;
     async fn room_member_set_quarantined(
         &mut self,
@@ -516,7 +516,7 @@ pub trait DataThreadMember {
         &mut self,
         thread_id: ChannelId,
         user_id: UserId,
-        put: ThreadMemberPut,
+        put: ThreadMemberCreate,
     ) -> Result<()>;
     async fn thread_member_put_bulk(
         &mut self,

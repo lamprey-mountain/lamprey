@@ -16,9 +16,8 @@ fn bool_true() -> bool {
     true
 }
 
-// TODO: don't derive Eq
+/// a member in a room
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct RoomMember {
     pub user_id: UserId,
     pub room_id: RoomId,
@@ -70,7 +69,7 @@ pub struct Timeout {
 }
 
 #[record]
-#[derive(Default, PartialEq, Eq)]
+#[derive(Default)]
 pub struct RoomMemberPut {
     #[schema(required = false, min_length = 1, max_length = 64)]
     #[validate(length(min = 1, max = 64))]
@@ -96,8 +95,9 @@ pub struct RoomMemberPut {
 }
 
 #[record]
-#[derive(Default, PartialEq, Eq, Diff)]
-pub struct RoomMemberPatch {
+#[derive(Default, Diff)]
+#[diff(target = "RoomMember")]
+pub struct RoomMemberUpdate {
     #[schema(min_length = 1, max_length = 64)]
     #[validate(length(min = 1, max = 64))]
     #[serde(default, deserialize_with = "some_option")]
@@ -131,46 +131,6 @@ pub struct RoomMemberPatch {
     // ///
     // /// incompatible with timeout_until
     // pub timeout_for: Option<u64>,
-}
-
-/// represents a restriction on who can join the room
-#[record]
-pub struct RoomBan {
-    /// the user who is banned
-    pub user_id: UserId,
-
-    /// the supplied reason why this user should be banned
-    pub reason: Option<String>,
-
-    /// when the ban was created
-    pub created_at: Time,
-
-    /// when the ban expires
-    pub expires_at: Option<Time>,
-    // TODO: add type, remove user_id
-    // pub ty: RoomBanType,
-}
-
-#[record]
-#[serde(tag = "type")]
-pub enum RoomBanType {
-    /// ban a single user
-    User { user_id: UserId },
-
-    /// ban a server by hostname
-    Server { hostname: Hostname },
-
-    /// ban an ip cidr range
-    Ip { ip_addr: String },
-    // TODO: ban emails
-    // /// ban email addresses
-    // Email { email_pattern: String },
-    // TODO: option to require email address
-}
-
-#[record]
-pub struct RoomBanCreate {
-    pub expires_at: Option<Time>,
 }
 
 #[record]
@@ -208,38 +168,7 @@ pub enum RoomMemberOrigin {
     PublicJoin,
 }
 
-// in the future, there will be multiple types of bans. right now there are just user bans.
-// BanId would be changed from UserId to another uuid newtype
-// pub enum RoomBanType {
-//     User {
-//         /// the user who is banned
-//         user_id: UserId,
-//     },
-
-//     Ip {
-//         /// the ip address(es) which are banned
-//         cidr: IpCidr,
-//     },
-
-//     // for when federation is implemented
-//     Server {
-//         /// the host who is banned
-//         host: String,
-//     },
-// }
-
-/// create many bans at once
-#[record]
-pub struct RoomBanBulkCreate {
-    /// who to ban
-    #[serde(default)]
-    #[validate(length(min = 1, max = 256))]
-    pub target_ids: Vec<UserId>,
-
-    /// when the ban expires
-    pub expires_at: Option<Time>,
-}
-
+// TODO: move prune types to a separate module
 /// Room member prune
 #[record]
 pub struct PruneBegin {
@@ -338,7 +267,7 @@ pub struct RoomMemberDeleteQuery {
 }
 
 impl RoomMember {
-    pub fn apply_patch(&mut self, patch: RoomMemberPatch) {
+    pub fn apply_patch(&mut self, patch: RoomMemberUpdate) {
         if let Some(override_name) = patch.override_name {
             self.override_name = override_name;
         }
@@ -368,3 +297,6 @@ impl RoomMember {
         self.timeout_until = put.timeout_until;
     }
 }
+
+// TEMP: compat
+pub use crate::v1::types::room_ban::*;

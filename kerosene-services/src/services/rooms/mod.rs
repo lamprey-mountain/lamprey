@@ -5,7 +5,7 @@ use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntryType, ChannelId, ChannelType, MessageSync, MessageType, PaginationQuery, RoleId,
     Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, RoomType,
-    ThreadMemberPut, UserId,
+    ThreadMemberCreate, UserId,
 };
 use common::v2::types::{AUTOMOD_USER_ID, SERVER_ROOM_ID, SERVER_USER_ID};
 use dashmap::{DashMap, DashSet};

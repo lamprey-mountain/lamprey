@@ -95,7 +95,7 @@ pub mod room_member_add {
 )]
 pub mod room_member_update {
     use crate::v1::types::misc::UserIdReq;
-    use crate::v1::types::{RoomId, RoomMember, RoomMemberPatch};
+    use crate::v1::types::{RoomId, RoomMember, RoomMemberUpdate};
 
     pub struct Request {
         #[path]
@@ -105,7 +105,7 @@ pub mod room_member_update {
         pub user_id: UserIdReq,
 
         #[json]
-        pub patch: RoomMemberPatch,
+        pub patch: RoomMemberUpdate,
     }
 
     pub struct Response {

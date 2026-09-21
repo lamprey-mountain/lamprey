@@ -8,7 +8,7 @@ use common::v1::types::document::{DocumentBranchState, DocumentRevisionRef, Hist
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     MessageChannelRename, MessageDocumentMerged, MessageDocumentTag, MessageSync,
-    MessageThreadCreated, MessageType, Permission, ThreadMemberPut,
+    MessageThreadCreated, MessageType, Permission, ThreadMemberCreate,
 };
 use common::v2::types::ChannelId;
 use kerosene_core::types::documents::EditContextId;
@@ -390,7 +390,7 @@ async fn document_branch_fork(
         )
         .await?;
 
-        txn.thread_member_put(channel_id, user_id, ThreadMemberPut {})
+        txn.thread_member_put(channel_id, user_id, ThreadMemberCreate {})
             .await?;
 
         let message_id = txn

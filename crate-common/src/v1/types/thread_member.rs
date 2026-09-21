@@ -1,12 +1,9 @@
 use lamprey_macros::record;
 
 use crate::v1::types::util::{Diff, Time};
-use crate::v1::types::{RoomMember, User, UserId};
-
-use super::ChannelId;
+use crate::v1::types::{ChannelId, RoomMember, User, UserId};
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct ThreadMember {
     pub thread_id: ChannelId,
     pub user_id: UserId,
@@ -16,7 +13,6 @@ pub struct ThreadMember {
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct ThreadMemberMinimal {
     pub user_id: UserId,
 
@@ -34,19 +30,19 @@ impl From<ThreadMember> for ThreadMemberMinimal {
 }
 
 #[record]
-#[derive(Default, PartialEq, Eq)]
-pub struct ThreadMemberPut {
-    // remove?
+#[derive(Default)]
+pub struct ThreadMemberCreate {
+    // TODO: remove?
 }
 
 #[record]
-#[derive(PartialEq, Eq, Diff)]
-pub struct ThreadMemberPatch {
-    // remove?
+#[derive(Default, Diff)]
+#[diff(target = "ThreadMember")]
+pub struct ThreadMemberUpdate {
+    // TODO: remove?
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(::utoipa::IntoParams))]
 pub struct ChannelMemberSearch {
     pub query: String,

@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::{
     ChannelId, PaginationDirection, PaginationQuery, PaginationResponse, ThreadMember,
-    ThreadMemberPut, UserId,
+    ThreadMemberCreate, UserId,
 };
 use lamprey_backend_core::Error;
 use sqlx::{query, query_as, query_file_as, query_scalar};
@@ -40,7 +40,7 @@ impl DataThreadMember for Postgres {
         &mut self,
         channel_id: ChannelId,
         user_id: UserId,
-        _put: ThreadMemberPut,
+        _put: ThreadMemberCreate,
     ) -> Result<()> {
         let mut conn = self.acquire().await?;
         query!(

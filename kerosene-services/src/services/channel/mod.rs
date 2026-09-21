@@ -7,7 +7,7 @@ use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message,
     MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageChannelTagged, MessageId,
     MessageSync, MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomId,
-    ThreadMemberPut, UserId,
+    ThreadMemberCreate, UserId,
 };
 use common::v2::types::MessageVerId;
 use kerosene_core::error::{ApiError, ErrorCode};
@@ -623,7 +623,7 @@ impl ServiceChannels {
             .await?;
         }
 
-        data.thread_member_put(channel_id, user.id, ThreadMemberPut {})
+        data.thread_member_put(channel_id, user.id, ThreadMemberCreate {})
             .await?;
         data.commit().await?;
 
@@ -808,7 +808,7 @@ impl ServiceChannels {
 
         data.channel_create_with_id(thread_id, create).await?;
 
-        data.thread_member_put(thread_id, user.id, ThreadMemberPut::default())
+        data.thread_member_put(thread_id, user.id, ThreadMemberCreate::default())
             .await?;
         data.commit().await?;
 

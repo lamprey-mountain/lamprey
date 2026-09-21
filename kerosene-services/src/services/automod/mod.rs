@@ -1,7 +1,7 @@
 use common::{
     v1::types::{
         Mentions, MentionsUser, MessageAutomodExecution, MessageSync, MessageType, Permission,
-        RoomId, RoomMemberPatch,
+        RoomId, RoomMemberUpdate,
         automod::{
             AutomodAction, AutomodRuleExecution, AutomodRuleSummary, AutomodRuleTest,
             AutomodRuleTestRequest,
@@ -272,7 +272,7 @@ impl ServiceAutomod {
                     txn.room_member_patch(
                         ctx.room_id,
                         ctx.user_id,
-                        RoomMemberPatch {
+                        RoomMemberUpdate {
                             timeout_until: Some(Some(timeout_until)),
                             ..Default::default()
                         },

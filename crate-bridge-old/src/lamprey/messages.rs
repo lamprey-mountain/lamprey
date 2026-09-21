@@ -84,7 +84,7 @@ pub enum LampreyMessage {
     RoomMemberPatch {
         room_id: RoomId,
         user_id: UserId,
-        patch: types::RoomMemberPatch,
+        patch: types::RoomMemberUpdate,
     },
     RoomThreads {
         room_id: RoomId,

@@ -61,7 +61,7 @@ pub mod thread_member_get {
 )]
 pub mod thread_member_add {
     use crate::v1::types::misc::UserIdReq;
-    use crate::v1::types::{ChannelId, ThreadMember, ThreadMemberPut};
+    use crate::v1::types::{ChannelId, ThreadMember, ThreadMemberCreate};
 
     pub struct Request {
         #[path]
@@ -71,7 +71,7 @@ pub mod thread_member_add {
         pub user_id: UserIdReq,
 
         #[json]
-        pub member: ThreadMemberPut,
+        pub member: ThreadMemberCreate,
     }
 
     pub struct Response {

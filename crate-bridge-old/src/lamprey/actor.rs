@@ -360,7 +360,7 @@ impl LampreyHandle {
         &self,
         room_id: RoomId,
         user_id: UserId,
-        patch: types::RoomMemberPatch,
+        patch: types::RoomMemberUpdate,
     ) -> Result<types::RoomMember> {
         let response = self
             .lamprey_ref

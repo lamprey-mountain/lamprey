@@ -18,8 +18,8 @@ use common::v1::types::{
     EmojiId, Invite, InviteCode, InviteCreate, InvitePatch, MediaId, MessageId, MessageModerate,
     MessagePatch, MessageVerId, PermissionOverwriteSet, PinsReorder, PuppetCreate, Role,
     RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, Room, RoomBan,
-    RoomBanBulkCreate, RoomCreate, RoomId, RoomMember, RoomMemberPatch, RoomMemberPut, RoomPatch,
-    ThreadMember, ThreadMemberPut, User, UserId, UserPatch, UserWithRelationship,
+    RoomBanBulkCreate, RoomCreate, RoomId, RoomMember, RoomMemberPut, RoomMemberUpdate, RoomPatch,
+    ThreadMember, ThreadMemberCreate, User, UserId, UserPatch, UserWithRelationship,
     emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiSearchQuery},
     flume::FlumeDeltaCreate,
     misc::UserIdReq,
@@ -437,7 +437,7 @@ route!(post   "/api/v1/room/{room_id}/transfer-ownership"         => room_transf
 // Room Member Routes
 route!(get    "/api/v1/room/{room_id}/member/{user_id}"           => room_member_get(room_id: RoomId, user_id: UserIdReq) -> RoomMember);
 route!(put    "/api/v1/room/{room_id}/member/{user_id}"           => room_member_add(room_id: RoomId, user_id: UserIdReq) -> RoomMember, RoomMemberPut);
-route!(patch  "/api/v1/room/{room_id}/member/{user_id}"           => room_member_patch(room_id: RoomId, user_id: UserIdReq) -> RoomMember, RoomMemberPatch);
+route!(patch  "/api/v1/room/{room_id}/member/{user_id}"           => room_member_patch(room_id: RoomId, user_id: UserIdReq) -> RoomMember, RoomMemberUpdate);
 route!(delete "/api/v1/room/{room_id}/member/{user_id}"           => room_member_delete(room_id: RoomId, user_id: UserIdReq));
 
 // Room Ban Routes
@@ -448,7 +448,7 @@ route!(delete "/api/v1/room/{room_id}/ban/{user_id}"              => room_ban_re
 
 // Thread Member Routes
 route!(get    "/api/v1/thread/{thread_id}/member/{user_id}"       => thread_member_get(thread_id: ChannelId, user_id: UserIdReq) -> ThreadMember);
-route!(put    "/api/v1/thread/{thread_id}/member/{user_id}"       => thread_member_add(thread_id: ChannelId, user_id: UserIdReq) -> ThreadMember, ThreadMemberPut);
+route!(put    "/api/v1/thread/{thread_id}/member/{user_id}"       => thread_member_add(thread_id: ChannelId, user_id: UserIdReq) -> ThreadMember, ThreadMemberCreate);
 route!(delete "/api/v1/thread/{thread_id}/member/{user_id}"       => thread_member_delete(thread_id: ChannelId, user_id: UserIdReq));
 
 // User Routes

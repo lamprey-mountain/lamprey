@@ -374,7 +374,7 @@ impl EventHandler for Handler {
 
                 let ly = globals.lamprey_handle().await?;
 
-                let patch = common::v1::types::RoomMemberPatch {
+                let patch = common::v1::types::RoomMemberUpdate {
                     override_name: Some(new.nick.clone()),
                     override_description: None,
                     mute: None,

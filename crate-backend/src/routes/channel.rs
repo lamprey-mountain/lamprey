@@ -11,7 +11,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::{
     AuditLogEntryType, ChannelReorderItem, ChannelType, RelationshipType, RoomCreate,
-    RoomMemberOrigin, RoomType, SERVER_ROOM_ID, ThreadMemberPut,
+    RoomMemberOrigin, RoomType, SERVER_ROOM_ID, ThreadMemberCreate,
 };
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -174,7 +174,7 @@ async fn channel_create_dm(
 
     if let Some(recipients) = &json.recipients {
         for id in recipients {
-            data.thread_member_put(channel_id, *id, ThreadMemberPut {})
+            data.thread_member_put(channel_id, *id, ThreadMemberCreate {})
                 .await?;
             let thread_member = data.thread_member_get(channel_id, *id).await?;
             members.push(thread_member);

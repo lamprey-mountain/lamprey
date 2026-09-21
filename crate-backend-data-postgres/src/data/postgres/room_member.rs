@@ -3,8 +3,8 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, RoomBan, RoomMember,
-    RoomMemberOrigin, RoomMemberPatch, RoomMemberPut, RoomMemberSearchAdvanced,
-    RoomMemberSearchResponse, User,
+    RoomMemberOrigin, RoomMemberPut, RoomMemberSearchAdvanced, RoomMemberSearchResponse,
+    RoomMemberUpdate, User,
 };
 use sqlx::{query, query_as, query_file_as, query_scalar};
 use time::PrimitiveDateTime;
@@ -382,7 +382,7 @@ impl DataRoomMember for Postgres {
         &mut self,
         room_id: RoomId,
         user_id: UserId,
-        patch: RoomMemberPatch,
+        patch: RoomMemberUpdate,
     ) -> Result<()> {
         let mut tx = self.begin_tx().await?;
         let item = query_as!(

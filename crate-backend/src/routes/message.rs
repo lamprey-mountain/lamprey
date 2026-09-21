@@ -7,7 +7,7 @@ use common::v1::types::ack::{AckBulkItem, AckType};
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Time;
-use common::v1::types::{AuditLogEntryType, MessagePin, MessageType, ThreadMemberPut};
+use common::v1::types::{AuditLogEntryType, MessagePin, MessageType, ThreadMemberCreate};
 use kerosene_services::globals::server_state::ServerState;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -646,7 +646,7 @@ async fn message_pin(
     let user_id = auth.user.id;
     let tm = data.thread_member_get(req.channel_id, user_id).await;
     if tm.is_err() {
-        data.thread_member_put(req.channel_id, user_id, ThreadMemberPut::default())
+        data.thread_member_put(req.channel_id, user_id, ThreadMemberCreate::default())
             .await?;
         let thread_member = data.thread_member_get(req.channel_id, user_id).await?;
         let msg = MessageSync::ThreadMemberUpsert {

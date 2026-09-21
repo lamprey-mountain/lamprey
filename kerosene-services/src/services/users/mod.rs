@@ -1,5 +1,5 @@
 use common::v1::types::federation::Remote;
-use common::v1::types::{Channel, Permission, ThreadMemberPut};
+use common::v1::types::{Channel, Permission, ThreadMemberCreate};
 use common::v1::types::{User, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
@@ -133,9 +133,9 @@ impl ServiceUsers {
         if let Some(thread_id) = txn.dm_get(user_id, other_id).await? {
             debug!("dm thread id {thread_id}");
             let chan = srv.channels.get(thread_id, Some(user_id)).await?;
-            txn.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
+            txn.thread_member_put(thread_id, user_id, ThreadMemberCreate::default())
                 .await?;
-            txn.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
+            txn.thread_member_put(thread_id, other_id, ThreadMemberCreate::default())
                 .await?;
             txn.commit().await?;
             return Ok((chan, false));
@@ -165,9 +165,9 @@ impl ServiceUsers {
             })
             .await?;
         txn.dm_put(user_id, other_id, thread_id).await?;
-        txn.thread_member_put(thread_id, user_id, ThreadMemberPut::default())
+        txn.thread_member_put(thread_id, user_id, ThreadMemberCreate::default())
             .await?;
-        txn.thread_member_put(thread_id, other_id, ThreadMemberPut::default())
+        txn.thread_member_put(thread_id, other_id, ThreadMemberCreate::default())
             .await?;
         txn.commit().await?;
         let chan = srv.channels.get(thread_id, Some(user_id)).await?;
