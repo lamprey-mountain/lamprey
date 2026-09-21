@@ -97,6 +97,7 @@ pub fn create_router_metrics(globals: Globals) -> Router {
 /// create an axum router for the media server
 pub fn create_router_media(globals: Globals) -> Router {
     let (router, api) = kerosene_rest::Routes::new_media()
+        .with_audit_logging(globals.clone())
         .into_axum_openapi()
         .with_state(globals.clone())
         .split_for_parts();
