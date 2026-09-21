@@ -95,8 +95,24 @@ pub fn create_router_metrics(globals: Globals) -> Router {
 }
 
 /// create an axum router for the media server
-pub fn _create_router_media(_globals: Globals) -> Router {
-    todo!()
+pub fn create_router_media(globals: Globals) -> Router {
+    let (router, api) = kerosene_rest::Routes::new_media()
+        .into_axum_openapi()
+        .with_state(globals.clone())
+        .split_for_parts();
+
+    let router = router
+        .route("/api/docs.json", get(|| async { Json(api) }))
+        .route(
+            "/api/docs",
+            get(|| async { Html(include_str!("../scalar.html")) }),
+        );
+
+    router
+        .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
+        .layer(util::cors())
+        .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
+        .layer(TraceLayer::new_for_http())
 }
 
 /// create an axum router for redex http handlers

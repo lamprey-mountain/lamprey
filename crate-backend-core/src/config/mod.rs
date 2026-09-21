@@ -9,7 +9,7 @@ use std::{
 use http::HeaderValue;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
-use strum::{EnumIter, IntoEnumIterator};
+use strum::EnumIter;
 use url::Url;
 
 use crate::{
@@ -445,10 +445,9 @@ fn default_import_concurrency() -> usize {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-// Incompatible with deny_unknown_fields due to serde(flatten).
 pub struct ListenConfig {
-    #[serde(default = "ListenComponent::all_components")]
     pub components: HashSet<ListenComponent>,
+
     #[serde(flatten)]
     pub transport: ListenTransport,
 }
@@ -463,11 +462,11 @@ pub enum ListenComponent {
     /// the main rest api server, websocket sync, and
     Api,
 
-    // TODO: merge media serving here
-    // /// the media proxy server
-    // ///
-    // /// it's not recommended to have Api or Redex enabled with Media for the same listener
-    // Media,
+    /// the media proxy server
+    ///
+    /// it's not recommended to have Api or Redex enabled with Media for the same listener
+    Media,
+
     // TODO: merge redex serving here
     // /// http handlers for redexes
     // Redex,
@@ -476,25 +475,22 @@ pub enum ListenComponent {
     // NOTE: should i add a WellKnown variant? what about a Html/Ui variant?
 }
 
-impl ListenComponent {
-    fn all_components() -> HashSet<Self> {
-        Self::iter().collect()
-    }
-}
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 #[serde(deny_unknown_fields)]
 pub enum ListenTransport {
+    /// listen on a tcp socket
     Tcp {
         #[serde(default = "default_address")]
         address: IpAddr,
+
+        // NOTE: maybe i dont want to supply a default_port?
         #[serde(default = "default_port")]
         port: u16,
     },
-    Unix {
-        path: PathBuf,
-    },
+
+    /// listen on a unix socket
+    Unix { path: PathBuf },
 }
 
 impl Display for ListenTransport {
@@ -511,13 +507,22 @@ impl Display for ListenTransport {
 }
 
 fn default_listen() -> Vec<ListenConfig> {
-    vec![ListenConfig {
-        components: ListenComponent::all_components(),
-        transport: ListenTransport::Tcp {
-            address: default_address(),
-            port: default_port(),
+    vec![
+        ListenConfig {
+            components: HashSet::from_iter([ListenComponent::Api, ListenComponent::Metrics]),
+            transport: ListenTransport::Tcp {
+                address: default_address(),
+                port: default_port(),
+            },
         },
-    }]
+        ListenConfig {
+            components: HashSet::from_iter([ListenComponent::Media]),
+            transport: ListenTransport::Tcp {
+                address: default_address(),
+                port: default_port() + 1,
+            },
+        },
+    ]
 }
 
 fn default_address() -> IpAddr {

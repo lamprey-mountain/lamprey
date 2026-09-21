@@ -6,7 +6,8 @@ use tracing::{info, warn};
 use crate::{
     prelude::*,
     server::http::{
-        apply_default_middleware, create_router_api, create_router_metrics, serve_transport,
+        apply_default_middleware, create_router_api, create_router_media, create_router_metrics,
+        serve_transport,
     },
 };
 
@@ -58,6 +59,7 @@ impl Server {
             for c in &l.components {
                 let component_router = match c {
                     ListenComponent::Api => create_router_api(self.globals()),
+                    ListenComponent::Media => create_router_media(self.globals()),
                     ListenComponent::Metrics => create_router_metrics(self.globals()),
                 };
                 router = router.merge(component_router);
