@@ -1,4 +1,3 @@
-import { useNavigate } from "@solidjs/router";
 import { For, Match, Show, Switch } from "solid-js";
 import { useApi, useRoles, useRoomMembers, useUsers } from "@/api";
 import { Checkbox } from "@/atoms/icons";
@@ -6,6 +5,7 @@ import { useVoice } from "@/components/features/voice/context.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useMenu } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 

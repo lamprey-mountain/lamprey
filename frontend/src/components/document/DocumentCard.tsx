@@ -1,4 +1,3 @@
-import { useNavigate } from "@solidjs/router";
 import { getTimestampFromUUID } from "sdk";
 import { Show } from "solid-js";
 import { useCtx } from "@/app/context";
@@ -6,6 +5,7 @@ import { Markdown } from "@/atoms/Markdown";
 import { Time } from "@/atoms/Time";
 import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { useChannel } from "@/contexts/mod";
+import { useNavigate } from "@/contexts/router";
 import type { ChannelT } from "@/types";
 
 export type DocumentCardProps = {

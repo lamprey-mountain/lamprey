@@ -1,4 +1,4 @@
-import { A, useNavigate } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import { createMemo, createSignal, For, Show } from "solid-js";
@@ -13,6 +13,7 @@ import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { useUploads } from "@/contexts/uploads.tsx";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
 import { usePermissions } from "@/hooks/usePermissions";

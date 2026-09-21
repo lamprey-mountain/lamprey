@@ -1,7 +1,6 @@
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { debounce } from "@solid-primitives/scheduled";
-import { useNavigate } from "@solidjs/router";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import { useFloating } from "solid-floating-ui";
 import {
@@ -22,6 +21,7 @@ import { Time } from "@/atoms/Time";
 import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { usePermissions } from "@/hooks/usePermissions";
 import { icChevron } from "@/utils/icons";
 import { ChannelIcon } from "../shared/User";

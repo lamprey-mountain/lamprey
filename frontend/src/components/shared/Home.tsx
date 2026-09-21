@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import { Show } from "solid-js";
 import { useApi } from "@/api";
 import { AnimatedText } from "@/atoms/AnimatedText";
@@ -55,9 +54,9 @@ export const Home = () => {
 				</Show>
 			</Show>
 
-			<A target="_self" href="/api/docs">
+			<a target="_self" href="/api/docs">
 				api docs
-			</A>
+			</a>
 
 			<Show when={flags.has("search_refactor")}>
 				<Search2Testing />

@@ -1,16 +1,6 @@
-import { A, useNavigate } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import type { Channel } from "sdk";
-import {
-	createEffect,
-	createSignal,
-	For,
-	from,
-	Match,
-	on,
-	onCleanup,
-	Show,
-	Switch,
-} from "solid-js";
+import { createSignal, from, Match, onCleanup, Show, Switch } from "solid-js";
 import { useApi, useChannels, useRooms } from "@/api";
 import { useCtx } from "@/app/context";
 import { createPopup } from "@/app/popup";
@@ -20,8 +10,9 @@ import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { createTooltip } from "@/atoms/Tooltip";
 import { AvatarWithStatus } from "@/components/shared/User";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
-import { useModals, useUserPopout } from "@/contexts/mod.tsx";
-import type { ChannelT, UserT } from "@/types";
+import { useUserPopout } from "@/contexts/mod.tsx";
+import { useNavigate } from "@/contexts/router";
+import type { UserT } from "@/types";
 import {
 	icCamera,
 	icCancel,

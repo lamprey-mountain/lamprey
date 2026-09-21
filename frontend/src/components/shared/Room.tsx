@@ -1,4 +1,4 @@
-import { A, useNavigate } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import { type Channel, getTimestampFromUUID } from "sdk";
 import { createMemo, For, Show } from "solid-js";
 import { useChannels } from "@/api";
@@ -8,6 +8,7 @@ import { Time } from "@/atoms/Time";
 import { MemberList } from "@/components/shared/MemberList";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { usePermissions } from "@/hooks/usePermissions";
 import type { RoomT } from "@/types";
 import { ChannelIcon } from "./User.tsx";

@@ -1,5 +1,4 @@
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
-import { useNavigate } from "@solidjs/router";
 import fuzzysort from "fuzzysort";
 import { type Channel, createUpload, type Media, type Script } from "sdk";
 import { useFloating } from "solid-floating-ui";
@@ -9,6 +8,7 @@ import { useApi } from "@/api";
 import { Search } from "@/atoms/Search";
 import { createPanes } from "@/components/panes/context";
 import { useChannel } from "@/contexts/channel";
+import { useNavigate } from "@/contexts/router";
 import { ChatHeader } from "../chat/ChatHeader";
 import { createScriptContext, ScriptContext } from "./context";
 import { RunLogs, ScriptCode, ScriptInputs, ScriptPreview } from "./Panes";

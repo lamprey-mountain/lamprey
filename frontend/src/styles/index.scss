@@ -698,6 +698,7 @@
 	}
 
 	& > .content > .inner {
+		display: flex;
 		padding: 0;
 		border: solid 1px $sep-300;
 		max-width: initial;
@@ -705,6 +706,7 @@
 		border-radius: 4px;
 
 		& > .settings {
+			flex: 1;
 			grid-template-columns: 192px 1fr;
 
 			& > header {

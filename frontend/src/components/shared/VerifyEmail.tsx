@@ -1,6 +1,7 @@
-import { type RouteSectionProps, useNavigate } from "@solidjs/router";
+import type { RouteSectionProps } from "@solidjs/router";
 import { createSignal, type JSX, Show } from "solid-js";
 import { useCtx } from "@/app/context";
+import { useNavigate } from "@/contexts/router";
 
 export const RouteVerifyEmail = (
 	props: RouteSectionProps<unknown>,

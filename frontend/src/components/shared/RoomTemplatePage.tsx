@@ -1,4 +1,4 @@
-import { type RouteSectionProps, useNavigate } from "@solidjs/router";
+import type { RouteSectionProps } from "@solidjs/router";
 import {
 	createMemo,
 	createResource,
@@ -16,6 +16,7 @@ import { CheckboxOptionWithLabel } from "@/atoms/CheckboxOption";
 import { Icon } from "@/atoms/Icon";
 import { ChannelIconRoom } from "@/avatar/ChannelIcon";
 import { Avatar, Avatar2 } from "@/avatar/UserAvatar";
+import { useNavigate } from "@/contexts/router";
 import { icQuestion } from "@/utils/icons";
 import { Title } from "./Title";
 import { UserDisplayName } from "./User";

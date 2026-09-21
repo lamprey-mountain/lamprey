@@ -1,6 +1,7 @@
-import { useNavigate, useSearchParams } from "@solidjs/router";
+import { useSearchParams } from "@solidjs/router";
 import type { Message } from "sdk";
 import { For, Show } from "solid-js";
+import { useNavigate } from "@/contexts/router";
 import { useSearch } from "@/contexts/search";
 import { MessageToolbarMount } from "../features/chat/MessageToolbar";
 import { MessageToolbarProvider } from "../features/chat/message-toolbar-context";

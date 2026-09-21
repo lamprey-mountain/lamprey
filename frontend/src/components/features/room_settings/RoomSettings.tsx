@@ -1,4 +1,3 @@
-import { A, useNavigate } from "@solidjs/router";
 import { SERVER_ROOM_ID } from "sdk";
 import { type Component, createMemo, For, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
@@ -19,6 +18,7 @@ import {
 } from "@/components/features/room_settings/mod";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import type { RoomT } from "@/types";
@@ -280,7 +280,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 		<div class="settings">
 			<header>
 				{props.room.id === SERVER_ROOM_ID ? "admin settings" : "room settings"}:{" "}
-				{currentTab()?.name} <A href={`/room/${props.room.id}`}>back</A>
+				{currentTab()?.name} <a href={`/room/${props.room.id}`}>back</a>
 			</header>
 			<nav>
 				<ul>
@@ -318,11 +318,11 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 											<Match when={matches(tab, isPageTab)}>
 												{(item) => (
 													<li>
-														<A
+														<a
 															href={`/room/${props.room.id}/settings/${item().path}`}
 														>
 															{item().name}
-														</A>
+														</a>
 													</li>
 												)}
 											</Match>

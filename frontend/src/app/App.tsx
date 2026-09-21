@@ -1,6 +1,6 @@
 import type { MemoryHistory, RouteSectionProps } from "@solidjs/router";
-import { MemoryRouter, Route, Router } from "@solidjs/router";
-import { type Component, createSignal, type ParentProps, Show } from "solid-js";
+import { MemoryRouter, Route } from "@solidjs/router";
+import { type Component, createEffect, type ParentProps, Show } from "solid-js";
 import { RootStoreContext } from "@/api";
 import { chatctx, useCtx } from "@/app/context";
 import { CalendarPopupProvider } from "@/components/features/calendar/Calendar";
@@ -17,9 +17,14 @@ import {
 	TooltipProvider,
 	UserPopoutProvider,
 } from "@/contexts/mod.tsx";
-import { ModalsProvider, useModals, useSettingsModals } from "@/contexts/modal";
+import { ModalsProvider, useModals } from "@/contexts/modal";
 import { OverlayProvider } from "@/contexts/overlay.tsx";
 import { ReadTrackingProvider } from "@/contexts/read-tracking.tsx";
+import {
+	createRouter,
+	RouterProvider,
+	useSettingsModals,
+} from "@/contexts/router";
 import { SearchProvider } from "@/contexts/search";
 import { SlashCommandsProvider } from "@/contexts/slash-commands.tsx";
 import { UploadsProvider } from "@/contexts/uploads.tsx";
@@ -45,20 +50,23 @@ import {
 } from "@/routes";
 
 const App: Component = () => {
-	const [location, setLocation] = createSignal(window.location.pathname);
+	const router = createRouter();
+	const listeners = new Set<(path: string) => void>();
+
+	createEffect(() => {
+		for (const l of listeners) {
+			l(router.main);
+		}
+	});
+
 	const history: MemoryHistory = {
-		get: location,
+		get: () => router.main,
 		go(delta) {
 			window.history.go(delta);
 		},
 		listen(listener) {
-			const handler = () => {
-				const path = window.location.pathname;
-				setLocation(path);
-				listener(path);
-			};
-			window.addEventListener("popstate", handler);
-			return () => window.removeEventListener("popstate", handler);
+			listeners.add(listener);
+			return () => listeners.delete(listener);
 		},
 		set(change) {
 			const value = typeof change === "string" ? change : change.value;
@@ -67,44 +75,45 @@ const App: Component = () => {
 			} else {
 				window.history.pushState(null, "", value);
 			}
-			setLocation(value);
 		},
 	};
 
 	return (
-		<MemoryRouter history={history} root={AppBootstrap}>
-			<Route path="/" component={AppLayoutMain}>
-				<Route path="/" component={RouteHome} />
-				<Route path="/inbox" component={RouteInbox} />
-				<Route path="/friends" component={RouteFriends} />
-				<Route path="/room/:room_id" component={RouteRoom} />
-				<Route
-					path="/room-template/:template_id"
-					component={RouteRoomTemplate}
-				/>
-				<Route path="/channel/:channel_id" component={RouteChannel} />
-				<Route
-					path="/channel/:channel_id/message/:message_id"
-					component={RouteChannel}
-				/>
-				<Route
-					path="/channel/:channel_id/script/:script_id"
-					component={RouteChannel}
-				/>
-				<Route path="/user/:user_id" component={RouteUser} />
-				<Route path="/invite/:code" component={RouteInvite} />
-				<Route path="/thread/:channel_id" component={RouteChannel} />
-				<Route
-					path="/thread/:channel_id/message/:message_id"
-					component={RouteChannel}
-				/>
-				<Route path="/search" component={RouteSearch} />
-				<Route path="/media/:media_id" component={RouteMedia} />
-			</Route>
-			<Route path="/verify-email" component={RouteVerifyEmail} />
-			<Route path="/authorize" component={RouteAuthorize} />
-			<Route path="*404" component={RouteNotFound} />
-		</MemoryRouter>
+		<RouterProvider router={router}>
+			<MemoryRouter history={history} root={AppBootstrap}>
+				<Route path="/" component={AppLayoutMain}>
+					<Route path="/" component={RouteHome} />
+					<Route path="/inbox" component={RouteInbox} />
+					<Route path="/friends" component={RouteFriends} />
+					<Route path="/room/:room_id" component={RouteRoom} />
+					<Route
+						path="/room-template/:template_id"
+						component={RouteRoomTemplate}
+					/>
+					<Route path="/channel/:channel_id" component={RouteChannel} />
+					<Route
+						path="/channel/:channel_id/message/:message_id"
+						component={RouteChannel}
+					/>
+					<Route
+						path="/channel/:channel_id/script/:script_id"
+						component={RouteChannel}
+					/>
+					<Route path="/user/:user_id" component={RouteUser} />
+					<Route path="/invite/:code" component={RouteInvite} />
+					<Route path="/thread/:channel_id" component={RouteChannel} />
+					<Route
+						path="/thread/:channel_id/message/:message_id"
+						component={RouteChannel}
+					/>
+					<Route path="/search" component={RouteSearch} />
+					<Route path="/media/:media_id" component={RouteMedia} />
+				</Route>
+				<Route path="/verify-email" component={RouteVerifyEmail} />
+				<Route path="/authorize" component={RouteAuthorize} />
+				<Route path="*404" component={RouteNotFound} />
+			</MemoryRouter>
+		</RouterProvider>
 	);
 };
 

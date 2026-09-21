@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import type { Channel, ChannelType } from "sdk";
 import { type Component, For, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
@@ -118,7 +117,7 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 		<div class="settings">
 			<header>
 				channel settings: {currentTab()?.name}{" "}
-				<A href={`/channel/${props.channel.id}`}>back</A>
+				<a href={`/channel/${props.channel.id}`}>back</a>
 			</header>
 			<nav>
 				<ul>
@@ -150,11 +149,11 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 									</Match>
 									<Match when={true}>
 										<li>
-											<A
+											<a
 												href={`/channel/${props.channel.id}/settings/${tab.path}`}
 											>
 												{tab.name}
-											</A>
+											</a>
 										</li>
 									</Match>
 								</Switch>

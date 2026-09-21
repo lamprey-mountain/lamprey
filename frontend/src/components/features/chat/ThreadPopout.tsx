@@ -1,5 +1,4 @@
 import { debounce } from "@solid-primitives/scheduled";
-import { useNavigate } from "@solidjs/router";
 import { go } from "fuzzysort";
 import type { Channel } from "sdk";
 import {
@@ -14,6 +13,7 @@ import { useChannels, usePreferences, useThreads } from "@/api";
 import { useCtx } from "@/app/context";
 import { ChannelIcon } from "@/components/shared/User";
 import { useModals } from "@/contexts/modal.tsx";
+import { useNavigate } from "@/contexts/router";
 
 export const ThreadPopout = (props: { channel_id: string }) => {
 	const threads2 = useThreads();

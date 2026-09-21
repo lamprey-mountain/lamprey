@@ -1,4 +1,3 @@
-import { useNavigate } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import type { Channel, ChannelType } from "sdk";
 import { createSignal, For, Show } from "solid-js";
@@ -9,6 +8,7 @@ import { serializeToMarkdown } from "@/components/features/editor/serializer.ts"
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useChannel } from "@/contexts/mod";
+import { useNavigate } from "@/contexts/router";
 import { useUploads } from "@/contexts/uploads";
 import { RenderUploadItem } from "../chat/Input";
 

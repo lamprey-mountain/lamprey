@@ -1,8 +1,8 @@
-import { useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { useApi } from "@/api/mod.ts";
 import { CheckboxOptionWithLabel } from "@/atoms/CheckboxOption.tsx";
 import { useModals } from "@/contexts/modal.tsx";
+import { useNavigate } from "@/contexts/router";
 import { Modal } from "./mod.tsx";
 
 export const ModalThreadCreate = (props: {

@@ -1,6 +1,5 @@
 import { autoUpdate, computePosition, offset, shift } from "@floating-ui/dom";
 import { debounce } from "@solid-primitives/scheduled";
-import { useNavigate } from "@solidjs/router";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { Portal } from "solid-js/web";
@@ -12,6 +11,7 @@ import { getStatusPath } from "@/avatar/UserAvatar";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useMenu } from "@/contexts/menu";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { useUserPopout } from "@/contexts/user-popout";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getThumbFromId } from "@/media/util";

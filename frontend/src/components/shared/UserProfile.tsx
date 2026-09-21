@@ -1,5 +1,4 @@
 import { debounce } from "@solid-primitives/scheduled";
-import { useNavigate } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import {
 	createEffect,
@@ -21,6 +20,7 @@ import { useAutocomplete } from "@/contexts/autocomplete";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useMenu } from "@/contexts/menu";
+import { useNavigate } from "@/contexts/router";
 import { useUserPopout } from "@/contexts/user-popout";
 import { usePermissions } from "@/hooks/usePermissions";
 import { getThumbFromId } from "@/media/util";

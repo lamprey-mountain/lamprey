@@ -1,7 +1,7 @@
-import { useNavigate } from "@solidjs/router";
 import type { Channel } from "sdk";
 import { useApi, useChannels } from "@/api";
 import { Checkbox } from "@/atoms/icons";
+import { useNavigate } from "@/contexts/router.tsx";
 import { Item, Menu, Separator } from "./Parts.tsx";
 
 export function VoiceMenu(props: { channel: Channel }) {

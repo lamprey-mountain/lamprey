@@ -1,5 +1,4 @@
 import { debounce } from "@solid-primitives/scheduled";
-import { useNavigate } from "@solidjs/router";
 import { createResource, createSignal, Match, Show, Switch } from "solid-js";
 import type { Invite, InviteTarget } from "ts-sdk";
 import { useApi } from "@/api";
@@ -8,6 +7,7 @@ import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown";
 import { RoomIcon } from "@/avatar/RoomIcon";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { createResizeTransition } from "@/hooks/createResizeTransition";
 import { getThumbFromId } from "@/media/util";
 import { icChevron, icWarning } from "@/utils/icons";

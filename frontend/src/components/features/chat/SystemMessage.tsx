@@ -1,4 +1,3 @@
-import { useNavigate } from "@solidjs/router";
 import type {
 	AutomodAction,
 	Message as MessageT,
@@ -19,6 +18,7 @@ import { Markdown } from "@/atoms/Markdown.tsx";
 import { Time } from "@/atoms/Time";
 import { Avatar } from "@/avatar/UserAvatar.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useNavigate } from "@/contexts/router.tsx";
 import { MARK_END, MARK_START, PUA_REGEX } from "@/utils/diff.ts";
 import { getDate } from "@/utils/general.tsx";
 import {
@@ -31,7 +31,6 @@ import {
 	icPin,
 	icQuestion,
 	icReply,
-	icSword,
 	icThread,
 } from "@/utils/icons.ts";
 import { useVoice } from "../voice/context.tsx";

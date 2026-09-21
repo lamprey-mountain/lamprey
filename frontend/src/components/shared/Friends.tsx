@@ -1,4 +1,3 @@
-import { useNavigate } from "@solidjs/router";
 import {
 	createResource,
 	createSignal,
@@ -16,6 +15,7 @@ import { Icon } from "@/atoms/Icon";
 import { Search } from "@/atoms/Search";
 import { createTooltip } from "@/atoms/Tooltip";
 import { useMenu } from "@/contexts/mod.tsx";
+import { useNavigate } from "@/contexts/router";
 import { AvatarWithStatus } from "./User";
 
 type FilterType = "all" | "online" | "incoming" | "outgoing";

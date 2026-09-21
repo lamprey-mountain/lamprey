@@ -1,4 +1,3 @@
-import { useNavigate } from "@solidjs/router";
 import type { Channel, Room } from "sdk";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { useChannels, useDms, useRooms } from "@/api";
@@ -9,6 +8,7 @@ import icMembers from "@/assets/members.png";
 import icSettings from "@/assets/settings.png";
 import { ChannelIcon } from "@/components/shared/User";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { autofocus } from "@/lib/autofocus";
 import { getThumbFromId } from "@/media/util";
 import { Modal } from "./mod";

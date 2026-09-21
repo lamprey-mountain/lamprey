@@ -1,5 +1,5 @@
 import { debounce } from "@solid-primitives/scheduled";
-import { type RouteSectionProps, useNavigate } from "@solidjs/router";
+import type { RouteSectionProps } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import type { ApiError, PreferencesUser, UserWithRelationship } from "sdk";
 import {
@@ -22,6 +22,7 @@ import { AvatarWithStatus } from "@/avatar/UserAvatar";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useMenu } from "@/contexts/menu";
+import { useNavigate } from "@/contexts/router";
 import { getThumbFromId } from "@/media/util";
 import type { ChannelT } from "@/types";
 import { Copyable } from "@/utils/general";

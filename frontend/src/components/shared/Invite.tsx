@@ -1,4 +1,4 @@
-import { type RouteSectionProps, useNavigate } from "@solidjs/router";
+import type { RouteSectionProps } from "@solidjs/router";
 import type { ApiError, Invite, InviteTarget } from "sdk";
 import {
 	createEffect,
@@ -16,6 +16,7 @@ import { ApiErrorDisplay, isApiError } from "@/atoms/ApiErrorDisplay";
 import { Markdown } from "@/atoms/Markdown.tsx";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals, useModals2 } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { Title } from "./Title";
 import { Avatar, ChannelIconGdm, RoomIcon } from "./User";
 import { Status } from "./UserProfileEdit";

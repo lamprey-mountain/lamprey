@@ -1,4 +1,3 @@
-import { useNavigate } from "@solidjs/router";
 import {
 	type Attachment,
 	type Channel as ChannelT,
@@ -21,6 +20,7 @@ import { useOptionalChannel } from "@/contexts/channel";
 import { useMenu } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
 import { useReadTracking } from "@/contexts/read-tracking.tsx";
+import { useNavigate } from "@/contexts/router.tsx";
 import { colors } from "@/lib/colors.ts";
 import { countEmojiOnly } from "@/lib/markdown";
 import { MediaView } from "@/media/Media.tsx";

@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import type { User } from "sdk";
 import { type Component, createMemo, For, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
@@ -118,7 +117,7 @@ export const UserSettings = (props: { user: User; page: string }) => {
 	return (
 		<div class="settings">
 			<header>
-				user settings <A href="/">home</A>
+				user settings <a href="/">home</a>
 			</header>
 			<nav>
 				<ul>
@@ -137,7 +136,7 @@ export const UserSettings = (props: { user: User; page: string }) => {
 								<For each={group.items}>
 									{(tab) => (
 										<li>
-											<A href={`/settings/${tab.path}`}>{tab.name}</A>
+											<a href={`/settings/${tab.path}`}>{tab.name}</a>
 										</li>
 									)}
 								</For>

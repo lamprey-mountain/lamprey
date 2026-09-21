@@ -1,4 +1,3 @@
-import { A } from "@solidjs/router";
 import type { Room } from "sdk";
 import {
 	createMemo,
@@ -140,18 +139,18 @@ export const RoomNav = () => {
 
 	const keybinds = useRoomNavKeybinds({
 		items: navItems,
-		selectedId: () => currentRoomId() ?? "home",
+		selectedId: () => currentRoomId() || "home",
 		onToggleFolder: toggleFolder,
 	});
 
 	const isFocused = (id: string) => {
 		const focused = keybinds.focusedId();
 		if (focused !== null) return focused === id;
-		const selected = currentRoomId() ?? "home";
+		const selected = currentRoomId() || "home";
 		return selected === id;
 	};
 
-	const isSelected = createSelector(() => currentRoomId() ?? "home");
+	const isSelected = createSelector(() => currentRoomId() || "home");
 
 	const RoomItem = (props: { room: Room; folderId?: string }) => {
 		const mentionCount = () => getRoomMentionCount(props.room.id);
@@ -193,14 +192,14 @@ export const RoomNav = () => {
 				ref={tip.content}
 			>
 				<div class="tile">
-					<A
+					<a
 						draggable="false"
 						href={`/room/${props.room.id}`}
 						class="nav"
 						tabIndex={-1}
 					>
 						<RoomIcon room={props.room} mentionCount={mentionCount()} />
-					</A>
+					</a>
 				</div>
 			</li>
 		);
@@ -227,9 +226,9 @@ export const RoomNav = () => {
 						ref={homeTip.content}
 					>
 						<div class="tile with-background">
-							<A href="/" end tabIndex={-1}>
+							<a href="/" tabIndex={-1}>
 								<Icon src={icHome} alt="home" />
-							</A>
+							</a>
 						</div>
 					</li>
 
@@ -332,9 +331,9 @@ export const RoomNav = () => {
 											tabIndex={isFocused(`view-${view.name}`) ? 0 : -1}
 											// isSelected
 										>
-											<A href="#" class="nav" tabIndex={-1}>
+											<a href="#" class="nav" tabIndex={-1}>
 												<div class="avatar">{view.name?.substring?.(0, 2)}</div>
-											</A>
+											</a>
 										</li>
 									)}
 								</Match>

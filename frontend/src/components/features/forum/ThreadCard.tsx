@@ -1,4 +1,3 @@
-import { useNavigate } from "@solidjs/router";
 import { getTimestampFromUUID } from "sdk";
 import { For, Show } from "solid-js";
 import { useApi } from "@/api";
@@ -8,6 +7,7 @@ import { Time } from "@/atoms/Time";
 import { createTooltip } from "@/atoms/Tooltip";
 import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { useChannel } from "@/contexts/mod";
+import { useNavigate } from "@/contexts/router";
 import type { ChannelT } from "@/types";
 import { MessageView } from "../chat/Message";
 import { MessageToolbarProvider } from "../chat/message-toolbar-context";

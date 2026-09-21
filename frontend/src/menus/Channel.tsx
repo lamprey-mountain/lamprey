@@ -1,5 +1,4 @@
 import { throttle } from "@solid-primitives/scheduled";
-import { useNavigate } from "@solidjs/router";
 import type { Channel, NotifsChannel } from "sdk";
 import {
 	createResource,
@@ -17,6 +16,7 @@ import { timeAgo } from "@/atoms/Time.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useModals } from "@/contexts/modal";
 import { useReadTracking } from "@/contexts/read-tracking.tsx";
+import { useNavigate } from "@/contexts/router.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { getDate } from "@/utils/general.tsx";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";

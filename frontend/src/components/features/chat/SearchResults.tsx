@@ -1,8 +1,8 @@
-import { useNavigate } from "@solidjs/router";
 import type { Channel, Message, Room } from "sdk";
 import { createMemo, For, Show } from "solid-js";
 import { useChannels } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown";
+import { useNavigate } from "@/contexts/router";
 import {
 	type SearchSort,
 	type SearchState,

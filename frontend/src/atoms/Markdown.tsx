@@ -1,4 +1,3 @@
-import { useNavigate } from "@solidjs/router";
 import type { Channel } from "sdk";
 import {
 	createContext,
@@ -17,6 +16,7 @@ import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { useUserPopout } from "@/contexts/mod";
+import { useNavigate } from "@/contexts/router";
 import { getEmojiHex } from "@/lib/emoji";
 import { flags } from "@/lib/flags";
 import { loaded, Parser } from "@/lib/markdown";

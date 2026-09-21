@@ -1,17 +1,9 @@
-import { Navigate, type RouteSectionProps } from "@solidjs/router";
-import type { Channel, WebtransportClient } from "sdk";
+import type { RouteSectionProps } from "@solidjs/router";
+import type { Channel } from "sdk";
 import type { JSX, ParentProps } from "solid-js";
-import {
-	createEffect,
-	createMemo,
-	Match,
-	on,
-	onCleanup,
-	Show,
-	Switch,
-} from "solid-js";
+import { createEffect, createMemo, Match, on, Show, Switch } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useApi, useChannels, useRooms } from "@/api";
+import { useApi, useChannels } from "@/api";
 import { useCtx } from "@/app/context";
 import icX from "@/assets/x-1.png";
 import { Icon } from "@/atoms/Icon";
@@ -21,7 +13,6 @@ import { Document } from "@/components/document/Document.tsx";
 import { DocumentHistory } from "@/components/document/DocumentHistory";
 import { Wiki } from "@/components/document/Wiki";
 import { Calendar } from "@/components/features/calendar/Calendar";
-import { ChannelSettings } from "@/components/features/channel_settings/index";
 import { ChatMain } from "@/components/features/chat/Chat.tsx";
 import { ChatHeader } from "@/components/features/chat/ChatHeader.tsx";
 import { PinnedMessages } from "@/components/features/chat/PinnedMessages.tsx";
@@ -33,9 +24,7 @@ import {
 	Forum2Thread,
 	Forum2ThreadPage,
 } from "@/components/features/forum/Forum2";
-import { RoomSettings } from "@/components/features/room_settings/RoomSettings";
 import { Scripts } from "@/components/features/scripts/Scripts";
-import { UserSettings } from "@/components/features/user_settings";
 import { Voice } from "@/components/features/voice/Voice.tsx";
 import { Category } from "@/components/shared/Category";
 import { ChannelNav } from "@/components/shared/ChannelNav";
@@ -55,7 +44,6 @@ import {
 	useChannel,
 } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
-import { useModals } from "@/contexts/modal";
 import { createInitialRoomState, RoomContext } from "@/contexts/room.tsx";
 import { useSearch } from "@/contexts/search";
 import { useCurrentRoomId } from "@/hooks/useCurrentRoomId";
@@ -83,7 +71,7 @@ export const AppLayoutMain = (props: ParentProps<RouteSectionProps>) => {
 			>
 				<div class="nav-tray">
 					<RoomNav />
-					<ChannelNav room_id={roomId() ?? undefined} />
+					<ChannelNav room_id={roomId() ?? ""} />
 					<UserTray />
 				</div>
 			</Resizable>

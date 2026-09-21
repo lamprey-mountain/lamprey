@@ -1,6 +1,6 @@
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { debounce } from "@solid-primitives/scheduled";
-import { A, useNavigate, useSearchParams } from "@solidjs/router";
+import { A, useSearchParams } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
 import { useFloating } from "solid-floating-ui";
@@ -26,6 +26,7 @@ import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { useUploads } from "@/contexts/uploads.tsx";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
 import { usePermissions } from "@/hooks/usePermissions";

@@ -1,16 +1,9 @@
-import { useLocation, useNavigate } from "@solidjs/router";
 import type { EditorView } from "prosemirror-view";
 import type { Media, Tag } from "sdk";
-import {
-	createContext,
-	createEffect,
-	on,
-	type ParentProps,
-	untrack,
-	useContext,
-} from "solid-js";
+import { createContext, type ParentProps, untrack, useContext } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi, useChannels, useRooms } from "@/api";
+import { useRouter } from "./router";
 
 export type ChannelTypeOption =
 	| "Text"
@@ -157,11 +150,22 @@ type ModalsContextType = [Modal[], ModalsController];
 const ModalsContext = createContext<ModalsContextType>();
 
 export const ModalsProvider = (p: ParentProps) => {
+	const router = useRouter();
 	const [modals, setModals] = createStore<Modal[]>([]);
 
 	const controller: ModalsController = {
 		close() {
+			const closingModal = modals[0];
 			setModals((prev) => prev.slice(1));
+
+			const wasSettings =
+				closingModal?.type === "user_settings" ||
+				closingModal?.type === "room_settings" ||
+				closingModal?.type === "channel_settings";
+
+			if (wasSettings) {
+				window.history.pushState(null, "", router.main);
+			}
 		},
 		open(modal: Modal) {
 			setModals((prev) => [...prev, modal]);
@@ -246,60 +250,4 @@ export const useModals2 = (): ModalsContext2Type => {
 			});
 		},
 	};
-};
-
-export const useSettingsModals = () => {
-	const location = useLocation();
-	const nav = useNavigate();
-	const [modals, modalCtl] = useModals();
-
-	const openSettings = (modal: Modal) => {
-		const lastModal = modals.at(-1);
-		const isSettingsOpen = lastModal?.type === "user_settings";
-		if (isSettingsOpen) {
-			modalCtl.replace(modal);
-		} else {
-			modalCtl.open(modal);
-		}
-	};
-
-	createEffect(
-		on(
-			() => location.pathname,
-			(path) => {
-				const userMatch = path.match(/^\/settings(\/([^/]+))?/);
-				if (userMatch) {
-					const [, , page] = userMatch;
-					openSettings({
-						type: "user_settings",
-						page,
-					});
-				}
-
-				const roomMatch = path.match(/^\/room\/([^/]+)\/settings(\/([^/]+))?/);
-				if (roomMatch) {
-					const [, room_id, , page] = roomMatch;
-					openSettings({
-						type: "room_settings",
-						room_id,
-						page,
-					});
-					// nav(`/room/${room_id}`, { replace: true });
-				}
-
-				const channelMatch = path.match(
-					/^\/channel\/([^/]+)\/settings(\/([^/]+))?/,
-				);
-				if (channelMatch) {
-					const [, channel_id, , page] = channelMatch;
-					openSettings({
-						type: "channel_settings",
-						channel_id,
-						page,
-					});
-					// nav(`/channel/${channel_id}`, { replace: true });
-				}
-			},
-		),
-	);
 };

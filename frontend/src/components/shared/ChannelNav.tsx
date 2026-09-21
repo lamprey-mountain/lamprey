@@ -1,9 +1,8 @@
-import { A, useParams } from "@solidjs/router";
+import { useParams } from "@solidjs/router";
 import type { Channel, ChannelType } from "sdk";
 import {
 	createEffect,
 	createMemo,
-	createSelector,
 	createSignal,
 	For,
 	Index,
@@ -27,7 +26,7 @@ import { Icon } from "@/atoms/Icon";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useDisplay, useMenu } from "@/contexts/mod";
 import { useModals } from "@/contexts/modal";
-import { useNavigate } from "@/contexts/router";
+import { useNavigate, useRouter } from "@/contexts/router";
 import { useChannelDnd } from "@/hooks/useChannelDnd";
 import {
 	type NavItem,
@@ -67,7 +66,7 @@ function setLastViewedChannel(roomId: string, channelId: string): void {
 	localStorage.setItem(key, channelId);
 }
 
-export const ChannelNav = (props: { room_id?: string }) => {
+export const ChannelNav = (props: { room_id: string }) => {
 	const api2 = useApi();
 	const dms2 = useDms();
 	const rooms2 = useRooms();
@@ -78,6 +77,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	const params = useParams();
 	const nav = useNavigate();
 	const dnd = useChannelDnd();
+	const router = useRouter();
 
 	const user = useCurrentUser();
 	const currentUserId = () => user()?.id;
@@ -118,7 +118,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 		if (uid) dms2.useList();
 	});
 
-	const room = rooms2.use(() => props.room_id);
+	const room = rooms2.use(() => props.room_id || undefined);
 	const roomMembers2 = useRoomMembers();
 
 	const canViewChannel = (channel: Channel): boolean => {
@@ -150,7 +150,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 	>(() => {
 		const allChannelsMap = new Map<string, ChannelWithThreads>();
 
-		for (const c of channels2.listByRoom(props.room_id ?? null)) {
+		for (const c of channels2.listByRoom(props.room_id || null)) {
 			if (!c.deleted_at) {
 				allChannelsMap.set(c.id, c);
 			}
@@ -412,7 +412,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					classList={{
 						"menu-room": !!props.room_id,
 					}}
-					data-room-id={props.room_id}
+					data-room-id={props.room_id || undefined}
 					ref={buttonRef!}
 					onClick={openRoomMenu}
 					onKeyDown={(e) => {
@@ -435,15 +435,19 @@ export const ChannelNav = (props: { room_id?: string }) => {
 					data-nav-id="home"
 					tabIndex={isFocused("home") ? 0 : -1}
 				>
-					<A
+					<a
 						href={props.room_id ? `/room/${props.room_id}` : "/"}
 						class="channel-link"
 						draggable={false}
-						end
+						classList={{
+							active:
+								router.main ===
+								(props.room_id ? `/room/${props.room_id}` : "/"),
+						}}
 						tabIndex={-1}
 					>
 						<Icon src={icHome} color={colors.fg500} /> home
-					</A>
+					</a>
 				</li>
 
 				<Show when={!props.room_id}>
@@ -453,15 +457,15 @@ export const ChannelNav = (props: { room_id?: string }) => {
 							data-nav-id="inbox"
 							tabIndex={isFocused("inbox") ? 0 : -1}
 						>
-							<A
+							<a
 								href="/inbox"
 								class="channel-link"
 								draggable={false}
-								end
+								classList={{ active: router.main === "/inbox" }}
 								tabIndex={-1}
 							>
 								<Icon src={icInbox} color={colors.fg500} /> inbox
-							</A>
+							</a>
 						</li>
 					</Show>
 
@@ -471,15 +475,15 @@ export const ChannelNav = (props: { room_id?: string }) => {
 							data-nav-id="friends"
 							tabIndex={isFocused("friends") ? 0 : -1}
 						>
-							<A
+							<a
 								href="/friends"
 								class="channel-link"
 								draggable={false}
-								end
+								classList={{ active: router.main === "/friends" }}
 								tabIndex={-1}
 							>
 								<Icon src={icMembers} color={colors.fg500} /> friends
-							</A>
+							</a>
 						</li>
 					</Show>
 
@@ -697,7 +701,7 @@ export const ChannelNav = (props: { room_id?: string }) => {
 
 export const ItemChannel = (props: {
 	channel: Channel;
-	room_id?: string;
+	room_id: string;
 	icon: boolean;
 }) => {
 	const nav = useNavigate();
@@ -762,7 +766,7 @@ export const ItemChannel = (props: {
 
 	const perms = usePermissions(
 		currentUserId,
-		() => props.room_id,
+		() => props.room_id || undefined,
 		() => props.channel.id,
 	);
 
@@ -834,7 +838,7 @@ export const ItemChannel = (props: {
 										e.stopPropagation();
 										modalCtl.open({
 											type: "invite_create",
-											room_id: props.room_id,
+											room_id: props.room_id || undefined,
 											channel_id: props.channel.id,
 										});
 									}}
@@ -861,7 +865,7 @@ export const ItemChannel = (props: {
 			}
 		>
 			{(href) => (
-				<A
+				<a
 					href={href()}
 					class="menu-channel channel-link"
 					classList={{ active: props.channel.id === params.channel_id }}
@@ -905,7 +909,7 @@ export const ItemChannel = (props: {
 										e.stopPropagation();
 										modalCtl.open({
 											type: "invite_create",
-											room_id: props.room_id,
+											room_id: props.room_id || undefined,
 											channel_id: props.channel.id,
 										});
 									}}
@@ -928,7 +932,7 @@ export const ItemChannel = (props: {
 							</button>
 						</div>
 					</Show>
-				</A>
+				</a>
 			)}
 		</Show>
 	);
