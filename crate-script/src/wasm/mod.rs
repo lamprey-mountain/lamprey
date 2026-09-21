@@ -14,7 +14,7 @@ use common::v1::types::{
     util::Time,
 };
 use futures::FutureExt;
-use tokio::sync::{broadcast, oneshot, watch};
+use tokio::sync::{broadcast, oneshot};
 use tracing::error;
 use wasmtime::{
     Config, Engine, Store,

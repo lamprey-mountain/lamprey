@@ -4,7 +4,6 @@ use super::{RoleId, RoomId, User, UserId};
 
 use crate::v1::types::{
     InviteCode,
-    federation::Hostname,
     util::{Diff, Time},
 };
 

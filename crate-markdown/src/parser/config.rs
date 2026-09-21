@@ -1,5 +1,3 @@
-use crate::prelude::*;
-
 // TODO: impl serde, use serde to wasm bindgen instead?
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]

@@ -45,7 +45,6 @@ pub mod media_head {
     response(OK, description = "success"),
 )]
 pub mod media_get {
-    use bytes::Bytes;
     use http::{HeaderMap, StatusCode};
 
     use crate::{util::body::Body, v1::types::MediaId, v2::types::media::proxy::MediaQuery};
@@ -114,7 +113,6 @@ pub mod media_head_filename {
     response(OK, description = "success"),
 )]
 pub mod media_get_filename {
-    use bytes::Bytes;
     use http::{HeaderMap, StatusCode};
 
     use crate::{util::body::Body, v1::types::MediaId, v2::types::media::proxy::MediaQuery};

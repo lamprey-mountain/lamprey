@@ -1,6 +1,5 @@
 use crate::util::body::Body;
 use crate::v1::types::error::ApiResult;
-use serde::de::DeserializeOwned;
 
 // export all routes
 

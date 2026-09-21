@@ -16,6 +16,7 @@ use common::v1::types::{
     },
 };
 
+use crate::prelude::*;
 use crate::services::search::{
     index::glue::{TantivyAuditLogEntry, TantivyChannel, TantivyMedia, TantivyRoom, TantivyUser},
     util::BqBuilder,
@@ -28,7 +29,6 @@ use crate::services::search::{
     index::{AsyncSearcher, glue::TantivyMessage},
     util::IntoTantivyOrder,
 };
-use crate::{Error, Result};
 use lamprey_search::visibility::{
     SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
     SearchMessagesVisibility, SearchRoomMemberVisibility, SearchRoomsVisibility, TantivyVisibility,

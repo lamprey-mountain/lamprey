@@ -6,7 +6,7 @@ use common::v1::types::document::{
     Document, DocumentArchived, DocumentPatch, DocumentPublished, Wiki, WikiPatch,
 };
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::federation::{Hostname, Remote, RemoteReq};
+use common::v1::types::federation::RemoteReq;
 use common::v1::types::misc::Color;
 use common::v1::types::util::Time;
 use common::v1::types::{Channel, ChannelReorder, RoomVerId};
@@ -16,8 +16,8 @@ use tracing::{info, warn};
 
 use crate::error::Result;
 use crate::types::{
-    ChannelId, ChannelPatch, ChannelVerId, DbChannel, DbChannelCreate, DbChannelPrivate,
-    DbChannelType, PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId,
+    ChannelId, ChannelPatch, ChannelVerId, DbChannelCreate, DbChannelPrivate, DbChannelType,
+    PaginationDirection, PaginationQuery, PaginationResponse, RoomId, UserId,
 };
 use crate::{Error, gen_paginate};
 

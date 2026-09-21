@@ -1,6 +1,6 @@
 use common::{
     util::member_list::MemberGroupKey,
-    v1::types::{ChannelId, MemberListGroupId, RoleId, RoomId, UserId},
+    v1::types::{ChannelId, RoomId, UserId},
 };
 
 use crate::prelude::*;

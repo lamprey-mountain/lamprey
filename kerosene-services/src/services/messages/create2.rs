@@ -12,10 +12,7 @@ use common::{
 };
 use futures::{FutureExt, TryFutureExt, try_join};
 use futures_util::future::try_join_all;
-use kerosene_core::{
-    error::{ApiError, ErrorCode},
-    types::permission::requirements::Requirements,
-};
+use kerosene_core::types::permission::requirements::Requirements;
 use lamprey_backend_data_postgres::{DbMessageAttachment, MediaLinkType as DbMediaLinkType};
 use lamprey_markdown::{Parser, query::QueryableExt};
 use tracing::error;

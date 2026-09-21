@@ -114,7 +114,6 @@ pub mod error {
 pub mod routes {
     pub mod util {
         pub mod auth {
-            use crate::prelude::*;
             use common::{
                 v1::types::{
                     Session, User,

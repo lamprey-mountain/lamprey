@@ -4,18 +4,15 @@
 
 use common::v1::types::util::Time;
 use common::v1::types::{
-    Channel, ChannelType, Permission, PermissionOverwriteType, RoleId, RoomId, RoomMember,
-    SERVER_USER_ID, UserId,
+    ChannelType, Permission, PermissionOverwriteType, RoleId, RoomMember, SERVER_USER_ID, UserId,
 };
 use lamprey_backend_core::types::permission::Permissions2Metadata;
 use lamprey_backend_core::types::permission::{
     CheckVisibility, MemberState, PermissionBits, Permissions2, ResourceContext,
 };
-use tracing::warn;
 
 use crate::prelude::*;
-use crate::services::cache::CachedRoomMember;
-use crate::services::rooms::{CachedChannel, LoadedRoom, RoomSnapshot};
+use crate::services::rooms::{CachedChannel, LoadedRoom};
 
 // TODO: add a permission calculator for a dm/gdm channel?
 // PERF: convert channel overwrites and role perms into bits; cache

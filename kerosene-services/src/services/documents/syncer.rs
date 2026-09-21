@@ -4,7 +4,6 @@ use common::v1::types::{
     ConnectionId, MessageSync, UserId,
     document::{DocumentStateVector, DocumentUpdate},
 };
-use futures::Sink;
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::error::RecvError;
 use tracing::{error, warn};

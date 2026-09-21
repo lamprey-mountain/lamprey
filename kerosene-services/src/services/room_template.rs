@@ -9,8 +9,6 @@ use common::v1::types::room_template::{
 use common::v1::types::{Channel, ChannelId, ChannelType, PermissionOverwriteType, Role, RoleId};
 use common::v1::types::{PaginationQuery, PaginationResponse};
 use common::v1::types::{RoomId, RoomPatch, UserId, channel::ChannelCreate, role::RoleCreate};
-use kerosene_core::types::permission::requirements::Requirements;
-use tracing::warn;
 use uuid::Uuid;
 
 use crate::prelude::*;

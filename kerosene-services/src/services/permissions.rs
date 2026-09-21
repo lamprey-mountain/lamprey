@@ -1,5 +1,3 @@
-use std::mem::needs_drop;
-
 use common::v1::types::defaults::EVERYONE_TRUSTED;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::oauth::ScopeBits;

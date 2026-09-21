@@ -8,7 +8,7 @@ use common::{
         document::{DocumentStateVector, DocumentUpdate},
         voice::{VoiceStateUpdate, messages::SignallingCommand},
     },
-    v2::types::{ConnectionId, SessionId},
+    v2::types::ConnectionId,
 };
 use futures::FutureExt;
 use kerosene_core::types::documents::EditContextId;
