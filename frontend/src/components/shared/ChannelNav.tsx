@@ -1,4 +1,4 @@
-import { A, useNavigate, useParams } from "@solidjs/router";
+import { A,  useParams } from "@solidjs/router";
 import type { Channel, ChannelType } from "sdk";
 import {
 	createEffect,
@@ -42,6 +42,7 @@ import {
 import { getDate } from "@/utils/general";
 import { useVoice } from "../features/voice/context";
 import { Avatar, ChannelIcon } from "./User";
+import { useNavigate } from "@/contexts/router";
 
 type ChannelWithThreads = Channel & { threads?: Channel[] };
 

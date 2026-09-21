@@ -1,6 +1,6 @@
-import type { RouteSectionProps } from "@solidjs/router";
-import { Route, Router } from "@solidjs/router";
-import { type Component, type ParentProps, Show } from "solid-js";
+import type { MemoryHistory, RouteSectionProps } from "@solidjs/router";
+import { MemoryRouter, Route, Router } from "@solidjs/router";
+import { type Component, createSignal, type ParentProps, Show } from "solid-js";
 import { RootStoreContext } from "@/api";
 import { chatctx, useCtx } from "@/app/context";
 import { CalendarPopupProvider } from "@/components/features/calendar/Calendar";
@@ -17,7 +17,7 @@ import {
 	TooltipProvider,
 	UserPopoutProvider,
 } from "@/contexts/mod.tsx";
-import { ModalsProvider, useModals } from "@/contexts/modal";
+import { ModalsProvider, useModals, useSettingsModals } from "@/contexts/modal";
 import { OverlayProvider } from "@/contexts/overlay.tsx";
 import { ReadTrackingProvider } from "@/contexts/read-tracking.tsx";
 import { SearchProvider } from "@/contexts/search";
@@ -33,23 +33,46 @@ import {
 	AppLayoutMain,
 	RouteAuthorize,
 	RouteChannel,
-	RouteChannelSettings,
 	RouteFriends,
 	RouteHome,
 	RouteInbox,
 	RouteInvite,
 	RouteNotFound,
 	RouteRoom,
-	RouteRoomSettings,
 	RouteRoomTemplate,
 	RouteSearch,
-	RouteSettings,
 	RouteUser,
 } from "@/routes";
 
 const App: Component = () => {
+	const [location, setLocation] = createSignal(window.location.pathname);
+	const history: MemoryHistory = {
+		get: location,
+		go(delta) {
+			window.history.go(delta);
+		},
+		listen(listener) {
+			const handler = () => {
+				const path = window.location.pathname;
+				setLocation(path);
+				listener(path);
+			};
+			window.addEventListener("popstate", handler);
+			return () => window.removeEventListener("popstate", handler);
+		},
+		set(change) {
+			const value = typeof change === "string" ? change : change.value;
+			if (typeof change !== "string" && change.replace) {
+				window.history.replaceState(null, "", value);
+			} else {
+				window.history.pushState(null, "", value);
+			}
+			setLocation(value);
+		},
+	};
+
 	return (
-		<Router root={AppBootstrap}>
+		<MemoryRouter history={history} root={AppBootstrap}>
 			<Route path="/" component={AppLayoutMain}>
 				<Route path="/" component={RouteHome} />
 				<Route path="/inbox" component={RouteInbox} />
@@ -78,23 +101,10 @@ const App: Component = () => {
 				<Route path="/search" component={RouteSearch} />
 				<Route path="/media/:media_id" component={RouteMedia} />
 			</Route>
-			<Route path="/settings/:page?" component={RouteSettings} />
-			<Route
-				path="/room/:room_id/settings/:page?"
-				component={RouteRoomSettings}
-			/>
-			<Route
-				path="/channel/:channel_id/settings/:page?"
-				component={RouteChannelSettings}
-			/>
-			<Route
-				path="/thread/:channel_id/settings/:page?"
-				component={RouteChannelSettings}
-			/>
 			<Route path="/verify-email" component={RouteVerifyEmail} />
 			<Route path="/authorize" component={RouteAuthorize} />
 			<Route path="*404" component={RouteNotFound} />
-		</Router>
+		</MemoryRouter>
 	);
 };
 
@@ -191,6 +201,7 @@ export const AppShell: Component<ParentProps> = (props) => {
 
 	useFavicon();
 	useGlobalEventHandlers();
+	useSettingsModals();
 
 	const cursorStats = ctx.cursorStats;
 

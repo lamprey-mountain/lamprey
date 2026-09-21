@@ -1,7 +1,16 @@
+import { useLocation, useNavigate } from "@solidjs/router";
 import type { EditorView } from "prosemirror-view";
 import type { Media, Tag } from "sdk";
-import { createContext, type ParentProps, useContext } from "solid-js";
+import {
+	createContext,
+	createEffect,
+	on,
+	type ParentProps,
+	untrack,
+	useContext,
+} from "solid-js";
 import { createStore } from "solid-js/store";
+import { useApi, useChannels, useRooms } from "@/api";
 
 export type ChannelTypeOption =
 	| "Text"
@@ -13,7 +22,24 @@ export type ChannelTypeOption =
 	| "Wiki";
 
 export type Modal =
-	| { type: "alert"; text: string }
+	| {
+			type: "room_settings";
+			room_id: string;
+			page?: string;
+	  }
+	| {
+			type: "channel_settings";
+			channel_id: string;
+			page?: string;
+	  }
+	| {
+			type: "user_settings";
+			page?: string;
+	  }
+	| {
+			type: "alert";
+			text: string;
+	  }
 	| {
 			type: "confirm";
 			text: string;
@@ -120,6 +146,7 @@ export type Modal =
 export type ModalsController = {
 	close: () => void;
 	open: (modal: Modal) => void;
+	replace: (modal: Modal) => void;
 	alert: (text: string) => void;
 	prompt: (text: string, cont: (text: string | null) => void) => void;
 	confirm: (text: string, cont: (confirmed: boolean) => void) => void;
@@ -138,6 +165,13 @@ export const ModalsProvider = (p: ParentProps) => {
 		},
 		open(modal: Modal) {
 			setModals((prev) => [...prev, modal]);
+		},
+		replace(modal: Modal) {
+			if (modals.at(-1)?.type === modal.type) {
+				setModals(modals.length - 1, modal);
+			} else {
+				setModals((prev) => [...prev.slice(0, -1), modal]);
+			}
 		},
 		alert(text: string) {
 			setModals((prev) => [{ type: "alert", text } as Modal, ...prev]);
@@ -212,4 +246,60 @@ export const useModals2 = (): ModalsContext2Type => {
 			});
 		},
 	};
+};
+
+export const useSettingsModals = () => {
+	const location = useLocation();
+	const nav = useNavigate();
+	const [modals, modalCtl] = useModals();
+
+	const openSettings = (modal: Modal) => {
+		const lastModal = modals.at(-1);
+		const isSettingsOpen = lastModal?.type === "user_settings";
+		if (isSettingsOpen) {
+			modalCtl.replace(modal);
+		} else {
+			modalCtl.open(modal);
+		}
+	};
+
+	createEffect(
+		on(
+			() => location.pathname,
+			(path) => {
+				const userMatch = path.match(/^\/settings(\/([^/]+))?/);
+				if (userMatch) {
+					const [, , page] = userMatch;
+					openSettings({
+						type: "user_settings",
+						page,
+					});
+				}
+
+				const roomMatch = path.match(/^\/room\/([^/]+)\/settings(\/([^/]+))?/);
+				if (roomMatch) {
+					const [, room_id, , page] = roomMatch;
+					openSettings({
+						type: "room_settings",
+						room_id,
+						page,
+					});
+					// nav(`/room/${room_id}`, { replace: true });
+				}
+
+				const channelMatch = path.match(
+					/^\/channel\/([^/]+)\/settings(\/([^/]+))?/,
+				);
+				if (channelMatch) {
+					const [, channel_id, , page] = channelMatch;
+					openSettings({
+						type: "channel_settings",
+						channel_id,
+						page,
+					});
+					// nav(`/channel/${channel_id}`, { replace: true });
+				}
+			},
+		),
+	);
 };

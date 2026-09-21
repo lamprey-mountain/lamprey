@@ -7,6 +7,7 @@ import { ModalAttachment } from "./ModalAttachment.tsx";
 import { ModalBan } from "./ModalBan.tsx";
 import { ModalCameraPreview } from "./ModalCameraPreview.tsx";
 import { ModalChannelCreate } from "./ModalChannelCreate";
+import { ModalChannelSettings } from "./ModalChannelSettings.tsx";
 import { ModalChannelTopic } from "./ModalChannelTopic.tsx";
 import { ModalEmojiUpload } from "./ModalEmojiUpload.tsx";
 import { ModalExportData } from "./ModalExportData.tsx";
@@ -20,9 +21,11 @@ import { ModalPalette } from "./ModalPalette.tsx";
 import { ModalPrivacy } from "./ModalPrivacy.tsx";
 import { ModalReactions } from "./ModalReactions.tsx";
 import { ModalRoomCreateOrJoin } from "./ModalRoomCreateOrJoin";
+import { ModalRoomSettings } from "./ModalRoomSettings.tsx";
 import { ModalTagEditor } from "./ModalTagEditor.tsx";
 import { ModalThreadCreate } from "./ModalThreadCreate.tsx";
 import { ModalTimeout } from "./ModalTimeout.tsx";
+import { ModalUserSettings } from "./ModalUserSettings.tsx";
 
 export const Modal = (
 	props: ParentProps<{
@@ -195,6 +198,24 @@ function isThreadCreate(
 	return modal.type === "thread_create";
 }
 
+function isUserSettings(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "user_settings" }> {
+	return modal.type === "user_settings";
+}
+
+function isRoomSettings(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "room_settings" }> {
+	return modal.type === "room_settings";
+}
+
+function isChannelSettings(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "channel_settings" }> {
+	return modal.type === "channel_settings";
+}
+
 export function getModal(modal: ModalType) {
 	const api2 = useApi();
 	if (isAlert(modal)) {
@@ -311,6 +332,17 @@ export function getModal(modal: ModalType) {
 				room_id={modal.room_id}
 				channel_id={modal.channel_id}
 			/>
+		);
+	}
+	if (isUserSettings(modal)) {
+		return <ModalUserSettings page={modal.page} />;
+	}
+	if (isRoomSettings(modal)) {
+		return <ModalRoomSettings room_id={modal.room_id} page={modal.page} />;
+	}
+	if (isChannelSettings(modal)) {
+		return (
+			<ModalChannelSettings channel_id={modal.channel_id} page={modal.page} />
 		);
 	}
 }

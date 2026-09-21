@@ -1,4 +1,4 @@
-import type { RouteSectionProps } from "@solidjs/router";
+import { Navigate, type RouteSectionProps } from "@solidjs/router";
 import type { Channel } from "sdk";
 import type { JSX, ParentProps } from "solid-js";
 import { createEffect, createMemo, Match, Show, Switch } from "solid-js";
@@ -47,6 +47,7 @@ import {
 	useChannel,
 } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useModals } from "@/contexts/modal";
 import { createInitialRoomState, RoomContext } from "@/contexts/room.tsx";
 import { useSearch } from "@/contexts/search";
 import { useCurrentRoomId } from "@/hooks/useCurrentRoomId";
@@ -148,46 +149,6 @@ export const RouteRoom = (p: ParentProps<RouteSectionProps>): JSX.Element => {
 };
 
 export const RouteRoomTemplate = RoomTemplatePage;
-
-export const RouteRoomSettings = (
-	p: ParentProps<RouteSectionProps>,
-): JSX.Element => {
-	const { t } = useCtx();
-	const rooms = useRooms();
-	const room = rooms.use(() => p.params.room_id);
-	const title = () => {
-		const r = room();
-		return r?.name ? t("page.settings_room", r.name) : t("loading");
-	};
-	return (
-		<>
-			<Title title={title()} />
-			<Show when={room()}>
-				{(r) => <RoomSettings room={r()} page={p.params.page ?? ""} />}
-			</Show>
-		</>
-	);
-};
-
-export const RouteChannelSettings = (
-	p: ParentProps<RouteSectionProps>,
-): JSX.Element => {
-	const { t } = useCtx();
-	const channels2 = useChannels();
-	const channel = channels2.use(() => p.params.channel_id);
-	const title = () => {
-		const c = channel();
-		return c?.name ? t("page.settings_channel", c.name) : t("loading");
-	};
-	return (
-		<>
-			<Title title={title()} />
-			<Show when={channel()}>
-				{(c) => <ChannelSettings channel={c()} page={p.params.page ?? ""} />}
-			</Show>
-		</>
-	);
-};
 
 const ThreadChatSidebar = (props: { thread_id: string }) => {
 	const channels2 = useChannels();
@@ -550,22 +511,6 @@ export function RouteNotFound(): JSX.Element {
 		<>
 			<Title title="not found" />
 			<div style="padding:8px">{t("not_found")}</div>
-		</>
-	);
-}
-
-export function RouteSettings(p: RouteSectionProps): JSX.Element {
-	const { t } = useCtx();
-	const user = useCurrentUser();
-	createEffect(() => {
-		console.log(user());
-	});
-	return (
-		<>
-			<Title title={user() ? t("page.settings_user") : t("loading")} />
-			<Show when={user()}>
-				{(u) => <UserSettings user={u()} page={p.params.page ?? ""} />}
-			</Show>
 		</>
 	);
 }

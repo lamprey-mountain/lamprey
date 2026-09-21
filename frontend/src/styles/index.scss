@@ -692,6 +692,32 @@
 	}
 }
 
+.modal-settings {
+	& > .content > .base {
+		display: none;
+	}
+
+	& > .content > .inner {
+		padding: 0;
+		border: solid 1px $sep-300;
+		max-width: initial;
+		width: 80vw; // TODO: full width on mobile
+		border-radius: 4px;
+
+		& > .settings {
+			grid-template-columns: 192px 1fr;
+
+			& > header {
+				display: none;
+			}
+
+			& > nav {
+				padding-left: 8px;
+			}
+		}
+	}
+}
+
 .contextmenu {
 	position: fixed;
 	pointer-events: none;
