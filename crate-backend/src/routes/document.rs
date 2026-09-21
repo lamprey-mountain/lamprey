@@ -1001,13 +1001,17 @@ async fn document_crdt_apply(
         )));
     }
 
-    let update_data = req.data;
+    let update_data = req
+        .data
+        .buffer()
+        .await
+        .map_err(|err| Error::Internal(err.to_string()))?;
     srv.documents
         .apply_update(
             EditContextId::from_prose(req.channel_id, req.branch_id),
             auth.user.id,
             None,
-            update_data.as_ref(),
+            &update_data,
         )
         .await?;
 

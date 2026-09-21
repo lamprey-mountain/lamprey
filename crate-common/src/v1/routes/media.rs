@@ -185,9 +185,7 @@ pub mod media_search {
     response(NO_CONTENT, description = "Upload success"),
 )]
 pub mod media_upload {
-    use bytes::Bytes;
-
-    use crate::v1::types::MediaId;
+    use crate::{util::body::Body, v1::types::MediaId};
 
     pub struct Request {
         #[path]
@@ -200,7 +198,7 @@ pub mod media_upload {
         pub content_length: u64,
 
         #[body]
-        pub body: Bytes,
+        pub body: Body,
     }
 
     pub struct Response {

@@ -6,8 +6,10 @@ use crate::{
     util::headers::{HeadersRequest, HeadersResponse},
 };
 
+use common::util::body::Body;
 use headers::CacheControl;
 use http::StatusCode;
+use kerosene_core::types::media::MediaPaths;
 use routes::media_proxy as routes;
 
 // PERF: cache files on local disk, similarly to how the s3 tantivy directory works
@@ -22,29 +24,51 @@ async fn head(req: Req<routes::media_head::Endpoint>) -> Result<routes::media_he
     let media = srv.media.get(media_id).await.cast_internal()?.ready().await;
 
     let meta = calculate_response_metadata(req.headers(), &MediaInfo::Media(&media))?;
-    let status = meta.status();
 
     Ok(routes::media_head::Response {
-        status,
+        status: meta.status(),
         headers: meta.headers.into(),
     })
 }
 
 #[handler(routes::media_get)]
 async fn get(req: Req<routes::media_get::Endpoint>) -> Result<routes::media_get::Response> {
+    let globals = req.globals();
     let srv = req.services();
     let media_id = req.inner().media_id;
     let wait = req.inner().query.wait;
 
     let media = srv.media.get(media_id).await.cast_internal()?.ready().await;
-
     let meta = calculate_response_metadata(req.headers(), &MediaInfo::Media(&media))?;
-    let status = meta.status();
+    let body = if meta.unmodified {
+        Body::empty()
+    } else {
+        // TODO: better errors
+        // PERF: cache MediaPaths
+        let paths = MediaPaths::new("media/");
+        let reader = globals
+            .blobs()
+            .reader(&paths.file(media.id))
+            .await
+            .map_err(|err| ServerError::Internal(Box::new(err)))?;
+        let stream = if let Some(range) = meta.range {
+            reader
+                .into_bytes_stream(range)
+                .await
+                .map_err(|err| ServerError::Internal(Box::new(err)))?
+        } else {
+            reader
+                .into_bytes_stream(..)
+                .await
+                .map_err(|err| ServerError::Internal(Box::new(err)))?
+        };
+        Body::from_stream(stream)
+    };
 
     Ok(routes::media_get::Response {
-        status,
+        status: meta.status(),
         headers: meta.headers.into(),
-        body: todo!(),
+        body,
     })
 }
 
@@ -63,10 +87,9 @@ async fn head_filename(
     }
 
     let meta = calculate_response_metadata(req.headers(), &MediaInfo::Media(&media))?;
-    let status = meta.status();
 
     Ok(routes::media_head_filename::Response {
-        status,
+        status: meta.status(),
         headers: meta.headers.into(),
     })
 }
@@ -86,10 +109,9 @@ async fn get_filename(
     }
 
     let meta = calculate_response_metadata(req.headers(), &MediaInfo::Media(&media))?;
-    let status = meta.status();
 
     Ok(routes::media_get_filename::Response {
-        status,
+        status: meta.status(),
         headers: meta.headers.into(),
         body: todo!(),
     })

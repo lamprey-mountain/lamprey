@@ -1,5 +1,5 @@
 use crate::util::body::Body;
-use crate::v1::types::error::ApiError;
+use crate::v1::types::error::ApiResult;
 use serde::de::DeserializeOwned;
 
 // export all routes
@@ -53,6 +53,8 @@ pub mod voice;
 pub mod webhook;
 
 /// route definitions for the cdn/media proxy
+// TODO(?): put these under crate::media::routes?
+// TODO(?): put well known route under crate::unversioned::routes?
 pub mod media_proxy;
 
 pub use ack::*;
@@ -130,8 +132,8 @@ impl From<EndpointMethod> for ::utoipa::openapi::HttpMethod {
 /// can extract body separately then extract with explicitly deserialized body later
 pub trait ExtractableRequest: Sized {
     /// the request body
-    type Body: DeserializeOwned;
+    type Body;
 
     /// extract full request from parts and deserialized Body
-    fn extract(parts: http::request::Parts, body: Self::Body) -> Result<Self, ApiError>;
+    fn extract(parts: http::request::Parts, body: Self::Body) -> ApiResult<Self>;
 }

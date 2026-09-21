@@ -455,8 +455,10 @@ pub mod document_crdt_diff {
     response(NO_CONTENT, description = "ok"),
 )]
 pub mod document_crdt_apply {
-    use crate::v1::types::{ChannelId, DocumentBranchId};
-    use bytes::Bytes;
+    use crate::{
+        util::body::Body,
+        v1::types::{ChannelId, DocumentBranchId},
+    };
 
     pub struct Request {
         #[path]
@@ -466,7 +468,7 @@ pub mod document_crdt_apply {
         pub branch_id: DocumentBranchId,
 
         #[body]
-        pub data: Bytes,
+        pub data: Body,
     }
 
     pub struct Response {}

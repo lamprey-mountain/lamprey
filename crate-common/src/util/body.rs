@@ -104,3 +104,15 @@ impl http_body::Body for Body {
         self.0.is_end_stream()
     }
 }
+
+// TODO: gate this behind serde feature
+impl<'de> serde::Deserialize<'de> for Body {
+    fn deserialize<D>(_de: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Err(serde::de::Error::custom(
+            "Body is not deserializable; should_parse() should have prevented this",
+        ))
+    }
+}

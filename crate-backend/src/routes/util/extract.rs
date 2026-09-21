@@ -102,7 +102,7 @@ impl From<ExtractorError> for Error {
 impl<Req> FromRequest<Arc<ServerState>> for UniversalExtractor<Req>
 where
     Req: ExtractableRequest + Send,
-    Req::Body: Send,
+    Req::Body: Send + DeserializeOwned,
 {
     type Rejection = Error;
 
@@ -125,7 +125,7 @@ where
         match headers.content_type {
             ContentType::Json => {
                 let body: Req::Body = parse_json(&bytes)?;
-                let req = Req::extract(parts, body).map_err(Error::Response)?;
+                let req = Req::extract(parts, body)?;
                 Ok(Self {
                     auth,
                     body: req,
@@ -136,7 +136,7 @@ where
             }
             ContentType::Msgpack => {
                 let body: Req::Body = parse_msgpack(&bytes)?;
-                let req = Req::extract(parts, body).map_err(Error::Response)?;
+                let req = Req::extract(parts, body)?;
                 Ok(Self {
                     auth,
                     body: req,
@@ -147,7 +147,7 @@ where
             }
             ContentType::Form => {
                 let body: Req::Body = parse_form(&bytes)?;
-                let req = Req::extract(parts, body).map_err(Error::Response)?;
+                let req = Req::extract(parts, body)?;
                 Ok(Self {
                     auth,
                     body: req,
@@ -167,7 +167,7 @@ where
                 let multipart = multer::Multipart::new(stream, boundary);
                 let collector = MultipartCollector::collect(multipart).await?;
                 let (body, files) = collector.parse()?;
-                let req = Req::extract(parts, body).map_err(Error::Response)?;
+                let req = Req::extract(parts, body)?;
 
                 // import media
                 let srv = state.services();
@@ -202,7 +202,7 @@ where
                     let body = serde_json::from_str("null").map_err(|_| {
                         Error::BadStatic("route requires a body but none was provided")
                     })?;
-                    let req = Req::extract(parts, body).map_err(Error::Response)?;
+                    let req = Req::extract(parts, body)?;
                     Ok(UniversalExtractor {
                         auth,
                         body: req,

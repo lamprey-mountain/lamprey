@@ -61,10 +61,10 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let extract_request_impl = {
         // TODO: better errors
         let error_expr = quote! {
-            return Err(crate::v1::types::error::ApiError::with_message(
+            crate::v1::types::error::ApiError::with_message(
                 crate::v1::types::error::ErrorCode::InvalidData,
                 "extraction failed".to_string(),
-            ))
+            )
         };
         let (path_extraction, query_extraction, header_extraction) =
             build_parts_extraction(&args, &req_fields, &error_expr)?;
@@ -79,7 +79,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                 impl crate::v1::routes::ExtractableRequest for Request {
                     type Body = #ty;
 
-                    async fn extract(
+                    fn extract(
                         parts: ::http::request::Parts,
                         body: Self::Body,
                     ) -> crate::v1::types::error::ApiResult<Self> {
@@ -103,7 +103,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                 impl crate::v1::routes::ExtractableRequest for Request {
                     type Body = ();
 
-                    async fn extract(
+                    fn extract(
                         parts: ::http::request::Parts,
                         _body: Self::Body,
                     ) -> crate::v1::types::error::ApiResult<Self> {
@@ -263,18 +263,29 @@ fn build_extract_response_fn(
     args: &EndpointArgs,
     fields: &[EndpointField],
 ) -> syn::Result<TokenStream> {
+    let parse_error_body = quote! {
+        let body_bytes = body.buffer().await.map_err(|_| crate::v1::types::error::ApiError::with_message(
+            crate::v1::types::error::ErrorCode::Internal,
+            "failed to buffer error response".to_string(),
+        ))?;
+        return Err(::serde_json::from_slice(&body_bytes).unwrap_or_else(|_| crate::v1::types::error::ApiError::with_message(
+            crate::v1::types::error::ErrorCode::Internal,
+            format!("failed to parse error response: {}", String::from_utf8_lossy(&body_bytes)),
+        )));
+    };
+
     let status_check = if !args.responses.is_empty() {
         let codes: Vec<_> = args.responses.iter().map(|r| &r.status).collect();
         quote! {
             let allowed = [#(#codes),*];
-            if !allowed.contains(&status.as_u16()) {
-                return Err(resp);
+            if !allowed.contains(&parts.status.as_u16()) {
+                #parse_error_body
             }
         }
     } else {
         quote! {
-            if !status.is_success() {
-                return Err(resp);
+            if !parts.status.is_success() {
+                #parse_error_body
             }
         }
     };
@@ -282,7 +293,7 @@ fn build_extract_response_fn(
     let status_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Status));
     let status_field_assignment = if let Some(f) = status_field {
         let ident = &f.ident;
-        quote! { #ident: status, }
+        quote! { #ident: parts.status, }
     } else {
         quote! {}
     };
@@ -319,17 +330,10 @@ fn build_extract_response_fn(
                     .and_then(|v| v.to_str().ok())
                     .and_then(|v| v.parse().ok())
                     .ok_or_else(|| {
-                        ::http::Response::builder()
-                            .status(::http::StatusCode::BAD_REQUEST)
-                            .header("Content-Type", "application/json")
-                            .body(::bytes::Bytes::from(
-                                ::serde_json::to_vec(&crate::v1::types::error::ApiError::with_message(
-                                    crate::v1::types::error::ErrorCode::BadHeader,
-                                    format!("missing or invalid header: {}", #header_name),
-                                ))
-                                .unwrap(),
-                            ))
-                            .unwrap()
+                        crate::v1::types::error::ApiError::with_message(
+                            crate::v1::types::error::ErrorCode::BadHeader,
+                            format!("missing or invalid header: {}", #header_name),
+                        )
                     })?;
             }
         }
@@ -349,48 +353,28 @@ fn build_extract_response_fn(
         let ty = &json_field.ty;
 
         Ok(quote! {
-            fn extract(resp: ::http::Response<crate::util::body::Body>) -> ::core::result::Result<Self, ::http::Response<crate::util::body::Body>> {
-                let status = resp.status();
-                #status_check
+            async fn extract(resp: ::http::Response<crate::util::body::Body>) -> crate::v1::types::error::ApiResult<Self> {
                 let (parts, body) = resp.into_parts();
+                #status_check
                 #(#header_extraction)*
-                let body_bytes = body.buffer().await.map_err(|_| {
-                        ::http::Response::builder()
-                            .status(::http::StatusCode::INTERNAL_SERVER_ERROR)
-                            .header(::http::header::CONTENT_TYPE, "application/json")
-                            .body(crate::util::body::Body::from(
-                                ::serde_json::to_vec(&crate::v1::types::error::ApiError::with_message(
-                                    crate::v1::types::error::ErrorCode::InvalidData,
-                                    "failed to buffer response body".to_string(),
-                                ))
-                                .unwrap(),
-                            ))
-                            .unwrap()
-                })?;
+                let body_bytes = body.buffer().await.map_err(|_| crate::v1::types::error::ApiError::with_message(
+                    crate::v1::types::error::ErrorCode::Internal,
+                    "failed to buffer response".to_string(),
+                ))?;
                 let #ident: #ty = ::serde_json::from_slice(&body_bytes)
-                    .map_err(|e| {
-                        ::http::Response::builder()
-                            .status(::http::StatusCode::INTERNAL_SERVER_ERROR)
-                            .header(::http::header::CONTENT_TYPE, "application/json")
-                            .body(crate::util::body::Body::from(
-                                ::serde_json::to_vec(&crate::v1::types::error::ApiError::with_message(
-                                    crate::v1::types::error::ErrorCode::InvalidData,
-                                    format!("failed to parse response json: {}", e),
-                                ))
-                                .unwrap(),
-                            ))
-                            .unwrap()
-                    })?;
+                    .map_err(|_| crate::v1::types::error::ApiError::with_message(
+                        crate::v1::types::error::ErrorCode::Internal,
+                        "failed to parse response".to_string(),
+                    ))?;
                 Ok(Response { #ident, #(#header_idents,)* #headers_field_assignment #status_field_assignment })
             }
         })
     } else if let Some(body_field) = body_field {
         let ident = &body_field.ident;
         Ok(quote! {
-            fn extract(resp: ::http::Response<crate::util::body::Body>) -> ::core::result::Result<Self, ::http::Response<crate::util::body::Body>> {
-                let status = resp.status();
-                #status_check
+            async fn extract(resp: ::http::Response<crate::util::body::Body>) -> crate::v1::types::error::ApiResult<Self> {
                 let (parts, body) = resp.into_parts();
+                #status_check
                 #(#header_extraction)*
                 let #ident = body;
                 Ok(Response { #ident, #(#header_idents,)* #headers_field_assignment #status_field_assignment })
@@ -398,10 +382,9 @@ fn build_extract_response_fn(
         })
     } else {
         Ok(quote! {
-            fn extract(resp: ::http::Response<crate::util::body::Body>) -> ::core::result::Result<Self, ::http::Response<crate::util::body::Body>> {
-                let status = resp.status();
+            async fn extract(resp: ::http::Response<crate::util::body::Body>) -> crate::v1::types::error::ApiResult<Self> {
+                let (parts, body) = resp.into_parts();
                 #status_check
-                let (parts, _body) = resp.into_parts();
                 #(#header_extraction)*
                 Ok(Response { #(#header_idents,)* #headers_field_assignment #status_field_assignment })
             }
@@ -569,7 +552,12 @@ fn build_extract_request_fn(
     let method_str = args.method.value();
     let method_ident = Ident::new(&method_str, args.method.span());
 
-    let error_expr = quote! { original_req.clone() };
+    let error_expr = quote! {
+        crate::v1::types::error::ApiError::with_message(
+            crate::v1::types::error::ErrorCode::InvalidData,
+            "invalid path".to_string(),
+        )
+    };
     let (path_extraction, query_extraction, header_extraction) =
         build_parts_extraction(args, fields, &error_expr)?;
 
@@ -577,18 +565,33 @@ fn build_extract_request_fn(
         let ident = &f.ident;
         let ty = &f.ty;
         quote! {
-            let body_bytes = body.buffer().await.map_err(|_| original_req.clone())?;
+            let body_bytes = body.buffer().await.map_err(|_| crate::v1::types::error::ApiError::with_message(
+                crate::v1::types::error::ErrorCode::InvalidData,
+                "failed to buffer request body".to_string(),
+            ))?;
             let #ident: #ty = ::serde_json::from_slice(&body_bytes)
-                .map_err(|_| original_req.clone())?;
+                .map_err(|_| crate::v1::types::error::ApiError::with_message(
+                    crate::v1::types::error::ErrorCode::InvalidData,
+                    "failed to parse request body".to_string(),
+                ))?;
         }
     } else if let Some(f) = form_field {
         let ident = &f.ident;
         let ty = &f.ty;
         quote! {
-            let body_bytes = body.buffer().await.map_err(|_| original_req.clone())?;
+            let body_bytes = body.buffer().await.map_err(|_| crate::v1::types::error::ApiError::with_message(
+                crate::v1::types::error::ErrorCode::InvalidData,
+                "failed to buffer request body".to_string(),
+            ))?;
             let #ident: #ty = ::serde_urlencoded::from_str::<#ty>(
-                &std::str::from_utf8(&body_bytes).map_err(|_| original_req.clone())?
-            ).map_err(|_| original_req.clone())?;
+                &std::str::from_utf8(&body_bytes).map_err(|_| crate::v1::types::error::ApiError::with_message(
+                    crate::v1::types::error::ErrorCode::InvalidData,
+                    "invalid utf8 in request body".to_string(),
+                ))?
+            ).map_err(|_| crate::v1::types::error::ApiError::with_message(
+                crate::v1::types::error::ErrorCode::InvalidData,
+                "failed to parse request body".to_string(),
+            ))?;
         }
     } else if let Some(f) = body_field {
         let ident = &f.ident;
@@ -602,14 +605,15 @@ fn build_extract_request_fn(
     let all_idents: Vec<_> = fields.iter().map(|f| &f.ident).collect();
 
     Ok(quote! {
-        fn extract(req: ::http::Request<crate::util::body::Body>) -> ::core::result::Result<Self, ::http::Request<crate::util::body::Body>> {
+        async fn extract(req: ::http::Request<crate::util::body::Body>) -> crate::v1::types::error::ApiResult<Self> {
             if req.method() != ::http::Method::#method_ident {
-                return Err(req);
+                return Err(crate::v1::types::error::ApiError::with_message(
+                    crate::v1::types::error::ErrorCode::InvalidData,
+                    "invalid method".to_string(),
+                ));
             }
 
-            let original_req = req;
-            let (parts, body) = original_req.clone().into_parts();
-
+            let (parts, body) = req.into_parts();
             let path = parts.uri.path();
             let query_str = parts.uri.query().unwrap_or("");
 
@@ -1165,7 +1169,10 @@ fn build_parts_extraction(
                 let raw_name = format_ident!("{}_raw", f.ident);
                 quote! {
                     let #ident: #ty = crate::v1::routes::PathParam::from_path_param(#raw_name)
-                        .map_err(|_| #error_expr)?;
+                        .map_err(|_| crate::v1::types::error::ApiError::with_message(
+                            crate::v1::types::error::ErrorCode::InvalidData,
+                            "invalid path parameter".to_string(),
+                        ))?;
                 }
             })
             .collect();
@@ -1202,7 +1209,10 @@ fn build_parts_extraction(
                     let ty = &f.ty;
                     stmts.push(quote! {
                         let #ident: #ty = ::serde_urlencoded::from_str(query_str)
-                            .map_err(|_| #error_expr)?;
+                            .map_err(|_| crate::v1::types::error::ApiError::with_message(
+                                crate::v1::types::error::ErrorCode::InvalidData,
+                                "failed to parse query parameters".to_string(),
+                            ))?;
                     });
                 }
                 _ => {}
@@ -1218,7 +1228,10 @@ fn build_parts_extraction(
                     #(#named_renames #named_idents: #named_tys,)*
                 }
                 let __qp: __QueryParams = ::serde_urlencoded::from_str(query_str)
-                    .map_err(|_| #error_expr)?;
+                    .map_err(|_| crate::v1::types::error::ApiError::with_message(
+                        crate::v1::types::error::ErrorCode::InvalidData,
+                        "failed to parse query parameters".to_string(),
+                    ))?;
                 #(let #named_idents = __qp.#named_idents;)*
             }
         };
@@ -1257,7 +1270,10 @@ fn build_parts_extraction(
                             .get(#header_name)
                             .and_then(|v| v.to_str().ok())
                             .and_then(|v| v.parse().ok())
-                            .ok_or_else(|| #error_expr)?;
+                            .ok_or_else(|| crate::v1::types::error::ApiError::with_message(
+                                crate::v1::types::error::ErrorCode::BadHeader,
+                                format!("missing or invalid header: {}", #header_name),
+                            ))?;
                     }
                 }
             })

@@ -532,6 +532,7 @@ pub enum MessageSync {
         user_id: UserId,
     },
 
+    // TODO: rename to ThreadMembersUpsert or ThreadMembersUpdate
     ThreadMemberUpsert {
         room_id: Option<RoomId>,
         thread_id: ChannelId,

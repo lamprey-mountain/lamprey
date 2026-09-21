@@ -1,4 +1,4 @@
-use std::{collections::HashMap, error::Error, sync::Arc};
+use std::{any::TypeId, collections::HashMap, error::Error, sync::Arc};
 
 use crate::{
     prelude::*,
@@ -16,7 +16,7 @@ use axum::{
     response::IntoResponse,
 };
 use common::{
-    util::routes::Endpoint,
+    util::{body::Body, routes::Endpoint},
     v1::{
         routes::ExtractableRequest,
         types::error::{ErrorField, ErrorFieldType},
@@ -30,6 +30,7 @@ use lamprey_backend_services::services::{
     Services,
     media::{Import, MediaItem},
 };
+use serde::de::DeserializeOwned;
 
 /// the current state for a request
 ///
@@ -57,6 +58,7 @@ impl<E> FromRequest<Globals> for Req<E>
 where
     E: Endpoint + Send,
     E::Request: ExtractableRequest + Send,
+    <E::Request as ExtractableRequest>::Body: DeserializeOwned,
 {
     type Rejection = ExtractorRejection;
 
@@ -84,6 +86,18 @@ where
                     ExtractorRejection::ServerError(ServerError::Internal(Box::new(err)))
                 }
             })?;
+
+        // FIXME: handle raw body request
+        // if TypeId::of::<<E::Request as ExtractableRequest>::Body>() == TypeId::of::<Body>() {
+        //     return Ok(Self {
+        //         inner: E::Request::extract(parts, body.into())?,
+        //         globals: globals.clone(),
+        //         identity,
+        //         media: HashMap::new(),
+        //         headers: Box::new(headers),
+        //         audit_logger,
+        //     });
+        // }
 
         let (inner, media) = match headers.content_type {
             ContentType::Json => {

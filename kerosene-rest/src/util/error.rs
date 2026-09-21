@@ -57,6 +57,12 @@ impl From<ServerError> for ExtractorRejection {
     }
 }
 
+impl From<ApiError> for ExtractorRejection {
+    fn from(err: ApiError) -> Self {
+        Self::ServerError(ServerError::Api(Box::new(err)))
+    }
+}
+
 impl From<http::Response<Bytes>> for ExtractorRejection {
     fn from(value: http::Response<Bytes>) -> Self {
         Self::Response(value)

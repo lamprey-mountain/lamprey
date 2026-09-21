@@ -26,7 +26,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                     req: crate::util::Req<#ep_type>,
                 ) -> Result<impl ::axum::response::IntoResponse> {
                     handle(req).await.map(|r| {
-                        r.encode().map(::axum::body::Body::from)
+                        r.encode()
                     })
                 }
                 let meta = #ep_type::metadata();
