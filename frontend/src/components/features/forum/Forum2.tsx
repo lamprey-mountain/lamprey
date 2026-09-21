@@ -305,7 +305,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 					/>
 				</Show>
 				<div style="display:flex; align-items:center">
-					<h3 style="font-size:1rem; margin-top:8px;flex:1">
+					<h3 style="font-size:1rem; flex:1">
 						{activeThreads()?.state.ids.length ?? "loading"} threads
 					</h3>
 					<div class="sort-view-container">
