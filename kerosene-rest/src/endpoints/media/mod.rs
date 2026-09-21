@@ -7,6 +7,8 @@ pub mod media;
 // mod thumb;
 // mod trickplay;
 
+mod util;
+
 pub fn register(r: &mut crate::Routes) {
     media::register(r);
 }

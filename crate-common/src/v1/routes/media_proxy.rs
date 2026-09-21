@@ -1,6 +1,7 @@
 use lamprey_macros::endpoint;
 
-// NOTE: should i remove the HEAD routes? they're kind of implied by GET.
+// TODO: remove the HEAD routes as they're already covered by GET.
+// i'll need to return a proper http body stream instead of bytes, otherwise i'd have to read the entire file on HEAD (among other things, like buffering the entire response body in memory)
 // i'd probably need to add a #[method] attr to get the request method.
 
 /// Head media
@@ -80,6 +81,8 @@ pub mod media_get {
     response(OK, description = "success"),
 )]
 pub mod media_head_filename {
+    use http::{HeaderMap, StatusCode};
+
     use crate::{v1::types::MediaId, v2::types::media::proxy::MediaQuery};
 
     pub struct Request {
@@ -94,8 +97,11 @@ pub mod media_head_filename {
     }
 
     pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
         #[headers]
-        pub headers: http::HeaderMap,
+        pub headers: HeaderMap,
     }
 }
 
@@ -109,6 +115,9 @@ pub mod media_head_filename {
     response(OK, description = "success"),
 )]
 pub mod media_get_filename {
+    use bytes::Bytes;
+    use http::{HeaderMap, StatusCode};
+
     use crate::{v1::types::MediaId, v2::types::media::proxy::MediaQuery};
 
     pub struct Request {
@@ -123,8 +132,15 @@ pub mod media_get_filename {
     }
 
     pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
         #[headers]
-        pub headers: http::HeaderMap,
+        pub headers: HeaderMap,
+
+        // PERF: use axum::body::Body
+        #[body]
+        pub body: Bytes,
     }
 }
 

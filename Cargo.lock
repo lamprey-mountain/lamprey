@@ -4587,6 +4587,7 @@ dependencies = [
  "lamprey-common",
  "lamprey-macros",
  "multer",
+ "percent-encoding",
  "rmp-serde",
  "serde",
  "serde_json",

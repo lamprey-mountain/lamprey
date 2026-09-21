@@ -31,6 +31,7 @@ mod util;
 /// create an axum router for the api
 pub fn create_router_api(globals: Globals) -> Router {
     let kerosene_routes = kerosene_rest::Routes::new_api()
+        .with_audit_logging(globals.clone())
         .into_axum_openapi()
         .with_state(globals.clone());
 

@@ -6,13 +6,12 @@ use axum::{
     response::{IntoResponseParts, ResponseParts},
 };
 use common::v1::types::{UserId, util::Time};
-use headers::authorization::Bearer;
 use headers::{
-    AcceptRanges, Authorization, CacheControl, ContentDisposition, ContentLength, ETag, IfRange,
-    LastModified,
+    AcceptRanges, Authorization, CacheControl, ContentDisposition, ContentLength, ETag,
+    HeaderMapExt, IfMatch, IfModifiedSince, IfNoneMatch, IfRange, LastModified,
+    authorization::Bearer,
 };
-use headers::{ETag, HeaderMapExt, IfMatch, IfModifiedSince, IfNoneMatch, LastModified};
-use http::request::Parts;
+use http::{HeaderMap, HeaderValue, request::Parts};
 use kerosene_core::error::ErrorCode;
 
 /// raw request headers for a request
@@ -70,11 +69,10 @@ pub struct HeadersResponse {
     pub last_modified: Option<LastModified>,
     pub accept_ranges: Option<AcceptRanges>,
     pub cache_control: Option<CacheControl>,
-    pub content_disposition: Option<ContentDisposition>,
+    pub content_disposition: Option<HeaderValue>,
     pub content_length: Option<ContentLength>,
     pub content_type: Option<headers::ContentType>,
-    pub etag: Option<ETag>,
-    pub last_modified: Option<LastModified>,
+    pub content_range: Option<headers::ContentRange>,
     // TODO: handle these headers
     // content-security-policy
     // permissions-policy
@@ -189,6 +187,7 @@ impl HeadersRequest {
             if_match: parts.headers.typed_get(),
             if_none_match: parts.headers.typed_get(),
             if_modified_since: parts.headers.typed_get(),
+            if_range: parts.headers.typed_get(),
             content_type,
             user_agent: parts
                 .headers
@@ -196,6 +195,7 @@ impl HeadersRequest {
                 .and_then(|h| h.to_str().ok())
                 .map(|s| s.to_string()),
             ip_addr,
+            range: parts.headers.typed_get(),
         })
     }
 }
@@ -210,6 +210,56 @@ impl IntoResponseParts for HeadersResponse {
         if let Some(last_modified) = self.last_modified {
             res.headers_mut().typed_insert(last_modified);
         }
+        if let Some(accept_ranges) = self.accept_ranges {
+            res.headers_mut().typed_insert(accept_ranges);
+        }
+        if let Some(cache_control) = self.cache_control {
+            res.headers_mut().typed_insert(cache_control);
+        }
+        if let Some(content_disposition) = self.content_disposition {
+            res.headers_mut()
+                .insert(http::header::CONTENT_DISPOSITION, content_disposition);
+        }
+        if let Some(content_length) = self.content_length {
+            res.headers_mut().typed_insert(content_length);
+        }
+        if let Some(content_type) = self.content_type {
+            res.headers_mut().typed_insert(content_type);
+        }
+        if let Some(content_range) = self.content_range {
+            res.headers_mut().typed_insert(content_range);
+        }
         Ok(res)
+    }
+}
+
+impl From<HeadersResponse> for HeaderMap {
+    fn from(value: HeadersResponse) -> Self {
+        let mut headers = HeaderMap::new();
+        if let Some(etag) = value.etag {
+            headers.typed_insert(etag);
+        }
+        if let Some(last_modified) = value.last_modified {
+            headers.typed_insert(last_modified);
+        }
+        if let Some(accept_ranges) = value.accept_ranges {
+            headers.typed_insert(accept_ranges);
+        }
+        if let Some(cache_control) = value.cache_control {
+            headers.typed_insert(cache_control);
+        }
+        if let Some(content_disposition) = value.content_disposition {
+            headers.insert(http::header::CONTENT_DISPOSITION, content_disposition);
+        }
+        if let Some(content_length) = value.content_length {
+            headers.typed_insert(content_length);
+        }
+        if let Some(content_type) = value.content_type {
+            headers.typed_insert(content_type);
+        }
+        if let Some(content_range) = value.content_range {
+            headers.typed_insert(content_range);
+        }
+        headers
     }
 }

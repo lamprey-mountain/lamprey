@@ -14,7 +14,7 @@ use utoipa::{
 };
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::prelude::*;
+use crate::{prelude::*, util::audit_log};
 
 pub struct Routes {
     openapi: OpenApi,
@@ -121,6 +121,19 @@ impl Routes {
         crate::endpoints::media::register(&mut me);
 
         me
+    }
+
+    /// init audit logging. this **must** be called after `new_api()` or the router will panic.
+    pub fn with_audit_logging(mut self, globals: Globals) -> Self {
+        self.router = Some(
+            self.router
+                .unwrap()
+                .layer(axum::middleware::from_fn_with_state(
+                    globals,
+                    audit_log::middleware,
+                )),
+        );
+        self
     }
 
     /// get a reference the openapi schema
