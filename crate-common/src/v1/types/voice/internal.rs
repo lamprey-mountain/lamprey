@@ -1,3 +1,5 @@
+// TODO: move this out of common?
+
 use bitflags::bitflags;
 
 use lamprey_macros::record;

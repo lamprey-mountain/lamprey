@@ -722,7 +722,7 @@ pub struct DbInvite {
 /// awkward thing to note is that media linked to `Message`s also have links to each
 /// `MessageVersion` they're referenced in.
 // TODO: rename to DbMediaLinkType
-#[derive(sqlx::Type, PartialEq, Eq)]
+#[derive(Debug, sqlx::Type, Clone, Copy, PartialEq, Eq, Hash)]
 #[sqlx(type_name = "media_link_type")]
 pub enum MediaLinkType {
     Message,

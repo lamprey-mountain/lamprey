@@ -8,7 +8,7 @@ use common::{
         MessageInteraction, MessagePatch, MessageSync, MessageType, MessageVersion, Permission,
         SessionId, emoji::EmojiOwner, util::Time,
     },
-    v2::types::{ChannelId, MessageId, RoomId, UserId},
+    v2::types::{ChannelId, MessageId, RoomId, UserId, media::MediaLinkType},
 };
 use futures::{FutureExt, TryFutureExt, try_join};
 use futures_util::future::try_join_all;
@@ -16,7 +16,7 @@ use kerosene_core::{
     error::{ApiError, ErrorCode},
     types::permission::requirements::Requirements,
 };
-use lamprey_backend_data_postgres::{DbMessageAttachment, MediaLinkType};
+use lamprey_backend_data_postgres::{DbMessageAttachment, MediaLinkType as DbMediaLinkType};
 use lamprey_markdown::{Parser, query::QueryableExt};
 use tracing::error;
 use url::Url;
@@ -27,6 +27,7 @@ use crate::{
     prelude::*,
     services::{
         automod::AutomodContext,
+        media::MediaLinker,
         messages::{ServiceMessages, markdown, util::MediaRegistry2},
     },
     types::DbMessageCreate,
@@ -446,6 +447,41 @@ impl ServiceMessages {
         let (content, attachments, embeds, components, removed_at) =
             try_join!(content, attachments, embeds, components, removed_at)?;
 
+        // TODO: use MediaLinker here
+        // let mut media_linker = MediaLinker::new();
+        // media_linker.create(MediaLinkType::message(create.channel_id, create.id));
+        // media_linker.create(MediaLinkType::message_version(
+        //     create.channel_id,
+        //     create.id,
+        //     (*create.id).into(),
+        // ));
+        // let mut registry = MediaRegistry2::new();
+        // for att in &attachments {
+        //     let MessageAttachmentType::Media { media } = &att.ty;
+        //     media_linker.media(&media);
+        // }
+        // for embed in &embeds {
+        //     // TODO: media_linker.create Embed link
+        //     if let Some(media) = &embed.media {
+        //         media_linker.media(&media);
+        //     }
+        //     if let Some(thumbnail) = &embed.thumbnail {
+        //         media_linker.media(&thumbnail);
+        //     }
+        //     if let Some(author_avatar) = &embed.author_avatar {
+        //         media_linker.media(&author_avatar);
+        //     }
+        // }
+        // for media in components
+        //     .as_ref()
+        //     .map(|(_, a)| a.as_slice())
+        //     .unwrap_or_default()
+        // {
+        //     media_linker.media(&media_id);
+        // }
+        // media_linker.media(&media_id);
+        // media_linker.write(txn).await?;
+
         // collect media
         let mut registry = MediaRegistry2::new();
         for att in &attachments {
@@ -484,7 +520,7 @@ impl ServiceMessages {
         for media in registry.media() {
             let existing = txn.media_link_select(media.id).await?;
             let already_linked_to_this = existing.iter().any(|l| {
-                l.link_type == MediaLinkType::Message && l.target_id == create.id.into_inner()
+                l.link_type == DbMediaLinkType::Message && l.target_id == create.id.into_inner()
             });
 
             if !existing.is_empty() && !already_linked_to_this {
@@ -550,9 +586,9 @@ impl ServiceMessages {
 
             // insert message links
             for media in registry.media() {
-                txn.media_link_insert(media.id, *create.id, MediaLinkType::Message)
+                txn.media_link_insert(media.id, *create.id, DbMediaLinkType::Message)
                     .await?;
-                txn.media_link_insert(media.id, *create.id, MediaLinkType::MessageVersion)
+                txn.media_link_insert(media.id, *create.id, DbMediaLinkType::MessageVersion)
                     .await?;
             }
 

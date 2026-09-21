@@ -7,6 +7,7 @@ use common::v1::types::{MediaTrack as MediaTrackV1, MediaV0 as MediaV1};
 use common::v2::types::media::{
     Media as MediaV2, MediaErrorReason, MediaPatch as MediaPatchV2, MediaStatus,
 };
+use common::v2::types::{ChannelId, RoomId};
 use serde::{Deserialize, Serialize};
 use sqlx::{query, query_as};
 use time::PrimitiveDateTime;
@@ -309,7 +310,9 @@ impl DataMedia for Postgres {
                         }
                     }
                     DbMediaLinkType::MessageVersion => {
-                        if let Some((message_id, channel_id)) = message_version_map.get(&link.target_id) {
+                        if let Some((message_id, channel_id)) =
+                            message_version_map.get(&link.target_id)
+                        {
                             Some(MediaLinkTypeV2::MessageVersion {
                                 message_id: (*message_id).into(),
                                 channel_id: (*channel_id).into(),
@@ -353,7 +356,9 @@ impl DataMedia for Postgres {
                         }
                     }
                     DbMediaLinkType::ScriptVersion => {
-                        if let Some((script_id, channel_id)) = script_version_map.get(&link.target_id) {
+                        if let Some((script_id, channel_id)) =
+                            script_version_map.get(&link.target_id)
+                        {
                             Some(MediaLinkTypeV2::ScriptVersion {
                                 script_id: (*script_id).into(),
                                 channel_id: (*channel_id).into(),
@@ -708,5 +713,52 @@ impl DataMedia for Postgres {
         };
 
         Ok(Some(media.parse()))
+    }
+
+    async fn media_update_room_and_channel(
+        &mut self,
+        media_id: MediaId,
+        room_id: Option<RoomId>,
+        channel_id: Option<ChannelId>,
+    ) -> Result<()> {
+        // PERF(?): don't require reading and writing the whole object
+        // postgres needs to rewrite the entire row on update anyways though
+
+        let mut tx = self.begin_tx().await?;
+        let media = query_as!(
+            DbMediaWithId,
+            r#"
+            SELECT id, user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
+            FROM media
+            WHERE id = $1
+            FOR UPDATE
+        "#,
+            *media_id,
+        )
+        .fetch_one(tx.ext())
+        .await?;
+
+        let mut media_data: MediaV2 = media.parse();
+        media_data.room_id = room_id;
+        media_data.channel_id = channel_id;
+
+        let data =
+            serde_json::to_value(&DbMediaData::V2(media_data)).expect("failed to serialize media");
+
+        query!(
+            r#"
+            UPDATE media SET
+                data = $2, version_id = $3
+            WHERE id = $1
+        "#,
+            *media_id,
+            data,
+            Uuid::now_v7(),
+        )
+        .execute(tx.ext())
+        .await?;
+        tx.commit().await?;
+
+        Ok(())
     }
 }

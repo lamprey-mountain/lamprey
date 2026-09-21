@@ -8,13 +8,16 @@ use validator::Validate;
 use lamprey_macros::{Diff, record};
 
 use crate::v1::types::{
-    ChannelId, EmbedId, MediaId, MediaVerId, MessageId, MessageVerId, Mime, RedexId, RedexVerId,
-    RoomId, UserId, federation::Remote, misc::hashes::Hashes, util::Time,
+    ChannelId, MediaId, MediaVerId, Mime, RoomId, UserId, federation::Remote, misc::hashes::Hashes,
+    util::Time,
 };
 
 pub mod links;
 pub mod proxy;
+pub mod resolvable;
 pub mod scanner;
+
+pub use links::MediaLinkType;
 
 /// A reference to a piece of media to be used.
 // TODO: use this in more FooCreate and FooPatch structs
@@ -390,79 +393,6 @@ pub struct MediaCreated {
 
     /// A url to upload your media to. Is `None` if you used `MediaCreateSource::Download`.
     pub upload_url: Option<Url>,
-}
-
-/// describes how this piece of media is linked to another resource
-///
-/// objects can be linked to multiple objects; for example, media linked to
-/// `Message`s also have links to each `MessageVersion` they're referenced in.
-#[record]
-#[derive(PartialEq, Eq)]
-#[serde(tag = "type")]
-pub enum MediaLinkType {
-    /// this piece of media is linked to a message
-    // NOTE: auth checks copy MessageUpdate
-    // NOTE: should never exist on its own, always comes with a Message + MessageVersion link
-    Message {
-        channel_id: ChannelId,
-        message_id: MessageId,
-    },
-
-    /// this piece of media is linked to a message version
-    // NOTE: auth checks copy MessageUpdate
-    MessageVersion {
-        channel_id: ChannelId,
-        message_id: MessageId,
-        version_id: MessageVerId,
-    },
-
-    /// this piece of media is used as a user avatar
-    // NOTE: auth checks copy UserUpdate
-    UserAvatar { user_id: UserId },
-
-    /// this piece of media is used as a user banner
-    // NOTE: auth checks copy UserUpdate
-    UserBanner { user_id: UserId },
-
-    /// this piece of media is used as a channel icon
-    // NOTE: auth checks copy ChannelUpdate
-    ChannelIcon { channel_id: ChannelId },
-
-    /// this piece of media is used as a room icon
-    // NOTE: auth checks copy RoomUpdate
-    RoomIcon { room_id: RoomId },
-
-    /// this piece of media is embedded in a message
-    // NOTE: auth checks copy Message
-    // NOTE: should never exist on its own, always comes with a Message + MessageVersion link
-    Embed { id: EmbedId },
-
-    /// this piece of media is used as a custom emoji
-    // NOTE: auth checks copy EmojiUpdate
-    CustomEmoji { room_id: RoomId },
-
-    /// this piece of media is used as a room banner
-    // NOTE: auth checks copy RoomUpdate
-    RoomBanner { room_id: RoomId },
-
-    /// this piece of media is a script
-    Script {
-        channel_id: ChannelId,
-        script_id: RedexId,
-    },
-
-    /// this piece of media is a script version
-    ScriptVersion {
-        channel_id: ChannelId,
-        script_id: RedexId,
-        version_id: RedexVerId,
-    },
-
-    /// this piece of media is used in a document
-    Document {
-        channel_id: ChannelId,
-        document_id: ChannelId,
-    },
 }
 
 impl MediaCreateSource {

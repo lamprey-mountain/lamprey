@@ -10,6 +10,7 @@ pub struct MediaRegistry {
     pub duplicates: HashSet<MediaId>,
 }
 
+// TODO: deprecate and remove; use MediaLinker instead
 #[derive(Default)]
 pub struct MediaRegistry2<'a> {
     media: Vec<&'a Media>,

@@ -210,6 +210,13 @@ pub trait DataMedia {
         hostname: &Hostname,
         origin_id: Uuid,
     ) -> Result<Option<Media>>;
+
+    async fn media_update_room_and_channel(
+        &mut self,
+        media_id: MediaId,
+        room_id: Option<RoomId>,
+        channel_id: Option<ChannelId>,
+    ) -> Result<()>;
 }
 
 #[async_trait]

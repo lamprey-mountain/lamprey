@@ -18,10 +18,12 @@ use tracing::{debug, error};
 use crate::{prelude::*, services::media::util::MediaItemState};
 
 mod import;
+mod link;
 mod process;
 mod util;
 
 pub use import::Upload;
+pub use link::MediaLinker;
 pub use util::{Import, MediaItem, get_s3_url};
 
 pub struct ServiceMedia {
