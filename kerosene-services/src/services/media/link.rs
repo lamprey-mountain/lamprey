@@ -96,6 +96,13 @@ impl From<Error> for MediaLinkerError {
     }
 }
 
+impl From<MediaLinkerError> for Error {
+    fn from(err: MediaLinkerError) -> Self {
+        // TODO: better error
+        Error::Internal(err.to_string())
+    }
+}
+
 impl<'a> MediaLinker<'a> {
     /// create a media linker for a user
     ///
@@ -161,7 +168,10 @@ impl<'a> MediaLinker<'a> {
     }
 
     /// write these links to the database via a transaction
-    pub async fn write<Txn: Data>(self, txn: &mut Txn) -> CoreResult<(), MediaLinkerError> {
+    pub async fn write<Txn: Data + ?Sized>(
+        &self,
+        txn: &mut Txn,
+    ) -> CoreResult<(), MediaLinkerError> {
         // ensure there is no duplicate media
         let mut seen = HashSet::new();
         for media in &self.media {

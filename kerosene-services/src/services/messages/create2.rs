@@ -447,56 +447,29 @@ impl ServiceMessages {
         let (content, attachments, embeds, components, removed_at) =
             try_join!(content, attachments, embeds, components, removed_at)?;
 
-        // TODO: use MediaLinker here
-        // let mut media_linker = MediaLinker::new();
-        // media_linker.create(MediaLinkType::message(create.channel_id, create.id));
-        // media_linker.create(MediaLinkType::message_version(
-        //     create.channel_id,
-        //     create.id,
-        //     (*create.id).into(),
-        // ));
-        // let mut registry = MediaRegistry2::new();
-        // for att in &attachments {
-        //     let MessageAttachmentType::Media { media } = &att.ty;
-        //     media_linker.media(&media);
-        // }
-        // for embed in &embeds {
-        //     // TODO: media_linker.create Embed link
-        //     if let Some(media) = &embed.media {
-        //         media_linker.media(&media);
-        //     }
-        //     if let Some(thumbnail) = &embed.thumbnail {
-        //         media_linker.media(&thumbnail);
-        //     }
-        //     if let Some(author_avatar) = &embed.author_avatar {
-        //         media_linker.media(&author_avatar);
-        //     }
-        // }
-        // for media in components
-        //     .as_ref()
-        //     .map(|(_, a)| a.as_slice())
-        //     .unwrap_or_default()
-        // {
-        //     media_linker.media(&media_id);
-        // }
-        // media_linker.media(&media_id);
-        // media_linker.write(txn).await?;
-
         // collect media
+        let mut media_linker = MediaLinker::new(create.user_id);
+        media_linker.create(MediaLinkType::message(create.channel_id, create.id));
+        media_linker.create(MediaLinkType::message_version(
+            create.channel_id,
+            create.id,
+            (*create.id).into(),
+        ));
         let mut registry = MediaRegistry2::new();
         for att in &attachments {
             let MessageAttachmentType::Media { media } = &att.ty;
-            registry.insert(media);
+            media_linker.media(&media);
         }
         for embed in &embeds {
+            // TODO: media_linker.create Embed link
             if let Some(media) = &embed.media {
-                registry.insert(media);
+                media_linker.media(&media);
             }
             if let Some(thumbnail) = &embed.thumbnail {
-                registry.insert(thumbnail);
+                media_linker.media(&thumbnail);
             }
             if let Some(author_avatar) = &embed.author_avatar {
-                registry.insert(author_avatar);
+                media_linker.media(&author_avatar);
             }
         }
         for media in components
@@ -504,9 +477,8 @@ impl ServiceMessages {
             .map(|(_, a)| a.as_slice())
             .unwrap_or_default()
         {
-            registry.insert(media);
+            media_linker.media(&media);
         }
-        registry.check(create.user_id)?;
 
         // 3. commit
 
@@ -516,19 +488,7 @@ impl ServiceMessages {
         let mut txn = self.globals.begin().await?;
 
         // validate media
-        // PERF: batch media link query
-        for media in registry.media() {
-            let existing = txn.media_link_select(media.id).await?;
-            let already_linked_to_this = existing.iter().any(|l| {
-                l.link_type == DbMediaLinkType::Message && l.target_id == create.id.into_inner()
-            });
-
-            if !existing.is_empty() && !already_linked_to_this {
-                return Err(Error::ApiError(ApiError::from_code(
-                    ErrorCode::MediaAlreadyUsed,
-                )));
-            }
-        }
+        media_linker.write(&mut *txn).await?;
 
         // construct message
         let message = Message {

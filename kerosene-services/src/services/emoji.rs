@@ -6,12 +6,14 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::sync::MessageSync;
 use common::v1::types::util::Changes;
 use common::v1::types::{EmojiId, PaginationQuery, PaginationResponse, Permission, RoomId};
+use common::v2::types::media::MediaLinkType;
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use moka::future::Cache;
 use validator::Validate;
 
 use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
+use crate::services::media::MediaLinker;
 
 pub struct ServiceEmoji {
     globals: Globals,
@@ -59,7 +61,6 @@ impl ServiceEmoji {
         nonce: Option<String>,
     ) -> Result<EmojiCustom> {
         json.validate()?;
-        let mut data = self.globals.begin().await?;
         let srv = self.globals.services();
 
         let user = auth.ensure_user()?;
@@ -67,12 +68,24 @@ impl ServiceEmoji {
         let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::EmojiManage)?;
 
-        let media = data.media_select(json.media_id).await?;
+        let media = srv.media.get(json.media_id).await?.ready().await;
         if !media.metadata.is_image() {
             return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
         }
 
-        let emoji = data.emoji_create(user_id, room_id, json.clone()).await?;
+        let mut txn = self.globals.begin().await?;
+        let emoji = txn.emoji_create(user_id, room_id, json.clone()).await?;
+
+        MediaLinker::new(user_id)
+            .create(MediaLinkType::CustomEmoji {
+                room_id,
+                emoji_id: emoji.id,
+            })
+            .media(&media)
+            .write(&mut *txn)
+            .await?;
+
+        txn.commit().await?;
 
         let changes = Changes::new()
             .add("name", &json.name)
@@ -83,8 +96,6 @@ impl ServiceEmoji {
         auth.al_push(AuditLogEntryType::EmojiCreate {
             changes: changes.build(),
         });
-
-        data.commit().await?;
 
         let sync_msg = MessageSync::EmojiCreate {
             emoji: emoji.clone(),
@@ -165,7 +176,7 @@ impl ServiceEmoji {
         auth: &mut A,
         patch: EmojiCustomPatch,
     ) -> Result<EmojiCustom> {
-        let mut data = self.globals.begin().await?;
+        patch.validate()?;
         let srv = self.globals.services();
 
         let user = auth.ensure_user()?;
@@ -173,9 +184,11 @@ impl ServiceEmoji {
         let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::EmojiManage)?;
 
-        let emoji_before = data.emoji_get(emoji_id).await?;
-        data.emoji_update(emoji_id, patch).await?;
-        let emoji = data.emoji_get(emoji_id).await?;
+        let mut txn = self.globals.begin().await?;
+        let emoji_before = txn.emoji_get(emoji_id).await?;
+        txn.emoji_update(emoji_id, patch).await?;
+        let emoji = txn.emoji_get(emoji_id).await?;
+        txn.commit().await?;
 
         auth.set_room_id(room_id);
         auth.al_push(AuditLogEntryType::EmojiUpdate {
@@ -183,8 +196,6 @@ impl ServiceEmoji {
                 .change("name", &emoji_before.name, &emoji.name)
                 .build(),
         });
-
-        data.commit().await?;
 
         self.cache.insert(emoji.id, Arc::new(emoji.clone())).await;
 
@@ -207,20 +218,19 @@ impl ServiceEmoji {
         emoji_id: EmojiId,
         auth: &mut A,
     ) -> Result<()> {
-        let mut data = self.globals.begin().await?;
-        let emoji = data.emoji_get(emoji_id).await?;
+        let srv = self.globals.services();
 
         let user = auth.ensure_user()?;
         let user_id = user.id;
-        let perms = self
-            .globals
-            .services()
-            .perms
-            .for_room(user_id, room_id)
-            .await?;
+        let perms = srv.perms.for_room(user_id, room_id).await?;
         perms.ensure(Permission::EmojiManage)?;
 
-        data.emoji_delete(emoji_id).await?;
+        let mut txn = self.globals.begin().await?;
+        let emoji = txn.emoji_get(emoji_id).await?;
+        txn.emoji_delete(emoji_id).await?;
+        txn.commit().await?;
+
+        // NOTE: emoji are only ever soft deleted in order to avoid breaking older messages which still use them
 
         auth.set_room_id(room_id);
         auth.al_push(AuditLogEntryType::EmojiDelete {
@@ -231,8 +241,6 @@ impl ServiceEmoji {
                 .remove("media_id", &emoji.media_id)
                 .build(),
         });
-
-        data.commit().await?;
 
         self.cache.invalidate(&emoji_id).await;
 
