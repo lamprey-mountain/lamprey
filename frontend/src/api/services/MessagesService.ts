@@ -655,6 +655,7 @@ export class MessagesService extends BaseService<Message> {
 				content: body.content,
 				attachments: body.attachments,
 				embeds: body.embeds ?? [],
+				reply_id: body.reply_id,
 				created_at: new Date().toISOString(),
 				mentions: { users: [], roles: [], everyone: false },
 			},
