@@ -427,8 +427,7 @@
 	}
 
 	& > .body {
-		overflow: hidden;
-		max-width: 60ch;
+		overflow-wrap: anywhere;
 
 		// TODO: more specific selector
 		& .edited {
@@ -489,7 +488,6 @@
 	flex-direction: column;
 	align-items: start;
 	padding-right: 8px;
-	max-width: 60ch;
 }
 
 // TODO: add .local class to messages
