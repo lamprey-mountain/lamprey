@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE reaction SET deleted_seq = $3 WHERE message_id = $1 AND key = $2 AND deleted_seq IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7ace19aeabef7c5766cf31cff8b5ded45c34f81268716c9bc6b8757e33c49416"
+}

@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO calendar_overwrite (event_id, seq, title, description, start_at, end_at, cancelled)\n            VALUES ($1, $2, $3, $4, $5, $6, $7)\n            ON CONFLICT (event_id, seq) DO UPDATE SET\n                title = EXCLUDED.title,\n                description = EXCLUDED.description,\n                start_at = EXCLUDED.start_at,\n                end_at = EXCLUDED.end_at,\n                cancelled = EXCLUDED.cancelled\n            RETURNING event_id, seq as \"seq!\", title, description, location, url, start_at, end_at, cancelled\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "event_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "seq!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "location",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "start_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 7,
+        "name": "end_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 8,
+        "name": "cancelled",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Text",
+        "Text",
+        "Timestamp",
+        "Timestamp",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "83ef7ba6803e5a8841041c3edcaa66e4c30ace6c97fd554680142b3df4ac6e7e"
+}

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE channel SET latest_seq = latest_seq + 1 WHERE id = $1 RETURNING latest_seq as \"latest_seq!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latest_seq!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "05a15888050111b4b2581e7039f169de2e2c065f4d40468d8659ba170b28c6b6"
+}

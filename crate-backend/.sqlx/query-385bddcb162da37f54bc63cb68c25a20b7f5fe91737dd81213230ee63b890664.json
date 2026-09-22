@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH room_member_counts AS (\n                SELECT\n                    room_id,\n                    count(*) as member_count\n                FROM room_member\n                WHERE left_at IS NULL\n                GROUP BY room_id\n            ),\n            room_joins AS (\n                SELECT\n                    room_id,\n                    count(*) as join_count\n                FROM room_member\n                WHERE joined_at > $1\n                GROUP BY room_id\n            ),\n            room_leaves AS (\n                SELECT\n                    room_id,\n                    count(*) as leave_count\n                FROM room_member\n                WHERE left_at > $1\n                GROUP BY room_id\n            )\n            INSERT INTO metric_room (ts, room_id, members, members_join, members_leave)\n            SELECT\n                now(),\n                r.id as room_id,\n                coalesce(rmc.member_count, 0) as members,\n                coalesce(rj.join_count, 0) as members_join,\n                coalesce(rl.leave_count, 0) as members_leave\n            FROM room r\n            LEFT JOIN room_member_counts rmc ON rmc.room_id = r.id\n            LEFT JOIN room_joins rj ON rj.room_id = r.id\n            LEFT JOIN room_leaves rl ON rl.room_id = r.id\n            ON CONFLICT (ts, room_id) DO UPDATE SET\n                members = EXCLUDED.members,\n                members_join = EXCLUDED.members_join,\n                members_leave = EXCLUDED.members_leave;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamp"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "385bddcb162da37f54bc63cb68c25a20b7f5fe91737dd81213230ee63b890664"
+}

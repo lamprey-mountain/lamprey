@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE email_queue\n            SET status = 'claimed', claimed_at = NOW()\n            WHERE id = (\n                SELECT id\n                FROM email_queue\n                WHERE status = 'pending' OR (status = 'failed' AND retries < 5 AND last_attempt_at < NOW() - INTERVAL '5 minutes')\n                ORDER BY created_at ASC\n                FOR UPDATE SKIP LOCKED\n                LIMIT 1\n            )\n            RETURNING id, to_addr, from_addr, subject, plain_text_body, html_body\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "to_addr",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "from_addr",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "subject",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "plain_text_body",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "html_body",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "8a269f50c76accc4cefd0d3085eaccf6bf1454f3bcee0297b2845300bdc7665f"
+}

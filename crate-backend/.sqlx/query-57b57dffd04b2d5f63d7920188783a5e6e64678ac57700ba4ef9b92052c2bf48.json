@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "select from role where room_id = $1 for update",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "57b57dffd04b2d5f63d7920188783a5e6e64678ac57700ba4ef9b92052c2bf48"
+}

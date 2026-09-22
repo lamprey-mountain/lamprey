@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM search_reindex_queue WHERE target_id = $1 AND target_type = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "485a58dffd62177e7fc1f2b8370b12d6d6e1b60a4a59da241161d4b547ee530d"
+}

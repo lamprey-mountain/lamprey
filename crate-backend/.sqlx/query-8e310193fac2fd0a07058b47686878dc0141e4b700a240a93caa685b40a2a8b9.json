@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE channel_calendar\n                SET\n                    color = $2,\n                    default_timezone = $3\n                WHERE channel_id = $1\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8e310193fac2fd0a07058b47686878dc0141e4b700a240a93caa685b40a2a8b9"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH media_total_size AS (\n                SELECT\n                    m.id as media_id,\n                    coalesce(sum((track.value->>'size')::bigint), 0) as total_size\n                FROM media m,\n                jsonb_array_elements(m.data->'tracks') AS track\n                GROUP BY m.id\n            ),\n            channel_media_stats AS (\n                SELECT\n                    msg.channel_id,\n                    count(DISTINCT ma.media_id) AS media_count,\n                    sum(mts.total_size) as media_size\n                FROM message msg\n                JOIN message_version mv ON msg.latest_version_id = mv.version_id\n                JOIN message_attachment ma ON ma.version_id = mv.version_id\n                JOIN media_total_size mts ON mts.media_id = ma.media_id\n                WHERE msg.deleted_at IS NULL\n                GROUP BY msg.channel_id\n            ),\n            channel_message_stats AS (\n                SELECT\n                    channel_id,\n                    count(*) as message_count\n                FROM message\n                WHERE deleted_at IS NULL\n                GROUP BY channel_id\n            )\n            INSERT INTO metric_channel (ts, channel_id, room_id, message_count, media_count, media_size)\n            SELECT\n                now(),\n                c.id as channel_id,\n                c.room_id,\n                coalesce(cms.message_count, 0) as message_count,\n                coalesce(cmeds.media_count, 0) as media_count,\n                coalesce(cmeds.media_size, 0) as media_size\n            FROM channel c\n            LEFT JOIN channel_message_stats cms ON cms.channel_id = c.id\n            LEFT JOIN channel_media_stats cmeds ON cmeds.channel_id = c.id\n            WHERE c.room_id IS NOT NULL\n            ON CONFLICT (ts, channel_id) DO UPDATE SET\n                message_count = EXCLUDED.message_count,\n                media_count = EXCLUDED.media_count,\n                media_size = EXCLUDED.media_size;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "392eeb58176f3dd651bf0b16eb0bba65ae0759405f54b31d8a6de92a8a5687e0"
+}

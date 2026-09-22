@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO preferences_room (user_id, room_id, config)\n            VALUES ($1, $2, $3)\n            ON CONFLICT (user_id, room_id) DO UPDATE SET config = $3\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "366dac7bbddbcadf890f1bb571e02efe7d157c52e9517e1977f90cd58efb75a1"
+}

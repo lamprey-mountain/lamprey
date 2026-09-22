@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "insert into email_auth_code (code, addr, session_id, expires_at, purpose) values ($1, $2, $3, now() + '10 minutes', $4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1206eec6652189f30f04fe170b46e94ac1838ff5f737324b7e7f7f65b359e707"
+}

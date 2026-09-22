@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE room_member\n        \tSET quarantined = $3\n            WHERE room_id = $1 AND user_id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8571925da9b479286ad55a90aee4e009d33d3759809b2d4fdfb2767b8f090e14"
+}

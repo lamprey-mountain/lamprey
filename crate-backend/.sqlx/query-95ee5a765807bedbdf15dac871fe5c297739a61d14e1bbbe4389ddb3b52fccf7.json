@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, name, creator_id, animated, media_id, room_id FROM custom_emoji WHERE id = ANY($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "animated",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "media_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "room_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "95ee5a765807bedbdf15dac871fe5c297739a61d14e1bbbe4389ddb3b52fccf7"
+}

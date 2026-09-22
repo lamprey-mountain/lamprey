@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update usr set password_hash = null, password_salt = null where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "aabdebeca954dae2904cf92a8d21710f59d77dd252afc99070c08159563c42f5"
+}
