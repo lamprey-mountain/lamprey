@@ -139,31 +139,32 @@ impl ServiceScripts {
     pub async fn create_script_version(&self, script: Redex, ver: RedexVersion) -> Result<()> {
         let ver_format = ver.format.clone();
         let ver_location = ver.location.clone();
-        let ver_metadata = ver.metadata.clone();
         let inputs = self.process(script.clone(), Some(ver)).await?;
 
-        let mut data = self.globals.begin().await?;
+        // TODO: immediately insert script version, update it after processing finishes
+        let mut txn = self.globals.begin().await?;
 
         // store the extracted inputs as cached_inputs on the new version
         let inputs_json = serde_json::to_value(&inputs.inputs).ok();
-        let version_id = data
+        // FIXME: use ver.version_id instead of creating a new version id
+        let version_id = txn
             .script_version_create(
                 script.id,
                 script.channel_id,
                 script.creator_id,
                 ver_format,
                 ver_location,
-                ver_metadata,
+                inputs.metadata,
                 inputs_json,
             )
             .await?;
 
         // update status to Valid
-        data.script_version_update_status(script.id, version_id, RedexVersionStatus::Valid)
+        txn.script_version_update_status(script.id, version_id, RedexVersionStatus::Valid)
             .await?;
 
         // broadcast the new version
-        if let Some(full_ver) = data
+        if let Some(full_ver) = txn
             .script_version_get(script.id, script.channel_id, version_id)
             .await?
         {
@@ -178,7 +179,7 @@ impl ServiceScripts {
             .await;
         }
 
-        data.commit().await?;
+        txn.commit().await?;
 
         Ok(())
     }
