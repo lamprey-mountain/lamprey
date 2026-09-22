@@ -26,65 +26,12 @@ async fn inbox_get(
     req: routes::inbox_get::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let notifications = s
-        .data()
-        .notification_list(auth.user.id, req.pagination, req.params)
-        .await?;
-
-    let mut channel_ids = std::collections::HashSet::new();
-    for notif in &notifications.items {
-        if let Some(channel_id) = notif.channel_id() {
-            channel_ids.insert(channel_id);
-        }
-    }
 
     let srv = s.services();
-
-    // Verify channel access before returning channel data
-    let mut channels = Vec::new();
-    for thread_id in channel_ids {
-        if let Ok(thread) = srv.channels.get(thread_id, Some(auth.user.id)).await {
-            srv.perms
-                .for_channel3(Some(auth.user.id), thread_id)
-                .await?
-                .ensure_view()?
-                .check()?;
-            channels.push(thread);
-        }
-    }
-
-    let mut room_ids = std::collections::HashSet::new();
-    for thread in &channels {
-        if let Some(room_id) = thread.room_id {
-            room_ids.insert(room_id);
-        }
-    }
-
-    let mut rooms = Vec::new();
-    for room_id in room_ids {
-        if let Ok(room) = srv.rooms.get(room_id, Some(auth.user.id)).await {
-            rooms.push(room);
-        }
-    }
-
-    let mut messages = Vec::new();
-    for notif in &notifications.items {
-        if let (Some(channel_id), Some(message_id)) = (notif.channel_id(), notif.ty.message_id()) {
-            if let Ok(message) = s.data().message_get(channel_id, message_id).await {
-                messages.push(message);
-            }
-        }
-    }
-
-    let res = NotificationPagination {
-        notifications: notifications.items,
-        total: notifications.total,
-        has_more: notifications.has_more,
-        cursor: notifications.cursor,
-        channels,
-        messages,
-        rooms,
-    };
+    let res = srv
+        .notifications
+        .inbox_query(auth.user.id, req.pagination, req.params)
+        .await?;
 
     Ok(Json(res))
 }
@@ -99,15 +46,14 @@ async fn inbox_post(
     req: routes::inbox_post::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    s.services()
-        .perms
+    let srv = s.services();
+    srv.perms
         .for_channel3(Some(auth.user.id), req.notification.channel_id)
         .await?
         .ensure_view()?
         .check()?;
 
-    let room_id = s
-        .services()
+    let room_id = srv
         .channels
         .get(req.notification.channel_id, Some(auth.user.id))
         .await
@@ -179,7 +125,7 @@ async fn inbox_mark_unread(
     req: routes::inbox_mark_unread::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    // Verify channel access for each notification being marked unread
+    // FIXME: verify channel access for each notification being marked unread
     let srv = s.services();
     for channel_id in &req.mark_unread.channel_ids {
         srv.perms
@@ -204,7 +150,7 @@ async fn inbox_flush(
     req: routes::inbox_flush::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    // Verify channel access for each notification being flushed
+    // FIXME: verify channel access for each notification being marked unread
     let srv = s.services();
     if let Some(channel_ids) = &req.flush.channel_ids {
         for channel_id in channel_ids {

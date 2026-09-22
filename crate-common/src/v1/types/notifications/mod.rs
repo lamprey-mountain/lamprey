@@ -3,8 +3,8 @@ use lamprey_macros::record;
 use uuid::Uuid;
 
 use crate::v1::types::{
-    Channel, ChannelId, Message, MessageId, NotificationId, Room, RoomId, UserId,
-    reaction::ReactionKeyParam, util::Time,
+    Channel, ChannelId, Message, MessageId, NotificationId, RoomId, RoomMember, ThreadMember,
+    User, UserId, reaction::ReactionKeyParam, util::Time,
 };
 
 pub mod bytes;
@@ -112,9 +112,8 @@ pub enum NotificationType {
 }
 
 /// query your inbox
-// TODO: rename to NotificationQuery?
 #[record(params)]
-pub struct InboxListParams {
+pub struct NotificationQuery {
     /// only include notifications from these rooms
     #[serde(default)]
     #[schema(required = false, min_length = 1, max_length = 32)]
@@ -205,19 +204,17 @@ pub struct NotificationFlush {
 pub struct NotificationPagination {
     pub notifications: Vec<Notification>,
     pub total: u64,
-    pub has_more: bool, // TODO: remove
     pub cursor: Option<String>,
 
+    #[deprecated = "check `cursor` field instead"]
+    pub has_more: bool,
+
     // extra context
-    pub channels: Vec<Channel>,
     pub messages: Vec<Message>,
-    pub rooms: Vec<Room>,
-    // TODO: rename `channels` to `threads`, only return archived threads
-    // TODO: remove `rooms`
-    // TODO: add room members, thread members, users
-    // pub room_members: Vec<RoomMember>,
-    // pub thread_members: Vec<ThreadMember>,
-    // pub users: Vec<User>,
+    pub threads: Vec<Channel>,
+    pub room_members: Vec<RoomMember>,
+    pub thread_members: Vec<ThreadMember>,
+    pub users: Vec<User>,
 }
 
 impl NotificationType {

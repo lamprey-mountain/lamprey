@@ -2,7 +2,7 @@ use lamprey_macros::endpoint;
 
 /// Inbox get
 ///
-/// List notifications
+/// Query notifications
 #[endpoint(
     get,
     path = "/inbox",
@@ -11,7 +11,7 @@ use lamprey_macros::endpoint;
     response(OK, body = NotificationPagination, description = "success"),
 )]
 pub mod inbox_get {
-    use crate::v1::types::notifications::{InboxListParams, NotificationPagination};
+    use crate::v1::types::notifications::{NotificationQuery, NotificationPagination};
     use crate::v1::types::{NotificationId, PaginationQuery};
 
     pub struct Request {
@@ -19,7 +19,7 @@ pub mod inbox_get {
         pub pagination: PaginationQuery<NotificationId>,
 
         #[query]
-        pub params: InboxListParams,
+        pub params: NotificationQuery,
     }
 
     pub struct Response {

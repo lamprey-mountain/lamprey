@@ -21,7 +21,7 @@ use common::v1::types::{
     },
     email::{EmailAddr, EmailInfo, EmailInfoPatch},
     emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch},
-    notifications::{InboxListParams, Notification, NotificationFlush, NotificationMarkRead},
+    notifications::{NotificationQuery, Notification, NotificationFlush, NotificationMarkRead},
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     reaction::{ReactionKeyParam, ReactionListItem},
     room_analytics::{
@@ -860,7 +860,7 @@ pub trait DataNotification {
         &mut self,
         user_id: UserId,
         pagination: PaginationQuery<NotificationId>,
-        params: InboxListParams,
+        params: NotificationQuery,
     ) -> Result<PaginationResponse<Notification>>;
     async fn notification_mark_read(
         &mut self,

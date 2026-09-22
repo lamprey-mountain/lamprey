@@ -40,7 +40,7 @@ impl ServiceNotifications {
             return Ok(keys.clone());
         }
 
-        let srv = self.state.services();
+        let srv = self.globals.services();
         let c = srv.config.internal_get().await?;
 
         let (vapid_private, vapid_public) = (c.vapid_private_key, c.vapid_public_key);
@@ -75,13 +75,13 @@ impl ServiceNotifications {
     /// pushes the notification to all sessions in parallel
     // NOTE: i may want to make this internal/private?
     pub async fn push(&self, user_id: UserId, mut payload: NotificationBytes) -> Result<()> {
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
         let subscriptions = data.push_list_for_user(user_id).await?;
         let mut tasks = JoinSet::new();
 
         for sub in subscriptions {
             payload.set_session_id(sub.session_id);
-            let state = self.state.clone();
+            let state = self.globals.clone();
             tasks.spawn(Self::push_inner(state, sub, payload.to_bytes().into()));
         }
 

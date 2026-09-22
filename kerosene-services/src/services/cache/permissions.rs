@@ -73,7 +73,7 @@ impl<'a> RoomPermissions<'a> {
                                     .map_or(false, |t| t.members.contains_key(&uid))
                             })
                         } else {
-                            // TODO: fetch thread from db
+                            // FIXME: fetch thread from db
                             false
                         };
                         if !is_member {

@@ -15,8 +15,15 @@ pub struct NotificationBytes {
 pub enum NotificationBytesVersion {
     // 0x00
     V1 {
+        /// the id of the notification itself
         notification_id: NotificationId,
+
+        /// the id of the session that the notification is being sent to
         session_id: SessionId,
+
+        /// additional information about the notification
+        ///
+        /// contains the type of notification, as well as ids to fetch
         ty: NotificationBytesType,
     },
 }
@@ -34,7 +41,6 @@ pub enum NotificationBytesType {
     Reaction {
         channel_id: ChannelId,
         message_id: MessageId,
-        // TODO: add reaction_key
     },
 
     // 0x02

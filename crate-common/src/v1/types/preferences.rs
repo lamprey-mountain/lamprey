@@ -130,6 +130,7 @@ pub struct PreferencesGlobalFriends {
     pub allow_everyone: bool,
 
     /// allow everyone who shares a room with you send you a friend request
+    ///
     /// requires the room to have allow_dms set
     pub allow_mutual_room: bool,
 

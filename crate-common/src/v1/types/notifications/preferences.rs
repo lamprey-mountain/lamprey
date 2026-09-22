@@ -4,6 +4,10 @@ use lamprey_macros::record;
 
 use crate::v1::types::util::Time;
 
+fn true_fn() -> bool {
+    true
+}
+
 /// notification config for a user (works globally)
 #[record]
 #[derive(Default)]
@@ -25,18 +29,30 @@ pub struct NotifsRoom {
     pub mute: Option<Mute>,
 
     /// how to handle new messages
+    ///
+    /// defaults to inheriting from global config
     pub messages: Option<NotifsMessages>,
 
     /// how to handle new replies
+    ///
+    /// defaults to inheriting from global config
     pub replies: Option<NotifsReplies>,
 
     /// how to handle new threads
+    ///
+    /// defaults to inheriting from global config
     pub threads: Option<NotifsThreads>,
 
     /// whether to receive @everyone and @here mentions
+    ///
+    /// defaults to true
+    #[serde(default = "true_fn")]
     pub mention_everyone: bool,
 
     /// whether to receive all @role mentions
+    ///
+    /// defaults to true
+    #[serde(default = "true_fn")]
     pub mention_roles: bool,
 }
 
@@ -48,15 +64,17 @@ pub struct NotifsChannel {
 
     /// message notif config
     ///
-    /// None means inherit from category/room
+    /// defaults to inheriting from the parent channel (for threads), category, or room
     pub messages: Option<NotifsMessages>,
 
     /// how to handle new replies
+    ///
+    /// defaults to inheriting from the parent channel (for threads), category, or room
     pub replies: Option<NotifsReplies>,
 
     /// can't be set on voice and thread channels
     ///
-    /// None means inherit from category/room
+    /// defaults to inheriting from the parent channel (for threads), category, or room
     pub threads: Option<NotifsThreads>,
 }
 

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use common::v1::types::notifications::{
-    InboxListParams, Notification, NotificationFlush, NotificationMarkRead,
+    Notification, NotificationFlush, NotificationMarkRead, NotificationQuery,
 };
 use common::v1::types::{NotificationId, PaginationDirection, PaginationQuery, PaginationResponse};
 use sqlx::{query, query_file, query_file_as, query_file_scalar};
@@ -73,7 +73,7 @@ impl DataNotification for Postgres {
         &mut self,
         user_id: UserId,
         pagination: PaginationQuery<NotificationId>,
-        params: InboxListParams,
+        params: NotificationQuery,
     ) -> Result<PaginationResponse<Notification>> {
         let p: super::Pagination<_> = pagination.try_into()?;
 

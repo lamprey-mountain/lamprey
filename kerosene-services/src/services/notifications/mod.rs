@@ -13,9 +13,10 @@ use crate::services::notifications::push::VapidKeys;
 
 pub mod calculator;
 pub mod push;
+pub mod inbox;
 
 pub struct ServiceNotifications {
-    state: Globals,
+    globals: Globals,
     vapid_keys: RwLock<Option<VapidKeys>>,
 }
 
@@ -46,16 +47,16 @@ impl MentionedUsers {
 }
 
 impl ServiceNotifications {
-    pub fn new(state: Globals) -> Self {
+    pub fn new(globals: Globals) -> Self {
         Self {
-            state,
+            globals,
             vapid_keys: RwLock::new(None),
         }
     }
 
     /// create new vapid keys if they dont exist
     pub async fn init_vapid_keys(&self) -> Result<()> {
-        let mut txn = self.state.begin().await?;
+        let mut txn = self.globals.begin().await?;
         if txn.config_get().await?.is_none() {
             info!("initializing internal config");
             let (keypair, _) = ece::generate_keypair_and_auth_secret()
@@ -92,7 +93,7 @@ impl ServiceNotifications {
     }
 
     pub fn start_background_tasks(&self) {
-        tokio::spawn(Self::spawn_push_task(self.state.clone()));
+        tokio::spawn(Self::spawn_push_task(self.globals.clone()));
     }
 
     // TODO: flush ack states on shutdown
@@ -107,7 +108,7 @@ impl ServiceNotifications {
         }
 
         let calc =
-            match calculator::Calculator::load_for_message(self.state.clone(), channel, message)
+            match calculator::Calculator::load_for_message(self.globals.clone(), channel, message)
                 .await
             {
                 Ok(c) => c,
@@ -132,7 +133,7 @@ impl ServiceNotifications {
             return;
         }
 
-        let mut txn = match self.state.begin().await {
+        let mut txn = match self.globals.begin().await {
             Ok(d) => d,
             Err(err) => {
                 warn!("failed to begin database transaction, skipping: {err:?}");
@@ -212,7 +213,7 @@ impl ServiceNotifications {
             warn!("failed to commit database transaction: {err:?}");
         }
 
-        let srv = self.state.services();
+        let srv = self.globals.services();
         if !thread_members.is_empty() {
             let thread_id = channel.id;
 
@@ -226,7 +227,7 @@ impl ServiceNotifications {
             };
 
             if let Err(err) = self
-                .state
+                .globals
                 .messaging()
                 .broadcast_channel(thread_id, msg)
                 .await
@@ -244,7 +245,7 @@ impl ServiceNotifications {
     ) -> Result<MentionedUsers> {
         let mut m = MentionedUsers::default();
         let mentions = &message.latest_version.mentions;
-        let mut data = self.state.begin_read().await?;
+        let mut data = self.globals.begin_read().await?;
 
         // add user mentions
         for u in &mentions.users {
