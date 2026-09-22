@@ -4,7 +4,10 @@ use std::sync::Arc;
 
 use crate::prelude::*;
 use common::{
-    util::routes::{Endpoint, Request, Response},
+    util::{
+        body::Body,
+        routes::{Endpoint, Request, Response},
+    },
     v1::types::SessionToken,
     v2::types::UserId,
 };
@@ -117,20 +120,21 @@ impl Http {
     }
 
     pub async fn dispatch<E: Endpoint>(&self, req: E::Request) -> Result<E::Response> {
+        // PERF: don't buffer entire body up front
+        // TODO: don't panic, add better error handling
         let http_req = req.encode();
-        let res = self.client.execute(http_req.try_into()?).await?;
+        let (parts, body) = http_req.into_parts();
+        let bytes = body.buffer().await.unwrap();
+        let reqwest_req = http::Request::from_parts(parts, reqwest::Body::from(bytes));
+        let res = self.client.execute(reqwest_req.try_into()?).await?;
 
         let status = res.status();
         let headers = res.headers().clone();
-        let body = res.bytes().await?;
-
-        // PERF: stream body for some routes? (this is only relevant for media.)
-        // TODO: better error handling
 
         let mut builder = http::Response::builder().status(status);
         *builder.headers_mut().expect("builder not errored") = headers;
-        let http_res = builder.body(body).unwrap();
+        let http_res = builder.body(Body::from_stream(res.bytes_stream())).unwrap();
 
-        Ok(E::Response::extract(http_res).unwrap())
+        Ok(E::Response::extract(http_res).await.unwrap())
     }
 }
