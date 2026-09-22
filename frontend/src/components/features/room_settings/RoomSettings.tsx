@@ -18,7 +18,7 @@ import {
 } from "@/components/features/room_settings/mod";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
-import { useNavigate } from "@/contexts/router";
+import { useNavigate, useRouter } from "@/contexts/router";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import type { RoomT } from "@/types";
@@ -248,6 +248,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	);
 
 	const nav = useNavigate();
+	const router = useRouter();
 
 	const handleAction = (action: string) => {
 		switch (action) {
@@ -320,6 +321,17 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 													<li>
 														<a
 															href={`/room/${props.room.id}/settings/${item().path}`}
+															classList={{
+																active:
+																	router.overlay ===
+																	`/room/${props.room.id}/settings/${item().path}`,
+															}}
+															onClick={(e) => {
+																e.preventDefault();
+																nav(
+																	`/room/${props.room.id}/settings/${item().path}`,
+																);
+															}}
 														>
 															{item().name}
 														</a>

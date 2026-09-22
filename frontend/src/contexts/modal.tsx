@@ -1,8 +1,7 @@
 import type { EditorView } from "prosemirror-view";
 import type { Media, Tag } from "sdk";
-import { createContext, type ParentProps, untrack, useContext } from "solid-js";
+import { createContext, type ParentProps, useContext } from "solid-js";
 import { createStore } from "solid-js/store";
-import { useApi, useChannels, useRooms } from "@/api";
 import { useRouter } from "./router";
 
 export type ChannelTypeOption =

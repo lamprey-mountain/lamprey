@@ -11,6 +11,7 @@ import {
 } from "@/components/features/channel_settings/mod";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { usePermissions } from "@/hooks/usePermissions";
 
 type PermissionCheck = (p: ReturnType<typeof usePermissions>) => boolean;
@@ -74,6 +75,7 @@ const tabs: Array<{
 export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 	const api2 = useApi();
 	const [, modalCtl] = useModals();
+	const nav = useNavigate();
 	const currentUser = useCurrentUser();
 	const user_id = () => currentUser()?.id;
 	const perms = usePermissions(
@@ -151,6 +153,12 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 										<li>
 											<a
 												href={`/channel/${props.channel.id}/settings/${tab.path}`}
+												onClick={(e) => {
+													e.preventDefault();
+													nav(
+														`/channel/${props.channel.id}/settings/${tab.path}`,
+													);
+												}}
 											>
 												{tab.name}
 											</a>

@@ -20,6 +20,7 @@ import {
 	Sessions,
 	Voice,
 } from "@/components/features/user_settings/mod";
+import { useNavigate } from "@/contexts/router";
 
 // Tab type definitions with proper discriminated unions
 type CategoryTab = { category: string };
@@ -108,6 +109,7 @@ function groupTabsByCategory(tabs: TabItem[]): GroupedTab[] {
 }
 
 export const UserSettings = (props: { user: User; page: string }) => {
+	const nav = useNavigate();
 	const currentTab = (): PageTab | undefined => {
 		const tab = tabs.find((i) => isPageTab(i) && i.path === (props.page ?? ""));
 		return tab && isPageTab(tab) ? tab : undefined;
@@ -136,7 +138,15 @@ export const UserSettings = (props: { user: User; page: string }) => {
 								<For each={group.items}>
 									{(tab) => (
 										<li>
-											<a href={`/settings/${tab.path}`}>{tab.name}</a>
+											<a
+												href={`/settings/${tab.path}`}
+												onClick={(e) => {
+													e.preventDefault();
+													nav(`/settings/${tab.path}`);
+												}}
+											>
+												{tab.name}
+											</a>
 										</li>
 									)}
 								</For>

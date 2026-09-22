@@ -130,16 +130,17 @@ export const createRouter = (): Router => {
 	handlePopState();
 
 	const handleNavigate = () => {
-		// TODO: actually handle navigate event
+		// TODO: handle the navigate event
 		handlePopState();
 	};
 
-	// window.navigation?.addEventListener("navigate", handleNavigate);
-	window.navigation?.addEventListener("navigateend", handleNavigate);
+	window.navigation?.addEventListener("currententrychange", handleNavigate);
 	window.addEventListener("popstate", handlePopState);
 	onCleanup(() => {
-		// window.navigation?.removeEventListener("navigate", handleNavigate);
-		window.navigation?.removeEventListener("navigateend", handleNavigate);
+		window.navigation?.removeEventListener(
+			"currententrychange",
+			handleNavigate,
+		);
 		window.removeEventListener("popstate", handlePopState);
 	});
 
