@@ -188,14 +188,7 @@ impl RoomActor {
         for role in roles_data {
             let allow = PermissionBits::from(role.allow.as_slice());
             let deny = PermissionBits::from(role.deny.as_slice());
-            roles.insert(
-                role.id,
-                CachedRole {
-                    inner: role,
-                    allow,
-                    deny,
-                },
-            );
+            roles.insert(role.id, role.into());
         }
 
         let mut channels = ImMap::new();

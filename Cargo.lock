@@ -2081,6 +2081,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "ecow"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dca6141d10838e13f9b166c190254a3f9b5d8379521f9b7510810061cef17a4"
+
+[[package]]
 name = "ed25519"
 version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4615,6 +4621,7 @@ dependencies = [
  "axum-extra",
  "base32",
  "base64 0.22.1",
+ "bitflags 2.13.1",
  "blake3",
  "bytes",
  "chrono",
@@ -4624,6 +4631,7 @@ dependencies = [
  "dashmap 6.2.1",
  "decancer",
  "ece",
+ "ecow",
  "ed25519-dalek",
  "flate2",
  "futures",
@@ -5851,6 +5859,20 @@ name = "mach2"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dae608c151f68243f2b000364e1f7b186d9c29845f7d2d85bd31b9ad77ad552b"
+
+[[package]]
+name = "macros-components"
+version = "0.1.4"
+dependencies = [
+ "darling 0.23.0",
+ "lamprey-common",
+ "macrotest",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+ "uuid",
+]
 
 [[package]]
 name = "macrotest"

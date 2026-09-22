@@ -245,9 +245,9 @@ impl MemberList {
             let mut best_role: Option<(RoleId, u16)> = None;
             for role_id in &member.roles {
                 if let Some(role) = data.roles.get(role_id) {
-                    if role.inner.hoist {
-                        if best_role.is_none() || role.inner.position < best_role.unwrap().1 {
-                            best_role = Some((*role_id, role.inner.position));
+                    if role.hoist() {
+                        if best_role.is_none() || role.position < best_role.unwrap().1 {
+                            best_role = Some((*role_id, role.position));
                         }
                     }
                 }

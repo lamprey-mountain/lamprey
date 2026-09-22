@@ -22,7 +22,6 @@ use crate::services::room_template::builtin;
 use crate::types::{DbMessageCreate, DbRoomCreate, MediaLinkType};
 
 pub mod actor;
-pub mod permissions;
 pub mod types;
 pub mod utils;
 

@@ -350,8 +350,8 @@ impl ServiceCache {
                 room_members.push(member);
             }
 
-            for role in loaded.roles.values() {
-                all_roles.push(role.inner.clone());
+            for (role_id, role) in loaded.roles.iter() {
+                all_roles.push(role.clone().rehydrate(*role_id, room.id));
             }
 
             for channel in loaded.channels.values() {

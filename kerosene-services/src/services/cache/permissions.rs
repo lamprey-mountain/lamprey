@@ -212,7 +212,7 @@ impl<'a> RoomPermissions<'a> {
             if let Some(role) = self.room.roles.get(role_id) {
                 allowed_bits.add_all(role.allow);
                 denied_bits.add_all(role.deny);
-                *rank = (*rank).max(role.inner.position);
+                *rank = (*rank).max(role.position);
             }
         }
 

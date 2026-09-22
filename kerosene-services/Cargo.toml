@@ -16,6 +16,7 @@ axum = { version = "0.8.9", features = ["macros", "ws", "multipart"] }
 axum-extra = { version = "0.10.3", features = ["typed-header"] }
 base32 = "0.5.1"
 base64 = "0.22.1"
+bitflags = { version = "2.13.1", features = ["serde"] }
 blake3 = { version = "1.8.6", features = ["mmap"] }
 bytes = "1.12.1"
 chrono = "0.4.45"
@@ -26,6 +27,7 @@ csscolorparser = { version = "0.7.2", features = ["lab"] }
 dashmap = "6.2.1"
 decancer = "3.3.3"
 ece = "2.3.1"
+ecow = "0.3.1"
 ed25519-dalek = { version = "2.2.0", features = ["rand_core"] }
 flate2 = "1.1.9"
 futures = "0.3.34"

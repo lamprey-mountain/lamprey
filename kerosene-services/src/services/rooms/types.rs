@@ -1,6 +1,7 @@
 //! cached/in memory rooms
 
-use common::v2::types::PermissionOverwriteId;
+use common::v2::types::{PermissionOverwriteId, RoleVerId, RoomId};
+use ecow::EcoString;
 use im::HashMap as ImMap;
 use kerosene_core::error::{ApiError, ErrorCode};
 use lamprey_search::visibility::ChannelVisibility;
@@ -195,16 +196,100 @@ pub struct CachedChannel {
     // pub overwrites_users: HashMap<UserId, PermSet>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub struct CachedRole {
-    /// the role itself
-    pub inner: Role,
+    pub version_id: RoleVerId,
+    pub name: EcoString,
+    pub description: Option<EcoString>,
+    pub position: u16,
+    pub flags: RoleFlags,
 
     /// allowed permissions as a bitfield
     pub allow: PermissionBits,
 
     /// denied permissions as a bitfield
     pub deny: PermissionBits,
+}
+
+bitflags::bitflags! {
+    #[derive(Debug, Clone)]
+    pub struct RoleFlags: u8 {
+        const SelfApplicable = 1 << 0;
+        const Mentionable = 1 << 1;
+        const Hoist = 1 << 2;
+        const Sticky = 1 << 3;
+    }
+}
+
+impl CachedRole {
+    /// convert into an api role object
+    pub fn rehydrate(self, id: RoleId, room_id: RoomId) -> Role {
+        Role {
+            id,
+            version_id: self.version_id,
+            room_id,
+            name: self.name.to_string(),
+            description: self.description.map(|s| s.to_string()),
+            allow: self.allow.to_vec(),
+            deny: self.deny.to_vec(),
+            is_self_applicable: self.flags.contains(RoleFlags::SelfApplicable),
+            is_mentionable: self.flags.contains(RoleFlags::Mentionable),
+            position: self.position,
+            hoist: self.flags.contains(RoleFlags::Hoist),
+            sticky: self.flags.contains(RoleFlags::Sticky),
+
+            // TODO: populate member_count based on room member list
+            member_count: 0,
+        }
+    }
+
+    #[inline]
+    pub fn is_self_applicable(&self) -> bool {
+        self.flags.contains(RoleFlags::SelfApplicable)
+    }
+
+    #[inline]
+    pub fn is_mentionable(&self) -> bool {
+        self.flags.contains(RoleFlags::Mentionable)
+    }
+
+    #[inline]
+    pub fn hoist(&self) -> bool {
+        self.flags.contains(RoleFlags::Hoist)
+    }
+
+    #[inline]
+    pub fn sticky(&self) -> bool {
+        self.flags.contains(RoleFlags::Sticky)
+    }
+}
+
+impl From<Role> for CachedRole {
+    fn from(role: Role) -> Self {
+        let mut flags = RoleFlags::empty();
+        if role.is_self_applicable {
+            flags |= RoleFlags::SelfApplicable;
+        }
+        if role.is_mentionable {
+            flags |= RoleFlags::Mentionable;
+        }
+        if role.hoist {
+            flags |= RoleFlags::Hoist;
+        }
+        if role.sticky {
+            flags |= RoleFlags::Sticky;
+        }
+
+        CachedRole {
+            version_id: role.version_id,
+            name: EcoString::from(role.name),
+            description: role.description.map(EcoString::from),
+            position: role.position,
+            flags,
+            allow: PermissionBits::from(role.allow.as_slice()),
+            deny: PermissionBits::from(role.deny.as_slice()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -260,7 +345,12 @@ impl RoomSnapshot {
 
     pub fn get_roles(&self) -> Option<Vec<Role>> {
         let data = self.get_data()?;
-        Some(data.roles.values().map(|r| r.inner.clone()).collect())
+        Some(
+            data.roles
+                .iter()
+                .map(|(id, r)| r.clone().rehydrate(*id, data.room.id))
+                .collect(),
+        )
     }
 
     pub fn ensure_sudo_if_needed(&self, auth: &Auth) -> Result<()> {
@@ -382,28 +472,10 @@ impl LoadedRoom {
                 }
             }
             MessageSync::RoleCreate { role } => {
-                let allow = PermissionBits::from(role.allow.as_slice());
-                let deny = PermissionBits::from(role.deny.as_slice());
-                new_room.roles.insert(
-                    role.id,
-                    CachedRole {
-                        inner: role.clone(),
-                        allow,
-                        deny,
-                    },
-                );
+                new_room.roles.insert(role.id, role.clone().into());
             }
             MessageSync::RoleUpdate { role } => {
-                let allow = PermissionBits::from(role.allow.as_slice());
-                let deny = PermissionBits::from(role.deny.as_slice());
-                new_room.roles.insert(
-                    role.id,
-                    CachedRole {
-                        inner: role.clone(),
-                        allow,
-                        deny,
-                    },
-                );
+                new_room.roles.insert(role.id, role.clone().into());
             }
             MessageSync::RoleDelete { role_id, .. } => {
                 new_room.roles.remove(role_id);
@@ -420,7 +492,7 @@ impl LoadedRoom {
             MessageSync::RoleReorder { roles, .. } => {
                 for item in roles {
                     if let Some(mut role) = new_room.roles.get(&item.role_id).cloned() {
-                        role.inner.position = item.position;
+                        role.position = item.position;
                         new_room.roles.insert(item.role_id, role);
                     }
                 }

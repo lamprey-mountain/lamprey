@@ -319,17 +319,15 @@ impl ServiceRoomTemplates {
 
         // collect roles
         for (id, cr) in &r.roles {
-            let role = &cr.inner;
-
             let create = RoleCreate {
-                name: role.name.clone(),
-                description: role.description.clone(),
-                allow: role.allow.clone(),
-                deny: role.deny.clone(),
-                is_self_applicable: role.is_self_applicable,
-                is_mentionable: role.is_mentionable,
-                hoist: role.hoist,
-                sticky: role.sticky,
+                name: cr.name.to_string(),
+                description: cr.description.as_ref().map(|s| s.to_string()),
+                allow: cr.allow.to_vec(),
+                deny: cr.deny.to_vec(),
+                is_self_applicable: cr.is_self_applicable(),
+                is_mentionable: cr.is_mentionable(),
+                hoist: cr.hoist(),
+                sticky: cr.sticky(),
             };
 
             roles.insert(
@@ -337,7 +335,7 @@ impl ServiceRoomTemplates {
                 RoomTemplateRole {
                     inner: create,
                     id: Uuid::now_v7(),
-                    position: role.position,
+                    position: cr.position,
                 },
             );
         }
