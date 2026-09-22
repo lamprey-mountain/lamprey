@@ -6,6 +6,7 @@ use rowan::TextRange;
 
 use crate::prelude::*;
 
+pub mod custom_emoji;
 pub mod timestamp_style;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

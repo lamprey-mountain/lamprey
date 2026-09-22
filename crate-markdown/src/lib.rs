@@ -1,5 +1,5 @@
 pub mod ast;
-// pub mod grammar;
+pub mod builder;
 pub mod lexer;
 pub mod parser;
 pub mod query;

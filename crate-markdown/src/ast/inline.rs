@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::util::custom_emoji::CustomEmojiData;
 use crate::util::timestamp_style::TimestampStyle;
 use crate::{ast::impl_ast, tree::node::SyntaxElement};
 use lamprey_common::v2::types::{ChannelId, RoleId, UserId};
@@ -30,17 +31,6 @@ pub struct Timestamp(SyntaxNode);
 pub struct CustomEmoji(SyntaxToken);
 #[derive(Debug)]
 pub struct UnicodeEmoji(SyntaxToken);
-
-/// data about a custom emoji
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize))]
-#[cfg_attr(feature = "wasm", derive(tsify::Tsify), tsify(into_wasm_abi))]
-pub struct CustomEmojiData {
-    pub animated: bool,
-    pub name: String,
-    #[cfg_attr(feature = "wasm", tsify(type = "string"))]
-    pub id: Uuid,
-}
 
 /// data about a mention
 #[derive(Debug, Clone)]
