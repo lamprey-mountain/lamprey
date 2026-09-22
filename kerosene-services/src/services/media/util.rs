@@ -1,3 +1,4 @@
+use core::fmt;
 use lamprey_backend_core::config::{Config, ConfigBlobs};
 use std::sync::Arc;
 use url::Url;
@@ -248,6 +249,17 @@ impl MediaItemWriter {
     pub fn set_ready(&self) {
         self.set_state(MediaItemState::Ready);
         let _ = self.tx_ready.send(true);
+    }
+}
+
+impl fmt::Debug for MediaItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MediaItem")
+            .field("id", &self.inner.media.borrow().id)
+            .field("state", &self.inner.state)
+            .field("downloaded", &self.inner.bytes.initialized())
+            .field("ready", &*self.ready.borrow())
+            .finish()
     }
 }
 
