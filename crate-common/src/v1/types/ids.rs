@@ -312,52 +312,51 @@ genid!(Eval, "00000000-0000-0000-0000-00000000eval");
 genid!(Call, "00000000-0000-0000-0000-00000000call");
 genid!(Sfu, "00000000-0000-0000-0000-000000000sfu");
 
-impl From<RoleId> for PermissionOverwriteId {
-    fn from(value: RoleId) -> Self {
-        value.inner.into()
-    }
+macro_rules! convertable {
+    ($from:ident => $to:ident) => {
+        impl From<$from> for $to {
+            fn from(value: $from) -> Self {
+                value.inner.into()
+            }
+        }
+    };
 }
 
-impl From<UserId> for PermissionOverwriteId {
-    fn from(value: UserId) -> Self {
-        value.inner.into()
-    }
-}
+convertable!(RoleId => PermissionOverwriteId);
+convertable!(UserId => PermissionOverwriteId);
 
-impl From<PermissionOverwriteId> for RoleId {
-    fn from(value: PermissionOverwriteId) -> Self {
-        value.inner.into()
-    }
-}
-
-impl From<PermissionOverwriteId> for UserId {
-    fn from(value: PermissionOverwriteId) -> Self {
-        value.inner.into()
-    }
-}
+// NOTE: do i want to include these?
+convertable!(PermissionOverwriteId => UserId);
+convertable!(PermissionOverwriteId => RoleId);
 
 /// the user id of the server system user (aka root)
-// hex translates to "root"
+///
+/// the raw bytes translate to `root`
 pub const SERVER_USER_ID: UserId = user_id!("00000000-0000-7000-0000-0000726f6f74");
 
 /// the room id of the server system room
-// hex translates to "server"
+///
+/// the raw bytes translate to `server`
 pub const SERVER_ROOM_ID: RoomId = room_id!("00000000-0000-7000-0000-736572766572");
 
 /// the user id of the automod system user
-// hex translates to "automod"
+///
+/// the raw bytes translate to `automod`
 pub const AUTOMOD_USER_ID: UserId = user_id!("00000000-0000-7000-0061-75746f6d6f64");
 
 /// the session id used for the admin token
-// hex translates to "skeletonkey"
+///
+/// the raw bytes translate to `skeletonkey`
 pub const SERVER_TOKEN_SESSION_ID: SessionId = session_id!("00000000-0073-6b65-6c65-746f6e6b6579");
 
 /// server room role id for server admins
-// hex translates to "admin"
+///
+/// the raw bytes translate to `admin`
 pub const SERVER_ADMIN_ROLE_ID: RoleId = role_id!("00000000-0000-0000-0000-0061646d696e");
 
 /// server room role id for registered users
-// hex translates to "registered"
+///
+/// the raw bytes translate to `registered`
 pub const SERVER_REGISTERED_ROLE_ID: RoleId = role_id!("00000000-0000-7265-6769-737465726564");
 
 export_models!(

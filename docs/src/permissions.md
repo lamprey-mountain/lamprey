@@ -1,30 +1,32 @@
 # permissions
 
+**OUTDATED DOCS!** some of this stuff may work, but a lot may not.
+
 how permissions are calculated and applied in lamprey.
 
-## calculating
+## room permissions
 
-### room permissions
-
-1. if the user is the **owner**, they have all permissions (and maximum rank).
+1. if the user is the **owner** or the **server user**, they have all permissions (and maximum rank).
 2. start with an empty permission set.
-3. add all **allow** permissions from the roles the user has.
+3. add all **allow** permissions from the roles the user has (including the `@everyone` role).
 4. if the user has the **Admin** permission, return all permissions.
-5. remove all **deny** permissions from the roles the user has.
+5. remove all **deny** permissions from the roles the user has (including the `@everyone` role).
 
-### channel permissions
+## channel permissions
 
 1. start with the user's **room permissions**.
 2. if the user has **Admin**, return all permissions.
 3. apply **overwrites** for the parent channel (if any), then for the current
    channel.
-   - overwrites are applied in this order:
-     - `@everyone` role **allow**.
-     - `@everyone` role **deny**.
-     - Role **allows**.
-     - Role **denies**.
-     - User **allows**.
-     - User **denies**.
+
+overwrites are applied in this order:
+
+1. `@everyone` role **allow**.
+2. `@everyone` role **deny**.
+3. Role **allows**.
+4. Role **denies**.
+5. User **allows**.
+6. User **denies**.
 
 ## restrictions
 
@@ -56,7 +58,8 @@ Channels and threads can be **locked**.
 - when a channel is locked, normal message creation is restricted.
 - users with `ThreadManage`, `ChannelManage`, or `ThreadLock` can also bypass
   the lock.
-- specific roles can be configured to bypass the lock; this is api only
+- specific roles can be configured to bypass the lock. (this is api only for now)
+- the lock can be set to expire at a certain time. (this is api only for now)
 
 ## notes
 

@@ -5,4 +5,5 @@ use lamprey_macros::record;
 #[derive(Default)]
 pub struct DispatchFilter {
     // TODO: design this
+    // NOTE: may not be needed with the new subscription system
 }

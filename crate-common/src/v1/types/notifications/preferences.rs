@@ -1,17 +1,12 @@
 //! user notification preference
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::util::Time;
 
 /// notification config for a user (works globally)
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct NotifsGlobal {
     pub mute: Option<Mute>,
     pub messages: NotifsMessages,
@@ -22,10 +17,11 @@ pub struct NotifsGlobal {
 }
 
 /// notification config for a room
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct NotifsRoom {
+    // TODO: add skip_serializing_if (will this break frontend?)
+    // #[serde(skip_serializing_if = "Option::is_none")]
     pub mute: Option<Mute>,
 
     /// how to handle new messages
@@ -45,9 +41,8 @@ pub struct NotifsRoom {
 }
 
 /// notification config for a channel
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default)]
 pub struct NotifsChannel {
     pub mute: Option<Mute>,
 
@@ -66,9 +61,8 @@ pub struct NotifsChannel {
 }
 
 /// how to handle new messages
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, Copy, PartialEq, Eq)]
 pub enum NotifsMessages {
     /// notify on every message
     Everything,
@@ -88,9 +82,8 @@ pub enum NotifsMessages {
 }
 
 /// how to handle new replies
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, Copy, PartialEq, Eq)]
 pub enum NotifsReplies {
     /// always notify for replies
     Notify,
@@ -104,9 +97,8 @@ pub enum NotifsReplies {
 }
 
 /// how to handle new threads
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, Copy, PartialEq, Eq)]
 pub enum NotifsThreads {
     /// notify whenever a new thread is created
     Notify,
@@ -120,9 +112,8 @@ pub enum NotifsThreads {
 }
 
 /// what notifications to send for reactions
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, Copy, PartialEq, Eq)]
 pub enum NotifsReactions {
     /// notify for all reactions
     Always,
@@ -139,9 +130,8 @@ pub enum NotifsReactions {
 }
 
 /// when to send text to speech notifications
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, Copy, PartialEq, Eq)]
 pub enum NotifsTts {
     /// read all messages that created a notification
     Always,
@@ -155,9 +145,8 @@ pub enum NotifsTts {
 }
 
 /// how long to mute notifications for
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, PartialEq, Eq)]
 pub struct Mute {
     /// how long to mute for, or forever if None
     pub expires_at: Option<Time>,
@@ -167,13 +156,13 @@ pub struct Mute {
 }
 
 // TODO: implement notification config for voice, documents, calendar events, redexes
+// mention location: message, document?
 
 /// when to send notifications for voice channels
 ///
 /// only affects private rooms
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Default, Copy, PartialEq, Eq)]
 pub enum NotifsVoice {
     /// when someone starts streaming
     Streams,

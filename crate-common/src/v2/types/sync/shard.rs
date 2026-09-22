@@ -14,7 +14,7 @@ use super::SyncEncoding;
 
 // SyncId: a single logical session
 // ShardId: a concrete transport
-// ConnectionId: remove?
+// ConnectionId: remove? merge into SyncId?
 
 /// a logical session/connection to the service
 #[record]

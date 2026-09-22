@@ -149,16 +149,17 @@ pub struct RoomPreview {
 
     /// number of people who are online in this room
     pub online_count: u64,
+    // TODO(?): room_type, channel_count, emoji_count, features, remote
 }
 
 /// User-specific room data
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct RoomPrivate {
     pub notifications: NotifsRoom,
 
     /// resolved notifications for you
     pub permissions: Vec<Permission>,
+    // TODO(?): room_member?
 }
 
 /// Data required to create a room

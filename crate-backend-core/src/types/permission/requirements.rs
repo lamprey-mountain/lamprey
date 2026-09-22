@@ -28,6 +28,8 @@ bitflags! {
 
         /// require the user to be in sudo mode
         const RequireSudo = 1 << 6;
+
+        // TODO: flags to require mfa/sudo iff RoomSecurity requires it
     }
 }
 
@@ -72,6 +74,10 @@ pub enum RequirementsContext {
 
     /// this is for channel-level permissions, including overwrites
     Channel(ChannelId),
+    // TODO(?): more permission checks (see AuthCheck)
+    // - must be this session/connection/user
+    // - must be able to see a user (friends, mutual rooms/gdms/dms, privacy settings, ...etc?)
+    // - "any of" checks instead of making everything "all of"
 }
 
 /// a set of authorization checks that must pass

@@ -1,5 +1,7 @@
 # media
 
+**OUTDATED DOCS!** some of this stuff may work, but a lot may not.
+
 lamprey's media API handles file uploads, downloads, and processing (thumbnails,
 transcoding).
 

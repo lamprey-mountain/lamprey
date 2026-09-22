@@ -30,15 +30,24 @@ use crate::{
     },
 };
 
-pub mod channel;
 pub mod filter;
-pub mod invite;
-pub mod room;
 pub mod shard;
 pub mod subscribe;
-pub mod user;
 pub mod visibility;
+// TODO: define errors here?
+
+// dispatch types
+// TODO: move to dispatch submodule?
+pub mod channel;
+pub mod invite;
+pub mod room;
+pub mod user;
 pub mod webhook;
+
+// transports
+pub mod websocket;
+pub mod webtransport;
+// pub mod webhook_transport; // TODO
 
 pub use crate::v1::types::{SyncCompression, SyncFormat as SyncEncoding, SyncVersion};
 
@@ -46,8 +55,7 @@ pub use crate::v1::types::{SyncCompression, SyncFormat as SyncEncoding, SyncVers
 pub use crate::v1::types::e2ee::E2EEDispatch;
 
 /// query parameters when establishing a websocket sync connection
-#[record]
-#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
+#[record(params)]
 pub struct WebsocketSyncParams {
     pub version: SyncVersion,
 
@@ -139,6 +147,7 @@ pub struct SyncResume {
     #[serde(default)]
     pub seq: u64,
 
+    // TODO(?): do i include this? if not, remove.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub shard_id: Option<ShardId>,
 }

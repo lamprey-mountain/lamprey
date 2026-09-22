@@ -4728,6 +4728,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "lamprey"
+version = "0.1.4"
+
+[[package]]
 name = "lamprey-backend"
 version = "0.1.4"
 dependencies = [

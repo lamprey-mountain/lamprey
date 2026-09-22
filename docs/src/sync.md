@@ -1,5 +1,9 @@
 # sync
 
+**OUTDATED DOCS!** some of this stuff may work, but a lot may not.
+
+TODO: document webtransport
+
 lamprey uses a websocket-based sync protocol to keep clients up to date with the
 server state.
 
