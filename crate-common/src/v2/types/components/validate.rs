@@ -15,6 +15,16 @@ use crate::{
 // - validate ComponentType::{is_usable_inline, requires_form}
 // - validate that forms, rows cannot be nested
 
+/// an error that occured while validating components
+#[derive(Debug, thiserror::Error)]
+pub enum ValidationError {
+    #[error("at least one root component is required")]
+    MissingRoot,
+
+    #[error("component {0:?} doesnt exist")]
+    UnknownComponent(ComponentId),
+}
+
 pub struct ValidationState<'a> {
     path: Vec<String>,
     errors: Vec<ErrorField>,

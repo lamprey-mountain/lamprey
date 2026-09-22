@@ -1,0 +1,24 @@
+[package]
+name = "macros-components"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+darling = "0.23.0"
+lamprey = { package = "lamprey-common", version = "0.1.1", path = "../crate-common" }
+proc-macro-crate = "3.5.0"
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = { version = "2.0", features = ["full", "extra-traits"] }
+uuid = { version = "1.24.1", features = ["v7", "macro-diagnostics"] }
+
+[dev-dependencies]
+macrotest = "1"

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::v1::types::{
     components::{ComponentId, MAX_COMPONENTS, MAX_DEPTH, MAX_TOTAL_TEXT_LENGTH},
     error::{ApiError, ApiResult, ErrorCode, ErrorField, ErrorFieldType},
@@ -105,30 +107,23 @@ impl ValidationState {
     }
 }
 
+#[derive(Default)]
 pub struct IdAllocator {
     next_id: u16,
-    used: std::collections::HashSet<u16>,
+
+    // PERF: there might be a better data structure for this?
+    // maybe like bitmaps?
+    used: HashSet<u16>,
 }
 
 impl IdAllocator {
     /// Create a new ID allocator.
     pub fn new() -> Self {
-        Self {
-            next_id: 0,
-            // PERF: there might be a better data structure for this?
-            // maybe like bitmaps?
-            used: std::collections::HashSet::new(),
-        }
-    }
-
-    /// Mark an ID as used.
-    #[deprecated = "use mark_used2"]
-    pub fn mark_used(&mut self, id: u16) {
-        self.used.insert(id);
+        Self::default()
     }
 
     /// Mark an ID as used. Returns an error if the id was already used.
-    pub fn mark_used2(&mut self, id: u16) -> ApiResult<()> {
+    pub fn mark_used(&mut self, id: u16) -> ApiResult<()> {
         if !self.used.insert(id) {
             return Err(ApiError::with_message(
                 ErrorCode::InvalidData,
@@ -139,7 +134,7 @@ impl IdAllocator {
         Ok(())
     }
 
-    /// Allocate a new ID or try to use the requested one.
+    /// Allocate a new ID or try to use the requested one. Creates a new id if the requested id could not be used.
     pub fn allocate(&mut self, requested: Option<ComponentId>) -> ComponentId {
         if let Some(id) = requested {
             if self.used.insert(id.0) {
@@ -147,6 +142,27 @@ impl IdAllocator {
             }
         }
 
+        self.allocate_new()
+    }
+
+    /// Allocate a new ID or try to use the requested one. Returns an error if the requested id could not be used.
+    pub fn try_allocate(&mut self, requested: Option<ComponentId>) -> ApiResult<ComponentId> {
+        if let Some(id) = requested {
+            if self.used.insert(id.0) {
+                Ok(id)
+            } else {
+                Err(ApiError::with_message(
+                    ErrorCode::InvalidData,
+                    format!("id {} already used", id.0),
+                ))
+            }
+        } else {
+            Ok(self.allocate_new())
+        }
+    }
+
+    /// Allocate a new ID
+    fn allocate_new(&mut self) -> ComponentId {
         while self.used.contains(&self.next_id) {
             if self.next_id == u16::MAX {
                 // Should never happen given MAX_COMPONENTS = 64,

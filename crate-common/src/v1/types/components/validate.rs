@@ -353,7 +353,7 @@ impl Components<Create> {
         // mark ids in old tree as used
         if let Some(prev_tree) = prev {
             for component in &prev_tree.inner {
-                component.visit_ids_fallible(&mut |id| id_allocator.mark_used2(id.0))?;
+                component.visit_ids_fallible(&mut |id| id_allocator.mark_used(id.0))?;
             }
         }
 
@@ -386,7 +386,7 @@ impl Components<Create> {
         // mark ids in old tree as used
         if let Some(prev_tree) = prev {
             for component in &prev_tree.inner {
-                component.visit_ids_fallible(&mut |id| id_allocator.mark_used2(id.0))?;
+                component.visit_ids_fallible(&mut |id| id_allocator.mark_used(id.0))?;
             }
         }
 

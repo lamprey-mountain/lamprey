@@ -27,3 +27,9 @@ pub struct ComponentReplace {
     pub target: ComponentId,
     pub component_ids: Vec<ComponentId>,
 }
+
+/// an error that occured while applying a delta to some components
+#[derive(Debug, thiserror::Error)]
+pub enum ComponentDeltaError {
+    // etc...
+}

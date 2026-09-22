@@ -177,7 +177,7 @@ impl Components {
     pub fn append(&mut self, target_id: ComponentId, other: Components) -> ApiResult<()> {
         let mut id_allocator = IdAllocator::new();
         for c in &self.items {
-            id_allocator.mark_used2(c.id.0)?;
+            id_allocator.mark_used(c.id.0)?;
         }
 
         let Some(target) = self.items.iter_mut().find(|c| c.id == target_id) else {
@@ -301,7 +301,7 @@ impl Components {
     pub fn replace(&mut self, target_id: ComponentId, replacements: Components) -> ApiResult<()> {
         let mut id_allocator = IdAllocator::new();
         for c in &self.items {
-            id_allocator.mark_used2(c.id.0)?;
+            id_allocator.mark_used(c.id.0)?;
         }
 
         let mut replacement_ids = vec![];
