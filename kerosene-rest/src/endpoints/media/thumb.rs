@@ -9,11 +9,6 @@ use http::StatusCode;
 use kerosene_core::types::media::MediaPaths;
 use routes::media_proxy as routes;
 
-#[handler(routes::thumb_head)]
-async fn head(req: Req<routes::thumb_head::Endpoint>) -> Result<routes::thumb_head::Response> {
-    todo!()
-}
-
 #[handler(routes::thumb_get)]
 async fn get(req: Req<routes::thumb_get::Endpoint>) -> Result<routes::thumb_get::Response> {
     let globals = req.globals();
@@ -87,25 +82,29 @@ async fn get(req: Req<routes::thumb_get::Endpoint>) -> Result<routes::thumb_get:
             },
         )?;
 
-        let reader = globals
-            .blobs()
-            .reader(&thumb_path)
-            .await
-            .map_err(|err| ServerError::Internal(Box::new(err)))?;
-
-        let stream = if let Some(range) = meta.range {
-            reader
-                .into_bytes_stream(range)
-                .await
-                .map_err(|err| ServerError::Internal(Box::new(err)))?
+        if req.method() == http::Method::HEAD {
+            Body::empty()
         } else {
-            reader
-                .into_bytes_stream(..)
+            let reader = globals
+                .blobs()
+                .reader(&thumb_path)
                 .await
-                .map_err(|err| ServerError::Internal(Box::new(err)))?
-        };
+                .map_err(|err| ServerError::Internal(Box::new(err)))?;
 
-        Body::from_stream(stream)
+            let stream = if let Some(range) = meta.range {
+                reader
+                    .into_bytes_stream(range)
+                    .await
+                    .map_err(|err| ServerError::Internal(Box::new(err)))?
+            } else {
+                reader
+                    .into_bytes_stream(..)
+                    .await
+                    .map_err(|err| ServerError::Internal(Box::new(err)))?
+            };
+
+            Body::from_stream(stream)
+        }
     };
 
     Ok(routes::thumb_get::Response {
@@ -115,4 +114,4 @@ async fn get(req: Req<routes::thumb_get::Endpoint>) -> Result<routes::thumb_get:
     })
 }
 
-export_routes!(head, get);
+export_routes!(get);
