@@ -13,6 +13,24 @@ pub fn derive_diff(input: TokenStream) -> TokenStream {
     diff::expand_diff_derive(input)
 }
 
+// FIXME(doc): "no item named `Serialize` in scope"
+/// derive common traits for a type
+///
+/// ## syntax
+///
+/// - `#[record]` basic record type
+/// - `#[record(params)]` to derive [`IntoParams`] if feature `utoipa` is enabled
+///
+/// ## common traits
+///
+/// these are derived for all types
+///
+/// - [`Debug`]
+/// - [`Clone`]
+/// - [`Serialize`] if feature `serde` is enabled
+/// - [`Deserialize`] if feature `serde` is enabled
+/// - [`ToSchema`] if feature `utoipa` is enabled
+/// - [`Validate`] if feature `validator` is enabled
 #[proc_macro_attribute]
 pub fn record(args: TokenStream, input: TokenStream) -> TokenStream {
     record::expand(args.into(), input.into())
@@ -90,6 +108,9 @@ pub fn handler_new(args: TokenStream, item: TokenStream) -> TokenStream {
 
 macro_rules! define_id_macro {
     ($name:ident, $ty:literal) => {
+        #[doc = concat!("create a new ", $ty)]
+        #[doc = ""]
+        #[doc = concat!("example: `let id: ", $ty, " = ", stringify!($name), "!(some-uuid-here)`. note that quotes aren't used for uuids.")]
         #[proc_macro]
         pub fn $name(input: TokenStream) -> TokenStream {
             let lit = syn::parse_macro_input!(input as syn::LitStr);

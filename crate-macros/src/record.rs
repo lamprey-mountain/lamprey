@@ -4,11 +4,11 @@ use syn::{Attribute, Data, DeriveInput, Fields, parse::Parse, parse2};
 
 /// macro attrs for a record
 pub struct RecordArgs {
-    // TODO
+    params: bool,
 }
 
 pub fn expand(args: TokenStream, input: TokenStream) -> syn::Result<TokenStream> {
-    let _args: RecordArgs = parse2(args)?;
+    let args: RecordArgs = parse2(args)?;
     let mut input: DeriveInput = parse2(input)?;
     // let mut input = parse_macro_input!(input as DeriveInput);
 
@@ -42,11 +42,18 @@ pub fn expand(args: TokenStream, input: TokenStream) -> syn::Result<TokenStream>
         quote! {}
     };
 
+    let params_attr = if args.params {
+        quote! { #[cfg_attr(feature = "utoipa", derive(::utoipa::IntoParams))] }
+    } else {
+        quote! {}
+    };
+
     let expanded = quote! {
         #[derive(Debug, Clone)]
         #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
         #[cfg_attr(feature = "utoipa", derive(::utoipa::ToSchema))]
         #validate_attr
+        #params_attr
         #input
     };
 
@@ -54,14 +61,22 @@ pub fn expand(args: TokenStream, input: TokenStream) -> syn::Result<TokenStream>
 }
 
 impl Parse for RecordArgs {
-    fn parse(_input: syn::parse::ParseStream) -> syn::Result<Self> {
-        // TODO
-        Ok(RecordArgs {})
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let mut params = false;
+        if input.peek(syn::Ident) {
+            let ident: syn::Ident = input.parse()?;
+            if ident == "params" {
+                params = true;
+            } else {
+                return Err(syn::Error::new(ident.span(), "unknown attribute"));
+            }
+        }
+        Ok(RecordArgs { params })
     }
 }
 
 /// wrap `#[attr_name(...)]` in `#[cfg_attr(feature = "feature_name", attr_name(...))]`
-fn wrap_attribute(attrs: &mut Vec<Attribute>, attr_name: &str, feature_name: &str) {
+fn wrap_attribute(attrs: &mut [Attribute], attr_name: &str, feature_name: &str) {
     for attr in attrs.iter_mut() {
         if attr.path().is_ident(attr_name) {
             let meta = &attr.meta;
@@ -73,7 +88,7 @@ fn wrap_attribute(attrs: &mut Vec<Attribute>, attr_name: &str, feature_name: &st
     }
 }
 
-fn wrap_attributes(attrs: &mut Vec<Attribute>) {
+fn wrap_attributes(attrs: &mut [Attribute]) {
     wrap_attribute(attrs, "serde", "serde");
     wrap_attribute(attrs, "validate", "validator");
     wrap_attribute(attrs, "utoipa", "utoipa");
