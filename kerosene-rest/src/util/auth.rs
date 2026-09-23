@@ -101,8 +101,93 @@ pub async fn calculate(headers: &HeadersRequest, globals: &Globals) -> Result<Id
                 });
             };
 
-            // FIXME: puppetting
-            let acting_user = real_user.clone();
+            // effective user / puppetting
+            let mut acting_user = if let Some(puppet_id) = headers.puppet_id {
+                let puppet = srv.users.get(puppet_id, None).await.cast_internal()?;
+
+                if puppet.bot {
+                    // bot owners can puppet their bots
+                    let app = globals
+                        .begin_read()
+                        .await
+                        .cast_internal()?
+                        .application_get(puppet.id.into_inner().into())
+                        .await
+                        .cast_internal()?;
+
+                    if app.owner_id != real_user.id {
+                        return Err(ApiError::from_code(ErrorCode::NotBotOwner).into());
+                    }
+
+                    puppet
+                } else {
+                    // bridge bots can puppet their... uh... puppets...
+                    if !real_user.bot {
+                        return Err(ApiError::from_code(ErrorCode::UserIsNotABot).into());
+                    }
+
+                    // TODO: more specific error
+                    let Some(p) = &puppet.puppet else {
+                        return Err(ApiError::from_code(ErrorCode::InvalidData).into());
+                    };
+
+                    if p.owner_id.into_inner() != *real_user.id {
+                        return Err(ApiError::from_code(ErrorCode::NotPuppetOwner).into());
+                    }
+
+                    puppet
+                }
+            } else {
+                real_user.clone()
+            };
+
+            // if the puppeteer is suspended, so is the puppet
+            if acting_user.id != real_user.id && real_user.is_suspended() {
+                acting_user.suspended = real_user.suspended.clone();
+            }
+
+            if acting_user.suspended.is_none() {
+                // if the bot owner is suspended, so is the bot
+                // PERF: getting bot_user likely redundant (same as real_user)
+                // (kept for now for parity with existing auth system)
+                if let Some(puppet) = &acting_user.puppet {
+                    let bot_app_id = puppet.owner_id;
+                    let bot_user = srv
+                        .users
+                        .get(bot_app_id.into_inner().into(), None)
+                        .await
+                        .cast_internal()?;
+                    if bot_user.is_suspended() {
+                        acting_user.suspended = bot_user.suspended.clone();
+                    } else if bot_user.bot {
+                        if let Ok(app) = globals
+                            .begin_read()
+                            .await
+                            .cast_internal()?
+                            .application_get(bot_app_id)
+                            .await
+                        {
+                            let owner = srv.users.get(app.owner_id, None).await.cast_internal()?;
+                            if owner.is_suspended() {
+                                acting_user.suspended = owner.suspended.clone();
+                            }
+                        }
+                    }
+                } else if acting_user.bot {
+                    if let Ok(app) = globals
+                        .begin_read()
+                        .await
+                        .cast_internal()?
+                        .application_get(acting_user.id.into_inner().into())
+                        .await
+                    {
+                        let owner = srv.users.get(app.owner_id, None).await.cast_internal()?;
+                        if owner.is_suspended() {
+                            acting_user.suspended = owner.suspended.clone();
+                        }
+                    }
+                }
+            }
 
             // scopes
             let scopes = if session.ty == SessionType::User {
