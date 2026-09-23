@@ -11,40 +11,64 @@ use crate::v1::types::{
     misc::Time,
 };
 
+/// a calendar event
+// TODO: add room_id: RoomId
+// TODO: add image: MediaId (like a banner?)
+// TODO: marking events as "all day"
 #[record]
 pub struct CalendarEvent {
+    /// unique identifier for this calendar event
     pub id: CalendarEventId,
+
+    /// the id of the calendar channel that this event was created in
     pub channel_id: ChannelId,
+
+    /// the id of the user who created this event
     pub creator_id: Option<UserId>,
-    #[schema(max_length = 64)]
-    #[validate(length(max = 64))]
+
+    /// name for this event
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub title: String,
-    #[schema(max_length = 4096)]
-    #[validate(length(max = 4096))]
+
+    /// description for this event. supports markdown.
+    #[schema(min_length = 1, max_length = 4096)]
+    #[validate(length(min = 1, max = 4096))]
     pub description: Option<String>,
-    #[schema(max_length = 512)]
-    #[validate(length(max = 512))]
+
+    /// location where this event will take place
+    #[schema(min_length = 1, max_length = 512)]
+    #[validate(length(min = 1, max = 512))]
     pub location: Option<String>,
+
+    /// a url for this event
     pub url: Option<Url>,
 
     /// the timezone that this event should be calculated in
     pub timezone: Option<Timezone>,
 
+    /// how this event should recur
     pub recurrence: Option<Recurrence>,
+
+    /// when this event starts
     pub starts_at: Time,
+
+    /// when this event ends
+    ///
+    /// if unset, this event describes a point in time
     pub ends_at: Option<Time>,
 }
 
 #[record]
 pub struct CalendarEventCreate {
-    #[schema(max_length = 64)]
-    #[validate(length(max = 64))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub title: String,
-    #[schema(max_length = 4096)]
-    #[validate(length(max = 4096))]
+    #[schema(min_length = 1, max_length = 4096)]
+    #[validate(length(min = 1, max = 4096))]
     pub description: Option<String>,
-    #[schema(max_length = 512)]
-    #[validate(length(max = 512))]
+    #[schema(min_length = 1, max_length = 512)]
+    #[validate(length(min = 1, max = 512))]
     pub location: Option<String>,
     pub url: Option<Url>,
     pub timezone: Option<Timezone>,
@@ -56,17 +80,17 @@ pub struct CalendarEventCreate {
 // TODO: rename to CalendarEventUpdate
 #[record]
 pub struct CalendarEventPatch {
-    #[schema(max_length = 64)]
-    #[validate(length(max = 64))]
+    #[schema(min_length = 1, max_length = 64)]
+    #[validate(length(min = 1, max = 64))]
     pub title: Option<String>,
 
-    #[schema(max_length = 4096)]
-    #[validate(length(max = 4096))]
+    #[schema(min_length = 1, max_length = 4096)]
+    #[validate(length(min = 1, max = 4096))]
     #[serde(default, deserialize_with = "some_option")]
     pub description: Option<Option<String>>,
 
-    #[schema(max_length = 512)]
-    #[validate(length(max = 512))]
+    #[schema(min_length = 1, max_length = 512)]
+    #[validate(length(min = 1, max = 512))]
     #[serde(default, deserialize_with = "some_option")]
     pub location: Option<Option<String>>,
 

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Write};
 
 use lamprey_macros::record;
 
@@ -7,8 +7,10 @@ use crate::v1::types::{
     misc::Time,
 };
 
+// TODO: add by_year_day
+// TODO: add by_n_weekday
+// TODO: add by_month
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct Recurrence {
     /// how often to recur
     pub frequency: RecurrenceFrequency,
@@ -22,17 +24,24 @@ pub struct Recurrence {
     pub by_month_day: Vec<u8>,
 
     /// when to end
+    #[serde(default)]
     pub limit: RecurrenceLimit,
 
     /// repeat every n (days/weeks/months/years)
+    #[serde(default = "const_one")]
     pub interval: u32,
 }
 
+fn const_one() -> u32 {
+    1
+}
+
 #[record]
-#[derive(PartialEq, Eq)]
+#[derive(Default, PartialEq, Eq)]
 #[serde(tag = "type")]
 pub enum RecurrenceLimit {
     /// repeat this event forever
+    #[default]
     Infinite,
 
     /// repeat this event n times
@@ -162,7 +171,8 @@ impl Recurrence {
 
     /// convert to a rfc rrule string
     pub fn to_rrule(&self) -> String {
-        let mut rrule = vec![];
+        // TODO: handle write! errs instead of unwrapping everything
+        let mut rrule = String::new();
 
         // TODO: extract out display/fromstr (use strum?)
         let freq = match self.frequency {
@@ -171,9 +181,9 @@ impl Recurrence {
             RecurrenceFrequency::Monthly => "MONTHLY",
             RecurrenceFrequency::Yearly => "YEARLY",
         };
-        rrule.push(format!("FREQ={}", freq));
 
-        rrule.push(format!("INTERVAL={}", self.interval));
+        write!(rrule, "FREQ={};", freq).unwrap();
+        write!(rrule, "INTERVAL={};", self.interval).unwrap();
 
         if !self.by_weekday.is_empty() {
             let days: Vec<&str> = self
@@ -190,17 +200,17 @@ impl Recurrence {
                     DayOfWeek::Sunday => "SU",
                 })
                 .collect();
-            rrule.push(format!("BYDAY={}", days.join(",")));
+            write!(rrule, "BYDAY={};", days.join(",")).unwrap();
         }
 
         if !self.by_month_day.is_empty() {
             let days: Vec<String> = self.by_month_day.iter().map(|d| d.to_string()).collect();
-            rrule.push(format!("BYMONTHDAY={}", days.join(",")));
+            write!(rrule, "BYMONTHDAY={};", days.join(",")).unwrap();
         }
 
         match &self.limit {
             RecurrenceLimit::Count { count } => {
-                rrule.push(format!("COUNT={}", count));
+                write!(rrule, "COUNT={};", count).unwrap();
             }
             RecurrenceLimit::Until { time } => {
                 let dt = time.to_offset(time::UtcOffset::UTC);
@@ -209,11 +219,11 @@ impl Recurrence {
                     "[year][month][day]T[hour][minute][second]Z",
                 )
                 .unwrap();
-                rrule.push(format!("UNTIL={}", dt.format(&fmt).unwrap()));
+                write!(rrule, "UNTIL={};", dt.format(&fmt).unwrap()).unwrap();
             }
             RecurrenceLimit::Infinite => {}
         }
 
-        rrule.join(";")
+        rrule
     }
 }
