@@ -1,5 +1,6 @@
 use core::fmt;
 use lamprey_backend_core::config::{Config, ConfigBlobs};
+use lamprey_backend_core::types::media::MediaPaths;
 use std::sync::Arc;
 use url::Url;
 
@@ -218,7 +219,8 @@ impl MediaItem {
 
                 // fetch from cdn
                 let media = self.media();
-                let url = get_s3_url(self.inner.s.config(), &format!("media/{}/file", media.id))?;
+                let paths = MediaPaths::new("media/");
+                let url = get_s3_url(self.inner.s.config(), &paths.file(media.id))?;
                 let reader = self.inner.s.blobs().reader_with(url.path()).await?;
                 let mut reader = reader.into_futures_async_read(0..).await?.compat();
                 tokio::io::copy(&mut reader, &mut writer).await?;
@@ -227,6 +229,109 @@ impl MediaItem {
             })
             .await
             .cloned()
+    }
+
+    /// makes sure a thumbnail is available for this piece of media, generating one if not
+    // TODO: add error logging
+    pub async fn generate_thumb(&self, width: u32, height: u32, animate: bool) -> Result<()> {
+        let media = self.media();
+        let key = ThumbnailKey {
+            media_id: media.id,
+            width,
+            height,
+            animate,
+        };
+
+        let globals = self.inner.s.clone();
+        self.inner
+            .s
+            .services()
+            .media
+            .pending_thumbnails
+            .try_get_with(key, async move {
+                let paths = MediaPaths::new("media/");
+                let ext = if animate { "webp" } else { "avif" };
+                let thumb_path = if animate {
+                    paths.thumb(media.id, width, ext)
+                } else {
+                    paths.thumb_static(media.id, width, ext)
+                };
+
+                if globals.blobs().exists(&thumb_path).await? {
+                    return Result::Ok(());
+                }
+
+                let source_tempfile = self.download_tempfile().await?;
+                let output_tempfile = TempFile::new().await?;
+
+                globals
+                    .services()
+                    .media
+                    .ffmpeg
+                    .generate_thumbnail(
+                        source_tempfile.file_path(),
+                        output_tempfile.file_path(),
+                        width,
+                        animate,
+                    )
+                    .await?;
+
+                // PERF: streaming upload, dont buffer entire thumbnail in memory
+                let mut thumb_data = Vec::new();
+                let mut reader = output_tempfile.open_ro().await?;
+                reader.read_to_end(&mut thumb_data).await?;
+                globals.blobs().write(&thumb_path, thumb_data).await?;
+
+                Result::Ok(())
+            })
+            .await
+            .map_err(|err| err.fake_clone())
+    }
+
+    /// makes sure a transcoded gifv is available for this piece of media, generating one if not
+    pub async fn generate_gifv(&self) -> Result<()> {
+        let media = self.media();
+        let globals = self.inner.s.clone();
+
+        globals
+            .services()
+            .media
+            .pending_gifv
+            .try_get_with(media.id, async move {
+                let paths = MediaPaths::new("media/");
+                let gifv_path = paths.gifv(media.id);
+
+                if globals.blobs().exists(&gifv_path).await? {
+                    return Result::Ok(());
+                }
+
+                let source_tempfile = self.download_tempfile().await?;
+                let output_tempfile = TempFile::new().await?;
+
+                globals
+                    .services()
+                    .media
+                    .ffmpeg
+                    .transcode_to_webm(source_tempfile.file_path(), output_tempfile.file_path())
+                    .await?;
+
+                let mut gifv_data = Vec::new();
+                let mut reader = output_tempfile.open_ro().await?;
+                reader.read_to_end(&mut gifv_data).await?;
+
+                let mut writer = globals
+                    .blobs()
+                    .writer_with(&gifv_path)
+                    .content_type("video/webm")
+                    .await?;
+
+                writer.write(gifv_data).await?;
+                writer.close().await?;
+
+                Result::Ok(())
+            })
+            .await
+            .map_err(|err| err.fake_clone())
     }
 }
 
@@ -368,4 +473,12 @@ impl From<Media> for Import {
             remote: value.remote,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ThumbnailKey {
+    pub media_id: MediaId,
+    pub width: u32,
+    pub height: u32,
+    pub animate: bool,
 }

@@ -15,6 +15,7 @@ use moka::future::Cache;
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, error};
 
+use crate::services::media::util::ThumbnailKey;
 use crate::{prelude::*, services::media::util::MediaItemState};
 
 mod import;
@@ -31,16 +32,24 @@ pub struct ServiceMedia {
     cache: Cache<MediaId, MediaItem>,
     uploads: Arc<DashMap<MediaId, Upload>>,
     ffmpeg: Ffmpeg,
+
+    // NOTE: maybe i should store these in postgres, nats, or somewhere that can be shared between nodes
+    pending_thumbnails: Cache<ThumbnailKey, ()>,
+    pending_gifv: Cache<MediaId, ()>,
 }
 
 impl ServiceMedia {
     pub fn new(state: Globals) -> Self {
         let ffmpeg = Ffmpeg::from_config(state.config());
+
+        // TODO: make cache capacities configurable
         Self {
             state,
-            cache: Cache::new(1000), // TODO: make configurable
+            cache: Cache::new(1000),
             uploads: Arc::new(DashMap::new()),
             ffmpeg,
+            pending_thumbnails: Cache::new(1000),
+            pending_gifv: Cache::new(1000),
         }
     }
 
