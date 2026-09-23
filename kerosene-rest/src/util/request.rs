@@ -24,7 +24,7 @@ use common::{
     v2::types::media::{Media, MediaReference},
 };
 use futures::stream;
-use http::StatusCode;
+use http::{Method, StatusCode};
 use kerosene_core::{error::ErrorCode, types::auth::Identity};
 use lamprey_backend_services::services::{
     Services,
@@ -50,6 +50,9 @@ pub struct Req<E: Endpoint> {
     /// request headers
     headers: Box<HeadersRequest>,
 
+    /// request method
+    method: Method,
+
     /// an audit logger slot
     audit_logger: AuditLoggerSlot,
 }
@@ -69,6 +72,7 @@ where
         let (parts, body) = req.into_parts();
         let headers = HeadersRequest::from_parts(&parts)?;
         let identity = super::auth::calculate(&headers, globals).await?;
+        let method = parts.method.clone();
 
         let audit_logger: &AuditLoggerSlot = parts
             .extensions
@@ -175,6 +179,7 @@ where
             identity,
             media,
             headers: Box::new(headers),
+            method,
             audit_logger,
         })
     }
@@ -211,6 +216,12 @@ impl<E: Endpoint> Req<E> {
     #[inline]
     pub fn headers(&self) -> &HeadersRequest {
         &self.headers
+    }
+
+    /// access request method
+    #[inline]
+    pub fn method(&self) -> &Method {
+        &self.method
     }
 
     pub fn get_media(&self, media_ref: &MediaReference) -> Option<&MediaItem> {

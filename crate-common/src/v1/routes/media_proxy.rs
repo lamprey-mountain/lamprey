@@ -150,7 +150,10 @@ pub mod media_get_filename {
     response(OK, description = "success"),
 )]
 pub mod thumb_get {
+    use http::{HeaderMap, StatusCode};
+
     use crate::{
+        util::body::Body,
         v1::types::MediaId,
         v2::types::media::proxy::{MediaQuery, ThumbQuery},
     };
@@ -167,8 +170,14 @@ pub mod thumb_get {
     }
 
     pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
         #[headers]
-        pub headers: http::HeaderMap,
+        pub headers: HeaderMap,
+
+        #[body]
+        pub body: Body,
     }
 }
 
@@ -182,6 +191,8 @@ pub mod thumb_get {
     response(OK, description = "success"),
 )]
 pub mod thumb_head {
+    use http::{HeaderMap, StatusCode};
+
     use crate::{
         v1::types::MediaId,
         v2::types::media::proxy::{MediaQuery, ThumbQuery},
@@ -199,8 +210,11 @@ pub mod thumb_head {
     }
 
     pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
         #[headers]
-        pub headers: http::HeaderMap,
+        pub headers: HeaderMap,
     }
 }
 
@@ -214,7 +228,9 @@ pub mod thumb_head {
     response(OK, description = "success"),
 )]
 pub mod gifv_get {
-    use crate::{v1::types::MediaId, v2::types::media::proxy::MediaQuery};
+    use http::{HeaderMap, StatusCode};
+
+    use crate::{util::body::Body, v1::types::MediaId, v2::types::media::proxy::MediaQuery};
 
     pub struct Request {
         #[path]
@@ -225,8 +241,14 @@ pub mod gifv_get {
     }
 
     pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
         #[headers]
-        pub headers: http::HeaderMap,
+        pub headers: HeaderMap,
+
+        #[body]
+        pub body: Body,
     }
 }
 
@@ -240,6 +262,8 @@ pub mod gifv_get {
     response(OK, description = "success"),
 )]
 pub mod gifv_head {
+    use http::{HeaderMap, StatusCode};
+
     use crate::{v1::types::MediaId, v2::types::media::proxy::MediaQuery};
 
     pub struct Request {
@@ -251,8 +275,11 @@ pub mod gifv_head {
     }
 
     pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
         #[headers]
-        pub headers: http::HeaderMap,
+        pub headers: HeaderMap,
     }
 }
 
@@ -266,7 +293,10 @@ pub mod gifv_head {
     response(OK, description = "success"),
 )]
 pub mod emoji_get {
+    use http::{HeaderMap, StatusCode};
+
     use crate::{
+        util::body::Body,
         v1::types::EmojiId,
         v2::types::media::proxy::{MediaQuery, ThumbQuery},
     };
@@ -283,8 +313,14 @@ pub mod emoji_get {
     }
 
     pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
         #[headers]
-        pub headers: http::HeaderMap,
+        pub headers: HeaderMap,
+
+        #[body]
+        pub body: Body,
     }
 }
 
@@ -298,6 +334,8 @@ pub mod emoji_get {
     response(OK, description = "success"),
 )]
 pub mod emoji_head {
+    use http::{HeaderMap, StatusCode};
+
     use crate::{
         v1::types::EmojiId,
         v2::types::media::proxy::{MediaQuery, ThumbQuery},
@@ -315,8 +353,11 @@ pub mod emoji_head {
     }
 
     pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
         #[headers]
-        pub headers: http::HeaderMap,
+        pub headers: HeaderMap,
     }
 }
 

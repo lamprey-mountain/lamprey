@@ -21,16 +21,15 @@ use http::StatusCode;
 pub enum MediaInfo<'a> {
     /// a piece of media directly
     Media(&'a Media),
-    // TODO; support these
-    // Thumb {
-    //     media: &'a Media,
-    //     content_length: Option<u64>,
-    //     animated: bool,
-    // },
-    // Gifv {
-    //     media: &'a Media,
-    //     content_length: Option<u64>,
-    // },
+    Thumb {
+        media: &'a Media,
+        content_length: Option<u64>,
+        animated: bool,
+    },
+    Gifv {
+        media: &'a Media,
+        content_length: Option<u64>,
+    },
 }
 
 /// metadata needed to respond
@@ -46,6 +45,14 @@ impl<'a> MediaInfo<'a> {
     pub fn content_type(&self) -> ContentType {
         match self {
             MediaInfo::Media(media) => media.content_type.to_string().parse().unwrap(),
+            MediaInfo::Thumb { animated, .. } => {
+                if *animated {
+                    "image/webp".parse().unwrap()
+                } else {
+                    "image/avif".parse().unwrap()
+                }
+            }
+            MediaInfo::Gifv { .. } => "video/mp4".parse().unwrap(),
         }
     }
 
@@ -53,13 +60,17 @@ impl<'a> MediaInfo<'a> {
     pub fn filename(&self) -> Cow<'a, str> {
         match self {
             MediaInfo::Media(media) => Cow::Borrowed(&media.filename),
+            MediaInfo::Thumb { media, .. } => Cow::Owned(format!("{}_thumb", media.filename)),
+            MediaInfo::Gifv { media, .. } => Cow::Owned(format!("{}_gifv", media.filename)),
         }
     }
 
-    /// get the length of this media
-    pub fn len(&self) -> u64 {
+    /// get the length of this media (if known)
+    pub fn len(&self) -> Option<u64> {
         match self {
-            MediaInfo::Media(media) => media.size,
+            MediaInfo::Media(media) => Some(media.size),
+            MediaInfo::Thumb { content_length, .. } => *content_length,
+            MediaInfo::Gifv { content_length, .. } => *content_length,
         }
     }
 
@@ -67,6 +78,8 @@ impl<'a> MediaInfo<'a> {
     pub fn media(&self) -> &'a Media {
         match self {
             MediaInfo::Media(media) => media,
+            MediaInfo::Thumb { media, .. } => media,
+            MediaInfo::Gifv { media, .. } => media,
         }
     }
 }
@@ -155,7 +168,9 @@ pub fn calculate_response_metadata<'a>(
     let mut range = None;
     if allow_range_request {
         if let Some(ranges) = &headers_req.range {
-            let satisfiable_ranges: Vec<_> = ranges.satisfiable_ranges(content_length).collect();
+            let satisfiable_ranges: Vec<_> = ranges
+                .satisfiable_ranges(content_length.unwrap_or(0))
+                .collect();
             // TODO(future): handling multiple satisfiable_ranges?
             if satisfiable_ranges.len() != 1 {
                 return Err(ApiError::with_message(
@@ -165,13 +180,16 @@ pub fn calculate_response_metadata<'a>(
                 .into());
             }
             let r = satisfiable_ranges[0];
-            headers.content_range = Some(ContentRange::bytes(r, content_length).unwrap());
+            headers.content_range =
+                Some(ContentRange::bytes(r, content_length.unwrap_or(0)).unwrap());
             range = Some(r);
         }
     }
 
     if range.is_none() {
-        headers.content_length = Some(ContentLength(content_length));
+        if let Some(cl) = content_length {
+            headers.content_length = Some(ContentLength(cl));
+        }
     }
 
     Ok(ResponseMetadata {
