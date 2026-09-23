@@ -584,7 +584,7 @@ async fn user_search(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(user_update))
-        .routes(routes2!(user_get))
+        // .routes(routes2!(user_get))
         .routes(routes2!(user_delete))
         .routes(routes2!(user_undelete))
         .routes(routes2!(user_audit_logs))

@@ -226,7 +226,7 @@ pub struct Ignore {
 
 /// a relationship between two users
 #[record]
-#[derive(PartialEq, Eq)]
+#[derive(Copy, PartialEq, Eq)]
 pub enum RelationshipType {
     /// friends :D
     Friend,
@@ -303,5 +303,17 @@ impl User {
     /// whether auth state can be updated for this user
     pub fn can_update_auth(&self) -> bool {
         self.webhook.is_none() && !self.bot && self.puppet.is_none() && self.remote.is_none()
+    }
+}
+
+impl Relationship {
+    pub fn is_ignored_or_blocked(&self) -> bool {
+        self.relation
+            .as_ref()
+            .is_some_and(|ty| ty == &RelationshipType::Block)
+            || self
+                .ignore
+                .as_ref()
+                .is_some_and(|ignore| ignore.until.is_none_or(|until| until < Time::now_utc()))
     }
 }
