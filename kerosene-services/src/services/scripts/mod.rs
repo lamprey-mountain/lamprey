@@ -253,15 +253,9 @@ impl ServiceScripts {
     /// - does basic validation
     /// - extracts script inputs and metadata
     /// - optionally process a specific version of a script
-    async fn process(&self, script: Redex, ver: Option<RedexVersion>) -> Result<ScriptExtracted> {
-        // NOTE: should i insert the extraction run in the db too?
-
-        let latest_version = ver.as_ref().unwrap_or(&script.latest_version);
-        let loaded = self.load(&script).await?;
-
-        let handle = loaded.spawn(EvalInput::Extraction, EvalId::new()).await?;
+    async fn process(&self, redex: Redex, ver: Option<RedexVersion>) -> Result<ScriptExtracted> {
+        let handle = self.spawn_inner(redex, None, EvalInput::Extraction).await?;
         let extracted = handle.done().await?;
-
         Ok(extracted)
     }
 
@@ -281,6 +275,21 @@ impl ServiceScripts {
             .script_get(redex_id)
             .await?
             .ok_or_else(|| Error::ApiError(ApiError::from_code(ErrorCode::UnknownRedex)))?;
+        let handle = self.spawn_inner(redex, None, input).await?;
+        Ok(handle)
+    }
+
+    async fn spawn_inner(
+        &self,
+        redex: Redex,
+        ver: Option<RedexVersion>,
+        input: EvalInput,
+    ) -> Result<AnyExecutionHandle> {
+        let redex_id = redex.id;
+        let latest_version = ver.as_ref().unwrap_or(&redex.latest_version);
+        let redex_version_id = latest_version.version_id;
+        let channel_id = redex.channel_id;
+
         let loaded = self.load(&redex).await?;
         let eval_id = EvalId::new();
 
