@@ -1,4 +1,7 @@
-use crate::{prelude::*, services::notifications::MentionedUsers};
+use crate::{
+    prelude::*,
+    services::notifications::{MentionedUsers, ServiceNotifications, preferences::Preferences},
+};
 use common::{
     v1::types::{
         Channel, ChannelId, Message, Room, RoomId, UserId,
@@ -14,8 +17,8 @@ use common::{
     v2::types::NotificationId,
 };
 
-/// actions to take on this event
-pub struct Actions {
+pub struct Actions_ {
+    // PERF: use bitflags
     should_push: bool,
     should_add_to_inbox: bool,
     should_increment_mention_count: bool,
@@ -23,191 +26,152 @@ pub struct Actions {
     notification: Option<Notification>,
 }
 
-/// What action to take for a notification
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NotificationAction {
-    /// Don't do anything
-    Skip,
+/// Set of actions to take on an event
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct Actions {
+    // PERF: use bitflags
+    should_push: bool,
+    should_add_to_inbox: bool,
+    should_increment_mention_count: bool,
+    should_add_to_thread: bool,
+}
 
-    /// Add to inbox only, no push notification
-    Inbox,
+// bitflags::bitflags! {
+//     struct ActionsInner: u8 {
+//         Push,
+//         Inbox,
+//         IncrementMentions,
+//         IncrementUnreads,
+//         AddToThread,
+//     }
+// }
 
-    /// Send push notification and add to inbox
-    Push,
+/// Notification action calculator for an event
+///
+/// Calculates what actions should be done for a user.
+pub struct Calculator<'a> {
+    globals: Globals,
+    context: CalculatorContext<'a>,
+}
+
+/// Notification calculator context for a message
+// TODO: handle other context types?
+pub(super) struct CalculatorContext<'a> {
+    pub room: Option<&'a Room>,
+    pub channel: &'a Channel,
+    pub replied_message: Option<&'a Message>,
+    pub message: &'a Message,
+    pub mentioned_users: &'a MentionedUsers,
 }
 
 impl Actions {
+    /// Don't do anything
+    pub fn skip() -> Self {
+        Self::default()
+    }
+
+    /// Add to inbox only, no push notification
+    pub fn inbox() -> Self {
+        todo!()
+    }
+
+    /// Send push notification and add to inbox
+    pub fn push() -> Self {
+        todo!()
+    }
+
     /// Whether this notification should be sent as a push notification
+    #[inline]
     pub fn should_push(&self) -> bool {
         self.should_push
     }
 
     /// Whether this notification should be added to the inbox
+    #[inline]
     pub fn should_add_to_inbox(&self) -> bool {
         self.should_add_to_inbox
     }
 
     /// Whether the mention count should be incremented
+    #[inline]
     pub fn should_increment_mention_count(&self) -> bool {
         self.should_increment_mention_count
     }
 
     /// Whether the user should be added to the thread
+    #[inline]
     pub fn should_add_to_thread(&self) -> bool {
         self.should_add_to_thread
     }
 
-    /// Get the notification that should be created for this user
-    pub fn notification(&self) -> Option<&Notification> {
-        self.notification.as_ref()
-    }
-}
-
-impl NotificationAction {
     /// Merge these actions with other actions
     pub fn merge(&self, other: Self) -> Self {
-        use NotificationAction::*;
-        match (*self, other) {
-            (Push, _) | (_, Push) => Push,
-            (Inbox, _) | (_, Inbox) => Inbox,
-            (Skip, Skip) => Skip,
+        let should_push = self.should_push || other.should_push;
+        let should_add_to_inbox =
+            should_push || self.should_add_to_inbox || other.should_add_to_inbox;
+        let should_increment_mention_count =
+            self.should_increment_mention_count || other.should_increment_mention_count;
+        let should_add_to_thread = self.should_add_to_thread || other.should_add_to_thread;
+
+        Self {
+            should_push,
+            should_add_to_inbox,
+            should_increment_mention_count,
+            should_add_to_thread,
         }
     }
 
-    /// Whether this notification should be sent as a push notification
-    pub fn should_push(&self) -> bool {
-        matches!(self, NotificationAction::Push)
-    }
-
-    /// Whether this notification should be added to the inbox
-    pub fn should_add_to_inbox(&self) -> bool {
-        matches!(self, NotificationAction::Inbox | NotificationAction::Push)
+    /// Get the notification that should be created for this user
+    #[inline]
+    pub fn notification(&self) -> Option<&Notification> {
+        // self.notification.as_ref()
+        todo!()
     }
 }
 
-impl From<NotifsMessages> for NotificationAction {
+impl From<NotifsMessages> for Actions {
     fn from(value: NotifsMessages) -> Self {
         match value {
-            NotifsMessages::Nothing => NotificationAction::Skip,
-            NotifsMessages::Mentions => NotificationAction::Inbox,
-            NotifsMessages::Watching => NotificationAction::Inbox,
-            NotifsMessages::Everything => NotificationAction::Push,
+            NotifsMessages::Nothing => Actions::skip(),
+            NotifsMessages::Mentions => Actions::inbox(),
+            NotifsMessages::Watching => Actions::inbox(),
+            NotifsMessages::Everything => Actions::push(),
         }
     }
 }
 
-impl From<NotifsReplies> for NotificationAction {
+impl From<NotifsReplies> for Actions {
     fn from(value: NotifsReplies) -> Self {
         match value {
-            NotifsReplies::Notify => NotificationAction::Push,
-            NotifsReplies::Watching => NotificationAction::Inbox,
-            NotifsReplies::Nothing => NotificationAction::Skip,
+            NotifsReplies::Notify => Actions::push(),
+            NotifsReplies::Watching => Actions::inbox(),
+            NotifsReplies::Nothing => Actions::skip(),
         }
     }
 }
 
-impl From<NotifsThreads> for NotificationAction {
+impl From<NotifsThreads> for Actions {
     fn from(value: NotifsThreads) -> Self {
         match value {
-            NotifsThreads::Notify => NotificationAction::Push,
-            NotifsThreads::Inbox => NotificationAction::Inbox,
-            NotifsThreads::Nothing => NotificationAction::Skip,
+            NotifsThreads::Notify => Actions::push(),
+            NotifsThreads::Inbox => Actions::inbox(),
+            NotifsThreads::Nothing => Actions::skip(),
         }
     }
 }
 
-/// a set of notification preferences for a user
-pub struct Preferences {
-    global: NotifsGlobal,
-    room: Option<NotifsRoom>,
-    channel: Option<NotifsChannel>,
-}
-
-/// notification calculator
-pub struct Calculator {
-    globals: Globals,
-
-    // context
-    room: Option<Room>,
-    channel: Option<Channel>,
-    replied_message: Option<Message>,
-    message: Option<Message>,
-    mentioned_users: Option<MentionedUsers>,
-    notification: Option<Notification>,
-}
-
-impl Calculator {
-    // PERF: borrow channel, message instead of cloning
-    pub(super) async fn load_for_message(
-        globals: Globals,
-        channel: &Channel,
-        message: &Message,
-    ) -> Result<Self> {
-        let srv = globals.services();
-
-        let replied_message = if let Some(reply_id) = message.reply_id() {
-            srv.messages.get(channel.id, reply_id, None).await.ok()
-        } else {
-            None
-        };
-
-        let room = if let Some(room_id) = channel.room_id {
-            srv.rooms.get(room_id, None).await.ok()
-        } else {
-            None
-        };
-
-        let mentioned_users = srv
-            .notifications
-            .get_mentioned_users(channel, message)
-            .await
-            .ok();
-
-        Ok(Self {
-            globals,
-            room,
-            channel: Some(channel.clone()),
-            replied_message,
-            message: Some(message.clone()),
-            mentioned_users,
-            notification: None,
-        })
-    }
-
-    pub async fn load_for_notification(globals: Globals, notif: &Notification) -> Result<Self> {
-        let srv = globals.services();
-
-        let channel_id = notif.channel_id();
-        let channel = if let Some(id) = channel_id {
-            srv.channels.get(id, None).await.ok()
-        } else {
-            None
-        };
-
-        let room_id = channel.as_ref().and_then(|ch| ch.room_id);
-        let room = if let Some(id) = room_id {
-            srv.rooms.get(id, None).await.ok()
-        } else {
-            None
-        };
-
-        Ok(Self {
-            globals,
-            room,
-            channel,
-            replied_message: None,
-            message: None,
-            mentioned_users: None,
-            notification: Some(notif.clone()),
-        })
-    }
-
+impl Calculator<'_> {
     /// calculate notification actions for a user
     // TODO: drop notification if message author is ignored or blocked
     pub async fn calculate(&self, user_id: UserId) -> Result<Actions> {
         let room_id = self.channel.as_ref().and_then(|c| c.room_id);
         let channel_id = self.channel.as_ref().map(|c| c.id);
-        let prefs = Preferences::load(&self.globals, user_id, room_id, channel_id).await?;
+        let prefs = self
+            .globals
+            .services()
+            .notifications
+            .preferences(user_id, room_id, channel_id)
+            .await?;
 
         // NOTE: maybe make this an enum
         let (notif, action) = if let Some(message) = &self.message {
@@ -257,9 +221,6 @@ impl Calculator {
                 reply,
             );
             (Some(notif), action)
-        } else if let Some(notif) = &self.notification {
-            let action = self.calculate_notification_action(&prefs, notif);
-            (Some(notif.clone()), action)
         } else {
             return Err(Error::Internal(
                 "no message or notification context in calculator".to_string(),
@@ -304,7 +265,7 @@ impl Calculator {
             should_add_to_inbox: action.should_add_to_inbox(),
             should_increment_mention_count,
             should_add_to_thread,
-            notification: notif,
+            // notification: notif,
         })
     }
 
@@ -315,15 +276,15 @@ impl Calculator {
         mention_everyone: bool,
         mention_role: bool,
         reply: bool,
-    ) -> NotificationAction {
+    ) -> Actions {
         if prefs.is_muted() {
-            return NotificationAction::Skip;
+            return Actions::skip();
         }
 
         let reply_action = if reply {
             prefs.resolve_replies().clone().into()
         } else {
-            NotificationAction::Skip
+            Actions::skip()
         };
 
         let mentioned = if let Some(room_prefs) = &prefs.room {
@@ -336,172 +297,39 @@ impl Calculator {
 
         let msg_pref = prefs.resolve_messages();
         let message_action = match msg_pref {
-            NotifsMessages::Everything => NotificationAction::Push,
+            NotifsMessages::Everything => Actions::push(),
             NotifsMessages::Watching => {
                 if mentioned {
-                    NotificationAction::Push
+                    Actions::push()
                 } else {
-                    NotificationAction::Inbox
+                    Actions::inbox()
                 }
             }
             NotifsMessages::Mentions => {
                 if mentioned {
-                    NotificationAction::Push
+                    Actions::push()
                 } else {
-                    NotificationAction::Skip
+                    Actions::skip()
                 }
             }
-            NotifsMessages::Nothing => NotificationAction::Skip,
+            NotifsMessages::Nothing => Actions::skip(),
         };
 
         reply_action.merge(message_action)
-    }
-
-    fn calculate_notification_action(
-        &self,
-        prefs: &Preferences,
-        notif: &Notification,
-    ) -> NotificationAction {
-        if prefs.is_muted() {
-            return match notif.ty {
-                NotificationType::FriendRequestSent { .. }
-                | NotificationType::FriendRequestReceived { .. }
-                | NotificationType::FriendRequestAccepted { .. } => NotificationAction::Inbox,
-                _ => NotificationAction::Skip,
-            };
-        }
-
-        match &notif.ty {
-            NotificationType::Message {
-                mention_user,
-                mention_everyone,
-                mention_role,
-                reply,
-                ..
-            } => self.calculate_message_action(
-                prefs,
-                *mention_user,
-                *mention_everyone,
-                *mention_role,
-                *reply,
-            ),
-            NotificationType::Thread { .. } => prefs.resolve_threads().clone().into(),
-            NotificationType::Reaction { .. } => match prefs.global.reactions {
-                NotifsReactions::Always => NotificationAction::Push,
-                // FIXME: NotifsReactions::Restricted should be enabled for private rooms?
-                // i may remove Restricted soon
-                NotifsReactions::Restricted | NotifsReactions::Dms => {
-                    if let Some(chan) = &self.channel {
-                        if chan.ty.is_dm() {
-                            NotificationAction::Push
-                        } else {
-                            NotificationAction::Skip
-                        }
-                    } else {
-                        NotificationAction::Skip
-                    }
-                }
-                NotifsReactions::Nothing => NotificationAction::Skip,
-            },
-            NotificationType::FriendRequestSent { .. }
-            | NotificationType::FriendRequestReceived { .. }
-            | NotificationType::FriendRequestAccepted { .. } => NotificationAction::Push,
-        }
     }
 
     // TODO: fn room_id(&self) -> Option<RoomId>
     // TODO: fn channel_id(&self) -> Option<ChannelId>
 }
 
-impl Preferences {
-    /// load a user's notification preferences
-    pub async fn load(
-        state: &Globals,
-        user_id: UserId,
-        room_id: Option<RoomId>,
-        channel_id: Option<ChannelId>,
-    ) -> Result<Self> {
-        let cache = &state.services().cache;
-        let global = cache.preferences_get(user_id).await?.notifs;
-
-        let room = if let Some(id) = room_id {
-            cache
-                .preferences_room_get(user_id, id)
-                .await
-                .ok()
-                .map(|p| p.notifs)
-        } else {
-            None
-        };
-
-        let channel = if let Some(id) = channel_id {
-            cache
-                .preferences_channel_get(user_id, id)
-                .await
-                .ok()
-                .map(|p| p.notifs)
-        } else {
-            None
-        };
-
-        Ok(Self {
-            global,
-            room,
-            channel,
-        })
-    }
-
-    /// check if global, room, or channel is muted
-    pub fn is_muted(&self) -> bool {
-        let now = Time::now_utc();
-        let check_mute = |mute: &Mute| {
-            mute.expires_at
-                .as_ref()
-                .map_or(true, |&expires| expires > now)
-        };
-
-        if self
-            .channel
-            .as_ref()
-            .and_then(|c| c.mute.as_ref())
-            .map_or(false, check_mute)
-        {
-            return true;
+impl ServiceNotifications {
+    pub(super) fn calculator_for_message<'a>(
+        &self,
+        context: CalculatorContext<'a>,
+    ) -> Calculator<'a> {
+        Calculator {
+            globals: self.globals.clone(),
+            context,
         }
-
-        if self
-            .room
-            .as_ref()
-            .and_then(|r| r.mute.as_ref())
-            .map_or(false, check_mute)
-        {
-            return true;
-        }
-
-        self.global.mute.as_ref().map_or(false, check_mute)
-    }
-
-    pub fn resolve_messages(&self) -> &NotifsMessages {
-        self.channel
-            .as_ref()
-            .and_then(|c| c.messages.as_ref())
-            .or_else(|| self.room.as_ref().and_then(|r| r.messages.as_ref()))
-            .unwrap_or(&self.global.messages)
-    }
-
-    pub fn resolve_replies(&self) -> &NotifsReplies {
-        self.channel
-            .as_ref()
-            .and_then(|c| c.replies.as_ref())
-            .or_else(|| self.room.as_ref().and_then(|r| r.replies.as_ref()))
-            .unwrap_or(&self.global.replies)
-    }
-
-    pub fn resolve_threads(&self) -> &NotifsThreads {
-        self.channel
-            .as_ref()
-            .and_then(|c| c.threads.as_ref())
-            .or_else(|| self.room.as_ref().and_then(|r| r.threads.as_ref()))
-            .unwrap_or(&self.global.threads)
     }
 }

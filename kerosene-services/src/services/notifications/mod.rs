@@ -9,11 +9,13 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 use crate::prelude::*;
+use crate::services::notifications::calculator::CalculatorContext;
 use crate::services::notifications::push::VapidKeys;
 
 pub mod calculator;
-pub mod push;
 pub mod inbox;
+pub mod preferences;
+pub mod push;
 
 pub struct ServiceNotifications {
     globals: Globals,
@@ -36,6 +38,7 @@ pub struct MentionedUsers {
 }
 
 impl MentionedUsers {
+    /// get a set of all user ids that were mentioned
     pub fn all(&self) -> HashSet<UserId> {
         let mut all = HashSet::new();
         all.extend(&self.users_from_direct);
@@ -107,22 +110,45 @@ impl ServiceNotifications {
             return;
         }
 
-        let calc =
-            match calculator::Calculator::load_for_message(self.globals.clone(), channel, message)
-                .await
-            {
-                Ok(c) => c,
-                Err(err) => {
-                    warn!("failed to load calculator: {err:?}");
-                    return;
-                }
-            };
+        // load additional context
+        let srv = self.globals.services();
 
-        // PERF: don't get_mentioned_users twice (Calculator::load_for_message also calls this)
-        let mentioned_users = self
-            .get_mentioned_users(channel, message)
-            .await
-            .unwrap_or_default(); // TODO: better error logging
+        // PERF: fetch replied_message, room, and mentioned_users in parallel
+        let replied_message = if let Some(reply_id) = message.reply_id() {
+            srv.messages.get(channel.id, reply_id, None).await.ok()
+        } else {
+            None
+        };
+
+        let room = if let Some(room_id) = channel.room_id {
+            srv.rooms.get(room_id, None).await.ok()
+        } else {
+            None
+        };
+
+        let mentioned_users = match self.get_mentioned_users(channel, message).await {
+            Ok(a) => a,
+            Err(err) => {
+                warn!("failed to get mentioned users: {err:?}");
+                Default::default()
+            }
+        };
+
+        let context = CalculatorContext {
+            room: room.as_ref(),
+            channel,
+            replied_message: todo!(),
+            message,
+            mentioned_users: todo!(),
+        };
+
+        let calc = match self.calculator_for_message(context).await {
+            Ok(c) => c,
+            Err(err) => {
+                warn!("failed to load calculator: {err:?}");
+                return;
+            }
+        };
 
         let targets: Vec<UserId> = mentioned_users
             .all()
@@ -213,7 +239,6 @@ impl ServiceNotifications {
             warn!("failed to commit database transaction: {err:?}");
         }
 
-        let srv = self.globals.services();
         if !thread_members.is_empty() {
             let thread_id = channel.id;
 
