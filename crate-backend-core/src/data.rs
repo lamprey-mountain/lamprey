@@ -21,7 +21,7 @@ use common::v1::types::{
     },
     email::{EmailAddr, EmailInfo, EmailInfoPatch},
     emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch},
-    notifications::{NotificationQuery, Notification, NotificationFlush, NotificationMarkRead},
+    notifications::{Notification, NotificationFlush, NotificationMarkRead, NotificationQuery},
     preferences::{PreferencesChannel, PreferencesGlobal, PreferencesRoom, PreferencesUser},
     reaction::{ReactionKeyParam, ReactionListItem},
     room_analytics::{

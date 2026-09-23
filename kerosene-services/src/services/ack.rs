@@ -1,5 +1,5 @@
 use common::v1::types::MessageSync;
-use common::v1::types::ack::{AckBulk, AckBulkItem, AckCreate, AckType};
+use common::v1::types::ack::{AckBulk, AckBulkItem, AckCreate, AckState, AckType};
 use common::v1::types::util::Time;
 use common::v2::types::{ChannelId, MessageId, MessageVerId, UserId};
 use dashmap::DashMap;
@@ -58,6 +58,8 @@ impl ServiceAck {
         // TODO: automatically flush on a timer or after a certain number of unflushed updates
         // maybe store updates as an operation log? maybe a list of `MessageSync`s?
 
+        // TODO: flush ack states on shutdown
+
         // enum Operation {
         //     MessageCreate(Message),
         //     MessagePinned(Message),
@@ -86,7 +88,7 @@ impl ServiceAck {
         // let mut channel_ids = HashSet::new();
         // let mut unknown_auth = false;
 
-        // for ack in &req.body.acks {
+        // for ack in &acks {
         //     if let Some(channel_id) = ack.ty.channel_id() {
         //         channel_ids.insert(channel_id);
         //     } else {
@@ -126,6 +128,9 @@ impl ServiceAck {
         //             .collect(),
         //     })?;
         // }
+
+        // MessageSync::PassiveAck { user_id, ack_states: vec![] };
+        // MessageSync::PassiveRoom { user_id, room_id: (), ack_states: vec![AckState { ty: todo!(), unread: todo!() }], voice_states: () };
 
         todo!()
     }
@@ -171,8 +176,15 @@ impl ServiceAck {
     }
 
     /// increment the mention count for all of these users in a channel
-    pub(crate) async fn increment(&self, channel_id: ChannelId, user_ids: &[UserId]) -> Result<()> {
-        // TODO: integrate with ServiceNotifications (users_to_increment)
-        todo!()
+    pub(crate) async fn increment_mentions(
+        &self,
+        channel_id: ChannelId,
+        user_ids: &[UserId],
+    ) -> Result<()> {
+        let mut txn = self.globals.begin().await?;
+        txn.unread_increment_counts(channel_id, &user_ids, &[])
+            .await?;
+        txn.commit().await?;
+        Ok(())
     }
 }

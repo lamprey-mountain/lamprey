@@ -3,8 +3,8 @@ use lamprey_macros::record;
 use uuid::Uuid;
 
 use crate::v1::types::{
-    Channel, ChannelId, Message, MessageId, NotificationId, RoomId, RoomMember, ThreadMember,
-    User, UserId, reaction::ReactionKeyParam, util::Time,
+    Channel, ChannelId, Message, MessageId, NotificationId, RoomId, RoomMember, ThreadMember, User,
+    UserId, reaction::ReactionKeyParam, util::Time,
 };
 
 pub mod bytes;

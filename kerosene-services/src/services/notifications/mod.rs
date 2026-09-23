@@ -99,8 +99,6 @@ impl ServiceNotifications {
         tokio::spawn(Self::spawn_push_task(self.globals.clone()));
     }
 
-    // TODO: flush ack states on shutdown
-
     // NOTE: should ServiceNotifications *really* be in charge of inserting thread members?
     // TODO: fn process_message_inner -> Result, make process_message do logging
     pub async fn process_message(&self, channel: &Channel, message: &Message) {
@@ -137,18 +135,12 @@ impl ServiceNotifications {
         let context = CalculatorContext {
             room: room.as_ref(),
             channel,
-            replied_message: todo!(),
+            replied_message: replied_message.as_ref(),
             message,
-            mentioned_users: todo!(),
+            mentioned_users: &mentioned_users,
         };
 
-        let calc = match self.calculator_for_message(context).await {
-            Ok(c) => c,
-            Err(err) => {
-                warn!("failed to load calculator: {err:?}");
-                return;
-            }
-        };
+        let calc = self.calculator_for_message(context);
 
         let targets: Vec<UserId> = mentioned_users
             .all()
@@ -167,11 +159,12 @@ impl ServiceNotifications {
             }
         };
 
-        let mut users_to_increment = vec![];
+        let mut incr_mentions = vec![];
+        let mut incr_unreads = vec![];
         let mut users_to_add_to_thread = vec![];
         let mut notifs_to_mark_pushed = vec![];
         for target in &targets {
-            let action = match calc.calculate(*target).await {
+            let (action, notification) = match calc.calculate(*target).await {
                 Ok(a) => a,
                 Err(err) => {
                     warn!("failed to calculate actions for user {target:?}: {err:?}");
@@ -180,17 +173,19 @@ impl ServiceNotifications {
             };
 
             if action.should_increment_mention_count() {
-                users_to_increment.push(*target);
+                incr_mentions.push(*target);
+            }
+
+            if action.should_increment_unread_count() {
+                incr_unreads.push(*target);
             }
 
             if action.should_add_to_inbox() {
-                if let Some(notification) = action.notification() {
-                    if let Err(err) = txn.notification_add(*target, notification.clone()).await {
-                        warn!("failed to add notification: {err:?}");
-                    }
-                    if !action.should_push() {
-                        notifs_to_mark_pushed.push(notification.id);
-                    }
+                if let Err(err) = txn.notification_add(*target, notification.clone()).await {
+                    warn!("failed to add notification: {err:?}");
+                }
+                if !action.should_push() {
+                    notifs_to_mark_pushed.push(notification.id);
                 }
             }
 
@@ -226,14 +221,13 @@ impl ServiceNotifications {
                 .unwrap_or_default();
         }
 
-        if !users_to_increment.is_empty() {
-            if let Err(err) = txn
-                .unread_increment_counts(channel.id, &users_to_increment, &[])
-                .await
-            {
+        if !incr_mentions.is_empty() {
+            if let Err(err) = srv.ack.increment_mentions(channel.id, &incr_mentions).await {
                 warn!("failed to increment unread counts: {err:?}");
             }
         }
+
+        // TODO: handle incr_unreads
 
         if let Err(err) = txn.commit().await {
             warn!("failed to commit database transaction: {err:?}");
