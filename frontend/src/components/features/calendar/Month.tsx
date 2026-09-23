@@ -11,6 +11,7 @@ import {
 } from "solid-js";
 import type { CalendarEvent, Channel } from "ts-sdk";
 import { useCtx } from "@/app/context";
+import { getDate } from "@/utils/general";
 import { useCalendar } from "./context";
 
 export const CalendarMonth = (props: {
@@ -163,6 +164,7 @@ export const CalendarMonth = (props: {
 							onClick={(e) =>
 								props.onDayClick(d().day, e.target as HTMLElement)
 							}
+							data-day={d().day}
 							data-month={d().month}
 							data-year={d().year}
 						>

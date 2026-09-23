@@ -105,6 +105,7 @@
 			padding: 0 2px;
 			margin-top: 2px;
 			color: $link-500;
+			min-height: 1em;
 		}
 	}
 }
@@ -135,11 +136,9 @@
 		align-items: center;
 		gap: 12px;
 		padding: 14px 20px;
-		border-bottom: solid 1px $sep-300;
 		background-color: $bg-150;
 
 		h2 {
-			margin: 0;
 			font-size: 16px;
 			font-weight: 700;
 			color: $fg-100;
@@ -148,15 +147,13 @@
 
 	.popup-close {
 		margin-left: auto;
-		background: none;
-		border: none;
 		color: $fg-500;
 		padding: 6px;
 		border-radius: 4px;
-		line-height: 1;
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		cursor: pointer;
 
 		&:hover {
 			background-color: $bg-300;
@@ -174,14 +171,13 @@
 
 	.popup-tab {
 		padding: 10px 16px;
-		background: none;
-		border: none;
 		border-bottom: 2px solid transparent;
 		color: $fg-500;
 		font-weight: 600;
 		text-align: center;
 		margin-bottom: -1px;
 		transition: all 0.2s ease;
+		cursor: pointer;
 
 		&.active {
 			color: $link-500;
@@ -190,6 +186,7 @@
 
 		&:hover:not(.active) {
 			color: $fg-200;
+			border-bottom-color: $sep-400;
 		}
 	}
 
@@ -216,7 +213,7 @@
 		justify-content: flex-end;
 		gap: 12px;
 		padding: 16px 20px;
-		border-top: solid 1px $sep-300;
+		/* border-top: solid 1px $sep-300; */
 		background-color: $bg-150;
 	}
 
@@ -321,10 +318,69 @@
 		}
 
 		p {
-			margin: 0;
 			font-size: 14px;
 			color: $fg-500;
 			line-height: 1.5;
+		}
+	}
+}
+
+.recurrence-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+
+	& > .row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	& > .top {
+		& > .interval-input {
+			field-sizing: content;
+			min-width: 32px;
+			-moz-appearance: textfield;
+
+			&::-webkit-outer-spin-button,
+			&::-webkit-inner-spin-button {
+				-webkit-appearance: none;
+				margin: 0;
+			}
+		}
+
+		& > .dropdown-container > .dropdown {
+			field-sizing: content;
+			min-width: 1em;
+			padding-right: 32px;
+		}
+	}
+
+	.weekday-toggles {
+		gap: 4px;
+
+		& > .weekday-toggle {
+			background-color: $bg-400;
+			height: 32px;
+			width: 32px;
+			border-radius: 32px;
+			text-align: center;
+			cursor: pointer;
+			font-size: .8rem;
+			transition: background-color 0.2s ease;
+
+			&:hover {
+				background-color: oklch(from $bg-400 calc(l + .1) c h);
+			}
+
+			&.active {
+				color: $fg-100;
+				background-color: $link-200;
+
+				&:hover {
+					background-color: oklch(from $link-200 calc(l + .1) c h);
+				}
+			}
 		}
 	}
 }

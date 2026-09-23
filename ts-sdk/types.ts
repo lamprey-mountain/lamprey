@@ -381,3 +381,6 @@ export type ServerInfo = components["schemas"]["ServerInfo"];
 export type RoomTemplate = components["schemas"]["RoomTemplate"];
 export type RoomTemplateChannel = components["schemas"]["RoomTemplateChannel"];
 export type RoomTemplateRole = components["schemas"]["RoomTemplateRole"];
+
+export type Recurrence = components["schemas"]["Recurrence"];
+export type RecurrenceFrequency = components["schemas"]["RecurrenceFrequency"];

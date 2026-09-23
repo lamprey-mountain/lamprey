@@ -1,11 +1,19 @@
 import type { CalendarEvent } from "sdk";
-import type { CalendarEventCreate, CalendarEventPatch } from "sdk/types";
+import type {
+	CalendarEventCreate,
+	CalendarEventPatch,
+	Recurrence,
+	RecurrenceFrequency,
+} from "sdk/types";
 import {
 	createContext,
 	createEffect,
 	createSignal,
+	For,
+	Match,
 	type ParentProps,
 	Show,
+	Switch,
 	useContext,
 } from "solid-js";
 import { createStore } from "solid-js/store";
@@ -14,6 +22,7 @@ import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Dropdown } from "@/atoms/Dropdown";
 import { Checkbox, XMark } from "@/atoms/icons";
 import { getDate } from "@/utils/general";
+import { WEEKDAYS } from "./utils";
 
 export type CalendarPopup = {
 	ref: HTMLElement | null;
@@ -120,7 +129,7 @@ export const PopupEventEditor = (props: {
 		end: props.event?.ends_at ? getDate(props.event.ends_at) : null,
 		allDay: false, // TODO: support in CalendarEvent
 		timezone: props.event?.timezone || "UTC",
-		recurrence: "", // TODO: support in CalendarEvent
+		recurrence: props.event?.recurrence ?? null,
 		location: props.event?.location || "",
 		url: props.event?.url || "",
 		description: props.event?.description || "",
@@ -145,7 +154,7 @@ export const PopupEventEditor = (props: {
 						name: event.title || "",
 						allDay: false, // TODO: support in CalendarEvent
 						timezone: event.timezone || "UTC",
-						recurrence: "", // TODO: support in CalendarEvent
+						recurrence: event.recurrence ?? null,
 						location: event.location || "",
 						url: event.url || "",
 						description: event.description || "",
@@ -173,6 +182,7 @@ export const PopupEventEditor = (props: {
 				body: {
 					title: formData.name, // TODO: require
 					description: formData.description || null,
+					recurrence: formData.recurrence,
 					location: formData.location || null,
 					url: formData.url || null,
 					starts_at: formData.start.toISOString(),
@@ -186,7 +196,7 @@ export const PopupEventEditor = (props: {
 					title: formData.name, // TODO: require
 					description: formData.description || null,
 					location: formData.location || null,
-					recurrence: null, // TODO: better recurrence input
+					recurrence: formData.recurrence,
 					timezone: null, // TODO: better timezone input
 					url: formData.url || null,
 					starts_at: formData.start.toISOString(),
@@ -339,17 +349,75 @@ export const PopupEventEditor = (props: {
 
 						<div class="popup-form-group">
 							<label for="calendar-recurrence-input">Recurrence</label>
+							<Show when={formData.recurrence}>
+								{(r) => (
+									<RecurrenceEditor
+										startsAt={formData.start}
+										recurrence={r()}
+										onInput={(r) => setFormData("recurrence", r)}
+									/>
+								)}
+							</Show>
 							<Dropdown
 								selected={formData.recurrence}
 								onSelect={(v) => v !== null && handleChange("recurrence", v)}
 								options={[
-									{ item: "", label: "None" },
-									{ item: "daily", label: "Every day" },
-									{ item: "weekly", label: "Every week" },
-									{ item: "biweekly", label: "Every other week" },
-									{ item: "monthly", label: "Every month" },
-									{ item: "yearly", label: "Every year" },
-									{ item: "weekdays", label: "Every weekday" },
+									{ item: null, label: "None" },
+									{
+										item: {
+											frequency: "Daily",
+											interval: 1,
+											limit: { type: "Infinite" },
+										},
+										label: "Every day",
+									},
+									{
+										item: {
+											frequency: "Weekly",
+											interval: 1,
+											limit: { type: "Infinite" },
+										},
+										label: "Every week",
+									},
+									{
+										item: {
+											frequency: "Weekly",
+											interval: 2,
+											limit: { type: "Infinite" },
+										},
+										label: "Every other week",
+									},
+									{
+										item: {
+											frequency: "Monthly",
+											interval: 1,
+											limit: { type: "Infinite" },
+										},
+										label: "Every month",
+									},
+									{
+										item: {
+											frequency: "Yearly",
+											interval: 1,
+											limit: { type: "Infinite" },
+										},
+										label: "Every year",
+									},
+									{
+										item: {
+											frequency: "Daily",
+											interval: 1,
+											limit: { type: "Infinite" },
+											by_weekday: [
+												"Monday",
+												"Tuesday",
+												"Wednesday",
+												"Thursday",
+												"Friday",
+											],
+										},
+										label: "Every weekday",
+									},
 								]}
 							/>
 						</div>
@@ -457,6 +525,113 @@ export const PopupEventEditor = (props: {
 					Save
 				</button>
 			</div>
+		</div>
+	);
+};
+
+export const RecurrenceEditor = (props: {
+	recurrence: Recurrence;
+	startsAt: Date;
+	onInput: (recurrence: Recurrence) => void;
+}) => {
+	const changeFrequency = (frequency: RecurrenceFrequency) => {
+		props.onInput({
+			...props.recurrence,
+			by_weekday: props.recurrence.by_weekday ?? [
+				WEEKDAYS[props.startsAt.getDay()].full,
+			],
+			frequency,
+		});
+	};
+
+	const changeInterval = (interval: number) => {
+		props.onInput({
+			...props.recurrence,
+			interval,
+		});
+	};
+
+	const toggleWeekday = (day: (typeof WEEKDAYS)[number]["full"]) => {
+		const current = props.recurrence.by_weekday ?? [];
+		const newWeekdays = current.includes(day)
+			? current.filter((d) => d !== day)
+			: [...current, day];
+		props.onInput({
+			...props.recurrence,
+			by_weekday: newWeekdays,
+		});
+	};
+
+	return (
+		<div class="recurrence-editor">
+			<div class="top row">
+				Repeats every{" "}
+				<input
+					class="interval-input"
+					type="number"
+					min="1"
+					placeholder="1"
+					required
+					value={props.recurrence.interval}
+					onInput={(e) =>
+						e.target.valueAsNumber && changeInterval(e.target.valueAsNumber)
+					}
+				/>{" "}
+				<Dropdown
+					selected={props.recurrence.frequency}
+					onSelect={(v) => v && changeFrequency(v)}
+					options={
+						[
+							{
+								item: "Daily",
+								label: props.recurrence.interval === 1 ? "day" : "days",
+							},
+							{
+								item: "Weekly",
+								label: props.recurrence.interval === 1 ? "week" : "weeks",
+							},
+							{
+								item: "Monthly",
+								label: props.recurrence.interval === 1 ? "month" : "months",
+							},
+							{
+								item: "Yearly",
+								label: props.recurrence.interval === 1 ? "year" : "years",
+							},
+						] as const
+					}
+				/>
+			</div>
+			<Switch>
+				<Match when={props.recurrence.frequency === "Weekly"}>
+					<div class="weekday-toggles row">
+						On{" "}
+						<For each={WEEKDAYS}>
+							{(day) => (
+								<button
+									type="button"
+									class="weekday-toggle"
+									classList={{
+										weekend: day.weekend,
+										active:
+											props.recurrence.by_weekday?.includes(day.full) ?? false,
+									}}
+									onClick={[toggleWeekday, day.full]}
+								>
+									{day.short}
+								</button>
+							)}
+						</For>
+					</div>
+				</Match>
+				<Match when={props.recurrence.frequency === "Monthly"}>
+					<div class="row">by_weekday by_month_day</div>
+				</Match>
+				<Match when={props.recurrence.frequency === "Yearly"}>
+					<div class="row">by_month_day</div>
+				</Match>
+			</Switch>
+			<div class="row">forever / (count) times / until (datetime)</div>
 		</div>
 	);
 };
