@@ -45,10 +45,12 @@ impl ServerError {
 impl From<ServerError> for ApiError {
     fn from(value: ServerError) -> Self {
         match value {
-            ServerError::Internal(_) => todo!(),
+            ServerError::Internal(err) => {
+                ApiError::with_message(ErrorCode::Internal, err.to_string())
+            }
             ServerError::Api(err) => *err,
-            ServerError::Unimplemented => todo!(),
-            ServerError::Unavailable => todo!(),
+            ServerError::Unimplemented => ApiError::from_code(ErrorCode::Unimplemented),
+            ServerError::Unavailable => ApiError::from_code(ErrorCode::Unavailable),
         }
     }
 }

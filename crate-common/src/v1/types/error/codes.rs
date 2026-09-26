@@ -725,6 +725,10 @@ pub enum ErrorCode {
     #[error("internal")]
     Internal,
 
+    /// service unavailable
+    #[error("service unavailable")]
+    Unavailable,
+
     /// only the message author can manage flume
     #[error("only the message author can manage flume")]
     OnlyMessageAuthorCanManageFlume,

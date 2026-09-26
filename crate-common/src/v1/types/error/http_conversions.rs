@@ -165,6 +165,7 @@ impl ErrorCode {
             ErrorCode::Ratelimit => StatusCode::TOO_MANY_REQUESTS,
             ErrorCode::Unimplemented => StatusCode::NOT_IMPLEMENTED,
             ErrorCode::Internal => StatusCode::INTERNAL_SERVER_ERROR,
+            ErrorCode::Unavailable => StatusCode::SERVICE_UNAVAILABLE,
             ErrorCode::DuplicateMediaId => StatusCode::BAD_REQUEST,
             ErrorCode::MediaAlreadyUsed => StatusCode::CONFLICT,
             ErrorCode::OnlyMessageAuthorCanManageFlume => StatusCode::FORBIDDEN,

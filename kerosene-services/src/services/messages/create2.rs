@@ -281,6 +281,7 @@ impl ServiceMessages {
         }
     }
 
+    // FIXME: return server result
     async fn create2_inner(&self, create: Create) -> Result<Message> {
         // PERF: the caller likely already has the channel/user; maybe pass via Create?
         let srv = self.globals.services();
