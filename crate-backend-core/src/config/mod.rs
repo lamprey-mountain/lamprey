@@ -75,6 +75,8 @@ pub struct Config {
     #[serde(default = "default_listen")]
     pub listen: Vec<ListenConfig>,
 
+    pub webtransport: Option<WebtransportConfig>,
+
     /// whether to enable admin tokens
     ///
     /// this stores a token in the database that allows full access to the
@@ -356,6 +358,16 @@ pub struct ConfigVoice {
     ///
     /// defaults to being disabled
     pub stun_port: Option<u16>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WebtransportConfig {
+    #[serde(default = "default_webtransport_port")]
+    pub port: u16,
+}
+
+fn default_webtransport_port() -> u16 {
+    4433
 }
 
 impl Default for ConfigScripts {

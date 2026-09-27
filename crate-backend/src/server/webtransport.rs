@@ -39,13 +39,18 @@ impl WtServer {
 
     /// start the server
     pub async fn serve(&self) -> Result<()> {
-        info!("starting webtransport server");
+        let srv = self.globals.services();
+        let Some(wt_config) = &self.globals.config().webtransport else {
+            info!("webtransport disabled");
+            return Ok(());
+        };
+
+        info!("starting webtransport server on port {}", wt_config.port);
 
         // TODO: allow configuring what the wt server should bind to (change port, ip addr)
-        let srv = self.globals.services();
         let identity = srv.config.webtransport_identity();
         let config = ServerConfig::builder()
-            .with_bind_default(4433)
+            .with_bind_default(wt_config.port)
             .with_identity(identity.clone_identity())
             .build();
         let server = Endpoint::server(config)?;
