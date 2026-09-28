@@ -81,4 +81,29 @@ pub async fn create(
     Ok(routes::message_create::Response { message, status })
 }
 
-export_routes!(create);
+#[handler(routes::message_get)]
+pub async fn get(req: Req<routes::message_get::Endpoint>) -> Result<routes::message_get::Response> {
+    let identity = req.identity();
+    identity.ensure_scopes(&[Scope::Full])?;
+
+    let srv = req.services();
+    let user_id = identity.user_id();
+    let body = req.inner();
+
+    srv.perms
+        .for_channel3(user_id, body.channel_id)
+        .await
+        .cast_internal()?
+        .ensure_view()?
+        .check()?;
+
+    let message = srv
+        .messages
+        .get(body.channel_id, body.message_id, user_id)
+        .await
+        .cast_internal()?;
+
+    Ok(routes::message_get::Response { message })
+}
+
+export_routes!(create, get);

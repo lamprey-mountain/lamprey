@@ -21,62 +21,6 @@ use crate::routes2;
 use crate::types::{DbMessageCreate, MessageSync, Permission};
 use lamprey_backend_core::types::permission::{CheckPermissions, Permissions2};
 
-/// Message create
-#[handler(routes::message_create)]
-async fn message_create(
-    State(globals): State<Arc<ServerState>>,
-    mut req: UniversalExtractor<routes::message_create::Request>,
-) -> Result<impl IntoResponse> {
-    let user = req.auth.ensure_user()?;
-    user.ensure_unsuspended()?;
-    let user_id = user.id;
-    let channel_id = req.body.channel_id;
-    req.auth.ensure_scopes(&[Scope::Full])?;
-
-    let timestamp = req.body.timestamp.and_then(|secs| {
-        time::OffsetDateTime::from_unix_timestamp(secs)
-            .ok()
-            .map(Time::from)
-    });
-
-    use kerosene_services::services::messages::create2::Create;
-
-    let srv = globals.services();
-    let message = srv
-        .messages
-        .create2(
-            Create::new_default(req.body.message, channel_id, user.id)
-                .session(req.auth.session().map(|s| s.id))
-                .timestamp(timestamp)
-                .nonce(req.body.idempotency_key),
-        )
-        .await?;
-
-    // TODO: move this logic to ServiceNotifications
-    // automatically ack the channel for the user who sent the message
-    let mut data = globals.data();
-    data.unread_ack_bulk(
-        user_id,
-        &[AckBulkItem {
-            ty: AckType::Message {
-                channel_id,
-                message_id: message.id,
-                mention_count: 0,
-            },
-        }],
-    )
-    .await?;
-    data.commit().await?;
-
-    srv.channels.invalidate_user(channel_id, user_id).await;
-
-    // TODO: use strongly typed response struct
-    // Ok(routes::message_create::Response { message })
-
-    // TODO: return 201 if message was created and 200 if message already existed (idempotency-key)
-    Ok((StatusCode::CREATED, Json(message)))
-}
-
 /// Message context
 #[handler(routes::message_context)]
 async fn message_context(
@@ -119,28 +63,6 @@ async fn message_list(
         .list(req.channel_id, auth.user_id(), req.pagination)
         .await?;
     Ok(Json(res))
-}
-
-/// Message get
-#[handler(routes::message_get)]
-async fn message_get(
-    auth: Auth4,
-    State(globals): State<Globals>,
-    req: routes::message_get::Request,
-) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
-    let srv = globals.services();
-
-    srv.perms
-        .for_channel3(auth.user_id(), req.channel_id)
-        .await?
-        .ensure_view()?
-        .check()?;
-    let message = srv
-        .messages
-        .get(req.channel_id, req.message_id, auth.user_id())
-        .await?;
-    Ok(Json(message))
 }
 
 /// Message edit
@@ -987,8 +909,6 @@ pub async fn message_nudge(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        // .routes(routes2!(message_create))
-        .routes(routes2!(message_get))
         .routes(routes2!(message_list))
         .routes(routes2!(message_list_deleted))
         .routes(routes2!(message_list_removed))
