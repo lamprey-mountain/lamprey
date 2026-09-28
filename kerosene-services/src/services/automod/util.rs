@@ -92,7 +92,11 @@ impl AutomodScan {
     /// ensure this resource isn't blocked
     pub fn ensure_unblocked(&self) -> Result<()> {
         if let Some(message) = self.block_message() {
-            Err(ApiError::with_message(ErrorCode::Automod, message.to_owned()).into())
+            Err(ApiError {
+                automod_message: Some(message.to_owned()),
+                ..ApiError::with_message(ErrorCode::Automod, message.to_owned())
+            }
+            .into())
         } else {
             Ok(())
         }
