@@ -1006,6 +1006,13 @@ impl DataMessage for Postgres {
         .execute(tx.ext())
         .await?;
 
+        query!(
+            "update channel set last_pin_timestamp = now() where id = $1",
+            *channel_id
+        )
+        .execute(tx.ext())
+        .await?;
+
         tx.commit().await?;
 
         Ok(true)
