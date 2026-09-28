@@ -93,6 +93,9 @@ pub trait LegacyErrorExt<T> {
 
 impl<T> LegacyErrorExt<T> for lamprey_backend_core::Result<T> {
     fn cast_internal(self) -> Result<T, ServerError> {
-        self.map_err(|err| ServerError::Internal(Box::new(err)))
+        self.map_err(|err| match err {
+            lamprey_backend_core::Error::ApiError(err) => ServerError::Api(Box::new(err)),
+            err => ServerError::Internal(Box::new(err)),
+        })
     }
 }
