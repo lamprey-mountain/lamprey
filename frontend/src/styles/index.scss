@@ -709,6 +709,7 @@
 		& > .settings {
 			flex: 1;
 			grid-template-columns: 192px 1fr;
+			grid-template-rows: 1fr;
 
 			& > header {
 				display: none;
