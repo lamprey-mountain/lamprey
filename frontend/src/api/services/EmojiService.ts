@@ -45,7 +45,7 @@ export class EmojiService extends BaseService<EmojiCustom> {
 						path: { room_id },
 						query: {
 							dir: "f",
-							limit: 100,
+							limit: 1024,
 							from: cursor,
 						},
 					},
@@ -110,6 +110,7 @@ export class EmojiService extends BaseService<EmojiCustom> {
 							this.client.http.GET("/api/v1/room/{room_id}/emoji", {
 								params: {
 									path: { room_id },
+									query: { limit: 1024 },
 								},
 							}),
 					);
