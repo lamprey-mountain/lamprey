@@ -22,7 +22,6 @@ use crate::{
     server::http::openapi::ApiDoc,
 };
 
-#[cfg(feature = "embed-frontend")]
 mod frontend;
 
 mod openapi;
@@ -49,15 +48,20 @@ pub fn create_router_api(globals: Globals) -> Router {
             get(|| async { Html(include_str!("../scalar.html")) }),
         );
 
-    #[cfg(not(feature = "embed-frontend"))]
-    let router = router.route("/", get(|| async { "it works!" }));
-    #[cfg(feature = "embed-frontend")]
-    let router = router
-        .route(
-            "/invite/{code}",
-            get(frontend::invite_meta_handler).with_state(state.clone()),
-        )
-        .fallback_service(axum::routing::get(frontend::frontend_handler).with_state(state.clone()));
+    let has_ui = state.config.ui.path.is_some() || cfg!(feature = "embed-frontend");
+
+    let router = if has_ui {
+        router
+            .route(
+                "/invite/{code}",
+                get(frontend::invite_meta_handler).with_state(state.clone()),
+            )
+            .fallback_service(
+                axum::routing::get(frontend::frontend_handler).with_state(state.clone()),
+            )
+    } else {
+        router.route("/", get(|| async { "it works!" }))
+    };
 
     router
         .layer(middleware::from_fn_with_state(globals.clone(), script_http))

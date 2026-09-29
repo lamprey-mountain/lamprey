@@ -53,6 +53,23 @@ impl Server {
         info!("starting server");
 
         let globals = self.globals();
+
+        let has_api = globals
+            .config()
+            .listen
+            .iter()
+            .any(|l| l.components.contains(&ListenComponent::Api));
+        if has_api {
+            if let Some(path) = &globals.config().ui.path {
+                info!("serving ui from {}", path.display());
+            } else if cfg!(feature = "embed-frontend") {
+                info!("serving embedded ui");
+            } else {
+                info!("ui is not being served");
+            }
+        }
+
+        let globals = self.globals();
         for l in &globals.config().listen {
             let mut router = Router::new();
             let transport = l.transport.clone();

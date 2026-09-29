@@ -11,11 +11,14 @@ use base64::{Engine, engine::general_purpose::STANDARD};
 use common::v1::types::{InviteCode, InviteTarget};
 use minijinja::{Environment, context};
 use rand::RngCore;
-use rust_embed::RustEmbed;
 use serde::Serialize;
 
 use crate::{Error, Result};
 
+#[cfg(feature = "embed-frontend")]
+use rust_embed::RustEmbed;
+
+#[cfg(feature = "embed-frontend")]
 #[derive(RustEmbed)]
 #[folder = "$RUST_EMBED_FRONTEND_PATH"]
 struct Asset;
@@ -38,10 +41,26 @@ pub async fn frontend_handler(
     }
 
     if path != "index.html" {
-        if let Some(content) = Asset::get(&path) {
+        let mut content_data = None;
+
+        if let Some(fs_path) = &s.config.ui.path {
+            let full_path = fs_path.join(&path);
+            if let Ok(content) = tokio::fs::read(&full_path).await {
+                content_data = Some(content);
+            }
+        }
+
+        #[cfg(feature = "embed-frontend")]
+        if content_data.is_none() {
+            if let Some(content) = Asset::get(&path) {
+                content_data = Some(content.data.into_owned());
+            }
+        }
+
+        if let Some(data) = content_data {
             return Ok(Response::builder()
                 .header(header::CONTENT_TYPE, mime_from_ext(&path))
-                .body(Body::from(content.data))
+                .body(Body::from(data))
                 .map_err(|e| Error::FrontendResponseBuilder(e.to_string()))?);
         }
     }
@@ -59,9 +78,24 @@ pub async fn frontend_handler(
 
     let env = Environment::new();
 
-    let tpl = Asset::get("index.html")
-        .ok_or_else(|| Error::FrontendAssetNotFound("index.html".to_string()))?;
-    let template = std::str::from_utf8(tpl.data.as_ref())?;
+    let tpl_data = if let Some(fs_path) = &s.config.ui.path {
+        tokio::fs::read(fs_path.join("index.html"))
+            .await
+            .map_err(|_| Error::FrontendAssetNotFound("index.html".to_string()))?
+    } else {
+        #[cfg(feature = "embed-frontend")]
+        {
+            Asset::get("index.html")
+                .ok_or_else(|| Error::FrontendAssetNotFound("index.html".to_string()))?
+                .data
+                .into_owned()
+        }
+        #[cfg(not(feature = "embed-frontend"))]
+        {
+            return Err(Error::FrontendAssetNotFound("index.html".to_string()));
+        }
+    };
+    let template = std::str::from_utf8(&tpl_data)?;
 
     let rendered = env
         .render_str(
@@ -117,9 +151,24 @@ pub async fn invite_meta_handler(
 
     let env = Environment::new();
 
-    let tpl = Asset::get("index.html")
-        .ok_or_else(|| Error::FrontendAssetNotFound("index.html".to_string()))?;
-    let template = std::str::from_utf8(tpl.data.as_ref())?;
+    let tpl_data = if let Some(fs_path) = &s.config.ui.path {
+        tokio::fs::read(fs_path.join("index.html"))
+            .await
+            .map_err(|_| Error::FrontendAssetNotFound("index.html".to_string()))?
+    } else {
+        #[cfg(feature = "embed-frontend")]
+        {
+            Asset::get("index.html")
+                .ok_or_else(|| Error::FrontendAssetNotFound("index.html".to_string()))?
+                .data
+                .into_owned()
+        }
+        #[cfg(not(feature = "embed-frontend"))]
+        {
+            return Err(Error::FrontendAssetNotFound("index.html".to_string()));
+        }
+    };
+    let template = std::str::from_utf8(&tpl_data)?;
 
     let mut rendered = env
         .render_str(

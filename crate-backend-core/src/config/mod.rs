@@ -114,6 +114,9 @@ pub struct Config {
     pub mmdb_path: Option<PathBuf>,
 
     #[serde(default)]
+    pub ui: ConfigUi,
+
+    #[serde(default)]
     pub limits: Limits,
 
     #[serde(default)]
@@ -582,6 +585,15 @@ pub struct ConfigModerationMediaScanner {
 
     /// how high the score must be in order to count as a trigger
     pub threshold: f32,
+}
+
+/// configuration for the web ui
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct ConfigUi {
+    /// the path to the ui files to serve
+    ///
+    /// defaults to serving an embedded ui, if one exists
+    pub path: Option<PathBuf>,
 }
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
