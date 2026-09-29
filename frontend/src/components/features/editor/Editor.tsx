@@ -105,6 +105,7 @@ export const createEditor = (opts: EditorProps): Editor => {
 			plugins: [
 				history(),
 				createPlaceholderPlugin(),
+				autocompletePlugin,
 				createMarkdownHighlightPlugin(),
 				createMarkdownInputRulesPlugin(),
 				createPastePlugin(),
@@ -132,7 +133,6 @@ export const createEditor = (opts: EditorProps): Editor => {
 					...opts.keymap,
 				}),
 				toolbarPlugin,
-				autocompletePlugin,
 				emojiPlugin,
 			],
 		});
