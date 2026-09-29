@@ -75,7 +75,7 @@ impl DataReaction for Postgres {
             r#"
             WITH pos AS (
                 SELECT coalesce(
-                    (SELECT position FROM reaction WHERE message_id = $1 AND key = $4 AND deleted_seq IS NULL),
+                    (SELECT position FROM reaction WHERE message_id = $1 AND key = $4 AND deleted_seq IS NULL LIMIT 1),
                     (SELECT coalesce(max(position) + 1, 0) FROM reaction WHERE message_id = $1)
                 ) AS pos
             )
