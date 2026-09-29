@@ -109,6 +109,9 @@ const flagsProd: Flag[] = [
 	"msgpack",
 	"sync_deflate",
 	"nsfw_blur",
+	"automod",
+	"markdown_code_components",
+	"media_three",
 ];
 
 export const flags = new ReactiveSet(
