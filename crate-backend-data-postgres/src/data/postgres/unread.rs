@@ -19,6 +19,7 @@ impl DataUnread for Postgres {
         let mut channel_ids = Vec::new();
         let mut message_ids = Vec::new();
         let mut mention_counts = Vec::new();
+        let mut pins_channel_ids = Vec::new();
         // let mut unread_counts = Vec::new();
 
         for ack in acks {
@@ -33,7 +34,9 @@ impl DataUnread for Postgres {
                     mention_counts.push(*mention_count as i32);
                     // TODO: unread_counts
                 }
-                _ => continue,
+                AckType::Pins { channel_id } => {
+                    pins_channel_ids.push(channel_id.into_inner());
+                }
             }
         }
 
@@ -52,6 +55,22 @@ impl DataUnread for Postgres {
                 *user_id,
                 &message_ids,
                 &mention_counts,
+            )
+            .execute(conn.ext())
+            .await?;
+        }
+
+        if !pins_channel_ids.is_empty() {
+            query!(
+                r#"
+                INSERT INTO unread (channel_id, user_id, pins_read_at)
+                SELECT u.channel_id, $2, NOW()
+                FROM UNNEST($1::uuid[]) AS u(channel_id)
+                ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET
+                    pins_read_at = EXCLUDED.pins_read_at;
+                "#,
+                &pins_channel_ids,
+                *user_id,
             )
             .execute(conn.ext())
             .await?;
