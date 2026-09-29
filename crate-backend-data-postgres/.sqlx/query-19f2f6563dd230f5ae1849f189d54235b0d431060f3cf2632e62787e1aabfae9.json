@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update channel set last_pin_timestamp = now() where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "19f2f6563dd230f5ae1849f189d54235b0d431060f3cf2632e62787e1aabfae9"
+}
