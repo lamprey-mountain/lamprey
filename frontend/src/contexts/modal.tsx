@@ -154,8 +154,10 @@ export const ModalsProvider = (p: ParentProps) => {
 
 	const controller: ModalsController = {
 		close() {
-			const closingModal = modals[0];
-			setModals((prev) => prev.slice(1));
+			const closingModal = modals.at(-1);
+			if (!closingModal) return;
+
+			setModals((prev) => prev.slice(0, -1));
 
 			const wasSettings =
 				closingModal?.type === "user_settings" ||
@@ -177,23 +179,23 @@ export const ModalsProvider = (p: ParentProps) => {
 			}
 		},
 		alert(text: string) {
-			setModals((prev) => [{ type: "alert", text } as Modal, ...prev]);
+			setModals((prev) => [...prev, { type: "alert", text }]);
 		},
 		prompt(text: string, cont: (text: string | null) => void) {
-			const modal = {
+			const modal: Modal = {
 				type: "prompt" as const,
 				text,
 				cont,
 			};
-			setModals((prev) => [modal as Modal, ...prev]);
+			setModals((prev) => [...prev, modal]);
 		},
 		confirm(text: string, cont: (confirmed: boolean) => void) {
-			const modal = {
+			const modal: Modal = {
 				type: "confirm" as const,
 				text,
 				cont,
 			};
-			setModals((prev) => [modal as Modal, ...prev]);
+			setModals((prev) => [...prev, modal]);
 		},
 	};
 
