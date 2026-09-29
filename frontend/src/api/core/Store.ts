@@ -459,13 +459,13 @@ export class RootStore {
 				}
 			}
 
+			const channel = this.channels.cache.get(m.channel_id);
 			const session = this.session();
 			const sessionUserId =
 				session?.status === "Unauthorized" ? undefined : session?.user_id;
 			const isOwnMessage = m.author_id === sessionUserId;
-			if (isOwnMessage) {
-				const channel = this.channels.cache.get(m.channel_id);
-				if (channel) {
+			if (channel) {
+				if (isOwnMessage) {
 					this.channels.cache.set(m.channel_id, {
 						...channel,
 						message_count: (channel.message_count ?? 0) + 1,
@@ -473,6 +473,12 @@ export class RootStore {
 						last_version_id: m.latest_version.version_id,
 						last_read_id: m.latest_version.version_id,
 						is_unread: false,
+					});
+				} else {
+					this.channels.cache.set(m.channel_id, {
+						...channel,
+						last_version_id: m.latest_version.version_id,
+						is_unread: true,
 					});
 				}
 			}
