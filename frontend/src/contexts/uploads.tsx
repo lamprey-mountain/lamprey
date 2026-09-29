@@ -90,7 +90,7 @@ export const UploadsProvider = (props: ParentProps<{ ctx: ChatCtx }>) => {
 					...atts.slice(idx + 1),
 				]);
 				// Replace dispatch with modal controller
-				modalCtl.alert(error.message);
+				modalCtl.alert(`error: ${error.message ?? error.error}`);
 			},
 			onComplete(media) {
 				const atts = ch.attachments;
