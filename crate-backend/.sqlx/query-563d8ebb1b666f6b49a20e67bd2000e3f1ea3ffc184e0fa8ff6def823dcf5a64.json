@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FROM document_branch WHERE document_id = $1 AND state = 'Active'::branch_state",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "563d8ebb1b666f6b49a20e67bd2000e3f1ea3ffc184e0fa8ff6def823dcf5a64"
+}

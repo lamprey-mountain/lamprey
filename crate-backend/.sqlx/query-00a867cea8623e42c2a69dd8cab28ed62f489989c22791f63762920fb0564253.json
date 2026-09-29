@@ -1,0 +1,88 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        \tSELECT\n                a.id, a.owner_id, a.name, a.description, a.public, a.oauth_secret, a.oauth_redirect_uris, a.oauth_confidential,\n                b.application_id as \"bridge_id?\", b.platform_name, b.platform_url, b.platform_description\n            FROM application a\n            LEFT JOIN application_bridge b ON a.id = b.application_id\n        \tWHERE a.id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "owner_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "public",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
+        "name": "oauth_secret",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "oauth_redirect_uris",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "oauth_confidential",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "bridge_id?",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 9,
+        "name": "platform_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "platform_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "platform_description",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "00a867cea8623e42c2a69dd8cab28ed62f489989c22791f63762920fb0564253"
+}

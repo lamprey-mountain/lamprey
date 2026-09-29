@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update invite set uses = uses + 1 where code = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "031f067c5d078d055c35b2f3d86ab5a57629914d2be1aebe9924a18458d7520f"
+}

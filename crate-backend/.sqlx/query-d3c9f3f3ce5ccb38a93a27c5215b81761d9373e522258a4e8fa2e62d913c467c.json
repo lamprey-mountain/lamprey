@@ -1,0 +1,62 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT w.id, c.room_id, w.channel_id, u.name, u.avatar, w.token, w.creator_id\n                FROM webhook w\n                JOIN usr u ON w.id = u.id\n                JOIN channel c ON w.channel_id = c.id\n                WHERE w.channel_id = $1 AND w.id > $2 AND w.id < $3 AND u.deleted_at IS NULL\n                ORDER BY (CASE WHEN $4 = 'f' THEN w.id END), w.id DESC LIMIT $5\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "channel_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "avatar",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "token",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "creator_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "d3c9f3f3ce5ccb38a93a27c5215b81761d9373e522258a4e8fa2e62d913c467c"
+}

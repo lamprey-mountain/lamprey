@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            select coalesce(\n                (select (config->>'dms')::bool from usr where id = $2),\n                false\n            )\n            or exists (\n                select 1\n                from room_member rm1\n                join room_member rm2 on rm1.room_id = rm2.room_id\n                join preferences_room ucr on rm1.room_id = ucr.room_id\n                where rm1.user_id = $1\n                  and rm2.user_id = $2\n                  and rm1.membership = 'Join'\n                  and rm2.membership = 'Join'\n                  and (ucr.config->>'dms')::bool = true\n            )\n            as \"allows!\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "allows!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "38e7a52da079297c2bef9be8cfba1db8eddd13dedc1ccead567b4af4743f0769"
+}

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO channel_document (\n                channel_id, draft, archived_at, archived_reason, template, slug,\n                published_at, published_revision, published_unlisted\n            )\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Timestamp",
+        "Text",
+        "Bool",
+        "Text",
+        "Timestamp",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4de19a5f4725b78e7b5faf9be8dc9106ea461011b028334fd28abd49a6c6275e"
+}

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(t.id)\nFROM channel t\nLEFT JOIN thread_member tm ON t.id = tm.channel_id AND tm.user_id = $2\nWHERE t.parent_id = $1\n  AND t.deleted_at IS NOT NULL\n  AND t.type IN ('ThreadPublic', 'ThreadPrivate', 'ThreadForum2', 'Document')\n  AND ($3::boolean OR t.type IN ('ThreadPublic', 'ThreadForum2') OR (t.type = 'ThreadPrivate' AND tm.user_id IS NOT NULL AND tm.membership = 'Join'))\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "43acb5c69f3b15531ecbc2e265815a3c4bc880cf61c11f3afba7b3df29ba4b14"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update invite set deleted_at = now() where code = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4c31d0959acbbe8e98ecddec25ede6ce13c3316c2830024aca8cc9513a598c62"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO search_reindex_queue (target_id, target_type) VALUES ($1, 'audit_log_entries') ON CONFLICT (target_id, target_type) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "716d28279ddadd4bd48d19ccd913042da15e079d7e378a850d3c4ab4c4b4bee1"
+}

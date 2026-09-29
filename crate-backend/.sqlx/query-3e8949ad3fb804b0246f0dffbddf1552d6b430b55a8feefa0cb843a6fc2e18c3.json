@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    \t    INSERT INTO room (id, version_id, name, description, icon, banner, public, type, quarantined, security_require_mfa, security_require_sudo, afk_channel_id, afk_channel_timeout, invites_paused_until, features, remote_hostname, remote_origin_id)\n    \t    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NULL, '{}', $14, $15)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Bool",
+        {
+          "Custom": {
+            "name": "room_type",
+            "kind": {
+              "Enum": [
+                "Default",
+                "Server",
+                "Emoji"
+              ]
+            }
+          }
+        },
+        "Bool",
+        "Bool",
+        "Bool",
+        "Uuid",
+        "Int8",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3e8949ad3fb804b0246f0dffbddf1552d6b430b55a8feefa0cb843a6fc2e18c3"
+}

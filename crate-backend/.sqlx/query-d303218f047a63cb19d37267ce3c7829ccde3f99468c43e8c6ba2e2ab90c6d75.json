@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO dm (user_a_id, user_b_id, channel_id)\n            VALUES ($1, $2, $3)\n            ON CONFLICT ON CONSTRAINT dm_pkey DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d303218f047a63cb19d37267ce3c7829ccde3f99468c43e8c6ba2e2ab90c6d75"
+}

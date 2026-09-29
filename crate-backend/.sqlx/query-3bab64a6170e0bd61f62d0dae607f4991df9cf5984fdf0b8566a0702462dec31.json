@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO unread (channel_id, user_id, pins_read_at)\n                SELECT u.channel_id, $2, NOW()\n                FROM UNNEST($1::uuid[]) AS u(channel_id)\n                ON CONFLICT ON CONSTRAINT unread_pkey DO UPDATE SET\n                    pins_read_at = EXCLUDED.pins_read_at;\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3bab64a6170e0bd61f62d0dae607f4991df9cf5984fdf0b8566a0702462dec31"
+}

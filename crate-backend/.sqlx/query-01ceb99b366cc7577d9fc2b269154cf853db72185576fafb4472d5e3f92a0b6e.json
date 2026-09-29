@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM role_member WHERE room_id = $1 AND role_id = $2 AND user_id = ANY($3::uuid[])",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "01ceb99b366cc7577d9fc2b269154cf853db72185576fafb4472d5e3f92a0b6e"
+}

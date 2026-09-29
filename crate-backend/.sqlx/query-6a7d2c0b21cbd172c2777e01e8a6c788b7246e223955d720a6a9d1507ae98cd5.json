@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM metric_channel WHERE deleted_at IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "6a7d2c0b21cbd172c2777e01e8a6c788b7246e223955d720a6a9d1507ae98cd5"
+}

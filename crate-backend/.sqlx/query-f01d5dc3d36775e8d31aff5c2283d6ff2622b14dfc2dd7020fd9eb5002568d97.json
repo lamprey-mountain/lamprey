@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update usr set config = $2 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f01d5dc3d36775e8d31aff5c2283d6ff2622b14dfc2dd7020fd9eb5002568d97"
+}

@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with r as (\n    select user_id, role.room_id, array_agg(role_id) as roles from role_member\n    join role on role_member.role_id = role.id\n    where user_id = $1 AND role.room_id = ANY($2::uuid[])\n    group by user_id, role.room_id\n)\nSELECT\n    m.room_id,\n    m.user_id,\n    membership as \"membership: _\",\n    override_name,\n    override_description,\n    joined_at,\n    origin,\n    mute,\n    deaf,\n    timeout_until,\n    coalesce(r.roles, '{}') as \"roles!\",\n    quarantined\nFROM room_member m\nleft join r on r.room_id = m.room_id AND r.user_id = m.user_id\nWHERE m.user_id = $1 AND m.room_id = ANY($2::uuid[]) AND m.membership = 'Join'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "membership: _",
+        "type_info": {
+          "Custom": {
+            "name": "membership",
+            "kind": {
+              "Enum": [
+                "Join",
+                "Ban",
+                "Leave"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "override_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "override_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "joined_at",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 6,
+        "name": "origin",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "mute",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "deaf",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "timeout_until",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 10,
+        "name": "roles!",
+        "type_info": "UuidArray"
+      },
+      {
+        "ordinal": 11,
+        "name": "quarantined",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      null,
+      false
+    ]
+  },
+  "hash": "6a70b9a0c1a8d5dd27678460485a17511363eceed5deeba17a609b21843e76e0"
+}

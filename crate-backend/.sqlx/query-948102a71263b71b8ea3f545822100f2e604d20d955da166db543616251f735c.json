@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT rel as \"rel: _\", ignore, ignore_until, other_id as user_id FROM user_relationship\n            \tWHERE user_id = $1 AND other_id > $2 AND other_id < $3 AND rel = 'Block'\n            \tORDER BY (CASE WHEN $4 = 'f' THEN other_id END), other_id DESC LIMIT $5\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rel: _",
+        "type_info": {
+          "Custom": {
+            "name": "user_relationship_type",
+            "kind": {
+              "Enum": [
+                "Friend",
+                "Outgoing",
+                "Incoming",
+                "Block"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "ignore",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "ignore_until",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 3,
+        "name": "user_id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "948102a71263b71b8ea3f545822100f2e604d20d955da166db543616251f735c"
+}

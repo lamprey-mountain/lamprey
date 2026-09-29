@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE channel_document\n                SET\n                    draft = $2,\n                    archived_at = $3,\n                    archived_reason = $4,\n                    template = $5,\n                    slug = $6,\n                    published_at = $7,\n                    published_revision = $8,\n                    published_unlisted = $9\n                WHERE channel_id = $1\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Timestamp",
+        "Text",
+        "Bool",
+        "Text",
+        "Timestamp",
+        "Text",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d8b523902ece7488bddf95813553fb02600d37738dc2727ae9e945a2ea6ef2fe"
+}

@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FROM audit_log\n                WHERE room_id = $1\n                AND (cardinality($2::uuid[]) = 0 OR user_id = ANY($2))\n                AND (cardinality($3::text[]) = 0 OR data->>'type' = ANY($3))\n                AND (cardinality($4::audit_log_entry_status[]) = 0 OR status = ANY($4))\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "TextArray",
+        {
+          "Custom": {
+            "name": "audit_log_entry_status[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "audit_log_entry_status",
+                  "kind": {
+                    "Enum": [
+                      "Success",
+                      "Unauthorized",
+                      "Failed"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a7ea496b5c6fe3f7347454587bfef77e98c8ad906c91d07c69adcb46a9820d8f"
+}

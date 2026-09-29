@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "update usr set password_hash = $2, password_salt = $3 where id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bytea",
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ac0d3faf75b3dd561b939f0c5f9f939a76fda6d922be1ba483162aaa28ab5523"
+}

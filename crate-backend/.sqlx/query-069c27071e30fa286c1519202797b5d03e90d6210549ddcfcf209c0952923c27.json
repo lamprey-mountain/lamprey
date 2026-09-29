@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT count(*)\n            FROM document_branch\n            WHERE document_id = $1 AND state = ANY($2::branch_state[])\n            AND (private = false OR creator_id = $3)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "branch_state[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "branch_state",
+                  "kind": {
+                    "Enum": [
+                      "Active",
+                      "Closed",
+                      "Merged"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "069c27071e30fa286c1519202797b5d03e90d6210549ddcfcf209c0952923c27"
+}

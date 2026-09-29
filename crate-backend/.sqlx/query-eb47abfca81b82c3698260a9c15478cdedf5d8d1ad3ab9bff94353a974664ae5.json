@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE user_email_addresses SET last_verification_email_sent_at = $1 WHERE user_id = $2 AND addr = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamp",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "eb47abfca81b82c3698260a9c15478cdedf5d8d1ad3ab9bff94353a974664ae5"
+}

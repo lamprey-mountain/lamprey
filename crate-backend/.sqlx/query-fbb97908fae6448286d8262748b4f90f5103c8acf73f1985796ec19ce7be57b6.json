@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE message SET removed_at = NULL, lifecycle_seq = $2 WHERE id = ANY($1) AND removed_at IS NOT NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fbb97908fae6448286d8262748b4f90f5103c8acf73f1985796ec19ce7be57b6"
+}

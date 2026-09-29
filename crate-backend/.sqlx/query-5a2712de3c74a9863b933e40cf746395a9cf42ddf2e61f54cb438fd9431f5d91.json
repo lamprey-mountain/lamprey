@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM media_link WHERE target_id = $1 AND link_type = 'MessageVersion'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5a2712de3c74a9863b933e40cf746395a9cf42ddf2e61f54cb438fd9431f5d91"
+}

@@ -1,0 +1,86 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id, room_id, name, enabled, data, except_nsfw, include_everyone, target as \"target: DbAutomodTarget\",\n                coalesce((SELECT json_agg(role_id) FROM automod_rule_except_role WHERE rule_id = id), '[]') as \"except_roles!\",\n                coalesce((SELECT json_agg(channel_id) FROM automod_rule_except_channel WHERE rule_id = id), '[]') as \"except_channels!\"\n            FROM automod_rule\n            WHERE id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "room_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "data",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 5,
+        "name": "except_nsfw",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "include_everyone",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "target: DbAutomodTarget",
+        "type_info": {
+          "Custom": {
+            "name": "automod_target",
+            "kind": {
+              "Enum": [
+                "Content",
+                "Member"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "except_roles!",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 9,
+        "name": "except_channels!",
+        "type_info": "Json"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "87b9eb58c54217e82ddd4351e0690e44020e6ef9740e36f6970582cbd5506ac7"
+}

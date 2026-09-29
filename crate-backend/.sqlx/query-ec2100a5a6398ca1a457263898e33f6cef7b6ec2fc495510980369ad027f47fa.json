@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT data\n            FROM document_update\n            WHERE branch_id = $1 AND seq > $2 AND seq <= $3\n            ORDER BY seq ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "data",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ec2100a5a6398ca1a457263898e33f6cef7b6ec2fc495510980369ad027f47fa"
+}
