@@ -482,6 +482,21 @@ export class RootStore {
 					});
 				}
 			}
+		} else if (msg.type === "PassiveAck") {
+			for (const s of msg.ack_states) {
+				if (s.type === "Message") {
+					const channel = this.channels.cache.get(s.channel_id);
+					if (!channel) continue;
+					this.channels.cache.set(s.channel_id, {
+						...channel,
+						mention_count: s.mention_count ?? 0,
+						last_read_id: s.message_id,
+						is_unread: s.unread,
+					});
+				} else if (s.type === "Pins") {
+					// TODO: handle pins
+				}
+			}
 		} else if (msg.type === "MessageUpdate") {
 			const message = msg.message;
 			if (message.flume?.state !== "Live") {
