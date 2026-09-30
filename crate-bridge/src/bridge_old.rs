@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::{
-    sync::{broadcast, mpsc, oneshot},
+    sync::{Mutex, broadcast, mpsc, oneshot},
     task::JoinHandle,
 };
 use url::Url;
@@ -117,6 +117,9 @@ pub struct BridgeHandle {
     pub commands: mpsc::Sender<BridgeCommand>,
     pub events: broadcast::Sender<Arc<BridgeEvent>>,
     pub db: Arc<dyn Database>,
+
+    /// lock to be held when bridging threads
+    pub channel_lock: Arc<Mutex<()>>,
 }
 
 // TODO: allow getting Portal data from PortalHandle
@@ -150,6 +153,7 @@ impl BridgeHandle {
             commands,
             events,
             db,
+            channel_lock: Arc::new(Mutex::new(())),
         }
     }
 

@@ -524,6 +524,9 @@ impl LampreyPortal {
             //     let _ = self.http.channel_update(self.channel_id, &patch).await;
             // }
             PortalEvent::ThreadCreate(chan) => {
+                // make sure that only one thread can be created at a time
+                let _guard = self.handle.bridge.channel_lock.lock().await;
+
                 let (create, discord_chan) = match chan {
                     bridge::ChannelData::Lamprey { .. } => return Ok(()),
                     bridge::ChannelData::Discord {

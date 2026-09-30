@@ -480,6 +480,9 @@ impl DiscordPortal {
             // PortalEvent::ReactionDeleteKey(message_id, reaction_key) => {}
             // PortalEvent::ReactionDeleteAll(message_id, _) => {}
             PortalEvent::ThreadCreate(chan) => {
+                // make sure that only one thread can be created at a time
+                let _guard = self.handle.bridge.channel_lock.lock().await;
+
                 let (create, lamprey_chan) = match chan {
                     bridge_old::ChannelData::Discord { .. } => return Ok(()),
                     bridge_old::ChannelData::Lamprey { channel } => {
