@@ -372,6 +372,7 @@ impl LampreyPortal {
 
                 let edited = ly
                     .http
+                    .for_puppet(puppet.id)?
                     .message_edit(self.channel_id, lamprey_message_id, &patch)
                     .await?;
 
