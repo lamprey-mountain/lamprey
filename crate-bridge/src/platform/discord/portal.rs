@@ -281,7 +281,10 @@ impl DiscordPortal {
                     builder = builder.avatar_url(avatar_url);
                 }
 
-                // TODO: handle threads (builder.in_thread(thread_id))
+                if discord_cfg.parent_id.is_some() {
+                    builder = builder.in_thread(discord_cfg.channel_id);
+                }
+
                 // TODO: handle components (builder.components(components))
 
                 let sent_message = webhook.execute(&self.http, true, builder).await?;
@@ -395,15 +398,15 @@ impl DiscordPortal {
                     }
                 }
 
+                let mut edit_builder = serenity::all::EditWebhookMessage::new()
+                    .content(content)
+                    .attachments(attachments)
+                    .allowed_mentions(CreateAllowedMentions::new());
+                if discord_cfg.parent_id.is_some() {
+                    edit_builder = edit_builder.in_thread(discord_cfg.channel_id);
+                }
                 let edited = webhook
-                    .edit_message(
-                        &self.http,
-                        message_id,
-                        serenity::all::EditWebhookMessage::new()
-                            .content(content)
-                            .attachments(attachments)
-                            .allowed_mentions(CreateAllowedMentions::new()),
-                    )
+                    .edit_message(&self.http, message_id, edit_builder)
                     .await?;
 
                 let mut new_attachments = vec![];
