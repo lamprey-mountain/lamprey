@@ -211,19 +211,17 @@ impl Discord {
             DiscordEvent::MessageUpdate(event, new) => {
                 let new_message = match new {
                     Some(msg) => msg,
-                    None => {
-                        match self.http.get_message(event.channel_id, event.id).await {
-                            Ok(msg) => msg,
-                            Err(e) => {
-                                warn!(
-                                    message_id = %event.id,
-                                    channel_id = %event.channel_id,
-                                    "failed to fetch updated message: {e:?}"
-                                );
-                                return;
-                            }
+                    None => match self.http.get_message(event.channel_id, event.id).await {
+                        Ok(msg) => msg,
+                        Err(e) => {
+                            warn!(
+                                message_id = %event.id,
+                                channel_id = %event.channel_id,
+                                "failed to fetch updated message: {e:?}"
+                            );
+                            return;
                         }
-                    }
+                    },
                 };
 
                 if let Some(webhook_id) = new_message.webhook_id {

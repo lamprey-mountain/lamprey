@@ -525,6 +525,17 @@ impl LampreyPortal {
                         channel: discord_chan,
                         ..
                     } => {
+                        if self
+                            .handle
+                            .bridge
+                            .db
+                            .portal_get_by_discord_channel(discord_chan.id.to_string())
+                            .await?
+                            .is_some()
+                        {
+                            return Ok(());
+                        }
+
                         let create = ChannelCreate {
                             name: discord_chan.name.clone(),
                             description: discord_chan.topic.clone(),

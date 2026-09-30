@@ -483,6 +483,17 @@ impl DiscordPortal {
                 let (create, lamprey_chan) = match chan {
                     bridge_old::ChannelData::Discord { .. } => return Ok(()),
                     bridge_old::ChannelData::Lamprey { channel } => {
+                        if self
+                            .handle
+                            .bridge
+                            .db
+                            .portal_get_by_lamprey_channel(channel.id.to_string())
+                            .await?
+                            .is_some()
+                        {
+                            return Ok(());
+                        }
+
                         let create = serenity::all::CreateThread::new(&channel.name).kind(
                             match channel.ty {
                                 lamprey::ChannelType::ThreadPublic => ChannelType::PublicThread,
