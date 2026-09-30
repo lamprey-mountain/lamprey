@@ -117,9 +117,10 @@ impl DiscordRealm {
                             };
 
                             if bridge.db.portal_create(portal.clone()).await.is_ok() {
+                                let handle = bridge.create_portal_handle(portal.id);
                                 let _ = bridge
                                     .events
-                                    .send(Arc::new(BridgeEvent::PortalCreated(portal)));
+                                    .send(Arc::new(BridgeEvent::PortalCreated(portal, handle)));
                             }
                         }
                     }

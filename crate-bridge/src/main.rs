@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
     let (bridge_cmd_tx, bridge_cmd_rx) = tokio::sync::mpsc::channel(1024);
     let bridge = BridgeHandle::new(db.clone(), bridge_cmd_tx);
 
-    let bridge_actor = BridgeActor::new(bridge_cmd_rx, bridge.events.clone(), db);
+    let bridge_actor = BridgeActor::new(bridge_cmd_rx, bridge.events.clone(), db, bridge.clone());
     tokio::spawn(bridge_actor.run());
 
     // spawn connections to platforms

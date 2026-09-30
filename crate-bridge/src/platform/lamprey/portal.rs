@@ -571,11 +571,12 @@ impl LampreyPortal {
                     .await
                     .is_ok()
                 {
+                    let handle = self.handle.bridge.create_portal_handle(portal.id);
                     let _ = self
                         .handle
                         .bridge
                         .events
-                        .send(Arc::new(bridge::BridgeEvent::PortalCreated(portal)));
+                        .send(Arc::new(bridge::BridgeEvent::PortalCreated(portal, handle)));
                 }
             }
             _ => {}

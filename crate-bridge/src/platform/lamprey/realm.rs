@@ -127,11 +127,12 @@ impl LampreyRealm {
                         .await
                         .is_ok()
                     {
+                        let handle = self.handle.bridge.create_portal_handle(portal.id);
                         let _ = self
                             .handle
                             .bridge
                             .events
-                            .send(Arc::new(BridgeEvent::PortalCreated(portal)));
+                            .send(Arc::new(BridgeEvent::PortalCreated(portal, handle)));
                     }
                 }
                 RealmEvent::MemberUpdate(member) => {

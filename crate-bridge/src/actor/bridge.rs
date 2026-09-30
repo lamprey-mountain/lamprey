@@ -84,7 +84,7 @@ pub enum BridgeEvent {
     PortalInit(Portal, PortalHandle),
 
     /// a portal has been newly created
-    PortalCreated(Portal),
+    PortalCreated(Portal, PortalHandle),
 
     /// an event for a portal
     PortalEvent(PortalId, PortalEvent),
@@ -142,6 +142,7 @@ pub struct BridgeActor {
     rx: mpsc::Receiver<BridgeCommand>,
     events: broadcast::Sender<Arc<BridgeEvent>>,
     db: Arc<dyn Database>,
+    bridge_handle: crate::bridge_old::BridgeHandle,
     pending_links: HashMap<lamprey::ChannelId, PendingLink>,
     pending_realm_links: HashMap<lamprey::RoomId, PendingRealmLink>,
 }
@@ -151,11 +152,13 @@ impl BridgeActor {
         rx: mpsc::Receiver<BridgeCommand>,
         events: broadcast::Sender<Arc<BridgeEvent>>,
         db: Arc<dyn Database>,
+        bridge_handle: crate::bridge_old::BridgeHandle,
     ) -> Self {
         Self {
             rx,
             events,
             db,
+            bridge_handle,
             pending_links: HashMap::new(),
             pending_realm_links: HashMap::new(),
         }
@@ -264,9 +267,10 @@ impl BridgeActor {
                         };
 
                         if self.db.portal_create(portal.clone()).await.is_ok() {
+                            let handle = self.bridge_handle.create_portal_handle(portal.id);
                             let _ = self
                                 .events
-                                .send(Arc::new(BridgeEvent::PortalCreated(portal)));
+                                .send(Arc::new(BridgeEvent::PortalCreated(portal, handle)));
                         }
                     }
 

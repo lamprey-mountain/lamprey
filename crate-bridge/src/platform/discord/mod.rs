@@ -698,9 +698,8 @@ impl Discord {
             BridgeEvent::PortalInit(portal, handle) => {
                 self.init_portal(portal, handle);
             }
-            BridgeEvent::PortalCreated(portal) => {
-                let handle = self.bridge.create_portal_handle(portal.id);
-                self.init_portal(portal, &handle);
+            BridgeEvent::PortalCreated(portal, handle) => {
+                self.init_portal(portal, handle);
             }
             BridgeEvent::PortalEvent(id, event) => {
                 if let Some(handle) = self.portal_handles.get(id) {
