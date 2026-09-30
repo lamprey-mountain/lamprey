@@ -21,7 +21,7 @@ export const RouteAuthorize = (p: RouteSectionProps): JSX.Element => {
 	const [data] = createResource(async () => {
 		// HACK: openapi fetch typescript doesn't like manually built urls here
 		const { data, error } = await ctx.client.http.GET(
-			`/api/v1/oauth/authorize${p.location.search}` as "/api/v1/oauth/authorize",
+			`/api/v1/oauth/authorize${location.search}` as "/api/v1/oauth/authorize",
 			{} as any,
 		);
 		if (error) throw (error as any).error;
