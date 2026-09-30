@@ -209,22 +209,35 @@ impl Discord {
                 );
             }
             DiscordEvent::MessageUpdate(event, new) => {
-                // TODO: handle message updates without new (fetch from discord's api?)
-                // TODO: at least warn if new doesnt exist right now
-                if let Some(new_message) = new {
-                    if let Some(webhook_id) = new_message.webhook_id {
-                        if self.webhook_lookup.contains_key(&webhook_id) {
-                            return;
+                let new_message = match new {
+                    Some(msg) => msg,
+                    None => {
+                        match self.http.get_message(event.channel_id, event.id).await {
+                            Ok(msg) => msg,
+                            Err(e) => {
+                                warn!(
+                                    message_id = %event.id,
+                                    channel_id = %event.channel_id,
+                                    "failed to fetch updated message: {e:?}"
+                                );
+                                return;
+                            }
                         }
                     }
+                };
 
-                    self.route_portal_event(
-                        event.channel_id,
-                        PortalEvent::MessageUpdate(MessageData::Discord {
-                            message: Box::new(new_message),
-                        }),
-                    );
+                if let Some(webhook_id) = new_message.webhook_id {
+                    if self.webhook_lookup.contains_key(&webhook_id) {
+                        return;
+                    }
                 }
+
+                self.route_portal_event(
+                    event.channel_id,
+                    PortalEvent::MessageUpdate(MessageData::Discord {
+                        message: Box::new(new_message),
+                    }),
+                );
             }
             DiscordEvent::TypingStart(event) => {
                 let discord_id = event.user_id.get().to_string();
