@@ -1,8 +1,9 @@
 use crate::{
-    ast::inline::{CustomEmojiData, Emoji, MentionData},
+    ast::inline::{Emoji, MentionData},
     parser::Parsed,
     prelude::*,
     query::{Decoration, QueryableExt},
+    util::custom_emoji::CustomEmojiData,
 };
 use serde::Serialize;
 use tsify::Tsify;
