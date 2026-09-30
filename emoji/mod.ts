@@ -29,10 +29,8 @@ export const sheetPngUrl: string = new URL(
 
 /** get the hex code from an emoji string */
 export function getEmojiHex(emojiStr: string): string {
-	// NOTE: maybe i don't want to strip the variation selector...?
 	return [...emojiStr]
 		.map((char) => char.codePointAt(0)!.toString(16))
-		.filter((hex) => hex !== "fe0f") // Strip the variation selector-16 (VS16)
 		.join("-");
 }
 
