@@ -84,6 +84,8 @@ pub enum PortalEvent {
     ChannelUpdate(ChannelData),
     ChannelDelete,
 
+    ThreadCreate(ChannelData),
+
     MessageCreate(MessageData),
     MessageUpdate(MessageData),
     MessageDelete(MessageId),

@@ -1,9 +1,10 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use common::{
     v1::types::{
-        MessageAttachmentCreate, MessageAttachmentCreateType, MessageAttachmentType, MessageCreate,
-        MessageType, ParseMentions, RoomMemberPut, misc::UserIdReq, reaction::ReactionKeyParam,
+        ChannelCreate, ChannelPatch, ChannelType, MessageAttachmentCreate,
+        MessageAttachmentCreateType, MessageAttachmentType, MessageCreate, MessageType,
+        ParseMentions, RoomMemberPut, misc::UserIdReq, reaction::ReactionKeyParam,
     },
     v2::types::ChannelId,
 };
@@ -501,6 +502,79 @@ impl LampreyPortal {
                             .reaction_delete_all(self.channel_id, lamprey_message_id)
                             .await?;
                     }
+                }
+            }
+            // PortalEvent::ChannelUpdate(chan) => {
+            //     let discord_chan = match chan {
+            //         bridge::ChannelData::Lamprey { .. } => return Ok(()),
+            //         bridge::ChannelData::Discord { channel, .. } => channel,
+            //     };
+            //     let patch = ChannelPatch {
+            //         name: Some(discord_chan.name.clone()),
+            //         description: Some(discord_chan.topic.clone()),
+            //         nsfw: Some(discord_chan.nsfw),
+            //         ..Default::default()
+            //     };
+            //     let _ = self.http.channel_update(self.channel_id, &patch).await;
+            // }
+            PortalEvent::ThreadCreate(chan) => {
+                let (create, discord_chan) = match chan {
+                    bridge::ChannelData::Lamprey { .. } => return Ok(()),
+                    bridge::ChannelData::Discord {
+                        channel: discord_chan,
+                        ..
+                    } => {
+                        let create = ChannelCreate {
+                            name: discord_chan.name.clone(),
+                            description: discord_chan.topic.clone(),
+                            ty: match discord_chan.kind {
+                                discord::ChannelType::PublicThread => ChannelType::ThreadPublic,
+                                discord::ChannelType::NewsThread => ChannelType::ThreadPublic,
+                                discord::ChannelType::PrivateThread => ChannelType::ThreadPrivate,
+                                _ => return Ok(()),
+                            },
+                            nsfw: discord_chan.nsfw,
+                            // TODO: copy invitable, auto_archive_duration
+                            ..Default::default()
+                        };
+                        (create, discord_chan)
+                    }
+                };
+
+                let channel = self.http.thread_create(self.channel_id, &create).await?;
+
+                let portal_id = bridge::PortalId::new();
+                let portal = bridge::Portal {
+                    id: portal_id,
+                    realm_id: self.portal.realm_id,
+                    lamprey: Some(bridge::PortalLamprey {
+                        channel_id: channel.id,
+                        room_id: self.portal.lamprey.as_ref().unwrap().room_id,
+                        last_id: channel.last_message_id.unwrap_or_default(),
+                    }),
+                    discord: Some(bridge::PortalDiscord {
+                        guild_id: discord_chan.guild_id,
+                        parent_id: discord_chan.parent_id,
+                        channel_id: discord_chan.id,
+                        webhook_url: self.portal.discord.as_ref().unwrap().webhook_url.clone(),
+                        webhook_id: self.portal.discord.as_ref().unwrap().webhook_id,
+                        last_id: discord_chan.last_message_id.unwrap_or_default(),
+                    }),
+                };
+
+                if self
+                    .handle
+                    .bridge
+                    .db
+                    .portal_create(portal.clone())
+                    .await
+                    .is_ok()
+                {
+                    let _ = self
+                        .handle
+                        .bridge
+                        .events
+                        .send(Arc::new(bridge::BridgeEvent::PortalCreated(portal)));
                 }
             }
             _ => {}

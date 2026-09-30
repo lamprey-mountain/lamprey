@@ -641,6 +641,28 @@ impl Discord {
                     }
                 }
             }
+            DiscordEvent::ThreadCreate(thread) => {
+                let Some(parent_id) = thread.parent_id else {
+                    return;
+                };
+                self.route_portal_event(
+                    parent_id,
+                    PortalEvent::ThreadCreate(ChannelData::Discord {
+                        channel: Box::new(thread),
+                        webhook: None,
+                    }),
+                );
+            }
+            DiscordEvent::ThreadUpdate(thread) => {
+                self.route_portal_event(
+                    thread.id,
+                    PortalEvent::ChannelUpdate(ChannelData::Discord {
+                        channel: Box::new(thread),
+                        webhook: None,
+                    }),
+                );
+            }
+            _ => {}
         }
     }
 

@@ -1,8 +1,12 @@
 use async_trait::async_trait;
-use serenity::all::{
-    ChannelId, Context, EventHandler, Guild, GuildChannel, GuildId, GuildMemberUpdateEvent,
-    Interaction, Message, MessageId, MessageUpdateEvent, Presence, Reaction, Ready,
-    TypingStartEvent,
+use serenity::{
+    all::{
+        ChannelId, Context, EventHandler, Guild, GuildChannel, GuildId, GuildMemberUpdateEvent,
+        Interaction, Message, MessageId, MessageUpdateEvent, PartialGuildChannel, Presence,
+        Reaction, Ready, ThreadListSyncEvent, ThreadMembersUpdateEvent, TypingStartEvent, User,
+        UserId,
+    },
+    model::guild::Member,
 };
 use tokio::sync::mpsc;
 use tracing::{error, info, trace};
@@ -21,6 +25,7 @@ pub enum DiscordEvent {
     MessageCreate(Message),
     MessageUpdate(MessageUpdateEvent, Option<Message>),
     MessageDelete(ChannelId, MessageId),
+    MessageDeleteBulk(ChannelId, Vec<MessageId>),
     ReactionAdd(Reaction),
     ReactionRemove(Reaction),
     ReactionRemoveAll(ChannelId, MessageId),
@@ -30,7 +35,14 @@ pub enum DiscordEvent {
     InteractionCreate(SlashCommand),
     TypingStart(TypingStartEvent),
     PresenceUpdate(Presence),
+    GuildMemberCreate(Member),
+    GuildMemberDelete(GuildId, UserId),
     GuildMemberUpdate(GuildMemberUpdateEvent),
+    ThreadCreate(GuildChannel),
+    ThreadUpdate(GuildChannel),
+    ThreadDelete(ChannelId),
+    ThreadListSync(ThreadListSyncEvent),
+    ThreadMembersUpdate(ThreadMembersUpdateEvent),
 }
 
 #[async_trait]
@@ -92,7 +104,13 @@ impl EventHandler for Handler {
             "discord message delete bulk: {:?}",
             multiple_deleted_messages_ids
         );
-        // TODO: Map to BridgeEvent/PortalEvent
+        let _ = self
+            .tx
+            .send(DiscordEvent::MessageDeleteBulk(
+                channel_id,
+                multiple_deleted_messages_ids,
+            ))
+            .await;
     }
 
     async fn reaction_add(&self, _ctx: Context, add_reaction: Reaction) {
@@ -169,11 +187,33 @@ impl EventHandler for Handler {
         }
     }
 
+    async fn guild_member_addition(&self, _ctx: Context, new_member: Member) {
+        info!("discord guild member addition: {:?}", new_member.user.name);
+        let _ = self
+            .tx
+            .send(DiscordEvent::GuildMemberCreate(new_member))
+            .await;
+    }
+
+    async fn guild_member_removal(
+        &self,
+        _ctx: Context,
+        guild_id: GuildId,
+        user: User,
+        _member_data_if_available: Option<Member>,
+    ) {
+        info!("discord guild member removal: {:?}", user.name);
+        let _ = self
+            .tx
+            .send(DiscordEvent::GuildMemberDelete(guild_id, user.id))
+            .await;
+    }
+
     async fn guild_member_update(
         &self,
         _ctx: Context,
-        _old: Option<serenity::model::guild::Member>,
-        _new: Option<serenity::model::guild::Member>,
+        _old: Option<Member>,
+        _new: Option<Member>,
         event: GuildMemberUpdateEvent,
     ) {
         info!("discord guild member update: {:?}", event.user.name);
@@ -185,5 +225,43 @@ impl EventHandler for Handler {
         let _ = self.tx.send(DiscordEvent::PresenceUpdate(presence)).await;
     }
 
-    // TODO: handle user_update
+    async fn thread_create(&self, _ctx: Context, thread: GuildChannel) {
+        info!("discord thread create: {:?}", thread.name);
+        let _ = self.tx.send(DiscordEvent::ThreadCreate(thread)).await;
+    }
+
+    async fn thread_update(&self, _ctx: Context, _old: Option<GuildChannel>, thread: GuildChannel) {
+        info!("discord thread update: {:?}", thread.name);
+        let _ = self.tx.send(DiscordEvent::ThreadUpdate(thread)).await;
+    }
+
+    async fn thread_delete(
+        &self,
+        _ctx: Context,
+        thread: PartialGuildChannel,
+        _full_thread_data: Option<GuildChannel>,
+    ) {
+        info!("discord thread delete: {:?}", thread.id);
+        let _ = self.tx.send(DiscordEvent::ThreadDelete(thread.id)).await;
+    }
+
+    async fn thread_list_sync(&self, _ctx: Context, thread_list_sync: ThreadListSyncEvent) {
+        info!("discord thread list sync");
+        let _ = self
+            .tx
+            .send(DiscordEvent::ThreadListSync(thread_list_sync))
+            .await;
+    }
+
+    async fn thread_members_update(
+        &self,
+        _ctx: Context,
+        thread_members_update: ThreadMembersUpdateEvent,
+    ) {
+        info!("discord thread members update");
+        let _ = self
+            .tx
+            .send(DiscordEvent::ThreadMembersUpdate(thread_members_update))
+            .await;
+    }
 }
