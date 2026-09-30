@@ -288,6 +288,7 @@
             pnpm
             pnpmConfigHook
             deno
+            jq
           ];
 
           pnpmWorkspaces = [ "@lamprey/emoji" ];
@@ -306,7 +307,10 @@
 
           installPhase = ''
             mkdir -p $out
-            cp -r generated mod.ts shared.ts package.json jsr.json readme.md $out/
+            cp -r generated mod.ts shared.ts readme.md $out/
+
+            jq --arg ver "${workspace-version}" '.version = $ver' package.json > $out/package.json
+            jq --arg ver "${workspace-version}" '.version = $ver' jsr.json > $out/jsr.json
           '';
         });
       in {
