@@ -34,7 +34,7 @@ mod realm;
 pub use serenity::all::{
     Activity, ActivityType, Attachment, AttachmentId, Channel, ChannelId, ChannelType,
     CreateAllowedMentions, CreateEmbed, Embed, GuildChannel, GuildId, Message, MessageId,
-    OnlineStatus, Presence, ReactionType, RoleId, User, UserId, WebhookId,
+    MessageType, OnlineStatus, Presence, ReactionType, RoleId, User, UserId, WebhookId,
 };
 
 pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -> PlatformHandle {

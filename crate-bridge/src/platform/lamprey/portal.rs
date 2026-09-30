@@ -150,6 +150,11 @@ impl LampreyPortal {
                     bridge_old::MessageData::Discord { message } => message,
                 };
 
+                // don't bridge "thread created" message
+                if matches!(dm.kind, discord::MessageType::ThreadCreated) {
+                    return Ok(());
+                }
+
                 // check if message has already been bridged
                 if self
                     .handle
