@@ -446,6 +446,10 @@ route!(put    "/api/v1/room/{room_id}/ban/{user_id}"              => room_ban_cr
 route!(post   "/api/v1/room/{room_id}/ban"                        => room_ban_create_bulk(room_id: RoomId), RoomBanBulkCreate);
 route!(delete "/api/v1/room/{room_id}/ban/{user_id}"              => room_ban_remove(room_id: RoomId, user_id: UserIdReq));
 
+// Thread Routes
+route!(post   "/api/v1/channel/{channel_id}/thread"                       => thread_create(channel_id: ChannelId) -> Channel, ChannelCreate);
+route!(post   "/api/v1/channel/{channel_id}/message/{message_id}/thread"  => thread_create_from_message(channel_id: ChannelId, message_id: MessageId) -> Channel, ChannelCreate);
+
 // Thread Member Routes
 route!(get    "/api/v1/thread/{thread_id}/member/{user_id}"       => thread_member_get(thread_id: ChannelId, user_id: UserIdReq) -> ThreadMember);
 route!(put    "/api/v1/thread/{thread_id}/member/{user_id}"       => thread_member_add(thread_id: ChannelId, user_id: UserIdReq) -> ThreadMember, ThreadMemberCreate);
