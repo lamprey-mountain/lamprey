@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use opentelemetry::trace::FutureExt;
 use serenity::all::{
-    CreateAllowedMentions, CreateEmbed, EditAttachments, ExecuteWebhook, Mentionable,
+    ChannelType, CreateAllowedMentions, CreateEmbed, EditAttachments, ExecuteWebhook, Mentionable,
 };
 use tokio::sync::broadcast;
 use tracing::{Instrument, debug, error, warn};
@@ -479,6 +479,62 @@ impl DiscordPortal {
             // PortalEvent::ReactionDelete(message_id, reaction_key, user) => {}
             // PortalEvent::ReactionDeleteKey(message_id, reaction_key) => {}
             // PortalEvent::ReactionDeleteAll(message_id, _) => {}
+            PortalEvent::ThreadCreate(chan) => {
+                let (create, lamprey_chan) = match chan {
+                    bridge_old::ChannelData::Discord { .. } => return Ok(()),
+                    bridge_old::ChannelData::Lamprey { channel } => {
+                        let create = serenity::all::CreateThread::new(&channel.name).kind(
+                            match channel.ty {
+                                lamprey::ChannelType::ThreadPublic => ChannelType::PublicThread,
+                                lamprey::ChannelType::ThreadPrivate => ChannelType::PrivateThread,
+                                // TODO: create NewsThread in News (announcement) channels
+                                _ => return Ok(()),
+                            },
+                        );
+                        (create, channel)
+                    }
+                };
+
+                let discord_cfg = self.portal.discord.as_ref().unwrap();
+
+                let thread = self
+                    .http
+                    .create_thread(discord_cfg.channel_id, &create, None)
+                    .await?;
+
+                let portal_id = bridge_old::PortalId::new();
+                let portal = bridge_old::Portal {
+                    id: portal_id,
+                    realm_id: self.portal.realm_id,
+                    lamprey: Some(bridge_old::PortalLamprey {
+                        channel_id: lamprey_chan.id,
+                        room_id: self.portal.lamprey.as_ref().unwrap().room_id,
+                        last_id: lamprey_chan.last_message_id.unwrap_or_default(),
+                    }),
+                    discord: Some(bridge_old::PortalDiscord {
+                        guild_id: discord_cfg.guild_id,
+                        parent_id: Some(discord_cfg.channel_id),
+                        channel_id: thread.id,
+                        webhook_url: discord_cfg.webhook_url.clone(),
+                        webhook_id: discord_cfg.webhook_id,
+                        last_id: thread.last_message_id.unwrap_or_default(),
+                    }),
+                };
+
+                if self
+                    .handle
+                    .bridge
+                    .db
+                    .portal_create(portal.clone())
+                    .await
+                    .is_ok()
+                {
+                    let handle = self.handle.bridge.create_portal_handle(portal.id);
+                    let _ = self.handle.bridge.events.send(Arc::new(
+                        bridge_old::BridgeEvent::PortalCreated(portal, handle),
+                    ));
+                }
+            }
             _ => {}
         }
         Ok(())

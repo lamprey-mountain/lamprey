@@ -200,6 +200,16 @@ impl Lamprey {
                         channel: channel.clone(),
                     };
 
+                    if let Some(parent_id) = channel.parent_id {
+                        if self.portal_lookup.contains_key(&parent_id) {
+                            self.route_portal_event(
+                                &parent_id,
+                                PortalEvent::ThreadCreate(channel_data),
+                            );
+                            return Ok(());
+                        }
+                    }
+
                     let Some(room_id) = channel.room_id else {
                         return Ok(());
                     };
