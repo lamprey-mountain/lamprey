@@ -48,21 +48,17 @@
 		align-items: center;
 
 		.emoji {
+			height: 36px;
+			width: 36px;
 			margin: 0 8px;
 		}
 	}
 
 	.emoji {
-		height: 40px;
-		width: 40px;
-		padding: 4px;
-		font-size: 32px;
-		cursor: pointer;
-		border-radius: 4px;
-
-		&:hover {
-			background: #fff2;
-		}
+		height: 100%;
+		width: 100%;
+		margin: 0;
+		image-rendering: optimizeQuality;
 	}
 
 	.search {
@@ -102,10 +98,15 @@
 		}
 	}
 
-	// TODO: use emojiwrap
-	.custom-emoji {
+	.emojiwrap {
 		padding: 4px;
 		height: 40px;
 		width: 40px;
+		cursor: pointer;
+		border-radius: 4px;
+
+		&:hover {
+			background: #fff2;
+		}
 	}
 }
