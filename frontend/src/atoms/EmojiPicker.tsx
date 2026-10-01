@@ -252,6 +252,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 					onInput={setSearch}
 					onSubmit={handleSubmit}
 					onEscape={() => props.selected(null, false)}
+					ref={(el) => queueMicrotask(() => el.focus())}
 				/>
 				{/* TODO: (low priority) skin tone */}
 				<div
