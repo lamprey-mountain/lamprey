@@ -625,7 +625,7 @@ impl ServiceMessages {
                             message_id: message.id,
                             version_id: message.latest_version.version_id,
                         }),
-                        message.latest_version.author_id,
+                        Some(message.author_id),
                         url,
                     )
                     .await
