@@ -2,11 +2,16 @@ use std::{collections::HashMap, sync::Arc};
 
 use common::{
     v1::types::{
-        ChannelCreate, ChannelPatch, ChannelType, MessageAttachmentCreate,
+        ChannelCreate, ChannelPatch, ChannelType, EmbedCreate, MessageAttachmentCreate,
         MessageAttachmentCreateType, MessageAttachmentType, MessageCreate, MessageType,
-        ParseMentions, RoomMemberPut, misc::UserIdReq, reaction::ReactionKeyParam,
+        ParseMentions, RoomMemberPut,
+        misc::{
+            UserIdReq,
+            color::{Color, ColorSrgb},
+        },
+        reaction::ReactionKeyParam,
     },
-    v2::types::{AUTOMOD_USER_ID, ChannelId, SERVER_USER_ID},
+    v2::types::{AUTOMOD_USER_ID, ChannelId, SERVER_USER_ID, media::MediaReference},
 };
 use sdk::http::{Http, MessageCreateOptions};
 use time::OffsetDateTime;
@@ -233,9 +238,7 @@ impl LampreyPortal {
                     if let Ok(media) = ly.import_url(import).await {
                         create.attachments.push(MessageAttachmentCreate {
                             ty: MessageAttachmentCreateType::Media {
-                                media: common::v2::types::media::MediaReference::Media {
-                                    media_id: media.id,
-                                },
+                                media: MediaReference::Media { media_id: media.id },
                                 alt: None,
                                 filename: None,
                             },
@@ -243,6 +246,74 @@ impl LampreyPortal {
                             spoiler: false,
                         });
                     }
+                }
+
+                for embed in &dm.embeds {
+                    let mut media = None;
+                    if let Some(image) = &embed.image {
+                        if let Ok(url) = image.url.parse::<url::Url>() {
+                            if let Ok(m) = ly
+                                .import_url(ImportUrl {
+                                    url,
+                                    filename: None,
+                                    description: None,
+                                    size: None,
+                                    user_id: Some(puppet.id),
+                                })
+                                .await
+                            {
+                                media = Some(MediaReference::Media { media_id: m.id });
+                            }
+                        }
+                    }
+
+                    let mut thumbnail = None;
+                    if let Some(thumb) = &embed.thumbnail {
+                        if let Ok(url) = thumb.url.parse::<url::Url>() {
+                            if let Ok(t) = ly
+                                .import_url(ImportUrl {
+                                    url,
+                                    filename: None,
+                                    description: None,
+                                    size: None,
+                                    user_id: Some(puppet.id),
+                                })
+                                .await
+                            {
+                                thumbnail = Some(MediaReference::Media { media_id: t.id });
+                            }
+                        }
+                    }
+
+                    create.embeds.push(EmbedCreate {
+                        url: embed.url.as_ref().and_then(|u| u.parse().ok()),
+                        title: embed.title.clone(),
+                        description: embed.description.clone(),
+                        color: embed.colour.map(|c| {
+                            // TODO: move this into a fn for Color or ColorSrgb
+                            let rgb = c.0;
+                            Color::Srgb(ColorSrgb {
+                                r: ((rgb >> 16) & 0xFF) as f32 / 255.0,
+                                g: ((rgb >> 8) & 0xFF) as f32 / 255.0,
+                                b: (rgb & 0xFF) as f32 / 255.0,
+                                alpha: None,
+                            })
+                        }),
+                        media,
+                        thumbnail,
+                        author_name: embed.author.as_ref().map(|a| a.name.clone()),
+                        author_url: embed
+                            .author
+                            .as_ref()
+                            .and_then(|a| a.url.as_ref().and_then(|u| u.parse().ok())),
+                        author_avatar: embed.author.as_ref().and_then(|a| {
+                            a.icon_url.as_ref().and_then(|u| {
+                                u.parse()
+                                    .ok()
+                                    .map(|url| MediaReference::Url { source_url: url })
+                            })
+                        }),
+                    });
                 }
 
                 // make sure the puppet is a room member, otherwise it won't be able to send any messages
@@ -337,7 +408,7 @@ impl LampreyPortal {
                     {
                         attachments.push(MessageAttachmentCreate {
                             ty: MessageAttachmentCreateType::Media {
-                                media: common::v2::types::media::MediaReference::Media {
+                                media: MediaReference::Media {
                                     media_id: existing_media_id,
                                 },
                                 alt: None,
@@ -353,9 +424,7 @@ impl LampreyPortal {
                         if let Ok(media) = ly.import_url(import).await {
                             attachments.push(MessageAttachmentCreate {
                                 ty: MessageAttachmentCreateType::Media {
-                                    media: common::v2::types::media::MediaReference::Media {
-                                        media_id: media.id,
-                                    },
+                                    media: MediaReference::Media { media_id: media.id },
                                     alt: None,
                                     filename: None,
                                 },
