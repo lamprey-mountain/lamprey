@@ -395,12 +395,12 @@ impl Lamprey {
 
                     // PERF: cache this too
                     let room_member = if let Some(room_id) = message.room_id {
-                        let member = self
-                            .client
+                        self.client
                             .http()
                             .room_member_get(room_id, message.author_id.into())
-                            .await?;
-                        Some(Box::new(member))
+                            .await
+                            .ok()
+                            .map(Box::new)
                     } else {
                         None
                     };
