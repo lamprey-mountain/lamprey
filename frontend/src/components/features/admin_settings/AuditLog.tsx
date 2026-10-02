@@ -5,8 +5,8 @@ import {
 	type Room,
 	SERVER_ROOM_ID,
 } from "sdk";
-import { For, Show, type VoidProps } from "solid-js";
-import { useApi, useAuditLog } from "@/api";
+import { createSignal, For, Show, type VoidProps } from "solid-js";
+import { useApi } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown.tsx";
 import { Time } from "@/atoms/Time.tsx";
 import {
@@ -16,41 +16,67 @@ import {
 } from "@/lib/audit-log-util";
 
 export function AuditLog(_props: VoidProps<{ room: Room }>) {
-	const _api2 = useApi();
-	const auditLog2 = useAuditLog();
-	const log = auditLog2.useList(() => SERVER_ROOM_ID);
-	const collapsed = new ReactiveSet();
+	const api = useApi();
+	const log = api.auditLog.useList(() => SERVER_ROOM_ID);
+	const [isExpanded, setIsExpanded] = createSignal(false);
+	const expanded = new ReactiveSet();
+
+	const toggleAll = () => {
+		if (isExpanded()) {
+			collapseAll();
+		} else {
+			expandAll();
+		}
+		setIsExpanded((b) => !b);
+	};
+
+	const expandAll = () => {
+		const l = log();
+		if (!l) return;
+		for (const id of l.state.ids) {
+			expanded.add(id);
+		}
+	};
+
+	const collapseAll = () => {
+		expanded.clear();
+	};
 
 	return (
 		<>
 			<h2>audit log</h2>
-			<Show when={false}>
-				{/* TODO: expand/collapse audit log entries */}
-				<button type="button" class="button">
-					expand all
-				</button>
-				<button type="button" class="button">
-					collapse all
-				</button>
-			</Show>
-			<Show when={false}>
-				{/* TODO: filter audit log by event type, actor, time range */}
-				<Dropdown
-					options={[
-						{ item: "MessageDelete", label: "message delete" },
-						{ item: "MessageVersionDelete", label: "message version delete" },
-						{ item: "MessageDeleteBulk", label: "message delete bulk" },
-						{ item: "ReactionPurge", label: "reaction purge" },
-					]}
-				/>
-				<Dropdown
-					options={[
-						{ item: "foo", label: "foo" },
-						{ item: "bar", label: "bar" },
-						{ item: "baz", label: "baz" },
-					]}
-				/>
-			</Show>
+			{/* TODO: filter audit log by event type, actor, time range */}
+			<div style="display:flex;gap:4px">
+				<div>
+					<h3 class="dim">user</h3>
+					<Dropdown
+						selected=""
+						options={[
+							{ item: "foo", label: "foo" },
+							{ item: "bar", label: "bar" },
+							{ item: "baz", label: "baz" },
+						]}
+					/>
+				</div>
+				<div>
+					<h3 class="dim">action</h3>
+					<Dropdown
+						options={[
+							{ item: "", label: "all actions" },
+							{ item: "MessageDelete", label: "message delete" },
+							{ item: "MessageVersionDelete", label: "message version delete" },
+							{ item: "MessageDeleteBulk", label: "message delete bulk" },
+							{ item: "ReactionPurge", label: "reaction purge" },
+						]}
+					/>
+				</div>
+				<div>
+					<div class="dim">&nbsp;</div>
+					<button type="button" class="button" onClick={toggleAll}>
+						{isExpanded() ? "collapse" : "expand"} all
+					</button>
+				</div>
+			</div>
 			<Show when={log()}>
 				<ul class="room-settings-audit-log">
 					<For
@@ -59,7 +85,7 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 							if (!l) return [];
 							return mergeAuditLogEntries(
 								l.state.ids
-									.map((id) => auditLog2.cache.get(id))
+									.map((id) => api.auditLog.cache.get(id))
 									.filter((e): e is AuditLogEntry => e !== undefined),
 							);
 						})()}
@@ -75,9 +101,9 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 									<div
 										class="info"
 										onClick={() =>
-											collapsed.has(firstEntry.id)
-												? collapsed.delete(firstEntry.id)
-												: collapsed.add(firstEntry.id)
+											expanded.has(firstEntry.id)
+												? expanded.delete(firstEntry.id)
+												: expanded.add(firstEntry.id)
 										}
 									>
 										<div style="display:flex;gap:4px">
@@ -90,7 +116,7 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 											(formatChanges(SERVER_ROOM_ID, mergedEntry).length !==
 												0 ||
 												mergedEntry.reason) &&
-											!collapsed.has(firstEntry.id)
+											expanded.has(firstEntry.id)
 										}
 									>
 										<ul class="metadata">

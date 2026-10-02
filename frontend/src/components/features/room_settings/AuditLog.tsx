@@ -17,24 +17,22 @@ import {
 } from "@/lib/audit-log-util";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
-	const api2 = useApi();
-	const log = api2.auditLog.useList(() => props.room.id);
+	const api = useApi();
+	const log = api.auditLog.useList(() => props.room.id);
 	const [members, setMembers] = createSignal<
 		Array<{ item: string; label: string }>
 	>([]);
-	const collapsed = new ReactiveSet();
+	const [isExpanded, setIsExpanded] = createSignal(false);
+	const expnded = new ReactiveSet();
 
 	createEffect(() => {
-		console.log("AAA", log()?.state);
-	});
-	createEffect(() => {
-		const roomMembers = api2.room_members.cache;
+		const roomMembers = api.room_members.cache;
 		const membersInRoom = Array.from(roomMembers.values()).filter(
 			(m) => m.room_id === props.room.id,
 		);
 		if (membersInRoom) {
 			const userList = membersInRoom.map((member) => {
-				const user = api2.users.cache.get(member.user_id);
+				const user = api.users.cache.get(member.user_id);
 				return {
 					item: member.user_id,
 					label: member.override_name || user?.name || member.user_id,
@@ -45,18 +43,30 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 		}
 	});
 
+	const toggleAll = () => {
+		if (isExpanded()) {
+			collapseAll();
+		} else {
+			expandAll();
+		}
+		setIsExpanded((b) => !b);
+	};
+
+	const expandAll = () => {
+		const l = log();
+		if (!l) return;
+		for (const id of l.state.ids) {
+			expnded.add(id);
+		}
+	};
+
+	const collapseAll = () => {
+		expnded.clear();
+	};
+
 	return (
 		<>
 			<h2>audit log</h2>
-			<Show when={false}>
-				{/* TODO: expand/collapse audit log entries */}
-				<button type="button" class="button">
-					expand all
-				</button>
-				<button type="button" class="button">
-					collapse all
-				</button>
-			</Show>
 			{/* TODO: filter audit log by event type, actor, time range */}
 			<div style="display:flex;gap:4px">
 				<div>
@@ -75,13 +85,19 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 						]}
 					/>
 				</div>
+				<div>
+					<div class="dim">&nbsp;</div>
+					<button type="button" class="button" onClick={toggleAll}>
+						{isExpanded() ? "collapse" : "expand"} all
+					</button>
+				</div>
 			</div>
 			<Show when={log()}>
 				{(l) => (
 					<ul class="room-settings-audit-log">
 						<For
 							each={mergeAuditLogEntries(
-								l().state.ids.map((id) => api2.auditLog.cache.get(id)!),
+								l().state.ids.map((id) => api.auditLog.cache.get(id)!),
 							)}
 						>
 							{(mergedEntry) => {
@@ -95,9 +111,9 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 										<div
 											class="info"
 											onClick={() =>
-												collapsed.has(firstEntry.id)
-													? collapsed.delete(firstEntry.id)
-													: collapsed.add(firstEntry.id)
+												expnded.has(firstEntry.id)
+													? expnded.delete(firstEntry.id)
+													: expnded.add(firstEntry.id)
 											}
 										>
 											<div style="display:flex;gap:4px">
@@ -110,7 +126,7 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 												(formatChanges(props.room.id, mergedEntry).length !==
 													0 ||
 													mergedEntry.reason) &&
-												!collapsed.has(firstEntry.id)
+												expnded.has(firstEntry.id)
 											}
 										>
 											<ul class="metadata">

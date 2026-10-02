@@ -1,7 +1,14 @@
 import { ReactiveSet } from "@solid-primitives/set";
 import { getTimestampFromUUID, type User } from "sdk";
-import { createResource, For, Show, type VoidProps } from "solid-js";
+import {
+	createResource,
+	createSignal,
+	For,
+	Show,
+	type VoidProps,
+} from "solid-js";
 import { useApi } from "@/api";
+import { Dropdown } from "@/atoms/Dropdown";
 import { Time } from "@/atoms/Time.tsx";
 import {
 	formatAuditLogEntry,
@@ -10,12 +17,14 @@ import {
 } from "@/lib/audit-log-util";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
-	const api2 = useApi();
-	const collapsed = new ReactiveSet();
+	const api = useApi();
+	const [isExpanded, setIsExpanded] = createSignal(false);
+	const expanded = new ReactiveSet();
 
 	// FIXME: return newest records first
+	// TODO: move logic to audit logs service
 	const [log] = createResource(async () => {
-		const { data } = await api2.client.http.GET(
+		const { data } = await api.client.http.GET(
 			"/api/v1/user/{user_id}/audit-logs",
 			{
 				params: { path: { user_id: "@self" } },
@@ -24,9 +33,51 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 		return data;
 	});
 
+	const toggleAll = () => {
+		if (isExpanded()) {
+			collapseAll();
+		} else {
+			expandAll();
+		}
+		setIsExpanded((b) => !b);
+	};
+
+	const expandAll = () => {
+		const l = log();
+		if (!l) return;
+		for (const mergedEntry of mergeAuditLogEntries(l.audit_log_entries)) {
+			expanded.add(mergedEntry.entries[0].id);
+		}
+	};
+
+	const collapseAll = () => {
+		expanded.clear();
+	};
+
 	return (
 		<>
 			<h2>audit log</h2>
+			<div style="display:flex;gap:4px">
+				{/* TODO: filter audit log by event type, actor (application?), time range */}
+				<div>
+					<h3 class="dim">action</h3>
+					<Dropdown
+						options={[
+							{ item: "", label: "all actions" },
+							{ item: "MessageDelete", label: "message delete" },
+							{ item: "MessageVersionDelete", label: "message version delete" },
+							{ item: "MessageDeleteBulk", label: "message delete bulk" },
+							{ item: "ReactionPurge", label: "reaction purge" },
+						]}
+					/>
+				</div>
+				<div>
+					<div class="dim">&nbsp;</div>
+					<button type="button" class="button" onClick={toggleAll}>
+						{isExpanded() ? "collapse" : "expand"} all
+					</button>
+				</div>
+			</div>
 			<Show when={log()}>
 				<ul class="room-settings-audit-log">
 					<For
@@ -47,9 +98,9 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 									<div
 										class="info"
 										onClick={() =>
-											collapsed.has(firstEntry.id)
-												? collapsed.delete(firstEntry.id)
-												: collapsed.add(firstEntry.id)
+											expanded.has(firstEntry.id)
+												? expanded.delete(firstEntry.id)
+												: expanded.add(firstEntry.id)
 										}
 									>
 										<div style="display:flex;gap:4px">
@@ -61,7 +112,7 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 										when={
 											(formatChanges(props.user.id, mergedEntry).length !== 0 ||
 												mergedEntry.reason) &&
-											!collapsed.has(firstEntry.id)
+											expanded.has(firstEntry.id)
 										}
 									>
 										<ul class="metadata">
