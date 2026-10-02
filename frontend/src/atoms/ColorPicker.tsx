@@ -13,7 +13,7 @@ import { Portal } from "solid-js/web";
 import { createTooltip } from "@/atoms/Tooltip";
 import { useMenu } from "@/contexts/mod.tsx";
 import { Color, oklchToRgb } from "@/lib/colors";
-import { compileShader, createWebGLProgram } from "@/lib/webgl";
+import { compileProgram, compileShader } from "@/lib/webgl";
 import { icEdit, icGear } from "@/utils/icons";
 import colorPickerFrag from "./color-picker.frag?raw";
 import colorPickerVert from "./color-picker.vert?raw";
@@ -152,7 +152,7 @@ export const ColorPicker = (props: ColorPickerProps) => {
 			// compile shaders
 			const vs = compileShader(bgGl, bgGl.VERTEX_SHADER, colorPickerVert);
 			const fs = compileShader(bgGl, bgGl.FRAGMENT_SHADER, colorPickerFrag);
-			program = createWebGLProgram(bgGl, vs, fs);
+			program = compileProgram(bgGl, vs, fs);
 			bgGl.useProgram(program);
 
 			// quad covering (0, 0) to (1, 1)

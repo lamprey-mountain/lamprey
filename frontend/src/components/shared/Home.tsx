@@ -1,6 +1,7 @@
 import { Show } from "solid-js";
 import { useApi } from "@/api";
 import { AnimatedText } from "@/atoms/AnimatedText";
+import { Static } from "@/atoms/Static";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
@@ -61,6 +62,8 @@ export const Home = () => {
 			<Show when={flags.has("search_refactor")}>
 				<Search2Testing />
 			</Show>
+
+			<Static />
 		</div>
 	);
 };

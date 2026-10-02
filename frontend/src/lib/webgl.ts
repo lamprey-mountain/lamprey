@@ -21,7 +21,7 @@ export function compileShader(
 	return shader;
 }
 
-export function createWebGLProgram(
+export function compileProgram(
 	gl: WebGLRenderingContext | WebGL2RenderingContext,
 	vertexShader: WebGLShader,
 	fragmentShader: WebGLShader,
