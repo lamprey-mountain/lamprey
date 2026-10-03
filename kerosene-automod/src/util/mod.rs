@@ -10,8 +10,6 @@ mod indexes;
 
 pub use indexes::{RuleIdx, RuleIndexes};
 
-// TODO: copy kerosene-services/src/services/automod/util.rs
-
 /// the result of scanning
 #[derive(Debug, Default)]
 pub struct Scan {
@@ -26,22 +24,24 @@ pub struct Scan {
 }
 
 /// actions to take as a result of scanning
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Actions {
     /// block creation of the associated resource
-    block: Option<String>,
+    ///
+    /// if `None`, don't block. if `Some(None)`, its blocked without a custom message.
+    pub block: Option<Option<String>>,
 
     /// timeout the actor for some time, if possible
-    timeout: Option<Duration>,
+    pub timeout: Option<Duration>,
 
     /// remove the associated resource
-    remove: bool,
+    pub remove: bool,
 
     /// send alerts to these channels
-    alerts: Vec<ChannelId>,
+    pub alerts: Vec<ChannelId>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Matches {
     // TODO: use automod v2 types for this
 }
@@ -78,8 +78,10 @@ impl Scan {
     }
 
     /// merge a scan
-    pub fn with<S: Into<Scan>>(self, scan: S) -> Self {
-        todo!()
+    pub fn merge(&mut self, other: Scan) {
+        self.actions.merge(other.actions);
+        self.rule_indexes |= other.rule_indexes;
+        // FIXME: merge matches
     }
 }
 
@@ -87,18 +89,47 @@ impl Actions {
     /// merge action(s)
     ///
     /// deduplicates actions
-    pub fn with<A: Into<Actions>>(self, actions: A) -> Self {
-        todo!()
+    pub fn merge(&mut self, other: Actions) {
+        if let Some(block) = other.block {
+            if self.block.is_none() {
+                self.block = Some(block);
+                self.remove = false;
+            }
+        }
+
+        if let Some(timeout) = other.timeout {
+            self.timeout = Some(self.timeout.map_or(timeout, |d| d.max(timeout)));
+        }
+
+        if other.remove && self.block.is_none() {
+            self.remove = true;
+        }
+
+        for channel_id in other.alerts {
+            if !self.alerts.contains(&channel_id) {
+                self.alerts.push(channel_id);
+            }
+        }
     }
 }
 
 impl From<AutomodAction> for Actions {
     fn from(value: AutomodAction) -> Self {
+        let mut actions = Actions::default();
         match value {
-            AutomodAction::Block { message } => todo!(),
-            AutomodAction::Timeout { duration } => todo!(),
-            AutomodAction::Remove => todo!(),
-            AutomodAction::SendAlert { channel_id } => todo!(),
+            AutomodAction::Block { message } => {
+                actions.block = Some(message);
+            }
+            AutomodAction::Timeout { duration } => {
+                actions.timeout = Some(duration);
+            }
+            AutomodAction::Remove => {
+                actions.remove = true;
+            }
+            AutomodAction::SendAlert { channel_id } => {
+                actions.alerts.push(channel_id);
+            }
         }
+        actions
     }
 }
