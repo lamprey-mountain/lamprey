@@ -1,7 +1,7 @@
 import { diffArrays } from "diff";
 import type { AuditLogChange, AuditLogEntry } from "sdk";
 import type { JSX } from "solid-js";
-import { useApi, useChannels, useRoomMembers } from "@/api";
+import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 
 const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
@@ -99,7 +99,7 @@ const resolveName = (
 
 	switch (type) {
 		case "user": {
-			const roomMembers2 = useRoomMembers();
+			const roomMembers2 = api2.roomMembers;
 			const member = roomMembers2.cache.get(`${room_id}:${id}`);
 			if (member?.override_name) return member.override_name;
 			const user = api2.users.cache.get(id);
