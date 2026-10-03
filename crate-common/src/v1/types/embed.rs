@@ -7,8 +7,9 @@ use lamprey_macros::record;
 use url::Url;
 
 // maybe allow iframes for some sites? probably could be done client side though
+/// what kind of embed this is
 #[record]
-#[derive(Default, PartialEq, Eq)]
+#[derive(Copy, Default, PartialEq, Eq)]
 pub enum EmbedType {
     /// this is a piece of media, ie. an image, video, or audio
     Media,

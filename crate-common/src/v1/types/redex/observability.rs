@@ -51,12 +51,21 @@ pub enum EvalLogSource {
 
 /// log level for a run log entry
 #[record]
-#[derive(PartialEq, Eq)]
+#[derive(Copy, PartialEq, Eq, Hash)]
 pub enum EvalLogLevel {
+    /// something uninteresting albeit useful to the developer happened
     Trace,
+
+    /// something interesting to the developer happened
     Debug,
+
+    /// something interesting to the user happened
     Info,
+
+    /// something went wrong but we can keep going
     Warning,
+
+    /// something went wrong and we can't keep going
     Error,
 }
 

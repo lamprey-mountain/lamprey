@@ -8,21 +8,11 @@ use reqwest::{Client, ClientBuilder};
 use url::Url;
 
 use crate::{
+    Plugin,
     error::UnfurlError,
-    logging::{LogEntry, LogSink, NoopLogSink, SelectPluginEntry, SelectPluginReason},
-    plugin::UnfurlPlugin,
+    plugin::{PluginHtml, PluginHttp, PluginUrl, UnfurlPlugin},
     util::{EmbedGenerationTemplate, EmbedMedia, EmbedMediaPending},
 };
-
-/// Helper function to extract finished media from EmbedMedia
-/// Returns None for Pending, Downloading, or Failed states
-fn media_to_finished(media: EmbedMedia) -> Option<Media> {
-    match media {
-        EmbedMedia::Finished(m) => Some(m),
-        EmbedMedia::Downloading(m) => Some(m),
-        _ => None,
-    }
-}
 
 /// The progressive state of an Embed.
 #[derive(Debug, Clone)]
@@ -32,74 +22,109 @@ pub struct EmbedGeneration {
 
 pub struct Unfurler {
     client: Client,
-    plugins: Vec<Arc<dyn UnfurlPlugin>>,
+    url_plugins: Vec<Box<dyn PluginUrl>>,
+    http_plugins: Vec<Box<dyn PluginHttp>>,
+    html_plugins: Vec<Box<dyn PluginHtml>>,
 }
 
 pub struct UnfurlerBuilder {
     client_builder: ClientBuilder,
-    plugins: Vec<Arc<dyn UnfurlPlugin>>,
+    url_plugins: Vec<Box<dyn PluginUrl>>,
+    http_plugins: Vec<Box<dyn PluginHttp>>,
+    html_plugins: Vec<Box<dyn PluginHtml>>,
 }
+
+// TODO: use this
+// /// an error that occured while building an unfurler
+// #[derive(Debug, thiserror::Error)]
+// pub enum UnfurlerBuilderError {
+//     #[error("{0}")]
+//     Reqwest(#[from] reqwest::Error),
+// }
 
 impl Unfurler {
     pub fn builder() -> UnfurlerBuilder {
         UnfurlerBuilder {
-            // Safe defaults for external fetching
             client_builder: Client::builder()
                 .timeout(std::time::Duration::from_secs(10))
                 .user_agent("Mozilla/5.0 (compatible; LampreyBot/1.0; +https://example.com)"),
-            plugins: Vec::new(),
+            url_plugins: Vec::new(),
+            http_plugins: Vec::new(),
+            html_plugins: Vec::new(),
         }
     }
 
-    /// Generate some url embeds for this url. Only runs the first sucessful plugin, but the plugin may return multiple embeds.
-    pub async fn unfurl(&self, url: &Url) -> Result<Vec<EmbedGeneration>, UnfurlError> {
-        self.unfurl_with_logger(url, &mut NoopLogSink).await
-    }
-
-    /// Generate some url embeds for this url with logging support.
-    ///
-    /// Only runs the first sucessful plugin, but the plugin may return multiple embeds.
-    /// Log entries are emitted to the provided `log_sink` during unfurling.
-    pub async fn unfurl_with_logger(
+    /// generate embeds for this url
+    #[deprecated = "use unfurl() directly"]
+    pub async fn unfurl_with_tracing(
         &self,
         url: &Url,
-        log_sink: &mut dyn LogSink,
     ) -> Result<Vec<EmbedGeneration>, UnfurlError> {
-        // 1. Try URL-based plugins (e.g. magnet://, ipfs://)
-        for plugin in &self.plugins {
-            if let Some(generation) = plugin.process_url(url).await? {
-                log_sink.handle(LogEntry::SelectPlugin(SelectPluginEntry::new(
-                    plugin.name(),
-                    SelectPluginReason::Url,
-                )));
-                return Ok(generation);
+        self.unfurl(url).await
+    }
+
+    /// generate embeds for this url
+    // TODO: return embeds *and* errors, not a result
+    pub async fn unfurl(&self, url: &Url) -> Result<Vec<EmbedGeneration>, UnfurlError> {
+        // PERF: try to run as many plugins in parallel as possible?
+
+        let mut embeds = vec![];
+
+        // 1. url based plugins (like magnet:// or ipfs://)
+        for plugin in &self.url_plugins {
+            let res = plugin.handle(self, url).await;
+            embeds.extend(res.embeds);
+            // TODO: handle res.errors
+
+            // tracing::info!(
+            //     plugin = %plugin.name(),
+            //     reason = "url",
+            //     "Selected plugin"
+            // );
+
+            if res.stop {
+                return Ok(embeds);
             }
         }
 
-        // 2. We need an HTTP response. Reject non-HTTP protocols at this point.
+        // TODO: use or remove SelectHttp and SelectHtml
+
+        // 2. http based plugins
         if url.scheme() != "http" && url.scheme() != "https" {
-            return Err(UnfurlError::UnsupportedProtocol);
+            return Ok(embeds);
         }
 
         let res = self.client.get(url.clone()).send().await?;
-        let final_url = res.url().clone();
 
-        // 3. Find a plugin that handles this specific response
-        for plugin in &self.plugins {
-            if plugin.accepts_response(&res) {
-                log_sink.handle(LogEntry::SelectPlugin(SelectPluginEntry::new(
-                    plugin.name(),
-                    SelectPluginReason::Response,
-                )));
-                return plugin.process_response(&final_url, res).await;
+        for plugin in &self.http_plugins {
+            let res = plugin.handle(self, res.url(), &res).await;
+            embeds.extend(res.embeds);
+            // TODO: handle res.errors
+
+            if res.stop {
+                return Ok(embeds);
             }
         }
 
-        Err(UnfurlError::NoPluginMatch)
+        // 3. html based plugins
+        for plugin in &self.html_plugins {
+            // TODO: implement this
+            // let sink = plugin.create_sink(self, res.url(), res.status(), res.headers());
+            // sink.process_token(token, line_number);
+            // let res = sink.finish();
+        }
+
+        Ok(embeds)
+    }
+
+    /// get the reqwest http client
+    pub fn http_client(&self) -> &reqwest::Client {
+        &self.client
     }
 }
 
 impl UnfurlerBuilder {
+    /// configure the http client
     pub fn client_config<F>(mut self, f: F) -> Self
     where
         F: FnOnce(ClientBuilder) -> ClientBuilder,
@@ -108,15 +133,33 @@ impl UnfurlerBuilder {
         self
     }
 
-    pub fn add_plugin<P: UnfurlPlugin + 'static>(mut self, plugin: P) -> Self {
-        self.plugins.push(Arc::new(plugin));
+    /// add a plugin to this unfurler
+    pub fn add_plugin<P: Plugin + 'static>(mut self, plugin: P) -> Self {
+        plugin.register(self)
+    }
+
+    /// add a url plugin to this unfurler
+    pub fn add_plugin_url<P: PluginUrl + 'static>(mut self, plugin: P) -> Self {
+        self.url_plugins.push(Box::new(plugin));
         self
+    }
+
+    /// add a http plugin to this unfurler
+    pub fn add_plugin_http<P: PluginHttp + 'static>(mut self, plugin: P) -> Self {
+        todo!()
+    }
+
+    /// add a html plugin to this unfurler
+    pub fn add_plugin_html<P: PluginHtml + 'static>(mut self, plugin: P) -> Self {
+        todo!()
     }
 
     pub fn build(self) -> Result<Unfurler, reqwest::Error> {
         Ok(Unfurler {
             client: self.client_builder.build()?,
-            plugins: self.plugins,
+            url_plugins: self.url_plugins,
+            http_plugins: self.http_plugins,
+            html_plugins: self.html_plugins,
         })
     }
 }
@@ -134,13 +177,13 @@ impl EmbedGeneration {
             title: self.embed.title,
             description: self.embed.description,
             color: self.embed.color,
-            media: self.embed.media.and_then(media_to_finished),
-            thumbnail: self.embed.thumbnail.and_then(media_to_finished),
+            media: self.embed.media.and_then(|m| m.to_finished()),
+            thumbnail: self.embed.thumbnail.and_then(|m| m.to_finished()),
             author_name: self.embed.author_name,
             author_url: self.embed.author_url,
-            author_avatar: self.embed.author_avatar.and_then(media_to_finished),
+            author_avatar: self.embed.author_avatar.and_then(|m| m.to_finished()),
             site_name: self.embed.site_name,
-            site_avatar: self.embed.site_avatar.and_then(media_to_finished),
+            site_avatar: self.embed.site_avatar.and_then(|m| m.to_finished()),
         }
     }
 

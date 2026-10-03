@@ -21,6 +21,7 @@ pub enum EmbedType {
     // Invite,
     // TODO(?): add embeds for other content too?
     /// this is manually created by a bot
+    // TODO: deprecate?
     #[default]
     Custom,
 }

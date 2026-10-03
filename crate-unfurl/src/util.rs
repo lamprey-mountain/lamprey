@@ -70,6 +70,19 @@ impl EmbedMediaPending {
     }
 }
 
+impl EmbedMedia {
+    /// extract finished media
+    ///
+    /// Returns None for Pending, Downloading, or Failed states
+    pub fn to_finished(self) -> Option<Media> {
+        match self {
+            Self::Finished(m) => Some(m),
+            Self::Downloading(m) => Some(m),
+            _ => None,
+        }
+    }
+}
+
 impl From<EmbedMediaPending> for EmbedMedia {
     fn from(value: EmbedMediaPending) -> Self {
         EmbedMedia::Pending(value)

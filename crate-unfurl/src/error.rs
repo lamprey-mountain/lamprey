@@ -1,5 +1,6 @@
 use tokio::task::JoinError;
 
+// TODO: deprecate, use more specific errors?
 #[derive(thiserror::Error, Debug)]
 pub enum UnfurlError {
     #[error("HTTP request failed: {0}")]

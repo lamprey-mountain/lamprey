@@ -6,8 +6,8 @@ use serde::Deserialize;
 use url::Url;
 
 use crate::{
-    UnfurlPlugin,
     error::UnfurlError,
+    plugin::UnfurlPlugin,
     unfurler::EmbedGeneration,
     util::{EmbedGenerationTemplate, EmbedMediaPending},
 };

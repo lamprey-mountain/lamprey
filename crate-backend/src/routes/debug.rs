@@ -8,7 +8,6 @@ use common::v1::types::application::Scope;
 use common::v1::types::{ChannelId, Embed, Permission, RoomId, UserId};
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use kerosene_services::services::media::Import;
-use lamprey_unfurl::logging::LogEntry;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::ToSchema;
@@ -258,35 +257,6 @@ async fn debug_version() -> Result<impl IntoResponse> {
     }))
 }
 
-/// Debug unfurler request
-#[derive(Debug, Deserialize, ToSchema)]
-struct DebugRequest {
-    url: Url,
-}
-
-/// Debug unfurler response
-#[derive(Debug, Serialize, ToSchema)]
-struct DebugResponse {
-    /// unfurler log
-    log: Vec<LogEntry>,
-
-    /// the generated embeds
-    embeds: Vec<Embed>,
-}
-
-/// Batch unfurl request
-#[derive(Debug, Deserialize, ToSchema)]
-struct UnfurlRequest {
-    /// limits to 4 urls max
-    urls: Vec<Url>,
-}
-
-/// Batch unfurl response
-#[derive(Debug, Serialize, ToSchema)]
-struct UnfurlResponse {
-    embeds: Vec<Embed>,
-}
-
 /// Unfurler debug
 #[utoipa::path(
     post,
@@ -302,101 +272,6 @@ async fn unfurler_debug(
     State(s): State<Arc<ServerState>>,
     Json(json): Json<DebugRequest>,
 ) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
-
-    let mut log_sink = DebugLogSink::new();
-    let generations = s
-        .inner
-        .services()
-        .embed
-        .unfurl_with_logger(&json.url, &mut log_sink)
-        .await?;
-
-    let mut embeds = Vec::new();
-    for mut g in generations {
-        let pending = g.pending_media();
-        for p in pending {
-            let import = Import::new(auth.user.id).merge(MediaCreate {
-                alt: p.alt,
-                strip_exif: false,
-                source: MediaCreateSource::Download {
-                    filename: None,
-                    size: None,
-                    source_url: p.url.clone(),
-                },
-            });
-            let mut item = s.services().media.import_from_url(import, &p.url).await?;
-            let media = item.ready().await;
-            g.update_media(
-                p.placeholder_media_id,
-                lamprey_unfurl::util::EmbedMedia::Finished((*media).clone()),
-            );
-        }
-
-        embeds.push(g.into_embed());
-    }
-
-    Ok(Json(DebugResponse {
-        log: log_sink.into_entries(),
-        embeds,
-    }))
-}
-
-/// Unfurl multiple urls
-#[utoipa::path(
-    post,
-    path = "/unfurler/unfurl",
-    tags = ["debug"],
-    request_body = UnfurlRequest,
-    responses(
-        (status = OK, body = UnfurlResponse, description = "success"),
-    )
-)]
-async fn unfurler_unfurl(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    Json(json): Json<UnfurlRequest>,
-) -> Result<impl IntoResponse> {
-    auth.ensure_scopes(&[Scope::Full])?;
-    auth.user.ensure_unsuspended()?;
-
-    if json.urls.len() > 4 {
-        return Err(crate::error::Error::BadRequest(
-            "maximum 4 URLs allowed".into(),
-        ));
-    }
-
-    let mut embeds = Vec::new();
-    for url in json.urls {
-        let generations = s.inner.services().embed.unfurl(&url).await?;
-
-        for mut g in generations {
-            let pending = g.pending_media();
-            for p in pending {
-                let import = Import::new(auth.user.id).merge(MediaCreate {
-                    alt: p.alt,
-                    strip_exif: false,
-                    source: MediaCreateSource::Download {
-                        filename: None,
-                        size: None,
-                        source_url: p.url.clone(),
-                    },
-                });
-                let mut item = s.services().media.import_from_url(import, &p.url).await?;
-                let media = item.ready().await;
-
-                g.update_media(
-                    p.placeholder_media_id,
-                    lamprey_unfurl::util::EmbedMedia::Finished((*media).clone()),
-                );
-            }
-
-            embeds.push(g.into_embed());
-        }
-    }
-
-    Ok(Json(UnfurlResponse { embeds }))
 }
 
 /// Trigger a panic
@@ -539,8 +414,6 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(debug_info))
         .routes(routes!(debug_version))
-        .routes(routes!(unfurler_debug))
-        .routes(routes!(unfurler_unfurl))
         .routes(routes!(debug_panic))
         .routes(routes!(debug_test_permissions))
         .routes(routes!(debug_health))

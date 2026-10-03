@@ -48,6 +48,7 @@ pub mod tag;
 pub mod text;
 pub mod thread;
 pub mod thread_member;
+pub mod unfurl;
 pub mod user;
 pub mod user_connection;
 pub mod util;
