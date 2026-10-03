@@ -4,11 +4,11 @@
 
 export type Globals = {
   log: {
-    debug(content: string, metadata: Record<string, string>): void;
-    info(content: string, metadata: Record<string, string>): void;
-    warn(content: string, metadata: Record<string, string>): void;
-    error(content: string, metadata: Record<string, string>): void;
-  }
+    debug(content: string, metadata?: Record<string, string>): void;
+    info(content: string, metadata?: Record<string, string>): void;
+    warn(content: string, metadata?: Record<string, string>): void;
+    error(content: string, metadata?: Record<string, string>): void;
+  },
 };
 
 export type Context = {
@@ -32,9 +32,9 @@ export type Register = {
 }
 
 export type Input<T extends Capability[], R = void> = {
-  needs<U extends Capability[]>(perms: [...U]): Input<[...T, ...U]>;
-  id(id: string): Input<T>;
-  label(id: string): Input<T>;
+  needs<U extends Capability[]>(perms: [...U]): Input<[...T, ...U], R>;
+  id(id: string): Input<T, R>;
+  label(id: string): Input<T, R>;
   run(call: (ctx: FilteredContext<T>) => R): void;
 };
 
@@ -53,6 +53,9 @@ export interface Script {
 declare module "lamprey:http" {
   // NOTE: i should probably make these use actual http methods
   export class Request {
+    // TODO
+    // constructor(body?: string, init?: { status?: number; headers?: Record<string, string> });
+
     readonly url: string;
     readonly method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | string;
     readonly redirect: string;
@@ -134,7 +137,7 @@ declare module "lamprey:redex" {
 }
 
 declare global {
-
+  const log: Globals["log"];
 }
 
 export {};
