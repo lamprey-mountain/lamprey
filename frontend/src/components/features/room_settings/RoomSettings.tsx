@@ -132,7 +132,13 @@ const todo = (_what: string) => null as unknown as Component<any>;
 
 const adminTabs: TabItem[] = [
 	{ category: "overview" },
-	{ name: "info", path: "", component: Admin.ServerInfo },
+	{ name: "info", path: "", component: Admin.Overview },
+	{
+		name: "analytics",
+		path: "analytics",
+		component: Admin.Todo,
+		permissionCheck: (p) => p.has("AnalyticsView"),
+	},
 
 	// control access to this server
 	{ category: "access" },
