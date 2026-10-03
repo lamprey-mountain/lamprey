@@ -1,3 +1,6 @@
+use core::fmt;
+use std::fmt::Write;
+
 use crate::{
     ast::{
         block::{Block, Document},
@@ -10,8 +13,12 @@ use crate::{
 /// render to html
 #[derive(Debug, Default)]
 pub struct HtmlRenderer {
-    // prevent people from constructing manually
-    _a: (),
+    _nope: (), // prevent people from manually constructing this
+}
+
+#[derive(Debug, Default)]
+struct Inner {
+    writer: String,
 }
 
 impl Renderer for HtmlRenderer {
@@ -20,7 +27,9 @@ impl Renderer for HtmlRenderer {
     fn render<Q: Queryable>(&self, q: Q) -> Self::Output {
         let node = q.get_root();
         if let Some(doc) = Document::cast(node) {
-            self.render(doc)
+            let mut r = Inner::default();
+            r.render(doc).unwrap();
+            r.writer
         } else {
             // TODO: handle error
             String::new()
@@ -28,214 +37,212 @@ impl Renderer for HtmlRenderer {
     }
 }
 
-// PERF: write using std::fmt::Write instead of using strings
-impl HtmlRenderer {
-    fn render(&self, doc: Document) -> String {
-        doc.children()
-            .map(|block| self.render_block(block))
-            .collect()
+impl Inner {
+    fn render(&mut self, doc: Document) -> fmt::Result {
+        for block in doc.children() {
+            self.render_block(block)?;
+        }
+        Ok(())
     }
 
-    fn render_block(&self, block: Block) -> String {
+    fn render_block(&mut self, block: Block) -> fmt::Result {
         match block {
             Block::Header(header) => {
                 let level = header.level();
-                format!(
-                    "<h{}>{}</h{}>",
-                    level,
-                    header
-                        .children()
-                        .map(|b| self.render_inline(b))
-                        .collect::<String>(),
-                    level
-                )
+                write!(self.writer, "<h{}>", level)?;
+                for child in header.children() {
+                    self.render_inline(child)?;
+                }
+                write!(self.writer, "</h{}>", level)?;
             }
             Block::Paragraph(paragraph) => {
-                format!(
-                    "<p>{}</p>",
-                    paragraph
-                        .children()
-                        .map(|i| self.render_inline(i))
-                        .collect::<String>()
-                )
+                write!(self.writer, "<p>")?;
+                for child in paragraph.children() {
+                    self.render_inline(child)?;
+                }
+                write!(self.writer, "</p>")?;
             }
             Block::Blockquote(blockquote) => {
-                format!(
-                    "<blockquote>{}</blockquote>",
-                    blockquote
-                        .children()
-                        .map(|b| self.render_block(b))
-                        .collect::<String>()
-                )
+                write!(self.writer, "<blockquote>")?;
+                for child in blockquote.children() {
+                    self.render_block(child)?;
+                }
+                write!(self.writer, "</blockquote>")?;
             }
             Block::Codeblock(codeblock) => {
-                format!(
-                    "<pre><code class=\"language-{}\">{}</code></pre>",
-                    codeblock.language().unwrap_or_else(|| "text".to_string()),
-                    codeblock
-                        .content()
-                        .map(|i| self.render_inline(i))
-                        .collect::<String>()
-                )
-            }
-            Block::List(list) => {
-                match list {
-                    List::Ordered(l) => {
-                        format!(
-                            "<ol>{}</ol>",
-                            l.items()
-                                .map(|item| {
-                                    format!(
-                                        "<li>{}</li>",
-                                        item.children()
-                                            .map(|node| self.render_inline(node))
-                                            .collect::<String>(),
-                                    )
-                                })
-                                .collect::<String>(),
-                        )
-                    }
-                    List::Unordered(l) => {
-                        format!(
-                            "<ul>{}</ul>",
-                            l.items()
-                                .map(|item| {
-                                    format!(
-                                        "<li>{}</li>",
-                                        item.children()
-                                            .map(|node| self.render_inline(node))
-                                            .collect::<String>(),
-                                    )
-                                })
-                                .collect::<String>(),
-                        )
-                    }
-                    List::Tasks(l) => {
-                        format!(
-                            r#"<ul class="task-list">{}</ul>"#,
-                            l.items()
-                                .map(|item| {
-                                    // TODO: research better ways of rendering this?
-                                    // maybe add config to HtmlRenderer
-                                    let checked = if item.mark() == TaskListMark::Complete { "checked" } else { "" };
-                                    format!(
-                                        r#"<li class="task-item"><input class="task-checkbox" type="checkbox" {} disabled />{}</li>"#,
-                                        checked,
-                                        item.children()
-                                            .map(|node| self.render_inline(node))
-                                            .collect::<String>(),
-                                    )
-                                })
-                                .collect::<String>(),
-                        )
-                    }
+                write!(
+                    self.writer,
+                    "<pre><code class=\"language-{}\">",
+                    codeblock.language().unwrap_or_default()
+                )?;
+                for child in codeblock.content() {
+                    self.render_inline(child)?;
                 }
+                write!(self.writer, "</code></pre>")?;
             }
+            Block::List(list) => match list {
+                List::Ordered(l) => {
+                    write!(self.writer, "<ol>")?;
+                    for item in l.items() {
+                        write!(self.writer, "<li>")?;
+                        for node in item.children() {
+                            self.render_inline(node)?;
+                        }
+                        write!(self.writer, "</li>")?;
+                    }
+                    write!(self.writer, "</ol>")?;
+                }
+                List::Unordered(l) => {
+                    write!(self.writer, "<ul>")?;
+                    for item in l.items() {
+                        write!(self.writer, "<li>")?;
+                        for node in item.children() {
+                            self.render_inline(node)?;
+                        }
+                        write!(self.writer, "</li>")?;
+                    }
+                    write!(self.writer, "</ul>")?;
+                }
+                List::Tasks(l) => {
+                    write!(self.writer, r#"<ul class="task-list">"#)?;
+                    for item in l.items() {
+                        let checked = if item.mark() == TaskListMark::Complete {
+                            "checked"
+                        } else {
+                            ""
+                        };
+                        // TODO: research better ways of rendering this?
+                        // maybe add config to HtmlRenderer
+                        write!(
+                            self.writer,
+                            r#"<li class="task-item"><input class="task-checkbox" type="checkbox" {} disabled />"#,
+                            checked
+                        )?;
+                        for node in item.children() {
+                            self.render_inline(node)?;
+                        }
+                        write!(self.writer, "</li>")?;
+                    }
+                    write!(self.writer, "</ul>")?;
+                }
+            },
             Block::Table(table) => {
+                write!(self.writer, "<table>")?;
                 let mut rows = table.rows().peekable();
-                let mut html = String::new();
-                html.push_str("<table>");
 
                 if let Some(header_row) = rows.next() {
-                    html.push_str("<thead><tr>");
+                    write!(self.writer, "<thead><tr>")?;
                     for cell in header_row.cells() {
-                        let text = cell
-                            .children()
-                            .map(|i| self.render_inline(i))
-                            .collect::<String>();
-                        html.push_str(&format!("<th>{}</th>", text.trim()));
+                        write!(self.writer, "<th>")?;
+                        for i in cell.children() {
+                            self.render_inline(i)?;
+                        }
+                        write!(self.writer, "</th>")?;
                     }
-                    html.push_str("</tr></thead>");
+                    write!(self.writer, "</tr></thead>")?;
                 }
 
                 rows.next(); // skip alignment row
 
                 if rows.peek().is_some() {
-                    html.push_str("<tbody>");
+                    write!(self.writer, "<tbody>")?;
                     for row in rows {
-                        html.push_str("<tr>");
+                        write!(self.writer, "<tr>")?;
                         for cell in row.cells() {
-                            let text = cell
-                                .children()
-                                .map(|i| self.render_inline(i))
-                                .collect::<String>();
-                            html.push_str(&format!("<td>{}</td>", text.trim()));
+                            write!(self.writer, "<td>")?;
+                            for i in cell.children() {
+                                self.render_inline(i)?;
+                            }
+                            write!(self.writer, "</td>")?;
                         }
-                        html.push_str("</tr>");
+                        write!(self.writer, "</tr>")?;
                     }
-                    html.push_str("</tbody>");
+                    write!(self.writer, "</tbody>")?;
                 }
 
-                html.push_str("</table>");
-                html
+                write!(self.writer, "</table>")?;
             }
         }
+        Ok(())
     }
 
-    fn render_inline(&self, inline: Inline) -> String {
+    fn render_inline(&mut self, inline: Inline) -> fmt::Result {
         match inline {
-            Inline::Strong(strong) => format!(
-                "<strong>{}</strong>",
-                strong
-                    .children()
-                    .map(|i| self.render_inline(i))
-                    .collect::<String>()
-            ),
-            Inline::Emphasis(emphasis) => format!(
-                "<em>{}</em>",
-                emphasis
-                    .children()
-                    .map(|i| self.render_inline(i))
-                    .collect::<String>()
-            ),
-            Inline::Link(link) => format!(
-                "<a href=\"{}\">{}</a>",
+            Inline::Strong(strong) => {
+                write!(self.writer, "<strong>")?;
+                for child in strong.children() {
+                    self.render_inline(child)?;
+                }
+                write!(self.writer, "</strong>")?;
+            }
+            Inline::Emphasis(emphasis) => {
+                write!(self.writer, "<em>")?;
+                for child in emphasis.children() {
+                    self.render_inline(child)?;
+                }
+                write!(self.writer, "</em>")?;
+            }
+            Inline::Link(link) => {
                 // TODO: escape
-                link.href(),
-                link.children()
-                    .map(|i| self.render_inline(i))
-                    .collect::<String>()
-            ),
-            Inline::Spoiler(spoiler) => format!(
-                "<span class=\"spoiler\">{}</span>",
-                spoiler
-                    .children()
-                    .map(|i| self.render_inline(i))
-                    .collect::<String>()
-            ),
-            Inline::Strikethrough(s) => format!(
-                "<s>{}</s>",
-                s.children()
-                    .map(|i| self.render_inline(i))
-                    .collect::<String>()
-            ),
-            Inline::Code(code) => format!(
-                "<code>{}</code>",
-                code.children()
-                    .map(|i| self.render_inline(i))
-                    .collect::<String>()
-            ),
+                write!(self.writer, "<a href=\"{}\">", link.href())?;
+                for child in link.children() {
+                    self.render_inline(child)?;
+                }
+                write!(self.writer, "</a>")?;
+            }
+            Inline::Spoiler(spoiler) => {
+                write!(self.writer, "<span class=\"spoiler\">")?;
+                for child in spoiler.children() {
+                    self.render_inline(child)?;
+                }
+                write!(self.writer, "</span>")?;
+            }
+            Inline::Strikethrough(s) => {
+                write!(self.writer, "<s>")?;
+                for child in s.children() {
+                    self.render_inline(child)?;
+                }
+                write!(self.writer, "</s>")?;
+            }
+            Inline::Code(code) => {
+                write!(self.writer, "<code>")?;
+                for child in code.children() {
+                    self.render_inline(child)?;
+                }
+                write!(self.writer, "</code>")?;
+            }
             Inline::Timestamp(timestamp) => {
                 // TODO: render timestamp from rust?
-                let t = timestamp.time();
-                let style = timestamp.style();
-                format!("<time datetime=\"{}\" data-style=\"{}\"></time>", t, style)
+                write!(
+                    self.writer,
+                    "<time datetime=\"{}\" data-style=\"{}\"></time>",
+                    timestamp.time(),
+                    timestamp.style()
+                )?;
             }
-            // TODO: escape
-            Inline::Text(text) => text.text(),
+            Inline::Text(text) => {
+                // TODO: escape
+                write!(self.writer, "{}", text.text())?;
+            }
             // TODO: custom html for mentions?
             // maybe make this configurable
             Inline::Mention(mention) => match mention.parse() {
-                MentionData::User(u) => format!("@{}", u),
-                MentionData::Role(r) => format!("@{}", r),
-                MentionData::Channel(c) => format!("#{}", c),
-                MentionData::Everyone => "@everyone".to_string(),
+                MentionData::User(u) => write!(self.writer, "@{}", u)?,
+                MentionData::Role(r) => write!(self.writer, "@{}", r)?,
+                MentionData::Channel(c) => write!(self.writer, "#{}", c)?,
+                MentionData::Everyone => write!(self.writer, "@everyone")?,
             },
             // TODO: custom html for custom emoji?
             // maybe make this configurable
-            Inline::CustomEmoji(e) => format!(":{}:", e.parse().name),
+            Inline::CustomEmoji(e) => {
+                write!(self.writer, ":{}:", e.parse().name)?;
+            }
             // TODO: verify that this doesnt risk xss
-            Inline::UnicodeEmoji(e) => e.text(),
+            Inline::UnicodeEmoji(e) => {
+                write!(self.writer, "{}", e.text())?;
+            }
         }
+
+        Ok(())
     }
 }
