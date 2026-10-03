@@ -1,0 +1,18 @@
+[package]
+name = "kerosene-zygote"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+
+[dependencies]
+bytes = "1.12.1"
+futures = "0.3.34"
+quinn = "0.11.12"
+rand = "0.10.3"
+slotmap = "1.1.1"
+thiserror = "2.0.21"
+tracing = "0.1.44"

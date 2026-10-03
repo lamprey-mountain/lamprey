@@ -9,7 +9,7 @@ members = [
   "kerosene-rest",
   "kerosene-sync",
   "kerosene-services",
-  "lamprey", "kerosene-automod",
+  "lamprey", "kerosene-automod", "kerosene-zygote",
 ]
 
 [workspace.package]
