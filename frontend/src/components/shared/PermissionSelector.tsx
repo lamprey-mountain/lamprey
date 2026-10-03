@@ -70,17 +70,7 @@ const permissionGroupOrder = (ty: RoomType) => {
 				"dangerous",
 			];
 		case "Server":
-			return [
-				"server",
-				"server members",
-				"room",
-				"members",
-				"messages",
-				"channels", // remove?
-				"voice", // remove?
-				"calendar", // remove?
-				"dangerous",
-			];
+			return ["server", "user", "room", "application", "members", "dangerous"];
 		case "Emoji":
 			return ["general", "room", "members", "dangerous"];
 	}
