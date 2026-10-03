@@ -4557,6 +4557,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "kerosene-automod"
+version = "0.1.4"
+dependencies = [
+ "kerosene-core",
+ "lamprey-common",
+ "regex",
+ "regex-automata",
+]
+
+[[package]]
 name = "kerosene-core"
 version = "0.1.4"
 dependencies = [

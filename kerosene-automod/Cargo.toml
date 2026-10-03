@@ -1,0 +1,15 @@
+[package]
+name = "kerosene-automod"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+
+[dependencies]
+kerosene = { package = "kerosene-core", version = "0.1.1", path = "../kerosene-core" }
+lamprey = { package = "lamprey-common", version = "0.1.1", path = "../crate-common" }
+regex = "1.13.1"
+regex-automata = "0.4.18"

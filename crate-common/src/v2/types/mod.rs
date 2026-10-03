@@ -1,4 +1,5 @@
 // pub mod channel;
+pub mod automod;
 pub mod components;
 pub mod embed;
 mod flume;

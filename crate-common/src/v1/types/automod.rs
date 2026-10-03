@@ -1,4 +1,6 @@
-use crate::v1::types::{AutomodRuleId, ChannelId, MessageId, RoleId, RoomId, UserId};
+use crate::v1::types::{
+    AutomodRuleId, ChannelId, MessageId, RoleId, RoomId, UserId, misc::duration::Duration,
+};
 
 use lamprey_macros::record;
 
@@ -108,7 +110,7 @@ pub struct AutomodRuleUpdate {
 pub struct AutomodRuleSummary {
     pub id: AutomodRuleId,
     pub name: String,
-    pub enabled: bool,
+    pub enabled: bool, // NOTE: this probably isnt necessary?
     pub target: AutomodTarget,
 }
 
@@ -235,8 +237,7 @@ pub enum AutomodMatchKind {
 
 /// where a piece of text was found
 #[record]
-#[derive(PartialEq, Eq, Hash)]
-// #[serde(tag = "type")]
+#[derive(Copy, PartialEq, Eq, Hash)]
 pub enum AutomodTextLocation {
     /// the user's name
     UserName,
@@ -288,7 +289,7 @@ pub enum AutomodTextLocation {
 
 /// where a piece of media was found
 #[record]
-#[derive(PartialEq, Eq, Hash)]
+#[derive(Copy, PartialEq, Eq, Hash)]
 pub enum AutomodMediaLocation {
     /// the user's avatar
     UserAvatar,
@@ -302,7 +303,18 @@ pub enum AutomodMediaLocation {
     /// a message's attachment
     MessageAttachment,
 
-    // TODO: varients for embed media fields
+    // TODO: add variants for embed media fields
+    // /// the main media for an embed
+    // EmbedMedia,
+    //
+    // /// a thumbnail for a url embed
+    // EmbedThumb,
+    //
+    // /// the avatar of an embed's author
+    // EmbedAuthorAvatar,
+    //
+    // /// the avatar of an embed's site
+    // EmbedSiteAvatar,
     /// a test scan
     Test,
 }
@@ -310,7 +322,9 @@ pub enum AutomodMediaLocation {
 #[record]
 #[serde(tag = "type")]
 pub enum AutomodTrigger {
-    /// scan text based on regex. regexes are case insensitive.
+    /// match text based on regex
+    ///
+    /// regexes are case insensitive.
     TextRegex {
         /// deny content that matches any of these regexes.
         // max length 32
@@ -326,7 +340,9 @@ pub enum AutomodTrigger {
         // keywords_allow: Vec<String>,
     },
 
-    /// scan text based on its keywords. automatically adds word boundaries and decancers the string (ie. properly handles unicode lookalikes).
+    /// match text based on keywords
+    ///
+    /// automatically adds word boundaries and decancers the string (ie. properly handles unicode lookalikes).
     TextKeywords {
         // max length 32
         // TODO: rename to deny in api
@@ -334,11 +350,11 @@ pub enum AutomodTrigger {
         deny: Vec<String>,
 
         // max length 32
-        // probably not useful?
+        // maybe not useful?
         allow: Vec<String>,
     },
 
-    /// deny text based on links
+    /// match text based on links
     TextLinks {
         /// which hostnames to block or allow. works recursively (ie. foo.example.com is blocked if example.com is blocked)
         hostnames: Vec<String>,
@@ -361,14 +377,41 @@ pub enum AutomodTrigger {
     //     /// which hostnames to allow
     //     allow: Vec<String>,
     // },
-    /// a builtin server defined list
+    /// matches based on a builtin server defined list
     TextBuiltin {
         /// the name of the server defined list
         // NOTE: maybe i want to use an id here instead?
         list: String,
     },
 
-    /// a builtin server defined media scanner
+    // TODO: maybe add this?
+    // /// matches based on markdown features some text uses
+    // TextMarkdown {
+    //     /// matches if any headers are used
+    //     headers: bool,
+    //
+    //     /// matches if any lists are used
+    //     lists: bool,
+    //
+    //     /// matches if any codeblocks are used
+    //     codeblocks: bool,
+    //
+    //     /// matches if any tables are used
+    //     tables: bool,
+    // },
+
+    // TODO: add these, deprecate MessageAttachments and MessageEmbeds
+    // /// match message attachments
+    // MessageAttachments {
+    //     /// trigger if the number of attachments is greater than this
+    //     count: u8,
+    // },
+    // /// match message embeds
+    // MessageEmbeds {
+    //     /// trigger if the number of attachments is greater than this
+    //     count: u8,
+    // },
+    /// matches media with a builtin server defined media scanner
     MediaScan {
         /// the name of a server defined media scanner
         ///
@@ -390,13 +433,17 @@ pub enum AutomodAction {
         message: Option<String>,
     },
 
-    /// timeout a user. not valid for `AutomodTarget::Member`.
+    /// timeout a user
+    ///
+    /// Not valid for [`AutomodTarget::Member`].
     Timeout {
         /// in milliseconds
-        duration: u64,
+        duration: Duration,
     },
 
-    /// remove a message. unlike Block, removed messages can be allowed/restored by a moderator. not valid for `AutomodTarget::Member`.
+    /// remove a message
+    ///
+    /// Unlike `Block`, removed messages can be allowed/restored by a moderator. Not valid for [`AutomodTarget::Member`].
     Remove,
 
     /// send an alert to a channel
@@ -406,6 +453,9 @@ pub enum AutomodAction {
         // TODO: remove this action when channel is removed
         channel_id: ChannelId,
     },
+    // TODO: maybe add this? if i want to replace some permissions with automod
+    // /// remove external custom emoji from the message
+    // StripExternalEmoji,
 }
 
 impl AutomodTextLocation {
