@@ -98,7 +98,7 @@ async fn server_info(
             }),
         },
         version: ServerVersion {
-            implementation: "chat-server".to_string(),
+            implementation: "kerosene".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
             extra,
         },
