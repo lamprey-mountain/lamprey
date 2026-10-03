@@ -9,6 +9,7 @@ use common::v1::types::room_template::{
 use common::v1::types::{Channel, ChannelId, ChannelType, PermissionOverwriteType, Role, RoleId};
 use common::v1::types::{PaginationQuery, PaginationResponse};
 use common::v1::types::{RoomId, RoomPatch, UserId, channel::ChannelCreate, role::RoleCreate};
+use common::v2::types::{SERVER_ADMIN_ROLE_ID, SERVER_REGISTERED_ROLE_ID, SERVER_ROOM_ID};
 use uuid::Uuid;
 
 use crate::prelude::*;
@@ -150,7 +151,14 @@ impl ServiceRoomTemplates {
 
         // Create roles
         for template_role in &snapshot.roles {
-            let role_id = if template_role.position == 0 {
+            let role_id = if matches!(
+                template_role.id,
+                SERVER_ADMIN_ROLE_ID,
+                SERVER_REGISTERED_ROLE_ID,
+                SERVER_ROOM_ID
+            ) {
+                template_role.id
+            } else if template_role.position == 0 {
                 RoleId::from(room_id.into_inner())
             } else {
                 RoleId::new()

@@ -604,7 +604,9 @@ impl ServiceRooms {
         let mut template_items = None;
 
         if welcome_channel_id.is_none() {
-            let snapshot = if create.public.unwrap_or_default() {
+            let snapshot = if extra.ty == RoomType::Server {
+                builtin::server_room()
+            } else if create.public.unwrap_or_default() {
                 builtin::public_room()
             } else {
                 builtin::private_room()

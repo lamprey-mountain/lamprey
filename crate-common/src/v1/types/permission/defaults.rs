@@ -239,3 +239,19 @@ pub const MODERATOR: &[Permission] = &[
     Permission::RoomJoin,
     Permission::RoomJoinForce,
 ];
+
+/// Default permissions for everyone on a server
+pub const SERVER_EVERYONE: &[Permission] = &[
+    Permission::DmCreate,
+    Permission::FriendCreate,
+    Permission::RoomCreate,
+    Permission::RoomJoin,
+    Permission::UserManageSelf,
+    Permission::UserProfileSelf,
+];
+
+/// Default permissions for registered users on a server
+pub const SERVER_REGISTERED: &[Permission] = &[
+    Permission::ApplicationCreate,
+    // NOTE: should i restrict more permissions?
+];

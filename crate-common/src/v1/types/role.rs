@@ -207,9 +207,10 @@ impl Role {
 }
 
 impl RoleCreate {
-    pub fn new(name: String) -> Self {
+    /// create a new role with a name
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
-            name,
+            name: name.into(),
             description: None,
             allow: vec![],
             deny: vec![],
@@ -218,5 +219,47 @@ impl RoleCreate {
             hoist: false,
             sticky: false,
         }
+    }
+
+    /// set the description for this role
+    pub fn description(mut self, description: impl Into<String>) -> Self {
+        self.description = Some(description.into());
+        self
+    }
+
+    /// allow permissions for this role
+    pub fn allow(mut self, perms: impl Into<Vec<Permission>>) -> Self {
+        self.allow = perms.into();
+        self
+    }
+
+    /// deny permissions for this role
+    pub fn deny(mut self, perms: impl Into<Vec<Permission>>) -> Self {
+        self.deny = perms.into();
+        self
+    }
+
+    /// set if this role can be mentioned by members
+    pub fn mentionable(mut self, mentionable: bool) -> Self {
+        self.is_mentionable = mentionable;
+        self
+    }
+
+    /// set if this role is self-applicable
+    pub fn self_applicable(mut self, self_applicable: bool) -> Self {
+        self.is_self_applicable = self_applicable;
+        self
+    }
+
+    /// set if this role should be hoisted
+    pub fn hoisted(mut self, hoisted: bool) -> Self {
+        self.hoist = hoisted;
+        self
+    }
+
+    /// set if this role should be sticky
+    pub fn sticky(mut self, sticky: bool) -> Self {
+        self.sticky = sticky;
+        self
     }
 }
