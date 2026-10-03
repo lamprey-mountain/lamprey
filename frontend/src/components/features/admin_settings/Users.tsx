@@ -1,7 +1,8 @@
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { throttle } from "@solid-primitives/scheduled";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import { useUsers } from "@/api";
+import { useApi, useUsers } from "@/api";
+import { Search } from "@/atoms/Search";
 import { Time } from "@/atoms/Time.tsx";
 import { Avatar } from "@/components/shared/User";
 import { useMenu } from "@/contexts/mod.tsx";
@@ -9,17 +10,17 @@ import { getDate } from "@/utils/general";
 
 export function Users() {
 	const { setMenu } = useMenu();
-	const users2 = useUsers();
+	const api = useApi();
 	const [query, setQuery] = createSignal("");
 	const [searchResults, setSearchResults] = createSignal<any[]>([]);
 
 	const throttledSearch = throttle(async (q: string) => {
 		if (q.length > 0) {
-			const results = await users2.search(q);
+			const results = await api.users.search(q);
 			if (results && results.results) {
 				setSearchResults(
 					results.results
-						.map((id: string) => users2.cache.get(id))
+						.map((id: string) => api.users.cache.get(id))
 						.filter(Boolean),
 				);
 			} else {
@@ -34,7 +35,7 @@ export function Users() {
 		throttledSearch(query());
 	});
 
-	const users = createMemo(() => [...users2.cache.values()]);
+	const users = createMemo(() => [...api.users.cache.values()]);
 
 	const fetchMore = () => {
 		// Users are loaded from cache, no pagination needed
@@ -54,10 +55,10 @@ export function Users() {
 	return (
 		<div class="room-settings-members">
 			<h2>Users</h2>
-			<input
-				type="text"
+			<Search
 				placeholder="Search users..."
-				onInput={(e) => setQuery(e.currentTarget.value)}
+				onInput={setQuery}
+				ref={(el) => queueMicrotask(() => el.focus())}
 			/>
 			<header>
 				<div class="name">name</div>
@@ -89,14 +90,13 @@ export function Users() {
 									type="button"
 									class="button"
 									onClick={(e) => {
-										queueMicrotask(() => {
-											setMenu({
-												type: "user",
-												user_id: user.id,
-												x: e.clientX,
-												y: e.clientY,
-												admin: true,
-											});
+										e.stopPropagation();
+										setMenu({
+											type: "user",
+											user_id: user.id,
+											x: e.clientX,
+											y: e.clientY,
+											admin: true,
 										});
 									}}
 								>

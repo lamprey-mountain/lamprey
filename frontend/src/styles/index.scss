@@ -900,7 +900,7 @@ input[type="url"] {
 
 		&.padded {
 			padding: 0.5rem;
-			padding-right: calc(100% - 60ch);
+			padding-right: max(calc(100% - 60ch), .5rem);
 		}
 	}
 
