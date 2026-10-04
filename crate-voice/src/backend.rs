@@ -77,9 +77,14 @@ impl BackendConnection {
             .parse::<String>()
             .expect("infallible")
             .into_client_request()?;
-        let auth_header = format!("Server {}", token)
-            .try_into()
-            .map_err(|e| Error::InvalidAuthToken(format!("{e}")))?;
+        let auth_header = format!(
+            "Server {}",
+            token
+                .load()
+                .map_err(|err| Error::InvalidAuthToken(err.to_string()))?
+        )
+        .try_into()
+        .map_err(|e| Error::InvalidAuthToken(format!("{e}")))?;
         request.headers_mut().insert("Authorization", auth_header);
 
         info!("Connecting to backend websocket...");
