@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use common::v1::types::UserListFilter::Registered;
 use common::v1::types::defaults::{ADMIN_ROOM, EVERYONE_TRUSTED, EVERYONE_UNTRUSTED, MODERATOR};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::room_template::{
@@ -151,11 +152,12 @@ impl ServiceRoomTemplates {
 
         // Create roles
         for template_role in &snapshot.roles {
-            let role_id = if matches!(
-                template_role.id,
-                SERVER_ADMIN_ROLE_ID | SERVER_REGISTERED_ROLE_ID | SERVER_ROOM_ID
-            ) {
-                template_role.id
+            let is_server_builtin = template_role.id == *SERVER_ADMIN_ROLE_ID
+                || template_role.id == *SERVER_REGISTERED_ROLE_ID
+                || template_role.id == *SERVER_ROOM_ID;
+
+            let role_id = if is_server_builtin {
+                RoleId::from(template_role.id)
             } else if template_role.position == 0 {
                 RoleId::from(room_id.into_inner())
             } else {

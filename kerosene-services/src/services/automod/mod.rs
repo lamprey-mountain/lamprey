@@ -266,8 +266,7 @@ impl ServiceAutomod {
                         continue;
                     }
 
-                    let timeout_until =
-                        Time::now_utc() + std::time::Duration::from_millis(*duration);
+                    let timeout_until = Time::now_utc() + *duration;
                     let mut txn = self.globals.begin().await?;
                     txn.room_member_patch(
                         ctx.room_id,

@@ -562,6 +562,7 @@ impl ServiceRooms {
         create.validate()?;
         let srv = self.globals.services();
         let welcome_channel_id = extra.welcome_channel_id;
+        let room_type = extra.ty;
 
         let mut txn = self.globals.begin().await?;
         let mut room = txn.room_create(create.clone(), extra).await?;
@@ -604,7 +605,7 @@ impl ServiceRooms {
         let mut template_items = None;
 
         if welcome_channel_id.is_none() {
-            let snapshot = if extra.ty == RoomType::Server {
+            let snapshot = if room_type == RoomType::Server {
                 builtin::server_room()
             } else if create.public.unwrap_or_default() {
                 builtin::public_room()

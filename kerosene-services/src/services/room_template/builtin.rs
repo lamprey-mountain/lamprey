@@ -64,7 +64,7 @@ pub fn server_room() -> RoomTemplateSnapshot {
         channels: vec![],
         roles: vec![
             RoomTemplateRole {
-                id: SERVER_ADMIN_ROLE_ID,
+                id: *SERVER_ADMIN_ROLE_ID,
                 inner: RoleCreate::new("admin")
                     .description("server-wide administrator")
                     .allow([Permission::Admin]),
@@ -80,12 +80,12 @@ pub fn server_room() -> RoomTemplateSnapshot {
             },
             // TODO: rework how "guest"/"registered" users work. it's kind of confusing and error prone.
             RoomTemplateRole {
-                id: SERVER_REGISTERED_ROLE_ID,
+                id: *SERVER_REGISTERED_ROLE_ID,
                 inner: RoleCreate::new("registered").allow(SERVER_REGISTERED),
                 position: 1,
             },
             RoomTemplateRole {
-                id: SERVER_ROOM_ID,
+                id: *SERVER_ROOM_ID,
                 inner: RoleCreate::new("everyone")
                     .description("Default role")
                     .allow(SERVER_EVERYONE),
