@@ -31,7 +31,9 @@ export function mergeAuditLogEntries(
 	for (const entry of entries) {
 		const lastMerged = merged[merged.length - 1];
 
-		const canMerge = entry.type.endsWith("Update");
+		// TODO: make each entry detail line for RedexVersionCreate say "created a new version"
+		const canMerge =
+			entry.type.endsWith("Update") || entry.type === "RedexVersionCreate";
 
 		if (
 			canMerge &&
