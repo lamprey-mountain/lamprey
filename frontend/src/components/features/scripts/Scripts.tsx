@@ -2,13 +2,7 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import fuzzysort from "fuzzysort";
 import { type Channel, createUpload, type Media, type Redex } from "sdk";
 import { useFloating } from "solid-floating-ui";
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	Show,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import { useApi } from "@/api";
 import { Search } from "@/atoms/Search";

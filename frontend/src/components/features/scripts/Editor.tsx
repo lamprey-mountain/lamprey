@@ -201,7 +201,6 @@ export const CodeEditor = (props: {
 			// crosshairCursor(),
 			highlightActiveLine(),
 			highlightSelectionMatches(),
-			drawSelection(),
 			keymap.of([
 				...closeBracketsKeymap,
 				...defaultKeymap,

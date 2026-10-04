@@ -19,15 +19,21 @@ export const theme = EditorView.theme(
 			padding: "0 2px",
 		},
 		".cm-activeLine": {
-			backgroundColor: "oklch(var(--color-bg1))",
+			backgroundColor: "oklch(var(--color-fg2) / 0.06)",
 		},
-		// ".cm-selectionBackground, ::selection": {
-		// 	// backgroundColor: "#3fa9c9",
-		// 	backgroundColor: "#f00",
-		// },
+		".cm-selectionBackground": {
+			backgroundColor: "oklch(var(--color-blue) / 0.3)",
+		},
 		".cm-selectionMatch": {
-			backgroundColor: "oklch(var(--color-green) / 0.2)",
+			backgroundColor: "oklch(var(--color-green) / 0.3)",
 		},
+		"&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionMatch": {
+			backgroundColor: "oklch(var(--color-green) / 0.4)",
+		},
+		"&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground":
+			{
+				backgroundColor: "oklch(var(--color-blue) / 0.4)",
+			},
 	},
 	{ dark: true },
 );
