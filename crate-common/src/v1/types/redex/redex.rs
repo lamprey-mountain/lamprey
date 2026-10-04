@@ -46,16 +46,21 @@ pub struct RedexHandler {
 
 #[record]
 #[serde(tag = "type")]
-#[derive(PartialEq, Eq)]
 pub enum RedexHandlerType {
     /// a manual trigger/button
     Manual,
 
-    /// an http request
+    /// an http server
     Http {
-        // TODO: configurable endpoints. for now, run_id.suffix is used.
-        // /// the domain name requests should go to
-        // endpoint: String,
+        // TODO(future): bring your own domain name
+
+        // NOTE: should i have this instead of base_url?
+        // /// the hostname this redex can be reached at
+        // hostname: String,
+        /// the url this redex can be reached at
+        // NOTE: this is a String so i can use serde(default) for backwards compat
+        #[serde(default)]
+        base_url: String,
     },
 
     /// an api event (MessageSync)

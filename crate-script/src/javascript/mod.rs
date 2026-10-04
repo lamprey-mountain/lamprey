@@ -413,7 +413,7 @@ async fn exec_inner<'js>(
             if let Some(input) = r
                 .inputs
                 .iter()
-                .find(|i| i.definition.ty == RedexHandlerType::Http {})
+                .find(|i| matches!(i.definition.ty, RedexHandlerType::Http { .. }))
             {
                 let handler = input.callback.clone().restore(&ctx)?;
 
@@ -446,7 +446,7 @@ async fn exec_inner<'js>(
             for input in r
                 .inputs
                 .iter()
-                .filter(|i| i.definition.ty == RedexHandlerType::Event)
+                .find(|i| matches!(i.definition.ty, RedexHandlerType::Event))
             {
                 let handler = input.callback.clone().restore(&ctx)?;
 

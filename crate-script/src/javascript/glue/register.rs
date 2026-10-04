@@ -71,7 +71,10 @@ impl ScriptRegister {
 
     /// create a new input that runs when a http request is received
     fn on_http(&self) -> InputBuilder {
-        self.input(RedexHandlerType::Http {})
+        self.input(RedexHandlerType::Http {
+            // this will be filled in by the backend
+            base_url: String::new(),
+        })
     }
 
     /// create a new input that runs when an api event is received
