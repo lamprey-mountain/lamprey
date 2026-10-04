@@ -3,7 +3,6 @@ import { useApi, useChannels } from "@/api";
 import type { Menu } from "@/app/context";
 
 export function useContextMenu(setMenu: Setter<Menu | null>) {
-	const _api2 = useApi();
 	const channels2 = useChannels();
 	const store = useApi();
 

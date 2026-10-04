@@ -7,6 +7,7 @@ export * from "./InviteApplication.tsx";
 export * from "./Message.tsx";
 export * from "./PermissionOverwrite.tsx";
 export * from "./Room.tsx";
+export * from "./Settings.tsx";
 export * from "./User.tsx";
 export * from "./UserAdmin.tsx";
 export * from "./Voice.tsx";

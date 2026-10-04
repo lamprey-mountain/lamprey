@@ -51,6 +51,7 @@ import {
 	MessageMenu,
 	PermissionOverwriteMenu,
 	RoomMenu,
+	SettingsMenu,
 	TopicMenu,
 	UserMenu,
 	VoiceMenu,
@@ -417,6 +418,9 @@ export function OverlayProvider(props: ParentProps) {
 						admin={menu.admin}
 					/>
 				);
+			}
+			case "settings": {
+				return <SettingsMenu />;
 			}
 			case "folder": {
 				return <FolderMenu folder_id={menu.folder_id} />;

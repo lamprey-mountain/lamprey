@@ -1,7 +1,6 @@
 import { A } from "@solidjs/router";
-import type { Channel } from "sdk";
 import { createSignal, from, Match, onCleanup, Show, Switch } from "solid-js";
-import { useApi, useChannels, useRooms } from "@/api";
+import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { createPopup } from "@/app/popup";
 import { Duration } from "@/atoms/Duration.tsx";
@@ -10,7 +9,7 @@ import { ToggleIcon } from "@/atoms/ToggleIcon.tsx";
 import { createTooltip } from "@/atoms/Tooltip";
 import { AvatarWithStatus } from "@/components/shared/User";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
-import { useUserPopout } from "@/contexts/mod.tsx";
+import { useMenu, useUserPopout } from "@/contexts/mod.tsx";
 import { useNavigate } from "@/contexts/router";
 import type { UserT } from "@/types";
 import {
@@ -29,8 +28,8 @@ import { VoiceDebug } from "../features/voice/VoiceDebug";
 
 export const UserTray = () => {
 	const nav = useNavigate();
-	const channels = useChannels();
-	const rooms = useRooms();
+	const api = useApi();
+	const menu = useMenu();
 
 	const currentUser = useCurrentUser();
 	const [voice, voiceActions] = useVoice();
@@ -69,8 +68,10 @@ export const UserTray = () => {
 	const voiceDuration = useVoiceDuration();
 
 	const voiceChannel = () =>
-		voice.joinedChannelId ? channels.cache.get(voice.joinedChannelId) : null;
-	const voiceRoom = rooms.use(() => voiceChannel()?.room_id ?? undefined);
+		voice.joinedChannelId
+			? api.channels.cache.get(voice.joinedChannelId)
+			: null;
+	const voiceRoom = api.rooms.use(() => voiceChannel()?.room_id ?? undefined);
 
 	const stopScreenshareTooltip = createTooltip({
 		tip: () => "Stop Screenshare",
@@ -285,7 +286,16 @@ export const UserTray = () => {
 						type="button"
 						class="button icon-button"
 						ref={settingsTooltip.content}
-						onClick={() => nav("/settings")}
+						onClick={[nav, "/settings"]}
+						onContextMenu={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							menu.setMenu({
+								type: "settings",
+								x: e.clientX,
+								y: e.clientY,
+							});
+						}}
 					>
 						<Icon src={icSettings} />
 					</button>
