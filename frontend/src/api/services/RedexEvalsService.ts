@@ -33,6 +33,7 @@ export class RedexEvalsService extends BaseService<Eval> {
 		);
 	}
 
+	// PERF: don't refetch if we already have a list
 	async list(
 		channel_id: string,
 		redex_id: RedexId,

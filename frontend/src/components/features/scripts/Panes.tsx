@@ -105,8 +105,18 @@ export const ScriptInputs = (props: {
 		(id) => api.scripts.fetch(id),
 	);
 
-	const [runs, { refetch: refetchRuns }] = createResource(scriptId, (id) =>
-		api.scriptRuns.list(s.channel_id, id),
+	createEffect(() => {
+		api.scriptRuns.list(s.channel_id, scriptId());
+	});
+
+	// show newest evals first
+	const runs = createMemo(() =>
+		[...api.scriptRuns.cache.values()]
+			.toSorted(
+				(a, b) =>
+					getDate(b.created_at).valueOf() - getDate(a.created_at).valueOf(),
+			)
+			.slice(0, 32),
 	);
 
 	const trigger = async (inputId: string) => {
@@ -115,7 +125,6 @@ export const ScriptInputs = (props: {
 			exclusive: false,
 			trigger_id: inputId,
 		});
-		refetchRuns();
 	};
 
 	const openLogs = (runId: string) => {
@@ -146,14 +155,6 @@ export const ScriptInputs = (props: {
 			);
 		}
 	};
-
-	// show newest evals first
-	const sortedRuns = createMemo(() =>
-		[...(runs()?.items ?? [])].toSorted(
-			(a, b) =>
-				getDate(b.created_at).valueOf() - getDate(a.created_at).valueOf(),
-		),
-	);
 
 	return (
 		<div class="script-inputs">
@@ -187,7 +188,7 @@ export const ScriptInputs = (props: {
 			<section>
 				<h3>Recent Runs</h3>
 				<ul class="run-list">
-					<For each={sortedRuns()}>
+					<For each={runs()}>
 						{(run) => (
 							<li>
 								<div class="run-item">
