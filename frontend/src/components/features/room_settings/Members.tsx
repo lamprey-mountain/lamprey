@@ -1,6 +1,7 @@
 import { type ReferenceElement, shift } from "@floating-ui/dom";
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import type { Role, RoomMember, RoomMemberOrigin } from "sdk";
+import { throttle } from "@solid-primitives/scheduled";
+import type { Role, RoomMember, RoomMemberOrigin, User } from "sdk";
 import { useFloating } from "solid-floating-ui";
 import {
 	createEffect,
@@ -11,8 +12,8 @@ import {
 	Show,
 	type VoidProps,
 } from "solid-js";
-import { useApi, useRoles, useRoomMembers, useUsers } from "@/api";
-import { useCtx } from "@/app/context";
+import { useApi } from "@/api";
+import { Search } from "@/atoms/Search";
 import { Time } from "@/atoms/Time.tsx";
 import { Avatar } from "@/components/shared/User";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
@@ -23,17 +24,13 @@ import type { RoomT } from "@/types";
 import { getDate } from "@/utils/general";
 
 export function Members(props: VoidProps<{ room: RoomT }>) {
-	const _ctx = useCtx();
 	const { setMenu } = useMenu();
-	const api2 = useApi();
-	const roomMembers2 = useRoomMembers();
-	const users2 = useUsers();
-	const roles2 = useRoles();
+	const api = useApi();
 
 	// Get member IDs for this room from cache
 	const memberIds = createMemo(() => {
 		const ids: string[] = [];
-		for (const [key] of roomMembers2.cache.entries()) {
+		for (const [key] of api.roomMembers.cache.entries()) {
 			if (key.startsWith(`${props.room.id}:`)) {
 				ids.push(key);
 			}
@@ -49,7 +46,7 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 		const [, modalCtl] = useModals();
 		modalCtl.confirm("really remove?", (conf) => {
 			if (!conf) return;
-			api2.client.http.DELETE(
+			api.client.http.DELETE(
 				"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 				{ params: { path: { room_id: props.room.id, role_id, user_id } } },
 			);
@@ -64,7 +61,7 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 			for (const entry of entries) {
 				if (entry.isIntersecting) {
 					// Trigger a re-fetch by accessing the cache
-					roomMembers2.cache.size;
+					api.roomMembers.cache.size;
 				}
 			}
 		},
@@ -76,20 +73,51 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 		y: number;
 	}>();
 
+	const [query, setQuery] = createSignal("");
+	const [searchResults, setSearchResults] = createSignal<string[]>([]);
+
+	const throttledSearch = throttle(async (q: string) => {
+		if (q.length > 0) {
+			const results = await api.room_members.search(props.room.id, q);
+			if (results) {
+				setSearchResults(results.users.map((i) => `${props.room.id}:${i.id}`));
+			} else {
+				setSearchResults([]);
+			}
+		} else {
+			setSearchResults([]);
+		}
+	}, 500);
+
+	createEffect(() => {
+		throttledSearch(query());
+	});
+
 	return (
 		<div class="room-settings-members">
-			<h2>members</h2>
+			<h2>Members</h2>
+			<Search
+				placeholder="Search users..."
+				onInput={setQuery}
+				ref={(el) => queueMicrotask(() => el.focus())}
+			/>
 			<header>
 				<div class="name">name</div>
 				<div class="joined">joined</div>
 			</header>
-			<Show when={memberIds().length > 0}>
+			<Show
+				when={
+					query().length > 0
+						? searchResults().length > 0
+						: memberIds().length > 0
+				}
+			>
 				<ul>
-					<For each={memberIds()}>
+					<For each={query().length > 0 ? searchResults() : memberIds()}>
 						{(id) => {
-							const i = roomMembers2.cache.get(id);
+							const i = api.roomMembers.cache.get(id);
 							if (!i) return null;
-							const user = users2.use(() => i.user_id);
+							const user = api.users.use(() => i.user_id);
 							const name = () => i.override_name ?? user()?.name;
 							return (
 								<li>
@@ -100,7 +128,7 @@ export function Members(props: VoidProps<{ room: RoomT }>) {
 											<ul class="roles">
 												<For each={i.roles}>
 													{(role_id) => {
-														const role = roles2.cache.get(role_id);
+														const role = api.roles.cache.get(role_id);
 														return (
 															<li>
 																<button
@@ -189,10 +217,8 @@ const EditRoles = (props: {
 	user_id: string;
 	room: RoomT;
 }) => {
-	const api2 = useApi();
-	const roles2 = useRoles();
-	const roomMembers2 = useRoomMembers();
-	const member = roomMembers2.cache.get(`${props.room.id}:${props.user_id}`);
+	const api = useApi();
+	const member = api.roomMembers.cache.get(`${props.room.id}:${props.user_id}`);
 	const [menuParentRef, setMenuParentRef] = createSignal<ReferenceElement>();
 	const [menuRef, setMenuRef] = createSignal<HTMLElement>();
 
@@ -229,7 +255,7 @@ const EditRoles = (props: {
 			const user_id = member?.user_id;
 			if (!user_id) return;
 			if (e.target?.checked) {
-				api2.client.http.PUT(
+				api.client.http.PUT(
 					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 					{
 						params: {
@@ -242,7 +268,7 @@ const EditRoles = (props: {
 					},
 				);
 			} else {
-				api2.client.http.DELETE(
+				api.client.http.DELETE(
 					"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}",
 					{
 						params: {
@@ -258,7 +284,7 @@ const EditRoles = (props: {
 		};
 
 	const getRoles = () =>
-		[...roles2.cache.values()].filter(
+		[...api.roles.cache.values()].filter(
 			(r) => r.room_id === props.room.id && r.id !== r.room_id,
 		);
 

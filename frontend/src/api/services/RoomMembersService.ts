@@ -135,6 +135,8 @@ export class RoomMembersService extends BaseService<RoomMember> {
 				},
 			}),
 		);
+		for (const i of result.users) this.store.users.upsert(i);
+		for (const i of result.room_members) this.upsert(i);
 		return result;
 	}
 
