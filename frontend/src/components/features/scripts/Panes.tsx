@@ -5,12 +5,16 @@ import {
 	createSignal,
 	For,
 	type JSX,
+	Match,
 	onCleanup,
 	Show,
+	Switch,
 } from "solid-js";
+import type { EvalInputSummary } from "ts-sdk";
 import { useApi } from "@/api";
 import { Time } from "@/atoms/Time";
 import { usePanes } from "@/components/panes/context";
+import { HTTP_STATUS_TEXT } from "@/lib/http";
 import { getDate } from "@/utils/general";
 import { type ScriptPane, useScript } from "./context";
 import { LazyCodeEditor } from "./LazyEditor";
@@ -100,10 +104,7 @@ export const ScriptInputs = (props: {
 	const api = useApi();
 	const scriptId = () => props.pane.data.script_id;
 
-	const [script] = createResource(
-		() => `${s.channel_id}:${scriptId()}`,
-		(id) => api.scripts.fetch(id),
-	);
+	const script = api.scripts.use(() => `${s.channel_id}:${scriptId()}`);
 
 	createEffect(() => {
 		api.scriptRuns.list(s.channel_id, scriptId());
@@ -168,10 +169,12 @@ export const ScriptInputs = (props: {
 									<button
 										class="inner"
 										type="button"
-										onClick={() => trigger(input.id)}
+										onClick={[trigger, input.id]}
 									>
 										<div>{input.label}</div>
-										<div class="dim">{input.id}</div>
+										<div class="dim">
+											{input.type} {input.id}
+										</div>
 									</button>
 								</Show>
 								<Show when={input.type !== "Manual"}>
@@ -186,26 +189,71 @@ export const ScriptInputs = (props: {
 				</div>
 			</section>
 			<section>
-				<h3>Recent Runs</h3>
-				<ul class="run-list">
+				<h3>Recent Evals</h3>
+				<ul class="eval-list">
 					<For each={runs()}>
-						{(run) => (
-							<li>
-								<div class="run-item">
-									<div class="run-info">
-										<span class="status" data-status={run.status}>
-											{run.status}
-										</span>
-										<Time date={getDate(run.created_at)} />
+						{(run) => {
+							function matchesInput<T extends EvalInputSummary["type"]>(
+								ty: T,
+							): (EvalInputSummary & { type: T }) | false {
+								if (run.input.type === ty) {
+									return run.input as EvalInputSummary & { type: T };
+								} else {
+									return false;
+								}
+							}
+
+							return (
+								<li>
+									<div class="eval-item" onClick={[openLogs, run.id]}>
+										<div class="eval-info">
+											<span class="status" data-status={run.status}>
+												{run.status}
+											</span>
+											<Time date={getDate(run.created_at)} />
+										</div>
+										<div style="display:flex">
+											<Switch>
+												<Match when={matchesInput("Extraction")}>
+													Extraction
+												</Match>
+												<Match when={matchesInput("Http")}>
+													{(input) => {
+														const r = input().request;
+
+														return (
+															<>
+																http
+																{r.request_method}
+																{r.request_url}
+																{" -> "}
+																{r.response_status}
+																{HTTP_STATUS_TEXT[r.response_status]}
+															</>
+														);
+													}}
+												</Match>
+												<Match when={matchesInput("Manual")}>
+													{(input) => (
+														<>
+															{input().id}
+															{input().user_id}
+														</>
+													)}
+												</Match>
+												<Match when={matchesInput("Event")}>
+													{(input) => <>event {input().event.type}</>}
+												</Match>
+											</Switch>
+											<div style="flex:1"></div>
+											<button class="view-logs" type="button">
+												View Logs
+											</button>
+										</div>
 									</div>
-									<menu>
-										<button type="button" onClick={() => openLogs(run.id)}>
-											Logs
-										</button>
-									</menu>
-								</div>
-							</li>
-						)}
+								</li>
+							);
+						}}
 					</For>
 				</ul>
 			</section>
@@ -236,8 +284,8 @@ export const RunLogs = (props: {
 		([c, sid, rid]) => api.scriptLogs.list(c, sid, rid),
 	);
 
-	const [runInfo] = createResource(runId, (rid) =>
-		api.scriptRuns.fetch(`${channelId()}:${scriptId()}:${rid}`),
+	const runInfo = api.scriptRuns.use(
+		() => `${channelId()}:${scriptId()}:${runId()}`,
 	);
 
 	const [levelFilter, setLevelFilter] = createSignal<string>("all");
@@ -276,7 +324,7 @@ export const RunLogs = (props: {
 	};
 
 	return (
-		<div class="run-logs">
+		<div class="eval-logs">
 			<Show when={logResource.loading}>
 				<div>Loading logs...</div>
 			</Show>

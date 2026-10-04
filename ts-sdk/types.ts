@@ -136,6 +136,7 @@ export type RedexId = string;
 export type RedexVerId = string;
 export type EvalId = string;
 export type Redex = components["schemas"]["Redex"];
+export type EvalInputSummary = components["schemas"]["EvalInputSummary"];
 export type EvalCreateManual = components["schemas"]["EvalCreateManual"];
 export type EvalLogEntry = components["schemas"]["EvalLogEntry"];
 

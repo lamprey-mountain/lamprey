@@ -331,7 +331,9 @@ export function createPanes<P extends { type: string }>(props: PanesProps<P>) {
 											required
 											enableWheel={false}
 											onSelect={(item) => {
-												// TODO
+												data.update(pane.id, {
+													data: { ...pane.data, type: item },
+												});
 											}}
 										/>
 										{headerExtra()}
