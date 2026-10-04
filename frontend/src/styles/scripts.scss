@@ -249,31 +249,40 @@
 		flex-wrap: wrap;
 		border: 1px solid $sep-400;
 		border-radius: 2px;
-		margin: 2px 8px;
+		margin: 0 8px;
 		overflow: hidden;
+	}
 
-		button {
-			font-size: 0.75rem;
-			padding: 2px 8px;
-			cursor: pointer;
-			background-color: $bg-300;
-			color: $fg-400;
+	.menu-button {
+		font-size: 0.75rem;
+		padding: 2px 8px;
+		cursor: pointer;
+		background-color: $bg-300;
+		color: $fg-400;
 
-			&:hover {
-				background-color: oklch(from $bg-300 calc(l + .05) c h);
-				color: $fg-300;
-			}
-
-			&[aria-pressed="true"],
-			&:active {
-				background-color: oklch(from $bg-300 calc(l + .1) c h);
-				color: $fg-100;
-			}
-
-			&:active > .inner {
-				translate: 0 1px;
-			}
+		&:hover {
+			background-color: oklch(from $bg-300 calc(l + .05) c h);
+			color: $fg-300;
 		}
+
+		&[aria-pressed="true"],
+		&:active {
+			background-color: oklch(from $bg-300 calc(l + .1) c h);
+			color: $fg-100;
+		}
+
+		&:active > .inner {
+			translate: 0 1px;
+		}
+	}
+
+	.time-button {
+		border: 1px solid $sep-400;
+		border-radius: 2px;
+		display: flex;
+		align-items: center;
+		gap: 2px;
+		padding: 2px 4px;
 	}
 
 	ul[role="log"] {

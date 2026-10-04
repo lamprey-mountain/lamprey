@@ -13,10 +13,13 @@ import {
 } from "solid-js";
 import type { EvalInputSummary } from "ts-sdk";
 import { useApi } from "@/api";
+import { Duration } from "@/atoms/Duration";
+import { Icon } from "@/atoms/Icon";
 import { Time } from "@/atoms/Time";
 import { usePanes } from "@/components/panes/context";
 import { HTTP_STATUS_TEXT } from "@/lib/http";
 import { getDate } from "@/utils/general";
+import { icQuestion } from "@/utils/icons";
 import { type ScriptPane, useScript } from "./context";
 import { LazyCodeEditor } from "./LazyEditor";
 
@@ -325,6 +328,12 @@ export const RunLogs = (props: {
 			.join(" ");
 	};
 
+	const [isTimeRelative, setIsTimeRelative] = createSignal(false);
+	const ts = createMemo(() => {
+		const ts = runInfo()?.created_at;
+		return ts ? getDate(ts) : new Date();
+	});
+
 	return (
 		<div class="eval-logs">
 			<Show when={logResource.loading}>
@@ -363,6 +372,7 @@ export const RunLogs = (props: {
 							{(a) => (
 								<button
 									type="button"
+									class="menu-button"
 									onClick={[setLevelFilter, a.id]}
 									aria-pressed={isLevelFilterSelected(a.id)}
 								>
@@ -371,44 +381,61 @@ export const RunLogs = (props: {
 							)}
 						</For>
 					</div>
+					<button
+						type="button"
+						class="menu-button time-button"
+						onClick={() => setIsTimeRelative((a) => !a)}
+					>
+						{/* TODO: add a clock or timer icon */}
+						<Icon src={icQuestion} />
+						{isTimeRelative() ? "relative" : "absolute"}
+					</button>
 				</menu>
 				<ul role="log">
 					<For each={filteredLogs()}>
-						{(entry) => (
-							<li
-								classList={{ expanded: expandedEntry() === entry.id }}
-								onclick={[toggleExpand, entry.id]}
-								style="cursor: pointer"
-							>
-								<div class="main">
-									<span class="time">
-										<Time date={getDate(entry.created_at)} />
-									</span>
-									<span class="level" data-level={entry.level}>
-										{entry.level}
-									</span>
-									<span class="content">{entry.content}</span>
-									<Show when={hasAttrs(entry)}>
-										<span class="attrs-summary">
-											{formatAttrsSummary(entry.attributes)}
-										</span>
-									</Show>
-								</div>
-								<Show when={expandedEntry() === entry.id && hasAttrs(entry)}>
-									<ul class="attrs expanded">
-										<For each={Object.entries(entry.attributes ?? {})}>
-											{([key, val]) => (
-												<li>
-													<span class="key">{key}</span>
-													<span class="syn">=</span>
-													<span class="val">{String(val)}</span>
-												</li>
+						{(entry) => {
+							const entryTs = getDate(entry.created_at);
+
+							return (
+								<li
+									classList={{ expanded: expandedEntry() === entry.id }}
+									onclick={[toggleExpand, entry.id]}
+									style="cursor: pointer"
+								>
+									<div class="main">
+										<span class="time">
+											{isTimeRelative() ? (
+												<Time date={entryTs} />
+											) : (
+												<Duration ms={entryTs.valueOf() - ts().valueOf()} />
 											)}
-										</For>
-									</ul>
-								</Show>
-							</li>
-						)}
+										</span>
+										<span class="level" data-level={entry.level}>
+											{entry.level}
+										</span>
+										<span class="content">{entry.content}</span>
+										<Show when={hasAttrs(entry)}>
+											<span class="attrs-summary">
+												{formatAttrsSummary(entry.attributes)}
+											</span>
+										</Show>
+									</div>
+									<Show when={expandedEntry() === entry.id && hasAttrs(entry)}>
+										<ul class="attrs expanded">
+											<For each={Object.entries(entry.attributes ?? {})}>
+												{([key, val]) => (
+													<li>
+														<span class="key">{key}</span>
+														<span class="syn">=</span>
+														<span class="val">{String(val)}</span>
+													</li>
+												)}
+											</For>
+										</ul>
+									</Show>
+								</li>
+							);
+						}}
 					</For>
 				</ul>
 			</Show>
