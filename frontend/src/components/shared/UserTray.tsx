@@ -271,6 +271,15 @@ export const UserTray = () => {
 						class="button icon-button"
 						ref={toggleMicTooltip.content}
 						onClick={() => voiceActions.toggleMicrophone()}
+						onContextMenu={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							menu.setMenu({
+								type: "voice_input",
+								x: e.clientX,
+								y: e.clientY,
+							});
+						}}
 					>
 						<ToggleIcon enabled={!voice.muted} src={icMic} />
 					</button>
@@ -279,6 +288,15 @@ export const UserTray = () => {
 						class="button icon-button"
 						ref={toggleDeafenedTooltip.content}
 						onClick={() => voiceActions.toggleDeafened()}
+						onContextMenu={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							menu.setMenu({
+								type: "voice_output",
+								x: e.clientX,
+								y: e.clientY,
+							});
+						}}
 					>
 						<ToggleIcon enabled={!voice.deafened} src={icHeadphones} />
 					</button>

@@ -1,12 +1,29 @@
 import type { User } from "sdk";
-import { Show, type VoidProps } from "solid-js";
+import { createSignal, onCleanup, Show, type VoidProps } from "solid-js";
 import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Dropdown } from "@/atoms/Dropdown";
 import { Checkbox } from "@/atoms/icons";
 
+const useMediaDevices = () => {
+	const [devices, setDevices] = createSignal([] as MediaDeviceInfo[]);
+
+	const refetch = () => {
+		navigator.mediaDevices.enumerateDevices().then(setDevices);
+	};
+
+	refetch();
+	navigator.mediaDevices.addEventListener("devicechange", refetch);
+	onCleanup(() =>
+		navigator.mediaDevices.removeEventListener("devicechange", refetch),
+	);
+
+	return devices;
+};
+
 export function Voice(_props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
+	const devices = useMediaDevices();
 
 	// TODO: save input/output device volume, profile, etc per device id
 	// TODO: automatic gain control
@@ -44,6 +61,8 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 							}
 						}}
 						options={[
+							// FIXME: both firefox and chromium return devices with no id or label. this is probably a problem on my end?
+							// ...devices().map(i => ({ item: i.deviceId, label: i.label })),
 							{ item: "default", label: "Default Microphone" },
 							{ item: "mic1", label: "Microphone 1" },
 							{ item: "mic2", label: "Microphone 2" },

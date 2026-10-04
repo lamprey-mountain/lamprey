@@ -11,3 +11,5 @@ export * from "./Settings.tsx";
 export * from "./User.tsx";
 export * from "./UserAdmin.tsx";
 export * from "./Voice.tsx";
+export * from "./VoiceInput.tsx";
+export * from "./VoiceOutput.tsx";

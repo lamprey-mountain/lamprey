@@ -54,7 +54,9 @@ import {
 	SettingsMenu,
 	TopicMenu,
 	UserMenu,
+	VoiceInputMenu,
 	VoiceMenu,
+	VoiceOutputMenu,
 } from "@/menus/mod.ts";
 import { getModal } from "@/modals/mod.tsx";
 import { FormattingToolbar } from "./FormattingToolbar.tsx";
@@ -421,6 +423,12 @@ export function OverlayProvider(props: ParentProps) {
 			}
 			case "settings": {
 				return <SettingsMenu />;
+			}
+			case "voice_input": {
+				return <VoiceInputMenu />;
+			}
+			case "voice_output": {
+				return <VoiceOutputMenu />;
 			}
 			case "folder": {
 				return <FolderMenu folder_id={menu.folder_id} />;

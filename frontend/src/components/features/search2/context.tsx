@@ -7,9 +7,8 @@ export type SearchConfig = {
 
 export type Filter = {
 	name: string;
+	// aliases?: string[];
 
-	// /** The filter keyword (e.g. "author", "channel") */
-	// name: string;
 	// /** What kind of value the filter expects */
 	// valueType: SearchFilterValueType;
 	// /** Whether the node stores a human-readable name in addition to the value */
@@ -27,6 +26,9 @@ export type Filter = {
 	// /** Convert a FilterASTNode → a ProseMirror node */
 	// toPMNode: (ast: FilterASTNode) => Node;
 };
+
+// export type FilterType = "user" | "channel" | "date" | "boolean" | "has" | "mentionable";
+// use Decoration.widget for user avatars, channel icons
 
 export type CreateSearchOptions = {
 	filters: Filter[];

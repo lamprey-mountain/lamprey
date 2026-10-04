@@ -30,9 +30,9 @@ export type Menu = {
 			room_id?: string;
 			admin: boolean;
 	  }
-	| {
-			type: "settings";
-	  }
+	| { type: "settings" }
+	| { type: "voice_input" }
+	| { type: "voice_output" }
 	| { type: "folder"; folder_id: string }
 	| { type: "topic"; channel_id: string }
 	| { type: "voice"; channel_id: string }
