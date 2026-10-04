@@ -17,19 +17,19 @@ export type PaneNode<P> = {
 	id: number;
 	size?: number;
 } & (
-	| { type: "split_horizontal"; children: PaneNode<P>[] }
-	| { type: "split_vertical"; children: PaneNode<P>[] }
-	| { type: "leaf"; data: P }
-);
+		| { type: "split_horizontal"; children: PaneNode<P>[] }
+		| { type: "split_vertical"; children: PaneNode<P>[] }
+		| { type: "leaf"; data: P }
+	);
 
 export type PaneCreate<P> = {
 	id?: number;
 	parentId?: number;
 } & (
-	| { type: "split_horizontal" }
-	| { type: "split_vertical" }
-	| { type: "leaf"; data: P }
-);
+		| { type: "split_horizontal" }
+		| { type: "split_vertical" }
+		| { type: "leaf"; data: P }
+	);
 
 export type PaneDirection = "horizontal" | "vertical";
 
@@ -66,9 +66,6 @@ export type TemplateProps<
 };
 
 export const PanesContext = createContext<PanesState<any>>();
-
-let nextPaneId = 1;
-const assignPaneId = () => nextPaneId++;
 
 const addChildToParent = <P,>(
 	root: PaneNode<P>,
@@ -119,6 +116,25 @@ export type PanesProps<P> = {
 
 export function createPanes<P extends { type: string }>(props: PanesProps<P>) {
 	const [root, setRoot] = createSignal<PaneNode<P> | undefined>();
+	let nextPaneId = 1;
+
+	const assignPaneId = (): number => {
+		const id = nextPaneId++;
+		const isUsed = (node: PaneNode<P>): boolean => {
+			if (node.id === id) return true;
+			if (node.type === "split_horizontal" || node.type === "split_vertical") {
+				return node.children.some(isUsed);
+			}
+			return false;
+		};
+
+		const r = root();
+		if (r && isUsed(r)) {
+			return assignPaneId();
+		}
+		return id;
+	};
+
 	const templates = new Map<
 		string,
 		(props: PaneTemplateProps<P>) => JSX.Element
@@ -138,7 +154,7 @@ export function createPanes<P extends { type: string }>(props: PanesProps<P>) {
 				id: paneId,
 				...create,
 				...(create.type === "split_horizontal" ||
-				create.type === "split_vertical"
+					create.type === "split_vertical"
 					? { children: [] }
 					: {}),
 			} as PaneNode<P>;
@@ -222,7 +238,7 @@ export function createPanes<P extends { type: string }>(props: PanesProps<P>) {
 				id: paneId,
 				...newPane,
 				...(newPane.type === "split_horizontal" ||
-				newPane.type === "split_vertical"
+					newPane.type === "split_vertical"
 					? { children: [] }
 					: {}),
 			} as PaneNode<P>;
