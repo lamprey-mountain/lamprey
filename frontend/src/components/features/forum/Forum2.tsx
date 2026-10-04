@@ -728,7 +728,6 @@ export const Forum2Thread = (props: { channel: Channel }) => {
 											message={{ ...m(), thread: null, reactions: [] }}
 											separate
 										/>
-										<br />
 										<Reactions message={m()} prompt />
 									</>
 								)}
