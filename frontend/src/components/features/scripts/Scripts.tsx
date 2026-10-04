@@ -2,7 +2,13 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import fuzzysort from "fuzzysort";
 import { type Channel, createUpload, type Media, type Redex } from "sdk";
 import { useFloating } from "solid-floating-ui";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import { Portal } from "solid-js/web";
 import { useApi } from "@/api";
 import { Search } from "@/atoms/Search";
@@ -13,11 +19,11 @@ import { ChatHeader } from "../chat/ChatHeader";
 import { createScriptContext, ScriptContext } from "./context";
 import { RunLogs, ScriptCode, ScriptInputs, ScriptPreview } from "./Panes";
 
-// in channel nav: show current script like a thread
+// TODO: show current redex like a thread in channel nav
 
 export const Scripts = (props: { channel: Channel }) => {
 	const api = useApi();
-	const navigate = useNavigate();
+	const nav = useNavigate();
 	const s = createScriptContext(props.channel.id);
 
 	createEffect(() => {
@@ -42,7 +48,7 @@ export const Scripts = (props: { channel: Channel }) => {
 	});
 
 	const openScript = (script: Redex) => {
-		navigate(`/channel/${props.channel.id}/script/${script.id}`);
+		nav(`/channel/${props.channel.id}/script/${script.id}`);
 	};
 
 	const panes = createPanes({
@@ -140,6 +146,12 @@ export const Scripts = (props: { channel: Channel }) => {
 			},
 		});
 	};
+
+	createEffect(() => {
+		if (panes.root() === undefined) {
+			nav(`/channel/${props.channel.id}`);
+		}
+	});
 
 	return (
 		<ScriptContext.Provider value={s}>

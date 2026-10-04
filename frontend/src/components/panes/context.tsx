@@ -379,6 +379,7 @@ export function createPanes<P extends { type: string }>(props: PanesProps<P>) {
 
 	return {
 		...data,
+		root,
 		Render: RootView,
 		Template,
 	};
