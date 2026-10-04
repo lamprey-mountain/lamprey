@@ -14,6 +14,7 @@ pub mod log {
     /// an unfurler log/span entry
     #[record]
     pub struct Entry {
+        /// unique identifier for this entry
         pub id: u64,
 
         /// when this entry started
@@ -40,7 +41,7 @@ pub mod log {
     /// structured data for an unfurler log entry
     #[record]
     pub enum EntryKind {
-        /// an http request
+        /// http request
         Http {
             url: Url,
             status: u16,
@@ -49,7 +50,7 @@ pub mod log {
             // TODO(?): include both request and response headers
         },
 
-        /// some other
+        /// generic log entry
         Other {
             /// a human readable message
             message: String,

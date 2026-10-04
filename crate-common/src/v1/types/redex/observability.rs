@@ -63,6 +63,7 @@ pub enum EvalLogLevel {
     Info,
 
     /// something went wrong but we can keep going
+    // TODO: rename to Warn
     Warning,
 
     /// something went wrong and we can't keep going

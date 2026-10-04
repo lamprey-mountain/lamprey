@@ -14,7 +14,6 @@ use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::ServerState;
-use kerosene_services::services::embed::DebugLogSink;
 
 use super::util::Auth;
 use crate::error::Result;
@@ -255,23 +254,6 @@ async fn debug_version() -> Result<impl IntoResponse> {
         rustc_rev: env!("VERGEN_RUSTC_COMMIT_HASH"),
         rustc_channel: env!("VERGEN_RUSTC_CHANNEL"),
     }))
-}
-
-/// Unfurler debug
-#[utoipa::path(
-    post,
-    path = "/unfurler/debug",
-    tags = ["debug"],
-    request_body = DebugRequest,
-    responses(
-        (status = OK, body = DebugResponse, description = "success"),
-    )
-)]
-async fn unfurler_debug(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    Json(json): Json<DebugRequest>,
-) -> Result<impl IntoResponse> {
 }
 
 /// Trigger a panic
