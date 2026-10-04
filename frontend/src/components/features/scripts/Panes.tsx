@@ -2,6 +2,7 @@ import {
 	createEffect,
 	createMemo,
 	createResource,
+	createSelector,
 	createSignal,
 	For,
 	type JSX,
@@ -290,6 +291,7 @@ export const RunLogs = (props: {
 
 	const [levelFilter, setLevelFilter] = createSignal<string>("all");
 	const [expandedEntry, setExpandedEntry] = createSignal<number | null>(null);
+	const isLevelFilterSelected = createSelector(levelFilter);
 
 	const filteredLogs = () => {
 		const filter = levelFilter();
@@ -348,42 +350,34 @@ export const RunLogs = (props: {
 						</div>
 					)}
 				</Show>
-				<div class="log-filters">
-					<button
-						type="button"
-						onClick={() => setLevelFilter("all")}
-						aria-pressed={levelFilter() === "all"}
-					>
-						All
-					</button>
-					<button
-						type="button"
-						onClick={() => setLevelFilter("Info")}
-						aria-pressed={levelFilter() === "Info"}
-					>
-						Info
-					</button>
-					<button
-						type="button"
-						onClick={() => setLevelFilter("Warning")}
-						aria-pressed={levelFilter() === "Warning"}
-					>
-						Warning
-					</button>
-					<button
-						type="button"
-						onClick={() => setLevelFilter("Error")}
-						aria-pressed={levelFilter() === "Error"}
-					>
-						Error
-					</button>
-				</div>
+				<menu style="display:flex">
+					<div class="log-filters">
+						<For
+							each={[
+								{ id: "all", label: "All" },
+								{ id: "Info", label: "Info" },
+								{ id: "Warning", label: "Warning" },
+								{ id: "Error", label: "Error" },
+							]}
+						>
+							{(a) => (
+								<button
+									type="button"
+									onClick={[setLevelFilter, a.id]}
+									aria-pressed={isLevelFilterSelected(a.id)}
+								>
+									<div class="inner">{a.label}</div>
+								</button>
+							)}
+						</For>
+					</div>
+				</menu>
 				<ul role="log">
 					<For each={filteredLogs()}>
 						{(entry) => (
 							<li
 								classList={{ expanded: expandedEntry() === entry.id }}
-								onclick={() => toggleExpand(entry.id)}
+								onclick={[toggleExpand, entry.id]}
 								style="cursor: pointer"
 							>
 								<div class="main">

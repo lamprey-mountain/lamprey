@@ -244,30 +244,34 @@
 		}
 	}
 
-	& > .log-filters {
+	.log-filters {
 		display: flex;
-		gap: 4px;
-		margin: 2px 8px;
 		flex-wrap: wrap;
+		border: 1px solid $sep-400;
+		border-radius: 2px;
+		margin: 2px 8px;
+		overflow: hidden;
 
 		button {
 			font-size: 0.75rem;
 			padding: 2px 8px;
 			cursor: pointer;
 			background-color: $bg-300;
-			border: 1px solid $sep-400;
-			border-radius: 2px;
 			color: $fg-400;
 
 			&:hover {
-				background-color: $bg-200;
+				background-color: oklch(from $bg-300 calc(l + .05) c h);
 				color: $fg-300;
 			}
 
 			&[aria-pressed="true"],
 			&:active {
-				background-color: $bg-400;
-				color: $fg-200;
+				background-color: oklch(from $bg-300 calc(l + .1) c h);
+				color: $fg-100;
+			}
+
+			&:active > .inner {
+				translate: 0 1px;
 			}
 		}
 	}
