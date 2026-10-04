@@ -514,6 +514,58 @@
 	.volume {
 		width: 100%;
 	}
+
+	.mic-check {
+		display: flex;
+		gap: 8px;
+
+		& > .button {
+			margin: 1px 0;
+			border-radius: 4px;
+			width: 3em;
+			text-align: center;
+
+			&:active > .inner {
+				translate: 0 1px;
+			}
+		}
+
+		& > .tape {
+			flex: 1;
+			overflow: hidden;
+			position: relative;
+			display: flex;
+			align-items: center;
+			background: $bg-100;
+			border-radius: 4px;
+
+			& > .level {
+				position: absolute;
+				height: 100%;
+				width: 0;
+				transition: width 333ms linear;
+			}
+
+			& > .text {
+				margin: 0 .5rem;
+				color: $fg-500;
+				z-index: 1;
+				opacity: 1;
+				transition: opacity 120ms ease-out;
+			}
+		}
+
+		&.active > .tape > .text {
+			opacity: 0;
+		}
+
+		&.active > .tape > .level {
+			width: var(--level);
+
+			// 16.6ms per frame, 30Hz updates from vad
+			transition: width 33ms linear;
+		}
+	}
 }
 
 .user-settings-applications {

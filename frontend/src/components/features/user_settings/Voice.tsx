@@ -1,15 +1,61 @@
 import type { User } from "sdk";
-import { createSignal, onCleanup, Show, type VoidProps } from "solid-js";
+import {
+	createMemo,
+	createSignal,
+	onCleanup,
+	onMount,
+	Show,
+	type VoidProps,
+} from "solid-js";
 import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Dropdown } from "@/atoms/Dropdown";
 import { Checkbox } from "@/atoms/icons";
+import { createVAD } from "../voice/vad";
 
+// NOTE: maybe move this to another file?
 const useMediaDevices = () => {
 	const [devices, setDevices] = createSignal([] as MediaDeviceInfo[]);
 
+	const formatKind = (kind: MediaDeviceKind) => {
+		switch (kind) {
+			case "audioinput":
+				return "microphone";
+			case "audiooutput":
+				return "output";
+			case "videoinput":
+				return "camera";
+		}
+	};
+
+	const update = (devices: MediaDeviceInfo[]) => {
+		const mapped = devices.map((d) => {
+			return {
+				groupId: d.groupId,
+				deviceId: d.deviceId || "default",
+				kind: d.kind,
+				label: d.label || `Default ${formatKind(d.kind)}`,
+			} as MediaDeviceInfo;
+		});
+		console.log("UPDATE", mapped);
+		setDevices(mapped);
+	};
+
+	// browsers don't reveal any information unless we already have a stream
+	navigator.mediaDevices
+		.getUserMedia({ audio: true })
+		.then((stream) => {
+			navigator.mediaDevices
+				.enumerateDevices()
+				.then(update)
+				.finally(() => {
+					stream.getTracks().forEach((t) => t.stop());
+				});
+		})
+		.catch((err) => console.error("getUserMedia failed", err));
+
 	const refetch = () => {
-		navigator.mediaDevices.enumerateDevices().then(setDevices);
+		navigator.mediaDevices.enumerateDevices().then(update);
 	};
 
 	refetch();
@@ -21,9 +67,49 @@ const useMediaDevices = () => {
 	return devices;
 };
 
+const createMicCheck = () => {
+	const vad = createVAD();
+	const [active, setActive] = createSignal(false);
+	let stream: MediaStream | undefined;
+
+	const stop = () => {
+		if (stream) {
+			stream.getTracks().forEach((t) => t.stop());
+		}
+		stream = undefined;
+		setActive(false);
+	};
+
+	const start = async (deviceId?: string) => {
+		// don't reuse voice context's state, we don't want to accidentally unmute the user if they're in a voice channel
+		stream = await navigator.mediaDevices.getUserMedia(
+			deviceId ? { audio: { deviceId } } : { audio: true },
+		);
+		vad.connect(stream);
+		setActive(true);
+	};
+
+	const level = createMemo((prev: number = 0) => {
+		const db = 20 * Math.log10(Math.max(vad.rms(), 1e-4)); // -80..0
+		const target = Math.min(1, Math.max(0, (db + 60) / 60)); // -60dB..0dB -> 0..1
+		return target > prev ? target : prev * 0.85 + target * 0.15; // immediate attack, smooth release
+	});
+
+	onCleanup(stop);
+
+	return {
+		active,
+		stop,
+		start,
+		level,
+		vad,
+	};
+};
+
 export function Voice(_props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
 	const devices = useMediaDevices();
+	const micCheck = createMicCheck();
 
 	// TODO: save input/output device volume, profile, etc per device id
 	// TODO: automatic gain control
@@ -47,7 +133,11 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 				<div style="display:flex;flex-direction:column;flex:1">
 					<h3 class="dim title2">input device</h3>
 					<Dropdown
-						selected={ctx.preferences().frontend.input_device || "default"}
+						selected={
+							ctx.preferences().frontend.input_device ||
+							devices().find((d) => d.kind === "audioinput")?.deviceId ||
+							"default"
+						}
 						onSelect={(value) => {
 							if (value) {
 								const c = ctx.preferences();
@@ -60,14 +150,9 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 								});
 							}
 						}}
-						options={[
-							// FIXME: both firefox and chromium return devices with no id or label. this is probably a problem on my end?
-							// ...devices().map(i => ({ item: i.deviceId, label: i.label })),
-							{ item: "default", label: "Default Microphone" },
-							{ item: "mic1", label: "Microphone 1" },
-							{ item: "mic2", label: "Microphone 2" },
-							{ item: "headset", label: "Headset Microphone" },
-						]}
+						options={devices()
+							.filter((i) => i.kind === "audioinput")
+							.map((i) => ({ item: i.deviceId, label: i.label }))}
 					/>
 					<h3 class="dim title3">volume</h3>
 					<input
@@ -94,7 +179,11 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 				<div style="display:flex;flex-direction:column;flex:1">
 					<h3 class="dim title2">output device</h3>
 					<Dropdown
-						selected={ctx.preferences().frontend.output_device || "default"}
+						selected={
+							ctx.preferences().frontend.output_device ||
+							devices().find((d) => d.kind === "audiooutput")?.deviceId ||
+							"default"
+						}
 						onSelect={(value) => {
 							if (value) {
 								const c = ctx.preferences();
@@ -107,13 +196,9 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 								});
 							}
 						}}
-						options={[
-							{ item: "default", label: "Default Speakers" },
-							{ item: "speaker1", label: "Speakers 1" },
-							{ item: "speaker2", label: "Speakers 2" },
-							{ item: "headphones", label: "Headphones" },
-							{ item: "headset", label: "Headset" },
-						]}
+						options={devices()
+							.filter((i) => i.kind === "audiooutput")
+							.map((i) => ({ item: i.deviceId, label: i.label }))}
 					/>
 					<h3 class="dim title3">volume</h3>
 					<input
@@ -140,16 +225,29 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 				</div>
 			</div>
 			<h3 class="dim title">mic check</h3>
-			<div style="display:flex;gap:4px">
-				<div style="flex:1;background:#111;border-radius:4px;overflow:hidden;">
-					<div style="width:12%;background:oklch(var(--color-link-500));height:100%"></div>
+			<div class="mic-check" classList={{ active: micCheck.active() }}>
+				{/* TODO(?): allow recording and replaying your audio? */}
+				<button
+					type="button"
+					class="button primary"
+					onClick={() => {
+						micCheck.active() ? micCheck.stop() : micCheck.start();
+					}}
+				>
+					<div class="inner">{micCheck.active() ? "Stop" : "Test"}</div>
+				</button>
+				<div class="tape">
+					<div
+						class="level"
+						style={{
+							"--level": `${micCheck.level() * 100}%`,
+							background: micCheck.vad.hasVoiceActivity()
+								? "oklch(var(--color-link-500))"
+								: "oklch(var(--color-bg4))",
+						}}
+					></div>
+					<div class="text">{micCheck.active() ? "" : "no signal"}</div>
 				</div>
-				<button type="button" class="button">
-					record
-				</button>
-				<button type="button" class="button">
-					play
-				</button>
 			</div>
 			<h3 class="dim title">audio processing</h3>
 			<CheckboxOption

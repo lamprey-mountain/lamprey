@@ -11,6 +11,7 @@ export const createVAD = () => {
 	vadLog.debug("init");
 
 	const [hasVoiceActivity, setHasVoiceActivity] = createSignal(false);
+	const [rms, setRms] = createSignal(0);
 	const ctx = new AudioContext();
 	let source: MediaStreamAudioSourceNode | undefined;
 	let node: AudioWorkletNode | undefined;
@@ -22,6 +23,7 @@ export const createVAD = () => {
 			node.port.onmessage = (event) => {
 				if (event.data && typeof event.data.hasVoiceActivity === "boolean") {
 					setHasVoiceActivity(event.data.hasVoiceActivity);
+					setRms(event.data.rms);
 				}
 			};
 			if (source) {
@@ -43,7 +45,9 @@ export const createVAD = () => {
 
 	return {
 		hasVoiceActivity,
+		rms,
 		// connect(track: MediaTrack) {},
+		// TODO: handle stream end/stop
 		connect(stream: MediaStream) {
 			source?.disconnect();
 			source = ctx.createMediaStreamSource(stream);

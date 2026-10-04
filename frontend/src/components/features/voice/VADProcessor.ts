@@ -2,50 +2,55 @@
 
 // TODO: see if theres a better method of VAD
 class VADProcessor extends AudioWorkletProcessor {
-	private threshold = 0.02;
-	private minFramesEnable = 3;
-	private minFramesDisable = 5;
-	private consecutiveOn = 0;
-	private consecutiveOff = 0;
-	private hasVoiceActivity = false;
+	private onThreshold = 0.02;
+	private offThreshold = 0.012; // hysteresis
+	private enableFrames = Math.round((20 * sampleRate) / 1000 / 128); // ~20ms
+	private disableFrames = Math.round((250 * sampleRate) / 1000 / 128); // ~250ms hangover
+	private reportEvery = Math.round((33 * sampleRate) / 1000 / 128); // ~30Hz meter
+	private on = 0;
+	private off = 0;
+	private active = false;
+	private frame = 0;
+	private peak = 0;
 
 	process(
 		inputs: Float32Array[][],
 		_outputs: Float32Array[][],
 		_parameters: Record<string, Float32Array>,
 	) {
-		const input = inputs[0];
-		if (input.length > 0 && input[0].length > 0) {
-			const channel = input[0];
-			let sumSquares = 0;
-			for (let i = 0; i < channel.length; i++) {
-				sumSquares += channel[i] * channel[i];
-			}
-			const rms = Math.sqrt(sumSquares / channel.length);
-			const currentActivity = rms > this.threshold;
+		const ch = inputs[0]?.[0];
+		if (!ch?.length) return true;
 
-			if (currentActivity) {
-				this.consecutiveOn++;
-				this.consecutiveOff = 0;
-				if (
-					!this.hasVoiceActivity &&
-					this.consecutiveOn >= this.minFramesEnable
-				) {
-					this.hasVoiceActivity = true;
-					this.port.postMessage({ hasVoiceActivity: true });
-				}
-			} else {
-				this.consecutiveOff++;
-				this.consecutiveOn = 0;
-				if (
-					this.hasVoiceActivity &&
-					this.consecutiveOff >= this.minFramesDisable
-				) {
-					this.hasVoiceActivity = false;
-					this.port.postMessage({ hasVoiceActivity: false });
-				}
-			}
+		// calculate voice activity via root mean square
+		let sum = 0;
+		for (let i = 0; i < ch.length; i++) sum += ch[i] * ch[i];
+		const rms = Math.sqrt(sum / ch.length);
+		this.peak = Math.max(this.peak, rms);
+
+		const thr = this.active ? this.offThreshold : this.onThreshold;
+		if (rms > thr) {
+			this.on++;
+			this.off = 0;
+		} else {
+			this.off++;
+			this.on = 0;
 		}
+
+		let changed = false;
+		if (!this.active && this.on >= this.enableFrames) {
+			this.active = true;
+			changed = true;
+		} else if (this.active && this.off >= this.disableFrames) {
+			this.active = false;
+			changed = true;
+		}
+
+		if (changed || ++this.frame >= this.reportEvery) {
+			this.port.postMessage({ hasVoiceActivity: this.active, rms: this.peak });
+			this.peak = 0;
+			this.frame = 0;
+		}
+
 		return true;
 	}
 }
