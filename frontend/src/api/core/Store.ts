@@ -560,6 +560,17 @@ export class RootStore {
 		} else if (msg.type === "ScriptDelete") {
 			this.scripts.cache.delete(msg.script_id);
 		} else if (
+			msg.type === "ScriptVersionCreate" ||
+			msg.type === "ScriptVersionUpdate"
+		) {
+			this.scripts.upsertVersion(msg.version);
+			const script = this.scripts.cache.get(msg.redex_id);
+			if (script) {
+				this.scripts.upsert({ ...script, latest_version: msg.version });
+			}
+		} else if (msg.type === "ScriptVersionDelete") {
+			this.scripts.deleteVersion(msg.channel_id, msg.redex_id, msg.version_id);
+		} else if (
 			msg.type === "ScriptRunCreate" ||
 			msg.type === "ScriptRunUpdate"
 		) {

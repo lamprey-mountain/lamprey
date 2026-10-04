@@ -1,3 +1,4 @@
+import { ReactiveMap } from "@solid-primitives/map";
 import type {
 	PaginationResponse,
 	Redex,
@@ -12,9 +13,14 @@ import { BaseService } from "../core/Service";
 
 export class RedexesService extends BaseService<Redex> {
 	protected cacheName = "script";
+	versions: ReactiveMap<string, RedexVersion> = new ReactiveMap();
 
 	getKey(item: Redex): string {
 		return item.id;
+	}
+
+	upsertVersion(version: RedexVersion) {
+		this.versions.set(version.version_id, version);
 	}
 
 	async fetch(id: string): Promise<Redex> {
@@ -134,6 +140,22 @@ export class RedexesService extends BaseService<Redex> {
 			}),
 		);
 		this.cache.delete(redex_id);
+	}
+
+	async deleteVersion(
+		channel_id: string,
+		redex_id: string,
+		version_id: string,
+	): Promise<void> {
+		await this.retryWithBackoff(() =>
+			this.client.http.DELETE(
+				"/api/v1/channel/{channel_id}/redex/{redex_id}/version/{version_id}",
+				{
+					params: { path: { channel_id, redex_id, version_id } },
+				},
+			),
+		);
+		this.versions.delete(version_id);
 	}
 
 	subscribe(channel_id: string, redex_id: RedexId) {
