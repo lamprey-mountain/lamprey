@@ -1,5 +1,6 @@
 import {
 	createEffect,
+	createMemo,
 	createResource,
 	createSignal,
 	For,
@@ -146,6 +147,14 @@ export const ScriptInputs = (props: {
 		}
 	};
 
+	// show newest evals first
+	const sortedRuns = createMemo(() =>
+		[...(runs()?.items ?? [])].toSorted(
+			(a, b) =>
+				getDate(b.created_at).valueOf() - getDate(a.created_at).valueOf(),
+		),
+	);
+
 	return (
 		<div class="script-inputs">
 			<section>
@@ -178,7 +187,7 @@ export const ScriptInputs = (props: {
 			<section>
 				<h3>Recent Runs</h3>
 				<ul class="run-list">
-					<For each={runs()?.items}>
+					<For each={sortedRuns()}>
 						{(run) => (
 							<li>
 								<div class="run-item">

@@ -41,7 +41,10 @@ export class ScriptRunsService extends BaseService<Run> {
 			this.client.http.GET(
 				"/api/v1/channel/{channel_id}/redex/{redex_id}/eval",
 				{
-					params: { path: { channel_id, redex_id } },
+					params: {
+						path: { channel_id, redex_id },
+						query: { limit: 32, dir: "b" },
+					},
 				},
 			),
 		);
