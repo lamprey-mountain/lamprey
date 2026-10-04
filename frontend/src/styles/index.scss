@@ -4178,18 +4178,39 @@ button.round {
 			padding: 4px 8px;
 			background-color: $bg-150;
 			border-bottom: 1px solid $sep-300;
-			gap: 8px;
 			height: 32px;
+			gap: 4px;
+			/* cursor: grab; */ // TODO: drag and drop
 
-			nav {
-				font-size: 0.8rem;
-				color: $fg-400;
-			}
+			& > .dropdown-container {
+				border: 1px solid transparent;
+				border-radius: 4px;
+				cursor: pointer;
 
-			.title {
-				font-weight: bold;
-				flex: 1;
-				font-size: 0.9rem;
+				& > .dropdown {
+					border: 0;
+					background: none;
+					field-sizing: content;
+					padding: 2px 4px;
+				}
+
+				& > .dropdown-chevron-wrapper {
+					position: static;
+					visibility: hidden;
+				}
+
+				&:hover,
+				&:focus-within {
+					background: #fff1;
+
+					& > .dropdown-chevron-wrapper {
+						visibility: visible;
+					}
+				}
+
+				&:focus-within {
+					border: 1px solid $sep-400;
+				}
 			}
 
 			.pane-header-save {

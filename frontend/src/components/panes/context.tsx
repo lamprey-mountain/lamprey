@@ -9,6 +9,7 @@ import {
 	Switch,
 	useContext,
 } from "solid-js";
+import { Dropdown } from "@/atoms/Dropdown";
 import { PaneResizeHandle } from "@/atoms/Resizable";
 
 export type PanePlacement = "top" | "bottom" | "left" | "right";
@@ -17,19 +18,19 @@ export type PaneNode<P> = {
 	id: number;
 	size?: number;
 } & (
-		| { type: "split_horizontal"; children: PaneNode<P>[] }
-		| { type: "split_vertical"; children: PaneNode<P>[] }
-		| { type: "leaf"; data: P }
-	);
+	| { type: "split_horizontal"; children: PaneNode<P>[] }
+	| { type: "split_vertical"; children: PaneNode<P>[] }
+	| { type: "leaf"; data: P }
+);
 
 export type PaneCreate<P> = {
 	id?: number;
 	parentId?: number;
 } & (
-		| { type: "split_horizontal" }
-		| { type: "split_vertical" }
-		| { type: "leaf"; data: P }
-	);
+	| { type: "split_horizontal" }
+	| { type: "split_vertical" }
+	| { type: "leaf"; data: P }
+);
 
 export type PaneDirection = "horizontal" | "vertical";
 
@@ -154,7 +155,7 @@ export function createPanes<P extends { type: string }>(props: PanesProps<P>) {
 				id: paneId,
 				...create,
 				...(create.type === "split_horizontal" ||
-					create.type === "split_vertical"
+				create.type === "split_vertical"
 					? { children: [] }
 					: {}),
 			} as PaneNode<P>;
@@ -238,7 +239,7 @@ export function createPanes<P extends { type: string }>(props: PanesProps<P>) {
 				id: paneId,
 				...newPane,
 				...(newPane.type === "split_horizontal" ||
-					newPane.type === "split_vertical"
+				newPane.type === "split_vertical"
 					? { children: [] }
 					: {}),
 			} as PaneNode<P>;
@@ -320,15 +321,25 @@ export function createPanes<P extends { type: string }>(props: PanesProps<P>) {
 							return (
 								<>
 									<header class="pane-header">
-										<nav>
-											{paneType().replace("script_", "").replace("_", " ")}
-										</nav>
-										<div class="title">Pane {pane.id}</div>
+										<div class="dim">#{pane.id}</div>
+										<Dropdown
+											options={[...templates.keys()].map((i) => ({
+												item: i,
+												label: i.replace("script_", "").replace("_", " "),
+											}))}
+											selected={paneType()}
+											required
+											enableWheel={false}
+											onSelect={(item) => {
+												// TODO
+											}}
+										/>
 										{headerExtra()}
+										<div style="flex:1"></div>
 										<button
 											type="button"
 											class="close"
-											onClick={() => data.close(pane.id)}
+											onClick={[data.close, pane.id]}
 										>
 											&times;
 										</button>
