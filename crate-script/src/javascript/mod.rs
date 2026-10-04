@@ -302,6 +302,7 @@ fn setup_environment(
 
     rquickjs::Class::<glue::register::ScriptRegister>::define(&globals)?;
     rquickjs::Class::<glue::register::InputBuilder>::define(&globals)?;
+    rquickjs::Class::<glue::url::JsUrl>::define(&globals)?;
 
     globals.set("log", glue::log::Logger::new(sender, script_id))?;
 

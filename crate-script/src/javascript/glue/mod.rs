@@ -3,7 +3,7 @@
 // pub mod compression;
 // pub mod encoding;
 pub mod http;
-// pub mod url;
+pub mod url;
 // pub mod streams;
 
 // TODO: maybe impl more standard apis?
