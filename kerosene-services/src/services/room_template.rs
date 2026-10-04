@@ -153,9 +153,7 @@ impl ServiceRoomTemplates {
         for template_role in &snapshot.roles {
             let role_id = if matches!(
                 template_role.id,
-                SERVER_ADMIN_ROLE_ID,
-                SERVER_REGISTERED_ROLE_ID,
-                SERVER_ROOM_ID
+                SERVER_ADMIN_ROLE_ID | SERVER_REGISTERED_ROLE_ID | SERVER_ROOM_ID
             ) {
                 template_role.id
             } else if template_role.position == 0 {
