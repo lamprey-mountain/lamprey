@@ -7,19 +7,19 @@ pub struct ModuleResolver;
 
 pub struct ModuleLoader;
 
-/// a reference to a module that can be loaded
+/// a reference to a module
 #[derive(Debug)]
 pub enum ModuleRef {
     /// load a builtin module: `lamprey:name`
-    Builtin(BuiltinModule),
+    Lamprey(LampreyModule),
 
-    /// load another script as a module: `script:uuid-here`
-    Script(RedexId),
+    /// import another redex as a module: `redex:your-uuid-here`
+    Redex(RedexId),
     // NOTE: maybe in the future i'll allow importing `https://path/to/somewhere`, `npm:foo`, `jsr:foo`?
 }
 
 #[derive(Debug)]
-pub enum BuiltinModule {
+pub enum LampreyModule {
     /// access to the lamprey api
     Api,
 
@@ -39,6 +39,7 @@ pub enum BuiltinModule {
     Storage,
 }
 
+// TODO: maybe derive Default for these instead
 impl ModuleResolver {
     pub fn new() -> Self {
         Self
@@ -59,6 +60,7 @@ impl rquickjs::loader::Resolver for ModuleResolver {
         name: &str,
         attributes: Option<rquickjs::loader::ImportAttributes<'js>>,
     ) -> rquickjs::Result<String> {
+        // TODO: what do i do here?
         dbg!(base, name, attributes);
         Ok(name.to_string())
     }
@@ -69,18 +71,19 @@ impl rquickjs::loader::Loader for ModuleLoader {
         &mut self,
         ctx: &rquickjs::prelude::Ctx<'js>,
         name: &str,
-        _attributes: Option<rquickjs::loader::ImportAttributes<'js>>,
+        attrs: Option<rquickjs::loader::ImportAttributes<'js>>,
     ) -> rquickjs::Result<Module<'js, rquickjs::module::Declared>> {
         let resolved: ModuleRef = name
             .parse()
             .map_err(|_| rquickjs::Error::new_loading(name))?;
 
         match resolved {
-            ModuleRef::Builtin(b) => match b {
-                BuiltinModule::Http => Module::declare_def::<super::glue::http::js_inner, _>(
+            ModuleRef::Lamprey(b) => match b {
+                LampreyModule::Http => Module::declare_def::<super::glue::http::js_inner, _>(
                     ctx.clone(),
                     "lamprey:http",
                 ),
+                _ => super::glue::events::BUNDLE.clone().load(ctx, name, attrs),
                 _ => Err(rquickjs::Error::new_loading(name)),
                 // // these modules are pretty incomplete
                 // BuiltinModule::Net => {
@@ -100,7 +103,7 @@ impl rquickjs::loader::Loader for ModuleLoader {
                 //     Module::declare_def::<super::glue::env::js_inner, _>(ctx.clone(), "lamprey:env")
                 // }
             },
-            ModuleRef::Script(_i) => {
+            ModuleRef::Redex(_i) => {
                 // TODO: somehow load this?
                 // unsure how to load modules async (need to fetch from db)
                 Err(rquickjs::Error::new_loading(name))
@@ -110,7 +113,7 @@ impl rquickjs::loader::Loader for ModuleLoader {
 }
 
 // TODO: better errors
-impl FromStr for BuiltinModule {
+impl FromStr for LampreyModule {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -132,11 +135,16 @@ impl FromStr for ModuleRef {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some(s) = s.strip_prefix("lamprey:") {
-            return BuiltinModule::from_str(s).map(ModuleRef::Builtin);
+            return LampreyModule::from_str(s).map(ModuleRef::Lamprey);
         }
 
-        if let Some(s) = s.strip_prefix("script:") {
-            return RedexId::from_str(s).map(ModuleRef::Script).map_err(|_| ());
+        // TODO
+        // if let Some(s) = s.strip_prefix("core:") {
+        //     return LampreyModule::from_str(s).map(ModuleRef::Lamprey);
+        // }
+
+        if let Some(s) = s.strip_prefix("redex:") {
+            return RedexId::from_str(s).map(ModuleRef::Redex).map_err(|_| ());
         }
 
         Err(())

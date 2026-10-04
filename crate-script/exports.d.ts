@@ -1,6 +1,6 @@
 // for use with the scripting api
 
-// declare const self: Globals;
+declare const self: Globals;
 
 export type Globals = {
   log: {
@@ -8,7 +8,7 @@ export type Globals = {
     info(content: string, metadata?: Record<string, string>): void;
     warn(content: string, metadata?: Record<string, string>): void;
     error(content: string, metadata?: Record<string, string>): void;
-  },
+  };
 };
 
 export type Context = {
@@ -29,7 +29,7 @@ export type Register = {
 
   /** http input, must be manually triggered */
 	onHttp(): Input<["request"], Response | Promise<Response>>;
-}
+};
 
 export type Input<T extends Capability[], R = void> = {
   needs<U extends Capability[]>(perms: [...U]): Input<[...T, ...U], R>;
@@ -135,9 +135,3 @@ declare module "lamprey:redex" {
       // stop()
     }
 }
-
-declare global {
-  const log: Globals["log"];
-}
-
-export {};
