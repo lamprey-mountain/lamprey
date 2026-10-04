@@ -8,13 +8,13 @@ import {
 import type {
 	AuditLogEntry,
 	EmojiCustom,
+	Eval,
+	EvalLogEntry,
 	Invite,
 	Notification,
 	PushInfo,
+	Redex,
 	RoomBan,
-	Run,
-	RunLogEntry,
-	Script,
 	Tag,
 	ThreadMember,
 	Webhook,
@@ -115,17 +115,17 @@ export interface ApiDB extends DBSchema {
 		key: string;
 	};
 	script: {
-		value: Script;
+		value: Redex;
 		key: string;
 		indexes: { channel_id: string };
 	};
 	script_run: {
-		value: Run;
+		value: Eval;
 		key: string;
 		indexes: { script_id: string };
 	};
 	script_log: {
-		value: RunLogEntry;
+		value: EvalLogEntry;
 		key: [string, number];
 		indexes: { run_id: string };
 	};

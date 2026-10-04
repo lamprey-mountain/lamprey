@@ -1,23 +1,23 @@
 import type {
 	PaginationResponse,
+	Redex,
 	RedexContentUpdate,
-	Script,
-	ScriptCreate,
-	ScriptId,
+	RedexCreate,
+	RedexId,
+	RedexVersion,
 	ScriptSubscribe,
-	ScriptVersion,
 } from "sdk";
 import { createUpload } from "sdk";
 import { BaseService } from "../core/Service";
 
-export class ScriptsService extends BaseService<Script> {
+export class RedexesService extends BaseService<Redex> {
 	protected cacheName = "script";
 
-	getKey(item: Script): string {
+	getKey(item: Redex): string {
 		return item.id;
 	}
 
-	async fetch(id: string): Promise<Script> {
+	async fetch(id: string): Promise<Redex> {
 		// id is expected to be "channel_id:redex_id" for fetching
 		const [channel_id, redex_id] = id.split(":");
 		if (!channel_id || !redex_id) {
@@ -31,7 +31,7 @@ export class ScriptsService extends BaseService<Script> {
 		);
 	}
 
-	async list(channel_id: string): Promise<PaginationResponse<Script>> {
+	async list(channel_id: string): Promise<PaginationResponse<Redex>> {
 		const data = await this.retryWithBackoff(() =>
 			this.client.http.GET("/api/v1/channel/{channel_id}/redex", {
 				params: { path: { channel_id }, query: { limit: 1024 } },
@@ -41,7 +41,7 @@ export class ScriptsService extends BaseService<Script> {
 		return data;
 	}
 
-	async create(channel_id: string, script: ScriptCreate): Promise<Script> {
+	async create(channel_id: string, script: RedexCreate): Promise<Redex> {
 		const data = await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/channel/{channel_id}/redex", {
 				params: { path: { channel_id } },
@@ -56,7 +56,7 @@ export class ScriptsService extends BaseService<Script> {
 		channel_id: string,
 		redex_id: string,
 		body: RedexContentUpdate,
-	): Promise<ScriptVersion> {
+	): Promise<RedexVersion> {
 		const data = await this.retryWithBackoff(() =>
 			this.client.http.PUT(
 				"/api/v1/channel/{channel_id}/redex/{redex_id}/content",
@@ -136,7 +136,7 @@ export class ScriptsService extends BaseService<Script> {
 		this.cache.delete(redex_id);
 	}
 
-	subscribe(channel_id: string, redex_id: ScriptId) {
+	subscribe(channel_id: string, redex_id: RedexId) {
 		const msg: ScriptSubscribe = {
 			type: "ScriptSubscribe",
 			channel_id,

@@ -1,18 +1,18 @@
 import { ReactiveMap } from "@solid-primitives/map";
-import type { PaginationResponse, RunId, RunLogEntry, ScriptId } from "sdk";
+import type { EvalId, EvalLogEntry, PaginationResponse, RedexId } from "sdk";
 import { BaseService } from "../core/Service";
 
-export class ScriptLogsService extends BaseService<RunLogEntry> {
+export class RedexLogsService extends BaseService<EvalLogEntry> {
 	protected cacheName = "script_log";
 
-	getKey(item: RunLogEntry): string {
+	getKey(item: EvalLogEntry): string {
 		return item.id.toString();
 	}
 
 	private logsByRun = new ReactiveMap<string, string[]>();
 
 	// add runId to logs since backend doesnt include it
-	private processLogs(runId: string, items: RunLogEntry[]) {
+	private processLogs(runId: string, items: EvalLogEntry[]) {
 		const keys = items.map((item) => this.getKey(item));
 
 		const existing = this.logsByRun.get(runId) ?? [];
@@ -24,7 +24,7 @@ export class ScriptLogsService extends BaseService<RunLogEntry> {
 		this.upsertBulk(items);
 	}
 
-	subscribe(channel_id: string, redex_id: ScriptId) {
+	subscribe(channel_id: string, redex_id: RedexId) {
 		this.client.send({
 			type: "ScriptSubscribe",
 			channel_id,
@@ -32,15 +32,15 @@ export class ScriptLogsService extends BaseService<RunLogEntry> {
 		});
 	}
 
-	async fetch(_id: string): Promise<RunLogEntry> {
+	async fetch(_id: string): Promise<EvalLogEntry> {
 		throw new Error("Use list() to fetch logs");
 	}
 
 	async list(
 		channel_id: string,
-		redex_id: ScriptId,
-		eval_id: RunId,
-	): Promise<PaginationResponse<RunLogEntry>> {
+		redex_id: RedexId,
+		eval_id: EvalId,
+	): Promise<PaginationResponse<EvalLogEntry>> {
 		const data = await this.retryWithBackoff(() =>
 			this.client.http.GET(
 				"/api/v1/channel/{channel_id}/redex/{redex_id}/eval/{eval_id}/log",
@@ -53,12 +53,12 @@ export class ScriptLogsService extends BaseService<RunLogEntry> {
 		return data;
 	}
 
-	getLogsForRun(eval_id: string): RunLogEntry[] {
+	getLogsForRun(eval_id: string): EvalLogEntry[] {
 		const ids = this.logsByRun.get(eval_id);
 		if (!ids) return [];
 		return ids
 			.map((id) => this.cache.get(id))
-			.filter((l): l is RunLogEntry => l != null);
+			.filter((l): l is EvalLogEntry => l != null);
 	}
 
 	override clear() {

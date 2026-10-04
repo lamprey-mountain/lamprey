@@ -24,11 +24,11 @@ export type {
 } from "./services/MessagesService";
 export type { NotificationService } from "./services/NotificationService";
 export type { PreferencesService } from "./services/PreferencesService";
+export type { RedexEvalsService as ScriptRunsService } from "./services/RedexEvalsService.ts";
+export type { RedexesService as ScriptsService } from "./services/RedexesService.ts";
+export type { RedexLogsService as ScriptLogsService } from "./services/RedexLogsService.ts";
 export type { RelationshipsService } from "./services/RelationshipsService";
 export type { RoomAnalyticsService } from "./services/RoomAnalyticsService";
-export type { ScriptLogsService } from "./services/ScriptLogsService";
-export type { ScriptRunsService } from "./services/ScriptRunsService";
-export type { ScriptsService } from "./services/ScriptsService";
 
 // Backwards compatibility type - maps old Api property names to RootStore
 export type Api = RootStore;

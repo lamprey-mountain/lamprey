@@ -1,6 +1,6 @@
 import { debounce } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
-import type { MessageSync, Script } from "sdk";
+import type { MessageSync, Redex } from "sdk";
 import { createContext, onCleanup, useContext } from "solid-js";
 import * as Y from "yjs";
 import { useApi } from "@/api";
@@ -10,7 +10,7 @@ import { base64UrlDecode, base64UrlEncode } from "../editor/editor-utils";
 type ScriptContextT = {
 	channel_id: string;
 	documents: Map<string, Y.Doc>;
-	acquire(redex: Script): Y.Doc | null;
+	acquire(redex: Redex): Y.Doc | null;
 	isSubscribed(id: string): boolean;
 };
 
@@ -46,7 +46,7 @@ export const createScriptContext = (channel_id: string) => {
 	const ctx: ScriptContextT = {
 		channel_id,
 		documents: new Map(),
-		acquire(redex: Script) {
+		acquire(redex: Redex) {
 			if (redex.latest_version.location.type !== "Document") {
 				return null;
 			}

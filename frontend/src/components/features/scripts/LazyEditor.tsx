@@ -1,9 +1,9 @@
-import type { Script } from "sdk";
+import type { Redex } from "sdk";
 import { createResource, Show } from "solid-js";
 
 // wrapper to lazy load the actual code editor
 export const LazyCodeEditor = (props: {
-	script: Script;
+	script: Redex;
 	onChange?: (val: string) => void;
 }) => {
 	const [real] = createResource(async () => {

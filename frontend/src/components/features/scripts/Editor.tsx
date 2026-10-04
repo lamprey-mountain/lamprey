@@ -47,7 +47,7 @@ import {
 import type {
 	MessageEnvelope,
 	MessageSync,
-	Script,
+	Redex,
 	Stream,
 	WebtransportClient,
 } from "ts-sdk";
@@ -62,7 +62,7 @@ import { highlight, theme } from "./theme";
 // import {lintKeymap} from "@codemirror/lint"
 
 export const CodeEditor = (props: {
-	script: Script;
+	script: Redex;
 	onChange?: (val: string) => void;
 }) => {
 	const api = useApi();

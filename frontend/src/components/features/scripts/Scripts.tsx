@@ -1,6 +1,6 @@
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import fuzzysort from "fuzzysort";
-import { type Channel, createUpload, type Media, type Script } from "sdk";
+import { type Channel, createUpload, type Media, type Redex } from "sdk";
 import { useFloating } from "solid-floating-ui";
 import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import { Portal } from "solid-js/web";
@@ -41,7 +41,7 @@ export const Scripts = (props: { channel: Channel }) => {
 		return results.map((r) => r.obj);
 	});
 
-	const openScript = (script: Script) => {
+	const openScript = (script: Redex) => {
 		navigate(`/channel/${props.channel.id}/script/${script.id}`);
 	};
 

@@ -17,13 +17,13 @@ import {
 	DEFAULT_PREFERENCES,
 	PreferencesService,
 } from "../services/PreferencesService";
+import { RedexEvalsService } from "../services/RedexEvalsService";
+import { RedexesService } from "../services/RedexesService";
+import { RedexLogsService } from "../services/RedexLogsService";
 import { RelationshipsService } from "../services/RelationshipsService";
 import { RolesService } from "../services/RolesService";
 import { RoomMembersService } from "../services/RoomMembersService";
 import { RoomsService } from "../services/RoomsService";
-import { ScriptLogsService } from "../services/ScriptLogsService";
-import { ScriptRunsService } from "../services/ScriptRunsService";
-import { ScriptsService } from "../services/ScriptsService";
 import { SessionsService } from "../services/SessionsService";
 import { ThreadMembersService } from "../services/ThreadMembersService";
 import { UsersService } from "../services/UsersService";
@@ -109,9 +109,9 @@ export class RootStore {
 	documentTags: DocumentTagService;
 	preferences: PreferencesService;
 	flumes: FlumeService;
-	scripts: ScriptsService;
-	scriptRuns: ScriptRunsService;
-	scriptLogs: ScriptLogsService;
+	scripts: RedexesService;
+	scriptRuns: RedexEvalsService;
+	scriptLogs: RedexLogsService;
 	streams: StreamManager | undefined;
 	voiceStates: ReactiveMap<string, VoiceState>;
 	typing: ReactiveMap<string, Set<string>>;
@@ -208,9 +208,9 @@ export class RootStore {
 		this.threads = new ThreadsService(this, getDb);
 		this.users = new UsersService(this, getDb);
 		this.webhooks = new WebhooksService(this, getDb);
-		this.scripts = new ScriptsService(this, getDb);
-		this.scriptRuns = new ScriptRunsService(this, getDb);
-		this.scriptLogs = new ScriptLogsService(this, getDb);
+		this.scripts = new RedexesService(this, getDb);
+		this.scriptRuns = new RedexEvalsService(this, getDb);
+		this.scriptLogs = new RedexLogsService(this, getDb);
 		if (this.client.isWebtransport) {
 			this.streams = new StreamManager(this.client as WebtransportClient);
 		}

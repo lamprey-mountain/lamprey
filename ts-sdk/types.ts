@@ -131,45 +131,44 @@ export type Time = components["schemas"]["Time"];
 export type PermissionOverwriteType =
 	components["schemas"]["PermissionOverwriteType"];
 export type NotifsRoom = components["schemas"]["NotifsRoom"];
-export type ScriptId = string;
-export type RunId = string;
-export type ScriptVerId = string;
 
-// TODO: rename types
-export type Script = components["schemas"]["Redex"];
-export type RunCreateTrigger = components["schemas"]["EvalCreateManual"];
-export type RunLogEntry = components["schemas"]["EvalLogEntry"];
+export type RedexId = string;
+export type RedexVerId = string;
+export type EvalId = string;
+export type Redex = components["schemas"]["Redex"];
+export type EvalCreateManual = components["schemas"]["EvalCreateManual"];
+export type EvalLogEntry = components["schemas"]["EvalLogEntry"];
 
-export type ScriptStatus = "Creating" | "Active" | "Borked" | "Deleted";
+export type RedexStatus = "Creating" | "Active" | "Borked" | "Deleted";
 
-export type ScriptVersion = components["schemas"]["RedexVersion"];
-export type ScriptLocation = components["schemas"]["RedexLocation"];
-export type ScriptFormat = "Javascript" | "Webassembly";
-export type ScriptVersionStatus = "Processing" | "Ready" | "Error";
+export type RedexVersion = components["schemas"]["RedexVersion"];
+export type RedexLocation = components["schemas"]["RedexLocation"];
+export type RedexFormat = "Javascript" | "Webassembly";
+export type RedexVersionStatus = "Processing" | "Ready" | "Error";
 
-export type ScriptCreate = {
-	format: ScriptFormat;
-	location: any;
+export type RedexCreate = {
+	format: RedexFormat;
+	location: RedexLocation;
 };
 
-export type Run = components["schemas"]["Eval"];
-export type RunStatus = components["schemas"]["EvalStatus"];
+export type Eval = components["schemas"]["Eval"];
+export type EvalStatus = components["schemas"]["EvalStatus"];
 
 export type ScriptSubscribe = {
 	type: "ScriptSubscribe";
 	channel_id: string;
-	script_id: ScriptId;
+	script_id: RedexId;
 };
 
 export type ScriptSync =
-	| { type: "ScriptCreate"; script: Script }
-	| { type: "ScriptUpdate"; script: Script }
-	| { type: "ScriptDelete"; script_id: ScriptId; channel_id: string }
-	| { type: "ScriptRunCreate"; run: Run; channel_id: string }
-	| { type: "ScriptRunUpdate"; run: Run; channel_id: string }
+	| { type: "ScriptCreate"; script: Redex }
+	| { type: "ScriptUpdate"; script: Redex }
+	| { type: "ScriptDelete"; script_id: RedexId; channel_id: string }
+	| { type: "ScriptRunCreate"; run: Eval; channel_id: string }
+	| { type: "ScriptRunUpdate"; run: Eval; channel_id: string }
 	| {
 			type: "ScriptLogCreate";
-			entry: RunLogEntry;
+			entry: EvalLogEntry;
 			channel_id: string;
 			run_id: string;
 	  };
