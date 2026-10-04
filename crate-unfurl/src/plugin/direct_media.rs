@@ -4,34 +4,35 @@ use reqwest::Response;
 use url::Url;
 
 use crate::{
-    error::UnfurlError,
-    plugin::UnfurlPlugin,
-    unfurler::EmbedGeneration,
+    Plugin, PluginHttp, Unfurler,
+    plugin::UnfurlResult,
+    unfurler::{EmbedGeneration, UnfurlerBuilder},
     util::{EmbedGenerationTemplate, EmbedMedia, EmbedMediaPending},
 };
 
 pub struct DirectMediaPlugin;
 
+impl Plugin for DirectMediaPlugin {
+    fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder {
+        builder.add_plugin_http(self)
+    }
+}
+
 #[async_trait]
-impl UnfurlPlugin for DirectMediaPlugin {
-    fn name(&self) -> &'static str {
-        "DirectMediaPlugin"
-    }
+impl PluginHttp for DirectMediaPlugin {
+    async fn handle(&self, _unfurler: &Unfurler, url: &Url, res: &Response) -> UnfurlResult {
+        let accepts_response =
+            if let Some(content_type) = res.headers().get(reqwest::header::CONTENT_TYPE) {
+                let ct = content_type.to_str().unwrap_or_default();
+                ct.starts_with("image/") || ct.starts_with("video/") || ct.starts_with("audio/")
+            } else {
+                false
+            };
 
-    fn accepts_response(&self, res: &Response) -> bool {
-        if let Some(content_type) = res.headers().get(reqwest::header::CONTENT_TYPE) {
-            let ct = content_type.to_str().unwrap_or_default();
-            ct.starts_with("image/") || ct.starts_with("video/") || ct.starts_with("audio/")
-        } else {
-            false
+        if !accepts_response {
+            return UnfurlResult::skip();
         }
-    }
 
-    async fn process_response(
-        &self,
-        url: &Url,
-        res: Response,
-    ) -> Result<Vec<EmbedGeneration>, UnfurlError> {
         // Extract basic mime info
         let ct_str = res
             .headers()
@@ -45,7 +46,7 @@ impl UnfurlPlugin for DirectMediaPlugin {
 
         let media: EmbedMedia = EmbedMediaPending::new(url.clone()).mime_guess(mime).into();
 
-        Ok(vec![EmbedGeneration {
+        let embed = EmbedGeneration {
             embed: EmbedGenerationTemplate {
                 ty: EmbedType::Media,
                 url: Some(url.clone()),
@@ -61,6 +62,12 @@ impl UnfurlPlugin for DirectMediaPlugin {
                 site_name: None,
                 site_avatar: None,
             },
-        }])
+        };
+
+        UnfurlResult {
+            embeds: vec![embed],
+            errors: vec![],
+            stop: true,
+        }
     }
 }

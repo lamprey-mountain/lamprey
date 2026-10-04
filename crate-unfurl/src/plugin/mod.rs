@@ -75,14 +75,13 @@ impl UnfurlResult {
 }
 
 /// A plugin for the unfurler
-#[async_trait]
 pub trait Plugin: Send + Sync {
     /// The name of this plugin, for debugging
     fn name(&self) -> &'static str {
         std::any::type_name::<Self>()
     }
 
-    fn register(&self, builder: UnfurlerBuilder) -> UnfurlerBuilder;
+    fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder;
 }
 
 /// an unfurler plugin that handles urls

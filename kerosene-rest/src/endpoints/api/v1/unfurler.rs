@@ -6,7 +6,10 @@ use common::{
         unfurl::{UnfurlerDebugResponse, UnfurlerResponse},
         util::Time,
     },
-    v2::types::{MessageId, media::MediaCreate},
+    v2::types::{
+        MessageId,
+        media::{MediaCreate, MediaCreateSource},
+    },
 };
 use futures::stream::{FuturesOrdered, FuturesUnordered};
 use http::StatusCode;
@@ -28,47 +31,45 @@ pub async fn debug(
     user.ensure_unsuspended()?;
 
     let srv = req.services();
-    // let mut log_sink = DebugLogSink::new();
-    // let generations = s
-    //     .inner
-    //     .services()
-    //     .embed
-    //     .unfurl_with_logger(&json.url, &mufutures::StreamExt::next(&mut media)    //     .await?;
+    let (generations, log) = srv.embed.unfurl_with_logs(&req.inner().body.url).await?;
 
-    // let mut embeds = Vec::new();
-    // for mut g in generations {
-    //     let pending = g.pending_media();
-    //     for p in pending {
-    //         let import = Import::new(auth.user.id).merge(MediaCreate {
-    //             alt: p.alt,
-    //             strip_exif: false,
-    //             source: MediaCreateSource::Download {
-    //                 filename: None,
-    //                 size: None,
-    //                 source_url: p.url.clone(),
-    //             },
-    //         });
-    //         let mut item = s.services().media.import_from_url(import, &p.url).await?;
-    //         let media = item.ready().await;
-    //         g.update_media(
-    //             p.placeholder_media_id,
-    //             lamprey_unfurl::util::EmbedMedia::Finished((*media).clone()),
-    //         );
-    //     }
+    let mut embeds = FuturesUnordered::new();
 
-    //     embeds.push(g.into_embed());
-    // }
+    for mut g in generations {
+        tasks.push(async {
+            let mut media = FuturesUnordered::new();
+            for pending in g.pending_media() {
+                media.push(async {
+                    let import = Import::new(user.id).merge(MediaCreate {
+                        alt: pending.alt,
+                        strip_exif: false,
+                        source: MediaCreateSource::Download {
+                            filename: None,
+                            size: None,
+                            source_url: pending.url.clone(),
+                        },
+                    });
+                    let mut item = srv.media.import_from_url(import, &pending.url).await?;
+                    (pending.placeholder_media_id, item.ready().await)
+                });
+            }
 
-    // Ok(Json(DebugResponse {
-    //     log: log_sink.into_entries(),
-    //     embeds,
-    // }))
+            while let Some((pid, media)) = media.next() {
+                g.update_media(
+                    pid,
+                    lamprey_unfurl::util::EmbedMedia::Finished((*media).clone()),
+                );
+            }
 
-    let mut log = vec![];
-    let mut embeds = vec![];
+            Result::Ok(g.into_embed())
+        });
+    }
 
     Ok(routes::unfurler_debug::Response {
-        body: UnfurlerDebugResponse { log, embeds },
+        body: UnfurlerDebugResponse {
+            log,
+            embeds: embeds.await,
+        },
     })
 }
 

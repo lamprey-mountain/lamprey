@@ -1,16 +1,11 @@
-use std::sync::Arc;
-
-use lamprey_common::{
-    v1::types::{Embed, EmbedId, MediaId},
-    v2::types::media::Media,
-};
+use lamprey_common::v1::types::{Embed, EmbedId, MediaId};
 use reqwest::{Client, ClientBuilder};
 use url::Url;
 
 use crate::{
     Plugin,
     error::UnfurlError,
-    plugin::{PluginHtml, PluginHttp, PluginUrl, UnfurlPlugin},
+    plugin::{PluginHtml, PluginHttp, PluginUrl},
     util::{EmbedGenerationTemplate, EmbedMedia, EmbedMediaPending},
 };
 
@@ -55,15 +50,6 @@ impl Unfurler {
     }
 
     /// generate embeds for this url
-    #[deprecated = "use unfurl() directly"]
-    pub async fn unfurl_with_tracing(
-        &self,
-        url: &Url,
-    ) -> Result<Vec<EmbedGeneration>, UnfurlError> {
-        self.unfurl(url).await
-    }
-
-    /// generate embeds for this url
     // TODO: return embeds *and* errors, not a result
     pub async fn unfurl(&self, url: &Url) -> Result<Vec<EmbedGeneration>, UnfurlError> {
         // PERF: try to run as many plugins in parallel as possible?
@@ -86,8 +72,6 @@ impl Unfurler {
                 return Ok(embeds);
             }
         }
-
-        // TODO: use or remove SelectHttp and SelectHtml
 
         // 2. http based plugins
         if url.scheme() != "http" && url.scheme() != "https" {
@@ -134,7 +118,7 @@ impl UnfurlerBuilder {
     }
 
     /// add a plugin to this unfurler
-    pub fn add_plugin<P: Plugin + 'static>(mut self, plugin: P) -> Self {
+    pub fn add_plugin<P: Plugin + 'static>(self, plugin: P) -> Self {
         plugin.register(self)
     }
 
@@ -146,12 +130,14 @@ impl UnfurlerBuilder {
 
     /// add a http plugin to this unfurler
     pub fn add_plugin_http<P: PluginHttp + 'static>(mut self, plugin: P) -> Self {
-        todo!()
+        self.http_plugins.push(Box::new(plugin));
+        self
     }
 
     /// add a html plugin to this unfurler
     pub fn add_plugin_html<P: PluginHtml + 'static>(mut self, plugin: P) -> Self {
-        todo!()
+        self.html_plugins.push(Box::new(plugin));
+        self
     }
 
     pub fn build(self) -> Result<Unfurler, reqwest::Error> {

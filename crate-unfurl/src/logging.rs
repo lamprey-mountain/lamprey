@@ -12,6 +12,7 @@ use tracing::{Event, Subscriber, field::Visit, span};
 use tracing_subscriber::{Layer, layer::Context, registry::LookupSpan};
 
 /// a tracing layer that collects diagnostics into a Vec of [`log::Entry`].
+#[derive(Clone)]
 pub struct DebugLayer {
     start: Instant,
     inner: Arc<Mutex<Inner>>, // PERF: surely i dont need to use a Mutex here, right?

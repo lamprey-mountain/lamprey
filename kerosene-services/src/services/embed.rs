@@ -1,14 +1,16 @@
 use std::{sync::Arc, time::Duration};
 
 use common::v1::types::embed::Embed;
-use common::v1::types::{MessageAttachmentType, MessageSync, MessageType, UserId};
+use common::v1::types::{MessageAttachmentType, MessageSync, MessageType, UserId, unfurl};
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use lamprey_unfurl::util::EmbedMedia;
 use lamprey_unfurl::{DirectMediaPlugin, HtmlStreamPlugin, Unfurler};
 use moka::future::Cache;
 use tokio::sync::{Mutex, broadcast};
 use tokio::task::JoinHandle;
+use tracing::instrument::WithSubscriber;
 use tracing::{debug, error, info, warn};
+use tracing_subscriber::layer::SubscriberExt;
 use url::Url;
 
 use crate::prelude::*;
@@ -198,16 +200,26 @@ impl ServiceEmbed {
             .map_err(|e| Error::UrlEmbedOther(e.to_string()))
     }
 
-    /// Unfurl a single URL with logging support
-    pub async fn unfurl_with_logger(
+    /// Unfurl a single URL and return logs
+    pub async fn unfurl_with_logs(
         &self,
         url: &Url,
-        log_sink: &mut dyn lamprey_unfurl::logging::LogSink,
-    ) -> crate::Result<Vec<lamprey_unfurl::unfurler::EmbedGeneration>> {
-        self.unfurler
-            .unfurl_with_logger(url, log_sink)
+    ) -> crate::Result<(
+        Vec<lamprey_unfurl::unfurler::EmbedGeneration>,
+        Vec<unfurl::log::Entry>,
+    )> {
+        // TODO: move log capturing logic into unfurling crate
+        let layer = lamprey_unfurl::logging::DebugLayer::new();
+        let subscriber = tracing_subscriber::Registry::default().with(layer.clone());
+
+        let generations = self
+            .unfurler
+            .unfurl(url)
+            .with_subscriber(subscriber)
             .await
-            .map_err(|e| Error::UrlEmbedOther(e.to_string()))
+            .map_err(|e| Error::UrlEmbedOther(e.to_string()))?;
+
+        Ok((generations, layer.take_entries()))
     }
 
     #[tracing::instrument(level = "info", skip(self))]

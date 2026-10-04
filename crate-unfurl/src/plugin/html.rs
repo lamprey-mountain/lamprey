@@ -13,6 +13,7 @@ use reqwest::Response;
 use url::Url;
 
 use crate::{
+    Plugin, PluginHtml, Unfurler,
     error::UnfurlError,
     plugin::{
         UnfurlPlugin,
@@ -21,7 +22,7 @@ use crate::{
             util::{RobotsImagePreview, TwitterCard},
         },
     },
-    unfurler::EmbedGeneration,
+    unfurler::{EmbedGeneration, UnfurlerBuilder},
     util::{EmbedGenerationTemplate, EmbedMediaPending},
 };
 
@@ -30,6 +31,24 @@ mod util;
 
 pub struct HtmlStreamPlugin {
     pub max_bytes: usize,
+}
+
+impl Plugin for HtmlStreamPlugin {
+    fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder {
+        builder.add_plugin_html(self)
+    }
+}
+
+impl PluginHtml for HtmlStreamPlugin {
+    fn create_sink(
+        &self,
+        unfurler: &Unfurler,
+        url: &Url,
+        status: reqwest::StatusCode,
+        headers: &reqwest::header::HeaderMap,
+    ) -> Box<dyn super::HtmlSink> {
+        todo!()
+    }
 }
 
 #[async_trait]
