@@ -1,6 +1,7 @@
 import { debounce } from "@solid-primitives/scheduled";
 import { go } from "fuzzysort";
 import type { Channel } from "sdk";
+import { getTimestampFromUUID } from "sdk";
 import {
 	createMemo,
 	createResource,
@@ -11,6 +12,7 @@ import {
 } from "solid-js";
 import { useChannels, usePreferences, useThreads } from "@/api";
 import { useCtx } from "@/app/context";
+import { Time } from "@/atoms/Time";
 import { ChannelIcon } from "@/components/shared/User";
 import { useModals } from "@/contexts/modal.tsx";
 import { useNavigate } from "@/contexts/router";
@@ -187,70 +189,77 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 		searchInputRef?.focus();
 	});
 
+	const ThreadItem = (props: { thread: Channel }) => {
+		return (
+			<div class="thread-item" onClick={[onThreadClick, props.thread]}>
+				<ChannelIcon channel={props.thread} />
+				<div>
+					<div>{props.thread.name}</div>
+					<div class="dim">
+						Active{" "}
+						<Time
+							date={getTimestampFromUUID(
+								props.thread.last_message_id ?? props.thread.id,
+							)}
+						/>
+					</div>
+				</div>
+			</div>
+		);
+	};
+
 	return (
 		<div class="threads-popout" onClick={(e) => e.stopPropagation()}>
-			<div class="header">
-				<input
-					ref={searchInputRef}
-					type="search"
-					placeholder="Search threads..."
-					value={search()}
-					onInput={(e) => onSearchInput(e.currentTarget.value)}
-					onKeyDown={onKeyDown}
-					class="search-pad"
-				/>
-				<button type="button" class="primary button" onClick={onCreateThread}>
-					create thread
-				</button>
-			</div>
-			<div class="thread-list">
-				<Show when={isLoading()}>
-					<h3 class="dim">loading threads...</h3>
-					<For each={skeletonItems}>{() => <ThreadSkeletonItem />}</For>
-				</Show>
-				<Show when={!isLoading()}>
-					<Show when={sortedThreads().joined.length}>
-						<h3 class="dim">joined threads</h3>
+			<div class="background"></div>
+			<div class="content">
+				<div class="header">
+					<input
+						ref={searchInputRef}
+						type="search"
+						placeholder="Search threads..."
+						value={search()}
+						onInput={(e) => onSearchInput(e.currentTarget.value)}
+						onKeyDown={onKeyDown}
+						class="search-pad"
+					/>
+					<button type="button" class="primary button" onClick={onCreateThread}>
+						create thread
+					</button>
+				</div>
+				<div class="thread-list">
+					<Show when={isLoading()}>
+						<h3 class="dim">loading threads...</h3>
+						<For each={skeletonItems}>{() => <ThreadSkeletonItem />}</For>
 					</Show>
-					<For each={sortedThreads().joined}>
-						{(thread) => (
+					<Show when={!isLoading()}>
+						<Show when={sortedThreads().joined.length}>
+							<h3 class="dim">joined threads</h3>
+						</Show>
+						<For each={sortedThreads().joined}>
+							{(thread) => <ThreadItem thread={thread} />}
+						</For>
+						<Show when={sortedThreads().notJoined.length}>
+							<h3 class="dim">active threads</h3>
+						</Show>
+						<For each={sortedThreads().notJoined}>
+							{(thread) => <ThreadItem thread={thread} />}
+						</For>
+						<Show when={sortedThreads().archived.length}>
+							<h3 class="dim">archived threads</h3>
+						</Show>
+						<For each={sortedThreads().archived}>
+							{(thread) => <ThreadItem thread={thread} />}
+						</For>
+						<Show when={isEmpty()}>
 							<div
-								class="thread-item menu-thread"
-								onClick={() => onThreadClick(thread)}
-								data-channel-id={thread.id}
-								data-room-id={thread.room_id}
+								class="dim"
+								style="text-align:center;margin:2em;font-size:1rem;"
 							>
-								<ChannelIcon channel={thread} />
-								<span>{thread.name}</span>
+								no threads :(
 							</div>
-						)}
-					</For>
-					<Show when={sortedThreads().notJoined.length}>
-						<h3 class="dim">active threads</h3>
+						</Show>
 					</Show>
-					<For each={sortedThreads().notJoined}>
-						{(thread) => (
-							<div class="thread-item" onClick={() => onThreadClick(thread)}>
-								<ChannelIcon channel={thread} />
-								<span>{thread.name}</span>
-							</div>
-						)}
-					</For>
-					<Show when={sortedThreads().archived.length}>
-						<h3 class="dim">archived threads</h3>
-					</Show>
-					<For each={sortedThreads().archived}>
-						{(thread) => (
-							<div class="thread-item" onClick={() => onThreadClick(thread)}>
-								<ChannelIcon channel={thread} />
-								<span>{thread.name}</span>
-							</div>
-						)}
-					</For>
-					<Show when={isEmpty()}>
-						<div style="text-align:center">no threads :(</div>
-					</Show>
-				</Show>
+				</div>
 			</div>
 		</div>
 	);
