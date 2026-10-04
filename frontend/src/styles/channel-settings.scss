@@ -51,12 +51,9 @@
 
 	.main,
 	.edit {
+		flex: 1;
 		padding: 8px;
 		overflow-y: auto;
-	}
-
-	.main {
-		flex: 1;
 	}
 
 	.edit {
