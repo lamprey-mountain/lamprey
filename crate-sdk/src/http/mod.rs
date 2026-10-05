@@ -119,7 +119,12 @@ impl Http {
         })
     }
 
-    pub async fn dispatch<E: Endpoint>(&self, req: E::Request) -> Result<E::Response> {
+    pub async fn dispatch<E, Req, Res>(&self, req: Req) -> Result<Res>
+    where
+        E: Endpoint<Request = Req, Response = Res>,
+        Req: Request<Endpoint = E>,
+        Res: Response<Endpoint = E>,
+    {
         // PERF: don't buffer entire body up front
         // TODO: don't panic, add better error handling
         let http_req = req.encode();
@@ -135,6 +140,6 @@ impl Http {
         *builder.headers_mut().expect("builder not errored") = headers;
         let http_res = builder.body(Body::from_stream(res.bytes_stream())).unwrap();
 
-        Ok(E::Response::extract(http_res).await.unwrap())
+        Ok(Res::extract(http_res).await.unwrap())
     }
 }

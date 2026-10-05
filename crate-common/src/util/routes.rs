@@ -7,8 +7,8 @@ use crate::{
 
 /// an http endpoint
 pub trait Endpoint {
-    type Request: Request;
-    type Response: Response;
+    type Request: Request<Endpoint = Self>;
+    type Response: Response<Endpoint = Self>;
 
     /// get the metadata for this endpoint
     fn metadata() -> Metadata;
@@ -75,6 +75,8 @@ pub enum Method {
 }
 
 pub trait Request: Sized {
+    type Endpoint: Endpoint<Request = Self>;
+
     /// encode this into an http request
     fn encode(self) -> http::Request<Body>;
 
@@ -85,6 +87,8 @@ pub trait Request: Sized {
 }
 
 pub trait Response: Sized {
+    type Endpoint: Endpoint<Response = Self>;
+
     /// encode this into an http response
     fn encode(self) -> http::Response<Body>;
 

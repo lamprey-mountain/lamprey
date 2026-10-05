@@ -164,11 +164,13 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             }
 
             impl crate::util::routes::Request for Request {
+                type Endpoint = Endpoint;
                 #encode_request_fn
                 #extract_request_fn
             }
 
             impl crate::util::routes::Response for Response {
+                type Endpoint = Endpoint;
                 #encode_response_fn
                 #extract_response_fn
             }
