@@ -566,6 +566,106 @@
 			transition: width 33ms linear;
 		}
 	}
+
+	.cam-check {
+		position: relative;
+		width: 100%;
+		aspect-ratio: 16/9;
+		border: solid $sep-300 1px;
+		border-radius: 4px;
+		margin: 8px 0;
+		overflow: hidden;
+		background: black;
+
+		& > .canvas {
+			position: absolute;
+			height: 100%;
+			width: 100%;
+			object-fit: contain;
+		}
+
+		& > .static {
+			opacity: 1;
+			transition: opacity 100ms 200ms linear;
+		}
+
+		&.live > .static {
+			opacity: 0;
+		}
+
+		& > .controls {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			width: 100%;
+			padding: 8px;
+			padding-top: 32px;
+			z-index: 1;
+			/* background: linear-gradient(transparent, oklch(from $bg-100 l c h / .5) */
+			/* 50%); */
+			background: linear-gradient(transparent, oklch(from black l c h / .5)
+				50%);
+			transition: padding-top 120ms ease-out;
+			display: flex;
+			align-items: end;
+			justify-content: space-between;
+
+			& > .button {
+				margin: 1px 0;
+				border-radius: 4px;
+				width: 3em;
+				text-align: center;
+
+				&:active > .inner {
+					translate: 0 1px;
+				}
+			}
+
+			& > .status {
+				margin: 0 .5rem;
+				color: $fg-100;
+				text-transform: uppercase;
+				font-weight: bold;
+				z-index: 1;
+				opacity: 1;
+				transition: opacity 120ms ease-out;
+				display: flex;
+				align-items: center;
+				gap: 4px;
+				pointer-events: none;
+
+				&::before {
+					content: "";
+					height: 8px;
+					width: 8px;
+					display: block;
+					border-radius: 50%;
+					border: solid transparent 2px;
+				}
+
+				&.active {
+					color: $color-orange;
+
+					&::before {
+						border-color: $color-orange;
+					}
+				}
+
+				&.live {
+					color: $color-red;
+
+					&::before {
+						background-color: $color-red;
+						border-color: transparent;
+					}
+				}
+			}
+		}
+
+		&.active > .controls {
+			padding-top: 8px;
+		}
+	}
 }
 
 .user-settings-applications {

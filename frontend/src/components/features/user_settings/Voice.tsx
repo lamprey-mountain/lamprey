@@ -1,5 +1,6 @@
 import type { User } from "sdk";
 import {
+	createEffect,
 	createMemo,
 	createSignal,
 	onCleanup,
@@ -11,6 +12,7 @@ import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Dropdown } from "@/atoms/Dropdown";
 import { Checkbox } from "@/atoms/icons";
+import { createStaticShaderCanvas } from "@/atoms/Static";
 import { createVAD } from "../voice/vad";
 
 // NOTE: maybe move this to another file?
@@ -42,6 +44,7 @@ const useMediaDevices = () => {
 	};
 
 	// browsers don't reveal any information unless we already have a stream
+	// NOTE: requesting audio media only lets me get metadata for audioinput/output devices, i would need to request video media for videoinput (camera) metadata
 	navigator.mediaDevices
 		.getUserMedia({ audio: true })
 		.then((stream) => {
@@ -106,10 +109,47 @@ const createMicCheck = () => {
 	};
 };
 
+const createCamCheck = () => {
+	const [active, setActive] = createSignal(false);
+	const [live, setLive] = createSignal(false);
+	let stream: MediaStream | undefined;
+
+	const stop = () => {
+		if (stream) {
+			stream.getTracks().forEach((t) => t.stop());
+		}
+		stream = undefined;
+		setActive(false);
+		setLive(false);
+	};
+
+	const start = async (deviceId?: string) => {
+		stop(); // PERF: make this a no-op if deviceId is te same
+
+		setActive(true);
+		stream = await navigator.mediaDevices.getUserMedia(
+			deviceId ? { video: { deviceId } } : { video: true },
+		);
+		setLive(true);
+		return stream;
+	};
+
+	onCleanup(stop);
+
+	return {
+		active,
+		live,
+		stop,
+		start,
+	};
+};
+
 export function Voice(_props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
 	const devices = useMediaDevices();
 	const micCheck = createMicCheck();
+	const camCheck = createCamCheck();
+	let videoRef: HTMLVideoElement | undefined;
 
 	// TODO: save input/output device volume, profile, etc per device id
 	// TODO: automatic gain control
@@ -363,6 +403,108 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 						/>
 					</div>
 				</Show>
+			</div>
+			<h3 class="dim title">camera</h3>
+			<div
+				class="cam-check"
+				classList={{ active: camCheck.active(), live: camCheck.live() }}
+			>
+				<Show when={camCheck.live()}>
+					<video
+						class="canvas"
+						ref={(el) => {
+							videoRef = el;
+						}}
+						autoplay
+						playsinline
+						muted
+					/>
+				</Show>
+
+				<Show when={camCheck.active()}>
+					<canvas
+						class="canvas static"
+						ref={(c) => {
+							const ctl = createStaticShaderCanvas(c);
+
+							// NOTE: this logic is common enough that i probably want to extract it out
+							// solid primitives scheduled doesn't have "double edged" schedulers which can delay an update for only one way
+							let timeout: ReturnType<typeof setTimeout> | undefined;
+							createEffect(() => {
+								if (timeout) clearTimeout(timeout);
+								if (camCheck.live()) {
+									timeout = setTimeout(() => ctl.pause(true), 500);
+								} else {
+									ctl.pause(false);
+								}
+							});
+							onCleanup(() => {
+								if (timeout) clearTimeout(timeout);
+							});
+						}}
+					/>
+				</Show>
+
+				<div class="controls">
+					<button
+						type="button"
+						class="button primary"
+						onClick={async () => {
+							if (camCheck.active()) {
+								camCheck.stop();
+								if (videoRef) videoRef.srcObject = null;
+							} else {
+								const stream = await camCheck.start(
+									ctx.preferences().frontend.video_device,
+								);
+								if (videoRef) videoRef.srcObject = stream;
+							}
+						}}
+					>
+						<div class="inner">{camCheck.active() ? "Stop" : "Test"}</div>
+					</button>
+					<div
+						class="status"
+						classList={{
+							active: camCheck.active(),
+							live: camCheck.live(),
+						}}
+					>
+						{camCheck.active()
+							? camCheck.live()
+								? "live"
+								: "awaiting camera"
+							: "offline"}
+					</div>
+				</div>
+			</div>
+			<div class="option apart">
+				<div>
+					<div>Video device</div>
+					<div class="dim">Device to pull video from</div>
+				</div>
+				<Dropdown
+					selected={
+						ctx.preferences().frontend.video_device ||
+						devices().find((d) => d.kind === "videoinput")?.deviceId ||
+						"default"
+					}
+					onSelect={(value) => {
+						if (value) {
+							const c = ctx.preferences();
+							ctx.setPreferences({
+								...c,
+								frontend: {
+									...c.frontend,
+									video_device: value,
+								},
+							});
+						}
+					}}
+					options={devices()
+						.filter((i) => i.kind === "videoinput")
+						.map((i) => ({ item: i.deviceId, label: i.label }))}
+				/>
 			</div>
 		</div>
 	);

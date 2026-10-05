@@ -1,4 +1,4 @@
-import { type Accessor, onCleanup } from "solid-js";
+import { type Accessor, createEffect, createSignal, onCleanup } from "solid-js";
 import fragmentShaderSource from "@/atoms/static.frag?raw";
 import vertexShaderSource from "@/atoms/static.vert?raw";
 import { compileProgram, compileShader } from "@/lib/webgl";
@@ -7,6 +7,8 @@ export const createStaticShader = (
 	gl: WebGL2RenderingContext,
 	resolution: Accessor<[number, number]>,
 ) => {
+	const [paused, setPaused] = createSignal(false);
+
 	// compile shaders
 	const vert = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
 	const frag = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
@@ -31,6 +33,8 @@ export const createStaticShader = (
 
 	let requestId: number;
 	const render = (time: number) => {
+		if (paused()) return;
+
 		const [width, height] = resolution();
 		gl.uniform1f(timeLoc, time * 0.001);
 		gl.uniform2f(resLoc, width, height);
@@ -47,6 +51,20 @@ export const createStaticShader = (
 		gl.deleteProgram(prog);
 		gl.deleteBuffer(positionBuffer);
 	});
+
+	createEffect(() => {
+		if (paused()) {
+			cancelAnimationFrame(requestId);
+		} else {
+			requestAnimationFrame(render);
+		}
+	});
+
+	return {
+		pause(p: boolean) {
+			setPaused(p);
+		},
+	};
 };
 
 export const createStaticShaderCanvas = (canvas: HTMLCanvasElement) => {
@@ -67,10 +85,12 @@ export const createStaticShaderCanvas = (canvas: HTMLCanvasElement) => {
 		}
 	});
 
-	createStaticShader(gl, () => [canvas.width, canvas.height]);
+	const ctl = createStaticShader(gl, () => [canvas.width, canvas.height]);
 
 	obs.observe(canvas);
 	onCleanup(() => obs.disconnect());
+
+	return ctl;
 };
 
 export const Static = () => {
