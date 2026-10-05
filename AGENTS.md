@@ -12,7 +12,6 @@ in general:
 
 this is for reference, don't run these. for various reasons, these may be buggy or require extra work to run. wait for and tell the user to run these instead if needed.
 
-- `deno task hakari` regenerate crate-hakari, to keep feature flags in sync across all deps
 - `deno task sqlx-prep` regenerate sqlx offline
 - `pnpm -F frontend test` runs playwright tests
 

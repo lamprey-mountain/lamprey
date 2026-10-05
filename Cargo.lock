@@ -97,18 +97,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ahash"
-version = "0.8.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75"
-dependencies = [
- "cfg-if",
- "once_cell",
- "version_check",
- "zerocopy",
-]
-
-[[package]]
 name = "aho-corasick"
 version = "1.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1141,15 +1129,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "concurrent-queue"
-version = "2.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ca0197aee26d1ae37445ee532fefce43251d24cc7c166799f4d46817f1d3973"
-dependencies = [
- "crossbeam-utils",
-]
-
-[[package]]
 name = "console"
 version = "0.16.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1204,15 +1183,6 @@ name = "constant_time_eq"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d52eff69cd5e647efe296129160853a42795992097e8af39800e1060caeea9b"
-
-[[package]]
-name = "convert_case"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "633458d4ef8c78b72454de2d54fd6ab2e60f9e02be22f3c6104cdc8a4e0fceb9"
-dependencies = [
- "unicode-segmentation",
-]
 
 [[package]]
 name = "convert_case"
@@ -1873,7 +1843,6 @@ version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c"
 dependencies = [
- "powerfmt",
  "serde_core",
 ]
 
@@ -3556,10 +3525,6 @@ name = "hashbrown"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
-dependencies = [
- "ahash",
- "allocator-api2",
-]
 
 [[package]]
 name = "hashbrown"
@@ -4814,7 +4779,6 @@ dependencies = [
  "lamprey-backend-core",
  "lamprey-backend-data-postgres",
  "lamprey-common",
- "lamprey-hakari",
  "lamprey-macros",
  "lamprey-markdown",
  "lamprey-script",
@@ -4925,7 +4889,6 @@ dependencies = [
  "async-trait",
  "lamprey-backend-core",
  "lamprey-common",
- "lamprey-hakari",
  "nanoid 0.4.0",
  "serde",
  "serde_json",
@@ -4949,7 +4912,6 @@ dependencies = [
  "futures",
  "futures-util",
  "lamprey-common",
- "lamprey-hakari",
  "lamprey-sdk",
  "reqwest 0.12.28",
  "rustls 0.23.43",
@@ -4979,7 +4941,6 @@ dependencies = [
  "futures",
  "kameo",
  "lamprey-common",
- "lamprey-hakari",
  "lamprey-markdown",
  "lamprey-sdk",
  "once_cell",
@@ -5015,7 +4976,6 @@ dependencies = [
  "futures",
  "kameo",
  "lamprey-common",
- "lamprey-hakari",
  "lamprey-sdk",
  "once_cell",
  "opentelemetry 0.30.0",
@@ -5048,7 +5008,6 @@ dependencies = [
  "lamprey-backend",
  "lamprey-backend-core",
  "lamprey-common",
- "lamprey-hakari",
  "lamprey-media",
  "lamprey-sdk",
  "lamprey-voice",
@@ -5116,134 +5075,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lamprey-hakari"
-version = "0.1.4"
-dependencies = [
- "aho-corasick",
- "anyhow",
- "arrayvec",
- "async-lock",
- "axum",
- "base16ct",
- "base64 0.22.1",
- "bitflags 2.13.1",
- "byteorder",
- "bytes",
- "chrono",
- "concurrent-queue",
- "const-oid 0.9.6",
- "cranelift-bitset",
- "crc32fast",
- "crossbeam-epoch",
- "crossbeam-utils",
- "crypto-common 0.1.7",
- "der",
- "deranged",
- "digest 0.10.7",
- "ed25519-dalek",
- "either",
- "errno",
- "event-listener",
- "event-listener-strategy",
- "fastrand",
- "figment",
- "fnv",
- "form_urlencoded",
- "futures",
- "futures-channel",
- "futures-core",
- "futures-io",
- "futures-sink",
- "futures-task",
- "futures-util",
- "generic-array",
- "getrandom 0.4.3",
- "hashbrown 0.14.5",
- "hashbrown 0.17.1",
- "hyper",
- "hyper-rustls",
- "hyper-util",
- "idna",
- "indexmap",
- "ipnet",
- "lazy_static",
- "libc",
- "linux-raw-sys 0.12.1",
- "log",
- "md-5",
- "memchr",
- "mime_guess",
- "nom 8.0.0",
- "num-traits",
- "object 0.37.3",
- "percent-encoding",
- "pkcs8",
- "pulley-interpreter",
- "rand 0.8.7",
- "rcgen",
- "regex-automata",
- "regex-syntax",
- "relative-path",
- "reqwest 0.12.28",
- "rquickjs 0.11.0",
- "rquickjs-core 0.11.0",
- "rustix 1.1.4",
- "rustls 0.23.43",
- "rustls-pki-types",
- "rustls-webpki 0.102.8",
- "rustls-webpki 0.103.14",
- "sec1",
- "security-framework-sys",
- "semver",
- "serde",
- "serde_core",
- "serde_derive",
- "serde_json",
- "sha1",
- "sha2 0.10.9",
- "signal-hook 0.4.4",
- "signature",
- "slab",
- "smallvec",
- "spin",
- "spki",
- "sqlx",
- "sqlx-macros",
- "sqlx-macros-core",
- "sqlx-postgres",
- "sqlx-sqlite",
- "stable_deref_trait",
- "subtle",
- "syn 1.0.109",
- "syn 2.0.119",
- "sync_wrapper",
- "time",
- "tokio",
- "tokio-rustls 0.26.4",
- "tokio-stream",
- "toml_datetime 0.7.5+spec-1.1.0",
- "toml_parser",
- "tower",
- "tower-http",
- "tracing",
- "tracing-core",
- "url",
- "utoipa",
- "utoipa-gen",
- "uuid",
- "wasmparser 0.246.2",
- "wasmtime-internal-core",
- "winapi",
- "windows-sys 0.61.2",
- "winnow 0.7.15",
- "zerocopy",
- "zeroize",
- "zstd",
- "zstd-safe",
- "zstd-sys",
-]
-
-[[package]]
 name = "lamprey-macros"
 version = "0.1.4"
 dependencies = [
@@ -5293,7 +5124,6 @@ dependencies = [
  "image",
  "lamprey-backend-core",
  "lamprey-common",
- "lamprey-hakari",
  "moka",
  "opendal",
  "opentelemetry 0.30.0",
@@ -5326,9 +5156,8 @@ dependencies = [
  "futures",
  "http",
  "lamprey-common",
- "lamprey-hakari",
  "nanoid 0.5.0",
- "rquickjs 0.12.2",
+ "rquickjs",
  "rquickjs-serde",
  "serde",
  "serde_json",
@@ -5353,7 +5182,6 @@ dependencies = [
  "headers",
  "http",
  "lamprey-common",
- "lamprey-hakari",
  "lru 0.18.2",
  "reqwest 0.12.28",
  "rustls 0.23.43",
@@ -5399,7 +5227,6 @@ dependencies = [
  "clap",
  "html5ever",
  "lamprey-common",
- "lamprey-hakari",
  "percent-encoding",
  "reqwest 0.13.4",
  "serde",
@@ -5425,7 +5252,6 @@ dependencies = [
  "futures-util",
  "lamprey-backend-core",
  "lamprey-common",
- "lamprey-hakari",
  "num_cpus",
  "opentelemetry 0.30.0",
  "opentelemetry-otlp 0.30.0",
@@ -8100,34 +7926,12 @@ dependencies = [
 
 [[package]]
 name = "rquickjs"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c50dc6d6c587c339edb4769cf705867497a2baf0eca8b4645fa6ecd22f02c77a"
-dependencies = [
- "rquickjs-core 0.11.0",
- "rquickjs-macro 0.11.0",
-]
-
-[[package]]
-name = "rquickjs"
 version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e04e4eedfb060b503b5f0a2644abb890b0b3620d3fb674f9455f230014964e4"
 dependencies = [
- "rquickjs-core 0.12.2",
- "rquickjs-macro 0.12.2",
-]
-
-[[package]]
-name = "rquickjs-core"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8bf7840285c321c3ab20e752a9afb95548c75cd7f4632a0627cea3507e310c1"
-dependencies = [
- "async-lock",
- "hashbrown 0.16.1",
- "relative-path",
- "rquickjs-sys 0.11.0",
+ "rquickjs-core",
+ "rquickjs-macro",
 ]
 
 [[package]]
@@ -8139,24 +7943,7 @@ dependencies = [
  "async-lock",
  "hashbrown 0.17.1",
  "relative-path",
- "rquickjs-sys 0.12.2",
-]
-
-[[package]]
-name = "rquickjs-macro"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7106215ff41a5677b104906a13e1a440b880f4b6362b5dc4f3978c267fad2b80"
-dependencies = [
- "convert_case 0.10.0",
- "fnv",
- "ident_case",
- "indexmap",
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "rquickjs-core 0.11.0",
- "syn 2.0.119",
+ "rquickjs-sys",
 ]
 
 [[package]]
@@ -8165,14 +7952,14 @@ version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cbcc8219b70ee2faa08d5339f47f15741cba2ce0cb9640e8495f2ab51293f50"
 dependencies = [
- "convert_case 0.11.0",
+ "convert_case",
  "fnv",
  "ident_case",
  "indexmap",
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "rquickjs-core 0.12.2",
+ "rquickjs-core",
  "syn 2.0.119",
 ]
 
@@ -8182,17 +7969,8 @@ version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04cf0aa631f8d0c5051db35f9f59899c34074d7b6be280c03fd4ce6165d0ed35"
 dependencies = [
- "rquickjs 0.12.2",
+ "rquickjs",
  "serde",
-]
-
-[[package]]
-name = "rquickjs-sys"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27344601ef27460e82d6a4e1ecb9e7e99f518122095f3c51296da8e9be2b9d83"
-dependencies = [
- "cc",
 ]
 
 [[package]]
@@ -8522,7 +8300,6 @@ dependencies = [
  "clap",
  "deadpool",
  "figment",
- "lamprey-hakari",
  "serde",
  "serde_json",
  "thiserror 2.0.21",

@@ -27,7 +27,6 @@ tracing = "0.1.44"
 url = "2.5.8"
 validator = "0.20.0"
 wasmtime = { version = "44.0.3", optional = true }
-lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 
 [features]
 # default = ["javascript"]

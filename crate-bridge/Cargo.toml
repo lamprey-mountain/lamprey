@@ -19,7 +19,6 @@ dotenvy = "0.15.7"
 figment = { version = "0.10.19", features = ["env", "toml"] }
 futures = "0.3"
 kameo = "0.19"
-lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 lamprey-markdown = { version = "0.1", path = "../crate-markdown" }
 once_cell = "1.21"
 opentelemetry = "0.30.0"

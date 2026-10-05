@@ -24,7 +24,6 @@ headers = "0.4.1"
 http = "1.5.0"
 image = { version = "0.25.10", features = ["avif"] }
 lamprey-backend-core = { version = "0.1.1", path = "../crate-backend-core" }
-lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 moka = { version = "0.12.16", features = ["future"] }
 opendal = { version = "0.54.1", features = ["services-s3"] }
 opentelemetry = "0.30.0"

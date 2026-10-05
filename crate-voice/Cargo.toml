@@ -21,7 +21,6 @@ figment = { version = "0.10.19", features = ["env", "json", "toml"] }
 futures = "0.3.34"
 futures-util = "0.3.34"
 lamprey-backend-core = { version = "0.1.1", path = "../crate-backend-core" }
-lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 num_cpus = "1.17.0"
 opentelemetry = "0.30.0"
 opentelemetry-otlp = { version = "0.30.0", features = ["grpc-tonic", "logs", "metrics", "reqwest", "tokio", "tracing", "trace"], default-features = false }

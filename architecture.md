@@ -17,7 +17,6 @@ how lamprey mountain is architectured
 
 - `crate-bot` a basic bot
 - `crate-bridge` discord bridge
-- `crate-hakari` used for cargo hakari
 - `crate-macros` proc macros
 - `crate-sdk` wip sdk for developing on lamprey
 

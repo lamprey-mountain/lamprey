@@ -19,7 +19,6 @@ dotenvy = "0.15.7"
 figment = { version = "0.10.19", features = ["env", "toml"] }
 futures = "0.3.34"
 futures-util = "0.3.34"
-lamprey-hakari = { version = "0.1", path = "../crate-hakari" }
 reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots", "json"] }
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 sdk = { package = "lamprey-sdk", version = "0.1.0", path = "../crate-sdk", features = ["voice"] }
@@ -31,7 +30,7 @@ stunclient = "0.4.2"
 symphonia = "0.5.5"
 systemstat = "0.2.7"
 tokio = { version = "1.53.1", features = ["macros", "net", "rt-multi-thread"] }
-tokio-util = { version = "0.7.19", features = ["time"] }
+tokio-util = { version = "0.7.19", features = ["codec", "time"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 url = "2.5.8"

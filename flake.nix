@@ -26,8 +26,8 @@
 
         craneLib = crane.mkLib pkgs;
 
-        baseInternalDeps = [ "crate-common" "crate-hakari" "crate-macros" ];
-        baseInternalDepsCrates = [ "lamprey-common" "lamprey-hakari" "lamprey-macros" ];
+        baseInternalDeps = [ "crate-common" "crate-macros" ];
+        baseInternalDepsCrates = [ "lamprey-common" "lamprey-macros" ];
 
         # this filter could probably be made stricter
         includeFilter = path: type:
