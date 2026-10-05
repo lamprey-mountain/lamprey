@@ -4602,6 +4602,7 @@ dependencies = [
  "lamprey-backend-core",
  "lamprey-common",
  "lamprey-macros",
+ "lamprey-unfurl",
  "multer",
  "percent-encoding",
  "rmp-serde",
