@@ -39,18 +39,25 @@ pub struct User {
     /// whether this user is an official system user
     pub system: bool,
 
-    // skip serializing if is_none
+    /// details about the puppet, if this user is one
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub puppet: Option<Puppet>,
 
-    // skip serializing if is_none
+    /// details about the webhook, if this user is one
+    ///
+    /// only returned if the caller has `ChannelView` in the webhook's channel
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub webhook: Option<UserWebhook>,
 
-    // skip serializing if is_none; only return for admins
+    /// details about this user's suspension, if they are suspended
+    ///
+    /// only returned if the caller has the server permission `UserManage`
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub suspended: Option<Suspended>,
 
     pub presence: Presence,
 
-    // ...remove? unsure how this will work.
+    // TODO: remove? unsure how this will work.
     pub registered_at: Option<Time>,
 
     // skip serializing if is_none; only return for admins
@@ -59,7 +66,7 @@ pub struct User {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub emails: Option<Vec<EmailInfo>>,
     pub preferences: Option<PreferencesUser>,
-    // #[ validate(length(min = 1, max = 16))]
+    // #[validate(length(min = 1, max = 16))]
     // pub fields: Vec<UserField>,
     /// whether this user is considered to have mutifactor authentication enabled on their account
     ///
