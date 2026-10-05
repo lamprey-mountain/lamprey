@@ -4545,11 +4545,14 @@ name = "kerosene"
 version = "0.1.4"
 dependencies = [
  "axum",
+ "clap",
  "figment",
+ "kerosene-core",
  "kerosene-rest",
  "kerosene-services",
  "kerosene-sync",
  "lamprey-backend-core",
+ "lamprey-common",
  "opentelemetry 0.32.0",
  "opentelemetry-otlp 0.32.0",
  "tokio",

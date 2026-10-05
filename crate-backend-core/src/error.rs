@@ -13,6 +13,7 @@ use crate::ffmpeg::FfmpegError;
 
 #[derive(thiserror::Error, Debug)]
 // TODO: avoid returning actual error messages to prevent leaking stuff
+// TODO: deprecate and remove? or replace with box dyn error or anyhow to make it less annoying to compile? this is causing issues already.
 pub enum Error {
     #[error("json web token error: {0}")]
     Jwt(#[from] jsonwebtoken::errors::Error),

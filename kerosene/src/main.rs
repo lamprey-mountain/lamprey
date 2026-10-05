@@ -1,20 +1,32 @@
+use clap::Parser;
 use figment::{
     Figment,
     providers::{Env, Format, Toml},
 };
+use kerosene::cli::Args;
+use kerosene_core::{config::Config, error::ServerResult};
 use kerosene_rest::Routes;
-use lamprey_backend_core::{config::Config, prelude::*};
 use tracing::info;
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> ServerResult<()> {
+    let args = Args::parse();
+
     let config: Config = Figment::new()
-        .merge(Toml::file("config.toml"))
+        .merge(Toml::file(args.config))
         .merge(Env::raw())
         .extract()?;
 
+    kerosene_core::observability::init(&config);
+
     info!("booting up with config: {:#?}", config);
 
+    // TODO: set up crypto
+    // rustls::crypto::ring::default_provider()
+    //     .install_default()
+    //     .expect("Failed to install rustls crypto provider");
+
+    // TODO: copy crate-backend/src/serve/mod.rs
     let globals = todo!();
 
     let router = Routes::new_api()
@@ -29,36 +41,6 @@ async fn main() -> Result<()> {
 
     // let server = Server::init_from_config(config).await?;
     // server.serve().await?;
-
-    // TODO: copy crate-backend/src/serve/mod.rs
-
-    Ok(())
-}
-
-pub fn setup_otel(config: &Config) -> Result<()> {
-    if let Some(endpoint) = &config.otel_trace_endpoint {
-        let exporter = opentelemetry_otlp::SpanExporter::builder()
-            .with_tonic()
-            .with_endpoint(endpoint)
-            .build()?;
-        let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
-            .with_batch_exporter(exporter)
-            .build();
-        use opentelemetry::trace::TracerProvider;
-        let tracer = provider.tracer("bridge-discord");
-        opentelemetry::global::set_tracer_provider(provider);
-        let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
-        let subscriber = Registry::default()
-            .with(EnvFilter::from_str(&config.rust_log)?)
-            .with(tracing_subscriber::fmt::layer())
-            .with(telemetry_layer);
-        tracing::subscriber::set_global_default(subscriber)?;
-    } else {
-        let subscriber = Registry::default()
-            .with(EnvFilter::from_str(&config.rust_log)?)
-            .with(tracing_subscriber::fmt::layer());
-        tracing::subscriber::set_global_default(subscriber)?;
-    }
 
     Ok(())
 }

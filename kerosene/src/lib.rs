@@ -1,3 +1,4 @@
+pub mod cli;
 pub mod server;
 
 // TODO: what actually goes here? nothing besides the readme?
