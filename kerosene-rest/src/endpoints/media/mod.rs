@@ -1,15 +1,17 @@
 use crate::prelude::*;
 
-// mod emoji;
-// mod gifv;
+pub mod emoji;
+pub mod gifv;
 pub mod media;
+// pub mod stream;
 pub mod thumb;
-// mod stream;
-// mod trickplay;
+// pub mod trickplay;
 
 mod util;
 
 pub fn register(r: &mut crate::Routes) {
+    emoji::register(r);
+    gifv::register(r);
     media::register(r);
     thumb::register(r);
 }
