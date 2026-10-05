@@ -13,6 +13,7 @@ import {
 	createMemo,
 	createSignal,
 	getOwner,
+	onMount,
 	runWithOwner,
 	Show,
 } from "solid-js";
@@ -104,6 +105,7 @@ export const SearchInput = (props: {
 	room?: RoomT;
 	autofocus?: boolean;
 	value?: string;
+	onInput?: (query: string) => void;
 }) => {
 	const users = useUsers();
 	const messagesService = useMessages();
@@ -593,6 +595,23 @@ export const SearchInput = (props: {
 					}),
 					// doesnt seem to do anything?
 					gapCursor(),
+					new Plugin({
+						state: {
+							init() {
+								return { q: "" };
+							},
+							apply(tr, prev, _oldState, state) {
+								if (tr.docChanged) {
+									const q = serializeToQuery(state);
+									if (q !== prev.q) {
+										props.onInput?.(q);
+										return { q };
+									}
+								}
+								return prev;
+							},
+						},
+					}),
 				],
 			});
 		},
@@ -614,6 +633,15 @@ export const SearchInput = (props: {
 			},
 		},
 		autofocus: props.autofocus ?? !!currentSearch(),
+	});
+
+	// automatically submit the initial query if it exists
+	onMount(() => {
+		queueMicrotask(() => {
+			if (props.value) {
+				handleSubmit();
+			}
+		});
 	});
 
 	return (

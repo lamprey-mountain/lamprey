@@ -1,6 +1,6 @@
-import { useSearchParams } from "@solidjs/router";
 import { useCtx } from "@/app/context";
 import { useCurrentUser } from "@/contexts/currentUser";
+import { useSearchParams } from "@/contexts/router";
 
 // TODO: refactor out duplicated code from here and Message.tsx
 
@@ -109,7 +109,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const channels2 = useChannels();
 	const threads2 = useThreads();
 	const ctx = useCtx();
-	const [params] = useSearchParams<ForumQuery>();
+	const [params, setParams] = useSearchParams<ForumQuery>();
 	const room_id = () => props.channel.room_id ?? "";
 	const forum_id = () => props.channel.id;
 	const prefsService = usePreferences();
@@ -122,10 +122,9 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const [searchQuery, setSearchQuery] = createSignal(params.q ?? "");
 	const [debouncedSearch, setDebouncedSearch] = createSignal(params.q ?? "");
 
-	const debouncedSetSearch = debounce(
-		(value: string) => setDebouncedSearch(value),
-		300,
-	);
+	const debouncedSetSearch = debounce((value: string) => {
+		setDebouncedSearch(value);
+	}, 300);
 
 	const [searchResults] = createResource(debouncedSearch, async (query) => {
 		if (!query.trim()) return [];
@@ -136,6 +135,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 					query: tantivyQuery,
 					limit: 50,
 					offset: 0,
+					field: "Created",
 				},
 			});
 			return res.data?.channels ?? [];
@@ -282,6 +282,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 						value={searchQuery}
 						onInput={(s) => {
 							setSearchQuery(s);
+							setParams({ q: s || null }, { replace: true });
 							debouncedSetSearch(s);
 						}}
 					/>
@@ -298,7 +299,10 @@ export const Forum2 = (props: { channel: Channel }) => {
 					<CreateForm
 						channel={props.channel}
 						threadChannelType="ThreadForum2"
-						onCancel={() => setShowCreateForm(false)}
+						onCancel={() => {
+							setParams({ title: null, body: null }, { replace: true });
+							setShowCreateForm(false);
+						}}
 						onSuccess={() => setShowCreateForm(false)}
 						initialTitle={params.title}
 						initialBody={params.body}

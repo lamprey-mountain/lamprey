@@ -1,7 +1,6 @@
-import { useSearchParams } from "@solidjs/router";
 import type { Message } from "sdk";
 import { For, Show } from "solid-js";
-import { useNavigate } from "@/contexts/router";
+import { useNavigate, useSearchParams } from "@/contexts/router";
 import { useSearch } from "@/contexts/search";
 import { MessageToolbarMount } from "../features/chat/MessageToolbar";
 import { MessageToolbarProvider } from "../features/chat/message-toolbar-context";
@@ -16,7 +15,7 @@ type SearchParams = {
 };
 
 export const SearchPage = () => {
-	const [search] = useSearchParams<SearchParams>();
+	const [search, setSearch] = useSearchParams<SearchParams>();
 	const searchCtx = useSearch();
 	const navigate = useNavigate();
 
@@ -37,7 +36,14 @@ export const SearchPage = () => {
 				<b>Search</b>
 			</header>
 			<div class="search-page">
-				<SearchInput autofocus value={search.q ?? ""} />
+				<SearchInput
+					autofocus
+					// NOTE: make sure that value doesn't cause an infinite loop! it's fine for now though.
+					value={search.q ?? ""}
+					onInput={(query) => {
+						setSearch({ q: query || null }, { replace: true });
+					}}
+				/>
 
 				<Show when={searchCtx.states["global"]}>
 					{(s) => (

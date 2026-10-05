@@ -15,6 +15,8 @@ export type Router = {
 	location: string;
 	main: string;
 	overlay: string;
+	search: string;
+	searchParams: URLSearchParams;
 };
 
 export const RouterContext = createContext<Router>();
@@ -113,9 +115,11 @@ export const createRouter = (): Router => {
 	const [location, setLocation] = createSignal(window.location.pathname);
 	const [main, setMain] = createSignal(getMainPath(window.location.pathname));
 	const [overlay, setOverlay] = createSignal("");
+	const [search, setSearch] = createSignal("");
 
 	const handlePopState = () => {
 		const p = window.location.pathname;
+		setSearch(window.location.search);
 		setLocation(p);
 
 		// TODO: more robust parsing logic
@@ -144,6 +148,8 @@ export const createRouter = (): Router => {
 		window.removeEventListener("popstate", handlePopState);
 	});
 
+	const searchParams = createMemo(() => new URLSearchParams(search()));
+
 	return {
 		get location() {
 			return location();
@@ -153,6 +159,12 @@ export const createRouter = (): Router => {
 		},
 		get overlay() {
 			return overlay();
+		},
+		get search() {
+			return search();
+		},
+		get searchParams() {
+			return searchParams();
 		},
 	};
 };
@@ -192,3 +204,40 @@ export const useNavigate = (): Navigator => {
 		}
 	};
 };
+
+export function useSearchParams<T extends Record<string, string>>() {
+	const router = useRouter();
+	const nav = useNavigate();
+
+	const proxy = new Proxy(
+		{},
+		{
+			get(_target, p, _receiver) {
+				if (typeof p !== "string") throw new Error("invalid property");
+				return router.searchParams.get(p);
+			},
+		},
+	);
+
+	const update = (
+		params: Record<string, string | null>,
+		options?: Partial<NavigateOptions>,
+	) => {
+		const existing = new URLSearchParams(window.location.search);
+
+		for (const [key, value] of Object.entries(params)) {
+			if (value === null) {
+				existing.delete(key);
+			} else {
+				existing.set(key, value);
+			}
+		}
+
+		const newSearch = existing.toString();
+		const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ""}`;
+
+		nav(newUrl, options);
+	};
+
+	return [proxy as Partial<T>, update] as const;
+}

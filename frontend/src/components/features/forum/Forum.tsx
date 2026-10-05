@@ -1,6 +1,6 @@
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { debounce } from "@solid-primitives/scheduled";
-import { A, useSearchParams } from "@solidjs/router";
+import { A } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
 import { useFloating } from "solid-floating-ui";
@@ -26,7 +26,7 @@ import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
-import { useNavigate } from "@/contexts/router";
+import { useNavigate, useSearchParams } from "@/contexts/router";
 import { useUploads } from "@/contexts/uploads.tsx";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -56,7 +56,7 @@ export const Forum = (props: { channel: Channel }) => {
 	const forum_id = () => props.channel.id;
 	const prefsService = usePreferences();
 	const prefs = prefsService.useRead();
-	const [params] = useSearchParams<ForumQuery>();
+	const [params, setParams] = useSearchParams<ForumQuery>();
 
 	// Call the appropriate hook based on filter at component level
 	const activeThreads = threads2.useListForChannel(forum_id);
@@ -89,10 +89,10 @@ export const Forum = (props: { channel: Channel }) => {
 	const [searchQuery, setSearchQuery] = createSignal(params.q ?? "");
 	const [debouncedSearch, setDebouncedSearch] = createSignal(params.q ?? "");
 
-	const debouncedSetSearch = debounce(
-		(value: string) => setDebouncedSearch(value),
-		300,
-	);
+	const debouncedSetSearch = debounce((value: string) => {
+		setDebouncedSearch(value);
+		setParams({ q: value || null }, { replace: true });
+	}, 300);
 
 	const [searchResults] = createResource(debouncedSearch, async (query) => {
 		if (!query.trim()) return [];
@@ -103,6 +103,7 @@ export const Forum = (props: { channel: Channel }) => {
 					query: tantivyQuery,
 					limit: 50,
 					offset: 0,
+					field: "Created",
 				},
 			});
 			return res.data?.channels ?? [];
@@ -215,6 +216,7 @@ export const Forum = (props: { channel: Channel }) => {
 					value={searchQuery}
 					onInput={(s) => {
 						setSearchQuery(s);
+						setParams({ q: s || null }, { replace: true });
 						debouncedSetSearch(s);
 					}}
 				/>
@@ -234,7 +236,10 @@ export const Forum = (props: { channel: Channel }) => {
 					threadChannelType={
 						props.channel.type === "Ticket" ? "ThreadPrivate" : "ThreadPublic"
 					}
-					onCancel={() => setShowCreateForm(false)}
+					onCancel={() => {
+						setParams({ title: null, body: null }, { replace: true });
+						setShowCreateForm(false);
+					}}
 					onSuccess={() => setShowCreateForm(false)}
 					initialTitle={params.title}
 					initialBody={params.body}
