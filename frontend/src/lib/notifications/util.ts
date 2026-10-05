@@ -14,6 +14,7 @@ interface NotificationApi {
 	client: Client;
 }
 
+// TODO: use @lamprey/markdown here
 export async function stripMarkdownAndResolveMentions(
 	content: string,
 	thread_id: string,

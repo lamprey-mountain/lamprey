@@ -34,13 +34,6 @@ const PRECACHE_CACHE = "precache-v1";
 
 const CACHE_VALID: Array<string> = [PRECACHE_CACHE];
 
-const _makeError = (error: string, status = 400) => {
-	return new Response(JSON.stringify({ error }), {
-		status,
-		headers: { "content-type": "application/json" },
-	});
-};
-
 const deleteOldCaches = async () => {
 	const c = await caches.keys();
 
@@ -56,14 +49,7 @@ const deleteOldCaches = async () => {
 
 const precache = async () => {
 	const cache = await caches.open(PRECACHE_CACHE);
-	await cache.addAll(__PRECACHE_MANIFEST__);
-};
-
-const _shouldCache = (req: Request) => {
-	if (req.method !== "GET" && req.method !== "HEAD") return false;
-	// const url = new URL(req.url, self.location.href);
-	// console.log("should cache?", url.href);
-	return false;
+	await cache.addAll([...__PRECACHE_MANIFEST__, "/index.html"]);
 };
 
 self.addEventListener("install", () => {
@@ -86,15 +72,10 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (event) => {
 	const url = new URL(event.request.url);
 
-	// 1. navigation requests (index.html) -> network first
+	// 1. use cached spa html for all navigation
 	if (event.request.mode === "navigate") {
 		event.respondWith(
-			fetch(event.request).catch((err) =>
-				caches.match("/index.html").then((res) => {
-					if (!res) throw err;
-					return res;
-				}),
-			),
+			caches.match("/index.html").then((hit) => hit ?? fetch(event.request)),
 		);
 		return;
 	}
