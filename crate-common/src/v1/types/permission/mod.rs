@@ -114,7 +114,7 @@ define_permissions! {
     /// send attachments
     MessageAttachments,
 
-    /// send messages
+    /// send messages and create posts in forums
     MessageCreate,
 
     /// can send messages in threads

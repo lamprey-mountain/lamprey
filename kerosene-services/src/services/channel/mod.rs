@@ -376,7 +376,8 @@ impl ServiceChannels {
         };
         perms.ensure(Permission::ChannelView)?;
 
-        if !json.ty.can_be_in(parent.as_ref().map(|c| c.ty)) {
+        let parent_ty = parent.as_ref().map(|c| c.ty);
+        if !json.ty.can_be_in(parent_ty) {
             return Err(ApiError::from_code(ErrorCode::InvalidParentChannelType).into());
         }
 
@@ -396,29 +397,46 @@ impl ServiceChannels {
                 perms.ensure(Permission::ChannelManage)?;
             }
             ChannelType::ThreadPublic => {
-                // TODO: use Permission::MessageCreate in ChannelType::Forum
-                perms.ensure(Permission::ThreadCreatePublic)?;
+                match parent_ty {
+                    Some(ChannelType::Forum) => {
+                        if !perms.has(Permission::ThreadCreatePublic) {
+                            // TODO: indicate that ThreadCreatePublic is also an acceptable permission?
+                            perms.ensure(Permission::MessageCreate)?;
+                        }
+                    }
+                    _ => perms.ensure(Permission::ThreadCreatePublic)?,
+                }
             }
             ChannelType::ThreadForum2 => {
-                // TODO: use Permission::MessageCreate in ChannelType::Forum2
-                perms.ensure(Permission::ThreadCreatePublic)?;
+                match parent_ty {
+                    Some(ChannelType::Forum2) => {
+                        if !perms.has(Permission::ThreadCreatePublic) {
+                            // TODO: indicate that ThreadCreatePublic is also an acceptable permission?
+                            perms.ensure(Permission::MessageCreate)?;
+                        }
+                    }
+                    _ => perms.ensure(Permission::ThreadCreatePublic)?,
+                }
             }
             ChannelType::ThreadPrivate => {
-                // TODO: use Permission::MessageCreate in ChannelType::Ticket
-                perms.ensure(Permission::ThreadCreatePrivate)?;
+                match parent_ty {
+                    Some(ChannelType::Ticket) => {
+                        if !perms.has(Permission::ThreadCreatePrivate) {
+                            // TODO: indicate that ThreadCreatePrivate is also an acceptable permission?
+                            perms.ensure(Permission::MessageCreate)?;
+                        }
+                    }
+                    _ => perms.ensure(Permission::ThreadCreatePrivate)?,
+                }
             }
             ChannelType::Dm | ChannelType::Gdm => {
                 return Err(ApiError::from_code(ErrorCode::DmGdmOnlyOutsideRoom).into());
             }
             ChannelType::Document => {
-                if let Some(parent) = parent.as_ref() {
-                    if parent.ty == ChannelType::Wiki {
-                        perms.ensure(Permission::DocumentCreate)?;
-                    } else {
-                        // TODO: enforce that documents can only be created in rooms (top level), categories, or wikis
-                        perms.ensure(Permission::ChannelManage)?;
-                    }
+                if parent_ty == Some(ChannelType::Wiki) {
+                    perms.ensure(Permission::DocumentCreate)?;
                 } else {
+                    // TODO: enforce that documents can only be created in rooms (top level), categories, or wikis
                     perms.ensure(Permission::ChannelManage)?;
                 }
             }
