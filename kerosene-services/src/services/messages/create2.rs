@@ -25,7 +25,7 @@ use crate::{
     services::{
         automod::AutomodContext,
         media::MediaLinker,
-        messages::{ServiceMessages, markdown, util::MediaRegistry2},
+        messages::{ServiceMessages, markdown},
     },
     types::DbMessageCreate,
 };
@@ -453,7 +453,6 @@ impl ServiceMessages {
             create.id,
             (*create.id).into(),
         ));
-        let mut registry = MediaRegistry2::new();
         for att in &attachments {
             let MessageAttachmentType::Media { media } = &att.ty;
             media_linker.media(&media);
@@ -485,7 +484,7 @@ impl ServiceMessages {
 
         let mut txn = self.globals.begin().await?;
 
-        // validate media
+        // validate and write media
         media_linker.write(&mut *txn).await?;
 
         // construct message
@@ -541,14 +540,6 @@ impl ServiceMessages {
             // PERF: avoid cloning, maybe move out of create
             // PERF: after media validation, have media registry store media ids instead of media so i can move embeds and components into DbMessageCreate
             txn.message_create(message_to_db(&message)).await?;
-
-            // insert message links
-            for media in registry.media() {
-                txn.media_link_insert(media.id, *create.id, DbMediaLinkType::Message)
-                    .await?;
-                txn.media_link_insert(media.id, *create.id, DbMediaLinkType::MessageVersion)
-                    .await?;
-            }
 
             // upsert slowmode
             if let Some(delay) = channel.slowmode_message {
