@@ -265,6 +265,7 @@ pub enum RoomFeature {
 }
 
 // TODO: impl default (make default room features configurable?)
+// TODO: impl bitflags version
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]

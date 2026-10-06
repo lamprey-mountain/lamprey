@@ -6,8 +6,8 @@ use common::v1::types::util::{Changes, Diff, Time};
 use common::v1::types::{
     AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message,
     MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageChannelTagged, MessageId,
-    MessageSync, MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomId,
-    ThreadMemberCreate, UserId,
+    MessageSync, MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomFeature,
+    RoomId, ThreadMemberCreate, UserId,
 };
 use common::v2::types::MessageVerId;
 use kerosene_core::error::{ApiError, ErrorCode};
@@ -432,6 +432,20 @@ impl ServiceChannels {
                 ));
             }
         };
+
+        // TODO: require feature for calendar channels
+        let required_feature = match json.ty {
+            ChannelType::Scripts => Some(RoomFeature::Scripts),
+            ChannelType::Document => Some(RoomFeature::Documents),
+            ChannelType::DocumentComment => Some(RoomFeature::Documents),
+            _ => None,
+        };
+
+        if let Some(f) = required_feature {
+            let room_id = room_id.ok_or(Error::BadStatic("Channel type must be in a room"))?;
+            let room = srv.rooms.load_snapshot(room_id, false).await?;
+            room.ensure_feature(&f)?;
+        }
 
         if json.ty.is_thread() && !perms.can_bypass_slowmode() {
             if let Some(parent) = &parent {
