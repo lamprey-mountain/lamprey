@@ -375,7 +375,7 @@ impl From<DbChannel> for Channel {
             archived_at: row.archived_at.map(|t| t.into()),
             deleted_at: row.deleted_at.map(|t| t.into()),
             ty: row.ty.into(),
-            latest_seq: ChannelSeq(row.latest_seq as u64),
+            latest_seq: ChannelSeq::from(row.latest_seq as u64),
             last_version_id: row.last_version_id.map(|i| i.into()),
             last_message_id: row.last_message_id.map(|i| i.into()),
             last_pin_timestamp: row.last_pin_timestamp.map(|t| t.into()),

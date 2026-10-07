@@ -1,5 +1,6 @@
 // TODO: remove `user_id` params
 
+use std::cmp;
 use std::collections::HashMap;
 
 use async_trait::async_trait;
@@ -1254,6 +1255,7 @@ impl DataMessage for Postgres {
         let mut conn = self.acquire().await?;
         let p: Pagination<_> = pagination.try_into()?;
         let limit = p.limit;
+        let since = u64::from(since);
 
         // Snapshot the channel's current latest_seq and room_id upfront to avoid a race
         // where the trailing read observes a seq that events were not returned for.
@@ -1263,7 +1265,7 @@ impl DataMessage for Postgres {
         )
         .fetch_one(conn.ext())
         .await?;
-        let channel_latest_seq = channel_info.latest_seq;
+        let channel_latest_seq = channel_info.latest_seq as u64;
         let room_id: Option<RoomId> = channel_info.room_id.map(|id| id.into());
 
         // Bound by the exact number of allowed distinctive `seq` sequences. (Prevents row limitations
@@ -1285,7 +1287,7 @@ impl DataMessage for Postgres {
             SELECT MAX(seq) FROM seqs
             "#,
             *channel_id,
-            since.0 as i64,
+            since as i64,
             (limit + 1) as i32
         )
         .fetch_one(conn.ext())
@@ -1294,7 +1296,7 @@ impl DataMessage for Postgres {
         let Some(max_seq) = cutoff_seq else {
             return Ok(ChannelSync {
                 events: vec![],
-                seq: ChannelSeq(channel_latest_seq as u64),
+                seq: ChannelSeq::from(channel_latest_seq as u64),
                 partial: false,
             });
         };
@@ -1342,7 +1344,7 @@ impl DataMessage for Postgres {
             ORDER BY m.created_seq ASC, m.id ASC
             "#,
             *channel_id,
-            since.0 as i64,
+            since as i64,
             max_seq
         )
         .fetch_all(conn.ext())
@@ -1360,7 +1362,7 @@ impl DataMessage for Postgres {
             ORDER BY lifecycle_seq ASC, id ASC
             "#,
             *channel_id,
-            since.0 as i64,
+            since as i64,
             max_seq
         )
         .fetch_all(conn.ext())
@@ -1379,7 +1381,7 @@ impl DataMessage for Postgres {
             ORDER BY mv.created_seq ASC, mv.version_id ASC
             "#,
             *channel_id,
-            since.0 as i64,
+            since as i64,
             max_seq
         )
         .fetch_all(conn.ext())
@@ -1431,7 +1433,7 @@ impl DataMessage for Postgres {
             ORDER BY r.created_seq ASC
             "#,
             *channel_id,
-            since.0 as i64,
+            since as i64,
             max_seq
         )
         .fetch_all(conn.ext())
@@ -1462,7 +1464,7 @@ impl DataMessage for Postgres {
             ORDER BY r.deleted_seq ASC
             "#,
             *channel_id,
-            since.0 as i64,
+            since as i64,
             max_seq
         )
         .fetch_all(conn.ext())
@@ -1682,14 +1684,11 @@ impl DataMessage for Postgres {
 
         // When partial, return the seq of the last fully-returned event group.
         // This ensures co-seq events aren't lost on the next call.
+        let last_event_seq = all_events.last().map(|e| e.seq as u64).unwrap_or(since);
         let seq = if partial {
-            ChannelSeq(all_events.last().map(|e| e.seq as u64).unwrap_or(since.0))
+            ChannelSeq::from(last_event_seq)
         } else {
-            let last_event_seq = all_events
-                .last()
-                .map(|e| e.seq as i64)
-                .unwrap_or(since.0 as i64);
-            ChannelSeq(std::cmp::max(channel_latest_seq, last_event_seq) as u64)
+            ChannelSeq::from(cmp::max(channel_latest_seq, last_event_seq))
         };
 
         let events = all_events.into_iter().map(|e| e.event).collect();
