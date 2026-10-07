@@ -27,6 +27,7 @@ use crate::types::{
 };
 
 mod create2;
+mod util;
 
 // TODO: split caches more
 // have a cache for public data, per-user data, member counts, etc
@@ -324,26 +325,6 @@ impl ServiceChannels {
         json.validate()?;
         // TODO(al2): use this when creating a channel
         let channel_id = ChannelId::new();
-
-        if let Some(room_id) = room_id {
-            let ty = AuditLogEntryType::ChannelCreate {
-                channel_id,
-                channel_type: json.ty,
-                changes: Changes::new()
-                    .add("name", &json.name)
-                    .add("description", &json.description)
-                    .add("nsfw", &json.nsfw)
-                    .add("user_limit", &json.user_limit)
-                    .add("bitrate", &json.bitrate)
-                    .add("type", &json.ty)
-                    .add("parent_id", &json.parent_id)
-                    .add("url", &json.url)
-                    .build(),
-            };
-            auth.set_room_id(room_id);
-            auth.al_push(ty);
-            // FIXME: don't commit audit log if request failed
-        };
 
         let srv = self.globals.services();
         let mut data = self.globals.begin().await?;
@@ -667,6 +648,14 @@ impl ServiceChannels {
             .await?;
         let channel = srv.channels.get(channel_id, Some(user.id)).await?;
 
+        // TODO: immediately create an audit log entry, add changes later
+        // even if the request fails part of the way through, i should still save audit logs
+        if let Some(room_id) = room_id {
+            let ty = util::calculate_audit_log_entry_from_create(&channel);
+            auth.set_room_id(room_id);
+            auth.al_push(ty);
+        }
+
         let broadcast = Broadcast::sync(MessageSync::ChannelCreate {
             channel: Box::new(channel.clone()),
         })
@@ -899,19 +888,7 @@ impl ServiceChannels {
         }
 
         if let Some(room_id) = room_id {
-            let ty = AuditLogEntryType::ChannelCreate {
-                channel_id: thread_id,
-                channel_type: channel.ty,
-                changes: Changes::new()
-                    .add("name", &channel.name)
-                    .add("description", &channel.description)
-                    .add("nsfw", &channel.nsfw)
-                    .add("user_limit", &channel.user_limit)
-                    .add("bitrate", &channel.bitrate)
-                    .add("type", &channel.ty)
-                    .add("parent_id", &channel.parent_id)
-                    .build(),
-            };
+            let ty = util::calculate_audit_log_entry_from_create(&channel);
             auth.set_room_id(room_id);
             auth.al_push(ty);
         }
@@ -1179,180 +1156,7 @@ impl ServiceChannels {
         self.invalidate_user(thread_id, user.id).await;
         let chan_new = self.get(thread_id, Some(user.id)).await?;
         if let Some(room_id) = chan_new.room_id {
-            let ty = AuditLogEntryType::ChannelUpdate {
-                channel_id: thread_id,
-                channel_type: chan_new.ty,
-                changes: Changes::new()
-                    .change("type", &chan_old.ty, &chan_new.ty)
-                    .change("name", &chan_old.name, &chan_new.name)
-                    .change("description", &chan_old.description, &chan_new.description)
-                    .change("icon", &chan_old.icon, &chan_new.icon)
-                    .change("url", &chan_old.url, &chan_new.url)
-                    .change("nsfw", &chan_old.nsfw, &chan_new.nsfw)
-                    .change("bitrate", &chan_old.bitrate, &chan_new.bitrate)
-                    .change("user_limit", &chan_old.user_limit, &chan_new.user_limit)
-                    .change("archived", &chan_old.is_archived(), &chan_new.is_archived())
-                    .change("locked", &chan_old.locked, &chan_new.locked)
-                    .change("tags", &chan_old.tags, &chan_new.tags)
-                    .change("parent_id", &chan_old.parent_id, &chan_new.parent_id)
-                    .change("invitable", &chan_old.invitable, &chan_new.invitable)
-                    .change(
-                        "auto_archive_duration",
-                        &chan_old.auto_archive_duration,
-                        &chan_new.auto_archive_duration,
-                    )
-                    .change(
-                        "default_auto_archive_duration",
-                        &chan_old.default_auto_archive_duration,
-                        &chan_new.default_auto_archive_duration,
-                    )
-                    .change(
-                        "slowmode_thread",
-                        &chan_old.slowmode_thread,
-                        &chan_new.slowmode_thread,
-                    )
-                    .change(
-                        "slowmode_message",
-                        &chan_old.slowmode_message,
-                        &chan_new.slowmode_message,
-                    )
-                    .change(
-                        "default_slowmode_message",
-                        &chan_old.default_slowmode_message,
-                        &chan_new.default_slowmode_message,
-                    )
-                    // document fields
-                    .change(
-                        "document_draft",
-                        &chan_old.document.as_ref().map(|d| d.draft).unwrap_or(false),
-                        &chan_new.document.as_ref().map(|d| d.draft).unwrap_or(false),
-                    )
-                    .change(
-                        "document_template",
-                        &chan_old
-                            .document
-                            .as_ref()
-                            .map(|d| d.template)
-                            .unwrap_or(false),
-                        &chan_new
-                            .document
-                            .as_ref()
-                            .map(|d| d.template)
-                            .unwrap_or(false),
-                    )
-                    .change(
-                        "document_archived",
-                        &chan_old
-                            .document
-                            .as_ref()
-                            .map(|d| d.archived.is_some())
-                            .unwrap_or(false),
-                        &chan_new
-                            .document
-                            .as_ref()
-                            .map(|d| d.archived.is_some())
-                            .unwrap_or(false),
-                    )
-                    .change(
-                        "document_archived_reason",
-                        &chan_old
-                            .document
-                            .as_ref()
-                            .and_then(|d| d.archived.as_ref().and_then(|a| a.reason.clone())),
-                        &chan_new
-                            .document
-                            .as_ref()
-                            .and_then(|d| d.archived.as_ref().and_then(|a| a.reason.clone())),
-                    )
-                    .change(
-                        "document_slug",
-                        &chan_old.document.as_ref().and_then(|d| d.slug.clone()),
-                        &chan_new.document.as_ref().and_then(|d| d.slug.clone()),
-                    )
-                    .change(
-                        "document_published",
-                        &chan_old
-                            .document
-                            .as_ref()
-                            .map(|d| d.published.is_some())
-                            .unwrap_or(false),
-                        &chan_new
-                            .document
-                            .as_ref()
-                            .map(|d| d.published.is_some())
-                            .unwrap_or(false),
-                    )
-                    .change(
-                        "document_published_revision",
-                        &chan_old
-                            .document
-                            .as_ref()
-                            .and_then(|d| d.published.as_ref())
-                            .map(|p| p.revision.clone()),
-                        &chan_new
-                            .document
-                            .as_ref()
-                            .and_then(|d| d.published.as_ref())
-                            .map(|p| p.revision.clone()),
-                    )
-                    .change(
-                        "document_published_unlisted",
-                        &chan_old
-                            .document
-                            .as_ref()
-                            .and_then(|d| d.published.as_ref())
-                            .map(|p| p.unlisted),
-                        &chan_new
-                            .document
-                            .as_ref()
-                            .and_then(|d| d.published.as_ref())
-                            .map(|p| p.unlisted),
-                    )
-                    // wiki fields
-                    .change(
-                        "wiki_allow_indexing",
-                        &chan_old
-                            .wiki
-                            .as_ref()
-                            .map(|w| w.allow_indexing)
-                            .unwrap_or(false),
-                        &chan_new
-                            .wiki
-                            .as_ref()
-                            .map(|w| w.allow_indexing)
-                            .unwrap_or(false),
-                    )
-                    .change(
-                        "wiki_page_index",
-                        &chan_old.wiki.as_ref().and_then(|w| w.page_index),
-                        &chan_new.wiki.as_ref().and_then(|w| w.page_index),
-                    )
-                    .change(
-                        "wiki_page_notfound",
-                        &chan_old.wiki.as_ref().and_then(|w| w.page_notfound),
-                        &chan_new.wiki.as_ref().and_then(|w| w.page_notfound),
-                    )
-                    // calendar fields
-                    .change(
-                        "calendar_color",
-                        &chan_old.calendar.as_ref().and_then(|c| c.color.clone()),
-                        &chan_new.calendar.as_ref().and_then(|c| c.color.clone()),
-                    )
-                    .change(
-                        "calendar_default_timezone",
-                        &chan_old
-                            .calendar
-                            .as_ref()
-                            .map(|c| c.default_timezone.0.clone())
-                            .unwrap_or_default(),
-                        &chan_new
-                            .calendar
-                            .as_ref()
-                            .map(|c| c.default_timezone.0.clone())
-                            .unwrap_or_default(),
-                    )
-                    .build(),
-            };
+            let ty = util::calculate_audit_log_entry_from_update(&chan_old, &chan_new);
             auth.set_room_id(room_id);
             auth.al_push(ty);
         }
