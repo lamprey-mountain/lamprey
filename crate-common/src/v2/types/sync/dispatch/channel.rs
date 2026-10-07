@@ -1,17 +1,24 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{Channel, ChannelId, ChannelSeq, Message};
+use crate::{
+    v1::types::{Channel, ChannelId, ChannelSeq, Message, misc::Time},
+    v2::types::{RoomId, UserId},
+};
 
 /// something happened in a channel
+///
+/// requires a subscription to the channel to receive
 #[record]
 pub struct DispatchChannel {
     pub channel_id: ChannelId,
 
-    // room_id: Option<RoomId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
     /// the channel sync sequence number of this event
     ///
     /// used for offline sync. only populated if this dispatch incremented the sequence number.
-    // TODO: skip serializing if none
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub seq: Option<ChannelSeq>,
 
     #[serde(flatten)]
@@ -21,18 +28,30 @@ pub struct DispatchChannel {
 #[record]
 #[serde(tag = "type")]
 pub enum DispatchChannelInner {
+    // PERF: very minor thing, but some structs (eg. Channel or Message) have duplicate channel and room ids (with respect to DispatchChannel)
+    // i'm not sure if theres a good way of avoiding this?
     /// a channel was created
     ChannelCreate { channel: Box<Channel> },
-    // ChannelUpdate {
-    //     channel: Box<Channel>,
-    // },
 
-    // ChannelTyping {
+    /// a channel was updated
+    ChannelUpdate { channel: Box<Channel> },
+
+    // TODO: add?
+    // ChannelDelete {
     //     channel_id: ChannelId,
-    //     user_id: UserId,
-    //     until: Time,
     // },
+    /// someone started typing in a channel
+    ///
+    /// requires a subscription in rooms
+    ChannelTyping {
+        user_id: UserId,
+        until: Time,
+        // #[serde(skip_serializing_if = "Option::is_none")]
+        // room_id: Option<RoomId>,
+        // NOTE: maybe include user, room member, channel/thread member objects?
+    },
 
+    // NOTE: is ChannelAck a channel or a user event?
     // /// read receipt update
     // ChannelAck {
     //     user_id: UserId,
@@ -54,6 +73,7 @@ pub enum DispatchChannelInner {
     // //     thread_id: ChannelId,
     // // },
     /// a message was created
+    // NOTE: maybe i should require a room subscription to receive message dispatches
     MessageCreate {
         /// the message itself
         message: Box<Message>,
@@ -67,25 +87,23 @@ pub enum DispatchChannelInner {
         // /// the user who sent this message
         // user: Box<User>,
     },
-    // MessageUpdate {
-    //     message: Message,
-    //     // /// the room member of the author, if this was sent in a room
-    //     // room_member: Option<RoomMember>,
 
-    //     // /// the thread member of the author, if this was sent in a thread
-    //     // thread_member: Option<ThreadMember>,
+    MessageUpdate {
+        message: Message,
+        // /// the room member of the author, if this was sent in a room
+        // room_member: Option<RoomMember>,
 
-    //     // /// the user who sent this message
-    //     // user: User,
-    // },
+        // /// the thread member of the author, if this was sent in a thread
+        // thread_member: Option<ThreadMember>,
 
+        // /// the user who sent this message
+        // user: User,
+    },
     // MessageDelete {
-    //     channel_id: ChannelId,
     //     message_id: MessageId,
     // },
 
     // MessageVersionDelete {
-    //     channel_id: ChannelId,
     //     message_id: MessageId,
     //     version_id: MessageVerId,
     // },

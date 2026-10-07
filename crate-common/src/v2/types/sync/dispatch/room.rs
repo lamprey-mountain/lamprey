@@ -1,14 +1,22 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{Channel, Role, RoleId, RoleReorderItem, Room, RoomId, RoomMember};
+use crate::v1::types::{
+    Channel, Role, RoleId, RoleReorderItem, Room, RoomId, RoomMember, mirror::RoomSeq,
+};
 
 /// something happened in a room
+///
+/// requires a subscription to the room to receive
 #[record]
 pub struct DispatchRoom {
     pub room_id: RoomId,
 
-    // /// the room sync sequence numb of this event, for offline sync
-    // seq: RoomSeq,
+    /// the room sync sequence number of this event, for offline sync
+    ///
+    /// used for offline sync. only populated if this dispatch incremented the sequence number.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seq: Option<RoomSeq>,
+
     #[serde(flatten)]
     pub inner: DispatchRoomInner,
 }

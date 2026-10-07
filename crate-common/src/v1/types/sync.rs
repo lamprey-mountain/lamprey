@@ -1108,71 +1108,17 @@ pub enum MessageSync {
     // TODO: box more types: PreferencesFoo, Tag, Session, Webhook, AutomodRule, Media
 }
 
-#[record]
+pub use crate::v2::types::sync::transport::{
+    Compression as SyncCompression, Encoding as SyncFormat, Version as SyncVersion,
+};
+
+#[record(params)]
 #[derive(PartialEq, Eq)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
 pub struct SyncParams {
     pub version: SyncVersion,
     pub compression: Option<SyncCompression>,
     #[serde(default)]
     pub format: SyncFormat,
-}
-
-// i thought that putting the api version in the path would be better, but
-// apparently websockets are hard to load balance. being able to use arbitrary
-// urls/paths in the future could be helpful.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-#[repr(u8)]
-pub enum SyncVersion {
-    V1 = 1,
-    V2 = 2,
-}
-
-#[cfg(feature = "serde")]
-impl serde::Serialize for SyncVersion {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_u8(*self as u8)
-    }
-}
-
-#[cfg(feature = "serde")]
-impl<'de> serde::Deserialize<'de> for SyncVersion {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        match u8::deserialize(deserializer)? {
-            1 => Ok(SyncVersion::V1),
-            2 => Ok(SyncVersion::V2),
-            n => Err(serde::de::Error::unknown_variant(&n.to_string(), &["1"])),
-        }
-    }
-}
-
-#[record]
-#[derive(Default, Copy, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum SyncFormat {
-    #[default]
-    Json,
-    Msgpack,
-}
-
-/// how data should be compressed
-///
-/// the client may send non-compressed json, but not non-compressed
-/// msgpack payloads (as theres no way to differentiate between compressed and
-/// non-compressed)
-#[record]
-#[derive(Copy, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum SyncCompression {
-    /// Deflate compression
-    Deflate,
 }
 
 impl MessagePayload {

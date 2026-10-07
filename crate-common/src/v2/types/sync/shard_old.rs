@@ -177,15 +177,3 @@ impl SyncWebhookStatus {
         *self == Self::Alive
     }
 }
-
-/// query parameters when establishing a websocket (or webtransport) sync connection
-#[record]
-#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
-pub struct WebsocketSyncParams {
-    pub version: SyncVersion,
-
-    pub compression: Option<SyncCompression>,
-
-    #[serde(default)]
-    pub encoding: SyncEncoding,
-}

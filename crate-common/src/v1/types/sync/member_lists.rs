@@ -56,4 +56,4 @@ pub enum MemberListOp {
 
 // TODO: reexport more things?
 // reexport for compatibility
-pub use crate::v2::types::sync::subscribe::{MemberListGroup, MemberListGroupId};
+pub use crate::v2::types::sync::stream::member_list::{MemberListGroup, MemberListGroupId};

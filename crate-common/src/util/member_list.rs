@@ -2,7 +2,7 @@
 
 use lamprey_macros::record;
 
-use crate::v2::types::{RoleId, UserId, sync::subscribe::MemberListGroupId};
+use crate::v2::types::{RoleId, UserId, sync::stream::member_list::MemberListGroupId};
 
 /// like a MemberListGroupId with extra metadata for sorting
 #[record]

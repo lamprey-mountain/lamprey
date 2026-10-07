@@ -1,83 +1,17 @@
 //! types for keeping a local copy of state in sync
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
+use lamprey_macros::record;
 
 use crate::v1::types::MessageSync;
 
-/// A monotonic sync token, incremented on every action in a channel.
-///
-/// Used for incremental sync to determine what events the client is missing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct ChannelSeq(pub u64); // TEMP: pub
+pub mod seq;
 
-impl ChannelSeq {
-    pub fn is_zero(&self) -> bool {
-        self.0 == 0
-    }
-}
-
-impl std::fmt::Display for ChannelSeq {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<u64> for ChannelSeq {
-    fn from(value: u64) -> Self {
-        Self(value)
-    }
-}
-
-impl From<ChannelSeq> for u64 {
-    fn from(value: ChannelSeq) -> Self {
-        value.0
-    }
-}
-
-/// A monotonic sync token, incremented on every action in a room.
-///
-/// Used for incremental sync to determine what events the client is missing.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub struct RoomSeq(pub u64);
-
-impl RoomSeq {
-    pub fn is_zero(&self) -> bool {
-        self.0 == 0
-    }
-}
-
-impl std::fmt::Display for RoomSeq {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<u64> for RoomSeq {
-    fn from(value: u64) -> Self {
-        Self(value)
-    }
-}
-
-impl From<RoomSeq> for u64 {
-    fn from(value: RoomSeq) -> Self {
-        value.0
-    }
-}
+pub use seq::{ChannelSeq, RoomSeq};
 
 /// Response from the channel mirror endpoint.
 ///
 /// Contains incremental sync events to apply to local state.
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct ChannelMirror {
     /// sync events to apply to local state
     pub events: Vec<MessageSync>,

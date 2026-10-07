@@ -4,13 +4,13 @@ use crate::v1::types::{UserId, harvest::Harvest, preferences::PreferencesGlobal}
 
 #[record]
 pub struct DispatchUser {
-    pub user_id: UserId,
+    pub user_id: UserId, // NOTE: redundant?
 
-    // /// the channel sync sequence number of this event
+    // /// the sequence number of this event
     // ///
     // /// used for offline sync. only populated if this dispatch incremented the sequence number.
-    // // TODO: skip serializing if none
-    // seq: Option<ChannelSeq>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub seq: Option<UserSeq>,
     #[serde(flatten)]
     pub inner: DispatchUserInner,
 }
@@ -18,6 +18,32 @@ pub struct DispatchUser {
 #[record]
 #[serde(tag = "type")]
 pub enum DispatchUserInner {
+    // /// a room was created and/or you joined a room
+    // RoomCreate {
+    //     room: Box<Room>,
+    //     roles: Vec<Role>,
+    //     channels: Vec<Channel>,
+    //     threads: Vec<Channel>,
+
+    //     /// your own room member
+    //     room_member: Option<Box<RoomMember>>,
+    // },
+
+    // // /// a room was updated
+    // // RoomUpdate {
+    // //     // ...
+    // // },
+
+    // // /// a room was deleted, you left a room, or you were removed (kicked/banned) from a room
+    // // RoomDelete {
+    // //     // ...
+    // // },
+    // /// a channel was created
+    // ChannelCreate { channel: Box<Channel> },
+    // // ChannelUpdate {
+    // //     channel: Box<Channel>,
+    // // },
+    // // TODO: add ChannelDelete?
     /// a user's harvest state was updated
     HarvestUpdate { harvest: Box<Harvest> },
 

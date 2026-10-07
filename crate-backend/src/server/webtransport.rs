@@ -4,7 +4,6 @@ use crate::prelude::*;
 use common::v1::types::{
     ChannelType, MessageClient, MessageEnvelope, MessagePayload, SyncParams, error::SyncErrorCode,
 };
-use flate2::{Compress, Decompress, FlushCompress, FlushDecompress};
 use kerosene_core::types::documents::EditContextId;
 use kerosene_services::services::connections::ConnectionHandle;
 use kerosene_sync::transport::{

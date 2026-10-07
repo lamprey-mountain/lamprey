@@ -1,6 +1,6 @@
 use crate::{
     v1::types::{ChannelId, ConnectionId, Permission, RoomId, SessionId, UserId},
-    v2::types::sync::Dispatch,
+    v2::types::sync::dispatch::Dispatch,
 };
 
 // TODO: use Requirements?
@@ -59,38 +59,38 @@ impl DispatchVisibility {
 }
 
 impl Dispatch {
-    /// get the visibility check for this dispatch
-    pub fn visibility(&self) -> DispatchVisibility {
-        // TODO: copy logic from crate-backend/src/sync/permissions.rs
-        match self {
-            // FIXME: use sync_id
-            // Dispatch::Ready { connection_id, .. } => DispatchVisibility::Connection(*connection_id),
-            // Dispatch::Ambient { connection_id, .. } => {
-            //     DispatchVisibility::Connection(*connection_id)
-            // }
-            Dispatch::Ready { .. } | Dispatch::Ambient { .. } => todo!(),
-            Dispatch::VoiceDispatch { user_id, .. } => DispatchVisibility::User(*user_id),
-            Dispatch::VoiceState { .. } => todo!(),
-            Dispatch::DocumentEdit { .. } => todo!(),
-            Dispatch::DocumentPresence { .. } => todo!(),
-            Dispatch::MediaProcessed { session_id, .. } => DispatchVisibility::Session(*session_id),
-            Dispatch::MediaUpdate { .. } => todo!(),
-            #[cfg(feature = "feat_e2ee")]
-            Dispatch::EncryptionDispatch { .. } => todo!(),
-            Dispatch::Room(d) => match &d.inner {
-                // DispatchRoomInner::AuditLogEntryCreate { .. } => todo!(),
-                _ => DispatchVisibility::Room(d.room_id),
-            },
-            Dispatch::Channel(d) => match &d.inner {
-                // DispatchChannelInner::
-                _ => todo!(),
-            },
-            Dispatch::User(_d) => todo!(),
-            Dispatch::Subscriptions(_d) => todo!(),
-            Dispatch::Invite(d) => match &d.target {
-                _ => todo!(),
-            },
-            Dispatch::Webhook(_d) => todo!(),
-        }
-    }
+    // /// get the visibility check for this dispatch
+    // pub fn visibility(&self) -> DispatchVisibility {
+    //     // TODO: copy logic from crate-backend/src/sync/permissions.rs
+    //     match self {
+    //         // FIXME: use sync_id
+    //         // Dispatch::Ready { connection_id, .. } => DispatchVisibility::Connection(*connection_id),
+    //         // Dispatch::Ambient { connection_id, .. } => {
+    //         //     DispatchVisibility::Connection(*connection_id)
+    //         // }
+    //         Dispatch::Ready { .. } | Dispatch::Ambient { .. } => todo!(),
+    //         Dispatch::VoiceDispatch { user_id, .. } => DispatchVisibility::User(*user_id),
+    //         Dispatch::VoiceState { .. } => todo!(),
+    //         Dispatch::DocumentEdit { .. } => todo!(),
+    //         Dispatch::DocumentPresence { .. } => todo!(),
+    //         Dispatch::MediaProcessed { session_id, .. } => DispatchVisibility::Session(*session_id),
+    //         Dispatch::MediaUpdate { .. } => todo!(),
+    //         #[cfg(feature = "feat_e2ee")]
+    //         Dispatch::EncryptionDispatch { .. } => todo!(),
+    //         Dispatch::Room(d) => match &d.inner {
+    //             // DispatchRoomInner::AuditLogEntryCreate { .. } => todo!(),
+    //             _ => DispatchVisibility::Room(d.room_id),
+    //         },
+    //         Dispatch::Channel(d) => match &d.inner {
+    //             // DispatchChannelInner::
+    //             _ => todo!(),
+    //         },
+    //         Dispatch::User(_d) => todo!(),
+    //         Dispatch::Subscriptions(_d) => todo!(),
+    //         Dispatch::Invite(d) => match &d.target {
+    //             _ => todo!(),
+    //         },
+    //         Dispatch::Webhook(_d) => todo!(),
+    //     }
+    // }
 }
