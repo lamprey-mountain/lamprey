@@ -13,7 +13,6 @@ use lamprey_macros::endpoint;
 pub mod permission_set {
     use crate::v1::types::{ChannelId, PermissionOverwriteId, PermissionOverwriteSet};
 
-    #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
@@ -41,7 +40,6 @@ pub mod permission_set {
 pub mod permission_remove {
     use crate::v1::types::{ChannelId, PermissionOverwriteId};
 
-    #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
     pub struct Request {
         #[path]
         pub channel_id: ChannelId,
