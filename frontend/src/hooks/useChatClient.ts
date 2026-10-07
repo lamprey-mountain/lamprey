@@ -6,7 +6,6 @@ import { type IDBPDatabase, openDB } from "idb";
 import {
 	type ClientOptions,
 	createClient,
-	createWebtransportClient,
 	type MessageEnvelope,
 	type MessageReady,
 	type MessageSync,
@@ -83,10 +82,10 @@ export function useChatClient(config: Config) {
 		onStreamClose(stream) {
 			syncLog.debug("stream close", `with id: ${stream}`);
 		},
+		preferWebtransport: useWebtransport,
 	};
-	const client = useWebtransport
-		? createWebtransportClient(options)
-		: createClient(options);
+
+	const client = createClient(options);
 
 	const [db, setDb] = createSignal<IDBPDatabase<ApiDB> | undefined>();
 

@@ -29,6 +29,7 @@ export type ClientOptions = {
 	onStreamClose?: (stream: StreamInfo) => void;
 	format?: "json" | "msgpack";
 	compress?: "deflate";
+	preferWebtransport?: boolean;
 };
 
 export type Http = oapi.Client<paths>;
@@ -68,6 +69,136 @@ type Resume = {
 };
 
 export function createClient(opts: ClientOptions): Client {
+	let inner: Client | null = null;
+	const state = createObservable<ClientState>("stopped");
+	const queue: Array<MessageClient> = [];
+	const syncListeners = new Map<
+		(msg: MessageSync, raw: MessageEnvelope) => void,
+		(() => void) | null
+	>();
+
+	const http = createFetch<paths>({
+		baseUrl: opts.apiUrl,
+	});
+
+	http.use({
+		onRequest(r) {
+			if (opts.token) {
+				r.request.headers.set("authorization", `Bearer ${opts.token}`);
+			}
+			return r.request;
+		},
+	});
+
+	let isConnecting = false;
+	let shouldStop = false;
+
+	function setupInner(client: Client, token?: string) {
+		inner = client;
+
+		for (const [listener, _] of syncListeners) {
+			syncListeners.set(listener, client.onSync(listener));
+		}
+
+		client.start(token);
+
+		for (const data of queue) {
+			client.send(data);
+		}
+		queue.length = 0;
+	}
+
+	async function connect(token?: string) {
+		if (isConnecting) return;
+		isConnecting = true;
+		shouldStop = false;
+		state.set("connecting");
+
+		try {
+			if (!opts.preferWebtransport || !("WebTransport" in globalThis)) {
+				setupInner(createWebsocketClient(opts), token);
+				return;
+			}
+
+			const info: ServerInfo = await http
+				.GET("/api/v1/server/@self")
+				.then(({ data }) => data!);
+
+			if (shouldStop) return;
+
+			const cert = info?.features?.webtransport?.certificate_hashes?.[0]?.value;
+			if (cert) {
+				setupInner(createWebtransportClient(opts), token);
+			} else {
+				setupInner(createWebsocketClient(opts), token);
+			}
+		} catch (err) {
+			if (shouldStop) return;
+			console.error(
+				"Failed to fetch server info, falling back to websocket",
+				err,
+			);
+			setupInner(createWebsocketClient(opts), token);
+		} finally {
+			isConnecting = false;
+		}
+	}
+
+	return {
+		opts,
+		http,
+		state: state.observable,
+		start: (token?: string) => {
+			if (token) opts.token = token;
+			if (inner) {
+				inner.start(token);
+			} else {
+				connect(token);
+			}
+		},
+		stop: () => {
+			shouldStop = true;
+			if (inner) {
+				inner.stop();
+			} else {
+				state.set("stopped");
+			}
+		},
+		stopAggressive: () => {
+			shouldStop = true;
+			opts.token = undefined;
+			if (inner) {
+				inner.stopAggressive();
+			} else {
+				state.set("stopped");
+			}
+		},
+		send: (data: MessageClient) => {
+			if (inner) {
+				inner.send(data);
+			} else {
+				queue.push(data);
+			}
+		},
+		onSync: (listener) => {
+			if (inner) {
+				syncListeners.set(listener, inner.onSync(listener));
+			} else {
+				syncListeners.set(listener, null);
+			}
+			return () => {
+				const unsub = syncListeners.get(listener);
+				if (unsub) unsub();
+				syncListeners.delete(listener);
+			};
+		},
+		get isWebtransport() {
+			return inner ? inner.isWebtransport : false;
+		},
+	};
+}
+
+export function createWebsocketClient(opts: ClientOptions): Client {
 	let ws: WebSocket;
 	let resume: null | Resume = null;
 	const state = createObservable<ClientState>("stopped");
