@@ -879,11 +879,10 @@ pub async fn message_nudge(
 
     let message = srv
         .messages
-        .create2(
-            Create::new(CreateType::Custom(MessageType::Nudge), channel_id, user.id)
-                .session(req.auth.session().map(|s| s.id))
-                .nonce(req.body.idempotency_key),
-        )
+        .create3(channel_id, user.id)
+        .session(req.auth.session().map(|s| s.id))
+        .nonce(req.body.idempotency_key)
+        .create(CreateType::Custom(MessageType::Nudge))
         .await?;
 
     // TODO: move this logic to ServiceNotifications

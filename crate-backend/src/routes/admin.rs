@@ -64,6 +64,12 @@ async fn admin_whisper(
         channel: Box::new(thread.clone()),
     })?;
 
+    // TODO: verify that create2/create3 works with system messages
+    // srv.messages
+    //     .create3(thread.id, SERVER_USER_ID)
+    //     .create_default(req.body.message)
+    //     .await?;
+
     srv.messages
         .create_system(thread.id, req.body.message)
         .await?;

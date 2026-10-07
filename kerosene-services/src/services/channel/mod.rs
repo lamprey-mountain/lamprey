@@ -678,14 +678,9 @@ impl ServiceChannels {
             // send a ThreadInitial message to the thread (starter_message)
             if let Some(starter_message) = json.starter_message {
                 srv.messages
-                    .create_thread_initial(
-                        channel_id,
-                        auth,
-                        None,
-                        starter_message,
-                        None,
-                        (*channel_id).into(),
-                    )
+                    .create3(channel_id, user_id)
+                    .id((*channel_id).into())
+                    .create_thread_initial(starter_message)
                     .await?;
             }
 

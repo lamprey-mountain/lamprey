@@ -158,43 +158,7 @@ impl ServiceMessages {
         Ok(messages)
     }
 
-    // pub async fn _create(
-    //     &self,
-    //     thread_id: ChannelId,
-    //     auth: &Auth,
-    //     nonce: Option<String>,
-    //     json: MessageCreate,
-    //     header_timestamp: Option<Time>,
-    // ) -> Result<Message> {
-    //     if let Some(n) = &nonce {
-    //         self.idempotency_keys
-    //             .try_get_with(
-    //                 n.clone(),
-    //                 self.create_inner(
-    //                     thread_id,
-    //                     auth.user.id,
-    //                     Some(auth),
-    //                     nonce,
-    //                     json,
-    //                     header_timestamp,
-    //                 ),
-    //             )
-    //             .await
-    //             .map_err(|err| err.fake_clone())
-    //     } else {
-    //         self.create_inner(
-    //             thread_id,
-    //             auth.user.id,
-    //             Some(auth),
-    //             nonce,
-    //             json,
-    //             header_timestamp,
-    //         )
-    //         .await
-    //     }
-    // }
-
-    pub async fn fetch_full_mentions_from_ids(
+    async fn fetch_full_mentions_from_ids(
         &self,
         mentions_ids: MentionsIds,
         room_id: Option<RoomId>,

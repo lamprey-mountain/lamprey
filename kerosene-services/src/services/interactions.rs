@@ -13,7 +13,7 @@ use common::v1::types::{
 };
 use common::v2::types::{ApplicationId, MessageId};
 use dashmap::DashMap;
-use kerosene_core::types::auth::Auth5;
+use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use lamprey_backend_core::Error;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
@@ -473,16 +473,12 @@ impl ServiceInteractions {
         // eg. start a comment thread for document interactions
         // actually, maybe not. that sounds like it could lead to some confusing behavior..
 
+        let user_id = (*inter.interaction.application_id).into();
         let message = srv
             .messages
-            .create(
-                channel_id,
-                auth,
-                idempotency_key,
-                message,
-                None,
-                MessageId::new(),
-            )
+            .create3(channel_id, user_id)
+            .nonce(idempotency_key)
+            .create_default(message)
             .await?;
 
         Ok(message)

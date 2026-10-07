@@ -338,13 +338,23 @@ impl Operation<'_, OpCreate> {
         self.service.create2(request)
     }
 
-    // fn create_default
-    // fn create_thread_initial
+    pub fn create_default(self, body: MessageCreate) -> impl Future<Output = Result<Message>> {
+        self.create(CreateType::Default(body))
+    }
+
+    pub fn create_thread_initial(
+        self,
+        body: MessageCreate,
+    ) -> impl Future<Output = Result<Message>> {
+        self.create(CreateType::ThreadInitial(body))
+    }
 }
 
 impl Operation<'_, OpUpdate> {
-    // TODO:
-    pub fn update<P: Into<MessagePatch>>(self, payload: P) -> impl Future<Output = Result<Message>> {
+    pub fn update<P: Into<MessagePatch>>(
+        self,
+        payload: P,
+    ) -> impl Future<Output = Result<Message>> {
         let request = Edit {
             id: self.id,
             channel_id: self.channel_id,
@@ -358,6 +368,7 @@ impl Operation<'_, OpUpdate> {
     }
 }
 
+// PERF: use Arc<Message> in cache, return types
 impl ServiceMessages {
     /// begin creating a new message
     pub fn create3(&self, channel_id: ChannelId, user_id: UserId) -> Operation<'_, OpCreate> {
@@ -374,8 +385,7 @@ impl ServiceMessages {
         }
     }
 
-    // PERF: return Arc<Message>
-    pub async fn create2(&self, create: Create) -> Result<Message> {
+    async fn create2(&self, create: Create) -> Result<Message> {
         if let (Some(session_id), Some(nonce)) = (create.session_id, create.nonce.clone()) {
             self.idempotency_keys
                 .try_get_with((session_id, nonce), self.create2_inner(create))

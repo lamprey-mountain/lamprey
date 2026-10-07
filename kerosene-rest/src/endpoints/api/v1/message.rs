@@ -8,7 +8,6 @@ use common::{
     v2::types::MessageId,
 };
 use http::StatusCode;
-use lamprey_backend_services::services::messages::create2::Create;
 use tracing::warn;
 
 use crate::prelude::*;
@@ -41,13 +40,12 @@ pub async fn create(
     let message_id = MessageId::new();
     let message = srv
         .messages
-        .create2(
-            Create::new_default(body.message, channel_id, user_id)
-                .id(message_id)
-                .session(Some(session_id))
-                .timestamp(timestamp)
-                .nonce(body.idempotency_key),
-        )
+        .create3(channel_id, user_id)
+        .id(message_id)
+        .session(Some(session_id))
+        .timestamp(timestamp)
+        .nonce(body.idempotency_key)
+        .create_default(body.message)
         .await
         .cast_internal()?;
 

@@ -255,51 +255,8 @@ impl<S> MessageOperation<'_, S> {
 }
 
 impl ServiceMessages {
-    /// create a new message
-    pub async fn create<A: Auth5>(
-        &self,
-        channel_id: ChannelId,
-        auth: &mut A,
-        nonce: Option<String>,
-        json: MessageCreate,
-        header_timestamp: Option<Time>,
-        message_id: MessageId,
-    ) -> Result<Message> {
-        auth.ensure_user()?;
-        let author = Author::User(auth.identity().clone());
-        if let Some(nonce) = nonce {
-            // FIXME: this won't work with federation
-            let session = auth.ensure_session()?;
-            self.idempotency_keys
-                .try_get_with(
-                    (session.id, nonce.clone()),
-                    self.create_inner(
-                        channel_id,
-                        author,
-                        Some(nonce),
-                        json,
-                        header_timestamp,
-                        message_id,
-                        false,
-                    ),
-                )
-                .await
-                .map_err(|err| err.fake_clone())
-        } else {
-            self.create_inner(
-                channel_id,
-                author,
-                nonce,
-                json,
-                header_timestamp,
-                message_id,
-                false,
-            )
-            .await
-        }
-    }
-
     /// create a new system message
+    // TODO: deprecate and remove this
     pub async fn create_system(
         &self,
         channel_id: ChannelId,
@@ -324,49 +281,6 @@ impl ServiceMessages {
         let op = self.commit(op).await?;
         let op = self.finalize(op).await?;
         Ok(op.stage.message)
-    }
-
-    pub async fn create_thread_initial<A: Auth5>(
-        &self,
-        channel_id: ChannelId,
-        auth: &mut A,
-        nonce: Option<String>,
-        json: MessageCreate,
-        header_timestamp: Option<Time>,
-        message_id: MessageId,
-    ) -> Result<Message> {
-        auth.ensure_user()?;
-        let author = Author::User(auth.identity().clone());
-        if let Some(nonce) = nonce {
-            // FIXME: this won't work with federation
-            let session = auth.ensure_session()?;
-            self.idempotency_keys
-                .try_get_with(
-                    (session.id, nonce.clone()),
-                    self.create_inner(
-                        channel_id,
-                        author,
-                        Some(nonce),
-                        json,
-                        header_timestamp,
-                        message_id,
-                        true,
-                    ),
-                )
-                .await
-                .map_err(|err| err.fake_clone())
-        } else {
-            self.create_inner(
-                channel_id,
-                author,
-                nonce,
-                json,
-                header_timestamp,
-                message_id,
-                true,
-            )
-            .await
-        }
     }
 
     async fn create_inner(
