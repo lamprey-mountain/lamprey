@@ -1,3 +1,5 @@
+//! interactive component actions
+
 use lamprey_macros::record;
 use url::Url;
 

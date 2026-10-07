@@ -1,3 +1,5 @@
+//! interactive components
+
 use lamprey_macros::record;
 
 use crate::v2::types::components::ComponentCustomId;

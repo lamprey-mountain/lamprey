@@ -16,25 +16,36 @@ use crate::{
     },
 };
 
+// #[derive(Debug, Clone, Copy)]
+// pub struct ComponentsFoo<'c> {
+//     components: &'c Components,
+//     // PERF: store lookup maps for components
+//     // - component id -> component
+//     // - component custom id -> component
+//     // - media id -> option(?) media vec index, component id(s?)
+// }
+
 /// a reference to a `Component` inside a `Components`
 #[derive(Debug, Clone, Copy)]
 pub struct ComponentRef<'c> {
     components: &'c Components,
     component: &'c Component,
+    // maybe store a list of parents? and add fns to get
+    // path: Vec<ComponentId>,
 }
 
 impl ComponentType {
     /// Whether this component type itself is interactive.
     fn is_interactive(&self) -> bool {
         match self {
-            ComponentType::Button { action, .. } => action.is_interactive(),
-            ComponentType::Input { .. }
-            | ComponentType::Textarea { .. }
-            | ComponentType::Select { .. }
-            | ComponentType::Upload { .. }
-            | ComponentType::Checkbox { .. }
-            | ComponentType::Checkboxes { .. } => true,
-            ComponentType::Form { .. } => true,
+            ComponentType::Button(button) => button.action.is_interactive(),
+            ComponentType::Input(_)
+            | ComponentType::Textarea(_)
+            | ComponentType::Select(_)
+            | ComponentType::Upload(_)
+            | ComponentType::Checkbox(_)
+            | ComponentType::Checkboxes(_) => true,
+            ComponentType::Form(_) => true,
             _ => false,
         }
     }
@@ -46,10 +57,7 @@ impl ComponentType {
         // TODO: allow Media?
         // TODO: handle Reference and Template
 
-        matches!(
-            self,
-            ComponentType::Button { .. } | ComponentType::Text { .. }
-        )
+        matches!(self, ComponentType::Button(_) | ComponentType::Text(_))
     }
 
     /// whether this component is usable in a `Row`
@@ -65,12 +73,12 @@ impl ComponentType {
 
         matches!(
             self,
-            ComponentType::Input { .. }
-                | ComponentType::Textarea { .. }
-                | ComponentType::Select { .. }
-                | ComponentType::Upload { .. }
-                | ComponentType::Checkbox { .. }
-                | ComponentType::Checkboxes { .. }
+            ComponentType::Input(_)
+                | ComponentType::Textarea(_)
+                | ComponentType::Select(_)
+                | ComponentType::Upload(_)
+                | ComponentType::Checkbox(_)
+                | ComponentType::Checkboxes(_)
         )
     }
 }
@@ -117,16 +125,14 @@ impl Components {
 
         for comp in &mut self.items {
             match &mut comp.ty {
-                ComponentType::Container { components, .. } => components.retain(|c| *c != id),
-                ComponentType::Details {
-                    summary, details, ..
-                } => {
-                    summary.retain(|c| *c != id);
-                    details.retain(|c| *c != id);
+                ComponentType::Container(container) => container.components.retain(|c| *c != id),
+                ComponentType::Details(details) => {
+                    details.summary.retain(|c| *c != id);
+                    details.details.retain(|c| *c != id);
                 }
-                ComponentType::Section { components, .. } => components.retain(|c| *c != id),
-                ComponentType::Form { components, .. } => components.retain(|c| *c != id),
-                ComponentType::Row { components, .. } => components.retain(|c| *c != id),
+                ComponentType::Section(section) => section.components.retain(|c| *c != id),
+                ComponentType::Form(form) => form.components.retain(|c| *c != id),
+                ComponentType::Row(row) => row.components.retain(|c| *c != id),
                 _ => {}
             }
         }
@@ -189,9 +195,9 @@ impl Components {
         };
 
         match &mut target.ty {
-            ComponentType::Text { content } => {
+            ComponentType::Text(text) => {
                 if let Some(s) = other.as_text() {
-                    content.push_str(s);
+                    text.content.push_str(s);
                 } else {
                     return Err(ApiError::with_message(
                         ErrorCode::InvalidData,
@@ -199,11 +205,11 @@ impl Components {
                     ));
                 }
             }
-            ComponentType::Gallery { items } => {
+            ComponentType::Gallery(gallery) => {
                 for their_id in &other.roots {
                     if let Some(c) = other.items.iter().find(|c| c.id == *their_id) {
-                        if let ComponentType::Media { item } = &c.ty {
-                            items.push(item.clone());
+                        if let ComponentType::Media(media) = &c.ty {
+                            gallery.items.push(media.item.clone());
                         } else {
                             return Err(ApiError::with_message(
                                 ErrorCode::InvalidData,
@@ -213,26 +219,31 @@ impl Components {
                     }
                 }
             }
-            ComponentType::Container { .. }
-            | ComponentType::Section { .. }
-            | ComponentType::Details { .. }
-            | ComponentType::Form { .. }
-            | ComponentType::Row { .. } => {
+            ComponentType::Container(_)
+            | ComponentType::Section(_)
+            | ComponentType::Details(_)
+            | ComponentType::Form(_)
+            | ComponentType::Row(_) => {
                 // PERF: don't make this O(quadratic)
                 for their_id in &other.roots {
                     if let Some(c) = other.get(*their_id) {
                         let cloned = self.import(c, &mut id_allocator);
                         let target = self.items.iter_mut().find(|c| c.id == target_id).unwrap();
                         match &mut target.ty {
-                            ComponentType::Container { components, .. }
-                            | ComponentType::Section { components, .. }
-                            | ComponentType::Details {
-                                details: components,
-                                ..
+                            ComponentType::Container(container) => {
+                                container.components.push(cloned.id);
                             }
-                            | ComponentType::Form { components, .. }
-                            | ComponentType::Row { components, .. } => {
-                                components.push(cloned.id);
+                            ComponentType::Section(section) => {
+                                section.components.push(cloned.id);
+                            }
+                            ComponentType::Details(details) => {
+                                details.details.push(cloned.id);
+                            }
+                            ComponentType::Form(form) => {
+                                form.components.push(cloned.id);
+                            }
+                            ComponentType::Row(row) => {
+                                row.components.push(cloned.id);
                             }
                             _ => unreachable!(),
                         }
@@ -273,17 +284,21 @@ impl Components {
         };
 
         match &mut new_ty {
-            ComponentType::Container { components, .. }
-            | ComponentType::Section { components, .. }
-            | ComponentType::Form { components, .. }
-            | ComponentType::Row { components, .. } => {
-                *components = clone_children(&components);
+            ComponentType::Container(container) => {
+                container.components = clone_children(&container.components);
             }
-            ComponentType::Details {
-                summary, details, ..
-            } => {
-                *summary = clone_children(&summary);
-                *details = clone_children(&details);
+            ComponentType::Section(section) => {
+                section.components = clone_children(&section.components);
+            }
+            ComponentType::Form(form) => {
+                form.components = clone_children(&form.components);
+            }
+            ComponentType::Row(row) => {
+                row.components = clone_children(&row.components);
+            }
+            ComponentType::Details(details) => {
+                details.summary = clone_children(&details.summary);
+                details.details = clone_children(&details.details);
             }
             _ => {}
         }
@@ -323,25 +338,53 @@ impl Components {
         // TODO: add an easier method of getting parent
         for comp in &mut self.items {
             let found = match &mut comp.ty {
-                ComponentType::Container { components, .. }
-                | ComponentType::Section { components, .. }
-                | ComponentType::Form { components, .. }
-                | ComponentType::Row { components, .. } => {
-                    if let Some(pos) = components.iter().position(|c| *c == target_id) {
-                        components.splice(pos..pos + 1, replacement_ids.clone());
+                ComponentType::Container(container) => {
+                    if let Some(pos) = container.components.iter().position(|c| *c == target_id) {
+                        container
+                            .components
+                            .splice(pos..pos + 1, replacement_ids.clone());
                         true
                     } else {
                         false
                     }
                 }
-                ComponentType::Details {
-                    summary, details, ..
-                } => {
-                    if let Some(pos) = summary.iter().position(|c| *c == target_id) {
-                        summary.splice(pos..pos + 1, replacement_ids.clone());
+                ComponentType::Section(section) => {
+                    if let Some(pos) = section.components.iter().position(|c| *c == target_id) {
+                        section
+                            .components
+                            .splice(pos..pos + 1, replacement_ids.clone());
                         true
-                    } else if let Some(pos) = details.iter().position(|c| *c == target_id) {
-                        details.splice(pos..pos + 1, replacement_ids.clone());
+                    } else {
+                        false
+                    }
+                }
+                ComponentType::Form(form) => {
+                    if let Some(pos) = form.components.iter().position(|c| *c == target_id) {
+                        form.components
+                            .splice(pos..pos + 1, replacement_ids.clone());
+                        true
+                    } else {
+                        false
+                    }
+                }
+                ComponentType::Row(row) => {
+                    if let Some(pos) = row.components.iter().position(|c| *c == target_id) {
+                        row.components.splice(pos..pos + 1, replacement_ids.clone());
+                        true
+                    } else {
+                        false
+                    }
+                }
+                ComponentType::Details(details) => {
+                    if let Some(pos) = details.summary.iter().position(|c| *c == target_id) {
+                        details
+                            .summary
+                            .splice(pos..pos + 1, replacement_ids.clone());
+                        true
+                    } else if let Some(pos) = details.details.iter().position(|c| *c == target_id) {
+                        details
+                            .details
+                            .splice(pos..pos + 1, replacement_ids.clone());
                         true
                     } else {
                         false
@@ -411,8 +454,9 @@ impl Components {
     /// Return an iterator over all [`MediaReference`]s that are referenced in these components.
     pub fn referenced_media(&self) -> impl Iterator<Item = &MediaReference> {
         self.items.iter().flat_map(|comp| match &comp.ty {
-            ComponentType::Media { item } => vec![&item.media_ref].into_iter(),
-            ComponentType::Gallery { items } => items
+            ComponentType::Media(media) => vec![&media.item.media_ref].into_iter(),
+            ComponentType::Gallery(gallery) => gallery
+                .items
                 .iter()
                 .map(|i| &i.media_ref)
                 .collect::<Vec<_>>()
@@ -449,8 +493,8 @@ impl Components {
                     .iter()
                     .find(|c| c.id == *id)
                     .expect("this should be validated");
-                if let ComponentType::Text { content } = &c.ty {
-                    return Some(content.as_str());
+                if let ComponentType::Text(text) = &c.ty {
+                    return Some(text.content.as_str());
                 }
             }
         }
@@ -459,24 +503,40 @@ impl Components {
     }
 }
 
+// TODO: fn walk() for ComponentRef
 impl<'c> ComponentRef<'c> {
     /// Get an iterator over this component's children
     // TODO: maybe create a ComponentRefIter struct for this instead of collecting into a vec first
     pub fn children(&self) -> impl Iterator<Item = ComponentRef<'c>> {
         match &self.component.ty {
-            ComponentType::Container { components, .. }
-            | ComponentType::Section { components, .. }
-            | ComponentType::Form { components, .. }
-            | ComponentType::Row { components, .. } => components
+            ComponentType::Container(container) => container
+                .components
                 .iter()
                 .map(|id| self.components.get(*id).unwrap())
                 .collect::<Vec<_>>()
                 .into_iter(),
-            ComponentType::Details {
-                summary, details, ..
-            } => summary
+            ComponentType::Section(section) => section
+                .components
                 .iter()
-                .chain(details.iter())
+                .map(|id| self.components.get(*id).unwrap())
+                .collect::<Vec<_>>()
+                .into_iter(),
+            ComponentType::Form(form) => form
+                .components
+                .iter()
+                .map(|id| self.components.get(*id).unwrap())
+                .collect::<Vec<_>>()
+                .into_iter(),
+            ComponentType::Row(row) => row
+                .components
+                .iter()
+                .map(|id| self.components.get(*id).unwrap())
+                .collect::<Vec<_>>()
+                .into_iter(),
+            ComponentType::Details(details) => details
+                .summary
+                .iter()
+                .chain(details.details.iter())
                 .map(|id| self.components.get(*id).unwrap())
                 .collect::<Vec<_>>()
                 .into_iter(),
@@ -489,23 +549,26 @@ impl<'c> ComponentRef<'c> {
         F: Fn(B, ComponentRef<'_>) -> B,
     {
         match &self.component.ty {
-            ComponentType::Container { components, .. } => components
+            ComponentType::Container(container) => container
+                .components
                 .iter()
                 .fold(init, |i, c| f(i, self.components.get(*c).unwrap())),
-            ComponentType::Section { components, .. } => components
+            ComponentType::Section(section) => section
+                .components
                 .iter()
                 .fold(init, |i, c| f(i, self.components.get(*c).unwrap())),
-            ComponentType::Form { components, .. } => components
+            ComponentType::Form(form) => form
+                .components
                 .iter()
                 .fold(init, |i, c| f(i, self.components.get(*c).unwrap())),
-            ComponentType::Row { components, .. } => components
+            ComponentType::Row(row) => row
+                .components
                 .iter()
                 .fold(init, |i, c| f(i, self.components.get(*c).unwrap())),
-            ComponentType::Details {
-                summary, details, ..
-            } => summary
+            ComponentType::Details(details) => details
+                .summary
                 .iter()
-                .chain(details.iter())
+                .chain(details.details.iter())
                 .fold(init, |i, c| f(i, self.components.get(*c).unwrap())),
             _ => init,
         }
@@ -516,6 +579,22 @@ impl<'c> ComponentRef<'c> {
         self.component.ty.is_interactive()
             || self.fold_all_children(false, |b, c| b || c.is_interactive())
     }
+
+    // TODO: add more navigation options?
+    // /// go to the next sibling component
+    // pub fn next(&mut self) -> Option<ComponentRef<'c>>;
+    //
+    // /// go to the previous sibling component
+    // pub fn prev(&mut self) -> Option<ComponentRef<'c>>;
+    //
+    // /// go to the parent component
+    // pub fn parent(&mut self) -> Option<ComponentRef<'c>>;
+    //
+    // /// get the zero-based index of the current component among its siblings
+    // pub fn index(&mut self) -> Option<usize>;
+    //
+    // /// get the depth of the current component in the tree
+    // pub fn depth(&mut self) -> Option<usize>;
 }
 
 impl Deref for ComponentRef<'_> {

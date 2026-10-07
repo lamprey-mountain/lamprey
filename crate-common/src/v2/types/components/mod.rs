@@ -1,19 +1,22 @@
-pub mod acl;
-pub mod action;
-pub mod components; // TODO: rename? components::components::Components is kinda bad
+//! components are a way to layout stuff
+
+// TODO: rearrange mod components, impls
+// components::components::Components is kinda bad
+// i should probably have a module for each component type
+
+pub mod components;
 pub mod impls;
-pub mod interactive;
 pub mod validate;
 
-// TODO: impl and use this instead of flume delta
-// pub mod delta;
+// TODO: implement transform
+// pub mod transform;
 
-// TODO: remove this?
-// pub mod tree;
+// TODO: merge mod acl, action into interactive?
+pub mod acl;
+pub mod action;
+pub mod interactive;
 
-// NOTE: maybe rename id types to be more clear? probably not.
 pub use crate::v1::types::components::{ComponentCustomId, ComponentId};
-
 pub use components::{Component, ComponentType, Components};
 
 #[cfg(test)]

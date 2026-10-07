@@ -1,3 +1,5 @@
+//! logic for validating components
+
 use crate::{
     v1::types::error::{ApiError, ApiResult, ErrorCode, ErrorField, ErrorFieldType},
     v2::types::components::{
@@ -179,84 +181,57 @@ impl Component {
 impl ComponentType {
     fn validate_inner(&self, state: &mut ValidationState) {
         match self {
-            ComponentType::Button {
-                label,
-                style: _,
-                action: _,
-            } => {
-                state.enter("label", |s| s.validate_label(label));
+            ComponentType::Button(button) => {
+                state.enter("label", |s| s.validate_label(&button.label));
                 // TODO: Validate action
             }
-            ComponentType::Input {
-                custom_id,
-                label,
-                value: _,
-                placeholder: _,
-                validation,
-            } => {
-                state.enter("custom_id", |s| s.validate_custom_id(custom_id));
-                state.enter("label", |s| s.validate_label(label));
-                state.enter("validation", |s| s.validate_validation(self, validation));
+            ComponentType::Input(input) => {
+                state.enter("custom_id", |s| s.validate_custom_id(&input.custom_id));
+                state.enter("label", |s| s.validate_label(&input.label));
+                state.enter("validation", |s| {
+                    s.validate_validation(self, &input.validation)
+                });
             }
-            ComponentType::Textarea {
-                custom_id,
-                label,
-                style: _,
-                value: _,
-                placeholder: _,
-                validation,
-            } => {
-                state.enter("custom_id", |s| s.validate_custom_id(custom_id));
-                state.enter("label", |s| s.validate_label(label));
-                state.enter("validation", |s| s.validate_validation(self, validation));
+            ComponentType::Textarea(textarea) => {
+                state.enter("custom_id", |s| s.validate_custom_id(&textarea.custom_id));
+                state.enter("label", |s| s.validate_label(&textarea.label));
+                state.enter("validation", |s| {
+                    s.validate_validation(self, &textarea.validation)
+                });
             }
-            ComponentType::Select {
-                custom_id,
-                label,
-                placeholder: _,
-                dataset: _,
-                validation,
-            } => {
-                state.enter("custom_id", |s| s.validate_custom_id(custom_id));
-                state.enter("label", |s| s.validate_label(label));
-                state.enter("validation", |s| s.validate_validation(self, validation));
+            ComponentType::Select(select) => {
+                state.enter("custom_id", |s| s.validate_custom_id(&select.custom_id));
+                state.enter("label", |s| s.validate_label(&select.label));
+                state.enter("validation", |s| {
+                    s.validate_validation(self, &select.validation)
+                });
             }
-            ComponentType::Upload {
-                custom_id,
-                label,
-                validation,
-            } => {
-                state.enter("custom_id", |s| s.validate_custom_id(custom_id));
-                state.enter("label", |s| s.validate_label(label));
-                state.enter("validation", |s| s.validate_validation(self, validation));
+            ComponentType::Upload(upload) => {
+                state.enter("custom_id", |s| s.validate_custom_id(&upload.custom_id));
+                state.enter("label", |s| s.validate_label(&upload.label));
+                state.enter("validation", |s| {
+                    s.validate_validation(self, &upload.validation)
+                });
             }
-            ComponentType::Checkbox {
-                custom_id,
-                option,
-                validation,
-            } => {
-                state.enter("custom_id", |s| s.validate_custom_id(custom_id));
-                state.enter("option", |s| s.validate_label(&option.label));
-                state.enter("validation", |s| s.validate_validation(self, validation));
+            ComponentType::Checkbox(checkbox) => {
+                state.enter("custom_id", |s| s.validate_custom_id(&checkbox.custom_id));
+                state.enter("option", |s| s.validate_label(&checkbox.option.label));
+                state.enter("validation", |s| {
+                    s.validate_validation(self, &checkbox.validation)
+                });
             }
-            ComponentType::Checkboxes {
-                custom_id,
-                label,
-                options: _,
-                validation,
-            } => {
-                state.enter("custom_id", |s| s.validate_custom_id(custom_id));
-                state.enter("label", |s| s.validate_label(label));
-                state.enter("validation", |s| s.validate_validation(self, validation));
+            ComponentType::Checkboxes(checkboxes) => {
+                state.enter("custom_id", |s| s.validate_custom_id(&checkboxes.custom_id));
+                state.enter("label", |s| s.validate_label(&checkboxes.label));
+                state.enter("validation", |s| {
+                    s.validate_validation(self, &checkboxes.validation)
+                });
             }
-            ComponentType::Container {
-                components,
-                color: _,
-            } => {
-                self.validate_child_ids(components, "components", state);
+            ComponentType::Container(container) => {
+                self.validate_child_ids(&container.components, "components", state);
             }
-            ComponentType::Text { content } => {
-                if content.len() > 8192 {
+            ComponentType::Text(text) => {
+                if text.content.len() > 8192 {
                     state.push_error(
                         "text content too long".to_owned(),
                         ErrorFieldType::Length {
@@ -266,31 +241,20 @@ impl ComponentType {
                     );
                 }
             }
-            ComponentType::Details {
-                open: _,
-                color: _,
-                summary,
-                details,
-            } => {
-                self.validate_child_ids(summary, "summary", state);
-                self.validate_child_ids(details, "details", state);
+            ComponentType::Details(details) => {
+                self.validate_child_ids(&details.summary, "summary", state);
+                self.validate_child_ids(&details.details, "details", state);
             }
-            ComponentType::Section {
-                color: _,
-                components,
-            } => {
-                self.validate_child_ids(components, "components", state);
+            ComponentType::Section(section) => {
+                self.validate_child_ids(&section.components, "components", state);
             }
-            ComponentType::Form {
-                custom_id,
-                components,
-            } => {
-                state.enter("custom_id", |s| s.validate_custom_id(custom_id));
-                self.validate_child_ids(components, "components", state);
+            ComponentType::Form(form) => {
+                state.enter("custom_id", |s| s.validate_custom_id(&form.custom_id));
+                self.validate_child_ids(&form.components, "components", state);
                 // TODO: Validate no nested forms
             }
-            ComponentType::Row { components } => {
-                if components.len() > 5 {
+            ComponentType::Row(row) => {
+                if row.components.len() > 5 {
                     state.push_error(
                         "row can have max 5 components".to_owned(),
                         ErrorFieldType::Length {
@@ -299,13 +263,13 @@ impl ComponentType {
                         },
                     );
                 }
-                self.validate_child_ids(components, "components", state);
+                self.validate_child_ids(&row.components, "components", state);
             }
-            ComponentType::Media { item: _ } => {
+            ComponentType::Media(_) => {
                 // nothing to validate
             }
-            ComponentType::Gallery { items } => {
-                if items.is_empty() || items.len() > 20 {
+            ComponentType::Gallery(gallery) => {
+                if gallery.items.is_empty() || gallery.items.len() > 20 {
                     state.push_error(
                         "items must be between 1 and 20".to_owned(),
                         ErrorFieldType::Length {
@@ -315,15 +279,18 @@ impl ComponentType {
                     );
                 }
             }
-            ComponentType::Reference { reference_id } => {
-                if !state.has_component(reference_id) {
+            ComponentType::Reference(reference) => {
+                if !state.has_component(&reference.reference_id) {
                     state.push_error(
-                        format!("referenced component {} not found", reference_id.0),
+                        format!(
+                            "referenced component {} not found",
+                            reference.reference_id.0
+                        ),
                         ErrorFieldType::Other,
                     );
                 }
             }
-            ComponentType::Template { .. } => {
+            ComponentType::Template(_) => {
                 // TODO: Implement
             }
         }
