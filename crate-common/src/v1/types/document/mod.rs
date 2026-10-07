@@ -416,6 +416,7 @@ pub struct Wiki {
     pub page_index: Option<ChannelId>,
 
     /// the id of the document that should be used as the 404/not found page
+    // TODO: rename to page_not_found, page_missing, page_default, something else?
     pub page_notfound: Option<ChannelId>,
 }
 

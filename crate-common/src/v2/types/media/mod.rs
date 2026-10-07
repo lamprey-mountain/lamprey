@@ -16,6 +16,7 @@ pub mod links;
 pub mod proxy;
 pub mod resolvable;
 pub mod scanner;
+pub mod track;
 
 pub use links::MediaLinkType;
 
@@ -178,7 +179,6 @@ pub struct Media {
 }
 
 #[record]
-#[derive(PartialEq)]
 pub struct MediaExpiry {
     /// when this media expires at
     pub expires_at: Time,
@@ -197,8 +197,9 @@ pub struct MediaExpiry {
 //     pub height: u64,
 // }
 
+/// why a piece of media is errored
 #[record]
-#[derive(PartialEq, Eq)]
+#[derive(Copy, PartialEq, Eq)]
 pub enum MediaErrorReason {
     /// this piece of media was not found
     NotFound,

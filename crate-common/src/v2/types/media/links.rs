@@ -9,6 +9,8 @@ use lamprey_macros::record;
 /// objects can be linked to multiple objects; for example, media linked to
 /// `Message`s also have links to each `MessageVersion` they're referenced in.
 // TODO(?): rename to MediaLink
+// TODO: deduplicate data (a piece of media linked to an edited message will store channel_id and message_id multiple times)
+// TODO: be able to calculate room_id/channel_id from a list of links
 #[record]
 #[derive(PartialEq, Eq, Hash)]
 #[serde(tag = "type")]
@@ -112,3 +114,11 @@ impl MediaLinkType {
 
     // TODO
 }
+
+// // TODO: impl and use this struct
+// pub struct MediaLinks(pub Vec<MediaLinkType>);
+//
+// impl MediaLinks {
+//     // pub fn room_id(&self) -> Option<RoomId> {}
+//     // pub fn channel_id(&self) -> Option<ChannelId> {}
+// }
