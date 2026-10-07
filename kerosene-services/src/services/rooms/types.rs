@@ -101,6 +101,7 @@ pub struct LoadedRoom {
     /// all loaded/active threads in this room
     ///
     /// may be None if threads are still loading
+    // TODO: use a custom enum like with RoomMembers
     pub threads: Option<ImMap<ChannelId, CachedThread>>,
     // NOTE: i could move documents, flumes, automod, etc here? note that flumes can exist outside of a room
     // pub documents: Option<ImMap<EditContextId, Document>>,

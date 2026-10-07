@@ -8,8 +8,6 @@ use crate::{prelude::*, services::channel::ServiceChannels};
 
 // TODO: impl and use this
 
-// TODO: pub struct ChannelHandle;
-
 /// A request to create a new channel.
 #[derive(Debug)]
 pub struct Create {

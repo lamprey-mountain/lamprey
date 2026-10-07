@@ -1,11 +1,6 @@
 // TODO: investigate whether i actually need PartialEq/Eq derives on some types
 
 use lamprey_macros::record;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
 
 #[cfg(feature = "validator")]
 use validator::Validate;
@@ -59,6 +54,7 @@ pub struct Message {
     pub latest_version: MessageVersion,
 
     /// exists if this message is pinned
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub pinned: Option<Pinned>,
 
     #[serde(default)]
@@ -424,14 +420,11 @@ pub struct MessageModerate {
     pub restore: Vec<MessageId>,
 }
 
-#[derive(Debug, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
-#[cfg_attr(feature = "validator", derive(Validate))]
+#[record(params)]
 pub struct RepliesQuery {
     /// how deeply to fetch replies
-    #[cfg_attr(feature = "serde", serde(default = "fn_one"))]
-    #[cfg_attr(feature = "validator", validate(range(min = 1, max = 8)))]
+    #[serde(default = "fn_one")]
+    #[validate(range(min = 1, max = 8))]
     pub depth: u16,
 
     /// how many replies to fetch per branch
@@ -488,23 +481,24 @@ fn fn_one() -> u16 {
     1
 }
 
-#[derive(Debug, Default)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record(params)]
 pub struct ContextQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub to_start: Option<MessageId>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub to_end: Option<MessageId>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u16>,
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
 pub struct RatelimitPut {
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub slowmode_thread_expire_at: Option<Option<Time>>,
 
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[serde(default, deserialize_with = "some_option")]
     pub slowmode_message_expire_at: Option<Option<Time>>,
 }
 
@@ -544,9 +538,8 @@ pub struct MessageList {
 // TODO: use for message list routes
 // TODO: use for message context route
 // TODO: use for thread list routes
-#[record]
+#[record(params)]
 #[derive(Default)]
-#[cfg_attr(feature = "utoipa", derive(IntoParams))]
 pub struct WithMembersQuery {
     /// whether to include members in response
     ///
