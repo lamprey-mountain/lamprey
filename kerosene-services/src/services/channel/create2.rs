@@ -1,10 +1,14 @@
 use common::{
-    v1::types::{Channel, ChannelCreate, util::Time},
+    v1::types::{Channel, ChannelCreate, ChannelPatch, util::Time},
     v2::types::{ChannelId, RoomId, SessionId, UserId},
 };
+use lamprey_backend_data_postgres::DbChannelCreate;
 use validator::Validate;
 
-use crate::{prelude::*, services::channel::ServiceChannels};
+use crate::{
+    prelude::*,
+    services::{channel::ServiceChannels, rooms::LoadedRoom},
+};
 
 // TODO: impl and use this
 
@@ -98,17 +102,83 @@ impl Create {
     }
 }
 
-impl ServiceChannels {
-    pub async fn create2(&self, create: Create) -> Result<Arc<Channel>> {
-        // if let (Some(session_id), Some(nonce)) = (create.session_id, create.nonce.clone()) {
-        //     self.idempotency_keys
-        //         .try_get_with((session_id, nonce), self.create2_inner(create))
-        //         .await
-        //         .map_err(|err| err.fake_clone())
-        // } else {
-        //     self.create2_inner(create).await
-        // }
+pub struct Draft<'a> {
+    chan: Channel,
+    parent: Option<&'a Channel>,
+    room: Option<&'a LoadedRoom>,
+}
+
+impl Draft<'_> {
+    pub fn from_create(c: ChannelCreate) -> Self {
         todo!()
+    }
+
+    pub fn from_update(c: Channel, update: ChannelPatch) -> Self {
+        // patch.apply(chan_old);
+        // archived_at needs special handling
+        todo!()
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        let c = &self.chan;
+
+        // general validation
+        c.validate()?;
+
+        // channel type specific validation
+        if c.bitrate.is_some() {
+            c.ensure_has_voice()?;
+        }
+        if c.user_limit.is_some() {
+            c.ensure_has_voice()?;
+        }
+        if c.url.is_some() {
+            c.ensure_has_url()?;
+        }
+        if c.default_auto_archive_duration.is_some() {
+            c.ensure_has_threads()?;
+        }
+        if c.auto_archive_duration.is_some() {
+            c.ensure_is_thread()?;
+        }
+        if c.slowmode_thread.is_some() {
+            c.ensure_has_threads()?;
+        }
+        if c.slowmode_message.is_some() {
+            c.ensure_has_text()?;
+        }
+        if c.default_slowmode_message.is_some() {
+            c.ensure_has_threads()?;
+        }
+        if c.icon.is_some() {
+            c.ensure_has_icon()?;
+        }
+
+        Ok(())
+    }
+
+    pub fn to_db_create(&self) -> DbChannelCreate {
+        todo!()
+    }
+
+    // NOTE: there isn't any special database struct for channel patches
+    pub fn to_db_update(&self) -> ChannelPatch {
+        todo!()
+    }
+}
+
+impl ServiceChannels {
+    // TODO: also impl fn create3 similarly to messages
+
+    pub async fn create2(&self, create: Create) -> Result<Arc<Channel>> {
+        if let Some(nonce) = create.nonce.clone() {
+            self.idempotency_keys
+                .try_get_with(nonce, Box::pin(self.create2_inner(create)))
+                .await
+                .map_err(|err| err.fake_clone())
+        } else {
+            Box::pin(self.create2_inner(create)).await
+        }
     }
 
     async fn create2_inner(&self, create: Create) -> Result<Arc<Channel>> {

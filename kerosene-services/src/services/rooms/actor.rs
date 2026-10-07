@@ -19,7 +19,6 @@ use crate::services::member_lists::actor::{MemberList, MemberListCommand, Member
 use crate::services::member_lists::util::MemberListKey;
 use crate::services::rooms::types::RoomMembers;
 use crate::types::PermissionBits;
-use crate::{Error, Result};
 
 // PERF: how many `Arc`s are too many?
 

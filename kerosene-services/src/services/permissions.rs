@@ -148,6 +148,7 @@ impl ServicePermissions {
             let mut perms = calc.query(user_id, Some(&chan.into()));
 
             // load slowmode fields
+            // PERF: cache slowmode data
             if let Some(uid) = user_id {
                 let mut txn = self.globals.begin_read().await?;
 

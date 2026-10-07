@@ -26,6 +26,7 @@ use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate, MediaLinkType,
 };
 
+mod actor;
 mod create2;
 mod permission_overwrite;
 mod util;
