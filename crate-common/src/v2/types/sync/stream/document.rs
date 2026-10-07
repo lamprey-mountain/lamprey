@@ -4,8 +4,10 @@ use lamprey_macros::record;
 
 use crate::{
     v1::types::document::{DocumentStateVector, DocumentUpdate},
-    v2::types::{DocumentBranchId, DocumentId, UserId},
+    v2::types::{DocumentBranchId, DocumentId, UserId, sync::stream::StreamProtocol},
 };
+
+pub struct Protocol;
 
 #[record]
 pub struct Initial {
@@ -22,6 +24,7 @@ pub struct Initial {
 }
 
 #[record]
+#[serde(tag = "op")]
 pub enum Command {
     /// edit a document
     Edit { update: DocumentUpdate },
@@ -35,6 +38,7 @@ pub enum Command {
 }
 
 #[record]
+#[serde(tag = "op")]
 pub enum Event {
     /// edit a document
     Edit {
@@ -59,4 +63,10 @@ pub enum Event {
     /// has been sent. clients should wait for this event before sending
     /// `Presence` or `Edit` messages to avoid "not subscribed" errors.
     Subscribed,
+}
+
+impl StreamProtocol for Protocol {
+    type Initial = Initial;
+    type Command = Command;
+    type Event = Event;
 }

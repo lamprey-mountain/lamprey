@@ -80,14 +80,16 @@ pub enum StreamHeader {
 
 // NOTE: do i include basic stuff (heartbeats, resuming, errors) for every protocol or just sync?
 
-// pub mod channel;
+// NOTE: maybe i could add more stream commands as an alternative to using rest? for stuff like typing indicators, etc.
+
+pub mod channel;
 // pub mod dispatch;
-// pub mod document;
-// pub mod flume;
+pub mod document;
+pub mod flume;
 pub mod identify;
 // pub mod invite;
 pub mod member_list;
 // pub mod redex;
-// pub mod room;
+pub mod room;
 // pub mod user;
-// pub mod voice;
+pub mod voice;
