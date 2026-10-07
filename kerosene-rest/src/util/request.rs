@@ -3,7 +3,7 @@ use std::{any::TypeId, collections::HashMap, error::Error, sync::Arc};
 use crate::{
     prelude::*,
     util::{
-        audit_log::{ActorInfo, AuditLoggerHandle, AuditLoggerSlot},
+        audit_log::{ActorInfo, AuditLoggerHandle, AuditLoggerSlot, Entry},
         error::{ExtractorError, ExtractorRejection},
         headers::{ContentType, HeadersRequest},
         multipart::MultipartCollector,
@@ -19,13 +19,22 @@ use common::{
     util::{body::Body, routes::Endpoint},
     v1::{
         routes::ExtractableRequest,
-        types::error::{ErrorField, ErrorFieldType},
+        types::{
+            AuditLogEntryStatus, AuditLogEntryType,
+            error::{ErrorField, ErrorFieldType},
+        },
     },
-    v2::types::media::{Media, MediaReference},
+    v2::types::{
+        RoomId,
+        media::{Media, MediaReference},
+    },
 };
 use futures::stream;
 use http::{Method, StatusCode};
-use kerosene_core::{error::ErrorCode, types::auth::Identity};
+use kerosene_core::{
+    error::ErrorCode,
+    types::auth::{Auth5, Identity},
+};
 use lamprey_backend_services::services::{
     Services,
     media::{Import, MediaItem},
@@ -244,5 +253,50 @@ impl<E: Endpoint> Req<E> {
 
         let slot = self.audit_logger.clone();
         AuditLoggerHandle::new(actor, slot)
+    }
+}
+
+/// **extremely hacky** shim to use req as an `Auth5` provider
+// TODO: move to a separate module?
+pub struct ReqAuth<'a, E: Endpoint> {
+    req: &'a Req<E>,
+    room_id: Option<RoomId>,
+}
+
+impl<'a, E: Endpoint> ReqAuth<'a, E> {
+    pub fn new(req: &'a Req<E>) -> Self {
+        Self { req, room_id: None }
+    }
+}
+
+impl<E: Endpoint> Auth5 for ReqAuth<'_, E>
+where
+    E::Request: Sync,
+{
+    fn identity(&self) -> &Identity {
+        &self.req.identity
+    }
+
+    fn set_room_id(&mut self, room_id: RoomId) {
+        self.room_id = Some(room_id);
+    }
+
+    fn al_push(&mut self, ty: AuditLogEntryType) {
+        let al = self.req.audit_log();
+        al.push_blocking_very_hacky_and_temporary(
+            self.room_id.unwrap(),
+            ty,
+            self.req.headers().reason.clone(),
+        );
+    }
+
+    fn al_status(&mut self, status: AuditLogEntryStatus) {
+        if let Ok(mut guard) = self.req.audit_logger.try_lock() {
+            if let Some(state) = guard.as_mut() {
+                for entry in state.pending_entries.iter_mut() {
+                    entry.status = Some(status);
+                }
+            }
+        }
     }
 }

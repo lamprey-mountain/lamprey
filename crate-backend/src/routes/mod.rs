@@ -30,7 +30,6 @@ mod moderation;
 mod notification;
 mod oauth;
 mod pack;
-mod permission_overwrite;
 mod preferences;
 mod public;
 mod push;
@@ -80,7 +79,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(notification::routes())
         .merge(oauth::routes())
         .merge(pack::routes())
-        .merge(permission_overwrite::routes())
         .merge(public::routes())
         .merge(push::routes())
         .merge(reaction::routes())

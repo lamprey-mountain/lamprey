@@ -17,7 +17,7 @@ impl ServiceChannels {
         auth: &mut A,
         channel_id: ChannelId,
         overwrite_id: PermissionOverwriteId,
-        payload: PermissionOverwriteSet,
+        payload: &PermissionOverwriteSet,
     ) -> ServerResult<()> {
         let user = auth.ensure_user()?;
         let user_id = user.id;

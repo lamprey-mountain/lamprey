@@ -31,7 +31,8 @@ pub struct Entry {
     room_id: RoomId,
     ty: AuditLogEntryType,
     reason: Option<String>,
-    status: Option<AuditLogEntryStatus>,
+    // TEMP: pub
+    pub(super) status: Option<AuditLogEntryStatus>,
     started_at: Time,
     ended_at: Option<Time>,
     actor: Arc<ActorInfo>,
@@ -45,7 +46,8 @@ pub struct AuditLoggerState {
     /// currently pending entries
     ///
     /// these haven't been written yet
-    pending_entries: Vec<Entry>,
+    // TEMP: pub
+    pub(super) pending_entries: Vec<Entry>,
 }
 
 pub type AuditLoggerSlot = Arc<Mutex<Option<AuditLoggerState>>>;
@@ -79,6 +81,35 @@ impl AuditLoggerHandle {
         };
 
         let mut guard = self.slot.lock().await;
+        if let Some(state) = guard.as_mut() {
+            state.pending_entries.push(entry);
+        }
+
+        EntryHandle {
+            id: entry_id,
+            slot: self.slot.clone(),
+        }
+    }
+
+    pub(crate) fn push_blocking_very_hacky_and_temporary(
+        &self,
+        room_id: RoomId,
+        ty: AuditLogEntryType,
+        reason: Option<String>,
+    ) -> EntryHandle {
+        let entry_id = AuditLogEntryId::new();
+        let entry = Entry {
+            id: entry_id,
+            room_id,
+            ty,
+            reason,
+            status: None,
+            started_at: Time::now_utc(),
+            ended_at: None,
+            actor: Arc::clone(&self.actor),
+        };
+
+        let mut guard = self.slot.try_lock().unwrap();
         if let Some(state) = guard.as_mut() {
             state.pending_entries.push(entry);
         }
@@ -140,7 +171,9 @@ pub async fn middleware(
 
     // commit any pending entries after request completes
     let mut guard = slot.lock().await;
-    if let Some(state) = guard.take() {
+    if let Some(state) = guard.take()
+        && !state.pending_entries.is_empty()
+    {
         let res = async {
             let mut txn = globals.begin().await.cast_internal()?;
             let ended_at = Time::now_utc();
