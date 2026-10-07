@@ -76,6 +76,12 @@ impl CreateType {
     }
 }
 
+impl From<MessageType> for CreateType {
+    fn from(value: MessageType) -> Self {
+        Self::Custom(value)
+    }
+}
+
 /// A request to edit an existing message.
 #[derive(Debug)]
 pub struct Edit {
@@ -268,7 +274,106 @@ fn message_to_db(m: &Message) -> DbMessageCreate {
     }
 }
 
+pub struct Operation<'a, O> {
+    service: &'a ServiceMessages,
+    op: O,
+    id: MessageId,
+    channel_id: ChannelId,
+    user_id: UserId,
+    session_id: Option<SessionId>,
+    nonce: Option<String>,
+    timestamp: Option<Time>,
+    interaction: Option<MessageInteraction>,
+}
+
+pub struct OpCreate;
+pub struct OpUpdate;
+
+impl<O> Operation<'_, O> {
+    /// set the session id
+    pub fn session(mut self, session_id: Option<SessionId>) -> Self {
+        self.session_id = session_id;
+        self
+    }
+
+    /// set the nonce (idempotency-key)
+    ///
+    /// session id must also be set to deduplicate/coalesce requests
+    pub fn nonce(mut self, nonce: Option<String>) -> Self {
+        self.nonce = nonce;
+        self
+    }
+
+    /// override the `created_at` timestamp for the message
+    pub fn timestamp(mut self, timestamp: Option<Time>) -> Self {
+        self.timestamp = timestamp;
+        self
+    }
+
+    /// set interaction metadata for the message
+    pub fn interaction(mut self, interaction: Option<MessageInteraction>) -> Self {
+        self.interaction = interaction;
+        self
+    }
+}
+
+impl Operation<'_, OpCreate> {
+    /// explicitly set an id for this message
+    pub fn id(mut self, id: MessageId) -> Self {
+        self.id = id;
+        self
+    }
+
+    pub fn create<P: Into<CreateType>>(self, payload: P) -> impl Future<Output = Result<Message>> {
+        let request = Create {
+            id: self.id,
+            channel_id: self.channel_id,
+            user_id: self.user_id,
+            session_id: self.session_id,
+            payload: Box::new(payload.into()),
+            nonce: self.nonce,
+            timestamp: self.timestamp,
+            interaction: self.interaction,
+        };
+        self.service.create2(request)
+    }
+
+    // fn create_default
+    // fn create_thread_initial
+}
+
+impl Operation<'_, OpUpdate> {
+    // TODO:
+    pub fn update<P: Into<MessagePatch>>(self, payload: P) -> impl Future<Output = Result<Message>> {
+        let request = Edit {
+            id: self.id,
+            channel_id: self.channel_id,
+            user_id: self.user_id,
+            session_id: self.session_id,
+            payload: Box::new(payload.into()),
+            nonce: self.nonce,
+            timestamp: self.timestamp,
+        };
+        self.service.edit2(request)
+    }
+}
+
 impl ServiceMessages {
+    /// begin creating a new message
+    pub fn create3(&self, channel_id: ChannelId, user_id: UserId) -> Operation<'_, OpCreate> {
+        Operation {
+            service: self,
+            op: OpCreate,
+            id: MessageId::new(),
+            channel_id,
+            user_id,
+            session_id: None,
+            nonce: None,
+            timestamp: None,
+            interaction: None,
+        }
+    }
+
     // PERF: return Arc<Message>
     pub async fn create2(&self, create: Create) -> Result<Message> {
         if let (Some(session_id), Some(nonce)) = (create.session_id, create.nonce.clone()) {
