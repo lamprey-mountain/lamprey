@@ -12,17 +12,26 @@ pub fn expand(args: TokenStream, input: TokenStream) -> syn::Result<TokenStream>
     let mut input: DeriveInput = parse2(input)?;
     // let mut input = parse_macro_input!(input as DeriveInput);
 
-    let is_struct = matches!(input.data, Data::Struct(_));
+    let is_validatable = match &input.data {
+        Data::Struct(s) => matches!(s.fields, Fields::Named(_)),
+        _ => false,
+    };
 
     wrap_attributes(&mut input.attrs);
     match &mut input.data {
-        Data::Struct(data_struct) => {
-            if let Fields::Named(fields) = &mut data_struct.fields {
+        Data::Struct(data_struct) => match &mut data_struct.fields {
+            Fields::Named(fields) => {
                 for field in fields.named.iter_mut() {
                     wrap_attributes(&mut field.attrs);
                 }
             }
-        }
+            Fields::Unnamed(fields) => {
+                for field in fields.unnamed.iter_mut() {
+                    wrap_attributes(&mut field.attrs);
+                }
+            }
+            Fields::Unit => {}
+        },
         Data::Enum(data_enum) => {
             for variant in data_enum.variants.iter_mut() {
                 wrap_attributes(&mut variant.attrs);
@@ -36,7 +45,7 @@ pub fn expand(args: TokenStream, input: TokenStream) -> syn::Result<TokenStream>
         Data::Union(_) => return Err(syn::Error::new_spanned(input, "Unions are not supported")),
     }
 
-    let validate_attr = if is_struct {
+    let validate_attr = if is_validatable {
         quote! { #[cfg_attr(feature = "validator", derive(::validator::Validate))] }
     } else {
         quote! {}
