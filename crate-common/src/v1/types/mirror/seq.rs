@@ -125,3 +125,5 @@ mod schema {
 
 impl_seq!(Channel);
 impl_seq!(Room);
+impl_seq!(User); // public user change
+impl_seq!(Client); // private user change

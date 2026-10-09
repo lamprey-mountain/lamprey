@@ -1,170 +1,59 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{UserId, harvest::Harvest, preferences::PreferencesGlobal};
+use crate::v1::types::{User, UserId, mirror::seq::UserSeq, presence::Presence};
 
+/// something happened to a user
 #[record]
-pub struct DispatchUser {
-    pub user_id: UserId, // NOTE: redundant?
-
-    // /// the sequence number of this event
-    // ///
-    // /// used for offline sync. only populated if this dispatch incremented the sequence number.
-    // #[serde(skip_serializing_if = "Option::is_none")]
-    // pub seq: Option<UserSeq>,
-    #[serde(flatten)]
-    pub inner: DispatchUserInner,
+#[serde(tag = "type")]
+pub enum DispatchUser {
+    UserCreate(UserCreate),
+    UserUpdate(UserUpdate),
+    UserDelete(UserDelete),
+    PresenceUpdate(PresenceUpdate),
 }
 
 #[record]
-#[serde(tag = "type")]
-pub enum DispatchUserInner {
-    // /// a room was created and/or you joined a room
-    // RoomCreate {
-    //     room: Box<Room>,
-    //     roles: Vec<Role>,
-    //     channels: Vec<Channel>,
-    //     threads: Vec<Channel>,
+pub struct UserCreate {
+    pub user: Box<User>,
+    pub seq: UserSeq,
+}
 
-    //     /// your own room member
-    //     room_member: Option<Box<RoomMember>>,
-    // },
+#[record]
+pub struct UserUpdate {
+    pub user: Box<User>,
+    pub seq: UserSeq,
+}
 
-    // // /// a room was updated
-    // // RoomUpdate {
-    // //     // ...
-    // // },
+#[record]
+pub struct UserDelete {
+    pub user_id: UserId,
+    pub seq: UserSeq,
+}
 
-    // // /// a room was deleted, you left a room, or you were removed (kicked/banned) from a room
-    // // RoomDelete {
-    // //     // ...
-    // // },
-    // /// a channel was created
-    // ChannelCreate { channel: Box<Channel> },
-    // // ChannelUpdate {
-    // //     channel: Box<Channel>,
-    // // },
-    // // TODO: add ChannelDelete?
-    /// a user's harvest state was updated
-    HarvestUpdate { harvest: Box<Harvest> },
+#[record]
+pub struct PresenceUpdate {
+    pub user_id: UserId,
+    pub presence: Presence,
+}
 
-    /// a user's global preferences was updated
-    PreferencesGlobal { config: Box<PreferencesGlobal> },
-    // PreferencesRoom {
-    //     room_id: RoomId,
-    //     config: PreferencesRoom,
-    // },
+impl DispatchUser {
+    /// id of the user this event happened to
+    pub fn user_id(&self) -> UserId {
+        match self {
+            DispatchUser::UserCreate(a) => a.user.id,
+            DispatchUser::UserUpdate(a) => a.user.id,
+            DispatchUser::UserDelete(a) => a.user_id,
+            DispatchUser::PresenceUpdate(a) => a.user_id,
+        }
+    }
 
-    // PreferencesChannel {
-    //     channel_id: ChannelId,
-    //     config: PreferencesChannel,
-    // },
-
-    // PreferencesUser {
-    //     target_user_id: UserId,
-    //     config: PreferencesUser,
-    // },
-
-    // SessionCreate {
-    //     session: Box<Session>,
-    // },
-
-    // SessionUpdate {
-    //     session: Box<Session>,
-    // },
-
-    // SessionDelete {
-    //     id: SessionId,
-    //     user_id: Option<UserId>,
-    // },
-
-    // SessionDeleteAll {
-    //     user_id: UserId,
-    // },
-
-    // RelationshipUpsert {
-    //     user_id: UserId,
-    //     target_user_id: UserId,
-    //     relationship: Relationship,
-    // },
-
-    // RelationshipDelete {
-    //     user_id: UserId,
-    //     target_user_id: UserId,
-    // },
-
-    // ConnectionCreate {
-    //     user_id: UserId,
-    //     connection: Connection,
-    // },
-
-    // ConnectionDelete {
-    //     user_id: UserId,
-    //     app_id: ApplicationId,
-    // },
-
-    // InboxNotificationCreate {
-    //     user_id: UserId,
-    //     notification: Notification,
-    // },
-
-    // InboxMarkRead {
-    //     user_id: UserId,
-    //     #[cfg_attr(feature = "serde", serde(flatten))]
-    //     params: NotificationMarkRead,
-    // },
-
-    // InboxMarkUnread {
-    //     user_id: UserId,
-    //     #[cfg_attr(feature = "serde", serde(flatten))]
-    //     params: NotificationMarkRead,
-    // },
-
-    // InboxFlush {
-    //     user_id: UserId,
-    //     #[cfg_attr(feature = "serde", serde(flatten))]
-    //     params: NotificationFlush,
-    // },
-
-    // UserCreate {
-    //     user: User,
-    // },
-
-    // UserUpdate {
-    //     user: User,
-    // },
-
-    // UserDelete,
-
-    // PresenceUpdate {
-    //     presence: Presence,
-    // },
-
-    // /// an interaction was created
-    // ///
-    // /// sent to the the user who created this and the target application
-    // InteractionCreate {
-    //     interaction: Box<Interaction>,
-
-    //     user_id: UserId,
-
-    //     /// the nonce
-    //     ///
-    //     /// taken from the `Ideompotency-Key` header. only sent to the user.
-    //     nonce: Option<String>,
-    // },
-
-    // InteractionSuccess {
-    //     user_id: UserId,
-    //     interaction_id: InteractionId,
-    //     nonce: Option<String>,
-    // },
-
-    // InteractionFailure {
-    //     user_id: UserId,
-    //     interaction_id: InteractionId,
-    //     nonce: Option<String>,
-    //     error_code: InteractionErrorCode,
-    // },
-    // // InteractionAutocompletionCreate
-    // // InteractionModalCreate
+    /// the user sync sequence number of this event
+    pub fn seq(&self) -> Option<UserSeq> {
+        match self {
+            DispatchUser::UserCreate(a) => Some(a.seq),
+            DispatchUser::UserUpdate(a) => Some(a.seq),
+            DispatchUser::UserDelete(a) => Some(a.seq),
+            DispatchUser::PresenceUpdate(a) => None,
+        }
+    }
 }

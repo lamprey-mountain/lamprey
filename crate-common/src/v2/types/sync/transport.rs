@@ -1,3 +1,5 @@
+//! Transport layer definitions for the sync protocol
+
 use lamprey_macros::record;
 
 pub mod webhook;

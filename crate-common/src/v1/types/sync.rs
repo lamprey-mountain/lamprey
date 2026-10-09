@@ -1090,12 +1090,14 @@ pub enum MessageSync {
         nonce: Option<String>,
     },
 
+    /// an interaction succeeded
     InteractionSuccess {
         user_id: UserId,
         interaction_id: InteractionId,
         nonce: Option<String>,
     },
 
+    /// an interaction failed
     InteractionFailure {
         user_id: UserId,
         interaction_id: InteractionId,
