@@ -655,9 +655,8 @@ pub enum AuditLogEntryType {
     },
 }
 
-#[record]
-#[derive(Default)]
-#[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
+/// filter to only return certain audit log entries
+#[record(params)]
 pub struct AuditLogFilter {
     /// only return audit log entries from these users
     #[serde(default)]
@@ -667,12 +666,25 @@ pub struct AuditLogFilter {
     #[serde(default, rename = "type")]
     pub ty: Vec<String>,
 
-    // TODO: implement
     /// only return audit log entries with these statuses
     ///
     /// defaults to only `Success`
-    #[serde(default)]
+    #[serde(default = "default_audit_log_status_filter")]
     pub status: Vec<AuditLogEntryStatus>,
+}
+
+impl Default for AuditLogFilter {
+    fn default() -> Self {
+        Self {
+            user_id: Default::default(),
+            ty: Default::default(),
+            status: default_audit_log_status_filter(),
+        }
+    }
+}
+
+fn default_audit_log_status_filter() -> Vec<AuditLogEntryStatus> {
+    vec![AuditLogEntryStatus::Success]
 }
 
 /// the status of an audit log event
