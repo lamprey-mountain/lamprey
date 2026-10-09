@@ -1,10 +1,7 @@
-import {
-	type Location,
-	type RouteSectionProps,
-	useNavigate,
-} from "@solidjs/router";
+import { type RouteSectionProps, useNavigate } from "@solidjs/router";
 import type { OauthInfo } from "sdk";
 import {
+	createMemo,
 	createResource,
 	createSignal,
 	ErrorBoundary,
@@ -15,7 +12,7 @@ import {
 } from "solid-js";
 import { useCtx } from "@/app/context";
 
-export const RouteAuthorize = (p: RouteSectionProps): JSX.Element => {
+export const RouteAuthorize = (_p: RouteSectionProps): JSX.Element => {
 	const ctx = useCtx();
 
 	const [data] = createResource(async () => {
@@ -41,7 +38,6 @@ export const RouteAuthorize = (p: RouteSectionProps): JSX.Element => {
 							auth_user={d().auth_user}
 							bot_user={d().bot_user}
 							authorized={d().authorized}
-							location={p.location}
 						/>
 					)}
 				</Show>
@@ -50,9 +46,7 @@ export const RouteAuthorize = (p: RouteSectionProps): JSX.Element => {
 	);
 };
 
-export const OauthAuthorizePrompt = (
-	p: VoidProps<OauthInfo & { location: Location }>,
-) => {
+export const OauthAuthorizePrompt = (p: VoidProps<OauthInfo>) => {
 	const ctx = useCtx();
 	const nav = useNavigate();
 	const [authorizing, setAuthorizing] = createSignal(false);
@@ -61,7 +55,7 @@ export const OauthAuthorizePrompt = (
 		try {
 			setAuthorizing(true);
 			const { data, error } = await ctx.client.http.POST(
-				`/api/v1/oauth/authorize${p.location.search}` as "/api/v1/oauth/authorize",
+				`/api/v1/oauth/authorize${location.search}` as "/api/v1/oauth/authorize",
 				{} as any,
 			);
 			if (error) {
@@ -75,11 +69,13 @@ export const OauthAuthorizePrompt = (
 		}
 	};
 
-	const scopes = () => {
-		const s = p.location.query.scope;
+	const scopes = createMemo(() => {
+		const url = URL.parse(location.href);
+		if (!url) return [];
+		const s = url.searchParams.get("scope");
 		const s2 = Array.isArray(s) ? s : s ? [s] : [];
 		return s2.flatMap((i) => i.split(" "));
-	};
+	});
 
 	const cancel = () => {
 		window.close();
