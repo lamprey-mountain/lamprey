@@ -29,6 +29,12 @@ export const Inbox = () => {
 	const inboxItems = inboxResult.resource;
 	const [selected, setSelected] = createSignal<string[]>([]);
 
+	const allItems = () => inboxItems()?.items ?? [];
+	const allIds = () => allItems().map((i) => i.id);
+	const isAllSelected = createMemo(() => allIds().length > 0 && selected().length === allIds().length);
+	const isSomeSelected = createMemo(() => selected().length > 0);
+	const isIndeterminate = createMemo(() => isSomeSelected() && !isAllSelected());
+
 	const getMessageIdsFromNotifIds = (notifIds: string[]) => {
 		const items = inboxItems()?.items ?? [];
 		return notifIds
@@ -88,19 +94,23 @@ export const Inbox = () => {
 				<div style="margin:8px;margin-bottom:0;margin-left: 16px;height:1rem;display:flex;align-items:center">
 					<CheckboxOption
 						id="inbox-select-all"
-						// TODO: checked=true when all items are selected
-						checked={false}
-						onChange={(checked) => {
-							if (checked) {
-								setSelected(inboxItems()?.items.map((i) => i.id) ?? []);
-							} else {
+						checked={isAllSelected()}
+						indeterminate={isIndeterminate()}
+						onChange={() => {
+							if (isSomeSelected()) {
 								setSelected([]);
+							} else {
+								setSelected(allIds());
 							}
 						}}
 						seed="inbox-select-all"
 					>
-						<Checkbox checked={false} seed="inbox-select-all" />
-						<span>select all</span>
+						<Checkbox
+							checked={isAllSelected()}
+							indeterminate={isIndeterminate()}
+							seed="inbox-select-all"
+						/>
+						<span>{isAllSelected() ? "deselect all" : "select all"}</span>
 					</CheckboxOption>
 					<div style="flex:1"></div>
 					<Show when={selected().length > 0}>
