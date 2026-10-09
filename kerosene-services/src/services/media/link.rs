@@ -1,10 +1,14 @@
+use kerosene_core::error::{ApiError, ServerError};
 use std::collections::HashSet;
 use uuid::Uuid;
 
 use crate::prelude::*;
-use common::v2::types::{
-    ChannelId, MediaId, RoomId, UserId,
-    media::{Media, MediaLinkType},
+use common::{
+    v1::types::error::ErrorCode,
+    v2::types::{
+        ChannelId, MediaId, RoomId, UserId,
+        media::{Media, MediaLinkType},
+    },
 };
 use lamprey_backend_data_postgres::{
     Data, MediaLink as DbMediaLink, MediaLinkType as DbMediaLinkType,
@@ -100,6 +104,26 @@ impl From<MediaLinkerError> for Error {
     fn from(err: MediaLinkerError) -> Self {
         // TODO: better error
         Error::Internal(err.to_string())
+    }
+}
+
+impl From<MediaLinkerError> for ServerError {
+    fn from(err: MediaLinkerError) -> Self {
+        // TODO: better errors
+        match err {
+            MediaLinkerError::NotUploader(_) => ApiError::with_message(
+                ErrorCode::InvalidData,
+                "you are not the media uploader".to_string(),
+            )
+            .into(),
+            MediaLinkerError::DuplicateMedia(_) => {
+                ApiError::from_code(ErrorCode::MediaAlreadyUsed).into()
+            }
+            MediaLinkerError::Conflict(_) => {
+                ApiError::from_code(ErrorCode::MediaAlreadyUsed).into()
+            }
+            MediaLinkerError::Internal(e) => ServerError::Internal(e.into()),
+        }
     }
 }
 

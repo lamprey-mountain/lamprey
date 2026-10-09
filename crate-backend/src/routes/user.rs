@@ -24,95 +24,6 @@ use crate::{ServerState, routes2};
 
 use crate::error::{Error, Result};
 
-/// User update
-#[handler(routes::user_update)]
-async fn user_update(
-    auth: Auth,
-    State(s): State<Arc<ServerState>>,
-    req: routes::user_update::Request,
-) -> Result<impl IntoResponse> {
-    auth.user.ensure_unsuspended()?;
-    auth.ensure_scopes(&[Scope::Full])?;
-    let target_user_id = req.user_id.local_unwrap_or(auth.user.id)?;
-    let srv = s.services();
-    let mut perms = srv
-        .perms
-        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
-        .await?
-        .ensure_view()?;
-    if auth.user.id != target_user_id {
-        perms.needs(Permission::UserManage);
-    } else {
-        perms.needs(Permission::UserProfileSelf);
-    }
-    perms.check()?;
-    let mut data = s.data();
-    let start = srv.users.get(target_user_id, Some(auth.user.id)).await?;
-    if !req.patch.changes(&start) {
-        return Ok(Json(start));
-    }
-    if let Some(Some(avatar_media_id)) = req.patch.avatar {
-        let media = data.media_select(avatar_media_id).await?;
-        if !media.metadata.is_image() {
-            return Err(ApiError::from_code(ErrorCode::InvalidData).into());
-        }
-    }
-    if let Some(Some(banner_media_id)) = req.patch.banner {
-        let media = data.media_select(banner_media_id).await?;
-        if !media.metadata.is_image() {
-            return Err(ApiError::from_code(ErrorCode::InvalidData).into());
-        }
-    }
-    data.user_update(target_user_id, req.patch.clone()).await?;
-    if let Some(maybe_avatar) = req.patch.avatar {
-        data.media_link_delete(target_user_id.into_inner(), MediaLinkType::UserAvatar)
-            .await?;
-        if let Some(avatar_media_id) = maybe_avatar {
-            data.media_link_create_exclusive(
-                avatar_media_id,
-                target_user_id.into_inner(),
-                MediaLinkType::UserAvatar,
-            )
-            .await?;
-        }
-    }
-    if let Some(maybe_banner) = req.patch.banner {
-        data.media_link_delete(target_user_id.into_inner(), MediaLinkType::UserBanner)
-            .await?;
-        if let Some(banner_media_id) = maybe_banner {
-            data.media_link_create_exclusive(
-                banner_media_id,
-                target_user_id.into_inner(),
-                MediaLinkType::UserBanner,
-            )
-            .await?;
-        }
-    }
-    srv.users.invalidate(target_user_id).await;
-    let user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
-    let changes = Changes::new()
-        .change("name", &start.name, &user.name)
-        .change("description", &start.description, &user.description)
-        .change("avatar", &start.avatar, &user.avatar)
-        .change("banner", &start.banner, &user.banner)
-        .build();
-
-    let al = auth.audit_log(target_user_id.into_inner().into());
-    al.commit_success(AuditLogEntryType::UserUpdate {
-        changes: changes.clone(),
-    })
-    .await?;
-
-    if auth.user.id != target_user_id {
-        let al = auth.audit_log(SERVER_ROOM_ID);
-        al.commit_success(AuditLogEntryType::UserUpdate { changes })
-            .await?;
-    }
-
-    s.broadcast(MessageSync::UserUpdate { user: user.clone() })?;
-    Ok(Json(user))
-}
-
 /// User delete
 #[handler(routes::user_delete)]
 async fn user_delete(
@@ -215,58 +126,6 @@ async fn user_undelete(
     .await?;
 
     Ok(StatusCode::NO_CONTENT)
-}
-
-/// User get
-#[handler(routes::user_get)]
-async fn user_get(
-    auth: Auth3,
-    State(s): State<Globals>,
-    req: routes::user_get::Request,
-) -> Result<impl IntoResponse> {
-    if !auth.is_public() {
-        auth.ensure_scopes(&[Scope::Identify])?;
-    }
-
-    let srv = s.services();
-    let mut data = s.begin().await?;
-
-    let mut user = match req.user_id {
-        UserIdReq::UserSelf => srv.users.get(auth.user()?.id, auth.user_id()).await?,
-        UserIdReq::UserId(target_user_id) => srv.users.get(target_user_id, auth.user_id()).await?,
-        UserIdReq::RemoteUser(user_id, hostname) => {
-            // TODO: get local user, get server info, check if user remote epoch == server sync epoch
-            // NOTE: do i put epoch checks in users service, federation service, somewhere else...?
-            srv.federation.import_user(user_id, &hostname).await?
-        }
-    };
-    let target_user_id = user.id;
-
-    let has_email_scope = match &auth.identity {
-        crate::routes::util::auth_old::AuthIdentity3::Session { scopes, .. } => {
-            scopes.iter().any(|s| s.implies(&Scope::Email))
-        }
-        _ => false,
-    };
-    if !has_email_scope {
-        user.emails = None;
-    }
-
-    // TODO: move this logic to users service
-    let relationship = if let Ok(user) = auth.user() {
-        data.user_relationship_get(user.id, target_user_id)
-            .await?
-            .unwrap_or_default()
-    } else {
-        Default::default()
-    };
-
-    data.commit().await?;
-
-    Ok(Json(UserWithRelationship {
-        inner: user,
-        relationship,
-    }))
 }
 
 /// User rooms list
@@ -583,8 +442,6 @@ async fn user_search(
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes2!(user_update))
-        // .routes(routes2!(user_get))
         .routes(routes2!(user_delete))
         .routes(routes2!(user_undelete))
         .routes(routes2!(user_audit_logs))

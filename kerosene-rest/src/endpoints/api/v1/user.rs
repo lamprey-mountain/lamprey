@@ -1,14 +1,19 @@
 use common::{
+    util::Diff,
     v1::types::{
-        MessageSync, UserWithRelationship,
+        AuditLogEntryType, MessageSync, Permission, SERVER_ROOM_ID, UserPatch,
+        UserWithRelationship,
         ack::{AckBulkItem, AckType},
         oauth::Scope,
-        util::Time,
+        util::{Changes, Time},
     },
-    v2::types::MessageId,
+    v2::types::{MessageId, media::MediaLinkType},
 };
 use http::StatusCode;
-use lamprey_backend_services::{compat::types::UserIdReq, services::messages::create2::Create};
+use lamprey_backend_services::{
+    compat::types::UserIdReq,
+    services::{media::MediaLinker, messages::create2::Create},
+};
 use tracing::warn;
 
 use crate::prelude::*;
@@ -61,4 +66,136 @@ pub async fn get(req: Req<routes::user_get::Endpoint>) -> Result<routes::user_ge
     Ok(routes::user_get::Response { user })
 }
 
-export_routes!(get);
+#[handler(routes::user_update)]
+pub async fn update(
+    req: Req<routes::user_update::Endpoint>,
+) -> Result<routes::user_update::Response> {
+    let srv = req.services();
+    let identity = req.identity();
+    let auth_user = identity.ensure_user()?;
+    auth_user.ensure_unsuspended()?;
+    identity.ensure_scopes(&[Scope::Full])?;
+
+    let al = req.audit_log();
+    let inner = req.inner();
+    let target_user_id = inner.user_id.clone().local_unwrap_or(auth_user.id)?;
+
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth_user.id), SERVER_ROOM_ID)
+        .await
+        .cast_internal()?
+        .ensure_view()?;
+
+    if auth_user.id != target_user_id {
+        perms.needs(Permission::UserManage);
+    } else {
+        perms.needs(Permission::UserProfileSelf);
+    }
+    perms.check()?;
+
+    let mut data = req.globals().begin().await.cast_internal()?;
+    let start = srv
+        .users
+        .get(target_user_id, Some(auth_user.id))
+        .await
+        .cast_internal()?;
+
+    if !inner.patch.changes(&start) {
+        return Ok(routes::user_update::Response { user: start });
+    }
+
+    let mut lm = MediaLinker::new(auth_user.id);
+    let mut media_store = Vec::new();
+
+    if let Some(maybe_avatar) = inner.patch.avatar {
+        lm.delete(MediaLinkType::UserAvatar {
+            user_id: target_user_id,
+        });
+        if let Some(avatar_media_id) = maybe_avatar {
+            let media = data.media_select(avatar_media_id).await.cast_internal()?;
+            if !media.metadata.is_image() {
+                return Err(ApiError::with_message(
+                    ErrorCode::MediaNotAnImage,
+                    "avatar must be an image".to_string(),
+                )
+                .into());
+            }
+            media_store.push(media);
+            lm.create(MediaLinkType::UserAvatar {
+                user_id: target_user_id,
+            });
+        }
+    }
+
+    if let Some(maybe_banner) = inner.patch.banner {
+        lm.delete(MediaLinkType::UserBanner {
+            user_id: target_user_id,
+        });
+        if let Some(banner_media_id) = maybe_banner {
+            let media = data.media_select(banner_media_id).await.cast_internal()?;
+            if !media.metadata.is_image() {
+                return Err(ApiError::with_message(
+                    ErrorCode::MediaNotAnImage,
+                    "banner must be an image".to_string(),
+                )
+                .into());
+            }
+            media_store.push(media);
+            lm.create(MediaLinkType::UserBanner {
+                user_id: target_user_id,
+            });
+        }
+    }
+
+    for m in &media_store {
+        lm.media(m);
+    }
+
+    data.user_update(target_user_id, inner.patch.clone())
+        .await
+        .cast_internal()?;
+    lm.write(&mut *data).await?;
+
+    data.commit().await.cast_internal()?;
+    srv.users.invalidate(target_user_id).await;
+
+    let user = srv
+        .users
+        .get(target_user_id, Some(auth_user.id))
+        .await
+        .cast_internal()?;
+
+    let changes = Changes::new()
+        .change("name", &start.name, &user.name)
+        .change("description", &start.description, &user.description)
+        .change("avatar", &start.avatar, &user.avatar)
+        .change("banner", &start.banner, &user.banner)
+        .build();
+
+    al.push(
+        target_user_id.into_inner().into(),
+        AuditLogEntryType::UserUpdate {
+            changes: changes.clone(),
+        },
+        req.headers().reason.clone(),
+    )
+    .await
+    .success()
+    .await;
+
+    if auth_user.id != target_user_id {
+        al.push(
+            SERVER_ROOM_ID.into_inner().into(),
+            AuditLogEntryType::UserUpdate { changes },
+            req.headers().reason.clone(),
+        )
+        .await
+        .success()
+        .await;
+    }
+
+    Ok(routes::user_update::Response { user })
+}
+
+export_routes!(get, update);
