@@ -5,6 +5,8 @@ import type {
 	Notification,
 	Pagination,
 	Room,
+	RoomMember,
+	ThreadMember,
 } from "sdk";
 import {
 	createEffect,
@@ -52,9 +54,10 @@ export class InboxService extends BaseService<Notification> {
 
 				const data = await this.retryWithBackoff<{
 					notifications: Notification[];
-					channels: Channel[];
+					threads: Channel[];
 					messages: Message[];
-					rooms: Room[];
+					room_members: RoomMember[];
+					thread_members: ThreadMember[];
 					has_more: boolean;
 					total: number;
 				}>(() =>
@@ -69,27 +72,25 @@ export class InboxService extends BaseService<Notification> {
 					}),
 				);
 
-				// Cache notifications
 				this.upsertBulk(data.notifications);
-
-				// Cache related entities
-				for (const channel of data.channels) {
+				for (const channel of data.threads) {
 					this.store.channels.upsert(channel);
 				}
 				for (const message of data.messages) {
 					this.store.messages.upsert(message);
 				}
-				for (const room of data.rooms) {
-					this.store.rooms.upsert(room);
+				for (const rm of data.room_members) {
+					this.store.room_members.upsert(rm);
+				}
+				for (const tm of data.thread_members) {
+					this.store.thread_members.upsert(tm);
 				}
 
 				return {
 					items: data.notifications.toReversed(),
 					total: data.total,
 					has_more: data.has_more,
-					channels: data.channels,
 					messages: data.messages,
-					rooms: data.rooms,
 				} as NotificationPagination;
 			},
 		);

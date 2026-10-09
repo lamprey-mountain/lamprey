@@ -38,16 +38,12 @@
 		margin-bottom: 8px;
 		overflow: hidden;
 
-		.notification-checkbox {
-			margin-right: 8px;
-		}
-
-		&[data-type="Message"] {
-			border-left: 3px solid $link-500;
-		}
-		&[data-type="Reaction"] {
-			border-left: 3px solid $color-green;
-		}
+		/* &[data-type="Message"] { */
+		/* border-left: 3px solid $link-500; */
+		/* } */
+		/* &[data-type="Reaction"] { */
+		/* border-left: 3px solid $color-green; */
+		/* } */
 		/* &[data-type="Reminder"] { */
 		/* border-left: 3px solid $color-yellow; */
 		/* } */
@@ -58,10 +54,17 @@
 		& > header {
 			display: flex;
 			align-items: center;
-			padding: 4px 8px;
 			font-size: 0.9rem;
+			background-color: oklch(from $bg-300 calc(l - .03) c h);
 			color: $fg-400;
 			border-bottom: solid 1px $sep-400;
+
+			& > .avatar {
+				height: 32px;
+				width: 32px;
+				margin: 4px;
+				margin-right: 8px;
+			}
 
 			.spacer {
 				flex: 1;
@@ -81,6 +84,7 @@
 				color: $fg-500;
 				cursor: pointer;
 				padding: 2px 4px;
+
 				&:hover {
 					color: $fg-200;
 					background-color: $bg-400;
@@ -106,6 +110,39 @@
 			.message.withavatar {
 				&:hover {
 					background-color: transparent;
+				}
+			}
+
+			.message.separate {
+				margin-top: 0;
+			}
+		}
+
+		&.selected {
+			/* border: 3px solid $color-green; */
+			border-color: $link-500;
+		}
+
+		menu {
+			display: flex;
+
+			& > .icon-button {
+				display: grid;
+				place-items: center;
+
+				& > .icon2 {
+					pointer-events: none;
+					width: 16px;
+					height: 16px;
+				}
+			}
+
+			& > .select {
+				display: flex;
+				cursor: pointer;
+
+				& > * {
+					pointer-events: none;
 				}
 			}
 		}

@@ -8,6 +8,10 @@ import icX1 from "@/assets/x-1.png";
 import icX2 from "@/assets/x-2.png";
 import icX3 from "@/assets/x-3.png";
 import icX4 from "@/assets/x-4.png";
+import icSlash1 from "@/assets/slash-1.png";
+import icSlash2 from "@/assets/slash-2.png";
+import icSlash3 from "@/assets/slash-3.png";
+import icSlash4 from "@/assets/slash-4.png";
 import { cyrb53, LCG } from "@/lib/rng";
 
 export const getCheckIcon = (seed: string): string => {
@@ -20,6 +24,12 @@ export const getXIcon = (seed: string): string => {
 	const rand = LCG(cyrb53(seed));
 	const xs = [icX1, icX2, icX3, icX4];
 	return xs[Math.floor(rand() * xs.length)];
+};
+
+export const getSlashIcon = (seed: string): string => {
+	const rand = LCG(cyrb53(seed));
+	const slashes = [icSlash1, icSlash2, icSlash3, icSlash4];
+	return slashes[Math.floor(rand() * slashes.length)];
 };
 
 export const RadioDot = (props: { checked?: boolean }) => {
@@ -73,7 +83,13 @@ export const XMark = (props: {
 	);
 };
 
-export const Checkbox = (props: { checked?: boolean; seed?: string }) => {
+export const Checkbox = (props: {
+	checked?: boolean;
+	indeterminate?: boolean;
+	seed?: string;
+}) => {
+	const active = () => props.checked || props.indeterminate;
+
 	return (
 		<svg
 			class="radio"
@@ -87,15 +103,19 @@ export const Checkbox = (props: { checked?: boolean; seed?: string }) => {
 				width="12"
 				height="12"
 				rx="2"
-				fill={props.checked ? "oklch(var(--color-link-200))" : "none"}
-				stroke={props.checked ? "oklch(var(--color-link-200))" : "currentColor"}
+				fill={active() ? "oklch(var(--color-link-200))" : "none"}
+				stroke={active() ? "oklch(var(--color-link-200))" : "currentColor"}
 				stroke-width="1"
 			/>
-			<Show when={props.checked && props.seed}>
+			<Show when={active() && props.seed}>
 				{(seed) => (
 					<image
 						class="icon"
-						href={getCheckIcon(seed())}
+						href={
+							props.indeterminate
+								? getSlashIcon(seed())
+								: getCheckIcon(seed())
+						}
 						style="height:12px;width:12px"
 						height="12"
 						width="12"

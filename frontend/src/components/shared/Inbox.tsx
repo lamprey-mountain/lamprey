@@ -1,14 +1,17 @@
 import { A } from "@solidjs/router";
 import type { Message, Notification } from "sdk";
-import { createSignal, For, Show } from "solid-js";
-import { useChannels, useInbox, useRooms } from "@/api";
+import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
+import { useApi } from "@/api";
 import type { NotificationPagination } from "@/api/services/InboxService.ts";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { Icon } from "@/atoms/Icon";
 import { Checkbox } from "@/atoms/icons";
 import { Time } from "@/atoms/Time";
 import { MessageView } from "@/components/features/chat/Message.tsx";
 import { getDate } from "@/utils/general";
+import { icCheck, icQuestion } from "@/utils/icons";
 import { MessageToolbarProvider } from "../features/chat/message-toolbar-context";
+import { ChannelIcon, RoomIcon } from "./User";
 
 // TODO: skeletons for inbox items
 // TODO: render other notification items besides messages
@@ -16,13 +19,13 @@ import { MessageToolbarProvider } from "../features/chat/message-toolbar-context
 // TODO: better caching, update inbox as sync messages are received, don't refetch when marking messages as read/unread
 
 export const Inbox = () => {
-	const inbox2 = useInbox();
+	const api = useApi();
 	const [params, setParams] = createSignal({
 		include_read: false,
 		room_id: [],
 		thread_id: [],
 	});
-	const inboxResult = inbox2.useList(params);
+	const inboxResult = api.inbox.useList(params);
 	const inboxItems = inboxResult.resource;
 	const [selected, setSelected] = createSignal<string[]>([]);
 
@@ -38,14 +41,14 @@ export const Inbox = () => {
 
 	const handleMarkSelectedRead = async () => {
 		if (selected().length === 0) return;
-		await inbox2.markRead(getMessageIdsFromNotifIds(selected()));
+		await api.inbox.markRead(getMessageIdsFromNotifIds(selected()));
 		setSelected([]);
 		inboxResult.refetch();
 	};
 
 	const handleMarkSelectedUnread = async () => {
 		if (selected().length === 0) return;
-		await inbox2.markUnread(getMessageIdsFromNotifIds(selected()));
+		await api.inbox.markUnread(getMessageIdsFromNotifIds(selected()));
 		setSelected([]);
 		inboxResult.refetch();
 	};
@@ -149,54 +152,51 @@ const NotificationItem = (props: {
 	refetch: () => void;
 	include_read: boolean;
 }) => {
-	const inbox = useInbox();
-	const channels = useChannels();
-	const rooms = useRooms();
+	const api = useApi();
 
 	const ty = () => props.notification.type;
 
 	const channel = () => {
 		const channelId = props.notification.channel_id;
 		if (!channelId) return undefined;
-		return channels.get(channelId);
+		return api.channels.get(channelId);
 	};
 
-	const message = () =>
+	const message = createMemo(() =>
 		props.allData?.messages.find(
 			(m: Message) => m.id === props.notification.message_id,
-		);
+		),
+	);
 
 	const room = () => {
 		const t = channel();
 		if (!t?.room_id) return;
-		return rooms.get(t.room_id);
+		return api.rooms.get(t.room_id);
 	};
 
 	const handleMarkRead = async () => {
-		await inbox.markRead([props.notification.message_id]);
+		await api.inbox.markRead([props.notification.id]);
 		props.refetch();
 	};
 
 	const handleMarkUnread = async () => {
-		await inbox.markUnread([props.notification.message_id]);
+		await api.inbox.markUnread([props.notification.id]);
 		props.refetch();
 	};
 
 	return (
-		<article class="notification" data-type={ty()}>
+		<article
+			class="notification"
+			data-type={ty()}
+			classList={{ selected: props.selected }}
+		>
 			<header>
-				<CheckboxOption
-					id={`inbox-notif-${props.notification.id}`}
-					checked={props.selected}
-					onChange={(checked) => props.onSelect(props.notification.id, checked)}
-					seed={`inbox-notif-${props.notification.id}`}
-					class="notification-checkbox"
-				>
-					<Checkbox
-						checked={props.selected}
-						seed={`inbox-notif-${props.notification.id}`}
-					/>
-				</CheckboxOption>
+				<Switch>
+					<Match when={room()}>{(room) => <RoomIcon room={room()} />}</Match>
+					<Match when={channel()}>
+						{(chan) => <ChannelIcon channel={chan()} />}
+					</Match>
+				</Switch>
 				<Show when={room()}>
 					<A href={`/room/${room()?.id}`}>{room()?.name}</A>
 					&nbsp;&gt;&nbsp;
@@ -205,19 +205,51 @@ const NotificationItem = (props: {
 				&nbsp;&bull;&nbsp;
 				<Time date={getDate(props.notification.added_at)} />
 				<div class="spacer"></div>
-				<div class="label">{ty()}</div>
-				<Show
-					when={!props.notification.read_at}
-					fallback={
-						<button type="button" class="mark-read" onClick={handleMarkUnread}>
-							Mark as unread
+				<menu>
+					<Show
+						when={!props.notification.read_at}
+						fallback={
+							<button
+								type="button"
+								class="icon-button mark-read"
+								onClick={handleMarkUnread}
+								data-tooltip="Mark as unread"
+							>
+								{/* TODO: icon for this*/}
+								<Icon src={icQuestion} />
+							</button>
+						}
+					>
+						<button
+							type="button"
+							class="icon-button mark-read"
+							onClick={handleMarkRead}
+							data-tooltip="Mark as read"
+						>
+							<Icon src={icCheck} />
 						</button>
-					}
-				>
-					<button type="button" class="mark-read" onClick={handleMarkRead}>
-						Mark as read
-					</button>
-				</Show>
+					</Show>
+
+					<label
+						class="select"
+						data-tooltip={
+							props.selected ? "Deselect notification" : "Select notification"
+						}
+					>
+						<Checkbox
+							checked={props.selected}
+							seed={`inbox-notif-${props.notification.id}`}
+						/>
+						<input
+							type="checkbox"
+							checked={props.selected}
+							onInput={(e) =>
+								props.onSelect(props.notification.id, e.currentTarget.checked)
+							}
+							style="display:none"
+						/>
+					</label>
+				</menu>
 			</header>
 			<div class="notification-content">
 				<A
