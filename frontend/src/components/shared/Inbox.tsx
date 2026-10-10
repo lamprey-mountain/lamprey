@@ -31,9 +31,13 @@ export const Inbox = () => {
 
 	const allItems = () => inboxItems()?.items ?? [];
 	const allIds = () => allItems().map((i) => i.id);
-	const isAllSelected = createMemo(() => allIds().length > 0 && selected().length === allIds().length);
+	const isAllSelected = createMemo(
+		() => allIds().length > 0 && selected().length === allIds().length,
+	);
 	const isSomeSelected = createMemo(() => selected().length > 0);
-	const isIndeterminate = createMemo(() => isSomeSelected() && !isAllSelected());
+	const isIndeterminate = createMemo(
+		() => isSomeSelected() && !isAllSelected(),
+	);
 
 	const getMessageIdsFromNotifIds = (notifIds: string[]) => {
 		const items = inboxItems()?.items ?? [];

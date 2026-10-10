@@ -1742,7 +1742,7 @@ button[disabled] {
 
 	& .indicator {
 		fill-rule: evenodd;
-		transition: fill 100ms, d 100ms;
+		transition: fill 100ms, d 100ms, opacity 150ms;
 	}
 
 	&[data-status="Online"] .indicator {
@@ -1763,6 +1763,40 @@ button[disabled] {
 
 	&[data-status="Available"] .indicator {
 		fill: $color-blue;
+	}
+
+	.typing-pill,
+	.cutout {
+		transition: x 200ms ease, width 200ms ease, opacity 150ms;
+	}
+
+	.typing-pill {
+		fill: $fg-100;
+	}
+
+	.typing-dots {
+		transition: opacity 150ms;
+
+		& > .dot {
+			r: 4px;
+			fill: white;
+			transform-box: fill-box;
+			transform-origin: center;
+			animation: typing 1s infinite ease-in-out;
+		}
+	}
+}
+
+@keyframes typing {
+	0%,
+	60%,
+	100% {
+		scale: 1;
+		opacity: .5;
+	}
+	30% {
+		scale: 1.2;
+		opacity: 1;
 	}
 }
 
