@@ -4,14 +4,14 @@ import icCheck1 from "@/assets/check-1.png";
 import icCheck2 from "@/assets/check-2.png";
 import icCheck3 from "@/assets/check-3.png";
 import icCheck4 from "@/assets/check-4.png";
-import icX1 from "@/assets/x-1.png";
-import icX2 from "@/assets/x-2.png";
-import icX3 from "@/assets/x-3.png";
-import icX4 from "@/assets/x-4.png";
 import icSlash1 from "@/assets/slash-1.png";
 import icSlash2 from "@/assets/slash-2.png";
 import icSlash3 from "@/assets/slash-3.png";
 import icSlash4 from "@/assets/slash-4.png";
+import icX1 from "@/assets/x-1.png";
+import icX2 from "@/assets/x-2.png";
+import icX3 from "@/assets/x-3.png";
+import icX4 from "@/assets/x-4.png";
 import { cyrb53, LCG } from "@/lib/rng";
 
 export const getCheckIcon = (seed: string): string => {
@@ -112,9 +112,7 @@ export const Checkbox = (props: {
 					<image
 						class="icon"
 						href={
-							props.indeterminate
-								? getSlashIcon(seed())
-								: getCheckIcon(seed())
+							props.indeterminate ? getSlashIcon(seed()) : getCheckIcon(seed())
 						}
 						style="height:12px;width:12px"
 						height="12"

@@ -281,6 +281,13 @@ export const MemberList = (props: MemberListProps) => {
 										</Match>
 										<Match when={matchesMember()}>
 											{(item) => {
+												const typing = () => {
+													if (!props.threadId) return false;
+													return api.typing
+														.get(props.threadId)
+														?.has(item().user.id);
+												};
+
 												const user = () =>
 													api.users.cache.get(item().user.id) ?? item().user;
 												const room_member = () =>
@@ -327,6 +334,8 @@ export const MemberList = (props: MemberListProps) => {
 															<AvatarWithStatus
 																user={user()}
 																animate={hovered()}
+																typing={typing()}
+																extraSpacing
 															/>
 															<span class="text">
 																<div class="name">{name()}</div>
