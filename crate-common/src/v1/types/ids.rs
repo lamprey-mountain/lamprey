@@ -182,16 +182,26 @@ impl<M: Marker> From<Id<M>> for Uuid {
 }
 
 impl<M: Marker> Id<M> {
+    /// create a new uuid v7 at the current timestamp
     pub fn new() -> Self {
         Uuid::now_v7().into()
     }
 
+    /// convert this id into the underlying [`uuid::Uuid`]
+    #[inline]
     pub fn into_inner(self) -> Uuid {
         self.into()
     }
 
+    #[inline]
     pub fn from_slice(bytes: &[u8]) -> Result<Self, uuid::Error> {
         Ok(Uuid::from_slice(bytes)?.into())
+    }
+
+    /// cast this id into a differently typed id
+    #[inline]
+    pub fn cast<N: Marker>(self) -> Id<N> {
+        self.into_inner().into()
     }
 }
 
