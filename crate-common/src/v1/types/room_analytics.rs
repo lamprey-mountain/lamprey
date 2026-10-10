@@ -1,14 +1,9 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::{IntoParams, ToSchema};
+use lamprey_macros::record;
 
 use crate::v1::types::{ChannelId, InviteCode, UserId, misc::Time};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Copy, PartialEq, Eq)]
 pub enum Aggregation {
     Hourly,
     Daily,
@@ -16,9 +11,8 @@ pub enum Aggregation {
     Monthly,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record(params)]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsParams {
     pub start: Option<Time>,
     pub end: Option<Time>,
@@ -29,9 +23,8 @@ pub struct AnalyticsParams {
 }
 
 /// the count of members in this room
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsMembersCount {
     /// The bucket for this data point.
     pub bucket: Time,
@@ -40,9 +33,8 @@ pub struct AnalyticsMembersCount {
     pub count: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsMembersJoin {
     /// The bucket for this data point.
     pub bucket: Time,
@@ -51,9 +43,8 @@ pub struct AnalyticsMembersJoin {
     pub count: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsMembersLeave {
     /// The bucket for this data point.
     pub bucket: Time,
@@ -62,9 +53,8 @@ pub struct AnalyticsMembersLeave {
     pub count: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsUsagesCount {
     /// The bucket for this data point.
     pub bucket: Time,
@@ -73,9 +63,8 @@ pub struct AnalyticsUsagesCount {
     pub count: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsUsagesAdd {
     /// The bucket for this data point.
     pub bucket: Time,
@@ -84,9 +73,8 @@ pub struct AnalyticsUsagesAdd {
     pub count: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsUsagesRemove {
     /// The bucket for this data point.
     pub bucket: Time,
@@ -95,17 +83,15 @@ pub struct AnalyticsUsagesRemove {
     pub count: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema, IntoParams))]
+#[record(params)]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsChannelParams {
     /// return only analytics for this channel, otherwise return data points for everything
     pub channel_id: Option<ChannelId>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsChannel {
     /// The bucket for this data point.
     pub bucket: Time,
@@ -115,9 +101,8 @@ pub struct AnalyticsChannel {
     pub media_size: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsOverview {
     /// The bucket for this data point.
     pub bucket: Time,
@@ -132,9 +117,8 @@ pub struct AnalyticsOverview {
     pub media_size: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct AnalyticsInvites {
     /// The bucket for this data point.
     pub bucket: Time,
@@ -146,9 +130,9 @@ pub struct AnalyticsInvites {
     pub uses: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize), serde(tag = "type"))]
+#[record]
+#[derive(PartialEq, Eq)]
+#[serde(tag = "type")]
 pub enum AnalyticsInvitesOrigin {
     /// user joined with this invite code
     Invite { code: InviteCode },
