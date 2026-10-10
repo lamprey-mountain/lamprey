@@ -7,6 +7,6 @@ pub use error::{Error, Result};
 
 /// common types used everywhere in backend
 pub mod prelude {
-    pub use crate::error::{Error, LegacyErrorExt, AnyErrorExt, Result};
+    pub use crate::error::{AnyErrorExt, Error, LegacyErrorExt, Result};
     pub use kerosene_core::prelude::*;
 }

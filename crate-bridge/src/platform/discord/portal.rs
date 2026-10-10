@@ -5,8 +5,8 @@ use opentelemetry::trace::FutureExt;
 use tokio::sync::broadcast;
 use tracing::{debug, error, info, warn};
 use twilight_http::Client as HttpClient;
-use twilight_model::channel::message::{Embed, Message};
 use twilight_model::channel::ChannelType;
+use twilight_model::channel::message::{Embed, Message};
 use twilight_model::id::Id;
 
 use crate::bridge_old::{MessageData, Portal, PortalEvent, PortalHandle, PortalId};
@@ -77,7 +77,8 @@ impl DiscordPortal {
         debug!(last_id=%last_id, "start backfill");
 
         loop {
-            let messages = self.http
+            let messages = self
+                .http
                 .channel_messages(Id::new(discord_cfg.channel_id.get()))
                 .after(Id::new(last_id.get()))
                 .limit(100)?
@@ -145,9 +146,10 @@ impl DiscordPortal {
                 // PERF: don't fetch webhook every time, cache it
                 let discord_cfg = self.portal.discord.as_ref().unwrap();
                 let webhook_url = &discord_cfg.webhook_url;
-                
+
                 // Twilight webhook parsing
-                let webhook_client = twilight_webhook::WebhookClient::from_url(webhook_url.as_str())?;
+                let webhook_client =
+                    twilight_webhook::WebhookClient::from_url(webhook_url.as_str())?;
 
                 let msg_inner = match &msg.latest_version.message_type {
                     common::v1::types::MessageType::DefaultMarkdown(m)
@@ -327,9 +329,10 @@ impl DiscordPortal {
                 // PERF: don't fetch webhook every time, cache it
                 let discord_cfg = self.portal.discord.as_ref().unwrap();
                 let webhook_url = &discord_cfg.webhook_url;
-                
+
                 // Twilight webhook parsing
-                let webhook_client = twilight_webhook::WebhookClient::from_url(webhook_url.as_str())?;
+                let webhook_client =
+                    twilight_webhook::WebhookClient::from_url(webhook_url.as_str())?;
 
                 let Some(portal_msg) = self
                     .handle
@@ -394,7 +397,8 @@ impl DiscordPortal {
                     }
                 }
 
-                let mut edit_builder = webhook_client.update_message(Id::new(message_id.get()))
+                let mut edit_builder = webhook_client
+                    .update_message(Id::new(message_id.get()))
                     .content(Some(&content))?;
                 // TODO: handle attachments
                 // .attachments(attachments)
@@ -402,11 +406,7 @@ impl DiscordPortal {
                 if discord_cfg.parent_id.is_some() {
                     edit_builder = edit_builder.thread_id(Id::new(discord_cfg.channel_id.get()));
                 }
-                let edited = edit_builder
-                    .execute()
-                    .await?
-                    .model()
-                    .await?;
+                let edited = edit_builder.execute().await?.model().await?;
 
                 let mut new_attachments = vec![];
                 for (i, attachment) in msg_inner.attachments.iter().enumerate() {
@@ -437,7 +437,10 @@ impl DiscordPortal {
                         {
                             let _ = self
                                 .http
-                                .delete_message(Id::new(discord_cfg.channel_id.get()), Id::new(discord_message_id.get()))
+                                .delete_message(
+                                    Id::new(discord_cfg.channel_id.get()),
+                                    Id::new(discord_message_id.get()),
+                                )
                                 .await;
                             let _ = self
                                 .handle
@@ -510,7 +513,11 @@ impl DiscordPortal {
 
                 let thread = self
                     .http
-                    .create_thread(Id::new(discord_cfg.channel_id.get()), &lamprey_chan.name, create)
+                    .create_thread(
+                        Id::new(discord_cfg.channel_id.get()),
+                        &lamprey_chan.name,
+                        create,
+                    )
                     .await?
                     .model()
                     .await?;

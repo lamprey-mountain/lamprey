@@ -66,7 +66,7 @@ impl DiscordRealm {
                                 lamprey::ChannelType::Text => ChannelType::GuildText,
                                 _ => continue,
                             };
-                            
+
                             let discord_channel = http
                                 .create_guild_channel(Id::new(guild_id.get()), &channel.name)
                                 .kind(channel_type)
@@ -81,10 +81,7 @@ impl DiscordRealm {
                                 .model()
                                 .await?;
 
-                            let webhook_url = webhook
-                                .url()
-                                .parse()
-                                .expect("invalid webhook url");
+                            let webhook_url = webhook.url().parse().expect("invalid webhook url");
 
                             let portal_id = PortalId::new();
                             let portal = Portal {
@@ -128,10 +125,14 @@ impl DiscordRealm {
                         if let Some(discord_cfg) = self.realm.discord.as_ref() {
                             let guild_id = discord_cfg.guild_id;
                             let discord_id = puppet.discord_id; // Assuming puppet_get_by_lamprey_id returns Twilight Id?
-                            
+
                             let nick = member.nickname.as_deref().unwrap_or("");
-                            let _ = self.http
-                                .update_guild_member(Id::new(guild_id.get()), Id::new(discord_id.get()))
+                            let _ = self
+                                .http
+                                .update_guild_member(
+                                    Id::new(guild_id.get()),
+                                    Id::new(discord_id.get()),
+                                )
                                 .nick(Some(nick))
                                 .await;
                         }

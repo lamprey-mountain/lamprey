@@ -605,10 +605,11 @@ pub struct HostnameNotConfigured;
 impl Config {
     #[deprecated = "use hostname2"]
     pub fn hostname(&self) -> Result<&str> {
-        let hostname = self.hostname
+        let hostname = self
+            .hostname
             .as_deref()
             .ok_or_else(|| ServerError::internal(HostnameNotConfigured))?;
-            Ok(hostname)
+        Ok(hostname)
     }
 
     /// get the federation hostname

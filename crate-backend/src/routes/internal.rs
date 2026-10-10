@@ -32,9 +32,10 @@ async fn internal_rpc(
         .ok_or(Error::MissingAuth)?
         .to_str()?;
 
-    let token = v.token.load()
-                .map_err(|err| Error::Internal(err.to_string()))
-    ?;
+    let token = v
+        .token
+        .load()
+        .map_err(|err| Error::Internal(err.to_string()))?;
     if auth != format!("Server {}", token) {
         return Err(Error::MissingAuth);
     }

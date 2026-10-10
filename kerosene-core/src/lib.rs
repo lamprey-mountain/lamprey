@@ -34,8 +34,7 @@ pub mod actors {
 /// common types used everywhere in kerosene
 pub mod prelude {
     pub use crate::error::{
-        ApiError, ApiResult, CoreResult, ErrorCode, Result, ServerError,
-        ServerResult,
+        ApiError, ApiResult, CoreResult, ErrorCode, Result, ServerError, ServerResult,
     };
     pub use bytes::Bytes;
 

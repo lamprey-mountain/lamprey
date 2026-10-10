@@ -534,7 +534,7 @@ pub mod calendar_overwrite_delete {
 )]
 pub mod calendar_instance_rsvp_list {
     use crate::v1::types::calendar::{
-        CalendarParticipant, CalendarParticipantQuery, CalendarInstanceSeq,
+        CalendarInstanceSeq, CalendarParticipant, CalendarParticipantQuery,
     };
     use crate::v1::types::{CalendarEventId, ChannelId};
 
@@ -569,7 +569,7 @@ pub mod calendar_instance_rsvp_list {
     response(CREATED, description = "Invite users to calendar instance success"),
 )]
 pub mod calendar_instance_rsvp_invite {
-    use crate::v1::types::calendar::{CalendarParticipantInvite, CalendarInstanceSeq};
+    use crate::v1::types::calendar::{CalendarInstanceSeq, CalendarParticipantInvite};
     use crate::v1::types::{CalendarEventId, ChannelId};
 
     pub struct Request {
@@ -599,7 +599,7 @@ pub mod calendar_instance_rsvp_invite {
     response(OK, body = CalendarParticipant, description = "ok"),
 )]
 pub mod calendar_instance_rsvp_get {
-    use crate::v1::types::calendar::{CalendarParticipant, CalendarInstanceSeq};
+    use crate::v1::types::calendar::{CalendarInstanceSeq, CalendarParticipant};
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::{CalendarEventId, ChannelId};
 
@@ -635,7 +635,7 @@ pub mod calendar_instance_rsvp_get {
 )]
 pub mod calendar_instance_rsvp_put {
     use crate::v1::types::calendar::{
-        CalendarParticipant, CalendarParticipantPut, CalendarInstanceSeq,
+        CalendarInstanceSeq, CalendarParticipant, CalendarParticipantPut,
     };
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::{CalendarEventId, ChannelId};
