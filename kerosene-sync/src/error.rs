@@ -2,8 +2,6 @@
 // enum ConnectionError {}
 
 use lamprey::v1::types::error::SyncErrorCode;
-// TEMP: reexport?
-pub use lamprey_backend_core::Error;
 
 // NOTE: maybe use Error directly?
 #[derive(Debug, thiserror::Error)]
