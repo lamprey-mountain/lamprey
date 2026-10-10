@@ -131,7 +131,7 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
                 }
             }
         }
-        SyncVersion::V2 => v2::accept(globals, connection).await,
+        SyncVersion::V2 => v2::accept(globals, connection, params).await,
     }
 }
 
@@ -402,77 +402,132 @@ mod v2 {
     use super::*;
     use crate::prelude::*;
 
+    use common::v1::types::Session;
+    use common::v1::types::presence::Presence;
+    use common::v2::types::ConnectionId;
+    use common::v2::types::sync::stream::hello;
+    use common::v2::types::sync::transport::webtransport::Params;
+    use futures::FutureExt;
+    use futures_util::future::Shared;
+    use kerosene_sync::v2::codec::Codec;
     use kerosene_sync::v2::transport::webtransport::{WebtransportStream, WebtransportTransport};
     use kerosene_sync::v2::transport::{Transport, TransportStream};
     use tokio::io::AsyncReadExt;
+    use tokio::sync::oneshot;
 
     const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
 
-    pub async fn accept(globals: Globals, connection: Connection) -> Result<()> {
-        let state: WtState = Arc::new(WtStateInner {
-            globals,
-            params,
-            shared: Mutex::new(WtStateShared::default()),
-        });
-
-        let tn = WebtransportTransport::new(connection);
-
-        // loop {
-        //     tokio::select! {
-        //         Ok((send, recv)) = connection.accept_bi() => {
-        //             let state = state.clone();
-        //             spawn(handle_stream(send, recv, state));
-        //         }
-        //         reason = connection.closed() => {
-        //             // TODO: handle reason correctly, return Ok or Err depending on it
-        //             debug!("connection closed: {reason}");
-        //             return Ok(())
-        //         }
-        //     }
-        // }
+    #[derive(Clone)]
+    struct State {
+        globals: Globals,
+        id: ConnectionId,
+        params: Params,
+        session: Shared<oneshot::Receiver<Arc<Session>>>,
     }
 
-    async fn handshake<T: Transport>(t: &mut T) {
-        tokio::time::timeout(HANDSHAKE_TIMEOUT, async {
-            // let a = t.next().await;
-            // read header
-            // handle identify header
-        })
-        .await;
-    }
-
-    async fn handle_stream(send: SendStream, recv: RecvStream, state: WtState) {
-        if let Err(err) = handle_stream_inner(send, recv, state).await {
-            debug!("error while handling stream: {err}");
+    impl State {
+        pub async fn session(&self) -> Result<Arc<Session>> {
+            self.session
+                .clone()
+                .await
+                .map_err(|_| Error::BadStatic("transport closed"))
         }
     }
 
-    async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState) -> Result<()> {
+    pub async fn accept(
+        globals: Globals,
+        connection: Connection,
+        params: SyncParams,
+    ) -> Result<()> {
+        let (session_tx, session_rx) = oneshot::channel();
+        let state = State {
+            globals,
+            id: ConnectionId::new(),
+            params: Params {
+                version: params.version,
+                compression: params.compression,
+                encoding: params.format,
+            },
+            session: session_rx.shared(),
+        };
+
+        let mut transport = WebtransportTransport::new(connection);
+        let mut stream_tasks = JoinSet::new();
+
+        // TODO: use proper sync error, close stream on auth fail
+        // TODO: timeout HANDSHAKE_TIMEOUT, close transport if no hello was received in time
+
+        // let (session, hello_frames) =
+        //     tokio::time::timeout(HANDSHAKE_TIMEOUT, handshake(&mut transport, shared.clone()))
+        //         .await
+        //         .map_err(|_| Error::BadStatic("handshake timeout"))??;
+
+        // handle streams
+        while let Some(s) = transport.next().await {
+            let state = state.clone();
+            stream_tasks.spawn(async move {
+                if let Err(err) = handle_stream(s, state).await {
+                    debug!("error while handling stream: {err}");
+                }
+            });
+        }
+
+        // TODO: somehow get connection closed reason here?
+        // debug!("connection closed: {reason}");
+
+        // TODO: clean up connection?
+
+        // TODO: use proper close code (maybe make close() a part of Transport)
+        // transport
+        //     .into_inner()
+        //     .close(SyncErrorCode::Unauthorized, &[]);
+
+        Ok(())
+    }
+
+    async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Result<()> {
         let srv = state.globals.services();
 
         // read stream header
-        let header = StreamHeader::try_from(recv.read_u8().await?).map_err(
+        let header = StreamHeader::try_from(stream.read_u8().await?).map_err(
             // TODO: better error types? (eg. dedicated sync error type)
-            ApiError::with_message(ErrorCode::InvalidData, "unknown header byte".to_string()),
+            |_| ApiError::with_message(ErrorCode::InvalidData, "unknown header byte".to_string()),
         )?;
 
-        let stream = WebtransportStream::new(send, recv);
-
         match header {
-            StreamHeader::Identify => {
-                type Proto = common::v2::types::sync::stream::identify::Protocol;
-                let params = common::v2::types::sync::transport::webtransport::Params {
-                    version: state.params.version,
-                    compression: state.params.compression,
-                    encoding: state.params.encoding,
-                };
-                let codec = kerosene_sync::v2::codec::Codec::<Proto>::new(params);
-                let (init, framed) = codec.accept(stream).await.unwrap();
-                todo!()
-            }
-            _ => todo!(),
-        }
+            StreamHeader::Hello => {
+                type Proto = hello::Protocol;
+                let codec = Codec::<Proto>::new(state.params.clone());
+                let (init, framed) = codec.accept(stream).await?;
+                match init {
+                    hello::Initial::Identify(identify) => {
+                        // authenticate session
+                        let session = srv.sessions.get_by_token(identify.token).await?;
 
-        Ok(())
+                        // setup presence
+                        if let (presence, Some(user_id)) = (identify.presence, session.user_id()) {
+                            let user = srv.users.get(user_id, Some(user_id)).await?;
+                            if !user.is_suspended() {
+                                let presence = presence.unwrap_or_else(Presence::online);
+                                srv.presence.set(state.id, user_id, presence);
+                            }
+                        }
+
+                        // FIXME: session_tx.send(session)
+
+                        Ok(())
+                    }
+                    // TODO: handle these later
+                    // hello::Initial::Resume(resume) => todo!(),
+                    // hello::Initial::Shard(shard) => todo!(),
+                    _ => Err(Error::Unimplemented),
+                }
+            }
+            _ => {
+                let _session = state.session().await?;
+                // TODO: do stuff with session
+                Err(Error::Unimplemented)
+            }
+        }
     }
 }

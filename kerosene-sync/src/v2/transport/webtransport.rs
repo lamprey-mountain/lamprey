@@ -20,18 +20,22 @@ pub struct WebtransportStream {
     recv: RecvStream,
 }
 
-impl WebtransportStream {
-    pub fn new(send: SendStream, recv: RecvStream) -> Self {
-        Self { send, recv }
-    }
-}
-
 impl WebtransportTransport {
     pub fn new(connection: Connection) -> Self {
         Self {
             connection,
             accept_future: None,
         }
+    }
+
+    pub fn into_inner(self) -> Connection {
+        self.connection
+    }
+}
+
+impl WebtransportStream {
+    pub fn new(send: SendStream, recv: RecvStream) -> Self {
+        Self { send, recv }
     }
 }
 
