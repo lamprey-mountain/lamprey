@@ -90,12 +90,12 @@ impl<'a> RoomPermissions<'a> {
             &mut timed_out,
             &mut quarantined,
             user_id,
-            member,
+            member.as_deref(),
         );
 
         if !bits.has(Permission::Admin) {
             if let Some(channel) = channel {
-                self.calculate_channel_permissions(&mut bits, &mut timed_out, channel, member);
+                self.calculate_channel_permissions(&mut bits, &mut timed_out, channel, member.as_deref());
 
                 // private thread logic
                 if channel.inner.ty == ChannelType::ThreadPrivate {
@@ -160,7 +160,8 @@ impl<'a> RoomPermissions<'a> {
         let Some(member) = member else {
             if self.room.inner.public {
                 let everyone_role_id: RoleId = self.room.inner.id.into_inner().into();
-                if let Some((perms, _)) = self.room.perm_roles.get(&everyone_role_id) {
+                if let Some(entry) = self.room.perm_roles.get(&everyone_role_id) {
+                    let (perms, _) = entry.value();
                     bits.add_all(perms.allow);
                     bits.remove_all(perms.deny);
                 }
@@ -173,13 +174,15 @@ impl<'a> RoomPermissions<'a> {
         let everyone_role_id: RoleId = self.room.inner.id.into_inner().into();
 
         // NOTE: the everyone role should always exist
-        if let Some((perms, _)) = self.room.perm_roles.get(&everyone_role_id) {
+        if let Some(entry) = self.room.perm_roles.get(&everyone_role_id) {
+            let (perms, _) = entry.value();
             allowed_bits.add_all(perms.allow);
             denied_bits.add_all(perms.deny);
         }
 
         for role_id in &member.roles {
-            if let Some((perms, role_position)) = self.room.perm_roles.get(role_id) {
+            if let Some(entry) = self.room.perm_roles.get(role_id) {
+                let (perms, role_position) = entry.value();
                 allowed_bits.add_all(perms.allow);
                 denied_bits.add_all(perms.deny);
                 *rank = (*rank).max(*role_position);
@@ -214,7 +217,7 @@ impl<'a> RoomPermissions<'a> {
     ) {
         if let Some(parent_id) = channel.inner.parent_id {
             if let Some(parent_cc) = self.room.channels.get(&parent_id) {
-                self.calculate_channel_permissions(bits, timed_out, parent_cc, member);
+                self.calculate_channel_permissions(bits, timed_out, &*parent_cc, member);
             } else {
                 warn!(
                     channel_id = ?channel.inner.id,

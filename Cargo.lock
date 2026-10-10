@@ -4355,6 +4355,7 @@ dependencies = [
  "rustls 0.23.43",
  "serde_json",
  "str0m",
+ "stunclient",
  "symphonia",
  "thiserror 2.0.21",
  "tokio",

@@ -409,6 +409,11 @@ impl SyncerHandle {
             .boxed()
     }
 
+    /// send a message to the server
+    pub fn send(&self, msg: MessageClient) {
+        let _ = self.tx.try_send(SyncerCommand::Send(msg));
+    }
+
     /// attempt to disconnect the syncer
     pub fn disconnect(&self) {
         let _ = self.tx.try_send(SyncerCommand::Disconnect);

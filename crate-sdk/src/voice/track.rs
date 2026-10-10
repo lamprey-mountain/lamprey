@@ -1,105 +1,121 @@
-use std::{future::Future, marker::PhantomData, sync::Arc};
-
 use common::{
     v1::types::voice::{MediaKind, Mid, TrackId, TrackKey},
     v2::types::UserId,
 };
-use futures_util::{StreamExt, stream::BoxStream};
+use futures::Stream;
 
-use crate::voice::{VoiceError, client::VoiceInner};
+use crate::voice::VoiceError;
 
-pub struct Track<K> {
-    state: Arc<VoiceInner>,
-    _kind: PhantomData<K>,
+/// a track that can be subscribed to
+pub struct Inbound {
+    // id: TrackId,
+    // user_id: UserId,
+    // kind: MediaKind,
+    // ...
 }
 
-pub struct InboundActive;
-pub struct InboundPending;
-pub struct OutboundActive;
-pub struct OutboundPending;
+/// a track that you're publishing
+pub struct Outbound {
+    // id: TrackId,
+    // kind: MediaKind,
+    // ...
+}
 
-pub trait Inbound {}
-pub trait Outbound {}
-pub trait Active {}
-pub trait Pending {}
+/// a stream of media from a track
+///
+/// when the last `InboundStream` referencing a track is dropped, that stream is
+/// automatically unsubscribed
+pub struct InboundStream {
+    // ...
+}
 
-impl Inbound for InboundActive {}
-impl Inbound for InboundPending {}
-impl Outbound for OutboundActive {}
-impl Outbound for OutboundPending {}
-impl Active for InboundActive {}
-impl Active for OutboundActive {}
-impl Pending for InboundPending {}
-impl Pending for OutboundPending {}
-
-impl<K> Track<K> {
-    /// local mid
-    pub fn mid(&self) -> Mid {
-        todo!()
-    }
-
+// NOTE: could i deduplicate Inbound/Outbound structs?
+// maybe i could have Track and TrackWriter?
+impl Inbound {
+    /// get the kind of media this track contains
     pub fn kind(&self) -> MediaKind {
         todo!()
     }
 
+    /// get which stream this track is associated with
     pub fn key(&self) -> TrackKey {
         todo!()
     }
 
+    /// get the assigned track id
+    pub fn track_id(&self) -> TrackId {
+        todo!()
+    }
+
+    /// get which user is publishing this track
     pub fn user_id(&self) -> UserId {
         todo!()
     }
 
-    // /// stop and remove this track
-    // // NOTE: maybe merge stop/cancel/unsubscribe here
-    // pub async fn stop(&self) -> Result<(), VoiceError> {
-    //     todo!()
-    // }
-}
-
-impl<K: Inbound> Track<K> {
-    /// get the assigned track id
-    pub fn track_id(&self) -> TrackId {
-        todo!()
-    }
-
-    /// attempt to unsubscribe to this track
-    pub async fn unsubscribe(&self) -> Result<(), VoiceError> {
-        todo!()
-    }
-}
-
-impl Track<InboundActive> {
     /// stream media from this track
-    pub fn stream(&self) -> BoxStream<'static, ()> {
-        futures_util::stream::empty().boxed()
+    pub async fn stream(&self) -> Result<InboundStream, VoiceError> {
+        todo!()
     }
 }
 
-impl Track<OutboundActive> {
+impl Outbound {
+    /// get the kind of media this track contains
+    pub fn kind(&self) -> MediaKind {
+        todo!()
+    }
+
+    /// get which stream this track is associated with
+    pub fn key(&self) -> TrackKey {
+        todo!()
+    }
+
+    /// get the local mid of this track
+    pub fn mid(&self) -> Mid {
+        todo!()
+    }
+
     /// get the assigned track id
-    pub fn track_id(&self) -> TrackId {
+    ///
+    /// only exists after signalling
+    pub fn track_id(&self) -> Option<TrackId> {
         todo!()
     }
 
-    pub async fn stop(&self) -> Result<(), VoiceError> {
-        todo!()
-    }
+    // /// create a new audio track
+    // pub fn new_audio() -> Self;
+
+    // /// create a new video track
+    // pub fn new_video() -> Self;
+
+    // /// Push encoded packets (e.g., Opus for audio, VP8 for video) directly to the SFU
+    // pub async fn write_encoded(&self, packet: EncodedPacket) -> Result<(), VoiceError>;
+
+    // /// (Optional) Push raw PCM if you build in an Opus encoder
+    // pub async fn write_pcm(&self, pcm_data: &[i16]) -> Result<(), VoiceError>;
+
+    // impl Sink for Outbound
+    // how is simulcasting done?
 }
 
-impl Track<OutboundPending> {
-    pub async fn cancel(self) -> Result<(), VoiceError> {
+impl InboundStream {
+    /// get the assigned local mid
+    pub fn mid(&self) -> Mid {
         todo!()
     }
+
+    // // for video, request a pli keyframe?
+    // pub fn request_keyframe(&self);
+    //
+    // select rid/simulcast layer
 }
 
-impl Future for Track<OutboundPending> {
-    type Output = Track<OutboundActive>;
+impl Stream for InboundStream {
+    type Item = (); // TODO: rtc packet type
 
-    fn poll(
+    fn poll_next(
         self: std::pin::Pin<&mut Self>,
         _cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
+    ) -> std::task::Poll<Option<Self::Item>> {
         todo!()
     }
 }

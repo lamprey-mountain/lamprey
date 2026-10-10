@@ -24,9 +24,9 @@ pub enum VoiceError {
 
     #[error("no matching track")]
     NoMatchingTrack,
-    // #[error("rtc peer is dead")]
-    // Dead,
 
+    #[error("rtc peer is dead")]
+    Dead,
     // #[error("other unknown error")]
     // Other,
 }

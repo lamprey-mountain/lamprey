@@ -354,18 +354,25 @@ impl MessagesInner {
 }
 
 impl MessageSlice {
+    /// returns true if this slice contains no messages
+    #[inline]
     pub fn is_empty(&self) -> bool {
         self.messages.is_empty()
     }
 
+    /// returns the id of the first message in the slice, if any
+    #[inline]
     pub fn start(&self) -> Option<MessageId> {
         self.messages.first().map(|m| m.id)
     }
 
+    /// returns the id of the last message in the slice, if any
+    #[inline]
     pub fn end(&self) -> Option<MessageId> {
         self.messages.last().map(|m| m.id)
     }
 
+    /// returns true if the given message id is within the range of this slice
     pub fn contains(&self, id: MessageId) -> bool {
         let (Some(first), Some(last)) = (self.start(), self.end()) else {
             return false;
@@ -374,10 +381,13 @@ impl MessageSlice {
         first <= id && id <= last
     }
 
+    /// the number of messages in this slice
+    #[inline]
     pub fn len(&self) -> usize {
         self.messages.len()
     }
 
+    /// returns a new `MessageSlice` containing a subset of the messages in this slice
     // TODO: allow using slice syntax? (core::ops::something)
     pub fn slice(&self, start: usize, end: usize) -> MessageSlice {
         MessageSlice {
@@ -389,11 +399,13 @@ impl MessageSlice {
     }
 
     /// whether there are more (possibly unloaded) messages before the start of this slice
+    #[inline]
     pub fn has_backwards(&self) -> bool {
         self.has_backwards
     }
 
     /// whether there are more (possibly unloaded) messages after the end of this slice
+    #[inline]
     pub fn has_forwards(&self) -> bool {
         self.has_forward
     }

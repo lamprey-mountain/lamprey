@@ -21,6 +21,7 @@ reqwest = { version = "0.12.28", default-features = false, features = ["rustls-t
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 serde_json = "1.0.151"
 str0m = { version = "0.20.0", optional = true }
+stunclient = { version = "0.4.2", features = ["async"], optional = true }
 symphonia = { version = "0.5.5", optional = true }
 thiserror = "2.0.20"
 tokio = { version = "1.53.1", features = ["fs", "rt-multi-thread", "macros"] }
@@ -34,7 +35,7 @@ yrs = { version = "0.25.0", features = ["sync"], optional = true }
 
 [features]
 default = ["voice", "document", "std", "flumes", "cache", "webtransport"]
-voice = ["dep:str0m", "dep:symphonia"]
+voice = ["dep:str0m", "dep:symphonia", "dep:stunclient"]
 document = ["dep:yrs"]
 flumes = []
 cache = []
