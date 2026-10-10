@@ -850,14 +850,14 @@ pub enum MessageSync {
         user_id: UserId,
     },
 
-    CalendarOverwriteRsvpCreate {
+    CalendarInstanceRsvpCreate {
         channel_id: ChannelId,
         event_id: CalendarEventId,
         seq: u64,
         participant: CalendarParticipant,
     },
 
-    CalendarOverwriteRsvpDelete {
+    CalendarInstanceRsvpDelete {
         channel_id: ChannelId,
         event_id: CalendarEventId,
         seq: u64,

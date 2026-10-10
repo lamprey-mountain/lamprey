@@ -949,7 +949,7 @@ pub trait DataCalendar {
         seq: u64,
     ) -> Result<()>;
 
-    // RSVP methods for overwrites
+    // TODO: rename to calendar_instance_rsvp_put
     async fn calendar_overwrite_rsvp_put(
         &mut self,
         event_id: CalendarEventId,
@@ -957,12 +957,14 @@ pub trait DataCalendar {
         user_id: UserId,
         attending: bool,
     ) -> Result<()>;
+    // TODO: rename to calendar_instance_rsvp_delete
     async fn calendar_overwrite_rsvp_delete(
         &mut self,
         event_id: CalendarEventId,
         seq: u64,
         user_id: UserId,
     ) -> Result<()>;
+    // TODO: rename to calendar_instance_rsvp_list
     async fn calendar_overwrite_rsvp_list(
         &mut self,
         event_id: CalendarEventId,
