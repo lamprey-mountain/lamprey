@@ -4,22 +4,23 @@ use std::sync::Arc;
 
 use crate::prelude::*;
 
-// A simpler Connection state for V2
 #[derive(Debug)]
 pub struct ConnectionV2 {
-    pub id: ConnectionId,
-    pub session_id: SessionId,
-    pub user_id: Option<UserId>,
+    id: ConnectionId,
+    session_id: SessionId,
+    user_id: Option<UserId>,
 }
 
 #[derive(Clone, Debug)]
 pub struct ConnectionHandleV2 {
-    pub inner: Arc<ConnectionV2>,
+    inner: Arc<ConnectionV2>,
 }
 
 impl ConnectionHandleV2 {
     pub fn create(session_id: SessionId, user_id: Option<UserId>) -> Self {
         let id = ConnectionId::new();
+
+        // let queue = ConnectionQueue::new(MAX_QUEUE_LEN);
 
         let inner = Arc::new(ConnectionV2 {
             id,
@@ -27,7 +28,17 @@ impl ConnectionHandleV2 {
             user_id,
         });
 
+        // tokio::spawn(
+        //     async move {
+        //         conn.spawn().await;
+        //     }
+        //     .instrument(tracing::debug_span!("connection", id = %id)),
+        // );
+
         Self { inner }
     }
-}
 
+    pub fn id(&self) -> ConnectionId {
+        self.inner.id
+    }
+}

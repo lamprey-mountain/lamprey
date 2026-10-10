@@ -15,6 +15,17 @@ pub struct WebtransportTransport {
     >,
 }
 
+pub struct WebtransportStream {
+    send: SendStream,
+    recv: RecvStream,
+}
+
+impl WebtransportStream {
+    pub fn new(send: SendStream, recv: RecvStream) -> Self {
+        Self { send, recv }
+    }
+}
+
 impl WebtransportTransport {
     pub fn new(connection: Connection) -> Self {
         Self {
@@ -22,11 +33,6 @@ impl WebtransportTransport {
             accept_future: None,
         }
     }
-}
-
-pub struct WebtransportStream {
-    send: SendStream,
-    recv: RecvStream,
 }
 
 impl AsyncRead for WebtransportStream {

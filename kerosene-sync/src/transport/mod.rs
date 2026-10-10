@@ -35,9 +35,6 @@ pub enum TransportEvent {
     Closed(bool),
 }
 
-// mod compress;
-// mod codec;
-
 pub enum Compression {
     Deflate {
         compressor: Compress,
