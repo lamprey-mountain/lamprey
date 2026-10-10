@@ -261,6 +261,7 @@ impl ServiceFederation {
             })
             .await?;
 
+        // import invite target
         match &res.invite.target {
             InviteTarget::Room {
                 room,
@@ -298,7 +299,6 @@ impl ServiceFederation {
     /// Load a room from a remote server, fetching and caching it locally.
     ///
     /// rooms may require authentication to view, pass the id of a user who is able to or trying to access this room as `puppet_id`
-    // TODO: use puppet_id
     pub async fn import_room(
         &self,
         remote: RemoteReq<RoomId>,
@@ -315,7 +315,15 @@ impl ServiceFederation {
             })
             .await?;
 
-        let mut room = res.room;
+        self.import_room_inner(remote, res.room, puppet_id).await
+    }
+
+    async fn import_room_inner(
+        &self,
+        remote: RemoteReq<RoomId>,
+        mut room: Room,
+        puppet_id: Option<UserId>,
+    ) -> Result<Room> {
         let remote_info = Remote {
             origin_id: remote.origin_id,
             hostname: remote.hostname.clone(),
