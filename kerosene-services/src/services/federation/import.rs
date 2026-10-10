@@ -10,8 +10,8 @@ use common::v1::types::error::ErrorCode;
 use common::v1::types::federation::signing::{OutgoingRequest, ServerKeySecret};
 use common::v1::types::federation::{FederationEpoch, Hostname, Remote, RemoteReq};
 use common::v1::types::{
-    Channel, ChannelId, ChannelPatch, Invite, InviteCode, InviteTarget, MediaId, Room, RoomId,
-    RoomPatch, User, UserId, UserPatch,
+    Channel, ChannelId, ChannelPatch, Invite, InviteCode, InviteTarget, MediaId, RolePatch, Room,
+    RoomId, RoomPatch, User, UserId, UserPatch,
 };
 use common::v2::types::media::Media;
 use common::v2::types::{RoleId, SERVER_USER_ID};
@@ -603,7 +603,17 @@ impl ServiceFederation {
             let existing = local_roles.iter().find(|r| r.name == role.name);
 
             if let Some(existing) = existing {
-                txn.role_update(room_id, role_id, patch).await?;
+                let patch = RolePatch {
+                    name: Some(role.name),
+                    description: Some(Some(role.description.unwrap_or_default())),
+                    allow: Some(role.allow),
+                    deny: Some(role.deny),
+                    is_self_applicable: Some(role.is_self_applicable),
+                    is_mentionable: Some(role.is_mentionable),
+                    hoist: Some(role.hoist),
+                    sticky: Some(role.sticky),
+                };
+                txn.role_update(local_room_id, existing.id, patch).await?;
             } else {
                 let db_role = DbRoleCreate {
                     id: RoleId::new(),
