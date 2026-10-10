@@ -21,35 +21,35 @@ use crate::{
 #[record]
 pub struct ChannelMirror {
     /// messages that were created
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub message_create: Vec<Message>,
 
     /// messages that were updated
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub message_update: Vec<Message>,
 
     /// messages that were deleted
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub message_delete: Vec<MessageId>,
 
     /// message versions that were created
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub message_version_create: Vec<MessageVersion>, // TODO: include message id
 
     /// message versions that were updated
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub message_version_update: Vec<MessageVersion>, // TODO: include message id
 
     /// message versions that were deleted
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub message_version_delete: Vec<MessageVerId>, // TODO: include message id
 
     /// reactions that were created
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub reaction_create: Vec<Reaction>,
 
     /// reactions that were deleted
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub reaction_delete: Vec<ReactionInfo>,
 
     // TODO: handle message remove, restore, update
@@ -100,11 +100,11 @@ pub struct ChannelMirrorQuery {
 #[record]
 pub struct RoomMirror {
     /// channels that were created
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub channel_create: Vec<Channel>,
 
     /// channels that were updated
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub channel_update: Vec<Channel>,
     // TODO: add channel_delete...?
     // /// channels that were deleted
