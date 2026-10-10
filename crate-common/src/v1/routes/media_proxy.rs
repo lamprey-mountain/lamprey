@@ -1,9 +1,5 @@
 use lamprey_macros::endpoint;
 
-// TODO: remove the HEAD routes as they're already covered by GET.
-// i'll need to return a proper http body stream instead of bytes, otherwise i'd have to read the entire file on HEAD (among other things, like buffering the entire response body in memory)
-// i'd probably need to add a #[method] attr to get the request method.
-
 /// Fetch media
 ///
 /// download a piece of media
@@ -248,5 +244,39 @@ pub mod stream_get {
     pub struct Response {
         #[headers]
         pub headers: http::HeaderMap,
+    }
+}
+
+/// Fetch track contents
+///
+/// get track contents for a piece of media
+#[endpoint(
+    get,
+    path = "/media/{media_id}/track/{id}",
+    tags = ["cdn"],
+    response(OK, description = "success"),
+)]
+pub mod track_get {
+    use http::{HeaderMap, StatusCode};
+
+    use crate::{util::body::Body, v1::types::MediaId};
+
+    pub struct Request {
+        #[path]
+        pub media_id: MediaId,
+
+        #[path]
+        pub id: String,
+    }
+
+    pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
+        #[headers]
+        pub headers: HeaderMap,
+
+        #[body]
+        pub body: Body,
     }
 }
