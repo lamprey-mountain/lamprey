@@ -401,12 +401,19 @@ async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState)
 mod v2 {
     use super::*;
     use crate::prelude::*;
-    use common::v2::types::sync::dispatch::Ready;
+    use common::v2::types::sync::dispatch::channel::{
+        ChannelCreate, ChannelUpdate, DispatchChannel, MessageCreate,
+    };
+    use common::v2::types::sync::dispatch::global::DispatchGlobal;
+    use common::v2::types::sync::dispatch::room::RoomCreate;
+    use common::v2::types::sync::dispatch::{Dispatch, Ready};
     use futures::SinkExt;
+    use kerosene_services::globals::messaging::Broadcast;
+    use kerosene_sync::util::{CLOSE_TIME, HEARTBEAT_TIME, Timeout};
     use tokio::sync::watch;
 
-    use common::v1::types::Session;
     use common::v1::types::presence::Presence;
+    use common::v1::types::{MessageSync, Session};
     use common::v2::types::ConnectionId;
     use common::v2::types::sync::stream::hello;
     use common::v2::types::sync::transport::webtransport::Params;
@@ -505,12 +512,12 @@ mod v2 {
             StreamHeader::Hello => {
                 type Proto = hello::Protocol;
                 let codec = Codec::<Proto>::new(state.params.clone());
-                let (init, framed) = codec.accept(stream).await?;
+                let (init, mut framed) = codec.accept(stream).await?;
                 match init {
                     hello::Initial::Identify(identify) => {
                         // authenticate session
                         let session = srv.sessions.get_by_token(identify.token).await?;
-                        let _ = state.session.send(Some(session));
+                        let _ = state.session.send(Some(session.clone()));
 
                         // set presence
                         if let (presence, Some(user_id)) = (identify.presence, session.user_id()) {
@@ -521,32 +528,70 @@ mod v2 {
                             }
                         }
 
-                        // TODO: send this after authentication
-                        // framed.send(hello::Event::Ready(Ready {
-                        //     user: (),
-                        //     application: (),
-                        //     session: (),
-                        //     conn: (),
-                        // }));
+                        // send ready payload
+                        let user = if let Some(uid) = session.user_id() {
+                            Some(Box::new(srv.users.get(uid, Some(uid)).await?))
+                        } else {
+                            None
+                        };
 
-                        // TODO: send this periodically (see kerosene-sync/src/util.rs HEARTBEAT_TIME, CLOSE_TIME)
-                        // framed.send(hello::Event::Ping);
+                        let application = if let Some(application_id) = session.app_id {
+                            let mut d = state.globals.begin_read().await?;
+                            Some(Box::new(d.application_get(application_id).await?))
+                        } else {
+                            None
+                        };
 
-                        // TODO: handle commands
-                        // option<result<command>>
-                        // match framed.next().await.unwrap().unwrap() {
-                        //     hello::Command::Presence { presence } => todo!(),
-                        //     hello::Command::Close => todo!(),
-                        //     hello::Command::Pong => todo!(),
-                        // }
+                        framed
+                            .send(hello::Event::Ready(Ready {
+                                user,
+                                application,
+                                session: Box::new((*session).clone()),
+                                conn: state.id,
+                            }))
+                            .await?;
 
-                        // TODO: handle broadcasts (map to dispatches)
-                        // let messaging = state.globals.messaging();
-                        // let broadcast = messaging.subscribe().await.unwrap().next().await.unwrap();
-                        // framed.send(hello::Event::Dispatch(hello::Dispatch {
-                        //     inner: (),
-                        //     seq: (),
-                        // }));
+                        // start main loop
+                        let mut timeout = Timeout::for_ping();
+                        let mut broadcast_stream = state.globals.messaging().subscribe().await?;
+                        loop {
+                            tokio::select! {
+                                _ = tokio::time::sleep_until(timeout.get_instant()) => match timeout {
+                                    Timeout::Ping(_) => {
+                                        framed.send(hello::Event::Ping).await?;
+                                        timeout = Timeout::for_close();
+                                    }
+                                    Timeout::Close(_) => {
+                                        return Err(Error::BadStatic("ping timeout"));
+                                    }
+                                },
+                                broadcast = broadcast_stream.next() => {
+                                    if let Some(msg) = broadcast {
+                                        if let Some(msg) = broadcast_to_dispatch(msg) {
+                                            framed.send(hello::Event::Dispatch(hello::Dispatch {
+                                                inner: Box::new(msg),
+                                                seq: 0, // TODO: populate seq
+                                            })).await?;
+                                        }
+                                    }
+                                },
+                                command = framed.next() => {
+                                    match command.transpose()? {
+                                        Some(hello::Command::Pong) => {
+                                            timeout = Timeout::for_ping();
+                                        }
+                                        Some(hello::Command::Presence { presence }) => {
+                                            if let Some(user_id) = session.user_id() {
+                                                srv.presence.set(state.id, user_id, presence);
+                                            }
+                                        }
+                                        Some(hello::Command::Close) | None => {
+                                            break;
+                                        }
+                                    }
+                                },
+                            }
+                        }
 
                         Ok(())
                     }
@@ -562,5 +607,42 @@ mod v2 {
                 Err(Error::Unimplemented)
             }
         }
+    }
+
+    // TODO: implement this, slowly and painfully
+    fn broadcast_to_dispatch(broadcast: Broadcast) -> Option<Dispatch> {
+        let Broadcast::Sync(sync) = broadcast else {
+            return None;
+        };
+
+        let dispatch: Dispatch = match sync.message {
+            MessageSync::RoomCreate { room } => DispatchGlobal::RoomCreate(RoomCreate {
+                room: Box::new(room),
+                roles: todo!(),
+                channels: todo!(),
+                threads: todo!(),
+                room_member: todo!(),
+                seq: todo!(),
+            })
+            .into(),
+            MessageSync::ChannelCreate { channel } => {
+                let seq = channel.latest_seq;
+                DispatchGlobal::ChannelCreate(ChannelCreate { channel, seq }).into()
+            }
+            MessageSync::ChannelUpdate { channel } => {
+                let seq = channel.latest_seq;
+                DispatchGlobal::ChannelUpdate(ChannelUpdate { channel, seq }).into()
+            }
+            MessageSync::MessageCreate { message } => {
+                DispatchChannel::MessageCreate(MessageCreate {
+                    message: Box::new(message),
+                    seq: 0.into(), // TODO: use actual channel seq
+                })
+                .into()
+            }
+            _ => return None,
+        };
+
+        Some(dispatch)
     }
 }

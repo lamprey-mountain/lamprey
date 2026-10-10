@@ -85,3 +85,33 @@ pub struct Ready {
     // /// the id of this shard, if this is a sharded connection
     // shard_id: Option<ShardId>,
 }
+
+impl From<DispatchGlobal> for Dispatch {
+    fn from(d: DispatchGlobal) -> Self {
+        Self::Global(d)
+    }
+}
+
+impl From<DispatchRoom> for Dispatch {
+    fn from(d: DispatchRoom) -> Self {
+        Self::Room(d)
+    }
+}
+
+impl From<DispatchChannel> for Dispatch {
+    fn from(d: DispatchChannel) -> Self {
+        Self::Channel(d)
+    }
+}
+
+impl From<DispatchUser> for Dispatch {
+    fn from(d: DispatchUser) -> Self {
+        Self::User(d)
+    }
+}
+
+impl From<DispatchClient> for Dispatch {
+    fn from(d: DispatchClient) -> Self {
+        Self::Client(d)
+    }
+}
