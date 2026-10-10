@@ -1,6 +1,10 @@
-use std::{collections::HashSet, fmt::Write};
+use std::collections::HashSet;
 
 use lamprey_macros::record;
+use time::format_description::BorrowedFormatItem;
+
+#[cfg(feature = "serde")]
+use crate::v1::types::util::deserialize_sorted;
 
 use crate::v1::types::{
     error::{ErrorField, ErrorFieldType},
@@ -11,16 +15,21 @@ use crate::v1::types::{
 // TODO: add by_n_weekday
 // TODO: add by_month
 #[record]
+#[derive(PartialEq, Eq)]
 pub struct Recurrence {
     /// how often to recur
     pub frequency: RecurrenceFrequency,
 
     /// only repeat on these days of the week
-    #[serde(default)]
+    ///
+    /// only usable with [`RecurrenceFrequency::Weekly`] or [`RecurrenceFrequency::Monthly`]
+    #[serde(default, deserialize_with = "deserialize_sorted")]
     pub by_weekday: Vec<DayOfWeek>,
 
     /// only repeat on these days of the month
-    #[serde(default)]
+    ///
+    /// only usable with [`RecurrenceFrequency::Monthly`] or [`RecurrenceFrequency::Yearly`]
+    #[serde(default, deserialize_with = "deserialize_sorted")]
     pub by_month_day: Vec<u8>,
 
     /// when to end
@@ -30,10 +39,6 @@ pub struct Recurrence {
     /// repeat every n (days/weeks/months/years)
     #[serde(default = "const_one")]
     pub interval: u32,
-}
-
-fn const_one() -> u32 {
-    1
 }
 
 #[record]
@@ -52,7 +57,7 @@ pub enum RecurrenceLimit {
 }
 
 #[record]
-#[derive(Copy, PartialEq, Eq)]
+#[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum RecurrenceFrequency {
     Daily,
     Weekly,
@@ -62,7 +67,7 @@ pub enum RecurrenceFrequency {
 
 /// a day of the week
 #[record]
-#[derive(Copy, PartialEq, Eq, Hash)]
+#[derive(Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum DayOfWeek {
     Monday,
     Tuesday,
@@ -73,7 +78,44 @@ pub enum DayOfWeek {
     Sunday,
 }
 
-// TODO: impl Validator for this
+fn const_one() -> u32 {
+    1
+}
+
+impl RecurrenceFrequency {
+    fn as_rrule(&self) -> &'static str {
+        match self {
+            Self::Daily => "DAILY",
+            Self::Weekly => "WEEKLY",
+            Self::Monthly => "MONTHLY",
+            Self::Yearly => "YEARLY",
+        }
+    }
+}
+
+impl DayOfWeek {
+    pub fn is_weekend(&self) -> bool {
+        matches!(self, Self::Saturday | Self::Sunday)
+    }
+
+    pub fn is_weekday(&self) -> bool {
+        !self.is_weekend()
+    }
+
+    fn as_rrule(&self) -> &'static str {
+        match self {
+            Self::Monday => "MO",
+            Self::Tuesday => "TU",
+            Self::Wednesday => "WE",
+            Self::Thursday => "TH",
+            Self::Friday => "FR",
+            Self::Saturday => "SA",
+            Self::Sunday => "SU",
+        }
+    }
+}
+
+// TODO: impl validator::Validate for this
 // TODO: impl parsing from rrule
 impl Recurrence {
     /// validate this rule (eg. if the constraints are valid)
@@ -169,61 +211,35 @@ impl Recurrence {
         }
     }
 
-    /// convert to a rfc rrule string
-    pub fn to_rrule(&self) -> String {
-        // TODO: handle write! errs instead of unwrapping everything
-        let mut rrule = String::new();
-
-        // TODO: extract out display/fromstr (use strum?)
-        let freq = match self.frequency {
-            RecurrenceFrequency::Daily => "DAILY",
-            RecurrenceFrequency::Weekly => "WEEKLY",
-            RecurrenceFrequency::Monthly => "MONTHLY",
-            RecurrenceFrequency::Yearly => "YEARLY",
-        };
-
-        write!(rrule, "FREQ={};", freq).unwrap();
-        write!(rrule, "INTERVAL={};", self.interval).unwrap();
+    /// convert to a [rfc 5545](https://www.rfc-editor.org/info/rfc5545/) rrule string
+    pub fn to_rrule(&self) -> Result<String, time::error::Format> {
+        let mut parts = vec![
+            format!("FREQ={}", self.frequency.as_rrule()),
+            format!("INTERVAL={}", self.interval),
+        ];
 
         if !self.by_weekday.is_empty() {
-            let days: Vec<&str> = self
-                .by_weekday
-                .iter()
-                .map(|d| match d {
-                    // TODO: extract out display/fromstr (use strum?)
-                    DayOfWeek::Monday => "MO",
-                    DayOfWeek::Tuesday => "TU",
-                    DayOfWeek::Wednesday => "WE",
-                    DayOfWeek::Thursday => "TH",
-                    DayOfWeek::Friday => "FR",
-                    DayOfWeek::Saturday => "SA",
-                    DayOfWeek::Sunday => "SU",
-                })
-                .collect();
-            write!(rrule, "BYDAY={};", days.join(",")).unwrap();
+            let days: Vec<_> = self.by_weekday.iter().map(DayOfWeek::as_rrule).collect();
+            parts.push(format!("BYDAY={}", days.join(",")));
         }
 
         if !self.by_month_day.is_empty() {
-            let days: Vec<String> = self.by_month_day.iter().map(|d| d.to_string()).collect();
-            write!(rrule, "BYMONTHDAY={};", days.join(",")).unwrap();
+            let days: Vec<_> = self.by_month_day.iter().map(|d| d.to_string()).collect();
+            parts.push(format!("BYMONTHDAY={}", days.join(",")));
         }
 
         match &self.limit {
-            RecurrenceLimit::Count { count } => {
-                write!(rrule, "COUNT={};", count).unwrap();
-            }
+            RecurrenceLimit::Count { count } => parts.push(format!("COUNT={count}")),
             RecurrenceLimit::Until { time } => {
-                let dt = time.to_offset(time::UtcOffset::UTC);
-                // TODO: use new version when parsing
-                let fmt = time::format_description::parse_borrowed::<1>(
-                    "[year][month][day]T[hour][minute][second]Z",
-                )
-                .unwrap();
-                write!(rrule, "UNTIL={};", dt.format(&fmt).unwrap()).unwrap();
+                const UNTIL_FMT: &[BorrowedFormatItem<'static>] =
+                    time::macros::format_description!("[year][month][day]T[hour][minute][second]Z");
+
+                let dt = time.to_offset(time::UtcOffset::UTC).format(UNTIL_FMT)?;
+                parts.push(format!("UNTIL={dt}"));
             }
             RecurrenceLimit::Infinite => {}
         }
 
-        rrule
+        Ok(parts.join(";"))
     }
 }

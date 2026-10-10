@@ -14,12 +14,4 @@ impl ServiceCalendar {
     pub fn new(globals: Globals) -> Self {
         Self { globals }
     }
-
-    pub fn recurrence<'a>(
-        &self,
-        cal: &Calendar,
-        ce: &'a CalendarEvent,
-    ) -> Result<RecurrenceCalculator<'a>> {
-        Ok(RecurrenceCalculator::new(cal, ce))
-    }
 }

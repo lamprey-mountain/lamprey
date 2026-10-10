@@ -8,17 +8,56 @@ use lamprey_macros::endpoint;
     path = "/calendar/event",
     tags = ["calendar"],
     scopes = [Full],
-    response(OK, description = "ok"),
+    response(OK, body = CalendarEventList, description = "ok"),
 )]
 pub mod calendar_event_list_user {
-    use crate::v1::types::calendar::CalendarEventListQuery;
+    use crate::v1::types::calendar::{CalendarEventList, CalendarEventListQuery};
 
     pub struct Request {
         #[query]
         pub query: CalendarEventListQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[json]
+        pub body: CalendarEventList,
+    }
+}
+
+/// Calendar export ics
+#[endpoint(
+    get,
+    path = "/calendar/{channel_id}/feed.ics",
+    tags = ["calendar"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, body = String, description = "ok"),
+)]
+pub mod calendar_export {
+    use crate::util::body::Body;
+    use crate::v1::types::ChannelId;
+    use crate::v1::types::calendar::{CalendarEventListQuery, CalendarExportQuery};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[query]
+        pub export_query: CalendarExportQuery,
+
+        #[query]
+        pub query: CalendarEventListQuery,
+    }
+
+    pub struct Response {
+        /// always `Content-Type: text/calendar; charset=utf-8`
+        #[header]
+        pub content_type: String,
+
+        // TODO: support ETag/Last-Modified
+        #[body]
+        pub body: Body,
+    }
 }
 
 /// Calendar event list
@@ -28,11 +67,11 @@ pub mod calendar_event_list_user {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = Vec<CalendarEvent>, description = "ok"),
+    response(OK, body = CalendarEventList, description = "ok"),
 )]
 pub mod calendar_event_list {
     use crate::v1::types::ChannelId;
-    use crate::v1::types::calendar::{CalendarEvent, CalendarEventListQuery};
+    use crate::v1::types::calendar::{CalendarEventList, CalendarEventListQuery};
 
     pub struct Request {
         #[path]
@@ -44,7 +83,7 @@ pub mod calendar_event_list {
 
     pub struct Response {
         #[json]
-        pub events: Vec<CalendarEvent>,
+        pub body: CalendarEventList,
     }
 }
 
@@ -109,12 +148,12 @@ pub mod calendar_event_get {
     path = "/calendar/{channel_id}/event/{event_id}",
     tags = ["calendar"],
     scopes = [Full],
-    permissions = [ChannelEdit],
+    permissions = [CalendarEventManage],
     audit_log_events = ["CalendarEventUpdate"],
     response(OK, body = CalendarEvent, description = "Update calendar event success"),
 )]
 pub mod calendar_event_update {
-    use crate::v1::types::calendar::{CalendarEvent, CalendarEventPatch};
+    use crate::v1::types::calendar::{CalendarEvent, CalendarEventUpdate};
     use crate::v1::types::{CalendarEventId, ChannelId};
 
     pub struct Request {
@@ -125,7 +164,7 @@ pub mod calendar_event_update {
         pub event_id: CalendarEventId,
 
         #[json]
-        pub patch: CalendarEventPatch,
+        pub patch: CalendarEventUpdate,
     }
 
     pub struct Response {
@@ -140,7 +179,7 @@ pub mod calendar_event_update {
     path = "/calendar/{channel_id}/event/{event_id}",
     tags = ["calendar"],
     scopes = [Full],
-    permissions = [ChannelEdit],
+    permissions = [CalendarEventManage],
     audit_log_events = ["CalendarEventDelete"],
     response(NO_CONTENT, description = "Delete calendar event success"),
 )]
@@ -158,6 +197,91 @@ pub mod calendar_event_delete {
     pub struct Response {}
 }
 
+/// Calendar instance list
+#[endpoint(
+    get,
+    path = "/calendar/{channel_id}/event/{event_id}/instance",
+    tags = ["calendar"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, body = Vec<CalendarInstance>, description = "List calendar instances success"),
+)]
+pub mod calendar_instance_list {
+    use crate::v1::types::calendar::CalendarInstance;
+    use crate::v1::types::{CalendarEventId, ChannelId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub event_id: CalendarEventId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub instances: Vec<CalendarInstance>,
+    }
+}
+
+/// Calendar instance get
+#[endpoint(
+    get,
+    path = "/calendar/{channel_id}/event/{event_id}/instance/{seq}",
+    tags = ["calendar"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, body = CalendarInstance, description = "Get calendar instance success"),
+)]
+pub mod calendar_instance_get {
+    use crate::v1::types::calendar::{CalendarInstance, CalendarInstanceSeq};
+    use crate::v1::types::{CalendarEventId, ChannelId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub event_id: CalendarEventId,
+
+        #[path]
+        pub seq: CalendarInstanceSeq,
+    }
+
+    pub struct Response {
+        #[json]
+        pub instance: CalendarInstance,
+    }
+}
+
+/// Calendar event RSVP invite
+#[endpoint(
+    post,
+    path = "/calendar/{channel_id}/event/{event_id}/rsvp",
+    tags = ["calendar"],
+    scopes = [Full],
+    permissions = [CalendarEventManage],
+    audit_log_events = ["CalendarRsvpCreate"],
+    response(CREATED, description = "Invite users to calendar event success"),
+)]
+pub mod calendar_rsvp_invite {
+    use crate::v1::types::calendar::CalendarParticipantInvite;
+    use crate::v1::types::{CalendarEventId, ChannelId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub event_id: CalendarEventId,
+
+        #[json]
+        pub invite: CalendarParticipantInvite,
+    }
+
+    pub struct Response {}
+}
+
 /// Calendar event RSVP list
 #[endpoint(
     get,
@@ -165,10 +289,10 @@ pub mod calendar_event_delete {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = Vec<CalendarEventParticipant>, description = "ok"),
+    response(OK, body = Vec<CalendarParticipant>, description = "ok"),
 )]
 pub mod calendar_event_rsvp_list {
-    use crate::v1::types::calendar::{CalendarEventParticipant, CalendarEventParticipantQuery};
+    use crate::v1::types::calendar::{CalendarParticipant, CalendarParticipantQuery};
     use crate::v1::types::{CalendarEventId, ChannelId};
 
     pub struct Request {
@@ -179,12 +303,12 @@ pub mod calendar_event_rsvp_list {
         pub event_id: CalendarEventId,
 
         #[query]
-        pub query: CalendarEventParticipantQuery,
+        pub query: CalendarParticipantQuery,
     }
 
     pub struct Response {
         #[json]
-        pub participants: Vec<CalendarEventParticipant>,
+        pub participants: Vec<CalendarParticipant>,
     }
 }
 
@@ -195,10 +319,10 @@ pub mod calendar_event_rsvp_list {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = CalendarEventParticipant, description = "ok"),
+    response(OK, body = CalendarParticipant, description = "ok"),
 )]
 pub mod calendar_event_rsvp_get {
-    use crate::v1::types::calendar::CalendarEventParticipant;
+    use crate::v1::types::calendar::CalendarParticipant;
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::{CalendarEventId, ChannelId};
 
@@ -215,7 +339,7 @@ pub mod calendar_event_rsvp_get {
 
     pub struct Response {
         #[json]
-        pub participant: CalendarEventParticipant,
+        pub participant: CalendarParticipant,
     }
 }
 
@@ -226,11 +350,11 @@ pub mod calendar_event_rsvp_get {
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelEdit],
-    audit_log_events = ["CalendarRsvpDelete"],
+    // audit_log_events = ["CalendarRsvpDelete"], // NOTE: adding other users should probably audit log
     response(OK, description = "ok"),
 )]
 pub mod calendar_event_rsvp_put {
-    use crate::v1::types::calendar::CalendarEventParticipantPut;
+    use crate::v1::types::calendar::CalendarParticipantPut;
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::{CalendarEventId, ChannelId};
 
@@ -245,7 +369,7 @@ pub mod calendar_event_rsvp_put {
         pub user_id: UserIdReq,
 
         #[json]
-        pub participant: CalendarEventParticipantPut,
+        pub participant: CalendarParticipantPut,
     }
 
     pub struct Response {}
@@ -316,7 +440,7 @@ pub mod calendar_overwrite_list {
     response(OK, body = CalendarOverwrite, description = "Get calendar overwrite success"),
 )]
 pub mod calendar_overwrite_get {
-    use crate::v1::types::calendar::CalendarOverwrite;
+    use crate::v1::types::calendar::{CalendarInstanceSeq, CalendarOverwrite};
     use crate::v1::types::{CalendarEventId, ChannelId};
 
     pub struct Request {
@@ -327,7 +451,7 @@ pub mod calendar_overwrite_get {
         pub event_id: CalendarEventId,
 
         #[path]
-        pub seq: u64,
+        pub seq: CalendarInstanceSeq,
     }
 
     pub struct Response {
@@ -336,18 +460,20 @@ pub mod calendar_overwrite_get {
     }
 }
 
-/// Calendar overwrite update
+/// Calendar overwrite put
+///
+/// Create or replace an overwrite for a calendar event
 #[endpoint(
-    patch,
+    put,
     path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}",
     tags = ["calendar"],
     scopes = [Full],
     permissions = [CalendarEventManage],
     audit_log_events = ["CalendarOverwriteUpdate"],
-    response(OK, body = CalendarOverwrite, description = "Update calendar overwrite success"),
+    response(OK, body = CalendarOverwrite, description = "Put calendar overwrite success"),
 )]
 pub mod calendar_overwrite_update {
-    use crate::v1::types::calendar::{CalendarOverwrite, CalendarOverwritePut};
+    use crate::v1::types::calendar::{CalendarInstanceSeq, CalendarOverwrite};
     use crate::v1::types::{CalendarEventId, ChannelId};
 
     pub struct Request {
@@ -358,10 +484,10 @@ pub mod calendar_overwrite_update {
         pub event_id: CalendarEventId,
 
         #[path]
-        pub seq: u64,
+        pub seq: CalendarInstanceSeq,
 
         #[json]
-        pub overwrite: CalendarOverwritePut,
+        pub overwrite: CalendarOverwrite,
     }
 
     pub struct Response {
@@ -381,7 +507,7 @@ pub mod calendar_overwrite_update {
     response(NO_CONTENT, description = "Delete calendar overwrite success"),
 )]
 pub mod calendar_overwrite_delete {
-    use crate::v1::types::{CalendarEventId, ChannelId};
+    use crate::v1::types::{CalendarEventId, ChannelId, calendar::CalendarInstanceSeq};
 
     pub struct Request {
         #[path]
@@ -391,23 +517,25 @@ pub mod calendar_overwrite_delete {
         pub event_id: CalendarEventId,
 
         #[path]
-        pub seq: u64,
+        pub seq: CalendarInstanceSeq,
     }
 
     pub struct Response {}
 }
 
-/// Calendar overwrite RSVP list
+/// Calendar instance RSVP list
 #[endpoint(
     get,
-    path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp",
+    path = "/calendar/{channel_id}/event/{event_id}/instance/{seq}/rsvp",
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = Vec<CalendarEventParticipant>, description = "ok"),
+    response(OK, body = Vec<CalendarParticipant>, description = "ok"),
 )]
-pub mod calendar_overwrite_rsvp_list {
-    use crate::v1::types::calendar::{CalendarEventParticipant, CalendarEventParticipantQuery};
+pub mod calendar_instance_rsvp_list {
+    use crate::v1::types::calendar::{
+        CalendarParticipant, CalendarParticipantQuery, CalendarInstanceSeq,
+    };
     use crate::v1::types::{CalendarEventId, ChannelId};
 
     pub struct Request {
@@ -418,30 +546,60 @@ pub mod calendar_overwrite_rsvp_list {
         pub event_id: CalendarEventId,
 
         #[path]
-        pub seq: u64,
+        pub seq: CalendarInstanceSeq,
 
         #[query]
-        pub query: CalendarEventParticipantQuery,
+        pub query: CalendarParticipantQuery,
     }
 
     pub struct Response {
         #[json]
-        pub participants: Vec<CalendarEventParticipant>,
+        pub participants: Vec<CalendarParticipant>,
     }
 }
 
-/// Calendar overwrite RSVP put
+/// Calendar instance RSVP invite
 #[endpoint(
-    put,
-    path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}",
+    post,
+    path = "/calendar/{channel_id}/event/{event_id}/instance/{seq}/rsvp",
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelEdit],
-    audit_log_events = ["CalendarRsvpDelete"],
-    response(OK, description = "ok"),
+    audit_log_events = ["CalendarRsvpCreate"],
+    response(CREATED, description = "Invite users to calendar instance success"),
 )]
-pub mod calendar_overwrite_rsvp_put {
-    use crate::v1::types::calendar::CalendarEventParticipantPut;
+pub mod calendar_instance_rsvp_invite {
+    use crate::v1::types::calendar::{CalendarParticipantInvite, CalendarInstanceSeq};
+    use crate::v1::types::{CalendarEventId, ChannelId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub event_id: CalendarEventId,
+
+        #[path]
+        pub seq: CalendarInstanceSeq,
+
+        #[json]
+        pub invite: CalendarParticipantInvite,
+    }
+
+    pub struct Response {}
+}
+
+/// Calendar instance RSVP get
+#[endpoint(
+    get,
+    path = "/calendar/{channel_id}/event/{event_id}/instance/{seq}/rsvp/{user_id}",
+    tags = ["calendar"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, body = CalendarParticipant, description = "ok"),
+)]
+pub mod calendar_instance_rsvp_get {
+    use crate::v1::types::calendar::{CalendarParticipant, CalendarInstanceSeq};
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::{CalendarEventId, ChannelId};
 
@@ -453,29 +611,70 @@ pub mod calendar_overwrite_rsvp_put {
         pub event_id: CalendarEventId,
 
         #[path]
-        pub seq: u64,
+        pub seq: CalendarInstanceSeq,
+
+        #[path]
+        pub user_id: UserIdReq,
+    }
+
+    pub struct Response {
+        #[json]
+        pub participant: CalendarParticipant,
+    }
+}
+
+/// Calendar instance RSVP put
+#[endpoint(
+    put,
+    path = "/calendar/{channel_id}/event/{event_id}/instance/{seq}/rsvp/{user_id}",
+    tags = ["calendar"],
+    scopes = [Full],
+    permissions = [ChannelEdit],
+    audit_log_events = ["CalendarRsvpUpdate"],
+    response(OK, description = "ok"),
+)]
+pub mod calendar_instance_rsvp_put {
+    use crate::v1::types::calendar::{
+        CalendarParticipant, CalendarParticipantPut, CalendarInstanceSeq,
+    };
+    use crate::v1::types::misc::UserIdReq;
+    use crate::v1::types::{CalendarEventId, ChannelId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+
+        #[path]
+        pub event_id: CalendarEventId,
+
+        #[path]
+        pub seq: CalendarInstanceSeq,
 
         #[path]
         pub user_id: UserIdReq,
 
         #[json]
-        pub participant: CalendarEventParticipantPut,
+        pub participant: CalendarParticipantPut,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[json]
+        pub participant: CalendarParticipant,
+    }
 }
 
-/// Calendar overwrite RSVP delete
+/// Calendar instance RSVP delete
 #[endpoint(
     delete,
-    path = "/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}",
+    path = "/calendar/{channel_id}/event/{event_id}/instance/{seq}/rsvp/{user_id}",
     tags = ["calendar"],
     scopes = [Full],
     permissions = [ChannelEdit],
     audit_log_events = ["CalendarRsvpDelete"],
-    response(NO_CONTENT, description = "Delete calendar overwrite RSVP success"),
+    response(NO_CONTENT, description = "Delete calendar instance RSVP success"),
 )]
-pub mod calendar_overwrite_rsvp_delete {
+pub mod calendar_instance_rsvp_delete {
+    use crate::v1::types::calendar::CalendarInstanceSeq;
     use crate::v1::types::misc::UserIdReq;
     use crate::v1::types::{CalendarEventId, ChannelId};
 
@@ -487,7 +686,7 @@ pub mod calendar_overwrite_rsvp_delete {
         pub event_id: CalendarEventId,
 
         #[path]
-        pub seq: u64,
+        pub seq: CalendarInstanceSeq,
 
         #[path]
         pub user_id: UserIdReq,

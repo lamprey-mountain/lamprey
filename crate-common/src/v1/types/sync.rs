@@ -25,7 +25,7 @@ use crate::v2::types::media::Media;
 use super::{
     Channel, ChannelId, DocumentId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId,
     Room, RoomId, RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
-    calendar::{CalendarEvent, CalendarEventParticipant, CalendarOverwrite},
+    calendar::{CalendarEvent, CalendarParticipant, CalendarOverwrite},
     emoji::EmojiCustom,
     harvest::Harvest,
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
@@ -841,7 +841,7 @@ pub enum MessageSync {
     CalendarRsvpCreate {
         channel_id: ChannelId,
         event_id: CalendarEventId,
-        participant: CalendarEventParticipant,
+        participant: CalendarParticipant,
     },
 
     CalendarRsvpDelete {
@@ -854,7 +854,7 @@ pub enum MessageSync {
         channel_id: ChannelId,
         event_id: CalendarEventId,
         seq: u64,
-        participant: CalendarEventParticipant,
+        participant: CalendarParticipant,
     },
 
     CalendarOverwriteRsvpDelete {

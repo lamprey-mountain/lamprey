@@ -16,8 +16,8 @@ use common::v1::types::{
     application::{Application, Connection, Scopes},
     automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate},
     calendar::{
-        CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
-        CalendarEventParticipantQuery, CalendarEventPatch, CalendarOverwrite, CalendarOverwritePut,
+        CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventUpdate,
+        CalendarOverwrite, CalendarParticipant, CalendarParticipantQuery,
     },
     email::{EmailAddr, EmailInfo, EmailInfoPatch},
     emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch},
@@ -901,7 +901,7 @@ pub trait DataCalendar {
     async fn calendar_event_update(
         &mut self,
         event_id: CalendarEventId,
-        patch: CalendarEventPatch,
+        patch: CalendarEventUpdate,
     ) -> Result<CalendarEvent>;
     async fn calendar_event_delete(&mut self, event_id: CalendarEventId) -> Result<()>;
 
@@ -920,19 +920,19 @@ pub trait DataCalendar {
         &mut self,
         event_id: CalendarEventId,
         user_id: UserId,
-    ) -> Result<CalendarEventParticipant>;
+    ) -> Result<CalendarParticipant>;
     async fn calendar_event_rsvp_list(
         &mut self,
         event_id: CalendarEventId,
-        query: CalendarEventParticipantQuery,
-    ) -> Result<Vec<CalendarEventParticipant>>;
+        query: CalendarParticipantQuery,
+    ) -> Result<Vec<CalendarParticipant>>;
 
     // Overwrite methods
     async fn calendar_overwrite_put(
         &mut self,
         event_id: CalendarEventId,
         seq: u64,
-        put: CalendarOverwritePut,
+        put: CalendarOverwrite,
     ) -> Result<CalendarOverwrite>;
     async fn calendar_overwrite_get(
         &mut self,
@@ -967,8 +967,8 @@ pub trait DataCalendar {
         &mut self,
         event_id: CalendarEventId,
         seq: u64,
-        query: CalendarEventParticipantQuery,
-    ) -> Result<Vec<CalendarEventParticipant>>;
+        query: CalendarParticipantQuery,
+    ) -> Result<Vec<CalendarParticipant>>;
 }
 
 #[async_trait]

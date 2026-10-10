@@ -11,7 +11,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::{
     AuditLogEntryType, MessageSync, Permission, UserId,
-    calendar::{CalendarEventParticipant, CalendarRsvpStatus},
+    calendar::{CalendarParticipant, CalendarRsvpStatus},
 };
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -402,7 +402,7 @@ async fn calendar_event_rsvp_put(
         .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     match req.participant.status {
-        CalendarRsvpStatus::Interested => {
+        CalendarRsvpStatus::Accepted => {
             s.data()
                 .calendar_event_rsvp_put(req.event_id, user_id)
                 .await?;
@@ -413,7 +413,7 @@ async fn calendar_event_rsvp_put(
                 MessageSync::CalendarRsvpCreate {
                     channel_id: req.channel_id,
                     event_id: req.event_id,
-                    participant: CalendarEventParticipant {
+                    participant: CalendarParticipant {
                         user_id,
                         status: req.participant.status,
                         user: None,
@@ -423,7 +423,7 @@ async fn calendar_event_rsvp_put(
             )
             .await?;
         }
-        CalendarRsvpStatus::Uninterested => {
+        CalendarRsvpStatus::Declined => {
             s.data()
                 .calendar_event_rsvp_delete(req.event_id, user_id)
                 .await?;
@@ -823,7 +823,7 @@ async fn calendar_overwrite_rsvp_put(
         .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     match req.participant.status {
-        CalendarRsvpStatus::Interested => {
+        CalendarRsvpStatus::Accepted => {
             s.data()
                 .calendar_overwrite_rsvp_put(req.event_id, req.seq, user_id, true)
                 .await?;
@@ -835,7 +835,7 @@ async fn calendar_overwrite_rsvp_put(
                     channel_id: req.channel_id,
                     event_id: req.event_id,
                     seq: req.seq,
-                    participant: CalendarEventParticipant {
+                    participant: CalendarParticipant {
                         user_id,
                         status: req.participant.status,
                         user: None,
@@ -845,7 +845,7 @@ async fn calendar_overwrite_rsvp_put(
             )
             .await?;
         }
-        CalendarRsvpStatus::Uninterested => {
+        CalendarRsvpStatus::Declined => {
             s.data()
                 .calendar_overwrite_rsvp_put(req.event_id, req.seq, user_id, false)
                 .await?;
