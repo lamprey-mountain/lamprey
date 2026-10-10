@@ -13,9 +13,9 @@ use common::v1::types::{
     Channel, ChannelId, ChannelPatch, Invite, InviteCode, InviteTarget, MediaId, Room, RoomId,
     RoomPatch, User, UserId, UserPatch,
 };
-use common::v2::types::SERVER_USER_ID;
 use common::v2::types::media::Media;
-use lamprey_backend_data_postgres::PaginationQuery;
+use common::v2::types::{RoleId, SERVER_USER_ID};
+use lamprey_backend_data_postgres::{DbRoleCreate, PaginationQuery};
 use uuid::Uuid;
 
 // TODO: use epochs for caching
@@ -266,34 +266,86 @@ impl ServiceFederation {
             InviteTarget::Room {
                 room,
                 channel,
-                roles,
-            } => todo!(),
-            InviteTarget::Gdm { channel } => todo!(),
-            InviteTarget::Server => todo!(),
+                roles: _,
+            } => {
+                let remote_room_req = RemoteReq {
+                    origin_id: room.id,
+                    hostname: hostname.clone(),
+                };
+                self.import_room_inner(remote_room_req, (*room).clone(), None)
+                    .await?;
+
+                if let Some(channel) = channel {
+                    let remote_chan_req = RemoteReq {
+                        origin_id: channel.id,
+                        hostname: hostname.clone(),
+                    };
+                    self.import_channel_inner(remote_chan_req, (**channel).clone(), None)
+                        .await?;
+                }
+            }
+            InviteTarget::Gdm { channel } => {
+                let remote_chan_req = RemoteReq {
+                    origin_id: channel.id,
+                    hostname: hostname.clone(),
+                };
+                self.import_channel_inner(remote_chan_req, (**channel).clone(), None)
+                    .await?;
+            }
+            InviteTarget::Server => return Err(Error::BadStatic("cannot import server invite")),
             InviteTarget::User { user } => {
                 self.import_user_inner((**user).clone(), &hostname).await?;
             }
         }
 
-        // let mut txn = self.globals.begin().await?;
-        // txn.invite_insert_channel(channel_id, creator_id, code, expires_at, max_uses, role_ids)
-        // txn.invite_insert_room   (room_id,    creator_id, code, expires_at, max_uses, role_ids)
-        // txn.commit().await?;
-
-        match res.invite.target {
+        // write invite to db
+        let mut txn = self.globals.begin().await?;
+        match &res.invite.target {
             InviteTarget::Room {
                 room,
-                channel,
+                channel: _,
                 roles,
-            } => todo!(),
-            InviteTarget::Gdm { channel } => todo!(),
-            InviteTarget::Server => todo!(),
-            InviteTarget::User { user } => todo!(),
+            } => {
+                // FIXME: map role ids
+                // FIXME: handle max_uses someho?
+                let role_ids: Vec<RoleId> = roles.iter().map(|r| r.id).collect();
+                txn.invite_insert_room(
+                    room.id,
+                    res.invite.creator_id,
+                    res.invite.code.clone(),
+                    res.invite.expires_at,
+                    None,
+                    &role_ids,
+                )
+                .await?;
+            }
+            InviteTarget::Gdm { channel } => {
+                // FIXME: handle max_uses
+                txn.invite_insert_channel(
+                    channel.id,
+                    res.invite.creator_id,
+                    res.invite.code.clone(),
+                    res.invite.expires_at,
+                    None,
+                    &[],
+                )
+                .await?;
+            }
+            InviteTarget::Server => unreachable!(),
+            InviteTarget::User { user } => {
+                txn.invite_insert_user(
+                    user.id,
+                    res.invite.creator_id,
+                    res.invite.code.clone(),
+                    res.invite.expires_at,
+                    None,
+                )
+                .await?;
+            }
         }
+        txn.commit().await?;
 
-        // TODO: import invite similarly to load_remote_room
-
-        todo!()
+        Ok(res.invite)
     }
 
     /// Load a room from a remote server, fetching and caching it locally.
@@ -522,7 +574,56 @@ impl ServiceFederation {
         remote: RemoteReq<RoomId>,
         puppet_id: Option<UserId>,
     ) -> Result<()> {
-        todo!()
+        let importer = self
+            .importer(remote.hostname.clone())
+            .await?
+            .with_puppet(puppet_id);
+        let res = importer
+            .http_signed(routes::role_list::Request {
+                room_id: remote.origin_id,
+                pagination: PaginationQuery {
+                    from: None,
+                    to: None,
+                    dir: None,
+                    limit: Some(1024),
+                },
+            })
+            .await?;
+
+        let mut txn = self.globals.begin().await?;
+
+        let local_room_id = match txn.room_get(remote.origin_id).await {
+            Ok(room) => room.id,
+            Err(_) => return Err(Error::BadStatic("room not found")),
+        };
+
+        let local_roles = txn.role_list(local_room_id).await?;
+
+        for role in res.roles.items {
+            let existing = local_roles.iter().find(|r| r.name == role.name);
+
+            if let Some(existing) = existing {
+                txn.role_update(room_id, role_id, patch).await?;
+            } else {
+                let db_role = DbRoleCreate {
+                    id: RoleId::new(),
+                    room_id: local_room_id,
+                    name: role.name,
+                    description: role.description,
+                    allow: role.allow,
+                    deny: role.deny,
+                    is_self_applicable: role.is_self_applicable,
+                    is_mentionable: role.is_mentionable,
+                    hoist: role.hoist,
+                    sticky: role.sticky,
+                };
+                txn.role_create(db_role, role.position as u64).await?;
+            }
+        }
+
+        txn.commit().await?;
+
+        Ok(())
     }
 
     /// Load a channel from a remote server, fetching and caching it locally.

@@ -12,7 +12,7 @@ pub use seq::{ChannelSeq, RoomSeq};
 ///
 /// Contains incremental sync events to apply to local state.
 #[record]
-pub struct ChannelMirror {
+pub struct ChannelSync {
     /// sync events to apply to local state
     pub events: Vec<MessageSync>,
     // pub events: Vec<DispatchChannelInner>, // v2
@@ -22,9 +22,6 @@ pub struct ChannelMirror {
     /// not all events were returned. call this endpoint again with the new `seq`
     pub partial: bool,
 }
-
-// TEMP: add alias backwards compat
-pub use ChannelMirror as ChannelSync;
 
 // /// response for the room sync endpoint
 // ///
