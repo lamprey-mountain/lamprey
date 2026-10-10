@@ -1129,6 +1129,10 @@ impl From<DbCalendarEvent> for CalendarEvent {
             recurrence: val.recurrence.and_then(|v| serde_json::from_value(v).ok()),
             starts_at: val.start_at.into(),
             ends_at: val.end_at.map(|e| e.into()),
+            media_id: None,
+            all_day: false,
+            participant_counts: Default::default(),
+            room_id: None,
         }
     }
 }
@@ -1149,8 +1153,6 @@ pub struct DbCalendarOverwrite {
 impl From<DbCalendarOverwrite> for CalendarOverwrite {
     fn from(val: DbCalendarOverwrite) -> Self {
         Self {
-            event_id: val.event_id.into(),
-            seq: val.seq as u64,
             title: val.title,
             extra_description: val.description,
             location: val.location.map(Some),

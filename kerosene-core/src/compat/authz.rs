@@ -295,10 +295,10 @@ impl AuthCheck {
             }
             MessageSync::CalendarRsvpCreate { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::CalendarRsvpDelete { channel_id, .. } => AuthCheck::Channel(*channel_id),
-            MessageSync::CalendarOverwriteRsvpCreate { channel_id, .. } => {
+            MessageSync::CalendarInstanceRsvpCreate { channel_id, .. } => {
                 AuthCheck::Channel(*channel_id)
             }
-            MessageSync::CalendarOverwriteRsvpDelete { channel_id, .. } => {
+            MessageSync::CalendarInstanceRsvpDelete { channel_id, .. } => {
                 AuthCheck::Channel(*channel_id)
             }
             MessageSync::WebhookCreate { webhook } => {

@@ -2,9 +2,9 @@ use async_trait::async_trait;
 use common::v1::types::{
     CalendarEventId, ChannelId, PaginationKey, UserId,
     calendar::{
-        CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventParticipant,
-        CalendarEventParticipantQuery, CalendarEventPatch, CalendarOverwrite, CalendarOverwritePut,
-        CalendarRsvpStatus, Timezone,
+        CalendarEvent, CalendarEventCreate, CalendarEventListQuery, CalendarEventUpdate,
+        CalendarOverwrite, CalendarParticipant, CalendarParticipantQuery, CalendarRsvpStatus,
+        Timezone,
     },
     error::{ApiError, ErrorCode},
     pagination::{PaginationDirection, PaginationResponse},
@@ -52,6 +52,10 @@ impl From<DbCalendarEvent> for CalendarEvent {
             recurrence: val.recurrence.and_then(|v| serde_json::from_value(v).ok()),
             starts_at: val.start_at.into(),
             ends_at: val.end_at.map(|e| e.into()),
+            media_id: None,
+            all_day: false,
+            participant_counts: Default::default(),
+            room_id: None,
         }
     }
 }
@@ -71,8 +75,6 @@ pub struct DbCalendarOverwrite {
 impl From<DbCalendarOverwrite> for CalendarOverwrite {
     fn from(val: DbCalendarOverwrite) -> Self {
         Self {
-            event_id: val.event_id.into(),
-            seq: val.seq as u64,
             title: val.title,
             extra_description: val.description,
             location: val.location.map(Some),
@@ -215,7 +217,7 @@ impl DataCalendar for Postgres {
     async fn calendar_event_update(
         &mut self,
         event_id: CalendarEventId,
-        patch: CalendarEventPatch,
+        patch: CalendarEventUpdate,
     ) -> Result<CalendarEvent> {
         let mut tx = self.begin_tx().await?;
         let event = query_as!(
@@ -314,7 +316,7 @@ impl DataCalendar for Postgres {
         &mut self,
         event_id: CalendarEventId,
         user_id: UserId,
-    ) -> Result<CalendarEventParticipant> {
+    ) -> Result<CalendarParticipant> {
         let mut conn = self.acquire().await?;
         let exists = query_scalar!(
             "SELECT 1 FROM calendar_event_rsvp WHERE event_id = $1 AND user_id = $2",
@@ -325,9 +327,9 @@ impl DataCalendar for Postgres {
         .await?;
 
         if exists.is_some() {
-            Ok(CalendarEventParticipant {
+            Ok(CalendarParticipant {
                 user_id,
-                status: CalendarRsvpStatus::Interested,
+                status: CalendarRsvpStatus::Accepted,
                 user: None,
                 member: None,
             })
@@ -341,8 +343,8 @@ impl DataCalendar for Postgres {
     async fn calendar_event_rsvp_list(
         &mut self,
         event_id: CalendarEventId,
-        _query: CalendarEventParticipantQuery,
-    ) -> Result<Vec<CalendarEventParticipant>> {
+        _query: CalendarParticipantQuery,
+    ) -> Result<Vec<CalendarParticipant>> {
         let mut conn = self.acquire().await?;
         let user_ids = query_scalar!(
             "SELECT user_id FROM calendar_event_rsvp WHERE event_id = $1",
@@ -353,9 +355,9 @@ impl DataCalendar for Postgres {
 
         Ok(user_ids
             .into_iter()
-            .map(|uid| CalendarEventParticipant {
+            .map(|uid| CalendarParticipant {
                 user_id: uid.into(),
-                status: CalendarRsvpStatus::Interested,
+                status: CalendarRsvpStatus::Accepted,
                 user: None,
                 member: None,
             })
@@ -366,7 +368,7 @@ impl DataCalendar for Postgres {
         &mut self,
         event_id: CalendarEventId,
         seq: u64,
-        put: CalendarOverwritePut,
+        put: CalendarOverwrite,
     ) -> Result<CalendarOverwrite> {
         let mut conn = self.acquire().await?;
         let overwrite = query_as!(
@@ -388,7 +390,7 @@ impl DataCalendar for Postgres {
             put.extra_description,
             put.starts_at.map(PrimitiveDateTime::from),
             put.ends_at.flatten().map(PrimitiveDateTime::from),
-            put.cancelled.unwrap_or(false)
+            put.cancelled
         )
         .fetch_one(conn.ext())
         .await?;
@@ -524,8 +526,8 @@ impl DataCalendar for Postgres {
         &mut self,
         event_id: CalendarEventId,
         seq: u64,
-        _query: CalendarEventParticipantQuery,
-    ) -> Result<Vec<CalendarEventParticipant>> {
+        _query: CalendarParticipantQuery,
+    ) -> Result<Vec<CalendarParticipant>> {
         let mut conn = self.acquire().await?;
         let parent_rsvps: Vec<Uuid> = query_scalar!(
             "SELECT user_id FROM calendar_event_rsvp WHERE event_id = $1",
@@ -560,9 +562,9 @@ impl DataCalendar for Postgres {
 
         Ok(participants
             .into_iter()
-            .map(|uid| CalendarEventParticipant {
+            .map(|uid| CalendarParticipant {
                 user_id: uid.into(),
-                status: CalendarRsvpStatus::Interested,
+                status: CalendarRsvpStatus::Accepted,
                 user: None,
                 member: None,
             })

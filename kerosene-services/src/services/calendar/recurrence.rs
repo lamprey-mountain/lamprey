@@ -10,10 +10,11 @@ use rrule::{RRule, RRuleSet, RRuleSetIter, Tz as RRuleTz, Unvalidated};
 use time::OffsetDateTime;
 use tracing::warn;
 
-use crate::prelude::*;
+use crate::{prelude::*, services::calendar::ServiceCalendar};
 
 /// utility for calculating various things from recurrence rules
 pub struct RecurrenceCalculator<'a> {
+    calendar: &'a Calendar,
     calendar_event: &'a CalendarEvent,
     rrule_set: RRuleSet,
 }
@@ -36,19 +37,13 @@ fn chrono_to_time(t: DateTime<RRuleTz>) -> Time {
 }
 
 // PERF: memoize some of these? maybe cache and save in db
+// TODO: avoid panicking
 impl<'a> RecurrenceCalculator<'a> {
-    pub fn new(cal: &Calendar, event: &'a CalendarEvent) -> Self {
-        let Some(recurrence) = &event.recurrence else {
-            return Self {
-                calendar_event: event,
-                rrule_set: todo!(),
-            };
-        };
-
+    fn new(calendar: &'a Calendar, event: &'a CalendarEvent) -> Self {
         let tz: Tz = event
             .timezone
             .as_ref()
-            .unwrap_or(&cal.default_timezone)
+            .unwrap_or(&calendar.default_timezone)
             .0
             .parse()
             .unwrap_or_else(|err| {
@@ -58,13 +53,20 @@ impl<'a> RecurrenceCalculator<'a> {
         let tz = RRuleTz::Tz(tz);
         let starts_at = time_to_chrono(event.starts_at, tz);
 
-        let rrule: RRule<Unvalidated> = recurrence
-            .to_rrule()
-            .parse()
-            .expect("to_rrule should only give valid rrules");
-        let rrule = rrule.validate(starts_at).unwrap();
-        let rrule_set = RRuleSet::new(starts_at).rrule(rrule).limit();
+        let rrule_set = if let Some(recurrence) = &event.recurrence {
+            let rrule: RRule<Unvalidated> = recurrence
+                .to_rrule()
+                .expect("invalid date")
+                .parse()
+                .expect("to_rrule should only give valid rrules");
+            let rrule = rrule.validate(starts_at).unwrap();
+            RRuleSet::new(starts_at).rrule(rrule).limit()
+        } else {
+            RRuleSet::new(starts_at)
+        };
+
         RecurrenceCalculator {
+            calendar,
             calendar_event: event,
             rrule_set,
         }
@@ -125,13 +127,17 @@ impl<'a> RecurrenceCalculator<'a> {
 
     /// get the chrono timezone of this event
     pub fn chrono_tz(&self) -> Tz {
+        // TODO: deduplicate this code with fn new()
         self.calendar_event
             .timezone
             .as_ref()
-            .unwrap_or(&Timezone("UTC".to_string()))
+            .unwrap_or(&self.calendar.default_timezone)
             .0
             .parse()
-            .unwrap()
+            .unwrap_or_else(|err| {
+                warn!(calendar_event_id = %self.calendar_event.id, "calendar event has invalid timezone: {err:?}");
+                Tz::UTC
+            })
     }
 
     /// get the rule timezone of this event
@@ -139,6 +145,7 @@ impl<'a> RecurrenceCalculator<'a> {
         RRuleTz::Tz(self.chrono_tz())
     }
 
+    /// get an iterator over event start times
     pub fn iter(&self, before: Option<Time>, after: Option<Time>) -> RecurrenceIterator {
         let mut rrs = self.rrule_set.clone();
 
@@ -172,5 +179,16 @@ impl Iterator for RecurrenceIterator {
         } else {
             None
         }
+    }
+}
+
+impl ServiceCalendar {
+    /// get a new recurrence calculator for a calendar event
+    pub fn recurrence<'a>(
+        &self,
+        calendar: &'a Calendar,
+        calendar_event: &'a CalendarEvent,
+    ) -> RecurrenceCalculator<'a> {
+        RecurrenceCalculator::new(calendar, calendar_event)
     }
 }

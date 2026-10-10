@@ -11,7 +11,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::{
     AuditLogEntryType, MessageSync, Permission, UserId,
-    calendar::{CalendarEventParticipant, CalendarRsvpStatus},
+    calendar::{CalendarParticipant, CalendarRsvpStatus},
 };
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -402,7 +402,7 @@ async fn calendar_event_rsvp_put(
         .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     match req.participant.status {
-        CalendarRsvpStatus::Interested => {
+        CalendarRsvpStatus::Accepted => {
             s.data()
                 .calendar_event_rsvp_put(req.event_id, user_id)
                 .await?;
@@ -413,7 +413,7 @@ async fn calendar_event_rsvp_put(
                 MessageSync::CalendarRsvpCreate {
                     channel_id: req.channel_id,
                     event_id: req.event_id,
-                    participant: CalendarEventParticipant {
+                    participant: CalendarParticipant {
                         user_id,
                         status: req.participant.status,
                         user: None,
@@ -423,7 +423,7 @@ async fn calendar_event_rsvp_put(
             )
             .await?;
         }
-        CalendarRsvpStatus::Uninterested => {
+        CalendarRsvpStatus::Declined => {
             s.data()
                 .calendar_event_rsvp_delete(req.event_id, user_id)
                 .await?;
@@ -439,6 +439,7 @@ async fn calendar_event_rsvp_put(
             )
             .await?;
         }
+        _ => return Err(Error::Unimplemented),
     }
 
     Ok(StatusCode::OK)
@@ -566,7 +567,7 @@ async fn calendar_overwrite_get(
 
     let overwrite = s
         .data()
-        .calendar_overwrite_get(req.event_id, req.seq)
+        .calendar_overwrite_get(req.event_id, req.seq.into())
         .await?;
     Ok(Json(overwrite))
 }
@@ -599,12 +600,12 @@ async fn calendar_overwrite_update(
     }
 
     let old_overwrite = data
-        .calendar_overwrite_get(req.event_id, req.seq)
+        .calendar_overwrite_get(req.event_id, req.seq.into())
         .await
         .ok();
 
     let overwrite = data
-        .calendar_overwrite_put(req.event_id, req.seq, req.overwrite.clone())
+        .calendar_overwrite_put(req.event_id, req.seq.into(), req.overwrite.clone())
         .await?;
 
     let room_id = chan
@@ -621,7 +622,7 @@ async fn calendar_overwrite_update(
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::CalendarOverwriteUpdate {
             event_id: req.event_id,
-            seq: req.seq,
+            seq: req.seq.into(),
             changes: Changes::new()
                 .change("title", &old.title, &overwrite.title)
                 .change(
@@ -646,7 +647,7 @@ async fn calendar_overwrite_update(
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::CalendarOverwriteCreate {
             event_id: req.event_id,
-            seq: req.seq,
+            seq: req.seq.into(),
             changes: Changes::new()
                 .add("title", &overwrite.title)
                 .add("extra_description", &overwrite.extra_description)
@@ -693,10 +694,10 @@ async fn calendar_overwrite_delete(
 
     let overwrite = s
         .data()
-        .calendar_overwrite_get(req.event_id, req.seq)
+        .calendar_overwrite_get(req.event_id, req.seq.into())
         .await?;
     s.data()
-        .calendar_overwrite_delete(req.event_id, req.seq)
+        .calendar_overwrite_delete(req.event_id, req.seq.into())
         .await?;
 
     let room_id = chan
@@ -706,7 +707,7 @@ async fn calendar_overwrite_delete(
     let al = auth.audit_log(room_id);
     al.commit_success(AuditLogEntryType::CalendarOverwriteDelete {
         event_id: req.event_id,
-        seq: req.seq,
+        seq: req.seq.into(),
         changes: Changes::new()
             .remove("title", &overwrite.title)
             .remove("extra_description", &overwrite.extra_description)
@@ -725,7 +726,7 @@ async fn calendar_overwrite_delete(
         MessageSync::CalendarOverwriteDelete {
             channel_id: req.channel_id,
             event_id: req.event_id,
-            seq: req.seq,
+            seq: req.seq.into(),
         },
     )
     .await?;
@@ -733,12 +734,12 @@ async fn calendar_overwrite_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Calendar overwrite RSVP list
-#[handler(routes::calendar_overwrite_rsvp_list)]
-async fn calendar_overwrite_rsvp_list(
+/// Calendar instance RSVP list
+#[handler(routes::calendar_instance_rsvp_list)]
+async fn calendar_instance_rsvp_list(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::calendar_overwrite_rsvp_list::Request,
+    req: routes::calendar_instance_rsvp_list::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let srv = s.services();
@@ -760,7 +761,7 @@ async fn calendar_overwrite_rsvp_list(
 
     let mut participants = s
         .data()
-        .calendar_overwrite_rsvp_list(req.event_id, req.seq, req.query.clone())
+        .calendar_overwrite_rsvp_list(req.event_id, req.seq.into(), req.query.clone())
         .await?;
 
     if req.query.include_member && !participants.is_empty() {
@@ -786,12 +787,12 @@ async fn calendar_overwrite_rsvp_list(
     Ok(Json(participants))
 }
 
-/// Calendar overwrite RSVP put
-#[handler(routes::calendar_overwrite_rsvp_put)]
-async fn calendar_overwrite_rsvp_put(
+/// Calendar instance RSVP put
+#[handler(routes::calendar_instance_rsvp_put)]
+async fn calendar_instance_rsvp_put(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::calendar_overwrite_rsvp_put::Request,
+    req: routes::calendar_instance_rsvp_put::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let user_id = req.user_id.unwrap_or(auth.user.id);
@@ -823,19 +824,19 @@ async fn calendar_overwrite_rsvp_put(
         .ok_or_else(|| ApiError::from_code(ErrorCode::ChannelNotInRoom))?;
 
     match req.participant.status {
-        CalendarRsvpStatus::Interested => {
+        CalendarRsvpStatus::Accepted => {
             s.data()
-                .calendar_overwrite_rsvp_put(req.event_id, req.seq, user_id, true)
+                .calendar_overwrite_rsvp_put(req.event_id, req.seq.into(), user_id, true)
                 .await?;
 
             s.broadcast_room(
                 room_id,
                 auth.user.id,
-                MessageSync::CalendarOverwriteRsvpCreate {
+                MessageSync::CalendarInstanceRsvpCreate {
                     channel_id: req.channel_id,
                     event_id: req.event_id,
-                    seq: req.seq,
-                    participant: CalendarEventParticipant {
+                    seq: req.seq.into(),
+                    participant: CalendarParticipant {
                         user_id,
                         status: req.participant.status,
                         user: None,
@@ -845,34 +846,35 @@ async fn calendar_overwrite_rsvp_put(
             )
             .await?;
         }
-        CalendarRsvpStatus::Uninterested => {
+        CalendarRsvpStatus::Declined => {
             s.data()
-                .calendar_overwrite_rsvp_put(req.event_id, req.seq, user_id, false)
+                .calendar_overwrite_rsvp_put(req.event_id, req.seq.into(), user_id, false)
                 .await?;
 
             s.broadcast_room(
                 room_id,
                 auth.user.id,
-                MessageSync::CalendarOverwriteRsvpDelete {
+                MessageSync::CalendarInstanceRsvpDelete {
                     channel_id: req.channel_id,
                     event_id: req.event_id,
-                    seq: req.seq,
+                    seq: req.seq.into(),
                     user_id,
                 },
             )
             .await?;
         }
+        _ => return Err(Error::Unimplemented),
     }
 
     Ok(StatusCode::OK)
 }
 
-/// Calendar overwrite RSVP delete
-#[handler(routes::calendar_overwrite_rsvp_delete)]
-async fn calendar_overwrite_rsvp_delete(
+/// Calendar instance RSVP delete
+#[handler(routes::calendar_instance_rsvp_delete)]
+async fn calendar_instance_rsvp_delete(
     auth: Auth,
     State(s): State<Arc<ServerState>>,
-    req: routes::calendar_overwrite_rsvp_delete::Request,
+    req: routes::calendar_instance_rsvp_delete::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     let user_id = req.user_id.unwrap_or(auth.user.id);
@@ -901,7 +903,7 @@ async fn calendar_overwrite_rsvp_delete(
     }
 
     s.data()
-        .calendar_overwrite_rsvp_delete(req.event_id, req.seq, user_id)
+        .calendar_overwrite_rsvp_delete(req.event_id, req.seq.into(), user_id)
         .await?;
 
     let room_id = chan
@@ -912,7 +914,7 @@ async fn calendar_overwrite_rsvp_delete(
         let al = auth.audit_log(room_id);
         al.commit_success(AuditLogEntryType::CalendarRsvpDelete {
             event_id: req.event_id,
-            seq: Some(req.seq),
+            seq: Some(req.seq.into()),
             user_id,
         })
         .await?;
@@ -921,10 +923,10 @@ async fn calendar_overwrite_rsvp_delete(
     s.broadcast_room(
         room_id,
         auth.user.id,
-        MessageSync::CalendarOverwriteRsvpDelete {
+        MessageSync::CalendarInstanceRsvpDelete {
             channel_id: req.channel_id,
             event_id: req.event_id,
-            seq: req.seq,
+            seq: req.seq.into(),
             user_id,
         },
     )
@@ -949,7 +951,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(calendar_overwrite_get))
         .routes(routes2!(calendar_overwrite_update))
         .routes(routes2!(calendar_overwrite_delete))
-        .routes(routes2!(calendar_overwrite_rsvp_list))
-        .routes(routes2!(calendar_overwrite_rsvp_put))
-        .routes(routes2!(calendar_overwrite_rsvp_delete))
+        .routes(routes2!(calendar_instance_rsvp_list))
+        .routes(routes2!(calendar_instance_rsvp_put))
+        .routes(routes2!(calendar_instance_rsvp_delete))
 }
