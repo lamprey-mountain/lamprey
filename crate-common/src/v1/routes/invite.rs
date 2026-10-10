@@ -30,11 +30,11 @@ pub mod invite_delete {
     response(OK, body = InviteWithMetadata, description = "success with metadata"),
 )]
 pub mod invite_resolve {
-    use crate::v1::types::{Invite, InviteCode, InviteWithMetadata};
+    use crate::v1::types::{Invite, InviteCode, InviteWithMetadata, misc::InviteCodeReq};
 
     pub struct Request {
         #[path]
-        pub invite_code: InviteCode,
+        pub invite_code: InviteCodeReq,
     }
 
     pub struct Response {
@@ -185,11 +185,11 @@ pub mod invite_update {
     response(OK, description = "success"),
 )]
 pub mod invite_use {
-    use crate::v1::types::InviteCode;
+    use crate::v1::types::{InviteCode, misc::InviteCodeReq};
 
     pub struct Request {
         #[path]
-        pub invite_code: InviteCode,
+        pub invite_code: InviteCodeReq,
     }
 
     pub struct Response {}
