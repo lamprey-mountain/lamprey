@@ -20,6 +20,13 @@ pub struct RoomPermissions<'a> {
     room: &'a CachedRoom,
 }
 
+// TODO: refactor like so?
+// pub struct PermissionsCalculator<'a> {}
+// impl PermissionsCalculator<'a> {
+//     pub fn in_room(&self, user_id: UserId, channel_id: ChannelId) -> Result<Permissions, ()>;
+//     pub fn in_channel(&self, user_id: UserId, channel_id: ChannelId) -> Result<Permissions, ()>;
+// }
+
 #[derive(Debug, Clone)]
 pub struct Permissions {
     bits: PermissionBits,

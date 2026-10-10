@@ -1,7 +1,7 @@
 use common::v1::types::{SessionToken, presence::Presence};
 use url::Url;
 
-use crate::cache::{Cache, CacheSettings};
+use crate::cache::{Cache, CacheConfig};
 use crate::http::Http;
 use crate::syncer::Syncer;
 use crate::{Client, prelude::*};
@@ -26,7 +26,7 @@ pub enum ClientBuilderCacheSettings {
     Default,
 
     /// create a cache with these settings
-    Configured(Box<CacheSettings>),
+    Configured(Box<CacheConfig>),
 }
 
 impl Default for ClientBuilder {
@@ -90,8 +90,8 @@ impl ClientBuilder {
 
     /// enable the cache with specific settings
     #[cfg(feature = "cache")]
-    pub fn cache<S: Into<CacheSettings>>(mut self, settings: S) -> Self {
-        self.cache = ClientBuilderCacheSettings::Configured(Box::new(settings.into()));
+    pub fn cache<S: Into<CacheConfig>>(mut self, config: S) -> Self {
+        self.cache = ClientBuilderCacheSettings::Configured(Box::new(config.into()));
         self
     }
 
@@ -156,7 +156,7 @@ impl ClientBuilder {
             ClientBuilderCacheSettings::Disabled => None,
             ClientBuilderCacheSettings::Default => Some(Cache::builder().build()),
             ClientBuilderCacheSettings::Configured(settings) => {
-                Some(Cache::builder().settings(*settings).build())
+                Some(Cache::builder().config(*settings).build())
             }
         };
 

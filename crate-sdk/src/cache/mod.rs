@@ -8,24 +8,23 @@ use common::{
     v2::types::{ChannelId, RoleId, RoomId, UserId},
 };
 
+mod config;
 mod permissions;
-mod settings;
 
+pub use config::{CacheBuilder, CacheConfig};
 pub use permissions::RoomPermissions;
-pub use settings::{CacheBuilder, CacheSettings};
 use tokio::sync::RwLock;
 
 use crate::messages::MessagesInner;
 
-// TODO: custom debug impl for Cache
-
-#[derive(Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Cache {
     pub(crate) inner: Arc<CacheInner>,
 }
 
+#[derive(Debug, Default)]
 pub struct CacheInner {
-    pub(crate) settings: CacheSettings,
+    pub(crate) config: CacheConfig,
     pub(crate) rooms: HashMap<RoomId, CachedRoom>,
     pub(crate) channels: HashMap<ChannelId, CachedChannel>,
     pub(crate) users: HashMap<UserId, CachedUser>,
@@ -42,11 +41,7 @@ pub struct CachedRoom {
     pub(crate) perm_roles: HashMap<RoleId, (PermSet, u16)>,
 }
 
-// struct PermOverwrite {
-//     kind: PermissionOverwriteType,
-//     allow: PermissionBits,
-//     deny: PermissionBits,
-// }
+// TODO: impl Deref for CachedFoo structs?
 
 #[derive(Debug, Clone)]
 pub struct CachedUser {
@@ -54,6 +49,13 @@ pub struct CachedUser {
 
     /// your relationship with this user, if it is known
     pub relationship: Option<Relationship>,
+    // TODO: use this instead of inner.presence?
+    // pub presence: Option<Presence>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CachedCurrentUser {
+    pub inner: User,
     // TODO: use this instead of inner.presence?
     // pub presence: Option<Presence>,
 }
@@ -92,12 +94,37 @@ impl From<&PermissionOverwrite> for PermSet {
     }
 }
 
-pub struct CacheRef<'a, T> {
-    inner: &'a T,
+pub struct CacheRef<'a, V> {
+    inner: &'a V,
 }
 
-impl<'a, T> std::ops::Deref for CacheRef<'a, T> {
-    type Target = T;
+/// something that can be identified with an id
+pub trait Identifiable {
+    type Id;
+
+    fn id(&self) -> Self::Id;
+}
+
+// TODO: allow using custom models for cache
+// pub trait CacheableChannel: From<Channel> {
+//     fn id(&self) -> ChannelId;
+//     fn parent_id(&self) -> Option<ChannelId>;
+//     fn room_id(&self) -> Option<RoomId>;
+//     fn channel_type(&self) -> ChanneType;
+//     // permission overwrites, last message id, last pin timestamp?
+// }
+
+impl Identifiable for Channel {
+    type Id = ChannelId;
+
+    fn id(&self) -> Self::Id {
+        self.id
+    }
+}
+// TODO: impl Identifiable for room, user
+
+impl<'a, V> std::ops::Deref for CacheRef<'a, V> {
+    type Target = V;
 
     fn deref(&self) -> &Self::Target {
         self.inner
@@ -106,17 +133,30 @@ impl<'a, T> std::ops::Deref for CacheRef<'a, T> {
 
 pub type CachedRoomRef<'a> = CacheRef<'a, CachedRoom>;
 pub type CachedUserRef<'a> = CacheRef<'a, CachedUser>;
+pub type CachedCurrentUserRef<'a> = CacheRef<'a, CachedCurrentUser>;
 pub type CachedChannelRef<'a> = CacheRef<'a, CachedChannel>;
 
+#[derive(Debug)]
 pub struct CacheStats {
     pub rooms: usize,
     pub channels: usize,
     pub users: usize,
+    // TODO: messages, emojis, room members, presences, per-room stats, per-channel stats
 }
 
+// TODO: cache members, roles, emoji
 impl Cache {
+    pub fn new() -> Cache {
+        Self::default()
+    }
+
     pub fn builder() -> CacheBuilder {
         CacheBuilder::default()
+    }
+
+    /// get cache config
+    pub fn config(&self) -> &CacheConfig {
+        &self.inner.config
     }
 
     /// get a reference to a room from its id
@@ -132,6 +172,11 @@ impl Cache {
     /// get a reference to a user from its id
     pub fn user(&self, id: UserId) -> Option<CachedUserRef<'_>> {
         self.inner.users.get(&id).map(|u| CacheRef { inner: u })
+    }
+
+    /// get a reference to the current user
+    pub fn current_user(&self) -> Option<CachedCurrentUserRef<'_>> {
+        todo!()
     }
 
     /// iterate over all cached rooms
