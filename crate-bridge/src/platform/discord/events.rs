@@ -1,15 +1,14 @@
-use async_trait::async_trait;
-use serenity::{
-    all::{
-        ChannelId, Context, EventHandler, Guild, GuildChannel, GuildId, GuildMemberUpdateEvent,
-        Interaction, Message, MessageId, MessageUpdateEvent, PartialGuildChannel, Presence,
-        Reaction, Ready, ThreadListSyncEvent, ThreadMembersUpdateEvent, TypingStartEvent, User,
-        UserId,
-    },
-    model::guild::Member,
-};
 use tokio::sync::mpsc;
 use tracing::{error, info, trace};
+use twilight_model::channel::{Channel, Message};
+use twilight_model::gateway::payload::incoming::{
+    ChannelCreate, ChannelDelete, GuildMemberAdd, GuildMemberRemove, GuildMemberUpdate,
+    InteractionCreate, MessageCreate, MessageDelete, MessageDeleteBulk, PresenceUpdate,
+    ReactionAdd, ReactionRemove, ReactionRemoveAll, ReactionRemoveEmoji, Ready, ThreadCreate,
+    ThreadDelete, ThreadListSync, ThreadMembersUpdate, ThreadUpdate, TypingStart,
+};
+use twilight_model::guild::Member;
+use twilight_model::id::Id;
 
 use crate::{
     config::Config,

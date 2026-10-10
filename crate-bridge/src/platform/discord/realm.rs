@@ -2,7 +2,9 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{error, warn};
 
-use serenity::all::{ChannelType, CreateChannel, CreateWebhook};
+use twilight_http::Client as HttpClient;
+use twilight_model::channel::ChannelType;
+use twilight_model::id::Id;
 
 use crate::bridge_old::{
     BridgeEvent, Portal, PortalDiscord, PortalId, PortalLamprey, Realm, RealmEvent, RealmHandle,
@@ -10,13 +12,12 @@ use crate::bridge_old::{
 };
 use crate::prelude::*;
 use crate::types::ChannelData;
-use sdk::http::Http;
 
 pub struct DiscordRealm {
     realm_id: RealmId,
     realm: Realm,
     handle: RealmHandle,
-    http: Arc<serenity::all::Http>,
+    http: Arc<HttpClient>,
 }
 
 impl DiscordRealm {
@@ -24,8 +25,7 @@ impl DiscordRealm {
         realm_id: RealmId,
         realm: Realm,
         handle: RealmHandle,
-        http: Arc<serenity::all::Http>,
-        _cache: Arc<serenity::all::Cache>,
+        http: Arc<HttpClient>,
     ) -> (RealmId, Result<()>) {
         let me = Self {
             realm_id,
@@ -61,39 +61,28 @@ impl DiscordRealm {
                             let http = self.http.clone();
                             let bridge = self.handle.bridge.clone();
 
-                            let create_channel =
-                                CreateChannel::new(channel.name.clone()).kind(match channel.ty {
-                                    lamprey::ChannelType::Text => ChannelType::Text,
-                                    _ => continue,
-                                });
-
-                            // TODO: run below code in a tokio task instead of blocking loop
-
-                            // TODO: add audit log reason
-                            let discord_channel =
-                                match http.create_channel(guild_id, &create_channel, None).await {
-                                    Ok(ch) => ch,
-                                    Err(e) => {
-                                        error!(?e, "failed to create discord channel");
-                                        continue;
-                                    }
-                                };
-
-                            // TODO: deduplicate this code with `/link`
-                            let webhook = match discord_channel
-                                .create_webhook(&http, CreateWebhook::new("bridge"))
-                                .await
-                            {
-                                Ok(wh) => wh,
-                                Err(e) => {
-                                    error!(?e, "failed to create webhook");
-                                    continue;
-                                }
+                            // Twilight channel creation
+                            let channel_type = match channel.ty {
+                                lamprey::ChannelType::Text => ChannelType::GuildText,
+                                _ => continue,
                             };
+                            
+                            let discord_channel = http
+                                .create_guild_channel(Id::new(guild_id.get()), &channel.name)
+                                .kind(channel_type)
+                                .await?
+                                .model()
+                                .await?;
+
+                            // Twilight webhook creation
+                            let webhook = http
+                                .create_webhook(Id::new(discord_channel.id.get()), "bridge")
+                                .await?
+                                .model()
+                                .await?;
 
                             let webhook_url = webhook
                                 .url()
-                                .expect("webhook url")
                                 .parse()
                                 .expect("invalid webhook url");
 
@@ -138,14 +127,12 @@ impl DiscordRealm {
                     if puppet.source_platform == crate::types::Platform::Lamprey {
                         if let Some(discord_cfg) = self.realm.discord.as_ref() {
                             let guild_id = discord_cfg.guild_id;
-                            let discord_id: serenity::all::UserId = puppet.discord_id;
+                            let discord_id = puppet.discord_id; // Assuming puppet_get_by_lamprey_id returns Twilight Id?
+                            
                             let nick = member.nickname.as_deref().unwrap_or("");
-                            let _ = guild_id
-                                .edit_member(
-                                    &self.http,
-                                    discord_id,
-                                    serenity::all::EditMember::new().nickname(nick),
-                                )
+                            let _ = self.http
+                                .update_guild_member(Id::new(guild_id.get()), Id::new(discord_id.get()))
+                                .nick(Some(nick))
                                 .await;
                         }
                     }

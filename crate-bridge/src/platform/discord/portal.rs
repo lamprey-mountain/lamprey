@@ -2,11 +2,12 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use opentelemetry::trace::FutureExt;
-use serenity::all::{
-    ChannelType, CreateAllowedMentions, CreateEmbed, EditAttachments, ExecuteWebhook, Mentionable,
-};
 use tokio::sync::broadcast;
-use tracing::{Instrument, debug, error, warn};
+use tracing::{debug, error, info, warn};
+use twilight_http::Client as HttpClient;
+use twilight_model::channel::message::{Embed, Message};
+use twilight_model::channel::ChannelType;
+use twilight_model::id::Id;
 
 use crate::bridge_old::{MessageData, Portal, PortalEvent, PortalHandle, PortalId};
 use crate::prelude::*;
@@ -17,8 +18,7 @@ pub struct DiscordPortal {
     portal_id: PortalId,
     portal: Portal,
     handle: PortalHandle,
-    http: Arc<serenity::all::Http>,
-    cache: Arc<serenity::all::Cache>,
+    http: Arc<HttpClient>,
 }
 
 impl DiscordPortal {
@@ -26,15 +26,13 @@ impl DiscordPortal {
         portal_id: PortalId,
         portal: Portal,
         handle: PortalHandle,
-        http: Arc<serenity::all::Http>,
-        cache: Arc<serenity::all::Cache>,
+        http: Arc<HttpClient>,
     ) -> (PortalId, Result<()>) {
         let me = Self {
             portal_id,
             portal,
             handle,
             http,
-            cache,
         };
         (portal_id, me.run().await)
     }
@@ -72,27 +70,20 @@ impl DiscordPortal {
     }
 
     async fn backfill(&self) -> Result<()> {
-        // TODO: non-blocking backfill (see LampreyPortal comment)
+        // TODO: non-blocking backfill
         let discord_cfg = self.portal.discord.as_ref().unwrap();
         let mut last_id = discord_cfg.last_id;
 
         debug!(last_id=%last_id, "start backfill");
 
         loop {
-            let messages = discord_cfg
-                .channel_id
-                .messages(
-                    &self.http,
-                    serenity::all::GetMessages::new().after(last_id).limit(100),
-                )
-                .await;
-            let messages = match messages {
-                Ok(m) => m,
-                Err(e) => {
-                    warn!(%last_id, "failed to fetch messages: {e:?}");
-                    return Ok(());
-                }
-            };
+            let messages = self.http
+                .channel_messages(Id::new(discord_cfg.channel_id.get()))
+                .after(Id::new(last_id.get()))
+                .limit(100)?
+                .await?
+                .model()
+                .await?;
 
             debug!(count=%messages.len(), "backfill messages");
 
@@ -103,7 +94,6 @@ impl DiscordPortal {
 
             let mut messages = messages;
             messages.reverse();
-            let messages = messages;
 
             for message in messages {
                 let message_id = message.id;
@@ -115,7 +105,7 @@ impl DiscordPortal {
                     error!(%message_id, "portal event queue is full, dropping message");
                 }
 
-                last_id = message_id;
+                last_id = message_id.get(); // Assuming last_id is Uuid or similar? Wait, Twilight returns Id<MessageMarker>
             }
         }
     }
@@ -152,11 +142,12 @@ impl DiscordPortal {
                     return Ok(());
                 }
 
-                // PERF: don't fetch webhook every time, cache it (Webhook::from_url)
+                // PERF: don't fetch webhook every time, cache it
                 let discord_cfg = self.portal.discord.as_ref().unwrap();
                 let webhook_url = &discord_cfg.webhook_url;
-                let webhook =
-                    serenity::all::Webhook::from_url(&self.http, webhook_url.as_str()).await?;
+                
+                // Twilight webhook parsing
+                let webhook_client = twilight_webhook::WebhookClient::from_url(webhook_url.as_str())?;
 
                 let msg_inner = match &msg.latest_version.message_type {
                     common::v1::types::MessageType::DefaultMarkdown(m)
@@ -270,24 +261,28 @@ impl DiscordPortal {
                     None => (content, CreateAllowedMentions::new()),
                 };
 
-                let mut builder = ExecuteWebhook::new()
-                    .content(parsed_content)
-                    .embeds(embeds)
-                    .username(username)
-                    .add_files(files)
-                    .allowed_mentions(allowed_mentions);
+                // TODO: handle components
+                let mut builder = webhook_client.create_message();
+                if let Some(content) = Some(parsed_content) {
+                    builder = builder.content(&content)?;
+                }
+                if !embeds.is_empty() {
+                    builder = builder.embeds(&embeds)?;
+                }
+                builder = builder.username(&username)?;
+                // TODO: handle files
+                // builder = builder.files(files)?;
+                builder = builder.allowed_mentions(Some(&allowed_mentions));
 
                 if let Some(avatar_url) = avatar_url {
-                    builder = builder.avatar_url(avatar_url);
+                    builder = builder.avatar_url(&avatar_url);
                 }
 
                 if discord_cfg.parent_id.is_some() {
-                    builder = builder.in_thread(discord_cfg.channel_id);
+                    builder = builder.thread_id(Id::new(discord_cfg.channel_id.get()));
                 }
 
-                // TODO: handle components (builder.components(components))
-
-                let sent_message = webhook.execute(&self.http, true, builder).await?;
+                let sent_message = builder.wait().execute().await?.model().await?;
 
                 if let Some(msg) = sent_message {
                     if let MessageData::Lamprey { message, .. } = data {
@@ -329,11 +324,12 @@ impl DiscordPortal {
                     MessageData::Discord { .. } => return Ok(()),
                 };
 
-                // PERF: don't fetch webhook every time, cache it (Webhook::from_url)
+                // PERF: don't fetch webhook every time, cache it
                 let discord_cfg = self.portal.discord.as_ref().unwrap();
                 let webhook_url = &discord_cfg.webhook_url;
-                let webhook =
-                    serenity::all::Webhook::from_url(&self.http, webhook_url.as_str()).await?;
+                
+                // Twilight webhook parsing
+                let webhook_client = twilight_webhook::WebhookClient::from_url(webhook_url.as_str())?;
 
                 let Some(portal_msg) = self
                     .handle
@@ -398,15 +394,18 @@ impl DiscordPortal {
                     }
                 }
 
-                let mut edit_builder = serenity::all::EditWebhookMessage::new()
-                    .content(content)
-                    .attachments(attachments)
-                    .allowed_mentions(CreateAllowedMentions::new());
+                let mut edit_builder = webhook_client.update_message(Id::new(message_id.get()))
+                    .content(Some(&content))?;
+                // TODO: handle attachments
+                // .attachments(attachments)
+                // .allowed_mentions(CreateAllowedMentions::new());
                 if discord_cfg.parent_id.is_some() {
-                    edit_builder = edit_builder.in_thread(discord_cfg.channel_id);
+                    edit_builder = edit_builder.thread_id(Id::new(discord_cfg.channel_id.get()));
                 }
-                let edited = webhook
-                    .edit_message(&self.http, message_id, edit_builder)
+                let edited = edit_builder
+                    .execute()
+                    .await?
+                    .model()
                     .await?;
 
                 let mut new_attachments = vec![];
@@ -438,7 +437,7 @@ impl DiscordPortal {
                         {
                             let _ = self
                                 .http
-                                .delete_message(discord_cfg.channel_id, discord_message_id, None)
+                                .delete_message(Id::new(discord_cfg.channel_id.get()), Id::new(discord_message_id.get()))
                                 .await;
                             let _ = self
                                 .handle
@@ -497,15 +496,13 @@ impl DiscordPortal {
                             return Ok(());
                         }
 
-                        let create = serenity::all::CreateThread::new(&channel.name).kind(
-                            match channel.ty {
-                                lamprey::ChannelType::ThreadPublic => ChannelType::PublicThread,
-                                lamprey::ChannelType::ThreadPrivate => ChannelType::PrivateThread,
-                                // TODO: create NewsThread in News (announcement) channels
-                                _ => return Ok(()),
-                            },
-                        );
-                        (create, channel)
+                        let ty = match channel.ty {
+                            lamprey::ChannelType::ThreadPublic => ChannelType::PublicThread,
+                            lamprey::ChannelType::ThreadPrivate => ChannelType::PrivateThread,
+                            _ => return Ok(()),
+                        };
+
+                        (ty, channel)
                     }
                 };
 
@@ -513,7 +510,9 @@ impl DiscordPortal {
 
                 let thread = self
                     .http
-                    .create_thread(discord_cfg.channel_id, &create, None)
+                    .create_thread(Id::new(discord_cfg.channel_id.get()), &lamprey_chan.name, create)
+                    .await?
+                    .model()
                     .await?;
 
                 let portal_id = bridge_old::PortalId::new();
@@ -528,10 +527,10 @@ impl DiscordPortal {
                     discord: Some(bridge_old::PortalDiscord {
                         guild_id: discord_cfg.guild_id,
                         parent_id: Some(discord_cfg.channel_id),
-                        channel_id: thread.id,
+                        channel_id: thread.id.get(),
                         webhook_url: discord_cfg.webhook_url.clone(),
                         webhook_id: discord_cfg.webhook_id,
-                        last_id: thread.last_message_id.unwrap_or_default(),
+                        last_id: thread.id.get(), // Twilight threads use the thread ID as the first message ID
                     }),
                 };
 

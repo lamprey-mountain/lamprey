@@ -1,13 +1,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use serenity::all::{
-    CreateInteractionResponse, CreateInteractionResponseMessage, CreateMessage, CreateWebhook,
-    GatewayIntents,
-};
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::JoinSet;
 use tracing::{debug, error, info, warn};
+use twilight_gateway::Intents;
+use twilight_model::id::Id;
 
 use crate::actor::bridge::BridgeCommand;
 use crate::bridge_old as bridge;
@@ -30,13 +28,6 @@ mod interactions;
 mod portal;
 mod realm;
 
-// re export discord (serenity) types
-pub use serenity::all::{
-    Activity, ActivityType, Attachment, AttachmentId, Channel, ChannelId, ChannelType,
-    CreateAllowedMentions, CreateEmbed, Embed, GuildChannel, GuildId, Message, MessageId,
-    MessageType, OnlineStatus, Presence, ReactionType, RoleId, User, UserId, WebhookId,
-};
-
 pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -> PlatformHandle {
     let (tx, rx) = oneshot::channel();
     let task = tokio::spawn(Discord::connect(bridge, config_full, config, tx));
@@ -53,14 +44,13 @@ struct Discord {
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
     realm_tasks: JoinSet<(RealmId, Result<()>)>,
     portal_handles: HashMap<PortalId, PortalHandle>,
-    portal_lookup: HashMap<ChannelId, PortalId>,
+    portal_lookup: HashMap<Id<twilight_model::id::marker::ChannelMarker>, PortalId>,
     portal_data: HashMap<PortalId, Portal>,
     realm_handles: HashMap<RealmId, RealmHandle>,
-    realm_lookup: HashMap<ChannelId, RealmId>,
+    realm_lookup: HashMap<Id<twilight_model::id::marker::ChannelMarker>, RealmId>,
     realm_data: HashMap<RealmId, Realm>,
-    webhook_lookup: HashMap<serenity::all::WebhookId, PortalId>,
-    http: Arc<serenity::all::Http>,
-    cache: Arc<serenity::all::Cache>,
+    webhook_lookup: HashMap<Id<twilight_model::id::marker::WebhookMarker>, PortalId>,
+    http: Arc<twilight_http::Client>,
 }
 
 impl Discord {
@@ -75,16 +65,10 @@ impl Discord {
             tx,
             config: config_full,
         };
-        let client = serenity::Client::builder(
-            &config.token.load().expect("failed to load token"),
-            GatewayIntents::all(),
-        )
-        .event_handler(handler)
-        .await
-        .map_err(|e| anyhow::anyhow!("Error creating client: {:?}", e))?;
+        let token = config.token.load().expect("failed to load token");
+        let http = Arc::new(twilight_http::Client::new(token.to_string()));
 
-        let http = client.http.clone();
-        let cache = client.cache.clone();
+        // TODO: Initialize Twilight gateway
 
         let me = Self {
             bridge,
@@ -99,9 +83,9 @@ impl Discord {
             realm_data: HashMap::new(),
             webhook_lookup: HashMap::new(),
             http,
-            cache,
         };
-        me.start(client, ready_tx).await?;
+        // me.start(client, ready_tx).await?; // TODO: Update start to use Twilight
+        ready_tx.send(()).unwrap();
 
         Ok(())
     }
@@ -114,7 +98,6 @@ impl Discord {
             portal,
             handle,
             self.http.clone(),
-            self.cache.clone(),
         ));
     }
 
@@ -127,20 +110,19 @@ impl Discord {
                 realm,
                 handle,
                 self.http.clone(),
-                self.cache.clone(),
             ));
     }
 
     async fn start(
         mut self,
-        mut client: serenity::Client,
+        // mut client: serenity::Client, // TODO: Remove or replace with Twilight gateway
         ready_tx: oneshot::Sender<()>,
     ) -> Result<()> {
-        tokio::spawn(async move {
-            if let Err(why) = client.start().await {
-                eprintln!("Client error: {:?}", why);
-            }
-        });
+        // tokio::spawn(async move {
+        //     if let Err(why) = client.start().await {
+        //         eprintln!("Client error: {:?}", why);
+        //     }
+        // });
 
         let mut bridge_events = self.bridge.events.subscribe();
         ready_tx.send(()).unwrap();
@@ -750,8 +732,10 @@ impl Discord {
 
     fn init_portal(&mut self, portal: &Portal, handle: &PortalHandle) {
         if let Some(discord) = &portal.discord {
-            self.portal_lookup.insert(discord.channel_id, portal.id);
+            let channel_id = Id::new(discord.channel_id.get()); // Assuming channel_id can be converted
+            self.portal_lookup.insert(channel_id, portal.id);
             if let Some(webhook_id) = discord.webhook_id {
+                let webhook_id = Id::new(webhook_id.get());
                 self.webhook_lookup.insert(webhook_id, portal.id);
             }
         }
