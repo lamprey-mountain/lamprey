@@ -7,7 +7,6 @@ pub trait Transport: Stream<Item = Self::TransportStream> + Send + 'static {
 
 pub trait TransportStream: AsyncWrite + AsyncRead + Send + Unpin + 'static {}
 
-// Automatically implement TransportStream for any type that meets the bounds
 impl<T> TransportStream for T where T: AsyncWrite + AsyncRead + Send + Unpin + 'static {}
 
 #[cfg(feature = "webtransport")]
