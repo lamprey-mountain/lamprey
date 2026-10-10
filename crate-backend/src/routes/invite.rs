@@ -4,6 +4,7 @@ use axum::response::IntoResponse;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::misc::InviteCodeReq;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntryType, ChannelType, Invite, InviteCode, InviteTarget, InviteTargetId,
