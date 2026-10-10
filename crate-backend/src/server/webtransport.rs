@@ -401,36 +401,43 @@ async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState)
 mod v2 {
     use super::*;
     use crate::prelude::*;
+    use common::v2::types::sync::dispatch::Ready;
+    use futures::SinkExt;
+    use tokio::sync::watch;
 
     use common::v1::types::Session;
     use common::v1::types::presence::Presence;
     use common::v2::types::ConnectionId;
     use common::v2::types::sync::stream::hello;
     use common::v2::types::sync::transport::webtransport::Params;
-    use futures::FutureExt;
-    use futures_util::future::Shared;
     use kerosene_sync::v2::codec::Codec;
     use kerosene_sync::v2::transport::webtransport::{WebtransportStream, WebtransportTransport};
     use kerosene_sync::v2::transport::{Transport, TransportStream};
     use tokio::io::AsyncReadExt;
-    use tokio::sync::oneshot;
 
     const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
 
-    #[derive(Clone)]
-    struct State {
+    struct StateInner {
         globals: Globals,
         id: ConnectionId,
         params: Params,
-        session: Shared<oneshot::Receiver<Arc<Session>>>,
+        session: watch::Sender<Option<Arc<Session>>>,
     }
 
-    impl State {
+    type State = Arc<StateInner>;
+
+    impl StateInner {
         pub async fn session(&self) -> Result<Arc<Session>> {
-            self.session
-                .clone()
-                .await
-                .map_err(|_| Error::BadStatic("transport closed"))
+            let mut rx = self.session.subscribe();
+            // Wait until a session is set
+            loop {
+                if let Some(session) = rx.borrow().clone() {
+                    return Ok(session);
+                }
+                if rx.changed().await.is_err() {
+                    return Err(Error::BadStatic("transport closed"));
+                }
+            }
         }
     }
 
@@ -439,8 +446,8 @@ mod v2 {
         connection: Connection,
         params: SyncParams,
     ) -> Result<()> {
-        let (session_tx, session_rx) = oneshot::channel();
-        let state = State {
+        let (session_tx, _) = watch::channel(None);
+        let state = Arc::new(StateInner {
             globals,
             id: ConnectionId::new(),
             params: Params {
@@ -448,8 +455,8 @@ mod v2 {
                 compression: params.compression,
                 encoding: params.format,
             },
-            session: session_rx.shared(),
-        };
+            session: session_tx,
+        });
 
         let mut transport = WebtransportTransport::new(connection);
         let mut stream_tasks = JoinSet::new();
@@ -503,8 +510,9 @@ mod v2 {
                     hello::Initial::Identify(identify) => {
                         // authenticate session
                         let session = srv.sessions.get_by_token(identify.token).await?;
+                        let _ = state.session.send(Some(session));
 
-                        // setup presence
+                        // set presence
                         if let (presence, Some(user_id)) = (identify.presence, session.user_id()) {
                             let user = srv.users.get(user_id, Some(user_id)).await?;
                             if !user.is_suspended() {
@@ -513,7 +521,32 @@ mod v2 {
                             }
                         }
 
-                        // FIXME: session_tx.send(session)
+                        // TODO: send this after authentication
+                        // framed.send(hello::Event::Ready(Ready {
+                        //     user: (),
+                        //     application: (),
+                        //     session: (),
+                        //     conn: (),
+                        // }));
+
+                        // TODO: send this periodically (see kerosene-sync/src/util.rs HEARTBEAT_TIME, CLOSE_TIME)
+                        // framed.send(hello::Event::Ping);
+
+                        // TODO: handle commands
+                        // option<result<command>>
+                        // match framed.next().await.unwrap().unwrap() {
+                        //     hello::Command::Presence { presence } => todo!(),
+                        //     hello::Command::Close => todo!(),
+                        //     hello::Command::Pong => todo!(),
+                        // }
+
+                        // TODO: handle broadcasts (map to dispatches)
+                        // let messaging = state.globals.messaging();
+                        // let broadcast = messaging.subscribe().await.unwrap().next().await.unwrap();
+                        // framed.send(hello::Event::Dispatch(hello::Dispatch {
+                        //     inner: (),
+                        //     seq: (),
+                        // }));
 
                         Ok(())
                     }
