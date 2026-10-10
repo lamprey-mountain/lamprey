@@ -101,7 +101,7 @@ export function createClient(opts: ClientOptions): Client {
 		}
 
 		// TODO: unsubscribe on cleanup
-		client.state.subscribe(s => state.set(s));
+		client.state.subscribe((s) => state.set(s));
 
 		client.start(token);
 
@@ -454,7 +454,7 @@ export function createWebtransportClient(
 		(msg: MessageSync, raw: MessageEnvelope) => void
 	>();
 	const format = opts.format ?? "json";
-	let clientReady: Promise<void> = new Promise(() => { });
+	let clientReady: Promise<void> = new Promise(() => {});
 	let clientReadyRes: () => void;
 
 	function handleMessage(msg: MessageEnvelope) {
