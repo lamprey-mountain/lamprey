@@ -9,6 +9,7 @@ use common::v1::routes;
 use common::v1::types::error::ErrorCode;
 use common::v1::types::federation::signing::{OutgoingRequest, ServerKeySecret};
 use common::v1::types::federation::{FederationEpoch, Hostname, Remote, RemoteReq};
+use common::v1::types::misc::InviteCodeReq;
 use common::v1::types::{
     Channel, ChannelId, ChannelPatch, Invite, InviteCode, InviteTarget, MediaId, RolePatch, Room,
     RoomId, RoomPatch, User, UserId, UserPatch,
@@ -257,7 +258,7 @@ impl ServiceFederation {
         let importer = self.importer(hostname.clone()).await?;
         let res = importer
             .http_signed(routes::invite_resolve::Request {
-                invite_code: code.clone(),
+                invite_code: InviteCodeReq::Local(code.clone()),
             })
             .await?;
 
