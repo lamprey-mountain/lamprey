@@ -1,10 +1,4 @@
 use lamprey_macros::endpoint;
-use uuid::Uuid;
-
-use crate::{
-    v1::types::MediaId,
-    v2::types::media::track::{Track, TrackCreate, TrackUpdate},
-};
 
 /// Media track create
 #[endpoint(
@@ -14,7 +8,10 @@ use crate::{
     response(CREATED, body = Track, description = "Track create success"),
 )]
 pub mod media_track_create {
-    use super::*;
+    use crate::{
+        v1::types::MediaId,
+        v2::types::media::track::{Track, TrackCreate},
+    };
 
     pub struct Request {
         #[path]
@@ -38,7 +35,7 @@ pub mod media_track_create {
     response(OK, body = Vec<Track>, description = "Track list success"),
 )]
 pub mod media_track_list {
-    use super::*;
+    use crate::{v1::types::MediaId, v2::types::media::track::Track};
 
     pub struct Request {
         #[path]
@@ -59,14 +56,17 @@ pub mod media_track_list {
     response(OK, body = Track, description = "Track update success"),
 )]
 pub mod media_track_update {
-    use super::*;
+    use crate::{
+        v1::types::{MediaId, MediaTrackId},
+        v2::types::media::track::{Track, TrackUpdate},
+    };
 
     pub struct Request {
         #[path]
         pub media_id: MediaId,
 
         #[path]
-        pub track_id: Uuid,
+        pub track_id: MediaTrackId,
 
         #[json]
         pub body: TrackUpdate,
@@ -86,14 +86,14 @@ pub mod media_track_update {
     response(NO_CONTENT, description = "Track delete success"),
 )]
 pub mod media_track_delete {
-    use super::*;
+    use crate::v1::types::{MediaId, MediaTrackId};
 
     pub struct Request {
         #[path]
         pub media_id: MediaId,
 
         #[path]
-        pub track_id: Uuid,
+        pub track_id: MediaTrackId,
     }
 
     pub struct Response {}
@@ -107,14 +107,17 @@ pub mod media_track_delete {
     response(OK, body = Track, description = "Track get success"),
 )]
 pub mod media_track_get {
-    use super::*;
+    use crate::{
+        v1::types::{MediaId, MediaTrackId},
+        v2::types::media::track::Track,
+    };
 
     pub struct Request {
         #[path]
         pub media_id: MediaId,
 
         #[path]
-        pub track_id: Uuid,
+        pub track_id: MediaTrackId,
     }
 
     pub struct Response {

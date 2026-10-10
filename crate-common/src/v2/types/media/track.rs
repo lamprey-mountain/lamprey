@@ -1,7 +1,8 @@
 // WORK IN PROGRESS PLANNING
 
 use lamprey_macros::record;
-use uuid::Uuid;
+
+use crate::v2::types::MediaTrackId;
 
 // TODO: add tracks field to media
 // maybe not even the full track list, just a has tracks flag?
@@ -30,7 +31,7 @@ pub struct TrackUpdate {
 /// an extra file for a piece of media
 #[record]
 pub struct Track {
-    pub id: Uuid, // TODO: create dedicated MediaTrackId
+    pub id: MediaTrackId,
     pub source: TrackSource,
 
     /// the type of this track
