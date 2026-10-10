@@ -1,18 +1,21 @@
 use std::sync::Arc;
 
-use crate::error::{Error, Result};
-use crate::services::federation::ServiceFederation;
+use crate::prelude::*;
+use crate::services::federation::{ServerInfo, ServiceFederation};
 use crate::services::media::Import;
 use crate::types::MediaLinkType;
+use common::util::body::Body;
+use common::v1::routes;
 use common::v1::types::error::ErrorCode;
-use common::v1::types::federation::signing::OutgoingRequest;
+use common::v1::types::federation::signing::{OutgoingRequest, ServerKeySecret};
 use common::v1::types::federation::{FederationEpoch, Hostname, Remote, RemoteReq};
 use common::v1::types::{
-    Channel, ChannelId, ChannelPatch, Invite, InviteCode, MediaId, Room, RoomId, RoomPatch, User,
-    UserId, UserPatch,
+    Channel, ChannelId, ChannelPatch, Invite, InviteCode, InviteTarget, MediaId, Room, RoomId,
+    RoomPatch, User, UserId, UserPatch,
 };
 use common::v2::types::SERVER_USER_ID;
 use common::v2::types::media::Media;
+use lamprey_backend_data_postgres::PaginationQuery;
 use uuid::Uuid;
 
 // TODO: use epochs for caching
@@ -22,7 +25,30 @@ use uuid::Uuid;
 // channels have room_id
 // i need to make sure that channels/rooms dont infinitely import each other
 
+// write initial data immediately
+// fetch references recursively
+
 impl ServiceFederation {
+    pub(super) async fn importer(&self, hostname: Hostname) -> Result<Importer> {
+        let info = self.fetch_server_info(&hostname).await?;
+        let key = self
+            .get_local_keys()
+            .await
+            .into_iter()
+            .next()
+            .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
+        let globals = self.globals.clone();
+        let http = globals.services().http.client.clone();
+        Ok(Importer {
+            globals,
+            hostname,
+            http,
+            info,
+            key,
+            puppet_id: None,
+        })
+    }
+
     /// Load a user from a remote server, fetching and caching it locally.
     pub async fn import_user(&self, origin_user_id: UserId, hostname: &Hostname) -> Result<User> {
         let info = self.fetch_server_info(hostname).await?;
@@ -30,22 +56,26 @@ impl ServiceFederation {
             .api_url
             .join(&format!("/api/v1/user/{}", origin_user_id))?;
 
-        let res = self.state.services().http.client.get(url).send().await?;
+        let res = self.globals.services().http.client.get(url).send().await?;
         if !res.status().is_success() {
             return Err(Error::BadStatic("failed to fetch remote user"));
         }
 
         let mut user: User = res.json().await?;
+        self.import_user_inner(user, &hostname).await
+    }
+
+    async fn import_user_inner(&self, mut user: User, hostname: &Hostname) -> Result<User> {
         let remote = Remote {
-            origin_id: origin_user_id,
+            origin_id: user.id,
             hostname: hostname.clone(),
             epoch: FederationEpoch(0),
         };
         user.remote = Some(remote.clone());
 
-        let mut txn = self.state.begin().await?;
-        let srv = self.state.services();
-        let local = txn.user_get(origin_user_id).await.ok();
+        let mut txn = self.globals.begin().await?;
+        let srv = self.globals.services();
+        let local = txn.user_get(user.id).await.ok();
         let existing = txn.user_get_remote(&remote).await.ok();
 
         let local_user_id = match (&local, &existing) {
@@ -53,7 +83,7 @@ impl ServiceFederation {
             (_, Some(existing)) => existing.id,
 
             // try to use the same id as origin
-            (None, None) => origin_user_id,
+            (None, None) => user.id,
 
             // it's already taken, create a new id
             (Some(_), None) => UserId::new(),
@@ -74,7 +104,7 @@ impl ServiceFederation {
 
             // commit so that the media service sees the user
             txn.commit().await?;
-            txn = self.state.begin().await?;
+            txn = self.globals.begin().await?;
         }
 
         let mut patch = UserPatch {
@@ -145,16 +175,17 @@ impl ServiceFederation {
         }
 
         // PERF: don't update if nothing changed
-        txn.user_update(local_user_id, patch).await?;
+        txn.user_update(user.id, patch).await?;
 
         txn.commit().await?;
 
+        user.id = local_user_id;
         Ok(user)
     }
 
     /// Import media from a remote server, saving a copy locally.
     pub async fn import_media(&self, remote: RemoteReq<MediaId>) -> Result<Arc<Media>> {
-        let srv = self.state.services();
+        let srv = self.globals.services();
 
         // fetch remote media object
         let info = self.fetch_server_info(&remote.hostname).await?;
@@ -187,7 +218,7 @@ impl ServiceFederation {
                     ..(*existing.media()).clone()
                 });
 
-                let mut txn = self.state.begin().await?;
+                let mut txn = self.globals.begin().await?;
                 txn.media_replace((*new_media).clone()).await?;
                 txn.commit().await?;
                 return Ok(new_media);
@@ -222,40 +253,42 @@ impl ServiceFederation {
     }
 
     /// Load an invite from a remote server, fetching and caching it locally.
-    pub async fn import_invite(&self, hostname: &Hostname, code: &InviteCode) -> Result<Invite> {
-        let info = self.fetch_server_info(&hostname).await?;
-        let url = info.api_url.join(&format!("/api/v1/invite/{}", code))?;
-
-        let key = self
-            .get_local_keys()
-            .await
-            .into_iter()
-            .next()
-            .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
-
-        let req = OutgoingRequest {
-            origin: &self.state.config().hostname2()?,
-            host: &hostname,
-            method: "GET",
-            path: url.path(),
-            body: &[],
-        };
-
-        let res = self
-            .state
-            .services()
-            .http
-            .client
-            .get(url.clone())
-            .headers(req.sign(&key)?)
-            .send()
+    pub async fn import_invite(&self, hostname: Hostname, code: &InviteCode) -> Result<Invite> {
+        let importer = self.importer(hostname.clone()).await?;
+        let res = importer
+            .http_signed(routes::invite_resolve::Request {
+                invite_code: code.clone(),
+            })
             .await?;
 
-        if !res.status().is_success() {
-            return Err(Error::BadStatic("request failed"));
+        match &res.invite.target {
+            InviteTarget::Room {
+                room,
+                channel,
+                roles,
+            } => todo!(),
+            InviteTarget::Gdm { channel } => todo!(),
+            InviteTarget::Server => todo!(),
+            InviteTarget::User { user } => {
+                self.import_user_inner((**user).clone(), &hostname).await?;
+            }
         }
 
-        let invite: Invite = res.json().await?;
+        // let mut txn = self.globals.begin().await?;
+        // txn.invite_insert_channel(channel_id, creator_id, code, expires_at, max_uses, role_ids)
+        // txn.invite_insert_room   (room_id,    creator_id, code, expires_at, max_uses, role_ids)
+        // txn.commit().await?;
+
+        match res.invite.target {
+            InviteTarget::Room {
+                room,
+                channel,
+                roles,
+            } => todo!(),
+            InviteTarget::Gdm { channel } => todo!(),
+            InviteTarget::Server => todo!(),
+            InviteTarget::User { user } => todo!(),
+        }
 
         // TODO: import invite similarly to load_remote_room
 
@@ -269,43 +302,20 @@ impl ServiceFederation {
     pub async fn import_room(
         &self,
         remote: RemoteReq<RoomId>,
-        _puppet_id: Option<UserId>,
+        puppet_id: Option<UserId>,
     ) -> Result<Room> {
-        let info = self.fetch_server_info(&remote.hostname).await?;
-        let url = info
-            .api_url
-            .join(&format!("/api/v1/room/{}", remote.origin_id))?;
-
-        let key = self
-            .get_local_keys()
-            .await
-            .into_iter()
-            .next()
-            .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
-
-        let req = OutgoingRequest {
-            origin: &self.state.config().hostname2()?,
-            host: &remote.hostname,
-            method: "GET",
-            path: url.path(),
-            body: &[],
-        };
-
-        let res = self
-            .state
-            .services()
-            .http
-            .client
-            .get(url.clone())
-            .headers(req.sign(&key)?)
-            .send()
+        let importer = self
+            .importer(remote.hostname.clone())
+            .await?
+            .with_puppet(puppet_id);
+        let res = importer
+            .http_signed(routes::room_get::Request {
+                room_id: remote.origin_id,
+                if_none_match: None,
+            })
             .await?;
 
-        if !res.status().is_success() {
-            return Err(Error::BadStatic("failed to fetch remote room"));
-        }
-
-        let mut room: Room = res.json().await?;
+        let mut room = res.room;
         let remote_info = Remote {
             origin_id: remote.origin_id,
             hostname: remote.hostname.clone(),
@@ -313,7 +323,7 @@ impl ServiceFederation {
         };
         room.remote = Some(remote_info.clone());
 
-        let mut txn = self.state.begin().await?;
+        let mut txn = self.globals.begin().await?;
         let local = txn.room_get(remote.origin_id).await.ok();
         let existing = txn.room_get_remote(&remote).await.ok();
 
@@ -350,7 +360,7 @@ impl ServiceFederation {
 
             // commit so media service sees the room
             txn.commit().await?;
-            txn = self.state.begin().await?;
+            txn = self.globals.begin().await?;
         }
 
         let mut patch = RoomPatch {
@@ -359,18 +369,14 @@ impl ServiceFederation {
             icon: None,
             banner: None,
             public: None,
-            // TODO: other fields
-            // welcome_channel_id: Some(Some(room.welcome_channel_id)),
-            // afk_channel_id: Some(Some(room.afk_channel_id)),
-            // afk_channel_timeout: Some(Some(room.afk_channel_timeout)),
-            // invites_paused_until: Some(Some(room.invites_paused_until)),
             welcome_channel_id: None,
             afk_channel_id: None,
-            afk_channel_timeout: None,
-            invites_paused_until: None,
+            afk_channel_timeout: Some(room.afk_channel_timeout),
+            invites_paused_until: Some(room.invites_paused_until),
         };
 
         // PERF: run multiple media imports in parallel
+        // PERF: don't hold txn for so long
         // NOTE: we compare against remote origin ids for icon/banner,
         // but we don't store them in DB. Re-fetching is currently unavoidable.
         match (room.icon, existing.as_ref().and_then(|e| e.icon)) {
@@ -426,7 +432,36 @@ impl ServiceFederation {
             }
         }
 
-        // TODO: mirror room.welcome_channel_id, room.afk_channel_id, room.owner_id
+        if let Some(id) = room.welcome_channel_id {
+            let chan = self
+                .import_channel(
+                    RemoteReq {
+                        origin_id: id,
+                        hostname: remote.hostname.clone(),
+                    },
+                    puppet_id,
+                )
+                .await?;
+            patch.welcome_channel_id = Some(Some(chan.id));
+        }
+
+        if let Some(id) = room.afk_channel_id {
+            let chan = self
+                .import_channel(
+                    RemoteReq {
+                        origin_id: id,
+                        hostname: remote.hostname.clone(),
+                    },
+                    puppet_id,
+                )
+                .await?;
+            patch.afk_channel_id = Some(Some(chan.id));
+        }
+
+        if let Some(id) = room.owner_id {
+            let user = self.import_user(id, &remote.hostname).await?;
+            txn.room_set_owner(local_room_id, user.id).await?;
+        }
 
         txn.room_update(local_room_id, patch).await?;
         txn.commit().await?;
@@ -436,13 +471,59 @@ impl ServiceFederation {
         Ok(room)
     }
 
+    /// import all channels in a room
+    pub async fn import_room_channels(
+        &self,
+        remote: RemoteReq<RoomId>,
+        puppet_id: Option<UserId>,
+    ) -> Result<()> {
+        let importer = self
+            .importer(remote.hostname.clone())
+            .await?
+            .with_puppet(puppet_id);
+        let res = importer
+            .http_signed(routes::channel_list::Request {
+                room_id: remote.origin_id,
+                pagination: PaginationQuery {
+                    from: None,
+                    to: None,
+                    dir: None,
+                    limit: Some(1024),
+                },
+            })
+            .await?;
+
+        for chan in res.channels.items {
+            self.import_channel_inner(
+                RemoteReq {
+                    origin_id: chan.id,
+                    hostname: remote.hostname.clone(),
+                },
+                chan,
+                puppet_id,
+            )
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    /// import all roles in a room
+    pub async fn import_room_roles(
+        &self,
+        remote: RemoteReq<RoomId>,
+        puppet_id: Option<UserId>,
+    ) -> Result<()> {
+        todo!()
+    }
+
     /// Load a channel from a remote server, fetching and caching it locally.
     ///
     /// channels may require authentication to view, pass the id of a user who is able to or trying to access this channel as `puppet_id`
     pub async fn import_channel(
         &self,
         remote: RemoteReq<ChannelId>,
-        _puppet_id: Option<UserId>,
+        puppet_id: Option<UserId>,
     ) -> Result<Channel> {
         let info = self.fetch_server_info(&remote.hostname).await?;
         let url = info
@@ -457,7 +538,11 @@ impl ServiceFederation {
             .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
 
         let req = OutgoingRequest {
-            origin: &self.state.config().hostname2()?,
+            origin: &self
+                .globals
+                .config()
+                .hostname2()
+                .map_err(|err| Error::Internal(err.to_string()))?,
             host: &remote.hostname,
             method: "GET",
             path: url.path(),
@@ -465,7 +550,7 @@ impl ServiceFederation {
         };
 
         let res = self
-            .state
+            .globals
             .services()
             .http
             .client
@@ -479,6 +564,15 @@ impl ServiceFederation {
         }
 
         let mut channel: Channel = res.json().await?;
+        self.import_channel_inner(remote, channel, puppet_id).await
+    }
+
+    pub async fn import_channel_inner(
+        &self,
+        remote: RemoteReq<ChannelId>,
+        mut channel: Channel,
+        _puppet_id: Option<UserId>,
+    ) -> Result<Channel> {
         let remote_info = Remote {
             origin_id: remote.origin_id,
             hostname: remote.hostname.clone(),
@@ -486,7 +580,7 @@ impl ServiceFederation {
         };
         channel.remote = Some(remote_info.clone());
 
-        let mut txn = self.state.begin().await?;
+        let mut txn = self.globals.begin().await?;
         let local = txn.channel_get(remote.origin_id).await.ok();
         let existing = txn.channel_get_remote(&remote).await.ok();
 
@@ -525,8 +619,8 @@ impl ServiceFederation {
                     slowmode_thread: channel.slowmode_thread.map(|v| v as i64),
                     slowmode_message: channel.slowmode_message.map(|v| v as i64),
                     default_slowmode_message: channel.default_slowmode_message.map(|v| v as i64),
+                    icon: None,
 
-                    icon: None,                     // handle icon later
                     parent_id: None,                // FIXME: import parent_id
                     locked: false, // FIXME: import locked (role ids need to be imported)
                     tags: None,    // FIXME: import tags
@@ -539,7 +633,7 @@ impl ServiceFederation {
 
             // commit so media service sees the channel
             txn.commit().await?;
-            txn = self.state.begin().await?;
+            txn = self.globals.begin().await?;
         }
 
         let mut patch = ChannelPatch::default();
@@ -577,6 +671,74 @@ impl ServiceFederation {
         channel.id = local_channel_id;
 
         Ok(channel)
+    }
+}
+
+use common::util::routes::{Endpoint, Request, Response};
+
+pub struct Importer {
+    globals: Globals,
+    http: reqwest::Client,
+    hostname: Hostname,
+    info: ServerInfo,
+    key: ServerKeySecret,
+    puppet_id: Option<UserId>,
+}
+
+impl Importer {
+    pub fn with_puppet(mut self, puppet_id: Option<UserId>) -> Self {
+        self.puppet_id = puppet_id;
+        self
+    }
+
+    /// send a signed http request for federation.
+    pub async fn http_signed<E, Req, Res>(&self, req: Req) -> Result<Res>
+    where
+        E: Endpoint<Request = Req, Response = Res>,
+        Req: Request<Endpoint = E>,
+        Res: Response<Endpoint = E>,
+    {
+        // TODO: don't panic, add better error handling
+
+        // buffer request body
+        let http_req = req.encode();
+        let (mut parts, body) = http_req.into_parts();
+        let bytes = body.buffer().await.unwrap();
+
+        // sign request
+        let outgoing_req = OutgoingRequest {
+            origin: &self
+                .globals
+                .config()
+                .hostname2()
+                .map_err(|err| Error::Internal(err.to_string()))?,
+            host: &self.hostname,
+            method: parts.method.as_str(),
+            path: parts.uri.path(),
+            body: &bytes,
+        };
+        let headers = outgoing_req.sign(&self.key)?;
+        for (name, value) in headers {
+            if let Some(name) = name {
+                parts.headers.insert(name, value);
+            }
+        }
+
+        // send request
+        let reqwest_req = http::Request::from_parts(parts, reqwest::Body::from(bytes));
+        let client = self.globals.services().http.client.clone();
+        let res = client
+            .execute(reqwest_req.try_into()?)
+            .await?
+            .error_for_status()?;
+        let status = res.status();
+        let headers = res.headers().clone();
+
+        // extract response
+        let mut builder = http::Response::builder().status(status);
+        *builder.headers_mut().expect("builder not errored") = headers;
+        let http_res = builder.body(Body::from_stream(res.bytes_stream())).unwrap();
+        Ok(Res::extract(http_res).await.unwrap())
     }
 }
 

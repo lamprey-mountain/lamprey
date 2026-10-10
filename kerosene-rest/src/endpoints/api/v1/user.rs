@@ -178,21 +178,15 @@ pub async fn update(
         AuditLogEntryType::UserUpdate {
             changes: changes.clone(),
         },
-        req.headers().reason.clone(),
     )
-    .await
-    .success()
-    .await;
+    .success();
 
     if auth_user.id != target_user_id {
         al.push(
             SERVER_ROOM_ID.into_inner().into(),
             AuditLogEntryType::UserUpdate { changes },
-            req.headers().reason.clone(),
         )
-        .await
-        .success()
-        .await;
+        .success();
     }
 
     Ok(routes::user_update::Response { user })

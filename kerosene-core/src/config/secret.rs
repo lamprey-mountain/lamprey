@@ -106,12 +106,11 @@ impl Secret {
         match &self.source {
             SecretSource::Inline(val) => Ok(val.clone()),
             SecretSource::File { file_path } => {
-                let content = fs::read_to_string(file_path)?;
+                let content = fs::read_to_string(file_path).map_err(ServerError::internal)?;
                 Ok(content.trim().to_string())
             }
             // TODO: more specific error
-            SecretSource::Env { env_var } => env::var(env_var)
-                .map_err(|_| Error::Internal(format!("environment variable {} not set", env_var))),
+            SecretSource::Env { env_var } => env::var(env_var).map_err(ServerError::internal),
         }
     }
 }

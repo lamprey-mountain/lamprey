@@ -4,7 +4,7 @@ pub mod permissions;
 pub mod queue;
 pub mod transport;
 pub mod util;
-pub mod v2;
+// pub mod v2; // TODO
 
 // TODO: implement these?
 // pub mod error;

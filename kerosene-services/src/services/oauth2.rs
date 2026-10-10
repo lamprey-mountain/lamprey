@@ -123,9 +123,7 @@ impl ServiceOauth {
             .config()
             .oauth_provider
             .get(provider)
-            .ok_or(Error::ApiError(ApiError::from_code(
-                ErrorCode::UnknownOauth2Client,
-            )))?;
+            .ok_or(ApiError::from_code(ErrorCode::UnknownOauth2Client))?;
         let state = Uuid::new_v4();
         self.oauth_states
             .insert(state, OauthState::new(provider.to_string(), session_id));
@@ -166,9 +164,7 @@ impl ServiceOauth {
             .config()
             .oauth_provider
             .get(&s.provider)
-            .ok_or(Error::ApiError(ApiError::from_code(
-                ErrorCode::UnknownOauth2Client,
-            )))?;
+            .ok_or(ApiError::from_code(ErrorCode::UnknownOauth2Client))?;
         let redirect_uri: Url = self
             .state
             .config()
@@ -180,10 +176,18 @@ impl ServiceOauth {
                 // TODO: get version from env at compile time
                 "DiscordBot (https://git.celery.eu.org/lamprey/lamprey, 0.1.0)",
             ),
-            _ => self.state.config().user_agent_header_value()?,
+            _ => self
+                .state
+                .config()
+                .user_agent_header_value()
+                .map_err(|err| Error::Internal(err.to_string()))?,
         };
 
-        let client_secret = p.client_secret.load()?.to_string();
+        let client_secret = p
+            .client_secret
+            .load()
+            .map_err(|err| Error::Internal(err.to_string()))?
+            .to_string();
         let (use_basic_auth, body) = match s.provider.as_str() {
             "github" => (
                 false,
@@ -230,15 +234,17 @@ impl ServiceOauth {
             .config()
             .oauth_provider
             .get(provider)
-            .ok_or(Error::ApiError(ApiError::from_code(
-                ErrorCode::UnknownOauth2Client,
-            )))?;
+            .ok_or(ApiError::from_code(ErrorCode::UnknownOauth2Client))?;
         let client = reqwest::Client::new();
         let body = OauthTokenRevoke {
             token_type_hint: "access_token".to_string(),
             token,
         };
-        let client_secret = p.client_secret.load()?.to_string();
+        let client_secret = p
+            .client_secret
+            .load()
+            .map_err(|err| Error::Internal(err.to_string()))?
+            .to_string();
         client
             .post(&p.revocation_url)
             .basic_auth(&p.client_id, Some(&client_secret))
@@ -253,7 +259,13 @@ impl ServiceOauth {
         let client = reqwest::Client::new();
         let res: DiscordAuth = client
             .get("https://discord.com/api/v10/oauth2/@me")
-            .header("User-Agent", self.state.config().user_agent_header_value()?)
+            .header(
+                "User-Agent",
+                self.state
+                    .config()
+                    .user_agent_header_value()
+                    .map_err(|err| Error::Internal(err.to_string()))?,
+            )
             .bearer_auth(token)
             .send()
             .await?
@@ -269,7 +281,13 @@ impl ServiceOauth {
             .get("https://api.github.com/user")
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
-            .header("User-Agent", self.state.config().user_agent_header_value()?)
+            .header(
+                "User-Agent",
+                self.state
+                    .config()
+                    .user_agent_header_value()
+                    .map_err(|err| Error::Internal(err.to_string()))?,
+            )
             .bearer_auth(token)
             .send()
             .await?

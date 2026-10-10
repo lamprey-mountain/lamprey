@@ -24,7 +24,11 @@ impl ServiceFederation {
             .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
 
         let req = OutgoingRequest {
-            origin: &self.state.config().hostname2()?,
+            origin: &self
+                .globals
+                .config()
+                .hostname2()
+                .map_err(|err| Error::Internal(err.to_string()))?,
             host: &hostname,
             method: "POST",
             path: ping_url.path(),
@@ -32,7 +36,7 @@ impl ServiceFederation {
         };
 
         let res = self
-            .state
+            .globals
             .services()
             .http
             .client
@@ -64,7 +68,11 @@ impl ServiceFederation {
             .ok_or_else(|| Error::BadStatic("no local signing keys"))?;
 
         let req = OutgoingRequest {
-            origin: &self.state.config().hostname2()?,
+            origin: &self
+                .globals
+                .config()
+                .hostname2()
+                .map_err(|err| Error::Internal(err.to_string()))?,
             host: &hostname,
             method: "POST",
             path: connect_url.path(),
@@ -72,7 +80,7 @@ impl ServiceFederation {
         };
 
         let res = self
-            .state
+            .globals
             .services()
             .http
             .client
@@ -100,7 +108,7 @@ impl ServiceFederation {
         ))?;
 
         let res = self
-            .state
+            .globals
             .services()
             .http
             .client
@@ -119,7 +127,7 @@ impl ServiceFederation {
             .join(&format!("/api/v1/server/{}/keys", &hostname.0))?;
 
         let res = self
-            .state
+            .globals
             .services()
             .http
             .client

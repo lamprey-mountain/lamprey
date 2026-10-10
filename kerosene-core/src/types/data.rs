@@ -1,4 +1,4 @@
-use common::v1::types::redex::{RedexFormat, RedexLocation, RedexMetadata};
+use lamprey::v1::types::redex::{RedexFormat, RedexLocation, RedexMetadata};
 
 #[derive(Debug, Clone)]
 pub struct DataScriptVersion {

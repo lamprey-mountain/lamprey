@@ -1,7 +1,7 @@
 use bitflags::bitflags;
-use common::v1::types::Permission;
-use common::v1::types::oauth::{Scope, ScopeBits};
-use common::v2::types::{ChannelId, RoomId};
+use lamprey::v1::types::Permission;
+use lamprey::v1::types::oauth::{Scope, ScopeBits};
+use lamprey::v2::types::{ChannelId, RoomId};
 
 use crate::types::permission::PermissionBits;
 

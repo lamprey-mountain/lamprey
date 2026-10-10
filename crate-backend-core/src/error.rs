@@ -5,11 +5,11 @@ use axum::{Json, http::StatusCode, response::IntoResponse};
 use bytes::Bytes;
 use common::v1::types::application::Scopes;
 use common::v1::types::error::{ApiError, SyncErrorCode};
+use kerosene_core::error::{CoreResult, ServerError};
+use kerosene_core::ffmpeg::FfmpegError;
 use opentelemetry_otlp::ExporterBuildError;
 use serde_json::json;
 use tracing::{debug, error};
-
-use crate::ffmpeg::FfmpegError;
 
 #[derive(thiserror::Error, Debug)]
 // TODO: avoid returning actual error messages to prevent leaking stuff
@@ -351,3 +351,28 @@ impl From<SyncErrorCode> for Error {
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+pub trait LegacyErrorExt<T> {
+    /// cast all errors into `ServerError::Internal`
+    fn cast_internal(self) -> CoreResult<T, ServerError>;
+}
+
+impl<T> LegacyErrorExt<T> for Result<T> {
+    fn cast_internal(self) -> CoreResult<T, ServerError> {
+        self.map_err(|err| match err {
+            Error::ApiError(err) => ServerError::Api(Box::new(err)),
+            err => ServerError::Internal(Box::new(err)),
+        })
+    }
+}
+
+pub trait AnyErrorExt<T> {
+    /// cast all errors into `ServerError::Internal`
+    fn cast_any_internal(self) -> CoreResult<T, ServerError>;
+}
+
+impl<T, E: core::error::Error + Send + Sync + 'static> AnyErrorExt<T> for CoreResult<T, E> {
+    fn cast_any_internal(self) -> CoreResult<T, ServerError> {
+        self.map_err(ServerError::internal)
+    }
+}

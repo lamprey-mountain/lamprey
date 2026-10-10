@@ -1,9 +1,7 @@
 // TODO: clean up this code
 
-use common::v1::types::error::{ApiError, ApiResult, ErrorCode};
-use common::v1::types::{ChannelId, Permission, RoomId};
-
-use crate::error::{Error, Result};
+use lamprey::v1::types::error::{ApiError, ApiResult, ErrorCode};
+use lamprey::v1::types::{ChannelId, Permission, RoomId};
 
 pub mod bits;
 pub mod flags;
@@ -98,44 +96,44 @@ impl Permissions {
     /// If the user cannot view (missing ChannelView permission or explicit cannot_view flag),
     /// returns a 404 error (UnknownRoom/UnknownChannel) to avoid leaking resource existence.
     #[inline]
-    pub fn ensure_view(&self) -> Result<()> {
+    pub fn ensure_view(&self) -> ApiResult<()> {
         if self.has(Permission::ChannelView) {
             Ok(())
         } else {
-            Err(Error::ApiError(ApiError::from_code(match self.context {
+            Err(ApiError::from_code(match self.context {
                 PermissionsContext::Room => ErrorCode::UnknownRoom,
                 PermissionsContext::Channel => ErrorCode::UnknownChannel,
-            })))
+            }))
         }
     }
 
     /// ensure that the user has a permission, returning an error if they don't
     #[inline]
-    pub fn ensure(&self, perm: Permission) -> Result<()> {
+    pub fn ensure(&self, perm: Permission) -> ApiResult<()> {
         if perm == Permission::ChannelView {
             self.ensure_view()
         } else if self.has(perm) {
             Ok(())
         } else {
-            Err(Error::ApiError(ApiError {
+            Err(ApiError {
                 required_permissions: vec![perm],
                 ..ApiError::from_code(ErrorCode::MissingPermissions)
-            }))
+            })
         }
     }
 
     /// ensure that the user has a permission (server variant with different error message)
     #[inline]
-    pub fn ensure_server(&self, perm: Permission) -> Result<()> {
+    pub fn ensure_server(&self, perm: Permission) -> ApiResult<()> {
         if perm == Permission::ChannelView {
             self.ensure_view()
         } else if self.has(perm) {
             Ok(())
         } else {
-            Err(Error::ApiError(ApiError {
+            Err(ApiError {
                 required_permissions_server: vec![perm],
                 ..ApiError::from_code(ErrorCode::MissingPermissions)
-            }))
+            })
         }
     }
 
@@ -187,7 +185,7 @@ impl Permissions {
     /// otherwise a 403 error (MissingPermissions). The error payload includes *all*
     /// missing permissions.
     #[inline]
-    pub fn ensure_all(&self, perms: &[Permission]) -> Result<()> {
+    pub fn ensure_all(&self, perms: &[Permission]) -> ApiResult<()> {
         self.ensure_all_impl(perms, false)
     }
 
@@ -195,11 +193,11 @@ impl Permissions {
     ///
     /// Like `ensure_all`, but uses `required_permissions_server` in the error response.
     #[inline]
-    pub fn ensure_all_server(&self, perms: &[Permission]) -> Result<()> {
+    pub fn ensure_all_server(&self, perms: &[Permission]) -> ApiResult<()> {
         self.ensure_all_impl(perms, true)
     }
 
-    fn ensure_all_impl(&self, perms: &[Permission], server: bool) -> Result<()> {
+    fn ensure_all_impl(&self, perms: &[Permission], server: bool) -> ApiResult<()> {
         if perms.is_empty() {
             return Ok(());
         }
@@ -226,7 +224,7 @@ impl Permissions {
             err.required_permissions = missing;
         }
 
-        Err(Error::ApiError(err))
+        Err(err)
     }
 
     /// whether this user has permissions to bypass slowmode in this channel
@@ -239,15 +237,13 @@ impl Permissions {
 
     /// ensure a channel is either unlocked or that the user has permission to interact with it
     // NOTE: remove? merge ThreadLocked error into ensure_foo()
-    pub fn ensure_unlocked(&self) -> Result<()> {
+    pub fn ensure_unlocked(&self) -> ApiResult<()> {
         if !self.is_channel_locked() {
             return Ok(());
         }
 
         if !self.can_bypass_locked_channels() {
-            return Err(Error::ApiError(ApiError::from_code(
-                ErrorCode::ThreadLocked,
-            )));
+            return Err(ApiError::from_code(ErrorCode::ThreadLocked));
         }
 
         Ok(())

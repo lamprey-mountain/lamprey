@@ -115,6 +115,8 @@
             src = filterSrcFor (dirs ++ baseInternalDeps);
             env = {
               VERGEN_GIT_SHA = self.rev or self.dirtyRev;
+              VERGEN_GIT_COMMIT_TIMESTAMP = self.lastModifiedDate;
+              VERGEN_GIT_DIRTY = if self ? rev then "false" else "true";
             };
           });
 
@@ -137,6 +139,8 @@
             ] ++ baseInternalDeps);
             env = {
               VERGEN_GIT_SHA = self.rev or self.dirtyRev;
+              VERGEN_GIT_COMMIT_TIMESTAMP = self.lastModifiedDate;
+              VERGEN_GIT_DIRTY = if self ? rev then "false" else "true";
               FRONTEND_DIST = frontend;
             };
         });

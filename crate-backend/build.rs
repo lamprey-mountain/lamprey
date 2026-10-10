@@ -1,4 +1,4 @@
-use vergen_gix::{CargoBuilder, Emitter, GixBuilder, RustcBuilder};
+use vergen_gitcl::{CargoBuilder, Emitter, GitclBuilder, RustcBuilder};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var("CARGO_FEATURE_EMBED_FRONTEND").is_ok() {
@@ -13,9 +13,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .debug(true)
         .target_triple(true)
         .build()?;
-    let git = GixBuilder::default()
-        .commit_timestamp(true)
+    let git = GitclBuilder::default()
         .sha(true)
+        .commit_timestamp(true)
+        .dirty(true)
         .build()?;
     let rustc = RustcBuilder::default()
         .semver(true)

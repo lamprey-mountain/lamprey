@@ -1,4 +1,4 @@
-use common::v1::types::federation::FederationEpoch;
+use lamprey::v1::types::federation::FederationEpoch;
 
 // TODO: save (cache?) in db?
 #[derive(Debug, Clone)]

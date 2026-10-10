@@ -1,4 +1,4 @@
-use common::v2::types::MediaId;
+use lamprey::v2::types::MediaId;
 
 /// media path calculator
 pub struct MediaPaths {

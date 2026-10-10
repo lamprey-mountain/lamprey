@@ -31,6 +31,12 @@ pub use ::core::result::Result as CoreResult;
 pub type Result<T, E = ServerError> = ::core::result::Result<T, E>;
 
 impl ServerError {
+    /// wrap any error into an internal error
+    #[inline]
+    pub fn internal<E: Into<Box<dyn std::error::Error + Send + Sync>>>(err: E) -> Self {
+        Self::Internal(err.into())
+    }
+
     pub fn http_status(&self) -> StatusCode {
         match self {
             Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -83,19 +89,5 @@ impl From<tracing::subscriber::SetGlobalDefaultError> for ServerError {
 impl From<tracing_subscriber::filter::ParseError> for ServerError {
     fn from(value: tracing_subscriber::filter::ParseError) -> Self {
         ServerError::Internal(Box::new(value))
-    }
-}
-
-pub trait LegacyErrorExt<T> {
-    /// cast all errors into `ServerError::Internal`
-    fn cast_internal(self) -> Result<T, ServerError>;
-}
-
-impl<T> LegacyErrorExt<T> for lamprey_backend_core::Result<T> {
-    fn cast_internal(self) -> Result<T, ServerError> {
-        self.map_err(|err| match err {
-            lamprey_backend_core::Error::ApiError(err) => ServerError::Api(Box::new(err)),
-            err => ServerError::Internal(Box::new(err)),
-        })
     }
 }

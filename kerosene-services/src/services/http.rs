@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-// use common::util::routes::{Endpoint, Request};
 use reqwest::{Client, Response};
 use url::Url;
 

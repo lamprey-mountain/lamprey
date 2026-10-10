@@ -1,6 +1,6 @@
 use std::net::IpAddr;
 
-use common::v1::types::{SessionId, UserId};
+use lamprey::v1::types::{SessionId, UserId};
 
 pub mod aggregate;
 pub mod types;

@@ -7,7 +7,6 @@ use common::v1::types::{
     ChannelId, Permission, PermissionOverwriteSet, PermissionOverwriteType, util::Changes,
 };
 use common::v2::types::{PermissionOverwriteId, UserId};
-use kerosene_core::error::{ApiError, ErrorCode, LegacyErrorExt, ServerResult};
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
 
 impl ServiceChannels {
