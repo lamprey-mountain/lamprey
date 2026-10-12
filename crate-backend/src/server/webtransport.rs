@@ -131,7 +131,7 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
                 }
             }
         }
-        SyncVersion::V2 => v2::accept(globals, connection).await,
+        SyncVersion::V2 => v2::accept(globals, connection, params).await,
     }
 }
 
@@ -401,78 +401,248 @@ async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState)
 mod v2 {
     use super::*;
     use crate::prelude::*;
+    use common::v2::types::sync::dispatch::channel::{
+        ChannelCreate, ChannelUpdate, DispatchChannel, MessageCreate,
+    };
+    use common::v2::types::sync::dispatch::global::DispatchGlobal;
+    use common::v2::types::sync::dispatch::room::RoomCreate;
+    use common::v2::types::sync::dispatch::{Dispatch, Ready};
+    use futures::SinkExt;
+    use kerosene_services::globals::messaging::Broadcast;
+    use kerosene_sync::util::{CLOSE_TIME, HEARTBEAT_TIME, Timeout};
+    use tokio::sync::watch;
 
+    use common::v1::types::presence::Presence;
+    use common::v1::types::{MessageSync, Session};
+    use common::v2::types::ConnectionId;
+    use common::v2::types::sync::stream::hello;
+    use common::v2::types::sync::transport::webtransport::Params;
+    use kerosene_sync::v2::codec::Codec;
     use kerosene_sync::v2::transport::webtransport::{WebtransportStream, WebtransportTransport};
     use kerosene_sync::v2::transport::{Transport, TransportStream};
     use tokio::io::AsyncReadExt;
 
     const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
 
-    pub async fn accept(globals: Globals, connection: Connection) -> Result<()> {
-        let state: WtState = Arc::new(WtStateInner {
-            globals,
-            params,
-            shared: Mutex::new(WtStateShared::default()),
-        });
-
-        let tn = WebtransportTransport::new(connection);
-
-        // loop {
-        //     tokio::select! {
-        //         Ok((send, recv)) = connection.accept_bi() => {
-        //             let state = state.clone();
-        //             spawn(handle_stream(send, recv, state));
-        //         }
-        //         reason = connection.closed() => {
-        //             // TODO: handle reason correctly, return Ok or Err depending on it
-        //             debug!("connection closed: {reason}");
-        //             return Ok(())
-        //         }
-        //     }
-        // }
+    struct StateInner {
+        globals: Globals,
+        id: ConnectionId,
+        params: Params,
+        session: watch::Sender<Option<Arc<Session>>>,
     }
 
-    async fn handshake<T: Transport>(t: &mut T) {
-        tokio::time::timeout(HANDSHAKE_TIMEOUT, async {
-            // let a = t.next().await;
-            // read header
-            // handle identify header
-        })
-        .await;
-    }
+    type State = Arc<StateInner>;
 
-    async fn handle_stream(send: SendStream, recv: RecvStream, state: WtState) {
-        if let Err(err) = handle_stream_inner(send, recv, state).await {
-            debug!("error while handling stream: {err}");
+    impl StateInner {
+        pub async fn session(&self) -> Result<Arc<Session>> {
+            let mut rx = self.session.subscribe();
+            // Wait until a session is set
+            loop {
+                if let Some(session) = rx.borrow().clone() {
+                    return Ok(session);
+                }
+                if rx.changed().await.is_err() {
+                    return Err(Error::BadStatic("transport closed"));
+                }
+            }
         }
     }
 
-    async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState) -> Result<()> {
+    pub async fn accept(
+        globals: Globals,
+        connection: Connection,
+        params: SyncParams,
+    ) -> Result<()> {
+        let (session_tx, _) = watch::channel(None);
+        let state = Arc::new(StateInner {
+            globals,
+            id: ConnectionId::new(),
+            params: Params {
+                version: params.version,
+                compression: params.compression,
+                encoding: params.format,
+            },
+            session: session_tx,
+        });
+
+        let mut transport = WebtransportTransport::new(connection);
+        let mut stream_tasks = JoinSet::new();
+
+        // TODO: use proper sync error, close stream on auth fail
+        // TODO: timeout HANDSHAKE_TIMEOUT, close transport if no hello was received in time
+
+        // let (session, hello_frames) =
+        //     tokio::time::timeout(HANDSHAKE_TIMEOUT, handshake(&mut transport, shared.clone()))
+        //         .await
+        //         .map_err(|_| Error::BadStatic("handshake timeout"))??;
+
+        // handle streams
+        while let Some(s) = transport.next().await {
+            let state = state.clone();
+            stream_tasks.spawn(async move {
+                if let Err(err) = handle_stream(s, state).await {
+                    debug!("error while handling stream: {err}");
+                }
+            });
+        }
+
+        // TODO: somehow get connection closed reason here?
+        // debug!("connection closed: {reason}");
+
+        // TODO: clean up connection?
+
+        // TODO: use proper close code (maybe make close() a part of Transport)
+        // transport
+        //     .into_inner()
+        //     .close(SyncErrorCode::Unauthorized, &[]);
+
+        Ok(())
+    }
+
+    async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Result<()> {
         let srv = state.globals.services();
 
         // read stream header
-        let header = StreamHeader::try_from(recv.read_u8().await?).map_err(
+        let header = StreamHeader::try_from(stream.read_u8().await?).map_err(
             // TODO: better error types? (eg. dedicated sync error type)
-            ApiError::with_message(ErrorCode::InvalidData, "unknown header byte".to_string()),
+            |_| ApiError::with_message(ErrorCode::InvalidData, "unknown header byte".to_string()),
         )?;
 
-        let stream = WebtransportStream::new(send, recv);
-
         match header {
-            StreamHeader::Identify => {
-                type Proto = common::v2::types::sync::stream::identify::Protocol;
-                let params = common::v2::types::sync::transport::webtransport::Params {
-                    version: state.params.version,
-                    compression: state.params.compression,
-                    encoding: state.params.encoding,
-                };
-                let codec = kerosene_sync::v2::codec::Codec::<Proto>::new(params);
-                let (init, framed) = codec.accept(stream).await.unwrap();
-                todo!()
-            }
-            _ => todo!(),
-        }
+            StreamHeader::Hello => {
+                type Proto = hello::Protocol;
+                let codec = Codec::<Proto>::new(state.params.clone());
+                let (init, mut framed) = codec.accept(stream).await?;
+                match init {
+                    hello::Initial::Identify(identify) => {
+                        // authenticate session
+                        let session = srv.sessions.get_by_token(identify.token).await?;
+                        let _ = state.session.send(Some(session.clone()));
 
-        Ok(())
+                        // set presence
+                        if let (presence, Some(user_id)) = (identify.presence, session.user_id()) {
+                            let user = srv.users.get(user_id, Some(user_id)).await?;
+                            if !user.is_suspended() {
+                                let presence = presence.unwrap_or_else(Presence::online);
+                                srv.presence.set(state.id, user_id, presence);
+                            }
+                        }
+
+                        // send ready payload
+                        let user = if let Some(uid) = session.user_id() {
+                            Some(Box::new(srv.users.get(uid, Some(uid)).await?))
+                        } else {
+                            None
+                        };
+
+                        let application = if let Some(application_id) = session.app_id {
+                            let mut d = state.globals.begin_read().await?;
+                            Some(Box::new(d.application_get(application_id).await?))
+                        } else {
+                            None
+                        };
+
+                        framed
+                            .send(hello::Event::Ready(Ready {
+                                user,
+                                application,
+                                session: Box::new((*session).clone()),
+                                conn: state.id,
+                            }))
+                            .await?;
+
+                        // start main loop
+                        let mut timeout = Timeout::for_ping();
+                        let mut broadcast_stream = state.globals.messaging().subscribe().await?;
+                        loop {
+                            tokio::select! {
+                                _ = tokio::time::sleep_until(timeout.get_instant()) => match timeout {
+                                    Timeout::Ping(_) => {
+                                        framed.send(hello::Event::Ping).await?;
+                                        timeout = Timeout::for_close();
+                                    }
+                                    Timeout::Close(_) => {
+                                        return Err(Error::BadStatic("ping timeout"));
+                                    }
+                                },
+                                broadcast = broadcast_stream.next() => {
+                                    if let Some(msg) = broadcast {
+                                        if let Some(msg) = broadcast_to_dispatch(msg) {
+                                            framed.send(hello::Event::Dispatch(hello::Dispatch {
+                                                inner: Box::new(msg),
+                                                seq: 0, // TODO: populate seq
+                                            })).await?;
+                                        }
+                                    }
+                                },
+                                command = framed.next() => {
+                                    match command.transpose()? {
+                                        Some(hello::Command::Pong) => {
+                                            timeout = Timeout::for_ping();
+                                        }
+                                        Some(hello::Command::Presence { presence }) => {
+                                            if let Some(user_id) = session.user_id() {
+                                                srv.presence.set(state.id, user_id, presence);
+                                            }
+                                        }
+                                        Some(hello::Command::Close) | None => {
+                                            break;
+                                        }
+                                    }
+                                },
+                            }
+                        }
+
+                        Ok(())
+                    }
+                    // TODO: handle these later
+                    // hello::Initial::Resume(resume) => todo!(),
+                    // hello::Initial::Shard(shard) => todo!(),
+                    _ => Err(Error::Unimplemented),
+                }
+            }
+            _ => {
+                let _session = state.session().await?;
+                // TODO: do stuff with session
+                Err(Error::Unimplemented)
+            }
+        }
+    }
+
+    // TODO: implement this, slowly and painfully
+    fn broadcast_to_dispatch(broadcast: Broadcast) -> Option<Dispatch> {
+        let Broadcast::Sync(sync) = broadcast else {
+            return None;
+        };
+
+        let dispatch: Dispatch = match sync.message {
+            MessageSync::RoomCreate { room } => DispatchGlobal::RoomCreate(RoomCreate {
+                room: Box::new(room),
+                roles: todo!(),
+                channels: todo!(),
+                threads: todo!(),
+                room_member: todo!(),
+                seq: todo!(),
+            })
+            .into(),
+            MessageSync::ChannelCreate { channel } => {
+                let seq = channel.latest_seq;
+                DispatchGlobal::ChannelCreate(ChannelCreate { channel, seq }).into()
+            }
+            MessageSync::ChannelUpdate { channel } => {
+                let seq = channel.latest_seq;
+                DispatchGlobal::ChannelUpdate(ChannelUpdate { channel, seq }).into()
+            }
+            MessageSync::MessageCreate { message } => {
+                DispatchChannel::MessageCreate(MessageCreate {
+                    message: Box::new(message),
+                    seq: 0.into(), // TODO: use actual channel seq
+                })
+                .into()
+            }
+            _ => return None,
+        };
+
+        Some(dispatch)
     }
 }
