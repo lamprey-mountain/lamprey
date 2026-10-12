@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
-use crate::prelude::*;
-use lamprey_backend_core::config::Config;
+use crate::{config::Config, prelude::*};
 use opentelemetry::trace::TracerProvider;
 use opentelemetry_otlp::WithExportConfig;
 use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};

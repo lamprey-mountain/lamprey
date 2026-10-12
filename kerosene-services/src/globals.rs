@@ -6,7 +6,7 @@ use crate::prelude::*;
 use std::sync::Weak;
 use std::time::Duration;
 
-use lamprey_backend_core::config::{Config, ConfigBlobs};
+use kerosene_core::config::{Config, ConfigBlobs};
 use lamprey_backend_data_postgres::data::postgres::PostgresPool;
 use lamprey_backend_data_postgres::data::{AnyData, Database};
 use opendal::layers::LoggingLayer;
@@ -81,7 +81,12 @@ impl Globals {
                     .endpoint(s3.endpoint.as_str())
                     .region(&s3.region)
                     .access_key_id(&s3.access_key_id)
-                    .secret_access_key(s3.secret_access_key.load()?.as_ref());
+                    .secret_access_key(
+                        s3.secret_access_key
+                            .load()
+                            .map_err(|err| Error::Internal(err.to_string()))?
+                            .as_ref(),
+                    );
                 opendal::Operator::new(builder)?
                     .layer(LoggingLayer::default())
                     .finish()

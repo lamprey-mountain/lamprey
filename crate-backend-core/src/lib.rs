@@ -1,13 +1,12 @@
-pub mod config;
+pub use kerosene_core::{config, ffmpeg, types};
 pub mod data;
 pub mod error;
-pub mod ffmpeg;
 pub mod queue;
-pub mod types;
 
 pub use error::{Error, Result};
 
 /// common types used everywhere in backend
 pub mod prelude {
-    pub use crate::error::{Error, Result};
+    pub use crate::error::{Error, LegacyErrorExt, AnyErrorExt, Result};
+    pub use kerosene_core::prelude::*;
 }

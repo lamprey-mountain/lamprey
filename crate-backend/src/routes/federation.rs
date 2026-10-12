@@ -24,7 +24,10 @@ async fn server_keys_get(
     State(globals): State<Globals>,
     req: routes::server_keys_get::Request,
 ) -> Result<impl IntoResponse> {
-    let local_hostname = globals.config().hostname2()?;
+    let local_hostname = globals
+        .config()
+        .hostname2()
+        .map_err(|err| Error::Internal(err.to_string()))?;
 
     let requested = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),
@@ -63,7 +66,10 @@ async fn server_connect(
 ) -> Result<impl IntoResponse> {
     let origin = auth.ensure_origin()?;
 
-    let local_hostname = globals.config().hostname2()?;
+    let local_hostname = globals
+        .config()
+        .hostname2()
+        .map_err(|err| Error::Internal(err.to_string()))?;
 
     let target = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),
@@ -114,7 +120,10 @@ async fn server_ping(
     let origin = auth.origin();
     let is_federated = origin.is_some();
 
-    let local_hostname = globals.config().hostname2()?;
+    let local_hostname = globals
+        .config()
+        .hostname2()
+        .map_err(|err| Error::Internal(err.to_string()))?;
 
     let target = match &req.hostname {
         ServerReq::ServerName(name) => name.as_str(),

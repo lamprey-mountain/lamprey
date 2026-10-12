@@ -249,6 +249,7 @@ impl<E: Endpoint> Req<E> {
             application_id: session.app_id,
             user_agent: session.imprint.user_agent.clone(),
             ip_addr: session.imprint.ip_addr.clone(),
+            reason: self.headers.reason.clone(),
         });
 
         let slot = self.audit_logger.clone();
@@ -283,11 +284,7 @@ where
 
     fn al_push(&mut self, ty: AuditLogEntryType) {
         let al = self.req.audit_log();
-        al.push_blocking_very_hacky_and_temporary(
-            self.room_id.unwrap(),
-            ty,
-            self.req.headers().reason.clone(),
-        );
+        al.push(self.room_id.unwrap(), ty);
     }
 
     fn al_status(&mut self, status: AuditLogEntryStatus) {

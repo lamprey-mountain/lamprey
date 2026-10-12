@@ -106,7 +106,7 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
 
     let state: WtState = Arc::new(WtStateInner {
         globals,
-        params,
+        params: params.clone(),
         shared: Mutex::new(WtStateShared::default()),
     });
 

@@ -1,14 +1,18 @@
 // TEMP: proxying for now?
 // TODO: write out this crate
-pub use lamprey_backend_core::config;
 // pub use lamprey_backend_core::queue;
-pub use lamprey_backend_core::types;
 
-// TODO: implement(?)
+pub mod compat;
+pub mod config;
 pub mod database;
 pub mod error;
+pub mod ffmpeg;
+pub mod observability;
+pub mod types;
 
 // pure logic/state for various resources, no io
+// TODO: implement?
+#[cfg(any())]
 pub mod actors {
     pub struct RoomData {
         // copy from kerosene-services/src/services/rooms/types.rs?
@@ -21,16 +25,16 @@ pub mod actors {
         }
     }
 
+    enum RoomCommand {}
+    enum RoomEvent {}
+
     // logic for channels, maybe users?
 }
 
-// TEMP: compatibility types for migration
-pub mod compat;
-
-/// common types used everywhere in backend
+/// common types used everywhere in kerosene
 pub mod prelude {
     pub use crate::error::{
-        ApiError, ApiResult, CoreResult, ErrorCode, LegacyErrorExt, Result, ServerError,
+        ApiError, ApiResult, CoreResult, ErrorCode, Result, ServerError,
         ServerResult,
     };
     pub use bytes::Bytes;
@@ -39,7 +43,5 @@ pub mod prelude {
     // pub use lamprey::v1::types::{UserId, RoomId, MediaId};
 }
 
-pub mod observability;
-
 // NOTE: instead of a generic util module, maybe i should create a dedicated module for each feature
-mod util;
+// mod util;

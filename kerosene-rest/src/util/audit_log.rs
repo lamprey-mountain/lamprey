@@ -1,3 +1,4 @@
+use crate::prelude::*;
 use axum::{
     body::Body,
     extract::State,
@@ -8,10 +9,7 @@ use common::{
     v1::types::{AuditLogEntry, AuditLogEntryStatus, AuditLogEntryType, RoomId, util::Time},
     v2::types::{ApplicationId, AuditLogEntryId, SessionId, UserId},
 };
-use kerosene_core::error::{LegacyErrorExt, ServerResult};
-use lamprey_backend_services::globals::Globals;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use std::sync::Mutex;
 use tracing::error;
 
 /// metadata about the actor who caused an audit log entry to be appended
@@ -22,6 +20,7 @@ pub struct ActorInfo {
     pub ip_addr: Option<String>,
     pub user_agent: Option<String>,
     pub application_id: Option<ApplicationId>,
+    pub reason: Option<String>,
 }
 
 /// a pending audit log entry
@@ -30,7 +29,6 @@ pub struct Entry {
     id: AuditLogEntryId,
     room_id: RoomId,
     ty: AuditLogEntryType,
-    reason: Option<String>,
     // TEMP: pub
     pub(super) status: Option<AuditLogEntryStatus>,
     started_at: Time,
@@ -62,54 +60,19 @@ impl AuditLoggerHandle {
         Self { actor, slot }
     }
 
-    pub async fn push(
-        &self,
-        room_id: RoomId,
-        ty: AuditLogEntryType,
-        reason: Option<String>,
-    ) -> EntryHandle {
+    pub fn push(&self, room_id: RoomId, ty: AuditLogEntryType) -> EntryHandle {
         let entry_id = AuditLogEntryId::new();
         let entry = Entry {
             id: entry_id,
             room_id,
             ty,
-            reason,
             status: None,
             started_at: Time::now_utc(),
             ended_at: None,
             actor: Arc::clone(&self.actor),
         };
 
-        let mut guard = self.slot.lock().await;
-        if let Some(state) = guard.as_mut() {
-            state.pending_entries.push(entry);
-        }
-
-        EntryHandle {
-            id: entry_id,
-            slot: self.slot.clone(),
-        }
-    }
-
-    pub(crate) fn push_blocking_very_hacky_and_temporary(
-        &self,
-        room_id: RoomId,
-        ty: AuditLogEntryType,
-        reason: Option<String>,
-    ) -> EntryHandle {
-        let entry_id = AuditLogEntryId::new();
-        let entry = Entry {
-            id: entry_id,
-            room_id,
-            ty,
-            reason,
-            status: None,
-            started_at: Time::now_utc(),
-            ended_at: None,
-            actor: Arc::clone(&self.actor),
-        };
-
-        let mut guard = self.slot.try_lock().unwrap();
+        let mut guard = self.slot.lock().unwrap();
         if let Some(state) = guard.as_mut() {
             state.pending_entries.push(entry);
         }
@@ -131,8 +94,9 @@ pub struct EntryHandle {
 }
 
 impl EntryHandle {
-    pub async fn set_status(&self, status: AuditLogEntryStatus) {
-        let mut guard = self.slot.lock().await;
+    /// explicitly set this entry's status
+    pub fn set_status(&self, status: AuditLogEntryStatus) {
+        let mut guard = self.slot.lock().unwrap();
         if let Some(state) = guard.as_mut() {
             if let Some(entry) = state.pending_entries.iter_mut().find(|e| e.id == self.id) {
                 entry.status = Some(status);
@@ -140,16 +104,19 @@ impl EntryHandle {
         }
     }
 
-    pub async fn success(self) {
-        self.set_status(AuditLogEntryStatus::Success).await;
+    /// explicitly mark this entry as successful
+    pub fn success(self) {
+        self.set_status(AuditLogEntryStatus::Success);
     }
 
-    pub async fn unauthorized(self) {
-        self.set_status(AuditLogEntryStatus::Unauthorized).await;
+    /// explicitly mark this entry as unauthorized
+    pub fn unauthorized(self) {
+        self.set_status(AuditLogEntryStatus::Unauthorized);
     }
 
-    pub async fn failed(self) {
-        self.set_status(AuditLogEntryStatus::Failed).await;
+    /// explicitly mark this entry as failed
+    pub fn failed(self) {
+        self.set_status(AuditLogEntryStatus::Failed);
     }
 }
 
@@ -170,10 +137,19 @@ pub async fn middleware(
     let res = next.run(req).await;
 
     // commit any pending entries after request completes
-    let mut guard = slot.lock().await;
-    if let Some(state) = guard.take()
+    let state = {
+        let mut guard = slot.lock().unwrap();
+        guard.take()
+    };
+    if let Some(state) = state
         && !state.pending_entries.is_empty()
     {
+        let default_status = if res.status().is_success() {
+            AuditLogEntryStatus::Success
+        } else {
+            AuditLogEntryStatus::Failed
+        };
+
         let res = async {
             let mut txn = globals.begin().await.cast_internal()?;
             let ended_at = Time::now_utc();
@@ -184,9 +160,9 @@ pub async fn middleware(
                     room_id: pending.room_id,
                     user_id: pending.actor.user_id,
                     session_id: Some(pending.actor.session_id),
-                    reason: pending.reason,
+                    reason: pending.actor.reason.clone(),
                     ty: pending.ty,
-                    status: pending.status.unwrap_or(AuditLogEntryStatus::Failed),
+                    status: pending.status.unwrap_or(default_status),
                     started_at: pending.started_at,
                     ended_at,
                     ip_addr: pending.actor.ip_addr.clone(),

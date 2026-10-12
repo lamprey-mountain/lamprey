@@ -87,7 +87,7 @@ impl ValidatedKey {
 impl ServiceFederation {
     /// load local signing keys from config
     pub async fn load_local_keys(&self) -> Result<()> {
-        let mut txn = self.state.begin_read().await?;
+        let mut txn = self.globals.begin_read().await?;
         let config = txn
             .config_get()
             .await?
@@ -127,7 +127,7 @@ impl ServiceFederation {
             local_keys.push(new_key);
 
             // TODO: use admin or something as the sole reader/writer for internal config
-            let mut txn = self.state.begin().await?;
+            let mut txn = self.globals.begin().await?;
             let mut config = txn
                 .config_get()
                 .await?
