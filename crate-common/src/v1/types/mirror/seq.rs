@@ -42,6 +42,11 @@ impl<M: Marker> Seq<M> {
     pub fn is_zero(&self) -> bool {
         self.inner == 0
     }
+
+    #[inline]
+    pub fn zero() -> Self {
+        Self::default()
+    }
 }
 
 impl<M: Marker> Default for Seq<M> {

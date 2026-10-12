@@ -24,7 +24,7 @@ use crate::util::is_valid_hostname;
 use crate::v1::routes::{PathParam, PathParamError};
 use crate::v1::types::error::{ApiResult, ErrorCode};
 use crate::v1::types::federation::Hostname;
-use crate::v1::types::{MediaId, MessageId};
+use crate::v1::types::{InviteCode, MediaId, MessageId};
 
 // TODO: rename FooIdReq to FooRef(?)
 
@@ -74,6 +74,41 @@ pub enum SessionIdReq {
     #[cfg_attr(feature = "serde", serde(deserialize_with = "const_self"))]
     SessionSelf,
     SessionId(SessionId),
+}
+
+#[derive(Debug, Clone, Deserialize, serde::Serialize)]
+#[cfg_attr(feature = "serde", serde(untagged))]
+#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+pub enum InviteCodeReq {
+    Remote(InviteCode, Hostname),
+    Local(InviteCode),
+}
+
+impl Display for InviteCodeReq {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            InviteCodeReq::Remote(code, host) => write!(f, "{code}:{host}"),
+            InviteCodeReq::Local(code) => write!(f, "{code}"),
+        }
+    }
+}
+
+impl FromStr for InviteCodeReq {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if let Some((code_str, host_str)) = s.split_once(':') {
+            if !is_valid_hostname(host_str) {
+                return Err(format!("invalid hostname: {}", host_str));
+            }
+            Ok(InviteCodeReq::Remote(
+                InviteCode(code_str.to_string()),
+                Hostname(host_str.to_string()),
+            ))
+        } else {
+            Ok(InviteCodeReq::Local(InviteCode(s.to_string())))
+        }
+    }
 }
 
 impl Display for SessionIdReq {

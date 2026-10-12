@@ -1,25 +1,14 @@
-use async_trait::async_trait;
-use futures::stream::BoxStream;
-use serde::{Deserialize, Serialize};
+use futures::Stream;
+use tokio::io::{AsyncRead, AsyncWrite};
 
-use crate::prelude::*;
-
-#[async_trait]
-pub trait TransportV2<C, E>: Send + 'static {
-    fn split(self: Box<Self>) -> (Box<dyn TransportSinkV2<E>>, TransportStreamV2<C>);
+pub trait Transport: Stream<Item = Self::TransportStream> + Send + 'static {
+    type TransportStream: TransportStream;
 }
 
-#[async_trait]
-pub trait TransportSinkV2<E>: Send + Sync + 'static {
-    async fn send(&mut self, event: E) -> Result<()>;
-    async fn close(&mut self) -> Result<()>;
-}
+pub trait TransportStream: AsyncWrite + AsyncRead + Send + Unpin + 'static {}
 
-pub type TransportStreamV2<C> = BoxStream<'static, Result<TransportEventV2<C>>>;
+// Automatically implement TransportStream for any type that meets the bounds
+impl<T> TransportStream for T where T: AsyncWrite + AsyncRead + Send + Unpin + 'static {}
 
-pub enum TransportEventV2<C> {
-    Message(C),
-    Closed(bool),
-}
-
+#[cfg(feature = "webtransport")]
 pub mod webtransport;
