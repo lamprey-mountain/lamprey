@@ -1,137 +1,16 @@
-//! core component types
+//! types for each component type
 
 use lamprey_macros::record;
-use url::Url;
 
 use crate::{
-    v1::types::{metadata::Metadata, misc::Color},
-    v2::types::{
-        MediaId,
-        components::{
-            ComponentCustomId, ComponentId,
-            acl::Allow,
-            action::ButtonAction,
-            interactive::{
-                ButtonStyle, Label, SelectDataset, SelectOption, TextareaStyle, Validation,
-            },
+    v1::types::misc::Color,
+    v2::types::components::{
+        ComponentCustomId, ComponentId, ComponentMedia,
+        interactive::{
+            ButtonAction, ButtonStyle, Choice, Dataset, Label, TextareaStyle, Validation,
         },
-        media::{Media as ApiMedia, MediaReference},
     },
 };
-
-/// top-level container for components
-#[record]
-#[derive(Default)]
-pub struct Components {
-    /// the ids of top level components
-    pub roots: Vec<ComponentId>,
-
-    /// list of components
-    pub items: Vec<Component>,
-
-    /// media referenced in the components
-    // NOTE: should i remove this and send a vec of all media in the top level response instead?
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub media: Vec<ApiMedia>,
-
-    /// application-specific metadata
-    // NOTE: maybe rename to `variables`? or have both variables to use with templates later and generic metadata?
-    #[serde(default, skip_serializing_if = "Metadata::is_empty")]
-    pub metadata: Metadata,
-}
-
-// NOTE: can components be reused? maybe separate ComponentType (and maybe
-// Allow) from the rest of the component?
-
-/// a single component in a tree
-#[record]
-pub struct Component {
-    pub id: ComponentId,
-
-    #[serde(flatten)]
-    pub ty: ComponentType,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub allow: Option<Allow>,
-}
-
-/// a piece of media used in a component
-#[record]
-pub struct ComponentMedia {
-    /// what media is being referenced
-    ///
-    /// clients can use any value, server will always send [`MediaReference::Media`]
-    #[serde(flatten)]
-    pub media_ref: MediaReference,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-
-    #[serde(default, skip_serializing_if = "is_false")]
-    pub spoiler: bool,
-}
-
-fn is_false(b: &bool) -> bool {
-    !*b
-}
-
-impl ComponentMedia {
-    pub fn new_media(media_id: MediaId) -> Self {
-        Self {
-            media_ref: MediaReference::Media { media_id },
-            description: None,
-            spoiler: false,
-        }
-    }
-
-    pub fn new_url(source_url: Url) -> Self {
-        Self {
-            media_ref: MediaReference::Url { source_url },
-            description: None,
-            spoiler: false,
-        }
-    }
-
-    #[inline]
-    pub fn media_id(&self) -> Option<MediaId> {
-        self.media_ref.media_id()
-    }
-}
-
-// TODO: impl?
-// impl ComponentMediaBuilder {
-//     pub fn description(mut self, description: impl Into<String>) -> Self {
-//         self.description = Some(description.into());
-//         self
-//     }
-//
-//     pub fn spoiler(mut self) -> Self {
-//         self.spoiler = true;
-//         self
-//     }
-// }
-//
-// impl ComponentBuilder {
-//     pub fn new(ty: ComponentType) -> Self {
-//         Self {
-//             id: None,
-//             ty,
-//             allow: None,
-//         }
-//     }
-//
-//     /// set the id for this component
-//     pub fn id(mut self, id: impl Into<ComponentId>) -> Self {
-//         self.id = Some(id.into());
-//         self
-//     }
-//
-//     /// set the access control for interacting with this component
-//     pub fn allow(mut self, allow: impl Into<Allow>) -> Self {
-//         self.allow = Some(allow.into());
-//         self
-//     }
-// }
 
 /// the type of a component
 ///
@@ -232,7 +111,7 @@ pub struct Select {
     pub custom_id: ComponentCustomId,
     pub label: Label,
     pub placeholder: Option<String>,
-    pub dataset: SelectDataset,
+    pub dataset: Dataset,
     pub validation: Validation,
 }
 
@@ -250,7 +129,7 @@ pub struct Upload {
 #[record]
 pub struct Checkbox {
     pub custom_id: ComponentCustomId,
-    pub option: SelectOption,
+    pub choice: Choice,
     pub validation: Validation,
 }
 
@@ -259,7 +138,7 @@ pub struct Checkbox {
 pub struct Checkboxes {
     pub custom_id: ComponentCustomId,
     pub label: Label,
-    pub options: Vec<SelectOption>,
+    pub choices: Vec<Choice>,
     pub validation: Validation,
 }
 
@@ -356,36 +235,4 @@ pub struct Button {
 pub struct Container {
     pub components: Vec<ComponentId>,
     pub color: Option<Color>,
-}
-
-// NOTE: in the past, components formed a json tree. now they're flat. maybe its still nice to be able to create components using a tree?
-
-// NOTE: in the past, when creating components, a String could be used as a shorthand to create a Text component with no content.
-// since every component now is required to have an id and the structure is flat, i don't think this is possible? but having shortcuts to save bandwidth would be nice.
-
-#[record]
-#[serde(transparent)]
-pub struct ComponentsCreate {
-    inner: Components,
-}
-
-impl ComponentsCreate {
-    pub fn new(c: Components) -> Self {
-        Self { inner: c }
-    }
-
-    /// get a reference to the underlying [`Components`] without validating
-    pub fn get_unvalidated(&self) -> &Components {
-        &self.inner
-    }
-
-    /// get a mutable reference to the underlying [`Components`] without validating
-    pub fn get_unvalidated_mut(&mut self) -> &mut Components {
-        &mut self.inner
-    }
-
-    /// get the underlying [`Components`] without validating
-    pub fn unwrap_unvalidated(self) -> Components {
-        self.inner
-    }
 }

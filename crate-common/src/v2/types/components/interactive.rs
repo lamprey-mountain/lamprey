@@ -1,8 +1,14 @@
 //! interactive components
 
 use lamprey_macros::record;
+use url::Url;
 
-use crate::v2::types::components::ComponentCustomId;
+use crate::v2::types::{
+    ChannelId,
+    components::{ComponentCustomId, Components},
+};
+
+pub use crate::v1::types::components::acl::Allow;
 
 #[record]
 #[derive(Default, Copy, PartialEq, Eq)]
@@ -78,17 +84,6 @@ pub struct Validation {
     pub format: Option<InputFormat>,
 }
 
-impl Validation {
-    pub fn is_empty(&self) -> bool {
-        !self.required
-            && self.min_length.is_none()
-            && self.min_values.is_none()
-            && self.max_length.is_none()
-            && self.max_values.is_none()
-            && self.format.is_none()
-    }
-}
-
 #[record]
 #[serde(tag = "type")]
 pub enum InputFormat {
@@ -147,10 +142,6 @@ pub enum InputFormat {
     },
 }
 
-fn true_fn() -> bool {
-    true
-}
-
 #[record]
 #[derive(Copy, PartialEq, Eq)]
 pub enum TextareaStyle {
@@ -163,9 +154,10 @@ pub enum TextareaStyle {
 
 /// where to pull options for a `Select` from
 #[record]
-pub enum SelectDataset {
+#[serde(tag = "type")]
+pub enum Dataset {
     /// a static set of options
-    Static { options: Vec<SelectOption> },
+    Static { choices: Vec<Choice> },
 
     /// dynamically provided from the application
     Dynamic,
@@ -195,22 +187,97 @@ pub enum SelectDataset {
     Mentionable,
 }
 
-/// a selectable option
+/// a selectable option, for select and checkboxes
 #[record]
-pub struct SelectOption {
-    /// this option's label
+pub struct Choice {
+    /// this choice's label
     pub label: Label,
 
-    /// custom id for tis option
+    /// custom id for this choice
     pub value: ComponentCustomId,
 
-    /// whether to select this option by default
+    /// whether to select this choice by default
     #[serde(default)]
     pub default: bool,
 }
 
-// interaction response type: input validation failed
-// interaction response type: dynamic select options
+// TODO: interaction response type: input validation failed
+// TODO: interaction response type: dynamic select options
+
+/// what to do when a button is pressed
+#[record]
+#[derive(PartialEq)]
+#[serde(tag = "type")]
+pub enum ButtonAction {
+    /// open a link in new tab
+    Open { url: Url },
+
+    /// navigate to a location in the app
+    Navigate { target: Navigate },
+
+    /// copy text to clipboard
+    Copy { text: String },
+
+    /// dispatch an interaction
+    Interaction {
+        /// developer-defined identifier for this component
+        custom_id: ComponentCustomId,
+    },
+
+    /// submit the form the button is in
+    ///
+    /// the button must be inside of a `Form` component
+    Submit,
+    // // open various things
+    // OpenPopover,
+    // OpenModal,
+    // OpenSidepane,
+    // OpenFullpane,
+
+    // // variables
+    // VariableSet,
+
+    // // messages
+    // MessagePrefill,
+
+    // SuggestCommand {
+    //     command: String,
+    // },
+    // RunCommand {
+    //     command: String,
+    // },
+}
+
+/// what to do on hover
+#[record]
+#[serde(tag = "type")]
+pub enum HoverAction {
+    /// show these components
+    Display { components: Components },
+}
+
+/// what to navigate to
+// TODO: impl Display, FromStr
+#[record]
+#[derive(PartialEq, Eq)]
+pub enum Navigate {
+    /// go to a channel id
+    ///
+    /// path: `/channel/{channel_id}`
+    Channel(ChannelId),
+    // TODO: see frontend/src/app/App.tsx for other valid urls
+}
+
+impl Validation {
+    pub fn is_empty(&self) -> bool {
+        !self.required
+            && self.min_length.is_none()
+            && self.min_values.is_none()
+            && self.max_length.is_none()
+            && self.max_values.is_none()
+            && self.format.is_none()
+    }
+}
 
 impl<S: Into<String>> From<S> for Label {
     fn from(text: S) -> Self {
@@ -219,4 +286,15 @@ impl<S: Into<String>> From<S> for Label {
             description: None,
         }
     }
+}
+
+impl ButtonAction {
+    pub fn is_interactive(&self) -> bool {
+        matches!(self, Self::Interaction { .. } | Self::Submit)
+    }
+}
+
+// TODO: move this fn to utils
+fn true_fn() -> bool {
+    true
 }

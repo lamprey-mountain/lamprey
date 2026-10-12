@@ -7,10 +7,7 @@ use crate::{
     },
     v2::types::{
         MediaId,
-        components::{
-            Component, ComponentId,
-            components::{ComponentType, Components},
-        },
+        components::{Component, ComponentId, ComponentType, Components},
         flume::FlumeDelta,
         media::MediaReference,
     },

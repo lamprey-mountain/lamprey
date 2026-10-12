@@ -3,23 +3,54 @@
 use crate::{
     v1::types::error::{ApiError, ApiResult, ErrorCode, ErrorField, ErrorFieldType},
     v2::types::components::{
-        Component, ComponentCustomId, ComponentId, ComponentType, Components,
-        components::ComponentsCreate,
+        Component, ComponentCustomId, ComponentId, ComponentType, Components, Create,
         interactive::{Label, Validation},
     },
 };
 
-// TODO: more validation
+/// restrictions on a component tree
+#[derive(Debug, Clone)]
+pub struct Limits {
+    /// maximum number of components in the root
+    pub components_root: usize,
+
+    /// maximum number of components in a container component (eg. section, container)
+    pub components_container: usize,
+
+    /// maximum number of components in a component tree
+    pub components_total: usize,
+
+    /// maximum length of text for labels (eg. buttons)
+    pub text_label: usize,
+
+    /// maximum length of text for label descriptions
+    pub text_description: usize,
+
+    /// maximum length of text for a text component
+    pub text_component: usize,
+
+    /// maximum length of text in a component tree
+    pub text_total: usize,
+
+    /// whether this tree can contain interactive components
+    pub allow_interactive: bool,
+}
+
+pub struct ComponentsParseError {
+    pub data: Create,
+    pub errors: Vec<ErrorField>,
+}
+
+/// an error that occured while parsing/validating components
+// TODO: more validation (maybe reuse errorfield)
 // - validate text length with both byte length and graphemes
 // - validate that components don't have duplicate ids (ie. two components cant have the same id)
 // - validate that components aren't referenced more than once (ie. the same component cant be in two different containers)
 // - validate that cycles dont exist (ie. components must form an acyclic tree)
 // - validate ComponentType::{is_usable_inline, requires_form}
 // - validate that forms, rows cannot be nested
-
-/// an error that occured while validating components
 #[derive(Debug, thiserror::Error)]
-pub enum ValidationError {
+pub enum ParseError {
     #[error("at least one root component is required")]
     MissingRoot,
 
@@ -47,6 +78,19 @@ enum ValidationContext {
     /// we're inside a row
     Row,
 }
+
+// TODO: maybe use this trait?
+// trait Visitor {
+//     fn enter<F>(&mut self, segment: impl Into<String>, f: F)
+//     where
+//         F: FnOnce(&mut Self);
+//
+//     fn limits(&self) -> &Limits;
+//
+//     // visit label
+//     // visit custom id
+//     // visit etc
+// }
 
 impl<'a> ValidationState<'a> {
     pub fn new(components: &'a Components) -> Self {
@@ -215,7 +259,7 @@ impl ComponentType {
             }
             ComponentType::Checkbox(checkbox) => {
                 state.enter("custom_id", |s| s.validate_custom_id(&checkbox.custom_id));
-                state.enter("option", |s| s.validate_label(&checkbox.option.label));
+                state.enter("option", |s| s.validate_label(&checkbox.choice.label));
                 state.enter("validation", |s| {
                     s.validate_validation(self, &checkbox.validation)
                 });
@@ -312,47 +356,14 @@ impl ComponentType {
     }
 }
 
-pub struct ComponentsParseError {
-    pub data: ComponentsCreate,
-    pub errors: Vec<ErrorField>,
-}
-
-impl ComponentsCreate {
+impl Create {
     /// parse and validate
     pub fn parse(self) -> Result<Components, ComponentsParseError> {
         todo!()
     }
 }
 
-/// restrictions on a component tree
-#[derive(Debug, Clone)]
-pub struct ComponentsLimits {
-    /// maximum number of components in the root
-    pub components_root: usize,
-
-    /// maximum number of components in a container component (eg. section, container)
-    pub components_container: usize,
-
-    /// maximum number of components in a component tree
-    pub components_total: usize,
-
-    /// maximum length of text for labels (eg. buttons)
-    pub text_label: usize,
-
-    /// maximum length of text for label descriptions
-    pub text_description: usize,
-
-    /// maximum length of text for a text component
-    pub text_component: usize,
-
-    /// maximum length of text in a component tree
-    pub text_total: usize,
-
-    /// whether this tree can contain interactive components
-    pub allow_interactive: bool,
-}
-
-impl ComponentsLimits {
+impl Limits {
     pub fn default_inert() -> Self {
         Self {
             components_root: 16,
