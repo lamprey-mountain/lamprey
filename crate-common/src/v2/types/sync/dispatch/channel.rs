@@ -9,48 +9,110 @@ use crate::{
 ///
 /// requires a subscription to the channel to receive
 #[record]
-pub struct DispatchChannel {
+#[serde(tag = "type")]
+pub enum DispatchChannel {
+    ChannelCreate(ChannelCreate),
+    ChannelUpdate(ChannelUpdate),
+    ChannelTyping(ChannelTyping),
+    MessageCreate(MessageCreate),
+    MessageUpdate(MessageUpdate),
+}
+
+/// a channel was created
+#[record]
+pub struct ChannelCreate {
+    pub channel: Box<Channel>,
+    pub seq: ChannelSeq,
+}
+
+/// a channel was updated
+#[record]
+pub struct ChannelUpdate {
+    pub channel: Box<Channel>,
+    pub seq: ChannelSeq,
+}
+
+// TODO: add ChannelDelete?
+
+/// someone started typing in a channel
+// NOTE: maybe include user, room member, channel/thread member objects?
+#[record]
+pub struct ChannelTyping {
     pub channel_id: ChannelId,
+    pub user_id: UserId,
+    pub until: Time,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub room_id: Option<RoomId>,
+}
 
-    /// the channel sync sequence number of this event
-    ///
-    /// used for offline sync. only populated if this dispatch incremented the sequence number.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub seq: Option<ChannelSeq>,
+/// a message was created
+// NOTE: maybe i should require a room subscription to receive message dispatches
+#[record]
+pub struct MessageCreate {
+    pub message: Box<Message>,
+    pub seq: ChannelSeq,
+    // NOTE: maybe i want to include resolved data either in the message or in the sync event itself
+    // /// the room member of the author, if this was sent in a room
+    // room_member: Option<Box<RoomMember>>,
 
-    #[serde(flatten)]
-    pub inner: DispatchChannelInner,
+    // /// the thread member of the author, if this was sent in a thread
+    // thread_member: Option<Box<ThreadMember>>,
+
+    // /// the user who sent this message
+    // user: Box<User>,
 }
 
 #[record]
-#[serde(tag = "type")]
+pub struct MessageUpdate {
+    pub message: Message,
+    pub seq: ChannelSeq,
+    // /// the room member of the author, if this was sent in a room
+    // room_member: Option<RoomMember>,
+
+    // /// the thread member of the author, if this was sent in a thread
+    // thread_member: Option<ThreadMember>,
+
+    // /// the user who sent this message
+    // user: User,
+}
+
+impl DispatchChannel {
+    /// id of the channel this event happened in
+    pub fn channel_id(&self) -> ChannelId {
+        match self {
+            DispatchChannel::ChannelCreate(a) => a.channel.id,
+            DispatchChannel::ChannelUpdate(a) => a.channel.id,
+            DispatchChannel::ChannelTyping(a) => a.channel_id,
+            DispatchChannel::MessageCreate(a) => a.message.channel_id,
+            DispatchChannel::MessageUpdate(a) => a.message.channel_id,
+        }
+    }
+
+    /// id of the room this event happened in
+    pub fn room_id(&self) -> Option<RoomId> {
+        match self {
+            DispatchChannel::ChannelCreate(a) => a.channel.room_id,
+            DispatchChannel::ChannelUpdate(a) => a.channel.room_id,
+            DispatchChannel::ChannelTyping(a) => a.room_id,
+            DispatchChannel::MessageCreate(a) => a.message.room_id,
+            DispatchChannel::MessageUpdate(a) => a.message.room_id,
+        }
+    }
+
+    /// the channel sync sequence number of this event
+    pub fn seq(&self) -> Option<ChannelSeq> {
+        match self {
+            DispatchChannel::ChannelCreate(a) => Some(a.seq),
+            DispatchChannel::ChannelUpdate(a) => Some(a.seq),
+            DispatchChannel::ChannelTyping(_) => None,
+            DispatchChannel::MessageCreate(a) => Some(a.seq),
+            DispatchChannel::MessageUpdate(a) => Some(a.seq),
+        }
+    }
+}
+
 pub enum DispatchChannelInner {
-    // PERF: very minor thing, but some structs (eg. Channel or Message) have duplicate channel and room ids (with respect to DispatchChannel)
-    // i'm not sure if theres a good way of avoiding this?
-    /// a channel was created
-    ChannelCreate { channel: Box<Channel> },
-
-    /// a channel was updated
-    ChannelUpdate { channel: Box<Channel> },
-
-    // TODO: add?
-    // ChannelDelete {
-    //     channel_id: ChannelId,
-    // },
-    /// someone started typing in a channel
-    ///
-    /// requires a subscription in rooms
-    ChannelTyping {
-        user_id: UserId,
-        until: Time,
-        // #[serde(skip_serializing_if = "Option::is_none")]
-        // room_id: Option<RoomId>,
-        // NOTE: maybe include user, room member, channel/thread member objects?
-    },
-
     // NOTE: is ChannelAck a channel or a user event?
     // /// read receipt update
     // ChannelAck {
@@ -72,33 +134,7 @@ pub enum DispatchChannelInner {
     // // ThreadDelete {
     // //     thread_id: ChannelId,
     // // },
-    /// a message was created
-    // NOTE: maybe i should require a room subscription to receive message dispatches
-    MessageCreate {
-        /// the message itself
-        message: Box<Message>,
-        // NOTE: maybe i want to include resolved data either in the message or in the sync event itself
-        // /// the room member of the author, if this was sent in a room
-        // room_member: Option<Box<RoomMember>>,
 
-        // /// the thread member of the author, if this was sent in a thread
-        // thread_member: Option<Box<ThreadMember>>,
-
-        // /// the user who sent this message
-        // user: Box<User>,
-    },
-
-    MessageUpdate {
-        message: Message,
-        // /// the room member of the author, if this was sent in a room
-        // room_member: Option<RoomMember>,
-
-        // /// the thread member of the author, if this was sent in a thread
-        // thread_member: Option<ThreadMember>,
-
-        // /// the user who sent this message
-        // user: User,
-    },
     // MessageDelete {
     //     message_id: MessageId,
     // },

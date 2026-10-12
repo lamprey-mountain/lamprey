@@ -1,41 +1,41 @@
+//! Dispatch events related to the sync protocol
+//!
+//! Dispatches are the basic system for keeping state in sync between the client
+//! and the server.
+
 use lamprey_macros::record;
 
 use crate::{
-    v1::types::{
-        Channel, Role, Room, RoomMember, Session, User, application::Application,
-        preferences::PreferencesGlobal,
-    },
+    v1::types::{Session, User, application::Application},
     v2::types::{
         ConnectionId,
-        sync::dispatch::{channel::DispatchChannel, room::DispatchRoom, user::DispatchUser},
+        sync::dispatch::{
+            channel::DispatchChannel, client::DispatchClient, global::DispatchGlobal,
+            room::DispatchRoom, user::DispatchUser,
+        },
     },
 };
 
 pub mod channel;
-pub mod invite;
-pub mod media;
+pub mod client;
+pub mod global;
+// pub mod invite;
+// pub mod media;
 pub mod room;
 pub mod user;
-pub mod webhook;
+// pub mod webhook;
 
 /// something happened
+// NOTE: probably not necessary to have this?
+// NOTE: if this is just for permission checks, i could probably make it take 'a references
 #[record]
-#[serde(tag = "op")]
+#[serde(untagged)]
 pub enum Dispatch {
-    /// extra context
-    ///
-    /// this is sent after Ready and is generally needed for the client to function
-    Ambient(Ambient),
-
-    // TODO: require a subscription to a room to receive room dispatches, same with channel. only user dispatches should be sent to the client.
-    #[serde(untagged)]
+    Global(DispatchGlobal),
     Room(DispatchRoom),
-
-    #[serde(untagged)]
     Channel(DispatchChannel),
-
-    #[serde(untagged)]
     User(DispatchUser),
+    Client(DispatchClient),
     // TODO: other dispatches, e2ee dispatch, voice state
 
     // #[cfg(feature = "feat_e2ee")]
@@ -58,6 +58,10 @@ pub enum Dispatch {
     // },
 }
 
+// NOTE: is this a dispatch event?
+/// identify handshake completed
+///
+/// contains basic information about the session and client
 #[record]
 pub struct Ready {
     /// current user, null if session is unauthorized
@@ -80,31 +84,4 @@ pub struct Ready {
     // syncer: Box<Syncer>,
     // /// the id of this shard, if this is a sharded connection
     // shard_id: Option<ShardId>,
-}
-
-// TODO: decide what goes here? returning all rooms could be bad for large bots
-// maybe only send room summaries, require subscribing to rooms to retrieve full ambient data and start receiving dispatches
-#[record]
-pub struct Ambient {
-    /// the user's global preferences
-    pub config: PreferencesGlobal,
-
-    /// all rooms the user can see
-    pub rooms: Vec<Room>,
-
-    /// all roles in all rooms the user can see
-    pub roles: Vec<Role>,
-
-    /// all non-thread channels the user can see
-    pub channels: Vec<Channel>,
-
-    /// all active (ie. not archived) threads the user can see
-    pub threads: Vec<Channel>,
-
-    /// the user's room member object for each room the user is in
-    pub room_members: Vec<RoomMember>,
-    // NOTE: maybe i should include even more data
-    // - friends/relationships (including friend requests)
-    // - dms
-    // - emoji
 }

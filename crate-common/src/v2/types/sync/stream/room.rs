@@ -3,7 +3,7 @@
 //! allows receiving room and role events
 
 use crate::{
-    v1::types::{RoomId, misc::Time},
+    v1::types::{RoomId, mirror::RoomSeq, misc::Time},
     v2::types::{ChannelId, UserId, sync::stream::StreamProtocol},
 };
 use lamprey_macros::record;
@@ -12,7 +12,12 @@ pub struct Protocol;
 
 #[record]
 pub struct Initial {
+    /// the id of the room to subscribe to
     pub room_id: RoomId,
+
+    /// the last sequence number the client has
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seq: Option<RoomSeq>,
 }
 
 #[record]

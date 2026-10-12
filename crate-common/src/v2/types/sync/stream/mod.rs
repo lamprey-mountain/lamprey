@@ -1,3 +1,5 @@
+//! Stream definitions for the sync protocol
+
 use lamprey_macros::record;
 
 /// A protocol that can be used with a stream
@@ -55,7 +57,6 @@ pub trait StreamProtocol {
 #[repr(u8)]
 pub enum StreamHeader {
     Identify = 0x00,
-    Dispatch = 0x01,
 
     // subscriptions
     MemberList = 0x10,
@@ -75,15 +76,37 @@ pub enum StreamHeader {
     Flume = 0x40,
 }
 
-// TODO: impl from StreamHeader for u8
-// TODO: impl tryfrom u8 for streamheader
+impl From<StreamHeader> for u8 {
+    fn from(header: StreamHeader) -> Self {
+        header as u8
+    }
+}
+
+impl TryFrom<u8> for StreamHeader {
+    type Error = u8;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x00 => Ok(StreamHeader::Identify),
+            0x10 => Ok(StreamHeader::MemberList),
+            0x11 => Ok(StreamHeader::Channel),
+            0x12 => Ok(StreamHeader::Room),
+            0x13 => Ok(StreamHeader::User),
+            0x14 => Ok(StreamHeader::Redex),
+            0x15 => Ok(StreamHeader::Invite),
+            0x20 => Ok(StreamHeader::Voice),
+            0x30 => Ok(StreamHeader::Document),
+            0x40 => Ok(StreamHeader::Flume),
+            _ => Err(value),
+        }
+    }
+}
 
 // NOTE: do i include basic stuff (heartbeats, resuming, errors) for every protocol or just sync?
 
 // NOTE: maybe i could add more stream commands as an alternative to using rest? for stuff like typing indicators, etc.
 
 pub mod channel;
-// pub mod dispatch;
 pub mod document;
 pub mod flume;
 pub mod identify;

@@ -1,3 +1,5 @@
+//! Visibility checks for sync events
+
 use crate::{
     v1::types::{ChannelId, ConnectionId, Permission, RoomId, SessionId, UserId},
     v2::types::sync::dispatch::Dispatch,

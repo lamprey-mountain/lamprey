@@ -3,7 +3,7 @@
 //! allows receiving channel and message events
 
 use crate::{
-    v1::types::{ChannelId, flume::FlumeDeltaCanonical},
+    v1::types::{ChannelId, ChannelSeq, flume::FlumeDeltaCanonical},
     v2::types::{MessageId, sync::stream::StreamProtocol},
 };
 use lamprey_macros::record;
@@ -12,7 +12,12 @@ pub struct Protocol;
 
 #[record]
 pub struct Initial {
+    /// the id of the channel to subscribe to
     pub channel_id: ChannelId,
+
+    /// the last sequence number the client has
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub seq: Option<ChannelSeq>,
 }
 
 #[record]

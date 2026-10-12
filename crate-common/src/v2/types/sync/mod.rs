@@ -1,3 +1,5 @@
+//! Sync protocol
+
 pub mod dispatch;
 pub mod stream;
 pub mod transport;
