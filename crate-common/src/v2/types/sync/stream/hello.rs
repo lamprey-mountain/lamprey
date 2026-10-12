@@ -8,10 +8,7 @@ use crate::{
     v1::types::{SessionToken, presence::Presence},
     v2::types::{
         ConnectionId,
-        sync::{
-            dispatch::{Ready, global::DispatchGlobal},
-            stream::StreamProtocol,
-        },
+        sync::{dispatch::Ready, stream::StreamProtocol},
     },
 };
 

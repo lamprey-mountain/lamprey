@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use lamprey_macros::record;
 
-use crate::v1::types::{SessionId, UserId, misc::binary::Binary};
+use crate::v1::types::UserId;
 
 /// retrieve cross signing keys
 #[record]

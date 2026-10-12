@@ -177,6 +177,19 @@ impl ComponentMedia {
 #[record]
 #[serde(tag = "type")]
 pub enum ComponentType {
+    // layout
+    Container(Container),
+    Section(Section),
+    Details(Details),
+    Form(Form),
+    Row(Row),
+
+    // content
+    Text(Text),
+    Media(Media),
+    Gallery(Gallery),
+
+    // interactive
     Button(Button),
     Input(Input),
     Textarea(Textarea),
@@ -184,14 +197,8 @@ pub enum ComponentType {
     Upload(Upload),
     Checkbox(Checkbox),
     Checkboxes(Checkboxes),
-    Container(Container),
-    Text(Text),
-    Details(Details),
-    Section(Section),
-    Form(Form),
-    Row(Row),
-    Media(Media),
-    Gallery(Gallery),
+
+    // logic
     Reference(Reference),
     Template(Template),
 }
