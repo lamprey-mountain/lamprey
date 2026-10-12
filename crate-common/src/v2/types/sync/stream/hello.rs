@@ -122,8 +122,9 @@ pub enum Event {
 #[record]
 pub struct Dispatch {
     /// the dispatch data itself
-    pub inner: Box<DispatchGlobal>,
-
+    pub inner: Box<crate::v2::types::sync::dispatch::Dispatch>,
+    // NOTE: do i only want to send DispatchGlobal events?
+    // pub inner: Box<DispatchGlobal>,
     /// the connection sequence number of this event, for resuming
     pub seq: u64,
     // /// the nonce for responses

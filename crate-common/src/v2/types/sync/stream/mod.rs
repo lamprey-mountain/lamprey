@@ -30,22 +30,24 @@ pub trait StreamProtocol {
         true
     }
 
-    // TODO: custom serialization/codec formats per stream
+    // TODO: allow custom serialization/codec formats per stream
     // eg. maybe i want dispatches to use json or msgpack, but for documents to use binary
 }
 
-// /// any known initial message
-// ///
-// /// sent as a handshake when opening a stream. sent by the side that opens the
-// /// stream, which is generally the client.
-// pub enum Handshake {
-//     Identify(identify::Initial),
-//     MemberList(member_list::Initial),
-//     // TODO: add other protocols here
-//     // Voice(voice::Initial),
-//     // Document(document::Initial),
-//     // etc...
-// }
+// NOTE: do i include basic stuff (heartbeats, resuming, errors) for every protocol or just sync?
+// NOTE: maybe i could add more stream commands as an alternative to using rest? for stuff like typing indicators, etc.
+// NOTE: i should probably split auth (hello) and global dispatches instead of reusing the stream
+
+pub mod channel;
+pub mod document;
+pub mod flume;
+pub mod hello;
+// pub mod invite;
+pub mod member_list;
+// pub mod redex;
+pub mod room;
+// pub mod user;
+pub mod voice;
 
 /// stream header byte
 ///
@@ -56,7 +58,7 @@ pub trait StreamProtocol {
 #[derive(Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum StreamHeader {
-    Identify = 0x00,
+    Hello = 0x00,
 
     // subscriptions
     MemberList = 0x10,
@@ -87,7 +89,7 @@ impl TryFrom<u8> for StreamHeader {
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0x00 => Ok(StreamHeader::Identify),
+            0x00 => Ok(StreamHeader::Hello),
             0x10 => Ok(StreamHeader::MemberList),
             0x11 => Ok(StreamHeader::Channel),
             0x12 => Ok(StreamHeader::Room),
@@ -101,18 +103,3 @@ impl TryFrom<u8> for StreamHeader {
         }
     }
 }
-
-// NOTE: do i include basic stuff (heartbeats, resuming, errors) for every protocol or just sync?
-
-// NOTE: maybe i could add more stream commands as an alternative to using rest? for stuff like typing indicators, etc.
-
-pub mod channel;
-pub mod document;
-pub mod flume;
-pub mod identify;
-// pub mod invite;
-pub mod member_list;
-// pub mod redex;
-pub mod room;
-// pub mod user;
-pub mod voice;
