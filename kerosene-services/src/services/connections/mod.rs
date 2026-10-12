@@ -1,10 +1,13 @@
-use common::v1::types::{
-    ConnectionId, MessageHello, SessionId, UserId,
-    presence::{Presence, Status},
+use common::{
+    v1::types::{
+        ConnectionId, MessageHello, SessionId, UserId,
+        presence::{Presence, Status},
+    },
+    v2::types::sync::stream::hello::Identify,
 };
 use dashmap::DashMap;
-use std::collections::HashMap;
 use std::time::Duration;
+use std::{collections::HashMap, sync::atomic::AtomicUsize};
 use tokio::sync::mpsc;
 use tokio_util::time::{DelayQueue, delay_queue};
 
@@ -13,11 +16,10 @@ use crate::prelude::*;
 const CONNECTION_RESUME_PERIOD: Duration = Duration::from_secs(60);
 
 pub use crate::services::connections::actor::{Connection, ConnectionHandle};
-pub use crate::services::connections::actor_v2::ConnectionHandleV2;
 
 mod actor;
-mod actor_v2;
 mod subscriptions;
+// mod expiry; // TODO: move expiration actor/logic into a submodule
 
 enum ConnectionEvent {
     Disconnected(ConnectionId),
@@ -26,7 +28,6 @@ enum ConnectionEvent {
 
 struct ConnectionExpiryActor {
     connections: Arc<DashMap<ConnectionId, ConnectionHandle>>,
-    connections_v2: Arc<DashMap<ConnectionId, ConnectionHandleV2>>,
     queue: DelayQueue<ConnectionId>,
     keys: HashMap<ConnectionId, delay_queue::Key>,
 }
@@ -53,7 +54,6 @@ impl ConnectionExpiryActor {
                     let id = expired.into_inner();
                     self.keys.remove(&id);
                     self.connections.remove(&id);
-                    self.connections_v2.remove(&id);
                 }
             }
         }
@@ -68,22 +68,32 @@ impl ConnectionExpiryActor {
 pub struct ServiceConnections {
     globals: Globals,
     connections: Arc<DashMap<ConnectionId, ConnectionHandle>>,
-    connections_v2: Arc<DashMap<ConnectionId, ConnectionHandleV2>>,
     cmd_tx: mpsc::UnboundedSender<ConnectionEvent>,
     // tasks: tokio::task::JoinSet<(ConnectionId, Result<()>)>,
     // user_connection_counts: DashMap<UserId, usize>,
+}
+
+// TODO: implement and use this
+/// connection statistics
+#[derive(Debug, Default)]
+pub struct Stats {
+    /// number of currently open connections
+    pub connections: AtomicUsize,
+
+    /// number of currently open streams
+    pub streams: AtomicUsize,
+    // TODO: total number of opened connections/streams
+    // NOTE: maybe i could include a user -> connection count map?
 }
 
 impl ServiceConnections {
     pub fn new(globals: Globals) -> Self {
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
         let connections = Arc::new(DashMap::new());
-        let connections_v2 = Arc::new(DashMap::new());
 
         tokio::spawn(
             ConnectionExpiryActor {
                 connections: connections.clone(),
-                connections_v2: connections_v2.clone(),
                 queue: DelayQueue::new(),
                 keys: HashMap::new(),
             }
@@ -93,7 +103,6 @@ impl ServiceConnections {
         Self {
             globals,
             connections,
-            connections_v2,
             cmd_tx,
         }
     }
@@ -133,19 +142,5 @@ impl ServiceConnections {
 
     fn cancel_cleanup(&self, id: ConnectionId) {
         let _ = self.cmd_tx.send(ConnectionEvent::Attached(id));
-    }
-
-    pub async fn accept_v2(
-        &self,
-        session_id: SessionId,
-        user_id: Option<UserId>,
-    ) -> Result<ConnectionHandleV2> {
-        let handle = ConnectionHandleV2::create(session_id, user_id);
-        self.connections_v2.insert(handle.id(), handle.clone());
-        Ok(handle)
-    }
-
-    pub fn get_v2(&self, id: ConnectionId) -> Option<ConnectionHandleV2> {
-        self.connections_v2.get(&id).map(|r| r.value().clone())
     }
 }
