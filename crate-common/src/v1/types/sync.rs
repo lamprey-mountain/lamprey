@@ -25,7 +25,7 @@ use crate::v2::types::media::Media;
 use super::{
     Channel, ChannelId, DocumentId, EmojiId, InviteCode, MessageId, MessageVerId, Role, RoleId,
     Room, RoomId, RoomMember, Session, SessionId, SessionToken, TagId, User, UserId,
-    calendar::{CalendarEvent, CalendarParticipant, CalendarOverwrite},
+    calendar::{CalendarEvent, CalendarOverwrite, CalendarParticipant},
     emoji::EmojiCustom,
     harvest::Harvest,
     notifications::{Notification, NotificationFlush, NotificationMarkRead},
