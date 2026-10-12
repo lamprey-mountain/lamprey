@@ -1,4 +1,6 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{sync::Arc, time::Duration};
+
+use dashmap::DashMap;
 
 use crate::cache::{Cache, CacheInner};
 
@@ -114,9 +116,9 @@ impl CacheBuilder {
         Cache {
             inner: Arc::new(CacheInner {
                 config: self.config,
-                rooms: HashMap::new(),
-                channels: HashMap::new(),
-                users: HashMap::new(),
+                rooms: DashMap::new(),
+                channels: DashMap::new(),
+                users: DashMap::new(),
             }),
         }
     }

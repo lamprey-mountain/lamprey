@@ -1,19 +1,20 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{hash::Hash, sync::Arc};
 
 use common::{
     v1::types::{
-        Channel, PermissionBits, PermissionOverwrite, Relationship, Role, Room, RoomMember,
-        ThreadMember, User,
+        Channel, MessagePayload, MessageSync, PermissionBits, PermissionOverwrite, Relationship,
+        Role, Room, RoomMember, ThreadMember, User,
     },
     v2::types::{ChannelId, RoleId, RoomId, UserId},
 };
+use dashmap::DashMap;
+use tokio::sync::RwLock;
 
 mod config;
 mod permissions;
 
 pub use config::{CacheBuilder, CacheConfig};
 pub use permissions::RoomPermissions;
-use tokio::sync::RwLock;
 
 use crate::messages::MessagesInner;
 
@@ -25,49 +26,49 @@ pub struct Cache {
 #[derive(Debug, Default)]
 pub struct CacheInner {
     pub(crate) config: CacheConfig,
-    pub(crate) rooms: HashMap<RoomId, CachedRoom>,
-    pub(crate) channels: HashMap<ChannelId, CachedChannel>,
-    pub(crate) users: HashMap<UserId, CachedUser>,
+    pub(crate) rooms: DashMap<RoomId, CachedRoom>,
+    pub(crate) channels: DashMap<ChannelId, CachedChannel>,
+    pub(crate) users: DashMap<UserId, CachedUser>,
     // TODO: use LruCache and/or Dashmap
     // pub(crate) users: lru::LruCache<UserId, CachedUser>,
 }
 
 #[derive(Debug, Clone)]
 pub struct CachedRoom {
-    pub inner: Room,
-    pub members: HashMap<UserId, RoomMember>,
-    pub channels: HashMap<ChannelId, CachedChannel>, // contains threads
-    pub roles: HashMap<RoleId, Role>,
-    pub(crate) perm_roles: HashMap<RoleId, (PermSet, u16)>,
+    pub inner: Box<Room>,
+    pub members: DashMap<UserId, RoomMember>,
+    pub channels: DashMap<ChannelId, CachedChannel>, // contains threads
+    pub roles: DashMap<RoleId, Role>,
+    pub(crate) perm_roles: DashMap<RoleId, (PermSet, u16)>,
 }
 
 // TODO: impl Deref for CachedFoo structs?
 
 #[derive(Debug, Clone)]
 pub struct CachedUser {
-    pub inner: User,
-
-    /// your relationship with this user, if it is known
-    pub relationship: Option<Relationship>,
+    pub inner: Box<User>,
+    // TODO: store relationships separately
+    // /// your relationship with this user, if it is known
+    // pub relationship: Option<Relationship>,
     // TODO: use this instead of inner.presence?
     // pub presence: Option<Presence>,
 }
 
 #[derive(Debug, Clone)]
 pub struct CachedCurrentUser {
-    pub inner: User,
+    pub inner: Box<User>,
     // TODO: use this instead of inner.presence?
     // pub presence: Option<Presence>,
 }
 
 #[derive(Debug, Clone)]
 pub struct CachedChannel {
-    pub inner: Channel,
-    pub members: HashMap<UserId, ThreadMember>,
+    pub inner: Box<Channel>,
+    pub members: DashMap<UserId, ThreadMember>,
     // PERF: don't use Arc<RwLock<_>>? what do i use instead?
     pub(crate) messages: Arc<RwLock<MessagesInner>>,
-    pub(crate) perm_roles: HashMap<RoleId, PermSet>,
-    pub(crate) perm_users: HashMap<UserId, PermSet>,
+    pub(crate) perm_roles: DashMap<RoleId, PermSet>,
+    pub(crate) perm_users: DashMap<UserId, PermSet>,
 }
 
 #[derive(Debug, Clone)]
@@ -94,8 +95,10 @@ impl From<&PermissionOverwrite> for PermSet {
     }
 }
 
-pub struct CacheRef<'a, V> {
-    inner: &'a V,
+// TODO: impl From<User> for CachedUser
+
+pub struct CacheRef<'a, K, V> {
+    inner: dashmap::mapref::one::Ref<'a, K, V>,
 }
 
 /// something that can be identified with an id
@@ -123,18 +126,18 @@ impl Identifiable for Channel {
 }
 // TODO: impl Identifiable for room, user
 
-impl<'a, V> std::ops::Deref for CacheRef<'a, V> {
+impl<'a, K: Hash + Eq, V> std::ops::Deref for CacheRef<'a, K, V> {
     type Target = V;
 
     fn deref(&self) -> &Self::Target {
-        self.inner
+        self.inner.value()
     }
 }
 
-pub type CachedRoomRef<'a> = CacheRef<'a, CachedRoom>;
-pub type CachedUserRef<'a> = CacheRef<'a, CachedUser>;
-pub type CachedCurrentUserRef<'a> = CacheRef<'a, CachedCurrentUser>;
-pub type CachedChannelRef<'a> = CacheRef<'a, CachedChannel>;
+pub type CachedRoomRef<'a> = CacheRef<'a, RoomId, CachedRoom>;
+pub type CachedUserRef<'a> = CacheRef<'a, UserId, CachedUser>;
+pub type CachedCurrentUserRef<'a> = CacheRef<'a, (), CachedCurrentUser>;
+pub type CachedChannelRef<'a> = CacheRef<'a, ChannelId, CachedChannel>;
 
 #[derive(Debug)]
 pub struct CacheStats {
@@ -181,17 +184,17 @@ impl Cache {
 
     /// iterate over all cached rooms
     pub fn rooms(&self) -> impl Iterator<Item = RoomId> {
-        self.inner.rooms.keys().copied()
+        self.inner.rooms.iter().map(|e| *e.key())
     }
 
     /// iterate over all cached channels
     pub fn channels(&self) -> impl Iterator<Item = ChannelId> {
-        self.inner.channels.keys().copied()
+        self.inner.channels.iter().map(|e| *e.key())
     }
 
     /// iterate over all cached users
     pub fn users(&self) -> impl Iterator<Item = UserId> {
-        self.inner.users.keys().copied()
+        self.inner.users.iter().map(|e| *e.key())
     }
 
     /// get cache stats
@@ -200,6 +203,36 @@ impl Cache {
             rooms: self.inner.rooms.len(),
             channels: self.inner.channels.len(),
             users: self.inner.users.len(),
+        }
+    }
+}
+
+impl Cache {
+    pub fn update(&mut self, payload: &MessagePayload) {
+        match payload {
+            MessagePayload::Sync { data, seq, nonce } => match &**data {
+                MessageSync::MessageCreate { message } => {
+                    // TODO
+                }
+                _ => {}
+            },
+            MessagePayload::Ready {
+                user,
+                application,
+                session,
+                conn,
+                seq,
+            } => {
+                if let Some(user) = user {
+                    self.inner.users.insert(
+                        user.id,
+                        CachedUser {
+                            inner: user.clone(),
+                        },
+                    );
+                }
+            }
+            _ => {}
         }
     }
 }
