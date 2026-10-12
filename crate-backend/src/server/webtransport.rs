@@ -1,9 +1,12 @@
 use std::time::Duration;
 
 use crate::prelude::*;
-use common::v1::types::{
-    ChannelType, MessageClient, MessageEnvelope, MessagePayload, SyncParams, SyncVersion,
-    error::SyncErrorCode,
+use common::{
+    v1::types::{
+        ChannelType, MessageClient, MessageEnvelope, MessagePayload, SyncParams, SyncVersion,
+        error::SyncErrorCode,
+    },
+    v2::types::sync::stream::StreamHeader,
 };
 use kerosene_core::types::documents::EditContextId;
 use kerosene_services::services::connections::ConnectionHandle;
@@ -14,7 +17,9 @@ use kerosene_sync::transport::{
 use tokio::{spawn, sync::Mutex, task::JoinSet};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, info};
-use wtransport::{Endpoint, RecvStream, SendStream, ServerConfig, endpoint::IncomingSession};
+use wtransport::{
+    Connection, Endpoint, RecvStream, SendStream, ServerConfig, endpoint::IncomingSession,
+};
 
 // TODO: impl better error handling instead of unwrapping everywhere
 
@@ -104,14 +109,14 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
     let params: SyncParams = serde_urlencoded::from_str(uri.query().unwrap_or_default()).unwrap();
     let connection = req.accept().await.unwrap();
 
-    let state: WtState = Arc::new(WtStateInner {
-        globals,
-        params: params.clone(),
-        shared: Mutex::new(WtStateShared::default()),
-    });
-
     match params.version {
         SyncVersion::V1 => {
+            let state: WtState = Arc::new(WtStateInner {
+                globals,
+                params,
+                shared: Mutex::new(WtStateShared::default()),
+            });
+
             loop {
                 tokio::select! {
                     Ok((send, recv)) = connection.accept_bi() => {
@@ -126,32 +131,12 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
                 }
             }
         }
-        SyncVersion::V2 => {
-            loop {
-                tokio::select! {
-                    Ok((send, recv)) = connection.accept_bi() => {
-                        let state = state.clone();
-                        spawn(handle_stream2(send, recv, state));
-                    }
-                    reason = connection.closed() => {
-                        // TODO: handle reason correctly, return Ok or Err depending on it
-                        debug!("connection closed: {reason}");
-                        return Ok(())
-                    }
-                }
-            }
-        }
+        SyncVersion::V2 => v2::accept(globals, connection).await,
     }
 }
 
 async fn handle_stream(send: SendStream, recv: RecvStream, state: WtState) {
     if let Err(err) = handle_stream_inner(send, recv, state).await {
-        debug!("error while handling stream: {err}");
-    }
-}
-
-async fn handle_stream2(send: SendStream, recv: RecvStream, state: WtState) {
-    if let Err(err) = handle_stream_inner2(send, recv, state).await {
         debug!("error while handling stream: {err}");
     }
 }
@@ -413,23 +398,81 @@ async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState)
     Ok(())
 }
 
-const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
+mod v2 {
+    use super::*;
+    use crate::prelude::*;
 
-async fn handle_stream_inner2(send: SendStream, recv: RecvStream, state: WtState) -> Result<()> {
-    let srv = state.globals.services();
-    let transport = Box::new(WebtransportTransport::new(send, recv, state.params.clone()));
-    let (mut send, mut recv) = transport.split(); // NOTE: this is incorrect now
-    let init = tokio::time::timeout(HANDSHAKE_TIMEOUT, recv.next()).await;
+    use kerosene_sync::v2::transport::webtransport::{WebtransportStream, WebtransportTransport};
+    use kerosene_sync::v2::transport::{Transport, TransportStream};
+    use tokio::io::AsyncReadExt;
 
-    // outer result: tokio timeout
-    // option: client not sending any more messages
-    // inner result: transport errors
-    let Ok(Some(Ok(TransportEvent::Message(init)))) = init else {
-        let _ = send.close().await;
-        return Ok(());
-    };
+    const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
 
-    // TODO
+    pub async fn accept(globals: Globals, connection: Connection) -> Result<()> {
+        let state: WtState = Arc::new(WtStateInner {
+            globals,
+            params,
+            shared: Mutex::new(WtStateShared::default()),
+        });
 
-    Ok(())
+        let tn = WebtransportTransport::new(connection);
+
+        // loop {
+        //     tokio::select! {
+        //         Ok((send, recv)) = connection.accept_bi() => {
+        //             let state = state.clone();
+        //             spawn(handle_stream(send, recv, state));
+        //         }
+        //         reason = connection.closed() => {
+        //             // TODO: handle reason correctly, return Ok or Err depending on it
+        //             debug!("connection closed: {reason}");
+        //             return Ok(())
+        //         }
+        //     }
+        // }
+    }
+
+    async fn handshake<T: Transport>(t: &mut T) {
+        tokio::time::timeout(HANDSHAKE_TIMEOUT, async {
+            // let a = t.next().await;
+            // read header
+            // handle identify header
+        })
+        .await;
+    }
+
+    async fn handle_stream(send: SendStream, recv: RecvStream, state: WtState) {
+        if let Err(err) = handle_stream_inner(send, recv, state).await {
+            debug!("error while handling stream: {err}");
+        }
+    }
+
+    async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState) -> Result<()> {
+        let srv = state.globals.services();
+
+        // read stream header
+        let header = StreamHeader::try_from(recv.read_u8().await?).map_err(
+            // TODO: better error types? (eg. dedicated sync error type)
+            ApiError::with_message(ErrorCode::InvalidData, "unknown header byte".to_string()),
+        )?;
+
+        let stream = WebtransportStream::new(send, recv);
+
+        match header {
+            StreamHeader::Identify => {
+                type Proto = common::v2::types::sync::stream::identify::Protocol;
+                let params = common::v2::types::sync::transport::webtransport::Params {
+                    version: state.params.version,
+                    compression: state.params.compression,
+                    encoding: state.params.encoding,
+                };
+                let codec = kerosene_sync::v2::codec::Codec::<Proto>::new(params);
+                let (init, framed) = codec.accept(stream).await.unwrap();
+                todo!()
+            }
+            _ => todo!(),
+        }
+
+        Ok(())
+    }
 }
