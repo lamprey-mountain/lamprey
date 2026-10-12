@@ -14,7 +14,7 @@ pub mod v2;
 // pub mod subscriptions;
 
 pub(crate) mod prelude {
-    pub use lamprey_backend_core::prelude::{Error, Result};
-    // TODO: pub use kerosene_core::prelude::*;
+    pub use kerosene_core::prelude::*;
+    pub use lamprey_backend_core::prelude::{Error, Result}; // TEMP: use kerosene instead!
     pub type WsMessage = axum::extract::ws::Message;
 }
