@@ -1,4 +1,4 @@
-use common::{
+use lamprey::{
     v1::types::{
         AuditLogEntryStatus, AuditLogEntryType, Session, SessionStatus, User,
         error::{ApiError, ApiResult, ErrorCode},

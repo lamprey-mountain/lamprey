@@ -1,5 +1,5 @@
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use common::{
+use lamprey::{
     v1::types::{document::DocumentRevisionId, ids::DocumentBranchId, util::Time},
     v2::types::{ChannelId, DocumentId, RedexId, UserId},
 };

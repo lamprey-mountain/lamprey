@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use common::v1::types::util::Time;
+use lamprey::v1::types::util::Time;
 use uuid::Uuid;
 
 // TEMP: reexport
-pub use common::v1::types::admin::{AdminBroadcast, AdminRegisterUser, AdminWhisper};
-pub use common::v1::types::search::stats::*;
+pub use lamprey::v1::types::admin::{AdminBroadcast, AdminRegisterUser, AdminWhisper};
+pub use lamprey::v1::types::search::stats::*;
 
 // TODO: rename as an internal thing
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

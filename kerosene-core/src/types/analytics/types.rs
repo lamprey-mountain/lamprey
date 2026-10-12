@@ -1,4 +1,4 @@
-use common::v1::types::{ChannelId, MediaId, RoomId, RoomMemberOrigin, UserId, util::Time};
+use lamprey::v1::types::{ChannelId, MediaId, RoomId, RoomMemberOrigin, UserId, util::Time};
 
 use crate::types::analytics::{AbuseMetadata, ResourceAction};
 

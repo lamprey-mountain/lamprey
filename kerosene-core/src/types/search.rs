@@ -1,4 +1,4 @@
-use common::{
+use lamprey::{
     v1::types::{ChannelId, search::Doctype},
     v2::types::RoomId,
 };
