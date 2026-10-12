@@ -12,14 +12,14 @@ use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 use url::Url;
 
+use crate::prelude::*;
 use crate::{
-    Error, Result,
     config::{limits::Limits, secret::Secret},
     types::health::HealthcheckIssue,
 };
 
-use common::v1::types::federation::Hostname;
-use common::v1::types::redex::EvalLimits;
+use lamprey::v1::types::federation::Hostname;
+use lamprey::v1::types::redex::EvalLimits;
 
 mod internal;
 mod limits;
@@ -598,12 +598,17 @@ pub struct ConfigUi {
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Debug, thiserror::Error)]
+#[error("hostname not configured")]
+pub struct HostnameNotConfigured;
+
 impl Config {
     #[deprecated = "use hostname2"]
     pub fn hostname(&self) -> Result<&str> {
-        self.hostname
+        let hostname = self.hostname
             .as_deref()
-            .ok_or_else(|| Error::Internal("federation hostname not configured".to_owned()))
+            .ok_or_else(|| ServerError::internal(HostnameNotConfigured))?;
+            Ok(hostname)
     }
 
     /// get the federation hostname
@@ -611,7 +616,7 @@ impl Config {
         let name = self
             .hostname
             .clone()
-            .ok_or_else(|| Error::Internal("federation hostname not configured".to_owned()))?;
+            .ok_or_else(|| ServerError::internal(HostnameNotConfigured))?;
         Ok(Hostname::new(name)?)
     }
 
@@ -629,7 +634,7 @@ impl Config {
 
     /// get user agent string
     pub fn user_agent_header_value(&self) -> Result<HeaderValue> {
-        Ok(HeaderValue::from_str(&self.user_agent())?)
+        Ok(HeaderValue::from_str(&self.user_agent()).map_err(ServerError::internal)?)
     }
 }
 

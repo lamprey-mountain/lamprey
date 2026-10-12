@@ -1,4 +1,4 @@
-use common::v1::types::redex::EvalLimits;
+use lamprey::v1::types::redex::EvalLimits;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

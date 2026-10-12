@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use common::v1::types::federation::ServerKeyAlgorithm;
-use common::v1::types::util::Time;
+use lamprey::v1::types::federation::ServerKeyAlgorithm;
+use lamprey::v1::types::util::Time;
 
 /// a server's signing key for internal use (includes private key)
 #[derive(Debug, Clone, Serialize, Deserialize)]
