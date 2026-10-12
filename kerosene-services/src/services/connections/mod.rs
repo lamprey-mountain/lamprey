@@ -15,6 +15,7 @@ const CONNECTION_RESUME_PERIOD: Duration = Duration::from_secs(60);
 pub use crate::services::connections::actor::{Connection, ConnectionHandle};
 
 mod actor;
+pub mod actor_v2;
 mod subscriptions;
 
 enum ConnectionEvent {

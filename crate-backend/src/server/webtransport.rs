@@ -2,7 +2,8 @@ use std::time::Duration;
 
 use crate::prelude::*;
 use common::v1::types::{
-    ChannelType, MessageClient, MessageEnvelope, MessagePayload, SyncParams, error::SyncErrorCode,
+    ChannelType, MessageClient, MessageEnvelope, MessagePayload, SyncParams, SyncVersion,
+    error::SyncErrorCode,
 };
 use kerosene_core::types::documents::EditContextId;
 use kerosene_services::services::connections::ConnectionHandle;
@@ -109,16 +110,35 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
         shared: Mutex::new(WtStateShared::default()),
     });
 
-    loop {
-        tokio::select! {
-            Ok((send, recv)) = connection.accept_bi() => {
-                let state = state.clone();
-                spawn(handle_stream(send, recv, state));
+    match params.version {
+        SyncVersion::V1 => {
+            loop {
+                tokio::select! {
+                    Ok((send, recv)) = connection.accept_bi() => {
+                        let state = state.clone();
+                        spawn(handle_stream(send, recv, state));
+                    }
+                    reason = connection.closed() => {
+                        // TODO: handle reason correctly, return Ok or Err depending on it
+                        debug!("connection closed: {reason}");
+                        return Ok(())
+                    }
+                }
             }
-            reason = connection.closed() => {
-                // TODO: handle reason correctly, return Ok or Err depending on it
-                debug!("connection closed: {reason}");
-                return Ok(())
+        }
+        SyncVersion::V2 => {
+            loop {
+                tokio::select! {
+                    Ok((send, recv)) = connection.accept_bi() => {
+                        let state = state.clone();
+                        spawn(handle_stream2(send, recv, state));
+                    }
+                    reason = connection.closed() => {
+                        // TODO: handle reason correctly, return Ok or Err depending on it
+                        debug!("connection closed: {reason}");
+                        return Ok(())
+                    }
+                }
             }
         }
     }
@@ -126,6 +146,12 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
 
 async fn handle_stream(send: SendStream, recv: RecvStream, state: WtState) {
     if let Err(err) = handle_stream_inner(send, recv, state).await {
+        debug!("error while handling stream: {err}");
+    }
+}
+
+async fn handle_stream2(send: SendStream, recv: RecvStream, state: WtState) {
+    if let Err(err) = handle_stream_inner2(send, recv, state).await {
         debug!("error while handling stream: {err}");
     }
 }
@@ -383,6 +409,27 @@ async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState)
 
         _ => return Err(Error::BadStatic("invalid client message")),
     }
+
+    Ok(())
+}
+
+const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
+
+async fn handle_stream_inner2(send: SendStream, recv: RecvStream, state: WtState) -> Result<()> {
+    let srv = state.globals.services();
+    let transport = Box::new(WebtransportTransport::new(send, recv, state.params.clone()));
+    let (mut send, mut recv) = transport.split(); // NOTE: this is incorrect now
+    let init = tokio::time::timeout(HANDSHAKE_TIMEOUT, recv.next()).await;
+
+    // outer result: tokio timeout
+    // option: client not sending any more messages
+    // inner result: transport errors
+    let Ok(Some(Ok(TransportEvent::Message(init)))) = init else {
+        let _ = send.close().await;
+        return Ok(());
+    };
+
+    // TODO
 
     Ok(())
 }
