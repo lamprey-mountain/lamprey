@@ -4,6 +4,7 @@ use axum::response::IntoResponse;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::misc::InviteCodeReq;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntryType, ChannelType, Invite, InviteCode, InviteTarget, InviteTargetId,
@@ -177,7 +178,11 @@ async fn invite_resolve(
 ) -> Result<impl IntoResponse> {
     let mut d = s.data();
     let s = s.services();
-    let invite = d.invite_get(req.invite_code).await?;
+    let invite_code = match req.invite_code {
+        InviteCodeReq::Local(c) => c,
+        _ => return Err(Error::Unimplemented),
+    };
+    let invite = d.invite_get(invite_code).await?;
 
     // invite creators can view their own invites
     if let Some(user) = auth.user() {
@@ -241,7 +246,11 @@ async fn invite_use(
     auth.ensure_scopes(&[Scope::Full])?;
     let mut d = s.data();
     let srv = s.services();
-    let invite = d.invite_get(req.invite_code.clone()).await?;
+    let invite_code = match req.invite_code {
+        InviteCodeReq::Local(c) => c,
+        _ => return Err(Error::Unimplemented),
+    };
+    let invite = d.invite_get(invite_code.clone()).await?;
     if invite.is_dead() {
         return Err(Error::ApiError(ApiError::from_code(
             ErrorCode::UnknownInvite,
@@ -426,7 +435,7 @@ async fn invite_use(
             // TODO: should i append to user audit logs here?
         }
     }
-    d.invite_incr_use(req.invite_code).await?;
+    d.invite_incr_use(invite_code).await?;
 
     // TODO: send welcome message to gdm
     let room_id = match &invite.invite.target {

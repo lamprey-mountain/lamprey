@@ -1,7 +1,8 @@
 use crate::v1::types::{
-    Id, InviteCode, RoomFeature, document::DocumentRevisionRef, reaction::ReactionKeyParam,
-    room_template::RoomTemplateCode,
+    Id, InviteCode, RoomFeature, document::DocumentRevisionRef, misc::InviteCodeReq,
+    reaction::ReactionKeyParam, room_template::RoomTemplateCode,
 };
+use std::str::FromStr;
 
 /// Trait for types that can be parsed from a path parameter string
 pub trait PathParam: Sized {
@@ -74,6 +75,12 @@ impl PathParam for RoomTemplateCode {
 impl PathParam for InviteCode {
     fn from_path_param(s: &str) -> Result<Self, PathParamError> {
         Ok(InviteCode(s.to_string()))
+    }
+}
+
+impl PathParam for InviteCodeReq {
+    fn from_path_param(s: &str) -> Result<Self, PathParamError> {
+        InviteCodeReq::from_str(s).map_err(PathParamError)
     }
 }
 
