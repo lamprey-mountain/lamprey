@@ -134,6 +134,11 @@ impl Paragraph {
             .children_with_tokens()
             .filter_map(|child| Inline::cast(child))
     }
+
+    /// returns true if this paragraph has no children
+    pub fn is_empty(&self) -> bool {
+        self.children().next().is_none()
+    }
 }
 
 impl Blockquote {

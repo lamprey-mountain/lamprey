@@ -1,6 +1,8 @@
 use core::fmt;
 use std::fmt::Write;
 
+use url::Url;
+
 use crate::{
     ast::{
         block::{Block, Document},
@@ -8,17 +10,24 @@ use crate::{
         list::{List, TaskListMark},
     },
     prelude::*,
+    util::sanitize_html::Sanitizable,
 };
 
 /// render to html
 #[derive(Debug, Default)]
 pub struct HtmlRenderer {
-    _nope: (), // prevent people from manually constructing this
+    config: Config,
 }
 
 #[derive(Debug, Default)]
-struct Inner {
+pub struct Config {
+    cdn_url: Option<Url>,
+}
+
+#[derive(Debug)]
+struct Inner<'a> {
     writer: String,
+    config: &'a Config,
 }
 
 impl Renderer for HtmlRenderer {
@@ -27,17 +36,19 @@ impl Renderer for HtmlRenderer {
     fn render<Q: Queryable>(&self, q: Q) -> Self::Output {
         let node = q.get_root();
         if let Some(doc) = Document::cast(node) {
-            let mut r = Inner::default();
+            let mut r = Inner {
+                writer: String::new(),
+                config: &self.config,
+            };
             r.render(doc).unwrap();
             r.writer
         } else {
-            // TODO: handle error
             String::new()
         }
     }
 }
 
-impl Inner {
+impl Inner<'_> {
     fn render(&mut self, doc: Document) -> fmt::Result {
         for block in doc.children() {
             self.render_block(block)?;
@@ -74,11 +85,11 @@ impl Inner {
                 write!(self.writer, "</blockquote>")?;
             }
             Block::Codeblock(codeblock) => {
-                write!(
-                    self.writer,
-                    "<pre><code class=\"language-{}\">",
-                    codeblock.language().unwrap_or_default()
-                )?;
+                if let Some(lang) = codeblock.language() {
+                    write!(self.writer, "<pre><code class=\"language-{lang}\">")?;
+                } else {
+                    write!(self.writer, "<pre><code>")?;
+                }
                 for child in codeblock.content() {
                     self.render_inline(child)?;
                 }
@@ -187,8 +198,12 @@ impl Inner {
                 write!(self.writer, "</em>")?;
             }
             Inline::Link(link) => {
-                // TODO: escape
-                write!(self.writer, "<a href=\"{}\">", link.href())?;
+                write!(
+                    self.writer,
+                    // TODO: configurable rel
+                    "<a rel=\"noopener noreferrer nofollow ugc\" href=\"{}\">",
+                    link.href().sanitized()
+                )?;
                 for child in link.children() {
                     self.render_inline(child)?;
                 }
@@ -225,25 +240,56 @@ impl Inner {
                 )?;
             }
             Inline::Text(text) => {
-                // TODO: escape
-                write!(self.writer, "{}", text.text())?;
+                write!(self.writer, "{}", text.text().sanitized())?;
             }
-            // TODO: custom html for mentions?
-            // maybe make this configurable
             Inline::Mention(mention) => match mention.parse() {
-                MentionData::User(u) => write!(self.writer, "@{}", u)?,
-                MentionData::Role(r) => write!(self.writer, "@{}", r)?,
-                MentionData::Channel(c) => write!(self.writer, "#{}", c)?,
-                MentionData::Everyone => write!(self.writer, "@everyone")?,
+                MentionData::User(u) => write!(
+                    self.writer,
+                    "<span class=\"mention mention-user\" data-user-id=\"{id}\">@{name}</span>",
+                    id = u,
+                    name = "Unknown user",
+                )?,
+                MentionData::Role(r) => write!(
+                    self.writer,
+                    "<span class=\"mention mention-role\" data-role-id=\"{id}\">@{name}</span>",
+                    id = r,
+                    name = "Unknown role",
+                )?,
+                MentionData::Channel(c) => write!(
+                    self.writer,
+                    "<span class=\"mention mention-channel\" data-channel-id=\"{id}\">#{name}</span>",
+                    id = c,
+                    name = "unknown channel",
+                )?,
+                MentionData::Everyone => write!(
+                    self.writer,
+                    "<span class=\"mention mention-everyone\">@everyone</span>"
+                )?,
             },
-            // TODO: custom html for custom emoji?
-            // maybe make this configurable
             Inline::CustomEmoji(e) => {
-                write!(self.writer, ":{}:", e.parse().name)?;
+                let e = e.parse();
+                if let Some(cdn_url) = &self.config.cdn_url {
+                    write!(
+                        self.writer,
+                        r#"<img class="emoji custom-emoji" data-emoji-id="{id}" data-emoji-name="{name}" data-emoji-animated="{animated}" src="{cdn_url}/emoji/{id}?size=64" alt=":{name}:" title=":{name}:">"#,
+                        id = e.id,
+                        name = e.name.sanitized(),
+                        animated = e.animated,
+                        cdn_url = cdn_url,
+                    )?;
+                } else {
+                    write!(
+                        self.writer,
+                        r#"<span class="emoji custom-emoji" data-emoji-id="{id}" data-emoji-name="{name}" data-emoji-animated="{animated}">:{name}:</span>"#,
+                        id = e.id,
+                        name = e.name.sanitized(),
+                        animated = e.animated,
+                    )?;
+                }
             }
             // TODO: verify that this doesnt risk xss
             Inline::UnicodeEmoji(e) => {
-                write!(self.writer, "{}", e.text())?;
+                write!(self.writer, "{}", e.text().sanitized())?;
             }
         }
 
