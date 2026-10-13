@@ -1,8 +1,109 @@
-mod basic;
-mod node;
-mod rtc;
-mod util;
+// TODO: rename this to mod publish?
 
-pub use basic::BasicPlayer;
-pub use node::*;
-pub use util::CreateSource;
+use std::time::Duration;
+
+use bytes::Bytes;
+use common::v1::types::voice::{KeyframeRequestKind, MediaKind, TrackKey};
+use futures::{FutureExt, Stream, future::BoxFuture};
+use str0m::{
+    format::Codec,
+    media::{MediaTime, Rid},
+};
+use tokio::sync::oneshot;
+
+use crate::voice::{Outbound, Voice, VoiceError, driver::RtcCommand};
+
+mod file_source;
+mod player;
+mod switchboard;
+
+pub use file_source::FileSource;
+pub use player::{Player, PlayerProducer};
+pub use switchboard::Switchboard;
+
+/// can be published to rtc
+pub trait Producer: Stream<Item = Result<Frame, VoiceError>> + Send + Unpin + 'static {
+    fn request_keyframe(&mut self, _kind: KeyframeRequestKind, _rid: Option<Rid>) {}
+    fn select_layer(&mut self, _rid: Rid) {}
+    fn kind(&self) -> MediaKind;
+}
+
+/// a source that media can be streamed from
+pub trait Source: Producer {
+    /// return whether this source supports seeking
+    fn is_seekable(&self) -> bool {
+        false
+    }
+
+    /// seek to a timestamp in the source
+    fn seek(&mut self, _position: Duration) -> Result<Duration, VoiceError> {
+        Err(VoiceError::NotSeekable)
+    }
+
+    /// get the total duration of this source, if known
+    fn duration(&self) -> Option<Duration> {
+        None
+    }
+
+    /// get the current playback position of this source, if known
+    fn position(&self) -> Option<Duration> {
+        None
+    }
+}
+
+/// a frame of media
+#[derive(Debug, Clone)]
+pub struct Frame {
+    pub codec: Codec,
+    pub time: MediaTime,
+    pub rid: Option<Rid>,
+    pub data: Bytes,
+}
+
+/// builder for publishing an outbound media track
+pub struct PublishBuilder<'a> {
+    voice: &'a Voice,
+    producer: Box<dyn Producer>,
+    key: TrackKey,
+}
+
+impl<'a> PublishBuilder<'a> {
+    pub(crate) fn new<P: Producer>(voice: &'a Voice, producer: P) -> Self {
+        Self {
+            voice,
+            producer: Box::new(producer),
+            key: TrackKey::User,
+        }
+    }
+
+    /// set which stream this track should be associated with (defaults to [`TrackKey::User`])
+    pub fn key(mut self, key: TrackKey) -> Self {
+        self.key = key;
+        self
+    }
+
+    async fn send(self) -> Result<Outbound, VoiceError> {
+        let (tx, rx) = oneshot::channel();
+        self.voice
+            .state
+            .tx
+            .send(RtcCommand::Publish {
+                producer: self.producer,
+                key: self.key,
+                reply: tx,
+            })
+            .await
+            .map_err(|_| VoiceError::ConnectionClosed)?;
+
+        rx.await.map_err(|_| VoiceError::ConnectionClosed)?
+    }
+}
+
+impl<'a> IntoFuture for PublishBuilder<'a> {
+    type Output = Result<Outbound, VoiceError>;
+    type IntoFuture = BoxFuture<'a, Self::Output>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        self.send().boxed()
+    }
+}

@@ -46,6 +46,8 @@ impl<'a> VoiceBuilder<'a> {
     }
 
     /// set whether we're muted
+    ///
+    /// defaults to false
     #[inline]
     pub fn mute(mut self, mute: bool) -> Self {
         self.self_mute = mute;
@@ -53,6 +55,8 @@ impl<'a> VoiceBuilder<'a> {
     }
 
     /// set whether we're deafened
+    ///
+    /// defaults to false
     #[inline]
     pub fn deaf(mut self, deaf: bool) -> Self {
         self.self_deaf = deaf;

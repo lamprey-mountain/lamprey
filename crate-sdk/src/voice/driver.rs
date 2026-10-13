@@ -1,18 +1,28 @@
-use std::{sync::Arc, time::Instant};
+use std::{
+    collections::HashMap,
+    pin::Pin,
+    sync::Arc,
+    task::{Context, Poll},
+    time::Instant,
+};
 
 use common::{
     v1::types::{
         MessageClient, MessageSync,
         voice::{
-            SessionDescription, VoiceStateUpdate,
+            Mid, SessionDescription, TrackCreate, TrackKey, TrackMetadata2, VoiceStateUpdate,
             messages::{SignallingCommand, SignallingEvent},
         },
     },
     v2::types::ChannelId,
 };
-use str0m::{Candidate, Rtc};
-use tokio::{sync::mpsc, time};
-use tracing::{debug, error, info};
+use futures::Stream;
+use str0m::{Candidate, Rtc, media::Direction};
+use tokio::{
+    sync::{mpsc, oneshot},
+    time,
+};
+use tracing::{debug, error, info, warn};
 
 use crate::{
     cache::Cache,
@@ -20,12 +30,12 @@ use crate::{
     voice::{
         VoiceError,
         client::{ConnectionState, LocalVoiceState, Shared},
-        track::Inbound,
+        player::{Frame, Producer},
+        track::{Inbound, Outbound},
     },
 };
 
 /// a command to control the rtc worker
-#[derive(Debug, Clone)]
 pub(crate) enum RtcCommand {
     /// handle a local ice candidate
     Candidate(Candidate),
@@ -35,6 +45,22 @@ pub(crate) enum RtcCommand {
 
     /// deafen local audio
     Deafen(bool),
+
+    /// publish a new outbound media track
+    Publish {
+        producer: Box<dyn Producer>,
+        key: TrackKey,
+        reply: oneshot::Sender<Result<Outbound, VoiceError>>,
+    },
+
+    /// disconnect this voice session
+    Disconnect,
+}
+
+struct OutboundEntry {
+    producer: Box<dyn Producer>,
+    metadata: TrackMetadata2,
+    active: bool,
 }
 
 pub struct Driver {
@@ -45,6 +71,8 @@ pub struct Driver {
     shared: Arc<Shared>,
     channel_id: ChannelId,
     pending: Option<str0m::change::SdpPendingOffer>,
+    outbound: HashMap<Mid, OutboundEntry>,
+    needs_negotiation: bool,
 }
 
 impl Driver {
@@ -64,13 +92,20 @@ impl Driver {
             shared,
             channel_id,
             pending: None,
+            outbound: HashMap::new(),
+            needs_negotiation: false,
         }
     }
 
     pub async fn spawn(mut self) {
         loop {
-            if let Err(e) = self.step().await {
-                error!("rtc step error: {e}");
+            match self.step().await {
+                Ok(()) => {}
+                Err(VoiceError::Dead) => {
+                    debug!("rtc driver shutting down");
+                    break;
+                }
+                Err(e) => error!("rtc step error: {e}"),
             }
         }
     }
@@ -104,12 +139,13 @@ impl Driver {
 
         let mut packet_buf = vec![0; 2048];
         let sleep = time::sleep_until(time::Instant::from_std(timeout));
+        let has_active_outbound = self.outbound.values().any(|o| o.active);
 
         tokio::select! {
             biased;
 
             Some(cmd) = self.rx.recv() => {
-                self.handle_command(cmd).await ?;
+                self.handle_command(cmd).await?;
                 return Ok(())
             },
 
@@ -132,6 +168,10 @@ impl Driver {
                 if let Err(e) = res {
                     error!("rtc handle_input error: {e}");
                 }
+            }
+
+            (mid, item) = poll_outbound(&mut self.outbound), if has_active_outbound => {
+                self.handle_outbound_frame(mid, item)?;
             }
 
             _ = sleep => {
@@ -174,6 +214,9 @@ impl Driver {
                 SignallingEvent::Offer { sdp, .. } => {
                     let sdp = str0m::change::SdpOffer::from_sdp_string(&sdp.0)?;
                     let answer = self.rtc.sdp_api().accept_offer(sdp)?;
+                    if self.pending.take().is_some() {
+                        self.needs_negotiation = true;
+                    }
                     self.syncer.send(MessageClient::VoiceDispatch {
                         channel_id: self.channel_id,
                         nonce: None,
@@ -181,11 +224,13 @@ impl Driver {
                             sdp: SessionDescription(answer.to_sdp_string()),
                         },
                     });
+                    self.negotiate_if_needed();
                 }
                 SignallingEvent::Answer { sdp } => {
                     let sdp = str0m::change::SdpAnswer::from_sdp_string(&sdp.0)?;
                     if let Some(pending) = self.pending.take() {
                         self.rtc.sdp_api().accept_answer(pending, sdp)?;
+                        self.negotiate_if_needed();
                     } else {
                         error!("got answer without a pending offer, ignoring");
                     }
@@ -334,6 +379,152 @@ impl Driver {
                     };
                 });
             }
+            RtcCommand::Publish {
+                producer,
+                key,
+                reply,
+            } => {
+                let kind = producer.kind();
+                let mut changes = self.rtc.sdp_api();
+                let s_mid = changes.add_media(kind.into(), Direction::SendOnly, None, None, None);
+                let mid: Mid = s_mid.into();
+
+                let outbound = Outbound {
+                    mid,
+                    id: None,
+                    kind,
+                    key: key.clone(),
+                };
+
+                self.outbound.insert(
+                    mid,
+                    OutboundEntry {
+                        producer,
+                        metadata: TrackMetadata2 {
+                            kind,
+                            key,
+                            whisper: None,
+                        },
+                        active: false,
+                    },
+                );
+                self.shared.tracks.outbound.insert(mid, outbound.clone());
+
+                // try to offer our newly published track
+                if self.pending.is_none() {
+                    if let Some((offer, pending)) = changes.apply() {
+                        self.pending = Some(pending);
+                        self.send_offer(offer);
+                    }
+                } else {
+                    self.needs_negotiation = true;
+                }
+
+                let _ = reply.send(Ok(outbound));
+            }
+            RtcCommand::Disconnect => {
+                self.syncer.send(MessageClient::VoiceDispatch {
+                    channel_id: self.channel_id,
+                    nonce: None,
+                    command: SignallingCommand::Disconnect,
+                });
+
+                self.shared.tracks.inbound.clear();
+                self.shared.tracks.outbound.clear();
+                self.shared
+                    .conn_state
+                    .send_replace(ConnectionState::Disconnected);
+
+                self.rtc.disconnect();
+            }
+        }
+        Ok(())
+    }
+
+    /// send an sdp offer if we have tracks that haven't been negotiated yet
+    fn negotiate_if_needed(&mut self) {
+        if !self.needs_negotiation || self.pending.is_some() {
+            return;
+        }
+
+        let changes = self.rtc.sdp_api();
+        if changes.has_changes() {
+            if let Some((offer, pending)) = changes.apply() {
+                self.pending = Some(pending);
+                self.needs_negotiation = false;
+                self.send_offer(offer);
+            }
+        } else {
+            self.needs_negotiation = false;
+        }
+    }
+
+    /// generate and send an offer signalling command
+    fn send_offer(&self, offer: str0m::change::SdpOffer) {
+        let tracks = self
+            .outbound
+            .iter()
+            .map(|(&s_mid, entry)| TrackCreate {
+                inner: entry.metadata.clone(),
+                mid: s_mid.into(),
+            })
+            .collect();
+
+        self.syncer.send(MessageClient::VoiceDispatch {
+            channel_id: self.channel_id,
+            nonce: None,
+            command: SignallingCommand::Offer {
+                sdp: SessionDescription(offer.to_sdp_string()),
+                tracks,
+            },
+        });
+    }
+
+    /// try to send a polled frame to the sfu
+    fn handle_outbound_frame(
+        &mut self,
+        mid: Mid,
+        item: Option<Result<Frame, VoiceError>>,
+    ) -> Result<(), VoiceError> {
+        match item {
+            Some(Ok(frame)) => {
+                if let Some(writer) = self.rtc.writer(mid.into()) {
+                    let pt = writer
+                        .payload_params()
+                        .find(|p| p.spec().codec == frame.codec)
+                        .map(|p| p.pt());
+                    if let Some(pt) = pt {
+                        let writer = if let Some(rid) = frame.rid {
+                            writer.rid(rid)
+                        } else {
+                            writer
+                        };
+                        writer.write(pt, Instant::now(), frame.time, frame.data.to_vec())?;
+                    } else {
+                        warn!(mid = ?mid, codec = ?frame.codec, "no matching payload type for codec");
+                    }
+                }
+            }
+            Some(Err(e)) => {
+                error!(mid = ?mid, "outbound producer error: {e}");
+            }
+            None => {
+                debug!(mid = ?mid, "outbound producer ended, stopping media");
+                self.outbound.remove(&mid);
+                self.shared.tracks.outbound.remove(&mid);
+
+                // TODO: extract this whole self.pending/needs_negotiation dance into a helper function?
+                let mut changes = self.rtc.sdp_api();
+                changes.stop_media(mid.into());
+                if self.pending.is_none() {
+                    if let Some((offer, pending)) = changes.apply() {
+                        self.pending = Some(pending);
+                        self.send_offer(offer);
+                    }
+                } else {
+                    self.needs_negotiation = true;
+                }
+            }
         }
         Ok(())
     }
@@ -354,9 +545,19 @@ impl Driver {
             }
 
             // media
-            // str0m::Event::MediaAdded(_) => todo!(),
-            // str0m::Event::MediaData(_) => todo!(),
-            // str0m::Event::KeyframeRequest(_) => todo!(),
+            str0m::Event::MediaAdded(media) => {
+                if let Some(entry) = self.outbound.get_mut(&media.mid.into()) {
+                    entry.active = true;
+                }
+            }
+            str0m::Event::MediaData(_) => {
+                // TODO: receiving media
+            }
+            str0m::Event::KeyframeRequest(req) => {
+                if let Some(entry) = self.outbound.get_mut(&req.mid.into()) {
+                    entry.producer.request_keyframe(req.kind.into(), req.rid);
+                }
+            }
 
             // datachannels
             // str0m::Event::ChannelOpen(_) => todo!(),
@@ -367,4 +568,22 @@ impl Driver {
 
         Ok(())
     }
+}
+
+/// poll every outbound entry
+async fn poll_outbound(
+    outbound: &mut HashMap<Mid, OutboundEntry>,
+) -> (Mid, Option<Result<Frame, VoiceError>>) {
+    std::future::poll_fn(|cx: &mut Context<'_>| {
+        for (&mid, entry) in outbound.iter_mut() {
+            if !entry.active {
+                continue;
+            }
+            if let Poll::Ready(item) = Pin::new(&mut entry.producer).poll_next(cx) {
+                return Poll::Ready((mid, item));
+            }
+        }
+        Poll::Pending
+    })
+    .await
 }

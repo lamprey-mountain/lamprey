@@ -18,6 +18,7 @@ use tokio::{
 use crate::voice::{
     VoiceError,
     driver::RtcCommand,
+    player::{Producer, PublishBuilder},
     track::{Inbound, Outbound, Track},
 };
 
@@ -83,12 +84,12 @@ pub enum ConnectionState {
 
 // TODO: add a way to get some events from the client? receiving new inbound tracks, etc...
 impl Voice {
-    /// get the id we're connected to
+    /// Get the ID of the channel we're connected to.
     pub fn channel_id(&self) -> ChannelId {
         self.state.voice_state.borrow().channel_id()
     }
 
-    /// get the current voice state according to the server
+    /// Get our current voice state according to the server.
     pub fn voice_state(&self) -> Option<VoiceState> {
         // PERF: use Arc for VoiceState?
         match &*self.state.voice_state.borrow() {
@@ -113,31 +114,8 @@ impl Voice {
     //     futures_util::stream::empty().boxed()
     // }
 
-    // /// create a new outgoing audio track
-    // pub async fn create_audio<S: AudioSource>(
-    //     &self,
-    //     _source: S,
-    // ) -> Result<OutboundPending, VoiceError> {
-    //     todo!()
-    // }
-
-    // /// create a new outgoing video track
-    // pub async fn create_video<S: VideoSource>(
-    //     &self,
-    //     _source: S,
-    // ) -> Result<OutboundPending, VoiceError> {
-    //     todo!()
-    // }
-
-    // /// create a new datachannel
-    // pub async fn create_channel(&self, _protocol: ProtocolType) -> Result<(), VoiceError> {
-    //     todo!()
-    // }
-
-    // /// move to a different channel
-    // ///
-    // /// will attempt to recreate all existing tracks
-    // pub async fn move_channel(&self, _channel_id: ChannelId) -> Result<(), VoiceError> {
+    // // TODO: use speaking flags
+    // pub async fn speaking(&self, _speaking: bool) -> Result<(), VoiceError> {
     //     todo!()
     // }
 
@@ -157,13 +135,22 @@ impl Voice {
             .map_err(|_| VoiceError::ConnectionClosed)
     }
 
-    // // TODO: use speaking flags
-    // pub async fn speaking(&self, _speaking: bool) -> Result<(), VoiceError> {
-    //     todo!()
-    // }
-
-    pub async fn disconnect(self) -> Result<(), VoiceError> {
+    /// move to a different channel
+    ///
+    /// this will attempt to recreate all existing outbound tracks into the new channel
+    pub async fn move_to(&self, _channel_id: ChannelId) -> Result<(), VoiceError> {
         todo!()
+    }
+
+    /// disconnect from the voice channel
+    ///
+    /// after this is called, this voice session is dead and should not be reused.
+    pub async fn disconnect(&self) -> Result<(), VoiceError> {
+        self.state
+            .tx
+            .send(RtcCommand::Disconnect)
+            .await
+            .map_err(|_| VoiceError::ConnectionClosed)
     }
 
     /// returns whether the voice connection is currently muted
@@ -174,6 +161,11 @@ impl Voice {
     /// returns whether the voice connection is currently deafened
     pub fn is_deaf(&self) -> bool {
         self.state.voice_state.borrow().deaf()
+    }
+
+    /// publish an outbound media track
+    pub fn publish<P: Producer>(&self, prod: P) -> PublishBuilder<'_> {
+        PublishBuilder::new(self, prod)
     }
 }
 

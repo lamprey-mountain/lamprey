@@ -30,4 +30,10 @@ pub enum VoiceError {
 
     #[error("connection closed")]
     ConnectionClosed,
+
+    #[error("no matching media track found")]
+    NoMatchingTrack,
+
+    #[error("source is not seekable")]
+    NotSeekable,
 }
