@@ -6,6 +6,21 @@ use html5ever::{
     tokenizer::{Tag, TagKind},
 };
 
+use crate::{Plugin, unfurler::UnfurlerBuilder};
+
+/// a plugin which parses microdata from html
+#[derive(Debug, Default)]
+pub struct MicrodataPlugin {
+    _nope: (), // prevent users from manually constructing
+}
+
+impl Plugin for MicrodataPlugin {
+    fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder {
+        // TODO: impl plugin
+        builder
+    }
+}
+
 // TODO: handle itemref attribute
 // TODO: dont buffer all items in memory (MicrodataProcessor), use stream parsing to generate embeds directly
 

@@ -13,7 +13,9 @@ use crate::{
 
 /// a plugin which handles wikipedia articles
 #[derive(Debug, Default)]
-pub struct WikipediaPlugin;
+pub struct WikipediaPlugin {
+    _nope: (), // prevent users from manually constructing
+}
 
 impl Plugin for WikipediaPlugin {
     fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder {

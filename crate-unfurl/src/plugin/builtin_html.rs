@@ -11,107 +11,32 @@ use html5ever::{
 };
 use tokio::sync::mpsc;
 use tracing::{debug, info};
-use url::Url;
 
 use crate::{
-    Plugin, PluginHttp, PluginUrl, Unfurler,
+    Plugin, PluginHttp, Unfurler,
     plugin::{Head, HtmlSink, HttpSink, UnfurlResult},
     unfurler::UnfurlerBuilder,
 };
 
-/// a plugin which forwards http responses to http plugins
-#[derive(Debug, Default)]
-pub struct ForwardHttpPlugin;
-
 /// a plugin which forwards html responses to html plugins
-#[derive(Debug, Default)]
-pub struct ForwardHtmlPlugin;
+#[derive(Debug)]
+pub struct ForwardHtmlPlugin {
+    // TODO: let end user configure this
+    // TODO: maybe move body size limit to the http plugin?
+    pub max_bytes: usize,
+}
 
-impl Plugin for ForwardHttpPlugin {
-    fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder {
-        builder.add_plugin_url(self)
+impl Default for ForwardHtmlPlugin {
+    fn default() -> Self {
+        Self {
+            max_bytes: 1024 * 1024 * 4,
+        }
     }
 }
 
 impl Plugin for ForwardHtmlPlugin {
     fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder {
         builder.add_plugin_http(self)
-    }
-}
-
-#[async_trait]
-impl PluginUrl for ForwardHttpPlugin {
-    /// attempt to handle a url
-    async fn handle(&self, unfurler: &Unfurler, url: &Url) -> UnfurlResult {
-        if url.scheme() != "http" && url.scheme() != "https" {
-            return UnfurlResult::skip();
-        }
-
-        let mut res = match unfurler.http_client().get(url.clone()).send().await {
-            Ok(r) => r,
-            Err(e) => return UnfurlResult::error(e.into()),
-        };
-
-        let head = Head {
-            url: res.url(),
-            status: res.status(),
-            headers: res.headers(),
-        };
-
-        let mut sinks = vec![];
-        for plugin in &unfurler.http_plugins {
-            if let Some(sink) = plugin.accept(unfurler, &head).await {
-                info!(
-                    plugin = %plugin.name(),
-                    kind = "http",
-                    "Select plugin"
-                );
-                sinks.push(sink);
-            }
-        }
-
-        if sinks.is_empty() {
-            return UnfurlResult::skip();
-        }
-
-        let mut embeds = vec![];
-        while let Some(chunk) = match res.chunk().await {
-            Ok(c) => c,
-            Err(e) => return UnfurlResult::error(e.into()),
-        } {
-            for sink in &mut sinks {
-                match sink.push(chunk.clone()).await {
-                    ControlFlow::Continue(_) => continue,
-                    ControlFlow::Break(res) => {
-                        embeds.extend(res.embeds);
-                        // TODO: handle res.errors
-                        if res.stop {
-                            return UnfurlResult {
-                                embeds,
-                                errors: vec![],
-                                stop: true,
-                            };
-                        }
-                    }
-                }
-            }
-        }
-
-        for sink in sinks {
-            let res = sink.finish().await;
-            embeds.extend(res.embeds);
-            // TODO: handle res.errors
-
-            if res.stop {
-                break;
-            }
-        }
-
-        UnfurlResult {
-            embeds,
-            errors: vec![],
-            stop: false,
-        }
     }
 }
 
@@ -151,11 +76,23 @@ impl PluginHttp for ForwardHtmlPlugin {
             let tokenizer = Tokenizer::new(sink, TokenizerOpts::default());
             let mut queue = BufferQueue::default();
             let mut decoder = UTF_8.new_decoder();
+            let mut out = String::new();
 
             while let Some(chunk) = rx.blocking_recv() {
-                let mut output = String::with_capacity(chunk.len());
-                let (_result, _read, _had_errors) = decoder.decode_to_string(&chunk, &mut output, false);
-                queue.push_back(StrTendril::from_slice(&output));
+                let max_len = decoder
+                    .max_utf8_buffer_length(chunk.len())
+                    .expect("chunk way too big!");
+                out.clear();
+                out.reserve(max_len);
+                let _ = decoder.decode_to_string(&chunk, &mut out, false);
+                queue.push_back(StrTendril::from_slice(&out));
+                let _ = tokenizer.feed(&mut queue);
+            }
+
+            out.clear();
+            let _ = decoder.decode_to_string(&[], &mut out, true);
+            if !out.is_empty() {
+                queue.push_back(StrTendril::from_slice(&out));
                 let _ = tokenizer.feed(&mut queue);
             }
 
@@ -167,6 +104,7 @@ impl PluginHttp for ForwardHtmlPlugin {
             tx,
             parse_task,
             bytes_read: 0,
+            max_bytes: self.max_bytes,
         }))
     }
 }
@@ -175,6 +113,7 @@ struct HtmlHttpSink {
     tx: mpsc::Sender<Bytes>,
     parse_task: tokio::task::JoinHandle<MultiSink>,
     bytes_read: usize,
+    max_bytes: usize,
 }
 
 #[async_trait]
@@ -183,15 +122,15 @@ impl HttpSink for HtmlHttpSink {
         self.bytes_read += chunk.len();
         if let Err(_) = self.tx.send(chunk).await {
             debug!("channel closed, stopping");
-            // TODO: break if closed
-            // return ControlFlow::Break(boxed_self.finish());
         }
 
-        // TODO: configurable self.max_bytes
-        if self.bytes_read > 1024 * 1024 * 4 {
+        if self.bytes_read > self.max_bytes {
             debug!("max bytes exceeded, stopping");
-            // TODO: break here
-            // return ControlFlow::Break(self.finish());
+            return ControlFlow::Break(UnfurlResult {
+                embeds: vec![],
+                errors: vec![],
+                stop: true,
+            });
         }
 
         ControlFlow::Continue(())
@@ -206,7 +145,7 @@ impl HttpSink for HtmlHttpSink {
             Err(e) => return UnfurlResult::error(e.into()),
         };
         for sink in sinks {
-            let s = sink.finish();
+            let s = sink.finish().await; // PERF: join in parallel
             result.embeds.extend(s.embeds);
             result.errors.extend(s.errors);
             result.stop = s.stop;

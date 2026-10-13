@@ -13,7 +13,10 @@ use crate::{
 };
 
 /// a plugin which handles links to media files
-pub struct DirectMediaPlugin;
+#[derive(Debug, Default)]
+pub struct DirectMediaPlugin {
+    _nope: (), // prevent users from manually constructing
+}
 
 impl Plugin for DirectMediaPlugin {
     fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder {

@@ -9,40 +9,59 @@ use lamprey_common::v1::types::{EmbedType, misc::Color};
 use url::Url;
 
 use crate::{
-    Plugin, PluginHtml, Unfurler,
-    plugin::{
-        Head, HtmlSink, UnfurlResult,
-        html::util::{RobotsImagePreview, TwitterCard},
-    },
+    Plugin, Unfurler,
+    plugin::{Head, HtmlSink, PluginHtml, UnfurlResult},
     unfurler::{EmbedGeneration, UnfurlerBuilder},
     util::{EmbedGenerationTemplate, EmbedMediaPending},
 };
 
-mod util;
+// TODO: split <title>/<meta description> handling out from opengraph
 
-pub struct HtmlStreamPlugin {
-    pub max_bytes: usize,
+/// A plugin which parses OpenGraph tags from HTML.
+#[derive(Debug, Default)]
+pub struct OpengraphPlugin {
+    _nope: (), // prevent users from manually constructing
 }
 
-impl Plugin for HtmlStreamPlugin {
-    fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder {
-        builder.add_plugin_html(self)
-    }
+#[derive(Debug)]
+struct OpengraphSink {
+    url: Url,
+    data: ExtractedData,
 }
 
-#[async_trait]
-impl PluginHtml for HtmlStreamPlugin {
-    async fn accept(&self, _unfurler: &Unfurler, head: &Head<'_>) -> Option<Box<dyn HtmlSink>> {
-        Some(Box::new(HtmlStreamSink {
-            data: ExtractedData::default(),
-            url: head.url.clone(),
-        }))
-    }
+/// Robots max-image-preview directive
+// TODO: parse X-Robots-Tag HTTP header
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RobotsImagePreview {
+    /// don't render image at all
+    None,
+
+    /// render image as a thumbnail
+    Standard,
+
+    /// render image as media
+    Large,
+}
+
+/// Twitter card type
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TwitterCard {
+    /// display text with a thumbnail
+    Summary,
+
+    /// display text with a full size image
+    SummaryLargeImage,
+
+    /// display a media player
+    Player,
+
+    /// display a mobile application
+    App,
 }
 
 /// Image display mode
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ImageMode {
+pub enum ImageMode {
     /// Don't show image
     Hide,
 
@@ -53,73 +72,8 @@ enum ImageMode {
     Thumb,
 }
 
-/// Determine image display mode based on Twitter card and robots directives
-// TODO: move to util
-fn determine_image_mode(data: &ExtractedData) -> ImageMode {
-    // Check robots max-image-preview first (takes precedence)
-    if let Some(robots) = data.robots_max_image_preview {
-        return match robots {
-            RobotsImagePreview::None => ImageMode::Hide,
-            RobotsImagePreview::Standard => ImageMode::Thumb,
-            RobotsImagePreview::Large => ImageMode::Full,
-        };
-    }
-
-    // Check Twitter card
-    match data.twitter_card {
-        Some(TwitterCard::SummaryLargeImage | TwitterCard::Player) => ImageMode::Full,
-        Some(TwitterCard::Summary | TwitterCard::App) => ImageMode::Thumb,
-        // Default: use OG type heuristics
-        None => {
-            let og_type = data.og_type.as_deref().unwrap_or("website");
-            if is_og_type_probably_thumbnail(og_type) {
-                ImageMode::Thumb
-            } else {
-                ImageMode::Full
-            }
-        }
-    }
-}
-
-/// Check if an OG type typically uses thumbnail images
-// TODO: move to util
-fn is_og_type_probably_thumbnail(og_type: &str) -> bool {
-    matches!(
-        og_type,
-        "music.song"
-            | "music.album"
-            | "music.playlist"
-            | "music.radio_station"
-            | "article"
-            | "book"
-            | "profile"
-            | "website"
-    )
-}
-
-/// Parse robots max-image-preview directive from robots meta content
-// TODO: move to util
-fn parse_robots_image_preview(content: &str) -> Option<RobotsImagePreview> {
-    // Robots meta can contain multiple comma-separated directives
-    // e.g., "noindex, nofollow, max-image-preview:large"
-    for directive in content.split(',') {
-        let directive = directive.trim().to_lowercase();
-        if directive.starts_with("max-image-preview:") {
-            let value = directive.strip_prefix("max-image-preview:")?.trim();
-            // TODO: move to FromStr impl
-            return Some(match value {
-                "none" => RobotsImagePreview::None,
-                "standard" => RobotsImagePreview::Standard,
-                "large" => RobotsImagePreview::Large,
-                _ => continue,
-            });
-        }
-    }
-    None
-}
-
 #[derive(Debug, Default)]
-struct ExtractedData {
+pub struct ExtractedData {
     in_title: bool,
     current_title: String,
 
@@ -160,24 +114,6 @@ struct ExtractedData {
     robots_max_image_preview: Option<RobotsImagePreview>,
 }
 
-impl ExtractedData {
-    pub fn has_meaningful_embed(&self) -> bool {
-        let has_enough_html_meta = self.title.is_some() && self.description.is_some();
-        self.og_title.is_some()
-            || self.og_description.is_some()
-            || self.twitter_title.is_some()
-            || self.twitter_description.is_some()
-            || self.has_media()
-            || has_enough_html_meta
-    }
-
-    pub fn has_media(&self) -> bool {
-        !self.images.entries.is_empty()
-            || !self.videos.entries.is_empty()
-            || !self.audios.entries.is_empty()
-    }
-}
-
 #[derive(Debug, Default)]
 struct MediaList {
     entries: Vec<MediaEntry>,
@@ -193,69 +129,24 @@ struct MediaEntry {
     alt: Option<String>,
 }
 
-impl MediaEntry {
-    pub fn preferred_url(&self) -> Option<&str> {
-        self.secure_url.as_deref().or(self.url.as_deref())
+impl Plugin for OpengraphPlugin {
+    fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder {
+        builder.add_plugin_html(self)
     }
 }
 
-impl MediaList {
-    /// handle a meta tag
-    ///
-    pub fn handle_meta(&mut self, suffix: &str, content: String) {
-        match suffix {
-            "" | ":url" => {
-                let lm = self.last_media();
-                if lm.url.is_some() {
-                    self.push_media().url = Some(content);
-                } else {
-                    lm.url = Some(content);
-                }
-            }
-            ":secure_url" => {
-                let lm = self.last_media();
-                if lm.secure_url.is_some() {
-                    self.push_media().secure_url = Some(content);
-                } else {
-                    lm.secure_url = Some(content);
-                }
-            }
-            ":type" => {
-                self.last_media().ty = Some(content);
-            }
-            ":alt" => {
-                self.last_media().alt = Some(content);
-            }
-            ":width" => {
-                self.last_media().width = Some(content);
-            }
-            ":height" => {
-                self.last_media().height = Some(content);
-            }
-            _ => {}
-        }
-    }
-
-    /// get the last MediaEntry, creating it if it doesnt exist
-    fn last_media(&mut self) -> &mut MediaEntry {
-        if self.entries.is_empty() {
-            self.push_media();
-        }
-        self.entries.last_mut().unwrap()
-    }
-
-    /// create a new MediaEntry and return it
-    fn push_media(&mut self) -> &mut MediaEntry {
-        self.entries.push_mut(MediaEntry::default())
+#[async_trait]
+impl PluginHtml for OpengraphPlugin {
+    async fn accept(&self, _unfurler: &Unfurler, head: &Head<'_>) -> Option<Box<dyn HtmlSink>> {
+        Some(Box::new(OpengraphSink {
+            url: head.url.clone(),
+            data: Default::default(),
+        }))
     }
 }
 
-struct HtmlStreamSink {
-    data: ExtractedData,
-    url: Url,
-}
-
-impl HtmlSink for HtmlStreamSink {
+#[async_trait]
+impl HtmlSink for OpengraphSink {
     fn push(&mut self, token: &Token, _line_number: u64) -> ControlFlow<UnfurlResult> {
         match token {
             Token::TagToken(tag) => {
@@ -424,7 +315,7 @@ impl HtmlSink for HtmlStreamSink {
         ControlFlow::Continue(())
     }
 
-    fn finish(self: Box<Self>) -> UnfurlResult {
+    async fn finish(self: Box<Self>) -> UnfurlResult {
         let data = self.data;
 
         if !data.has_meaningful_embed() {
@@ -541,4 +432,159 @@ impl HtmlSink for HtmlStreamSink {
             stop: false,
         }
     }
+}
+
+impl ExtractedData {
+    pub fn has_meaningful_embed(&self) -> bool {
+        let has_enough_html_meta = self.title.is_some() && self.description.is_some();
+        self.og_title.is_some()
+            || self.og_description.is_some()
+            || self.twitter_title.is_some()
+            || self.twitter_description.is_some()
+            || self.has_media()
+            || has_enough_html_meta
+    }
+
+    pub fn has_media(&self) -> bool {
+        !self.images.entries.is_empty()
+            || !self.videos.entries.is_empty()
+            || !self.audios.entries.is_empty()
+    }
+}
+
+impl MediaList {
+    /// handle a meta tag
+    ///
+    pub fn handle_meta(&mut self, suffix: &str, content: String) {
+        match suffix {
+            "" | ":url" => {
+                let lm = self.last_media();
+                if lm.url.is_some() {
+                    self.push_media().url = Some(content);
+                } else {
+                    lm.url = Some(content);
+                }
+            }
+            ":secure_url" => {
+                let lm = self.last_media();
+                if lm.secure_url.is_some() {
+                    self.push_media().secure_url = Some(content);
+                } else {
+                    lm.secure_url = Some(content);
+                }
+            }
+            ":type" => {
+                self.last_media().ty = Some(content);
+            }
+            ":alt" => {
+                self.last_media().alt = Some(content);
+            }
+            ":width" => {
+                self.last_media().width = Some(content);
+            }
+            ":height" => {
+                self.last_media().height = Some(content);
+            }
+            _ => {}
+        }
+    }
+
+    /// get the last MediaEntry, creating it if it doesnt exist
+    fn last_media(&mut self) -> &mut MediaEntry {
+        if self.entries.is_empty() {
+            self.push_media();
+        }
+        self.entries.last_mut().unwrap()
+    }
+
+    /// create a new MediaEntry and return it
+    fn push_media(&mut self) -> &mut MediaEntry {
+        self.entries.push_mut(MediaEntry::default())
+    }
+}
+
+impl MediaEntry {
+    pub fn preferred_url(&self) -> Option<&str> {
+        self.secure_url.as_deref().or(self.url.as_deref())
+    }
+}
+
+// TODO: use strum for this
+impl FromStr for TwitterCard {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "summary" => Ok(TwitterCard::Summary),
+            "summary_large_image" => Ok(TwitterCard::SummaryLargeImage),
+            "player" => Ok(TwitterCard::Player),
+            "app" => Ok(TwitterCard::App),
+            _ => Err(()),
+        }
+    }
+}
+
+/// Determine image display mode based on Twitter card and robots directives
+// TODO: move to util
+fn determine_image_mode(data: &ExtractedData) -> ImageMode {
+    // Check robots max-image-preview first (takes precedence)
+    if let Some(robots) = data.robots_max_image_preview {
+        return match robots {
+            RobotsImagePreview::None => ImageMode::Hide,
+            RobotsImagePreview::Standard => ImageMode::Thumb,
+            RobotsImagePreview::Large => ImageMode::Full,
+        };
+    }
+
+    // Check Twitter card
+    match data.twitter_card {
+        Some(TwitterCard::SummaryLargeImage | TwitterCard::Player) => ImageMode::Full,
+        Some(TwitterCard::Summary | TwitterCard::App) => ImageMode::Thumb,
+        // Default: use OG type heuristics
+        None => {
+            let og_type = data.og_type.as_deref().unwrap_or("website");
+            if is_og_type_probably_thumbnail(og_type) {
+                ImageMode::Thumb
+            } else {
+                ImageMode::Full
+            }
+        }
+    }
+}
+
+/// Check if an OG type typically uses thumbnail images
+// TODO: move to util
+fn is_og_type_probably_thumbnail(og_type: &str) -> bool {
+    matches!(
+        og_type,
+        "music.song"
+            | "music.album"
+            | "music.playlist"
+            | "music.radio_station"
+            | "article"
+            | "book"
+            | "profile"
+            | "website"
+    )
+}
+
+/// Parse robots max-image-preview directive from robots meta content
+// TODO: move to util
+fn parse_robots_image_preview(content: &str) -> Option<RobotsImagePreview> {
+    // Robots meta can contain multiple comma-separated directives
+    // e.g., "noindex, nofollow, max-image-preview:large"
+    for directive in content.split(',') {
+        let directive = directive.trim().to_lowercase();
+        if directive.starts_with("max-image-preview:") {
+            let value = directive.strip_prefix("max-image-preview:")?.trim();
+            // TODO: move to FromStr impl
+            return Some(match value {
+                "none" => RobotsImagePreview::None,
+                "standard" => RobotsImagePreview::Standard,
+                "large" => RobotsImagePreview::Large,
+                _ => continue,
+            });
+        }
+    }
+    None
 }

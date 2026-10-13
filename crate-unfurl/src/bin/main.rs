@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 use lamprey_unfurl::{
-    DirectMediaPlugin, HtmlStreamPlugin, Unfurler, plugin::wikipedia::WikipediaPlugin,
-    unfurler::PrettyEmbedGeneration,
+    DirectMediaPlugin, JsonLdPlugin, MicrodataPlugin, OpengraphPlugin, Unfurler,
+    plugin::wikipedia::WikipediaPlugin, unfurler::PrettyEmbedGeneration,
 };
 use url::Url;
 
@@ -14,10 +14,10 @@ async fn main() -> anyhow::Result<()> {
         Command::Unfurl { url } => {
             let unfurler = Unfurler::builder()
                 .add_plugin(WikipediaPlugin::default())
-                .add_plugin(HtmlStreamPlugin {
-                    max_bytes: 1024 * 1024 * 4,
-                })
-                .add_plugin(DirectMediaPlugin)
+                .add_plugin(DirectMediaPlugin::default())
+                .add_plugin(OpengraphPlugin::default())
+                .add_plugin(JsonLdPlugin::default())
+                .add_plugin(MicrodataPlugin::default())
                 .build()
                 .expect("failed to build unfurler");
             match unfurler.unfurl(&url).await {

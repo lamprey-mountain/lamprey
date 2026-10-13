@@ -13,15 +13,13 @@ use crate::{
     unfurler::{EmbedGeneration, UnfurlerBuilder},
 };
 
-// TODO: impl and use these
-pub(crate) mod builtin;
-
+pub(crate) mod builtin_html;
+pub(crate) mod builtin_http;
 pub mod direct_media;
-pub mod html; // TODO: split html module into opengraph, microdata, json_ld
+pub mod json_ld;
+pub mod microdata;
+pub mod opengraph;
 pub mod wikipedia;
-// pub mod microdata;
-// pub mod json_ld;
-// pub mod opengraph;
 
 /// the result of an unfurling
 #[derive(Debug)]
@@ -36,6 +34,7 @@ pub struct UnfurlResult {
     pub stop: bool,
 }
 
+/// http response metadata
 pub struct Head<'a> {
     pub url: &'a Url,
     pub status: StatusCode,
@@ -109,7 +108,7 @@ pub trait HtmlSink: Send {
         token: &html5ever::tokenizer::Token,
         line_number: u64,
     ) -> ControlFlow<UnfurlResult>;
-    fn finish(self: Box<Self>) -> UnfurlResult;
+    async fn finish(self: Box<Self>) -> UnfurlResult;
 }
 
 impl UnfurlResult {

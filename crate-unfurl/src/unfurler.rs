@@ -7,8 +7,8 @@ use crate::{
     Plugin,
     error::UnfurlError,
     plugin::{
-        PluginHtml, PluginHttp, PluginUrl,
-        builtin::{ForwardHtmlPlugin, ForwardHttpPlugin},
+        PluginHtml, PluginHttp, PluginUrl, builtin_html::ForwardHtmlPlugin,
+        builtin_http::ForwardHttpPlugin,
     },
     util::{EmbedGenerationTemplate, EmbedMedia, EmbedMediaPending},
 };
@@ -51,8 +51,6 @@ impl Unfurler {
             http_plugins: Vec::new(),
             html_plugins: Vec::new(),
         }
-        .add_plugin(ForwardHttpPlugin)
-        .add_plugin(ForwardHtmlPlugin)
     }
 
     /// generate embeds for this url
@@ -131,11 +129,15 @@ impl UnfurlerBuilder {
     // }
 
     pub fn build(self) -> Result<Unfurler, reqwest::Error> {
+        // add default plugins before building
+        let me = self
+            .add_plugin(ForwardHttpPlugin::default())
+            .add_plugin(ForwardHtmlPlugin::default());
         Ok(Unfurler {
-            client: self.client_builder.build()?,
-            url_plugins: self.url_plugins,
-            http_plugins: self.http_plugins,
-            html_plugins: self.html_plugins,
+            client: me.client_builder.build()?,
+            url_plugins: me.url_plugins,
+            http_plugins: me.http_plugins,
+            html_plugins: me.html_plugins,
         })
     }
 }
