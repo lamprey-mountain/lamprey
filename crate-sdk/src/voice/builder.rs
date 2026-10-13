@@ -83,7 +83,15 @@ impl<'a> VoiceBuilder<'a> {
         });
 
         let rtc = Rtc::builder().build(Instant::now());
-        let worker = Driver::new(rtc, rx, self.client.syncer(), state.clone(), channel_id);
+        let cache = self.client.cache().expect("cache is required for voice");
+        let worker = Driver::new(
+            rtc,
+            rx,
+            self.client.syncer(),
+            cache,
+            state.clone(),
+            channel_id,
+        );
         tokio::spawn(worker.spawn());
 
         // find public ipv4 addr via stun

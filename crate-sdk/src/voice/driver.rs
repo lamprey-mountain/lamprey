@@ -15,6 +15,7 @@ use tokio::{sync::mpsc, time};
 use tracing::{debug, error, info};
 
 use crate::{
+    cache::Cache,
     syncer::SyncerHandle,
     voice::{
         VoiceError,
@@ -28,8 +29,10 @@ use crate::{
 pub(crate) enum RtcCommand {
     /// handle a local ice candidate
     Candidate(Candidate),
+
     /// mute local audio
     Mute(bool),
+
     /// deafen local audio
     Deafen(bool),
 }
@@ -38,6 +41,7 @@ pub struct Driver {
     rtc: Rtc,
     rx: mpsc::Receiver<RtcCommand>,
     syncer: SyncerHandle,
+    cache: Cache,
     shared: Arc<Shared>,
     channel_id: ChannelId,
     pending: Option<str0m::change::SdpPendingOffer>,
@@ -48,6 +52,7 @@ impl Driver {
         rtc: Rtc,
         rx: mpsc::Receiver<RtcCommand>,
         syncer: SyncerHandle,
+        cache: Cache,
         shared: Arc<Shared>,
         channel_id: ChannelId,
     ) -> Self {
@@ -55,6 +60,7 @@ impl Driver {
             rtc,
             rx,
             syncer,
+            cache,
             shared,
             channel_id,
             pending: None,
@@ -225,12 +231,17 @@ impl Driver {
             MessageSync::VoiceState {
                 user_id,
                 state,
-                old_state,
+                old_state: _,
             } => {
-                // TODO
-                // if Some(user_id) == self.current_user_id {
-                //     self.shared.voice_state.send_replace(state.map(|s| s));
-                // }
+                if self.cache.current_user_id() == Some(*user_id) {
+                    if let Some(state) = state {
+                        if state.channel_id == self.channel_id {
+                            self.shared.voice_state.send_modify(|local| {
+                                *local = LocalVoiceState::Synced(state.clone())
+                            });
+                        }
+                    }
+                }
             }
             _ => {}
         }
