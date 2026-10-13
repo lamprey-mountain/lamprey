@@ -25,25 +25,25 @@ use crate::voice::{
 /// a connection to a voice channel
 #[derive(Clone)]
 pub struct Voice {
-    pub(crate) state: Arc<Shared>,
+    pub(super) state: Arc<Shared>,
 }
 
-pub(crate) struct Shared {
+pub(super) struct Shared {
     // TODO: use atomic for ConnectionState
-    pub(crate) tx: mpsc::Sender<RtcCommand>,
-    pub(crate) sock: UdpSocket,
-    pub(crate) tracks: Tracks,
+    pub(super) tx: mpsc::Sender<RtcCommand>,
+    pub(super) sock: UdpSocket,
+    pub(super) tracks: Tracks,
     // TODO: store call participants (voice states)
     // TODO: store datachannels
-    pub(crate) voice_state: watch::Sender<LocalVoiceState>,
+    pub(super) voice_state: watch::Sender<LocalVoiceState>,
 
     /// the current connection state
-    pub(crate) conn_state: watch::Sender<ConnectionState>,
+    pub(super) conn_state: watch::Sender<ConnectionState>,
 }
 
 // NOTE: this could be done with a struct?
 // desired: VoiceStateUpdate, confirmed: Option<VoiceState>
-pub(crate) enum LocalVoiceState {
+pub(super) enum LocalVoiceState {
     Connecting(VoiceStateUpdate),
     Pending(VoiceState, VoiceStateUpdate),
     Synced(VoiceState),
