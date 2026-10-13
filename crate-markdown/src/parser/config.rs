@@ -1,11 +1,12 @@
-use crate::prelude::*;
-
 // TODO: impl serde, use serde to wasm bindgen instead?
 #[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "wasm", wasm_bindgen)]
 pub struct ParserConfig {
-    /// the mrakdown format to parse
+    /// the markdown format to parse
     pub format: ParserConfigFormat,
+    // /// valid url schemes
+    // pub url_schemes: Vec<String>,
+    // TODO: valid url schemes (default to http, https, mailto, tel, magnet. maybe ssh, telnet, ftp, ftps.)
 }
 
 #[derive(Debug, Default, Clone, Copy)]
