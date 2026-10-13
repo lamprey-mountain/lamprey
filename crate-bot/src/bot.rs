@@ -1,31 +1,39 @@
-use crate::database::BotDatabase;
+use crate::commands::{RemindCommand, VoiceCommand};
 use crate::prelude::*;
+use crate::store::Store;
 use crate::{commands::Command, config::Config};
 use clap::Parser;
-use common::v1::types::misc::UserIdReq;
+use common::v1::types::MessageSync;
+use common::v1::types::components::{ComponentCreate, ComponentType, ComponentsCreate};
+use common::v1::types::flume::{FlumeAppendCreate, FlumeDeltaCreate, FlumeReplaceCreate};
+use common::v1::types::misc::duration::Duration;
+use common::v1::types::misc::{Time, UserIdReq};
 use common::v1::types::{
     Message, MessageClient,
     presence::{Activity, Presence, Status},
 };
-use common::v1::types::{MessageCreate, MessageSync};
 use common::v1::types::{MessagePayload, MessageType};
 use common::v2::types::UserId;
+use common::v2::types::components::ComponentId;
 use futures::StreamExt;
 use sdk::Client;
 use sdk::syncer::SyncerEvent;
-use sdk::voice::{Player, Voice};
-use sqlx::SqlitePool;
+use sdk::voice::{FileSource, Player, Voice};
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
+use crate::llm::Llm;
+use crate::reminders;
+use crate::util::BotResponse;
+
 pub struct Bot {
-    pub(crate) config: Config,
-    pub(crate) user_id: Option<UserId>, // surely there's a better way to do this?
-    pub(crate) client: Client,
-    pub(crate) db: BotDatabase,
-    pub(crate) voice: Option<Voice>,
-    pub(crate) player: Option<Player>,
+    config: Config,
+    user_id: Option<UserId>, // surely there's a better way to do this?
+    client: Client,
+    store: Store,
+    voice: Option<Voice>,
+    player: Option<Player>,
     control_rx: mpsc::Receiver<BotCommand>,
     control_tx: mpsc::Sender<BotCommand>,
     shutdown_token: CancellationToken,
@@ -43,9 +51,7 @@ pub enum BotCommand {
 impl Bot {
     /// initialize a bot from some config
     pub async fn from_config(config: Config) -> Result<Self> {
-        let pool = SqlitePool::connect(&config.database_url).await?;
-        sqlx::migrate!("./migrations").run(&pool).await?;
-        let db = BotDatabase::new(pool.clone());
+        let store = Store::open(&config.database_url).await?;
 
         let (control_tx, control_rx) = mpsc::channel(100);
         let shutdown_token = CancellationToken::new();
@@ -78,7 +84,7 @@ impl Bot {
             config,
             user_id: None,
             client,
-            db,
+            store,
             voice: None,
             player: None,
             control_rx,
@@ -239,29 +245,288 @@ impl Bot {
                 std::iter::once("bot".to_string())
                     .chain(command.split_whitespace().map(|s| s.to_string())),
             );
-            let resp = match command {
+            let resp: BotResponse = match command {
                 Ok(command) => {
                     debug!("got command {command:?}");
-                    match self.handle_command(&message, command).await {
-                        Ok(s) => s,
-                        Err(e) => e.to_string(),
-                    }
+                    self.handle_command(&message, command)
+                        .await
+                        .unwrap_or_else(|e| e.to_string().into())
                 }
-                Err(err) => err.to_string(),
+                Err(err) => err.to_string().into(),
             };
-            let resp = MessageCreate {
-                content: Some(resp),
-                ..Default::default()
-            };
-            self.client
-                .http()
-                .message_create(message.channel_id, &resp)
-                .await?;
+            if let Some(resp) = resp.0 {
+                self.client
+                    .http()
+                    .message_create(message.channel_id, &resp)
+                    .await?;
+            }
         }
 
         self.handle_llm(&message);
 
         Ok(())
+    }
+
+    async fn handle_command(&mut self, message: &Message, cmd: Command) -> Result<BotResponse> {
+        let resp = match cmd {
+            Command::Ping => "pong!".to_string(),
+            Command::Voice(v) => match v {
+                VoiceCommand::Join => {
+                    if self.voice.is_some() {
+                        "already joined".to_string()
+                    } else {
+                        let voice = self.client.voice(message.channel_id).await?;
+                        let (player, producer) = Player::new_audio();
+                        voice.publish(producer).await?;
+                        self.player = Some(player);
+                        self.voice = Some(voice);
+                        "joined".to_string()
+                    }
+                }
+                VoiceCommand::Leave => {
+                    if let Some(voice) = self.voice.take() {
+                        if let Some(player) = self.player.take() {
+                            player.stop();
+                        }
+                        voice.disconnect().await?;
+                        "left".to_string()
+                    } else {
+                        "not joined".to_string()
+                    }
+                }
+                VoiceCommand::Play => {
+                    if let Some(player) = self.player.clone() {
+                        player.set_paused(false);
+                        "playing".to_string()
+                    } else {
+                        let voice = match self.voice.clone() {
+                            Some(voice) => voice,
+                            None => {
+                                let voice = self.client.voice(message.channel_id).await?;
+                                self.voice = Some(voice.clone());
+                                voice
+                            }
+                        };
+                        let source = FileSource::from_path(&self.config.music_path)?;
+                        let (player, producer) = Player::new_audio();
+                        player.play(source);
+                        voice.publish(producer).await?;
+                        self.player = Some(player);
+                        "playing".to_string()
+                    }
+                }
+                VoiceCommand::Pause { paused } => match &self.player {
+                    Some(player) => {
+                        let paused = paused.unwrap_or(!player.paused());
+                        player.set_paused(paused);
+                        if paused { "paused" } else { "resumed" }.to_string()
+                    }
+                    None => "no player".to_string(),
+                },
+                VoiceCommand::Stop => {
+                    if let Some(player) = self.player.take() {
+                        player.stop();
+                        "stopped".to_string()
+                    } else {
+                        "no player".to_string()
+                    }
+                }
+            },
+            Command::Remind(cmd) => match cmd {
+                RemindCommand::Add { duration, text } => {
+                    let text = text.join(" ");
+                    let duration: Duration = duration
+                        .parse()
+                        .map_err(|_| anyhow::anyhow!("invalid duration (try e.g. 5m, 1h, 2d)"))?;
+                    let scheduled_at = Time::now_utc() + duration;
+                    let reminder =
+                        reminders::add(&self.store, message.author_id, text, scheduled_at).await?;
+                    format!(
+                        "Reminder #{} set for {}: {}",
+                        reminder.id,
+                        reminder.scheduled_at.to_string(),
+                        reminder.text
+                    )
+                }
+                RemindCommand::Remove { id } => {
+                    reminders::remove(&self.store, message.author_id, id).await?;
+                    format!("Removed reminder {id}")
+                }
+                RemindCommand::RemoveAll => {
+                    reminders::remove_all(&self.store, message.author_id).await?;
+                    "Removed all your reminders".to_string()
+                }
+                RemindCommand::List => {
+                    let reminders = reminders::list(&self.store, message.author_id).await?;
+
+                    if reminders.is_empty() {
+                        "No reminders".to_string()
+                    } else {
+                        let mut output = String::new();
+                        for reminder in &reminders {
+                            output.push_str(&format!(
+                                "[{}] {}",
+                                reminder.id,
+                                reminder.scheduled_at.to_string()
+                            ));
+                            if !reminder.text.is_empty() {
+                                output.push_str(&format!(": {}", reminder.text));
+                            }
+                            output.push('\n');
+                        }
+                        output
+                    }
+                }
+            },
+        };
+        Ok(resp.into())
+    }
+
+    fn handle_llm(&self, message: &Message) {
+        let Some(llm_config) = &self.config.llm else {
+            return;
+        };
+
+        let Some(current_user_id) = self.user_id else {
+            return;
+        };
+
+        if message.author_id == current_user_id {
+            return;
+        }
+
+        if !llm_config.channel_ids.contains(&message.channel_id) {
+            return;
+        }
+
+        let content = match &message.latest_version.message_type {
+            MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => m.content.as_deref(),
+            _ => None,
+        };
+
+        let Some(prompt) = content else {
+            return;
+        };
+
+        let client = self.client.clone();
+        let llm = Llm::new(llm_config.clone());
+        let channel_id = message.channel_id;
+        let reply_id = message.id;
+        let prompt = prompt.to_string();
+
+        tokio::spawn(async move {
+            let flume = match client
+                .flume(channel_id)
+                .reply_id(reply_id)
+                .components(ComponentsCreate {
+                    inner: vec![ComponentCreate {
+                        id: Some(ComponentId(0)),
+                        ty: ComponentType::Container {
+                            components: vec![ComponentCreate {
+                                id: Some(ComponentId(1)),
+                                ty: ComponentType::Text {
+                                    content: "*loading...*".to_string(),
+                                },
+                                allow: None,
+                            }],
+                            color: "#33454f".parse().ok(),
+                        },
+                        allow: None,
+                    }],
+                })
+                .await
+            {
+                Ok(flume) => flume,
+                Err(e) => {
+                    eprintln!("Failed to create flume: {:?}", e);
+                    return;
+                }
+            };
+
+            flume
+                .update(FlumeDeltaCreate {
+                    init: None,
+                    append: vec![],
+                    replace: vec![FlumeReplaceCreate {
+                        target: ComponentId(0),
+                        components: vec![ComponentCreate {
+                            id: Some(ComponentId(0)),
+                            ty: ComponentType::Container {
+                                components: vec![ComponentCreate {
+                                    id: Some(ComponentId(1)),
+                                    ty: ComponentType::Text {
+                                        content: "*loading...*".to_string(),
+                                    },
+                                    allow: None,
+                                }],
+                                color: "#517082".parse().ok(),
+                            },
+                            allow: None,
+                        }],
+                    }],
+                    delete: vec![],
+                })
+                .await;
+
+            match llm.complete(prompt).await {
+                Ok(stream) => {
+                    futures::pin_mut!(stream);
+                    let mut buffer = String::new();
+                    let mut first = true;
+
+                    while let Some(chunk) = stream.next().await {
+                        let Some(content) = chunk.text() else {
+                            continue;
+                        };
+                        buffer.push_str(content);
+
+                        if first {
+                            first = false;
+                            flume
+                                .update(FlumeDeltaCreate {
+                                    init: None,
+                                    append: vec![],
+                                    replace: vec![FlumeReplaceCreate {
+                                        target: ComponentId(1),
+                                        components: vec![ComponentCreate {
+                                            id: Some(ComponentId(1)),
+                                            ty: ComponentType::Text {
+                                                content: buffer.clone(),
+                                            },
+                                            allow: None,
+                                        }],
+                                    }],
+                                    delete: vec![],
+                                })
+                                .await;
+                        } else {
+                            flume
+                                .update(FlumeDeltaCreate {
+                                    init: None,
+                                    append: vec![FlumeAppendCreate {
+                                        target: ComponentId(1),
+                                        components: vec![ComponentCreate {
+                                            id: Some(ComponentId(1)),
+                                            ty: ComponentType::Text {
+                                                content: content.to_string(),
+                                            },
+                                            allow: None,
+                                        }],
+                                    }],
+                                    replace: vec![],
+                                    delete: vec![],
+                                })
+                                .await;
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error calling LLM: {:?}", e);
+                }
+            }
+
+            flume.commit().await;
+        });
     }
 }
 

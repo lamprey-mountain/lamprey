@@ -1,3 +1,5 @@
+//! configuration for the bot
+
 use common::v2::types::ChannelId;
 use serde::Deserialize;
 use url::Url;
