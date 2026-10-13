@@ -10,7 +10,6 @@ how lamprey mountain is architectured
 - `crate-backend-sync` websocket sync api implementation
 - `crate-backend-data-postgres` postgres implementation
 - `crate-common` common types used everywhere
-- `crate-media` media proxy
 - `crate-voice` voice sfu implementation
 
 ## other crates

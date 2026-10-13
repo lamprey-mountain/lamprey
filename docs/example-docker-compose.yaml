@@ -21,14 +21,6 @@ services:
       - postgres
     volumes:
       - ./config-backend.toml:/config.toml:ro
-  media:
-    container_name: lamprey-media
-    image: git.celery.eu.org/lamprey/lamprey-media:latest
-    restart: unless-stopped
-    depends_on:
-      - postgres
-    volumes:
-      - ./config-media.toml:/cdn.toml:ro
   bridge:
     container_name: lamprey-bridge
     image: git.celery.eu.org/lamprey/lamprey-bridge:latest

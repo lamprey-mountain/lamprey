@@ -318,7 +318,7 @@ impl MediaPipeline {
 
     /// (re)generate thumbnails for this
     async fn generate_thumbnails(&mut self) -> Result<()> {
-        // NOTE: thumbnails are generally generated in crate-media, not here
+        // NOTE: thumbnails are generally generated in the media endpoint, not here
         Ok(())
     }
 

@@ -344,17 +344,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-recursion"
-version = "1.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b43422f69d8ff38f95f1b2bb76517c91589a924d1559a0e935d7c8ce0274c11"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
 name = "async-tempfile"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4177,7 +4166,6 @@ dependencies = [
  "lamprey-backend",
  "lamprey-backend-core",
  "lamprey-common",
- "lamprey-media",
  "lamprey-sdk",
  "lamprey-voice",
  "serde",
@@ -4274,44 +4262,6 @@ dependencies = [
  "url",
  "uuid",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "lamprey-media"
-version = "0.1.4"
-dependencies = [
- "anyhow",
- "async-nats",
- "async-recursion",
- "async-tempfile",
- "axum",
- "dotenvy",
- "figment",
- "futures-util",
- "headers",
- "http",
- "image",
- "lamprey-backend-core",
- "lamprey-common",
- "moka",
- "opendal",
- "opentelemetry 0.30.0",
- "opentelemetry-otlp 0.30.0",
- "opentelemetry_sdk 0.30.0",
- "percent-encoding",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror 2.0.21",
- "tokio",
- "tokio-util",
- "tower-http",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "url",
- "utoipa",
- "utoipa-axum",
 ]
 
 [[package]]

@@ -2,7 +2,6 @@ const crates = [
 	"crate-backend",
 	"crate-backend-data-postgres",
 	"crate-bridge",
-	"crate-media",
 ];
 
 for (const crate of crates) {

@@ -39,10 +39,6 @@ async fn main_inner() -> Result<(), anyhow::Error> {
                     lamprey_backend::serve::server::Server::init_from_config(config).await?;
                 server.serve().await?;
             }
-            ServeCommand::Media { media_config } => {
-                let server = lamprey_media::server::MediaServer::init_from_config(config).await?;
-                server.serve().await?;
-            }
             ServeCommand::Voice { sfu_config } => {
                 lamprey_voice::sfu::Sfu::serve(config).await;
             }

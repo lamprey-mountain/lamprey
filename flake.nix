@@ -147,7 +147,6 @@
 
         bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" "crate-backend-core" "crate-script" "crate-markdown" ];
         voice = mkCrate "lamprey-voice" [ "crate-voice" ];
-        media = mkCrate "lamprey-media" [ "crate-media" "crate-backend-core" "crate-script" ];
         scanner-malware = mkCrate "scanner-malware" [ "scanner-malware" ];
 
         wasm-cargo-artifacts = craneLib.buildDepsOnly (common // {
@@ -319,7 +318,7 @@
         });
       in {
         packages = rec {
-          inherit backend bridge voice media frontend scanner-malware wasm-markdown emoji emoji-spritesheets agent-sandbox spawn-sandbox;
+          inherit backend bridge voice frontend scanner-malware wasm-markdown emoji emoji-spritesheets agent-sandbox spawn-sandbox;
 
           scanner-nsfw = pkgs.writeShellApplication {
             name = "run-scanner-nsfw";
@@ -381,19 +380,6 @@
                 "${pkgs.tini}/bin/tini"
                 "--"
                 "${voice}/bin/voice"
-              ];
-            };
-          };
-
-          media-oci = pkgs.dockerTools.streamLayeredImage {
-            name = "media";
-            tag = "latest";
-            contents = [ pkgs.dockerTools.caCertificates pkgs.ffmpeg-headless ];
-            config = {
-              Entrypoint = [
-                "${pkgs.tini}/bin/tini"
-                "--"
-                "${media}/bin/media"
               ];
             };
           };
