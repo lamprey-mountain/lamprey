@@ -1,5 +1,5 @@
 [package]
-name = "lamprey-search"
+name = "kerosene-search"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true

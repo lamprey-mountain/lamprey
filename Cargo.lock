@@ -3735,6 +3735,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "kerosene-search"
+version = "0.1.4"
+dependencies = [
+ "bytes",
+ "dashmap 6.2.1",
+ "lamprey-common",
+ "lamprey-markdown",
+ "once_cell",
+ "opendal",
+ "pastey 0.2.3",
+ "serde_json",
+ "tantivy",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
+]
+
+[[package]]
 name = "kerosene-services"
 version = "0.1.4"
 dependencies = [
@@ -3770,6 +3789,7 @@ dependencies = [
  "jsonwebtoken",
  "kameo",
  "kerosene-core",
+ "kerosene-search",
  "kerosene-sync",
  "lamprey-backend-core",
  "lamprey-backend-data-postgres",
@@ -3777,7 +3797,6 @@ dependencies = [
  "lamprey-macros",
  "lamprey-markdown",
  "lamprey-script",
- "lamprey-search",
  "lamprey-unfurl",
  "lettre",
  "maxminddb",
@@ -3921,7 +3940,6 @@ dependencies = [
  "lamprey-macros",
  "lamprey-markdown",
  "lamprey-script",
- "lamprey-search",
  "lamprey-unfurl",
  "lettre",
  "matchit 0.9.2",
@@ -4338,25 +4356,6 @@ dependencies = [
  "uuid",
  "wtransport",
  "yrs",
-]
-
-[[package]]
-name = "lamprey-search"
-version = "0.1.4"
-dependencies = [
- "bytes",
- "dashmap 6.2.1",
- "lamprey-common",
- "lamprey-markdown",
- "once_cell",
- "opendal",
- "pastey 0.2.3",
- "serde_json",
- "tantivy",
- "tokio",
- "tracing",
- "url",
- "uuid",
 ]
 
 [[package]]

@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use common::v1::types::{AuditLogEntry, Channel, Message, MessageSync, Room, RoomMember, User};
 use common::v2::types::media::Media;
-use lamprey_search::transform::{
+use kerosene_search::transform::{
     SearchAuditLogEntry, SearchChannel, SearchMedia, SearchMessage, SearchRoom, SearchRoomMember,
     SearchUser,
 };

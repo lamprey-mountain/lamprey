@@ -4,7 +4,7 @@ use common::v2::types::{PermissionOverwriteId, RoleVerId, RoomId};
 use ecow::EcoString;
 use im::HashMap as ImMap;
 use kerosene_core::error::{ApiError, ErrorCode};
-use lamprey_search::visibility::ChannelVisibility;
+use kerosene_search::visibility::ChannelVisibility;
 use std::sync::Arc;
 use tracing::warn;
 

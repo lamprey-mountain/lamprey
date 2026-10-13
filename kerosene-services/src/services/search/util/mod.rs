@@ -1,5 +1,5 @@
 // TEMP: re-export
-pub use lamprey_search::{
+pub use kerosene_search::{
     schema::SCHEMA,
     util::{BqBuilder, IntoTantivyOrder},
 };

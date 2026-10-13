@@ -7,7 +7,7 @@ use common::v1::types::{
 };
 use dashmap::DashSet;
 use lamprey_backend_core::types::data::{SearchReindexQueue, SearchReindexQueueTarget};
-use lamprey_search::transform::{
+use kerosene_search::transform::{
     SearchAuditLogEntry, SearchChannel, SearchMedia, SearchMessage, SearchRoom, SearchRoomMember,
     SearchUser,
 };

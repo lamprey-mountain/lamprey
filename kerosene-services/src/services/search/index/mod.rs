@@ -3,7 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use lamprey_search::directory::ObjectDirectory;
+use kerosene_search::directory::ObjectDirectory;
 use tantivy::{
     DocAddress, Index, IndexReader, IndexWriter, Searcher, TantivyDocument, Term,
     collector::Collector, query::Query, schema::document::DocumentDeserialize,

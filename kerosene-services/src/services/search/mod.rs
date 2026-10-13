@@ -15,7 +15,7 @@ mod tokenizer;
 mod util;
 
 // TEMP: re-export
-pub use lamprey_search::visibility::{
+pub use kerosene_search::visibility::{
     SearchAuditLogVisibility, SearchMediaVisibility, SearchRoomsVisibility,
 };
 

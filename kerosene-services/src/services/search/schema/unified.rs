@@ -1,7 +1,7 @@
 use crate::services::search::schema::IndexDefinition;
 use tantivy::schema::Schema;
 
-pub use lamprey_search::schema::UnifiedSchema;
+pub use kerosene_search::schema::UnifiedSchema;
 
 /// an index containing any lamprey data type
 #[derive(Default)]

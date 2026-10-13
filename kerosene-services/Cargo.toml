@@ -42,13 +42,13 @@ jsonwebkey = { version = "0.4.0", features = ["generate", "pkcs-convert"] }
 jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
 kameo = "0.19.2"
 kerosene-core = { version = "0.1.1", path = "../kerosene-core" }
+kerosene-search = { package = "kerosene-search", version = "0.1.0", path = "../kerosene-search" }
 kerosene-sync = { version = "0.1.1", path = "../kerosene-sync" }
 lamprey-backend-core = { path = "../crate-backend-core" }
 lamprey-backend-data-postgres = { version = "0.1.1", path = "../crate-backend-data-postgres" }
 lamprey-macros = { version = "0.1.1", path = "../crate-macros" }
 lamprey-markdown = { version = "0.1", path = "../crate-markdown" }
 lamprey-script = { package = "lamprey-script", version = "0.1.0", path = "../crate-script" }
-lamprey-search = { package = "lamprey-search", version = "0.1.0", path = "../crate-search" }
 lamprey-unfurl = { version = "0.1", path = "../crate-unfurl" }
 lettre = { version = "0.11.23", default-features = false, features = ["builder", "pool", "smtp-transport", "tokio1-rustls-tls"] }
 maxminddb = "0.28.1"

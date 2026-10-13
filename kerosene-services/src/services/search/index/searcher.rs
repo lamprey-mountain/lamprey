@@ -29,7 +29,7 @@ use crate::services::search::{
     index::{AsyncSearcher, glue::TantivyMessage},
     util::IntoTantivyOrder,
 };
-use lamprey_search::visibility::{
+use kerosene_search::visibility::{
     SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
     SearchMessagesVisibility, SearchRoomMemberVisibility, SearchRoomsVisibility, TantivyVisibility,
 };

@@ -21,7 +21,7 @@ use crate::services::search::index::searcher::{
     ContentSearcher, TantivySearchAuditLogEntries, TantivySearchChannels, TantivySearchEverything,
     TantivySearchMedia, TantivySearchMessages, TantivySearchRooms, TantivySearchUsers,
 };
-use lamprey_search::visibility::{
+use kerosene_search::visibility::{
     SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
     SearchMessagesVisibility, SearchRoomsVisibility,
 };
