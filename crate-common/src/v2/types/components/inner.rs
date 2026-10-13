@@ -72,7 +72,7 @@ pub struct ComponentMedia {
 #[record]
 #[serde(transparent)]
 pub struct Create {
-    inner: Components,
+    pub(super) inner: Components,
 }
 
 fn is_false(b: &bool) -> bool {

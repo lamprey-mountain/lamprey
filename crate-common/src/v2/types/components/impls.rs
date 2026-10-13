@@ -124,8 +124,7 @@ impl Components {
             match &mut comp.ty {
                 ComponentType::Container(container) => container.components.retain(|c| *c != id),
                 ComponentType::Details(details) => {
-                    details.summary.retain(|c| *c != id);
-                    details.details.retain(|c| *c != id);
+                    details.children.retain(|c| *c != id);
                 }
                 ComponentType::Section(section) => section.components.retain(|c| *c != id),
                 ComponentType::Form(form) => form.components.retain(|c| *c != id),
@@ -234,7 +233,7 @@ impl Components {
                                 section.components.push(cloned.id);
                             }
                             ComponentType::Details(details) => {
-                                details.details.push(cloned.id);
+                                details.children.push(cloned.id);
                             }
                             ComponentType::Form(form) => {
                                 form.components.push(cloned.id);
@@ -294,8 +293,7 @@ impl Components {
                 row.components = clone_children(&row.components);
             }
             ComponentType::Details(details) => {
-                details.summary = clone_children(&details.summary);
-                details.details = clone_children(&details.details);
+                details.children = clone_children(&details.children);
             }
             _ => {}
         }
@@ -373,14 +371,9 @@ impl Components {
                     }
                 }
                 ComponentType::Details(details) => {
-                    if let Some(pos) = details.summary.iter().position(|c| *c == target_id) {
+                    if let Some(pos) = details.children.iter().position(|c| *c == target_id) {
                         details
-                            .summary
-                            .splice(pos..pos + 1, replacement_ids.clone());
-                        true
-                    } else if let Some(pos) = details.details.iter().position(|c| *c == target_id) {
-                        details
-                            .details
+                            .children
                             .splice(pos..pos + 1, replacement_ids.clone());
                         true
                     } else {
@@ -531,9 +524,8 @@ impl<'c> ComponentRef<'c> {
                 .collect::<Vec<_>>()
                 .into_iter(),
             ComponentType::Details(details) => details
-                .summary
+                .children
                 .iter()
-                .chain(details.details.iter())
                 .map(|id| self.components.get(*id).unwrap())
                 .collect::<Vec<_>>()
                 .into_iter(),
@@ -563,9 +555,8 @@ impl<'c> ComponentRef<'c> {
                 .iter()
                 .fold(init, |i, c| f(i, self.components.get(*c).unwrap())),
             ComponentType::Details(details) => details
-                .summary
+                .children
                 .iter()
-                .chain(details.details.iter())
                 .fold(init, |i, c| f(i, self.components.get(*c).unwrap())),
             _ => init,
         }

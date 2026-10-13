@@ -1,12 +1,48 @@
 //! logic for validating components
 
-use crate::{
-    v1::types::error::{ApiError, ApiResult, ErrorCode, ErrorField, ErrorFieldType},
-    v2::types::components::{
-        Component, ComponentCustomId, ComponentId, ComponentType, Components, Create,
-        interactive::{Label, Validation},
-    },
+use std::collections::HashSet;
+
+use crate::v2::types::components::{
+    Component, ComponentCustomId, ComponentId, ComponentType, Components, Create,
+    interactive::{Label, Validation},
 };
+
+// TODO: more validation
+// - validate text length with both byte length and graphemes
+// - validate that components don't have duplicate ids (ie. two components cant have the same id)
+// - validate that components aren't referenced more than once (ie. the same component cant be in two different containers)
+// - validate that cycles dont exist (ie. components must form an acyclic tree)
+// - validate ComponentType::{is_usable_inline, requires_form}
+// - validate that forms, rows cannot be nested
+
+// TODO: derive default
+pub struct ValidationState {
+    path: Vec<String>,
+    errors: Vec<ParseField>,
+    limits: Limits,
+    known_ids: HashSet<ComponentId>,
+    used_ids: HashSet<ComponentId>,
+    seen_ids: HashSet<ComponentId>,
+    seen_custom_ids: HashSet<ComponentCustomId>,
+}
+
+// struct ValidationPath {
+//     path: String,
+//     context: ValidationContext,
+// }
+
+// alternatively, i could have is_inside_row: bool, is_inside_form
+#[derive(Debug, Clone, Copy)]
+enum ValidationContext {
+    /// we're not inside any specific context
+    Root,
+
+    /// we're inside a form
+    Form,
+
+    /// we're inside a row
+    Row,
+}
 
 /// restrictions on a component tree
 #[derive(Debug, Clone)]
@@ -36,47 +72,51 @@ pub struct Limits {
     pub allow_interactive: bool,
 }
 
-pub struct ComponentsParseError {
-    pub data: Create,
-    pub errors: Vec<ErrorField>,
+pub struct ParseOutput {
+    pub invalid: Components,
+    pub errors: Vec<ParseField>,
+}
+
+pub struct ParseField {
+    /// path to this field inside the component object
+    pub key: Vec<String>,
+
+    /// the errors that occured
+    pub errors: Vec<ParseError>,
 }
 
 /// an error that occured while parsing/validating components
-// TODO: more validation (maybe reuse errorfield)
-// - validate text length with both byte length and graphemes
-// - validate that components don't have duplicate ids (ie. two components cant have the same id)
-// - validate that components aren't referenced more than once (ie. the same component cant be in two different containers)
-// - validate that cycles dont exist (ie. components must form an acyclic tree)
-// - validate ComponentType::{is_usable_inline, requires_form}
-// - validate that forms, rows cannot be nested
 #[derive(Debug, thiserror::Error)]
 pub enum ParseError {
     #[error("at least one root component is required")]
     MissingRoot,
 
+    #[error("component id {0:?} already used")]
+    DuplicateId(ComponentId),
+
+    #[error("component custom id {0:?} already used")]
+    DuplicateCustomId(ComponentCustomId),
+
     #[error("component {0:?} doesnt exist")]
     UnknownComponent(ComponentId),
-}
 
-pub struct ValidationState<'a> {
-    path: Vec<String>,
-    errors: Vec<ErrorField>,
-    components: &'a Components,
-    // TODO: use ComponentsLimits
-    // TODO: use ValidationContext
-}
+    #[error("label text must be between {min} and {max} characters")]
+    LabelTextLength { min: u64, max: u64 },
 
-// alternatively, i could have is_inside_row: bool, is_inside_form
-#[derive(Debug, Clone, Copy)]
-enum ValidationContext {
-    /// we're not inside any specific context
-    Root,
+    #[error("label description must be between {min} and {max} characters")]
+    LabelDescriptionLength { min: u64, max: u64 },
 
-    /// we're inside a form
-    Form,
+    #[error("custom_id must be between {min} and {max} characters")]
+    CustomIdLength { min: u64, max: u64 },
 
-    /// we're inside a row
-    Row,
+    #[error("text content too long (max {max})")]
+    TextLength { max: u64 },
+
+    #[error("row can have max {max} components")]
+    RowChildrenLength { max: u64 },
+
+    #[error("items must be between {min} and {max}")]
+    GalleryItemsLength { min: u64, max: u64 },
 }
 
 // TODO: maybe use this trait?
@@ -92,16 +132,20 @@ enum ValidationContext {
 //     // visit etc
 // }
 
-impl<'a> ValidationState<'a> {
-    pub fn new(components: &'a Components) -> Self {
+impl ValidationState {
+    fn new(limits: Limits) -> Self {
         Self {
             path: vec![],
             errors: vec![],
-            components,
+            limits,
+            seen_ids: HashSet::new(),
+            seen_custom_ids: HashSet::new(),
+            known_ids: HashSet::new(),
+            used_ids: HashSet::new(),
         }
     }
 
-    pub fn enter<F>(&mut self, segment: impl Into<String>, f: F)
+    fn enter<F>(&mut self, segment: impl Into<String>, f: F)
     where
         F: FnOnce(&mut Self),
     {
@@ -110,89 +154,72 @@ impl<'a> ValidationState<'a> {
         self.path.pop();
     }
 
-    pub fn enter_index<F>(&mut self, index: usize, f: F)
+    fn enter_index<F>(&mut self, index: usize, f: F)
     where
         F: FnOnce(&mut Self),
     {
         self.enter(index.to_string(), f)
     }
 
-    pub fn push_error(&mut self, message: String, ty: ErrorFieldType) {
-        self.errors.push(ErrorField {
-            key: self.path.clone(),
-            message,
-            ty,
-        });
+    fn push_error(&mut self, error: ParseError) {
+        if let Some(field) = self.errors.iter_mut().find(|f| f.key == self.path) {
+            field.errors.push(error);
+        } else {
+            self.errors.push(ParseField {
+                key: self.path.clone(),
+                errors: vec![error],
+            });
+        }
     }
 
-    pub fn has_component(&self, id: &ComponentId) -> bool {
-        self.components.items.iter().any(|c| &c.id == id)
+    fn has_component(&self, id: &ComponentId) -> bool {
+        self.known_ids.contains(id)
     }
 
-    pub fn validate_label(&mut self, label: &Label) {
-        if label.text.is_empty() || label.text.len() > 256 {
-            self.push_error(
-                "label text must be between 1 and 256 characters".to_owned(),
-                ErrorFieldType::Length {
-                    min: Some(1),
-                    max: Some(256),
-                },
-            );
+    fn validate_label(&mut self, label: &Label) {
+        let max_label = self.limits.text_label as u64;
+        if label.text.is_empty() || label.text.len() as u64 > max_label {
+            self.push_error(ParseError::LabelTextLength {
+                min: 1,
+                max: max_label,
+            });
         }
         if let Some(desc) = &label.description {
-            if desc.is_empty() || desc.len() > 2048 {
-                self.push_error(
-                    "label description must be between 1 and 2048 characters".to_owned(),
-                    ErrorFieldType::Length {
-                        min: Some(1),
-                        max: Some(2048),
-                    },
-                );
+            let max_desc = self.limits.text_description as u64;
+            if desc.is_empty() || desc.len() as u64 > max_desc {
+                self.push_error(ParseError::LabelDescriptionLength {
+                    min: 1,
+                    max: max_desc,
+                });
             }
         }
     }
 
     // TODO: impl validate for ComponentCustomId
-    pub fn validate_custom_id(&mut self, custom_id: &ComponentCustomId) {
+    fn validate_custom_id(&mut self, custom_id: &ComponentCustomId) {
         if custom_id.0.is_empty() || custom_id.0.len() > 128 {
-            self.push_error(
-                "custom_id must be between 1 and 128 characters".to_owned(),
-                ErrorFieldType::Length {
-                    min: Some(1),
-                    max: Some(128),
-                },
-            );
+            self.push_error(ParseError::CustomIdLength { min: 1, max: 128 });
         }
     }
 
-    pub fn validate_validation(
-        &mut self,
-        _component_type: &ComponentType,
-        _validation: &Validation,
-    ) {
+    fn validate_validation(&mut self, _component_type: &ComponentType, _validation: &Validation) {
         // TODO: Implement more robust validation for `Validation` struct
         todo!()
     }
 }
 
 impl Components {
-    pub fn validate(&self) -> ApiResult<()> {
-        let mut state = ValidationState::new(self);
+    fn parse(self, mut state: ValidationState) -> Result<Self, ParseOutput> {
+        // TODO: populate state.known_ids
 
         if self.roots.is_empty() {
-            state.push_error(
-                "at least one root component is required".to_owned(),
-                ErrorFieldType::Other,
-            );
+            state.push_error(ParseError::MissingRoot);
         }
 
         for (i, root_id) in self.roots.iter().enumerate() {
             state.enter_index(i, |s| {
                 if !s.has_component(root_id) {
-                    s.push_error(
-                        format!("root component {} not found", root_id.0),
-                        ErrorFieldType::Other,
-                    );
+                    s.push_error(ParseError::UnknownComponent(*root_id));
                 }
             });
         }
@@ -202,21 +229,24 @@ impl Components {
         }
 
         if state.errors.is_empty() {
-            Ok(())
+            Ok(self)
         } else {
-            Err(ApiError {
-                fields: state.errors,
-                ..ApiError::with_message(
-                    ErrorCode::InvalidData,
-                    "invalid component data".to_owned(),
-                )
+            Err(ParseOutput {
+                invalid: self,
+                errors: state.errors,
             })
         }
     }
 }
 
+// TODO: impl ParseErrors to ApiError conersion
+
 impl Component {
     fn validate_inner(&self, state: &mut ValidationState) {
+        // TODO: check for duplicate ids
+        // state.seen_ids.insert(self.id);
+        // state.push_error(ParseError::DuplicateComponentId(component.id));
+
         // TODO: Implement recursive validation based on component type
         self.ty.validate_inner(state);
     }
@@ -275,19 +305,13 @@ impl ComponentType {
                 self.validate_child_ids(&container.components, "components", state);
             }
             ComponentType::Text(text) => {
-                if text.content.len() > 8192 {
-                    state.push_error(
-                        "text content too long".to_owned(),
-                        ErrorFieldType::Length {
-                            min: None,
-                            max: Some(8192),
-                        },
-                    );
+                let max_text = state.limits.text_component as u64;
+                if text.content.len() as u64 > max_text {
+                    state.push_error(ParseError::TextLength { max: max_text });
                 }
             }
             ComponentType::Details(details) => {
-                self.validate_child_ids(&details.summary, "summary", state);
-                self.validate_child_ids(&details.details, "details", state);
+                self.validate_child_ids(&details.children, "children", state);
             }
             ComponentType::Section(section) => {
                 self.validate_child_ids(&section.components, "components", state);
@@ -299,13 +323,7 @@ impl ComponentType {
             }
             ComponentType::Row(row) => {
                 if row.components.len() > 5 {
-                    state.push_error(
-                        "row can have max 5 components".to_owned(),
-                        ErrorFieldType::Length {
-                            min: None,
-                            max: Some(5),
-                        },
-                    );
+                    state.push_error(ParseError::RowChildrenLength { max: 5 });
                 }
                 self.validate_child_ids(&row.components, "components", state);
             }
@@ -314,24 +332,12 @@ impl ComponentType {
             }
             ComponentType::Gallery(gallery) => {
                 if gallery.items.is_empty() || gallery.items.len() > 20 {
-                    state.push_error(
-                        "items must be between 1 and 20".to_owned(),
-                        ErrorFieldType::Length {
-                            min: Some(1),
-                            max: Some(20),
-                        },
-                    );
+                    state.push_error(ParseError::GalleryItemsLength { min: 1, max: 20 });
                 }
             }
             ComponentType::Reference(reference) => {
                 if !state.has_component(&reference.reference_id) {
-                    state.push_error(
-                        format!(
-                            "referenced component {} not found",
-                            reference.reference_id.0
-                        ),
-                        ErrorFieldType::Other,
-                    );
+                    state.push_error(ParseError::UnknownComponent(reference.reference_id));
                 }
             }
             ComponentType::Template(_) => {
@@ -345,10 +351,7 @@ impl ComponentType {
             for (i, id) in ids.iter().enumerate() {
                 s.enter_index(i, |s2| {
                     if !s2.has_component(id) {
-                        s2.push_error(
-                            format!("component {} not found", id.0),
-                            ErrorFieldType::Other,
-                        );
+                        s2.push_error(ParseError::UnknownComponent(*id));
                     }
                 });
             }
@@ -358,8 +361,8 @@ impl ComponentType {
 
 impl Create {
     /// parse and validate
-    pub fn parse(self) -> Result<Components, ComponentsParseError> {
-        todo!()
+    pub fn parse(self, limits: Limits) -> Result<Components, ParseOutput> {
+        self.inner.parse(ValidationState::new(limits))
     }
 }
 

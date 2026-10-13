@@ -87,8 +87,13 @@ pub enum ComponentType {
 pub struct Input {
     pub custom_id: ComponentCustomId,
     pub label: Label,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub placeholder: Option<String>,
+
     pub validation: Validation,
 }
 
@@ -98,8 +103,12 @@ pub struct Textarea {
     pub custom_id: ComponentCustomId,
     pub label: Label,
     pub style: TextareaStyle,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub placeholder: Option<String>,
+
     pub validation: Validation,
 }
 
@@ -110,7 +119,10 @@ pub struct Textarea {
 pub struct Select {
     pub custom_id: ComponentCustomId,
     pub label: Label,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub placeholder: Option<String>,
+
     pub dataset: Dataset,
     pub validation: Validation,
 }
@@ -143,7 +155,7 @@ pub struct Checkboxes {
 }
 
 /// markdown text
-// maybe rename to Markdown?
+// NOTE: maybe rename to Markdown?
 #[record]
 pub struct Text {
     pub content: String,
@@ -154,14 +166,16 @@ pub struct Text {
 pub struct Details {
     #[serde(default)]
     pub open: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
-    pub summary: Vec<ComponentId>,
-    pub details: Vec<ComponentId>,
+    /// the first child is the summary
+    pub children: Vec<ComponentId>,
 }
 
 /// a section without any margin/padding
 #[record]
 pub struct Section {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
     pub components: Vec<ComponentId>,
 }
@@ -180,6 +194,7 @@ pub struct Form {
 /// intended for rows of buttons. cannot hold any component type other than `Button`. maximum of 5 components per row.
 #[record]
 pub struct Row {
+    // TODO: maybe allow other component types?
     pub components: Vec<ComponentId>,
 }
 
@@ -233,6 +248,26 @@ pub struct Button {
 /// a group of other components
 #[record]
 pub struct Container {
+    /// the child components in this container
+    // NOTE: this may be empty. should i allow empty containers in flumes only or always?
+    // TODO: use utoipa/validate attrs. maybe add to record macro.
+    // #[schema(max_length = 64)]
+    // #[validate(length(max = 64))]
     pub components: Vec<ComponentId>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
 }
+
+impl ComponentType {
+    // pub fn is_interactive(&self) -> bool;
+    // has_children
+    // children
+}
+
+impl Row {
+    // pub fn can_hold(&self, c: &ComponentType) -> bool;
+}
+
+// TODO: maybe add trait ComponentType {}?
+// TODO: maybe add trait ParentComponent { fn children(); fn can_hold(); ... }
