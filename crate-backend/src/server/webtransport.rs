@@ -407,7 +407,7 @@ mod v2 {
     use common::v2::types::sync::dispatch::{Dispatch, Ready};
     use futures::SinkExt;
     use kerosene_services::globals::messaging::Broadcast;
-    use kerosene_sync::util::{CLOSE_TIME, HEARTBEAT_TIME, Timeout};
+    use kerosene_sync::util::Timeout;
     use tokio::sync::watch;
 
     use common::v1::types::presence::Presence;
@@ -416,8 +416,8 @@ mod v2 {
     use common::v2::types::sync::stream::hello;
     use common::v2::types::sync::transport::webtransport::Params;
     use kerosene_sync::v2::codec::Codec;
-    use kerosene_sync::v2::transport::webtransport::{WebtransportStream, WebtransportTransport};
-    use kerosene_sync::v2::transport::{Transport, TransportStream};
+    use kerosene_sync::v2::transport::TransportStream;
+    use kerosene_sync::v2::transport::webtransport::WebtransportTransport;
     use tokio::io::AsyncReadExt;
 
     const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
