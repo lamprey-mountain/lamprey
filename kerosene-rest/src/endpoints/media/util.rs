@@ -10,12 +10,10 @@ use crate::{
 };
 use common::v2::types::media::Media;
 use headers::{
-    AcceptRanges, CacheControl, ContentLength, ContentRange, ContentType, ETag,
-    LastModified,
+    AcceptRanges, CacheControl, ContentLength, ContentRange, ContentType, ETag, LastModified,
 };
 use http::StatusCode;
 
-// NOTE: renamed from ContentInfo
 /// information about a piece of media
 #[derive(Debug)]
 pub enum MediaInfo<'a> {
@@ -97,7 +95,6 @@ impl ResponseMetadata {
     }
 }
 
-// NOTE: renamed from build_headers
 pub fn calculate_response_metadata<'a>(
     headers_req: &HeadersRequest,
     info: &MediaInfo<'a>,
@@ -180,8 +177,7 @@ pub fn calculate_response_metadata<'a>(
                 .into());
             }
             let r = satisfiable_ranges[0];
-            headers.content_range =
-                Some(ContentRange::bytes(r, content_length.unwrap_or(0)).unwrap());
+            headers.content_range = ContentRange::bytes(r, content_length).ok();
             range = Some(r);
         }
     }
