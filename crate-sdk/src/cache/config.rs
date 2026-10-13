@@ -116,6 +116,7 @@ impl CacheBuilder {
         Cache {
             inner: Arc::new(CacheInner {
                 config: self.config,
+                current: Default::default(),
                 rooms: DashMap::new(),
                 channels: DashMap::new(),
                 users: DashMap::new(),

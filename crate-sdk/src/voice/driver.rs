@@ -244,23 +244,25 @@ impl Driver {
                 self.rtc.add_local_candidate(c);
             }
             RtcCommand::Mute(mute) => {
-                let state = self.shared.voice_state.borrow();
-                let update = match &*state {
-                    LocalVoiceState::Connecting(u) => VoiceStateUpdate {
-                        self_mute: mute,
-                        ..u.clone()
-                    },
-                    LocalVoiceState::Pending(_s, u) => VoiceStateUpdate {
-                        self_mute: mute,
-                        ..u.clone()
-                    },
-                    LocalVoiceState::Synced(s) => VoiceStateUpdate {
-                        channel_id: s.channel_id,
-                        self_deaf: s.self_deaf,
-                        self_mute: mute,
-                        self_video: s.self_video,
-                        screenshare: None,
-                    },
+                let update = {
+                    let state = self.shared.voice_state.borrow();
+                    match &*state {
+                        LocalVoiceState::Connecting(u) => VoiceStateUpdate {
+                            self_mute: mute,
+                            ..u.clone()
+                        },
+                        LocalVoiceState::Pending(_s, u) => VoiceStateUpdate {
+                            self_mute: mute,
+                            ..u.clone()
+                        },
+                        LocalVoiceState::Synced(s) => VoiceStateUpdate {
+                            channel_id: s.channel_id,
+                            self_deaf: s.self_deaf,
+                            self_mute: mute,
+                            self_video: s.self_video,
+                            screenshare: None,
+                        },
+                    }
                 };
 
                 self.syncer.send(MessageClient::VoiceDispatch {
@@ -282,23 +284,25 @@ impl Driver {
                 });
             }
             RtcCommand::Deafen(deafen) => {
-                let state = self.shared.voice_state.borrow();
-                let update = match &*state {
-                    LocalVoiceState::Connecting(u) => VoiceStateUpdate {
-                        self_deaf: deafen,
-                        ..u.clone()
-                    },
-                    LocalVoiceState::Pending(_s, u) => VoiceStateUpdate {
-                        self_deaf: deafen,
-                        ..u.clone()
-                    },
-                    LocalVoiceState::Synced(s) => VoiceStateUpdate {
-                        channel_id: s.channel_id,
-                        self_deaf: deafen,
-                        self_mute: s.self_mute,
-                        self_video: s.self_video,
-                        screenshare: None,
-                    },
+                let update = {
+                    let state = self.shared.voice_state.borrow();
+                    match &*state {
+                        LocalVoiceState::Connecting(u) => VoiceStateUpdate {
+                            self_deaf: deafen,
+                            ..u.clone()
+                        },
+                        LocalVoiceState::Pending(_s, u) => VoiceStateUpdate {
+                            self_deaf: deafen,
+                            ..u.clone()
+                        },
+                        LocalVoiceState::Synced(s) => VoiceStateUpdate {
+                            channel_id: s.channel_id,
+                            self_deaf: deafen,
+                            self_mute: s.self_mute,
+                            self_video: s.self_video,
+                            screenshare: None,
+                        },
+                    }
                 };
 
                 self.syncer.send(MessageClient::VoiceDispatch {

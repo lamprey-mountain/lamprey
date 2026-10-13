@@ -16,6 +16,7 @@ pub mod syncer;
 
 // TODO: impl these
 // mod member_list;
+// mod media; // media handling utilities
 //
 // #[cfg(feature = "document")]
 // mod document;

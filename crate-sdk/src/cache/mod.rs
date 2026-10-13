@@ -1,22 +1,23 @@
-use std::{hash::Hash, sync::Arc};
+use std::sync::Arc;
 
+use arc_swap::ArcSwap;
 use common::{
     v1::types::{
-        Channel, MessagePayload, MessageSync, PermissionBits, PermissionOverwrite, Role, Room,
-        RoomMember, ThreadMember, User,
+        Channel, PermissionBits, PermissionOverwrite, PermissionOverwriteType, Role, Room,
+        RoomMember, ThreadMember, User, presence::Presence, voice::VoiceState,
     },
-    v2::types::{ChannelId, RoleId, RoomId, UserId},
+    v2::types::{ChannelId, RoleId, RoomId, SessionId, UserId},
 };
 use dashmap::DashMap;
-use tokio::sync::RwLock;
 
 mod config;
 mod permissions;
+mod update;
 
 pub use config::{CacheBuilder, CacheConfig};
 pub use permissions::RoomPermissions;
 
-use crate::messages::MessagesInner;
+use crate::messages::MessagesHandle;
 
 #[derive(Debug, Default, Clone)]
 pub struct Cache {
@@ -26,55 +27,102 @@ pub struct Cache {
 #[derive(Debug, Default)]
 pub struct CacheInner {
     pub(crate) config: CacheConfig,
-    pub(crate) rooms: DashMap<RoomId, CachedRoom>,
-    pub(crate) channels: DashMap<ChannelId, CachedChannel>,
-    pub(crate) users: DashMap<UserId, CachedUser>,
-    // TODO: use LruCache and/or Dashmap
+    pub(crate) current: ArcSwap<CacheCurrent>,
+    pub(crate) rooms: DashMap<RoomId, Arc<CachedRoom>>,
+    pub(crate) channels: DashMap<ChannelId, Arc<CachedChannel>>,
+    pub(crate) users: DashMap<UserId, Arc<CachedUser>>,
+    // TODO: maybe use LruCache?
     // pub(crate) users: lru::LruCache<UserId, CachedUser>,
 }
 
-#[derive(Debug, Clone)]
+/// info about the current client
+#[derive(Debug, Clone, Copy, Default)]
+pub struct CacheCurrent {
+    /// the session that the client is authenticating as
+    pub session_id: Option<SessionId>,
+
+    /// the user that the client is authenticating as
+    pub user_id: Option<UserId>,
+}
+
+#[derive(Debug)]
 pub struct CachedRoom {
-    pub inner: Box<Room>,
+    pub inner: ArcSwap<Room>,
     pub members: DashMap<UserId, RoomMember>,
-    pub channels: DashMap<ChannelId, CachedChannel>, // contains threads
+    pub channels: DashMap<ChannelId, Arc<CachedChannel>>,
+    pub threads: DashMap<ChannelId, Arc<CachedChannel>>,
     pub roles: DashMap<RoleId, Role>,
-    pub(crate) perm_roles: DashMap<RoleId, (PermSet, u16)>,
+    perm_roles: DashMap<RoleId, (PermSet, u16)>,
 }
 
 // TODO: impl Deref for CachedFoo structs?
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CachedUser {
-    pub inner: Box<User>,
-    // TODO: store relationships separately
+    pub inner: ArcSwap<User>,
+    // TODO: store relationships here or separately?
     // /// your relationship with this user, if it is known
     // pub relationship: Option<Relationship>,
+    /// the user's presence
     // TODO: use this instead of inner.presence?
-    // pub presence: Option<Presence>,
+    pub presence: ArcSwap<Presence>,
 }
 
-#[derive(Debug, Clone)]
-pub struct CachedCurrentUser {
-    pub inner: Box<User>,
-    // TODO: use this instead of inner.presence?
-    // pub presence: Option<Presence>,
-}
-
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CachedChannel {
-    pub inner: Box<Channel>,
+    pub inner: ArcSwap<Channel>,
     pub members: DashMap<UserId, ThreadMember>,
-    // PERF: don't use Arc<RwLock<_>>? what do i use instead?
-    pub(crate) messages: Arc<RwLock<MessagesInner>>,
-    pub(crate) perm_roles: DashMap<RoleId, PermSet>,
-    pub(crate) perm_users: DashMap<UserId, PermSet>,
+    pub voice_states: DashMap<UserId, Arc<VoiceState>>,
+    messages: MessagesHandle,
+    perm_roles: DashMap<RoleId, PermSet>,
+    perm_users: DashMap<UserId, PermSet>,
+}
+
+impl CachedChannel {
+    /// wrap an existing channel object
+    pub fn new(channel: Channel) -> Self {
+        let perm_roles: DashMap<RoleId, PermSet> = DashMap::new();
+        let perm_users: DashMap<UserId, PermSet> = DashMap::new();
+        for ow in &channel.permission_overwrites {
+            let perm = PermSet::from(ow);
+            match ow.ty {
+                PermissionOverwriteType::Role => {
+                    perm_roles.insert(ow.id.into(), perm);
+                }
+                PermissionOverwriteType::User => {
+                    perm_users.insert(ow.id.into(), perm);
+                }
+            }
+        }
+
+        Self {
+            inner: ArcSwap::from_pointee(channel),
+            members: DashMap::new(),
+            voice_states: DashMap::new(),
+            messages: MessagesHandle::new(),
+            perm_roles,
+            perm_users,
+        }
+    }
+}
+
+impl CachedRoom {
+    fn new(room: Room) -> Self {
+        Self {
+            inner: ArcSwap::from_pointee(room),
+            members: DashMap::new(),
+            channels: DashMap::new(),
+            threads: DashMap::new(),
+            roles: DashMap::new(),
+            perm_roles: DashMap::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct PermSet {
-    pub(crate) allow: PermissionBits,
-    pub(crate) deny: PermissionBits,
+struct PermSet {
+    allow: PermissionBits,
+    deny: PermissionBits,
 }
 
 impl From<&Role> for PermSet {
@@ -96,48 +144,6 @@ impl From<&PermissionOverwrite> for PermSet {
 }
 
 // TODO: impl From<User> for CachedUser
-
-pub struct CacheRef<'a, K, V> {
-    inner: dashmap::mapref::one::Ref<'a, K, V>,
-}
-
-/// something that can be identified with an id
-pub trait Identifiable {
-    type Id;
-
-    fn id(&self) -> Self::Id;
-}
-
-// TODO: allow using custom models for cache
-// pub trait CacheableChannel: From<Channel> {
-//     fn id(&self) -> ChannelId;
-//     fn parent_id(&self) -> Option<ChannelId>;
-//     fn room_id(&self) -> Option<RoomId>;
-//     fn channel_type(&self) -> ChanneType;
-//     // permission overwrites, last message id, last pin timestamp?
-// }
-
-impl Identifiable for Channel {
-    type Id = ChannelId;
-
-    fn id(&self) -> Self::Id {
-        self.id
-    }
-}
-// TODO: impl Identifiable for room, user
-
-impl<'a, K: Hash + Eq, V> std::ops::Deref for CacheRef<'a, K, V> {
-    type Target = V;
-
-    fn deref(&self) -> &Self::Target {
-        self.inner.value()
-    }
-}
-
-pub type CachedRoomRef<'a> = CacheRef<'a, RoomId, CachedRoom>;
-pub type CachedUserRef<'a> = CacheRef<'a, UserId, CachedUser>;
-pub type CachedCurrentUserRef<'a> = CacheRef<'a, (), CachedCurrentUser>;
-pub type CachedChannelRef<'a> = CacheRef<'a, ChannelId, CachedChannel>;
 
 #[derive(Debug)]
 pub struct CacheStats {
@@ -163,23 +169,27 @@ impl Cache {
     }
 
     /// get a reference to a room from its id
-    pub fn room(&self, id: RoomId) -> Option<CachedRoomRef<'_>> {
-        self.inner.rooms.get(&id).map(|r| CacheRef { inner: r })
+    pub fn room(&self, id: RoomId) -> Option<Arc<CachedRoom>> {
+        self.inner.rooms.get(&id).map(|r| r.value().clone())
     }
 
     /// get a reference to a channel from its id
-    pub fn channel(&self, id: ChannelId) -> Option<CachedChannelRef<'_>> {
-        self.inner.channels.get(&id).map(|c| CacheRef { inner: c })
+    pub fn channel(&self, id: ChannelId) -> Option<Arc<CachedChannel>> {
+        self.inner.channels.get(&id).map(|r| r.value().clone())
     }
 
     /// get a reference to a user from its id
-    pub fn user(&self, id: UserId) -> Option<CachedUserRef<'_>> {
-        self.inner.users.get(&id).map(|u| CacheRef { inner: u })
+    pub fn user(&self, id: UserId) -> Option<Arc<CachedUser>> {
+        self.inner.users.get(&id).map(|r| r.value().clone())
     }
 
     /// get a reference to the current user
-    pub fn current_user(&self) -> Option<CachedCurrentUserRef<'_>> {
-        todo!()
+    pub fn current_user(&self) -> Option<Arc<CachedUser>> {
+        if let Some(uid) = self.inner.current.load().user_id {
+            self.user(uid)
+        } else {
+            None
+        }
     }
 
     /// iterate over all cached rooms
@@ -203,30 +213,6 @@ impl Cache {
             rooms: self.inner.rooms.len(),
             channels: self.inner.channels.len(),
             users: self.inner.users.len(),
-        }
-    }
-}
-
-impl Cache {
-    pub fn update(&mut self, payload: &MessagePayload) {
-        match payload {
-            MessagePayload::Sync { data, .. } => match &**data {
-                MessageSync::MessageCreate { .. } => {
-                    // TODO
-                }
-                _ => {}
-            },
-            MessagePayload::Ready { user, .. } => {
-                if let Some(user) = user {
-                    self.inner.users.insert(
-                        user.id,
-                        CachedUser {
-                            inner: user.clone(),
-                        },
-                    );
-                }
-            }
-            _ => {}
         }
     }
 }

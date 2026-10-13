@@ -103,7 +103,7 @@ impl<'a> RoomPermissions<'a> {
                 );
 
                 // private thread logic
-                if channel.inner.ty == ChannelType::ThreadPrivate {
+                if channel.inner.load().ty == ChannelType::ThreadPrivate {
                     if !bits.has(Permission::ThreadManage) && !bits.has(Permission::Admin) {
                         let is_thread_member =
                             user_id.is_some_and(|uid| channel.members.contains_key(&uid));
@@ -118,7 +118,7 @@ impl<'a> RoomPermissions<'a> {
 
         // mask perms for non-members, even if we have Admin
         if member.is_none() {
-            if channel.is_some_and(|c| c.inner.ty == ChannelType::Broadcast) {
+            if channel.is_some_and(|c| c.inner.load().ty == ChannelType::Broadcast) {
                 bits.mask(PermissionBits::BROADCAST_LURKER_PERMS);
             } else {
                 bits.mask(PermissionBits::VIEW_PERMS);
@@ -136,7 +136,7 @@ impl<'a> RoomPermissions<'a> {
         // NOTE: is this logic correct?
         let visible = match channel {
             Some(_) => bits.has(Permission::Admin) || bits.has(Permission::ChannelView),
-            None => self.room.inner.public || member.is_some(),
+            None => self.room.inner.load().public || member.is_some(),
         };
 
         Permissions {
@@ -155,16 +155,17 @@ impl<'a> RoomPermissions<'a> {
         user_id: Option<UserId>,
         member: Option<&RoomMember>,
     ) {
-        if user_id.is_some_and(|uid| uid == SERVER_USER_ID || self.room.inner.owner_id == Some(uid))
-        {
+        if user_id.is_some_and(|uid| {
+            uid == SERVER_USER_ID || self.room.inner.load().owner_id == Some(uid)
+        }) {
             *rank = u16::MAX;
             *bits = Permission::Admin.into();
             return;
         }
 
         let Some(member) = member else {
-            if self.room.inner.public {
-                let everyone_role_id: RoleId = self.room.inner.id.into_inner().into();
+            if self.room.inner.load().public {
+                let everyone_role_id: RoleId = self.room.inner.load().id.into_inner().into();
                 if let Some(entry) = self.room.perm_roles.get(&everyone_role_id) {
                     let (perms, _) = entry.value();
                     bits.add_all(perms.allow);
@@ -176,7 +177,7 @@ impl<'a> RoomPermissions<'a> {
 
         let mut allowed_bits = PermissionBits::default();
         let mut denied_bits = PermissionBits::default();
-        let everyone_role_id: RoleId = self.room.inner.id.into_inner().into();
+        let everyone_role_id: RoleId = self.room.inner.load().id.into_inner().into();
 
         // NOTE: the everyone role should always exist
         if let Some(entry) = self.room.perm_roles.get(&everyone_role_id) {
@@ -220,12 +221,12 @@ impl<'a> RoomPermissions<'a> {
         channel: &CachedChannel,
         member: Option<&RoomMember>,
     ) {
-        if let Some(parent_id) = channel.inner.parent_id {
+        if let Some(parent_id) = channel.inner.load().parent_id {
             if let Some(parent_cc) = self.room.channels.get(&parent_id) {
                 self.calculate_channel_permissions(bits, timed_out, &*parent_cc, member);
             } else {
                 warn!(
-                    channel_id = ?channel.inner.id,
+                    channel_id = ?channel.inner.load().id,
                     parent_id = ?parent_id,
                     "channel has a parent_id that doesn't exist"
                 );
@@ -242,11 +243,11 @@ impl<'a> RoomPermissions<'a> {
         channel: &CachedChannel,
         member: Option<&RoomMember>,
     ) {
-        if channel.inner.permission_overwrites.is_empty() {
+        if channel.inner.load().permission_overwrites.is_empty() {
             return;
         }
 
-        let everyone_id = self.room.inner.id.into_inner().into();
+        let everyone_id = self.room.inner.load().id.into_inner().into();
 
         // 1. apply everyone allows
         // 2. apply everyone denies
@@ -283,7 +284,8 @@ impl<'a> RoomPermissions<'a> {
         channel: &CachedChannel,
         member: Option<&RoomMember>,
     ) {
-        let Some(locked) = &channel.inner.locked else {
+        let channel_guard = channel.inner.load();
+        let Some(locked) = &channel_guard.locked else {
             return;
         };
 
@@ -303,7 +305,7 @@ impl<'a> RoomPermissions<'a> {
         // or this is a thread and the member has the Manage Threads permission
         let has_perm = bits.has(Permission::Admin)
             || bits.has(Permission::ChannelManage)
-            || (channel.inner.ty.is_thread() && bits.has(Permission::ThreadManage));
+            || (channel.inner.load().ty.is_thread() && bits.has(Permission::ThreadManage));
 
         if !has_bypass && !has_perm {
             *timed_out = true;
