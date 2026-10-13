@@ -55,6 +55,7 @@ impl From<std::io::Error> for FfmpegError {
 }
 
 // TODO; add doc comments
+// TODO: make args/parameters configurable (eg. codec, crf)
 impl Ffmpeg {
     pub fn from_config(_config: &Config) -> Self {
         // TODO: use config
@@ -71,28 +72,40 @@ impl Ffmpeg {
             .unwrap_or(&Path::new("ffprobe"))
     }
 
+    /// transcode some media (usually a gif) to webm
     pub async fn transcode_to_webm(
         &self,
         in_path: &Path,
         out_path: &Path,
     ) -> Result<(), FfmpegError> {
-        // TODO: make args/parameters configurable (eg. codec, crf)
+        #[rustfmt::skip]
         let cmd = Command::new(self.resolved_ffmpeg_path())
-            .args(["-v", "quiet", "-y", "-i"])
+            .args(["-y", "-i"])
             .arg(in_path)
             .args([
-                "-c:v",
-                "libvpx-vp9",
-                "-crf",
-                "30",
-                "-b:v",
-                "0",
+                // yuva420p needs even width/height, so round each dimension down to the nearest even number
+                "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+
+                // use vp9 as the codec
+                "-c:v", "libvpx-vp9",
+
+                // use a pixel format that libvpx-vp9 likes
+                "-pix_fmt", "yuva420p",
+
+                // constant quality level (0-63, lower is better quality/larger file)
+                "-crf", "30",
+
+                // set target bitrate to 0 so VP9 uses crf
+                "-b:v", "0",
+
+                // remove audio
                 "-an",
-                "-f",
-                "webm",
+
+                // use webm as the container format
+                "-f", "webm",
             ])
             .arg(out_path)
-            .stdin(Stdio::piped())
+            .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .output()
@@ -119,7 +132,7 @@ impl Ffmpeg {
         animate: bool,
     ) -> Result<(), FfmpegError> {
         let mut cmd = Command::new(self.resolved_ffmpeg_path());
-        cmd.args(["-v", "quiet", "-y", "-i"]).arg(in_path);
+        cmd.args(["-y", "-i"]).arg(in_path);
 
         if animate {
             // Generate animated WebP for thumbnails
@@ -147,7 +160,7 @@ impl Ffmpeg {
         cmd.arg(out_path);
 
         let output = cmd
-            .stdin(Stdio::piped())
+            .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .output()
@@ -172,15 +185,13 @@ impl Ffmpeg {
     ) -> Result<Vec<u8>, FfmpegError> {
         let output = Command::new(self.resolved_ffmpeg_path())
             .args([
-                "-v",
-                "quiet",
                 &format!("-dump_attachment:{}", index),
                 "/dev/stdout",
                 "-y",
                 "-i",
             ])
             .arg(path)
-            .stdin(Stdio::piped())
+            .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
@@ -200,7 +211,7 @@ impl Ffmpeg {
 
     pub async fn extract_stream(&self, path: &Path, index: u64) -> Result<Vec<u8>, FfmpegError> {
         let output = Command::new(self.resolved_ffmpeg_path())
-            .args(["-v", "quiet", "-i"])
+            .args(["-i"])
             .arg(path)
             .args([
                 "-map",
@@ -211,7 +222,7 @@ impl Ffmpeg {
                 "copy",
                 "-",
             ])
-            .stdin(Stdio::piped())
+            .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
@@ -236,10 +247,10 @@ impl Ffmpeg {
         // TODO: better thumbnail generation logic for videos
         // eg. skip solid black/white frames at start of video, get thumb x% of the way through the video
         let output = Command::new(self.resolved_ffmpeg_path())
-            .args(["-v", "quiet", "-i"])
+            .args(["-i"])
             .arg(path)
             .args(["-vf", "thumbnail", "-frames:v", "1", "-f", "webp", "-"])
-            .stdin(Stdio::piped())
+            .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
@@ -259,12 +270,12 @@ impl Ffmpeg {
 
     pub async fn strip_metadata(&self, path: &Path, format: &str) -> Result<Vec<u8>, FfmpegError> {
         let output = Command::new(self.resolved_ffmpeg_path())
-            .args(["-v", "quiet", "-i"])
+            .args(["-i"])
             .arg(path)
             .args(["-map_metadata", "-1"])
             .args(["-f", format])
             .arg("-")
-            .stdin(Stdio::piped())
+            .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()
@@ -286,15 +297,7 @@ impl Ffmpeg {
         let out = tokio::time::timeout(
             std::time::Duration::from_secs(10),
             Command::new("ffprobe")
-                .args([
-                    "-v",
-                    "quiet",
-                    "-of",
-                    "json",
-                    "-show_format",
-                    "-show_streams",
-                    "-i",
-                ])
+                .args(["-of", "json", "-show_format", "-show_streams", "-i"])
                 .arg(path)
                 .output(),
         )
