@@ -4,7 +4,9 @@ use common::v1::types::embed::Embed;
 use common::v1::types::{MessageAttachmentType, MessageSync, MessageType, UserId, unfurl};
 use common::v2::types::media::{MediaCreate, MediaCreateSource};
 use lamprey_unfurl::util::EmbedMedia;
-use lamprey_unfurl::{DirectMediaPlugin, HtmlStreamPlugin, Unfurler};
+use lamprey_unfurl::{
+    DirectMediaPlugin, JsonLdPlugin, MicrodataPlugin, OpengraphPlugin, Unfurler, WikipediaPlugin,
+};
 use moka::future::Cache;
 use tokio::sync::{Mutex, broadcast};
 use tokio::task::JoinHandle;
@@ -44,10 +46,11 @@ impl ServiceEmbed {
                                 .expect("should always be valid user agent"),
                         )
                 })
-                .add_plugin(DirectMediaPlugin)
-                .add_plugin(HtmlStreamPlugin {
-                    max_bytes: 1024 * 1024 * 4,
-                })
+                .add_plugin(WikipediaPlugin::default())
+                .add_plugin(DirectMediaPlugin::default())
+                .add_plugin(OpengraphPlugin::default())
+                .add_plugin(JsonLdPlugin::default())
+                .add_plugin(MicrodataPlugin::default())
                 .build()
                 .expect("failed to build unfurler"),
         );
