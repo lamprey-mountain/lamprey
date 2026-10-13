@@ -1,4 +1,3 @@
-
 use crate::{
     endpoints::media::util::{MediaInfo, calculate_response_metadata},
     prelude::*,

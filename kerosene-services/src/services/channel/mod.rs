@@ -4,10 +4,10 @@ use std::time::Duration;
 use common::v1::types::presence::Status;
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
-    Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message,
-    MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageChannelTagged, MessageId,
-    MessageSync, MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomFeature,
-    RoomId, ThreadMemberCreate, UserId,
+    Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message, MessageChannelIcon,
+    MessageChannelMoved, MessageChannelRename, MessageChannelTagged, MessageId, MessageSync,
+    MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomFeature, RoomId,
+    ThreadMemberCreate, UserId,
 };
 use common::v2::types::MessageVerId;
 use kerosene_core::error::{ApiError, ErrorCode};

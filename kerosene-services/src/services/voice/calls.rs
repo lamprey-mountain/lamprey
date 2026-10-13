@@ -193,8 +193,7 @@ impl ServiceVoice {
                         // PERF: don't read message from db, store metadata in memory
                         let message = txn.message_get(channel_id, message_id).await?;
 
-                        let MessageType::Call(message_call) =
-                            message.latest_version.message_type
+                        let MessageType::Call(message_call) = message.latest_version.message_type
                         else {
                             return Ok(());
                         };

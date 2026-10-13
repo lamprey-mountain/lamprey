@@ -6,11 +6,11 @@ use tantivy::{
 };
 
 use common::v1::types::search::{
-        AuditLogSearchOrderField, AuditLogSearchRequest, ChannelSearchOrderField,
-        ChannelSearchRequest, Doctype, EverythingSearchRequest, MediaSearchOrderField,
-        MediaSearchRequest, MessageSearchOrderField, MessageSearchRequest, RoomMemberSearchRequest, RoomSearchOrderField,
-        RoomSearchRequest, UserSearchOrderField, UserSearchRequest,
-    };
+    AuditLogSearchOrderField, AuditLogSearchRequest, ChannelSearchOrderField, ChannelSearchRequest,
+    Doctype, EverythingSearchRequest, MediaSearchOrderField, MediaSearchRequest,
+    MessageSearchOrderField, MessageSearchRequest, RoomMemberSearchRequest, RoomSearchOrderField,
+    RoomSearchRequest, UserSearchOrderField, UserSearchRequest,
+};
 
 use crate::prelude::*;
 use crate::services::search::{

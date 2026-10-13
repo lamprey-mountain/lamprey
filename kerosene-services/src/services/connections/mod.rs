@@ -1,7 +1,7 @@
 use common::v1::types::{
-        ConnectionId, MessageHello,
-        presence::{Presence, Status},
-    };
+    ConnectionId, MessageHello,
+    presence::{Presence, Status},
+};
 use dashmap::DashMap;
 use std::time::Duration;
 use std::{collections::HashMap, sync::atomic::AtomicUsize};

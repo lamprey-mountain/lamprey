@@ -3,11 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::{
-    globals::messaging::Broadcast,
-    prelude::*,
-    services::rooms::actor::SyncMessage,
-};
+use crate::{globals::messaging::Broadcast, prelude::*, services::rooms::actor::SyncMessage};
 
 use common::v1::types::{
     ChannelId, ChannelType, InviteTarget, InviteTargetId, MessageSync, Permission, Room, RoomId,
@@ -468,7 +464,10 @@ impl ServiceCache {
             MessageSync::EmojiDelete { emoji_id, .. } => {
                 srv.emoji.cache.invalidate(emoji_id).await;
             }
-            MessageSync::PresenceUpdate { user_id, presence: _ } => {
+            MessageSync::PresenceUpdate {
+                user_id,
+                presence: _,
+            } => {
                 // Find all rooms this user is in and notify their actors
                 let rooms_to_notify = if let Some(rooms_set) = srv.rooms.user_rooms.get(user_id) {
                     rooms_set.iter().map(|r| *r).collect::<Vec<_>>()

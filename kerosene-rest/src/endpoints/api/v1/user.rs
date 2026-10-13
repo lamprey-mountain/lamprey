@@ -1,9 +1,7 @@
 use common::{
     util::Diff,
     v1::types::{
-        AuditLogEntryType, Permission, SERVER_ROOM_ID,
-        UserWithRelationship,
-        oauth::Scope,
+        AuditLogEntryType, Permission, SERVER_ROOM_ID, UserWithRelationship, oauth::Scope,
         util::Changes,
     },
     v2::types::media::MediaLinkType,

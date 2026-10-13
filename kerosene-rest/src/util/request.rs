@@ -1,9 +1,9 @@
-use std::{ collections::HashMap, error::Error, sync::Arc};
+use std::{collections::HashMap, error::Error, sync::Arc};
 
 use crate::{
     prelude::*,
     util::{
-        audit_log::{ActorInfo, AuditLoggerHandle, AuditLoggerSlot, },
+        audit_log::{ActorInfo, AuditLoggerHandle, AuditLoggerSlot},
         error::{ExtractorError, ExtractorRejection},
         headers::{ContentType, HeadersRequest},
         multipart::MultipartCollector,
@@ -11,9 +11,7 @@ use crate::{
     },
 };
 
-use axum::{
-    extract::{FromRequest, rejection::LengthLimitError},
-};
+use axum::extract::{FromRequest, rejection::LengthLimitError};
 use common::{
     util::routes::Endpoint,
     v1::{
