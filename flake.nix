@@ -131,7 +131,7 @@
               "crate-markdown"
               "crate-unfurl"
               "crate-script"
-              "crate-search"
+              "kerosene-search"
               "kerosene-core"
               "kerosene-services"
               "kerosene-sync"
