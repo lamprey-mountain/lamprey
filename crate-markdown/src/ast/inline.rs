@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::prelude::*;
 use crate::util::custom_emoji::CustomEmojiData;
 use crate::util::timestamp_style::TimestampStyle;
@@ -45,6 +47,29 @@ pub enum MentionData {
     Role(#[cfg_attr(feature = "wasm", tsify(type = "string"))] RoleId),
     Channel(#[cfg_attr(feature = "wasm", tsify(type = "string"))] ChannelId),
     Everyone,
+}
+
+// TODO: move this to another file
+impl FromStr for MentionData {
+    // TODO: use dedicated error type
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s == "@everyone" {
+            Ok(MentionData::Everyone)
+        } else if s.starts_with("<@") && s.ends_with('>') {
+            let uuid = Uuid::parse_str(&s[2..s.len() - 1]).map_err(|e| e.to_string())?;
+            Ok(MentionData::User(UserId::from(uuid)))
+        } else if s.starts_with("<&") && s.ends_with('>') {
+            let uuid = Uuid::parse_str(&s[2..s.len() - 1]).map_err(|e| e.to_string())?;
+            Ok(MentionData::Role(RoleId::from(uuid)))
+        } else if s.starts_with("<#") && s.ends_with('>') {
+            let uuid = Uuid::parse_str(&s[2..s.len() - 1]).map_err(|e| e.to_string())?;
+            Ok(MentionData::Channel(ChannelId::from(uuid)))
+        } else {
+            Err(format!("invalid mention: {}", s))
+        }
+    }
 }
 
 /// any inline node

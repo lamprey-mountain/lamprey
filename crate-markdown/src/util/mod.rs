@@ -7,6 +7,8 @@ use rowan::TextRange;
 use crate::prelude::*;
 
 pub mod custom_emoji;
+pub mod mentionable;
+pub mod sanitize_html;
 pub mod timestamp_style;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
