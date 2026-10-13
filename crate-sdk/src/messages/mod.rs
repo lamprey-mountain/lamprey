@@ -1,3 +1,5 @@
+//! message fetching, sending, and caching logic (WIP)
+
 #![allow(unused)] // TEMP: while prototyping
 
 use core::fmt;

@@ -1,3 +1,15 @@
+//! client sdk for lamprey mountain
+//!
+//! You probably want to start with [`Client`], which provides handles to the various
+//! subsystems:
+//!
+//! - [`http`]: typed rest api calls
+//! - [`syncer`]: the live sync connection and its events
+//! - [`cache`]: a client-side cache of server state
+//! - [`messages`]: per-channel message fetching and caching
+//! - [`flume`]: live-updating messages within a channel
+//! - [`voice`]: realtime media handling for voice channels
+
 #[cfg(feature = "cache")]
 pub mod cache;
 // pub mod cache_old;
@@ -6,7 +18,7 @@ pub mod cache;
 pub mod flume;
 
 #[cfg(feature = "voice")]
-pub mod voice; // NOTE: unsure if i should make this a pub mod?
+pub mod voice;
 
 pub mod client;
 mod error;

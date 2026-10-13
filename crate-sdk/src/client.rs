@@ -1,3 +1,5 @@
+//! Contains the [`Client`], the main entrypoint.
+
 use crate::cache::Cache;
 use crate::http::Http;
 use crate::syncer::SyncerHandle;
@@ -6,7 +8,9 @@ mod builder;
 
 pub use builder::ClientBuilder;
 
-/// main entrypoint
+/// The main entrypoint to the sdk.
+///
+/// This bundles a [`SyncerHandle`], [`Http`] client, and optionally a [`Cache`].
 pub struct Client {
     syncer: SyncerHandle,
     http: Http,

@@ -1,3 +1,9 @@
+//! websocket sync connection
+//!
+//! the syncer maintains a websocket connection to the server, broadcasting
+//! [`SyncerEvent`]s to [`SyncerHandle`] subscribers and automatically
+//! reconnecting and resuming if the connection drops.
+
 use std::{
     sync::{Arc, atomic::AtomicU8},
     time::Duration,

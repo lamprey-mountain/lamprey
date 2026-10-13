@@ -1,3 +1,5 @@
+//! Client-side caching of api resources
+
 use std::sync::Arc;
 
 use arc_swap::ArcSwap;
@@ -19,6 +21,7 @@ pub use permissions::RoomPermissions;
 
 use crate::messages::MessagesHandle;
 
+/// Caches lamprey api data in memory.
 #[derive(Debug, Default, Clone)]
 pub struct Cache {
     pub(crate) inner: Arc<CacheInner>,

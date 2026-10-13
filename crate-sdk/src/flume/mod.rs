@@ -1,3 +1,11 @@
+//! Flumes are live updating messages.
+//!
+//! A flume is a message that's able to update its content in real time. Use the
+//! [`Client::flume`] method to start building a flume via [`FlumeBuilder`], then
+//! use [`FlumeWriter`] to send updates.
+//!
+//! [`FlumeReader`] is used to watch the flume's content.
+
 use common::v2::types::ChannelId;
 
 use crate::Client;
