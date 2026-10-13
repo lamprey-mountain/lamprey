@@ -1,6 +1,6 @@
 [book]
+title = "docs"
+description = "lamprey mountain documentation"
 authors = ["tezlm"]
 language = "en"
-multilingual = false
 src = "src"
-title = "docs"
