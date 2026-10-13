@@ -25,6 +25,8 @@ use super::{Frame, Producer, Source};
 use crate::voice::VoiceError;
 
 /// a media source backed by symphonia (e.g. an audio file or buffer)
+///
+/// currently, only opus tracks are supported. other codecs are ignored when probing.
 pub struct FileSource {
     format: Box<dyn FormatReader>,
     track_id: u32,

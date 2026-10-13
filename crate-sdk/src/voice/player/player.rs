@@ -39,13 +39,22 @@ struct PlayerQueue {
     stop_request: bool,
 }
 
-/// controller handle for a [`PlayerProducer`]
+/// A `Player` is a cheaply cloneable handle used to control a
+/// [`PlayerProducer`]. It can control playback (play, pause, seek, etc...) and
+/// retrieve state like playback position or media duration.
+///
+/// `Player`s have a builtin queue. You can enqueue multiple different media
+/// sources, and they will play in sequence.
+///
+/// This doesn't produce any media by itself. You have to publish the associated
+/// [`PlayerProducer`] to a voice channel for it to do anything.
 #[derive(Clone)]
 pub struct Player {
     shared: Arc<PlayerShared>,
 }
 
-/// the [`Producer`] side of a [`Player`] that can be passed to [`Voice::publish`](crate::voice::Voice::publish)
+/// The [`Producer`] side of a [`Player`] that can be passed to
+/// [`Voice::publish`](crate::voice::Voice::publish).
 pub struct PlayerProducer {
     kind: MediaKind,
     shared: Arc<PlayerShared>,
@@ -61,6 +70,9 @@ impl Player {
     }
 
     /// create a new player for the given media kind and frame interval
+    ///
+    /// `frame_interval` is used to pace frames. for example, opus should
+    /// typically be paced to 20ms per frame.
     pub fn new(kind: MediaKind, frame_interval: Duration) -> (Self, PlayerProducer) {
         let (wake_tx, wake_rx) = watch::channel(());
         let shared = Arc::new(PlayerShared {
@@ -90,13 +102,14 @@ impl Player {
         (player, producer)
     }
 
-    /// enqueue a media source to be played
+    /// Enqueues a media source to be played.
+    #[doc(alias = "push")]
     pub fn enqueue(&self, source: impl Source) {
         self.shared.queue.lock().sources.push_back(Box::new(source));
         let _ = self.shared.wake_tx.send(());
     }
 
-    /// replace the current track and queue with a new source
+    /// Plays a new source, replacing the current track and clearing the queue.
     pub fn play(&self, source: impl Source) {
         let mut q = self.shared.queue.lock();
         q.sources.clear();
@@ -106,13 +119,14 @@ impl Player {
         let _ = self.shared.wake_tx.send(());
     }
 
-    /// skip the currently playing source and advance to the next one in the queue
+    /// Skips the currently playing source and advances to the next source in the queue.
+    #[doc(alias = "next")]
     pub fn skip(&self) {
         self.shared.queue.lock().skip_request = true;
         let _ = self.shared.wake_tx.send(());
     }
 
-    /// clear the queue and stop the player
+    /// Clears the queue and stops the player.
     pub fn stop(&self) {
         let mut q = self.shared.queue.lock();
         q.sources.clear();
@@ -121,12 +135,13 @@ impl Player {
         let _ = self.shared.wake_tx.send(());
     }
 
-    /// returns whether the player is currently paused
+    /// Returns whether the player is currently paused.
     pub fn paused(&self) -> bool {
         self.shared.paused.load(Ordering::Relaxed)
     }
 
-    /// pause or unpause the player
+    /// Pauses or unpauses the player.
+    #[doc(alias = "resume")]
     pub fn set_paused(&self, paused: bool) {
         self.shared.paused.store(paused, Ordering::Relaxed);
         if !paused {
@@ -140,6 +155,9 @@ impl Player {
     }
 
     /// set the volume multiplier
+    ///
+    /// this is **not clamped** and can go above `1.0`. you can mute audio with
+    /// a volume of `0.0`.
     pub fn set_volume(&self, volume: f32) {
         self.shared
             .volume
@@ -179,6 +197,7 @@ impl Player {
 
     // TODO: fn queue_duration: the total duration until the player's queue runs out of media to play
     // TODO: fn prev: reverse of skip
+    // NOTE: depending on how its implemented, volume could need to be renamed to gain
 }
 
 impl PlayerProducer {

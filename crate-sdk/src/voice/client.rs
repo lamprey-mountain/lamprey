@@ -119,6 +119,7 @@ impl Voice {
     //     todo!()
     // }
 
+    /// set whether we're muted
     pub async fn mute(&self, mute: bool) -> Result<(), VoiceError> {
         self.state
             .tx
@@ -127,6 +128,7 @@ impl Voice {
             .map_err(|_| VoiceError::ConnectionClosed)
     }
 
+    /// set whether we're deafened
     pub async fn deaf(&self, deaf: bool) -> Result<(), VoiceError> {
         self.state
             .tx
@@ -229,10 +231,6 @@ impl Tracks {
             .get(&mid)
             .map(|t| Track::Outbound(t.value().clone()))
     }
-
-    // TODO: figure out how publishing is going to work
-    // pub fn publish(&self, track)
-    // automatically remove track from offer/mapping when stream ends
 }
 
 impl LocalVoiceState {

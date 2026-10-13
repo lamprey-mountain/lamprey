@@ -21,10 +21,21 @@ pub use file_source::FileSource;
 pub use player::{Player, PlayerProducer};
 pub use switchboard::Switchboard;
 
-/// can be published to rtc
+/// a stream of media frames that can be sent to a voice channel
 pub trait Producer: Stream<Item = Result<Frame, VoiceError>> + Send + Unpin + 'static {
+    /// request a keyframe from the underlying source
+    ///
+    /// a `rid` of `None` defaults to requesting a keyframe on the producer's
+    /// currently active layer, if it has one. the default implementation is
+    /// a no-op.
     fn request_keyframe(&mut self, _kind: KeyframeRequestKind, _rid: Option<Rid>) {}
+
+    /// select the simulcast layer identified by the given rid
+    ///
+    /// the default implementation is a no-op.
     fn select_layer(&mut self, _rid: Rid) {}
+
+    /// the kind of media produced by this producer
     fn kind(&self) -> MediaKind;
 }
 
@@ -99,6 +110,8 @@ impl<'a> PublishBuilder<'a> {
     }
 }
 
+/// awaiting the builder publishes the track and resolves to the resulting
+/// [`Outbound`]
 impl<'a> IntoFuture for PublishBuilder<'a> {
     type Output = Result<Outbound, VoiceError>;
     type IntoFuture = BoxFuture<'a, Self::Output>;
