@@ -1,41 +1,49 @@
 use async_trait::async_trait;
 use lamprey_common::v1::types::EmbedType;
 use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
-use reqwest::{Client, Response};
 use serde::Deserialize;
 use url::Url;
 
 use crate::{
-    error::UnfurlError,
-    plugin::UnfurlPlugin,
-    unfurler::EmbedGeneration,
+    Unfurler,
+    plugin::{Plugin, PluginUrl, UnfurlResult},
+    unfurler::{EmbedGeneration, UnfurlerBuilder},
     util::{EmbedGenerationTemplate, EmbedMediaPending},
 };
 
+/// a plugin which handles wikipedia articles
 #[derive(Debug, Default)]
 pub struct WikipediaPlugin;
 
+impl Plugin for WikipediaPlugin {
+    fn register(self, builder: UnfurlerBuilder) -> UnfurlerBuilder {
+        builder.add_plugin_url(self)
+    }
+}
+
 #[async_trait]
-impl UnfurlPlugin for WikipediaPlugin {
-    async fn process_url(&self, url: &Url) -> Result<Option<Vec<EmbedGeneration>>, UnfurlError> {
+impl PluginUrl for WikipediaPlugin {
+    async fn handle(&self, unfurler: &Unfurler, url: &Url) -> UnfurlResult {
         let Some(summary_url) = wikipedia_summary_url(url) else {
-            return Ok(None);
+            return UnfurlResult::skip();
         };
 
-        // TODO: use http client from Unfurler instead of creating a new one
-        let http = Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
-            .user_agent("Mozilla/5.0 (compatible; LampreyBot/1.0; +https://example.com)")
-            .build()
-            .unwrap();
+        let res = unfurler.http_client().get(summary_url).send().await;
 
-        let summary: Summary = http
-            .get(summary_url)
-            .send()
-            .await?
-            .error_for_status()?
-            .json()
-            .await?;
+        let response = match res {
+            Ok(r) => r,
+            Err(e) => return UnfurlResult::error(e.into()),
+        };
+
+        let response = match response.error_for_status() {
+            Ok(r) => r,
+            Err(e) => return UnfurlResult::error(e.into()),
+        };
+
+        let summary: Summary = match response.json().await {
+            Ok(s) => s,
+            Err(e) => return UnfurlResult::error(e.into()),
+        };
 
         let thumbnail = if let Some(i) = summary.thumbnail
             && summary.originalimage.is_none()
@@ -51,31 +59,29 @@ impl UnfurlPlugin for WikipediaPlugin {
             None
         };
 
-        let embed = EmbedGenerationTemplate {
-            ty: EmbedType::Link,
-            url: Some(url.clone()),
-            canonical_url: None,
-            title: Some(summary.titles.normalized),
-            description: Some(summary.extract),
-            color: None,
-            media,
-            thumbnail,
-            author_name: None,
-            author_url: None,
-            author_avatar: None,
-            site_name: Some("Wikipedia".to_string()),
-            site_avatar: None,
+        let embed = EmbedGeneration {
+            embed: EmbedGenerationTemplate {
+                ty: EmbedType::Link,
+                url: Some(url.clone()),
+                canonical_url: None,
+                title: Some(summary.titles.normalized),
+                description: Some(summary.extract),
+                color: None,
+                media,
+                thumbnail,
+                author_name: None,
+                author_url: None,
+                author_avatar: None,
+                site_name: Some("Wikipedia".to_string()),
+                site_avatar: None,
+            },
         };
 
-        Ok(Some(vec![EmbedGeneration { embed }]))
-    }
-
-    async fn process_response(
-        &self,
-        _url: &Url,
-        _res: Response,
-    ) -> Result<Vec<EmbedGeneration>, UnfurlError> {
-        unreachable!()
+        UnfurlResult {
+            embeds: vec![embed],
+            errors: vec![],
+            stop: false,
+        }
     }
 }
 

@@ -1,11 +1,15 @@
 use lamprey_common::v1::types::{Embed, EmbedId, MediaId};
 use reqwest::{Client, ClientBuilder};
+use tracing::info;
 use url::Url;
 
 use crate::{
     Plugin,
     error::UnfurlError,
-    plugin::{PluginHtml, PluginHttp, PluginUrl},
+    plugin::{
+        PluginHtml, PluginHttp, PluginUrl,
+        builtin::{ForwardHtmlPlugin, ForwardHttpPlugin},
+    },
     util::{EmbedGenerationTemplate, EmbedMedia, EmbedMediaPending},
 };
 
@@ -18,8 +22,8 @@ pub struct EmbedGeneration {
 pub struct Unfurler {
     client: Client,
     url_plugins: Vec<Box<dyn PluginUrl>>,
-    http_plugins: Vec<Box<dyn PluginHttp>>,
-    html_plugins: Vec<Box<dyn PluginHtml>>,
+    pub(crate) http_plugins: Vec<Box<dyn PluginHttp>>,
+    pub(crate) html_plugins: Vec<Box<dyn PluginHtml>>,
 }
 
 pub struct UnfurlerBuilder {
@@ -47,6 +51,8 @@ impl Unfurler {
             http_plugins: Vec::new(),
             html_plugins: Vec::new(),
         }
+        .add_plugin(ForwardHttpPlugin)
+        .add_plugin(ForwardHtmlPlugin)
     }
 
     /// generate embeds for this url
@@ -56,46 +62,20 @@ impl Unfurler {
 
         let mut embeds = vec![];
 
-        // 1. url based plugins (like magnet:// or ipfs://)
         for plugin in &self.url_plugins {
+            info!(
+                plugin = %plugin.name(),
+                kind = "url",
+                "Selected plugin"
+            );
+
             let res = plugin.handle(self, url).await;
             embeds.extend(res.embeds);
             // TODO: handle res.errors
 
-            // tracing::info!(
-            //     plugin = %plugin.name(),
-            //     reason = "url",
-            //     "Selected plugin"
-            // );
-
             if res.stop {
                 return Ok(embeds);
             }
-        }
-
-        // 2. http based plugins
-        if url.scheme() != "http" && url.scheme() != "https" {
-            return Ok(embeds);
-        }
-
-        let res = self.client.get(url.clone()).send().await?;
-
-        for plugin in &self.http_plugins {
-            let res = plugin.handle(self, res.url(), &res).await;
-            embeds.extend(res.embeds);
-            // TODO: handle res.errors
-
-            if res.stop {
-                return Ok(embeds);
-            }
-        }
-
-        // 3. html based plugins
-        for plugin in &self.html_plugins {
-            // TODO: implement this
-            // let sink = plugin.create_sink(self, res.url(), res.status(), res.headers());
-            // sink.process_token(token, line_number);
-            // let res = sink.finish();
         }
 
         Ok(embeds)
@@ -139,6 +119,12 @@ impl UnfurlerBuilder {
         self.html_plugins.push(Box::new(plugin));
         self
     }
+
+    // /// set the media handler
+    // pub fn media_handler<H>(mut self, handler: H) -> Self {
+    //     // TODO: add some way to intercept and immediately begin importing media
+    //     self
+    // }
 
     pub fn build(self) -> Result<Unfurler, reqwest::Error> {
         Ok(Unfurler {

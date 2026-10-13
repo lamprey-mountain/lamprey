@@ -1,8 +1,7 @@
 use clap::{Parser, Subcommand};
 use lamprey_unfurl::{
-    DirectMediaPlugin, HtmlStreamPlugin, Unfurler,
-    plugin::wikipedia::WikipediaPlugin,
-    unfurler::{EmbedGeneration, PrettyEmbedGeneration},
+    DirectMediaPlugin, HtmlStreamPlugin, Unfurler, plugin::wikipedia::WikipediaPlugin,
+    unfurler::PrettyEmbedGeneration,
 };
 use url::Url;
 

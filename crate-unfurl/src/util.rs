@@ -1,8 +1,14 @@
+use std::ops::ControlFlow;
+
+use async_trait::async_trait;
+use bytes::Bytes;
 use lamprey_common::{
     v1::types::{EmbedType, MediaId, Mime, misc::Color},
     v2::types::media::Media,
 };
 use url::Url;
+
+use crate::plugin::{HttpSink, UnfurlResult};
 
 #[derive(Debug, Clone)]
 pub struct EmbedGenerationTemplate {
@@ -86,5 +92,19 @@ impl EmbedMedia {
 impl From<EmbedMediaPending> for EmbedMedia {
     fn from(value: EmbedMediaPending) -> Self {
         EmbedMedia::Pending(value)
+    }
+}
+
+/// a http sink which ignores the body
+pub struct AbyssSink;
+
+#[async_trait]
+impl HttpSink for AbyssSink {
+    async fn push(&mut self, _chunk: Bytes) -> ControlFlow<UnfurlResult> {
+        ControlFlow::Continue(())
+    }
+
+    async fn finish(self: Box<Self>) -> UnfurlResult {
+        UnfurlResult::skip()
     }
 }

@@ -1,32 +1,22 @@
-use std::{cell::RefCell, rc::Rc, str::FromStr};
+use std::{ops::ControlFlow, str::FromStr};
 
-use async_trait::async_trait;
 use html5ever::{
     local_name,
-    tendril::StrTendril,
-    tokenizer::{
-        BufferQueue, TagKind, Token, TokenSink, TokenSinkResult, Tokenizer, TokenizerOpts,
-    },
+    tokenizer::{TagKind, Token},
 };
 use lamprey_common::v1::types::{EmbedType, misc::Color};
-use reqwest::Response;
 use url::Url;
 
 use crate::{
     Plugin, PluginHtml, Unfurler,
-    error::UnfurlError,
     plugin::{
-        UnfurlPlugin,
-        html::{
-            microdata::MicrodataProcessor,
-            util::{RobotsImagePreview, TwitterCard},
-        },
+        Head, HtmlSink, UnfurlResult,
+        html::util::{RobotsImagePreview, TwitterCard},
     },
     unfurler::{EmbedGeneration, UnfurlerBuilder},
     util::{EmbedGenerationTemplate, EmbedMediaPending},
 };
 
-mod microdata;
 mod util;
 
 pub struct HtmlStreamPlugin {
@@ -40,187 +30,11 @@ impl Plugin for HtmlStreamPlugin {
 }
 
 impl PluginHtml for HtmlStreamPlugin {
-    fn create_sink(
-        &self,
-        unfurler: &Unfurler,
-        url: &Url,
-        status: reqwest::StatusCode,
-        headers: &reqwest::header::HeaderMap,
-    ) -> Box<dyn super::HtmlSink> {
-        todo!()
-    }
-}
-
-#[async_trait]
-impl UnfurlPlugin for HtmlStreamPlugin {
-    fn name(&self) -> &'static str {
-        "HtmlStreamPlugin"
-    }
-
-    fn accepts_response(&self, res: &Response) -> bool {
-        res.headers()
-            .get(reqwest::header::CONTENT_TYPE)
-            .and_then(|v| v.to_str().ok())
-            .map(|s| s.contains("text/html"))
-            .unwrap_or(false) // Default to false, some sites might be sneaky though
-    }
-
-    async fn process_response(
-        &self,
-        url: &Url,
-        mut res: Response,
-    ) -> Result<Vec<EmbedGeneration>, UnfurlError> {
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<bytes::Bytes>(32);
-
-        // the html parser is !Send due to Rc, so spawn a blocking task
-        let parse_task = tokio::task::spawn_blocking(move || {
-            let shared_data = Rc::new(RefCell::new(ExtractedData::default()));
-            let sink = MetaSink {
-                data: shared_data.clone(),
-            };
-            let tokenizer = Tokenizer::new(sink, TokenizerOpts::default());
-            let mut queue = BufferQueue::default();
-
-            // In your spawn_blocking task:
-            let mut tail = Vec::new();
-
-            while let Some(chunk) = rx.blocking_recv() {
-                let s = decode_chunk(&mut tail, &chunk);
-                queue.push_back(StrTendril::from_slice(&s));
-                let _ = tokenizer.feed(&mut queue);
-            }
-
-            tokenizer.end();
-            drop(tokenizer);
-
-            Rc::try_unwrap(shared_data).unwrap().into_inner()
-        });
-
-        let mut bytes_read = 0;
-        while let Some(chunk) = res.chunk().await? {
-            bytes_read += chunk.len();
-
-            if tx.send(chunk).await.is_err() {
-                break;
-            }
-
-            if bytes_read > self.max_bytes {
-                break;
-            }
-        }
-
-        drop(tx);
-
-        let data = dbg!(parse_task.await?);
-        if !data.has_meaningful_embed() {
-            return Ok(vec![]);
-        }
-
-        let image_mode = determine_image_mode(&data);
-
-        let mut tmpl = EmbedGenerationTemplate {
-            ty: EmbedType::Link,
-            url: Some(url.clone()),
-            canonical_url: data.canonical_url.and_then(|u| url.join(&u).ok()),
-            title: data.og_title.or(data.twitter_title).or(data.title),
-            description: data.og_description.or(data.description),
-            site_name: data.og_site_name,
-            color: data
-                .theme_color
-                .as_ref()
-                .and_then(|c| Color::from_str(c).ok()),
-            media: None,
-            thumbnail: None,
-            author_name: None,
-            author_url: None,
-            author_avatar: None,
-            site_avatar: None,
-            // TODO: handle favicon as site_avatar
-            // i need some way to avoid constantly refetching the same favicon though...
-            // site_avatar: data.favicon_url.and_then(|u| url.join(&u).ok()).map(|u| {
-            //     EmbedMediaPending::new(u)
-            //         .mime_guess("image/x-icon".parse().unwrap())
-            //         .into()
-            // }),
-        };
-
-        // Handle nested/recursive media
-        let og_type = data.og_type.as_deref().unwrap_or("website");
-        let is_media = matches!(
-            og_type,
-            "video"
-                | "video.movie"
-                | "video.episode"
-                | "video.tv_show"
-                | "video.other"
-                | "music.song"
-                | "music.album"
-                | "music.playlist"
-                | "music.radio_station"
-        );
-
-        // TODO: parse mime types from url? likely unnecessary if the media importer system autodetects mime anyways
-        if is_media && !data.videos.entries.is_empty() {
-            // TODO: don't only check the first video, iterate until a usable video is found
-            let video_meta = data.videos.entries.first();
-            if video_meta.and_then(|m| m.ty.as_deref()) == Some("text/html") {
-                // html videos (iframes) aren't allowed
-                tmpl.ty = EmbedType::Link;
-            } else {
-                tmpl.ty = EmbedType::Media;
-                if let Some(v_url) = data.videos.entries[0]
-                    .preferred_url()
-                    .and_then(|u| url.join(u).ok())
-                {
-                    tmpl.media = Some(
-                        EmbedMediaPending::new(v_url)
-                            .mime_guess("video/mp4".parse().unwrap())
-                            .into(),
-                    );
-                }
-            }
-
-            // TODO: don't only check the first image, iterate until a usable image is found
-            if let Some(img) = data.images.entries.first() {
-                if let Some(img_url) = img.preferred_url() {
-                    if let Ok(i_url) = url.join(img_url) {
-                        tmpl.thumbnail = Some(
-                            EmbedMediaPending::new(i_url)
-                                .mime_guess("image/jpeg".parse().unwrap())
-                                .into(),
-                        );
-                    }
-                }
-            }
-        } else if let Some(img) = data.images.entries.first() {
-            // TODO: don't only check the first image, iterate until a usable image is found
-            if let Some(img_url) = img.preferred_url() {
-                if let Ok(i_url) = url.join(img_url) {
-                    // NOTE: there might be cases where i want to include full media *and* a thumbnail?
-                    match image_mode {
-                        ImageMode::Hide => {}
-                        ImageMode::Full => {
-                            tmpl.media = Some(
-                                EmbedMediaPending::new(i_url)
-                                    .mime_guess("image/jpeg".parse().unwrap())
-                                    .into(),
-                            );
-                        }
-                        ImageMode::Thumb => {
-                            tmpl.thumbnail = Some(
-                                EmbedMediaPending::new(i_url)
-                                    .mime_guess("image/jpeg".parse().unwrap())
-                                    .into(),
-                            );
-                        }
-                    }
-                }
-            }
-        }
-
-        // TODO: handle rel=me and RSS feeds if needed later...
-
-        Ok(vec![EmbedGeneration { embed: dbg!(tmpl) }])
+    fn create_sink(&self, _unfurler: &Unfurler, head: &Head<'_>) -> Box<dyn HtmlSink> {
+        Box::new(HtmlStreamSink {
+            data: ExtractedData::default(),
+            url: head.url.clone(),
+        })
     }
 }
 
@@ -302,32 +116,6 @@ fn parse_robots_image_preview(content: &str) -> Option<RobotsImagePreview> {
     None
 }
 
-/// Merges `tail` with `chunk`, returning the valid UTF-8 string and
-/// storing any incomplete trailing bytes back into `tail`.
-fn decode_chunk<'a>(tail: &mut Vec<u8>, chunk: &[u8]) -> String {
-    let bytes = if tail.is_empty() {
-        // PERF: don't clone chunk
-        chunk.to_vec()
-    } else {
-        let mut b = std::mem::take(tail);
-        b.extend_from_slice(chunk);
-        b
-    };
-
-    match std::str::from_utf8(&bytes) {
-        Ok(s) => s.to_string(),
-        Err(e) => {
-            // FIXME: handle incomplete vs invalid byte sequences
-            // currently, this code treats all errors as incomplete sequences.
-            // this can cause all data to be stored in tail, rather than be
-            // properly parsed.
-            let valid = &bytes[..e.valid_up_to()];
-            tail.extend_from_slice(&bytes[e.valid_up_to()..]);
-            std::str::from_utf8(valid).unwrap().to_string()
-        }
-    }
-}
-
 #[derive(Debug, Default)]
 struct ExtractedData {
     in_title: bool,
@@ -368,8 +156,6 @@ struct ExtractedData {
 
     twitter_card: Option<TwitterCard>,
     robots_max_image_preview: Option<RobotsImagePreview>,
-
-    microdata: MicrodataProcessor,
 }
 
 impl ExtractedData {
@@ -462,27 +248,20 @@ impl MediaList {
     }
 }
 
-struct MetaSink {
-    // PERF: use Cell, if possible?
-    data: Rc<RefCell<ExtractedData>>,
+struct HtmlStreamSink {
+    data: ExtractedData,
+    url: Url,
 }
 
-impl TokenSink for MetaSink {
-    type Handle = ();
-
-    fn process_token(&self, token: Token, _line_number: u64) -> TokenSinkResult<()> {
-        let mut data = self.data.borrow_mut();
-
+impl HtmlSink for HtmlStreamSink {
+    fn push(&mut self, token: &Token, _line_number: u64) -> ControlFlow<UnfurlResult> {
         match token {
             Token::TagToken(tag) => {
-                #[cfg(feature = "microdata")]
-                data.microdata.handle_tag(&tag);
-
                 if tag.kind == TagKind::StartTag {
                     match tag.name {
                         local_name!("title") => {
-                            data.in_title = true;
-                            data.current_title.clear();
+                            self.data.in_title = true;
+                            self.data.current_title.clear();
                         }
                         local_name!("meta") => {
                             let mut name = None;
@@ -506,45 +285,49 @@ impl TokenSink for MetaSink {
                                 let key = property.or(name).unwrap_or_default().to_lowercase();
 
                                 if let Some(s) = key.strip_prefix("og:video") {
-                                    data.videos.handle_meta(s, content);
+                                    self.data.videos.handle_meta(s, content);
                                 } else if let Some(s) = key.strip_prefix("og:image") {
-                                    data.images.handle_meta(s, content);
+                                    self.data.images.handle_meta(s, content);
                                 } else if let Some(s) = key.strip_prefix("og:audio") {
-                                    data.audios.handle_meta(s, content);
+                                    self.data.audios.handle_meta(s, content);
                                 } else {
                                     match key.as_str() {
-                                        "og:title" => data.og_title = Some(content),
-                                        "twitter:title" => data.twitter_title = Some(content),
-                                        "twitter:card" => data.twitter_card = content.parse().ok(),
-                                        "description" => data.description = Some(content),
-                                        "og:description" => data.og_description = Some(content),
-                                        "twitter:description" => {
-                                            data.twitter_description = Some(content)
+                                        "og:title" => self.data.og_title = Some(content),
+                                        "twitter:title" => self.data.twitter_title = Some(content),
+                                        "twitter:card" => {
+                                            self.data.twitter_card = content.parse().ok()
                                         }
-                                        "og:site_name" => data.og_site_name = Some(content),
-                                        "theme-color" => data.theme_color = Some(content),
-                                        "og:url" => data.og_url = Some(content),
-                                        "og:type" => data.og_type = Some(content),
+                                        "description" => self.data.description = Some(content),
+                                        "og:description" => {
+                                            self.data.og_description = Some(content)
+                                        }
+                                        "twitter:description" => {
+                                            self.data.twitter_description = Some(content)
+                                        }
+                                        "og:site_name" => self.data.og_site_name = Some(content),
+                                        "theme-color" => self.data.theme_color = Some(content),
+                                        "og:url" => self.data.og_url = Some(content),
+                                        "og:type" => self.data.og_type = Some(content),
                                         "robots" => {
-                                            data.robots_max_image_preview =
+                                            self.data.robots_max_image_preview =
                                                 parse_robots_image_preview(&content);
                                         }
 
-                                        "author" => data.author_name = Some(content),
+                                        "author" => self.data.author_name = Some(content),
                                         "article:author" => {
-                                            if data.author_name.is_none() {
-                                                data.author_name = Some(content);
+                                            if self.data.author_name.is_none() {
+                                                self.data.author_name = Some(content);
                                             }
                                         }
 
                                         // NOTE: do i need something like ogp logic for these?
                                         "profile:image" | "twitter:creator:image" => {
-                                            data.author_avatar = Some(content)
+                                            self.data.author_avatar = Some(content)
                                         }
 
                                         // TODO: make sure image logic is correct?
                                         "twitter:image" => {
-                                            data.images.last_media().url = Some(content);
+                                            self.data.images.last_media().url = Some(content);
                                         }
 
                                         _ => {}
@@ -572,17 +355,16 @@ impl TokenSink for MetaSink {
                                 for r in rels {
                                     match r.to_lowercase().as_str() {
                                         "icon" => {
-                                            // TODO: make some icon rels higher priority than others?
-                                            if data.favicon_url.is_none() {
-                                                data.favicon_url = Some(href.clone());
+                                            if self.data.favicon_url.is_none() {
+                                                self.data.favicon_url = Some(href.clone());
                                             }
                                         }
                                         "apple-touch-icon" => {
-                                            data.apple_touch_icon_url = Some(href.clone());
+                                            self.data.apple_touch_icon_url = Some(href.clone());
                                         }
-                                        "canonical" => data.canonical_url = Some(href.clone()),
-                                        "author" => data.author_url = Some(href.clone()),
-                                        "me" => data.rel_me.push(href.clone()),
+                                        "canonical" => self.data.canonical_url = Some(href.clone()),
+                                        "author" => self.data.author_url = Some(href.clone()),
+                                        "me" => self.data.rel_me.push(href.clone()),
                                         "alternate" => {
                                             if let Some(t) = &ty {
                                                 let lt = t.to_lowercase();
@@ -590,7 +372,7 @@ impl TokenSink for MetaSink {
                                                     || lt == "application/atom+xml"
                                                     || lt == "application/json"
                                                 {
-                                                    data.feeds.push(href.clone());
+                                                    self.data.feeds.push(href.clone());
                                                 }
                                             }
                                         }
@@ -604,8 +386,8 @@ impl TokenSink for MetaSink {
                                 if attr.name.local == local_name!("type")
                                     && attr.value.to_lowercase() == "application/ld+json"
                                 {
-                                    data.in_ld_json = true;
-                                    data.current_ld_json.clear();
+                                    self.data.in_ld_json = true;
+                                    self.data.current_ld_json.clear();
                                 }
                             }
                         }
@@ -613,64 +395,148 @@ impl TokenSink for MetaSink {
                     }
                 } else if tag.kind == TagKind::EndTag {
                     if tag.name == local_name!("title") {
-                        data.in_title = false;
-                        if data.title.is_none() {
-                            // Extract title out to avoid borrow issues
-                            let title = data.current_title.trim().to_string();
-                            data.title = Some(title);
+                        self.data.in_title = false;
+                        if self.data.title.is_none() {
+                            let title = self.data.current_title.trim().to_string();
+                            self.data.title = Some(title);
                         }
                     } else if tag.name == local_name!("script") {
-                        if data.in_ld_json {
-                            data.in_ld_json = false;
-                            let s = data.current_ld_json.clone();
-                            data.ld_json.push(s);
+                        if self.data.in_ld_json {
+                            self.data.in_ld_json = false;
+                            let s = self.data.current_ld_json.clone();
+                            self.data.ld_json.push(s);
                         }
                     }
                 }
             }
             Token::CharacterTokens(s) => {
-                #[cfg(feature = "microdata")]
-                data.microdata.handle_text(&s);
-
-                if data.in_title {
-                    data.current_title.push_str(&s);
-                } else if data.in_ld_json {
-                    data.current_ld_json.push_str(&s);
+                if self.data.in_title {
+                    self.data.current_title.push_str(&s);
+                } else if self.data.in_ld_json {
+                    self.data.current_ld_json.push_str(&s);
                 }
             }
             _ => {}
         }
-        TokenSinkResult::Continue
+
+        ControlFlow::Continue(())
     }
-}
 
-// TODO: add more tests
+    fn finish(self: Box<Self>) -> UnfurlResult {
+        let data = self.data;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use html5ever::tendril::StrTendril;
-    use html5ever::tokenizer::{Tokenizer, TokenizerOpts};
+        if !data.has_meaningful_embed() {
+            return UnfurlResult::skip();
+        }
 
-    #[test]
-    fn test_ld_json_extraction() {
-        let shared_data = Rc::new(RefCell::new(ExtractedData::default()));
-        let sink = MetaSink {
-            data: shared_data.clone(),
+        let image_mode = determine_image_mode(&data);
+
+        let mut tmpl = EmbedGenerationTemplate {
+            ty: EmbedType::Link,
+            url: Some(self.url.clone()),
+            canonical_url: data.canonical_url.and_then(|u| self.url.join(&u).ok()),
+            title: data.og_title.or(data.twitter_title).or(data.title),
+            description: data.og_description.or(data.description),
+            site_name: data.og_site_name,
+            color: data
+                .theme_color
+                .as_ref()
+                .and_then(|c| Color::from_str(c).ok()),
+            media: None,
+            thumbnail: None,
+            author_name: None,
+            author_url: None,
+            author_avatar: None,
+            site_avatar: None,
+            // TODO: handle favicon as site_avatar
+            // i need some way to avoid constantly refetching the same favicon though...
+            // site_avatar: data.favicon_url.and_then(|u| url.join(&u).ok()).map(|u| {
+            //     EmbedMediaPending::new(u)
+            //         .mime_guess("image/x-icon".parse().unwrap())
+            //         .into()
+            // }),
         };
-        let tokenizer = Tokenizer::new(sink, TokenizerOpts::default());
-        let html = r#"<html><script type="application/ld+json">{"@context":"https://schema.org","@type":"Person","name":"John Doe"}</script></html>"#;
 
-        let mut queue = html5ever::tokenizer::BufferQueue::default();
-        queue.push_back(StrTendril::from(html));
-        let _ = tokenizer.feed(&mut queue);
-        tokenizer.end();
-
-        let data = shared_data.borrow();
-        assert_eq!(data.ld_json.len(), 1);
-        assert_eq!(
-            data.ld_json[0],
-            r#"{"@context":"https://schema.org","@type":"Person","name":"John Doe"}"#
+        // Handle nested/recursive media
+        let og_type = data.og_type.as_deref().unwrap_or("website");
+        let is_media = matches!(
+            og_type,
+            "video"
+                | "video.movie"
+                | "video.episode"
+                | "video.tv_show"
+                | "video.other"
+                | "music.song"
+                | "music.album"
+                | "music.playlist"
+                | "music.radio_station"
         );
+
+        // TODO: parse mime types from url? likely unnecessary if the media importer system autodetects mime anyways
+        if is_media && !data.videos.entries.is_empty() {
+            // TODO: don't only check the first video, iterate until a usable video is found
+            let video_meta = data.videos.entries.first();
+            if video_meta.and_then(|m| m.ty.as_deref()) == Some("text/html") {
+                // html videos (iframes) aren't allowed
+                tmpl.ty = EmbedType::Link;
+            } else {
+                tmpl.ty = EmbedType::Media;
+                if let Some(v_url) = data.videos.entries[0]
+                    .preferred_url()
+                    .and_then(|u| self.url.join(u).ok())
+                {
+                    tmpl.media = Some(
+                        EmbedMediaPending::new(v_url)
+                            .mime_guess("video/mp4".parse().unwrap())
+                            .into(),
+                    );
+                }
+            }
+
+            // TODO: don't only check the first image, iterate until a usable image is found
+            if let Some(img) = data.images.entries.first() {
+                if let Some(img_url) = img.preferred_url() {
+                    if let Ok(i_url) = self.url.join(img_url) {
+                        tmpl.thumbnail = Some(
+                            EmbedMediaPending::new(i_url)
+                                .mime_guess("image/jpeg".parse().unwrap())
+                                .into(),
+                        );
+                    }
+                }
+            }
+        } else if let Some(img) = data.images.entries.first() {
+            // TODO: don't only check the first image, iterate until a usable image is found
+            if let Some(img_url) = img.preferred_url() {
+                if let Ok(i_url) = self.url.join(img_url) {
+                    // NOTE: there might be cases where i want to include full media *and* a thumbnail?
+                    match image_mode {
+                        ImageMode::Hide => {}
+                        ImageMode::Full => {
+                            tmpl.media = Some(
+                                EmbedMediaPending::new(i_url)
+                                    .mime_guess("image/jpeg".parse().unwrap())
+                                    .into(),
+                            );
+                        }
+                        ImageMode::Thumb => {
+                            tmpl.thumbnail = Some(
+                                EmbedMediaPending::new(i_url)
+                                    .mime_guess("image/jpeg".parse().unwrap())
+                                    .into(),
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // TODO: handle rel=me and RSS feeds if needed later...
+
+        UnfurlResult {
+            embeds: vec![EmbedGeneration { embed: tmpl }],
+            errors: vec![],
+            stop: false,
+        }
     }
 }
