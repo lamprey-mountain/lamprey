@@ -3,7 +3,7 @@ use std::time::Duration;
 use chrono::{DateTime, Timelike};
 use chrono_tz::Tz;
 use common::v1::types::{
-    calendar::{Calendar, CalendarEvent, Timezone},
+    calendar::{Calendar, CalendarEvent},
     util::Time,
 };
 use rrule::{RRule, RRuleSet, RRuleSetIter, Tz as RRuleTz, Unvalidated};

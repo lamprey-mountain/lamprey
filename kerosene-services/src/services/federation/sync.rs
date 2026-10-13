@@ -10,7 +10,7 @@ use kerosene_core::compat::authz::AuthCheck;
 
 impl ServiceFederation {
     /// handle a sync from a remote server
-    pub async fn handle_sync(&self, req: ServerSyncRequest) -> Result<()> {
+    pub async fn handle_sync(&self, _req: ServerSyncRequest) -> Result<()> {
         // TODO: update database
         // TODO: broadcast sync event
         Ok(())
@@ -19,9 +19,9 @@ impl ServiceFederation {
     async fn update_database(&self, msg: MessageSync) -> Result<()> {
         match msg {
             // TODO: handle user events
-            MessageSync::UserCreate { user } => todo!(),
-            MessageSync::UserUpdate { user } => todo!(),
-            MessageSync::UserDelete { id } => todo!(),
+            MessageSync::UserCreate { user: _ } => todo!(),
+            MessageSync::UserUpdate { user: _ } => todo!(),
+            MessageSync::UserDelete { id: _ } => todo!(),
 
             // TODO: handle more events
             _ => {}
@@ -31,7 +31,7 @@ impl ServiceFederation {
     }
 
     /// push a sync event to any known remote servers
-    pub async fn push_sync(&self, msg: MessageSync) -> Result<()> {
+    pub async fn push_sync(&self, _msg: MessageSync) -> Result<()> {
         // PERF: aggregate n sync events and send as a batch instead of sending one at a time
         // TODO: filter visibility with ServerPerspective
         // TODO: subscribe to sushi belt and send it to push_sync
@@ -41,7 +41,7 @@ impl ServiceFederation {
     }
 
     /// get a `ServerPerspective` for the host
-    async fn load_perspective(&self, hostname: Hostname) -> Result<ServerPerspective> {
+    async fn load_perspective(&self, _hostname: Hostname) -> Result<ServerPerspective> {
         // PERF: how much can i cache perspectives?
         todo!()
     }
@@ -74,7 +74,7 @@ impl ServerPerspective {
     }
 
     /// whether this server can view this user
-    pub fn can_view_user(&self, user_id: UserId) -> bool {
+    pub fn can_view_user(&self, _user_id: UserId) -> bool {
         // true iff any user from this server (user.remote)
         // - shares a mutual room with the target user
         // - is friends the target user
@@ -82,13 +82,13 @@ impl ServerPerspective {
     }
 
     /// whether this server can view this room
-    pub fn can_view_room(&self, room_id: RoomId) -> bool {
+    pub fn can_view_room(&self, _room_id: RoomId) -> bool {
         // true iff the server has a room member in that room (check user.remote)
         todo!()
     }
 
     /// whether this server can view this channel
-    pub fn can_view_channel(&self, channel_id: ChannelId) -> bool {
+    pub fn can_view_channel(&self, _channel_id: ChannelId) -> bool {
         // true iff the server has any user with viewchannel perms for that channel
         todo!()
     }
@@ -96,13 +96,13 @@ impl ServerPerspective {
     pub fn passes_auth_check(&self, check: AuthCheck) -> bool {
         match check {
             AuthCheck::Room(id) => self.can_view_room(id),
-            AuthCheck::RoomPerm(id, permission) => todo!("how does this work?"),
+            AuthCheck::RoomPerm(_id, _permission) => todo!("how does this work?"),
             AuthCheck::Channel(id) => self.can_view_channel(id),
-            AuthCheck::ChannelPerm(id, permission) => todo!("how does this work?"),
-            AuthCheck::User(id) => todo!("true if this user exists on the remote server"),
+            AuthCheck::ChannelPerm(_id, _permission) => todo!("how does this work?"),
+            AuthCheck::User(_id) => todo!("true if this user exists on the remote server"),
             AuthCheck::UserVisible(id) => self.can_view_user(id),
             AuthCheck::Session(_) | AuthCheck::Connection(_) => false,
-            AuthCheck::Any(auth_checks) => todo!(),
+            AuthCheck::Any(_auth_checks) => todo!(),
         }
     }
 }

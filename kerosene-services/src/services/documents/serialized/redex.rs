@@ -22,7 +22,7 @@ impl FromDoc for SerializedRedex {
 
         for (name, out) in txn.root_refs() {
             match (name, out) {
-                (DOCUMENT_ROOT_NAME, yrs::Out::YText(text)) => {
+                (DOCUMENT_ROOT_NAME, yrs::Out::YText(_text)) => {
                     // TODO: validate text?
                 }
                 ("metadata", yrs::Out::Any(yrs::Any::Map(meta))) => {
@@ -53,7 +53,7 @@ impl FromDoc for SerializedRedex {
         todo!()
     }
 
-    fn from_doc_lenient(doc: &Doc) -> Self {
+    fn from_doc_lenient(_doc: &Doc) -> Self {
         todo!()
     }
 }

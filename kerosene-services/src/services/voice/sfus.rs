@@ -262,7 +262,7 @@ impl ServiceVoice {
                     existing_sfu_id,
                     new_sfu_id,
                 } => {
-                    let existing_sfu = self.sfus.get(&existing_sfu_id).ok_or_else(|| {
+                    let _existing_sfu = self.sfus.get(&existing_sfu_id).ok_or_else(|| {
                         Error::ApiError(ApiError::from_code(ErrorCode::UnknownSfu))
                     })?;
                     let new_sfu = self.sfus.get(&new_sfu_id).ok_or_else(|| {
@@ -473,9 +473,9 @@ impl ServiceVoice {
     pub async fn sfu_rebalance(&self, channel_id: ChannelId) -> Vec<RebalanceAction> {
         // TODO: implement this
 
-        let mut actions = Vec::new();
+        let actions = Vec::new();
         let router = self.router.read().await;
-        let merge_threshold = router.config.merge_threshold;
+        let _merge_threshold = router.config.merge_threshold;
 
         // 0. partition voice states by sfu
         let mut voice_states_by_sfu: HashMap<SfuId, Vec<VoiceStateHandle>> = HashMap::new();
@@ -489,7 +489,7 @@ impl ServiceVoice {
         // let mut sfus_to_remove = HashSet::new();
 
         // 1. evaluate merging (cleanup under-utilized shards)
-        for (&sfu_id, local_users) in &voice_states_by_sfu {
+        for (&_sfu_id, _local_users) in &voice_states_by_sfu {
             // if local_users.len() <= merge_threshold && channel.active_nodes.len() > 1 {
             //     // find the biggest "center of gravity" node to absorb these users
             //     if let Some((&absorb_node, _)) = voice_states_by_sfu
@@ -509,7 +509,7 @@ impl ServiceVoice {
         }
 
         // 2. evaluate splitting / migration (fix bad placements)
-        for (&sfu_id, local_users) in &voice_states_by_sfu {
+        for (&_sfu_id, _local_users) in &voice_states_by_sfu {
             // if sfus_to_remove.contains(&sfu_id) {
             //     continue;
             // }

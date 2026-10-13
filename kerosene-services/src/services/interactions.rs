@@ -14,7 +14,7 @@ use common::v1::types::{
 };
 use common::v2::types::{ApplicationId, MessageId};
 use dashmap::DashMap;
-use kerosene_core::types::auth::{Auth5, Auth5Ext};
+use kerosene_core::types::auth::Auth5;
 use lamprey_backend_core::Error;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
@@ -436,7 +436,7 @@ impl ServiceInteractions {
     // TODO: make these actual ApiErrors with dedicated ErrorCodes instead of BadStatic
     pub async fn handle_followup_message_create<A: Auth5>(
         &self,
-        auth: &mut A,
+        _auth: &mut A,
         id: InteractionId,
         token: String,
         message: MessageCreate,

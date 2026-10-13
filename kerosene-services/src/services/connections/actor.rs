@@ -541,7 +541,7 @@ impl Connection {
                     }
                     StreamAttach::Room { room_id } => {
                         let srv = self.globals.services();
-                        let perms = srv
+                        let _perms = srv
                             .perms
                             .for_room3(self.session.user_id(), room_id)
                             .await?
@@ -581,7 +581,7 @@ impl Connection {
                     }
                     StreamAttach::Channel { channel_id } => {
                         let srv = self.globals.services();
-                        let perms = srv
+                        let _perms = srv
                             .perms
                             .for_channel3(self.session.user_id(), channel_id)
                             .await?
@@ -621,7 +621,7 @@ impl Connection {
                 }
             }
             Command::Shutdown => {
-                for (_, mut stream) in self.streams.drain() {
+                for (_, stream) in self.streams.drain() {
                     if let Some(mut t) = stream.transport {
                         let _ = t.send.close().await;
                     }
@@ -834,10 +834,10 @@ impl Connection {
         let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
 
         let channel_id = context_id.channel_id();
-        let branch_id = context_id.branch_id();
+        let _branch_id = context_id.branch_id();
 
         let srv = self.globals.services();
-        let perms = srv
+        let _perms = srv
             .perms
             .for_channel3(Some(user_id), channel_id)
             .await?
@@ -897,7 +897,7 @@ impl Connection {
     ) -> Result<()> {
         let user_id = self.session.user_id().ok_or(Error::UnauthSession)?;
         let channel_id = context_id.channel_id();
-        let branch_id = context_id.branch_id();
+        let _branch_id = context_id.branch_id();
 
         let srv = self.globals.services();
         let mut perms = srv

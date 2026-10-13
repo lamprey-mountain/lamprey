@@ -17,7 +17,6 @@ use common::v1::types::{
 use common::v2::types::media::Media;
 use common::v2::types::{RoleId, SERVER_USER_ID};
 use lamprey_backend_data_postgres::{DbRoleCreate, PaginationQuery};
-use uuid::Uuid;
 
 // TODO: use epochs for caching
 
@@ -62,7 +61,7 @@ impl ServiceFederation {
             return Err(Error::BadStatic("failed to fetch remote user"));
         }
 
-        let mut user: User = res.json().await?;
+        let user: User = res.json().await?;
         self.import_user_inner(user, &hostname).await
     }
 
@@ -75,7 +74,7 @@ impl ServiceFederation {
         user.remote = Some(remote.clone());
 
         let mut txn = self.globals.begin().await?;
-        let srv = self.globals.services();
+        let _srv = self.globals.services();
         let local = txn.user_get(user.id).await.ok();
         let existing = txn.user_get_remote(&remote).await.ok();
 
@@ -683,7 +682,7 @@ impl ServiceFederation {
             return Err(Error::BadStatic("failed to fetch remote channel"));
         }
 
-        let mut channel: Channel = res.json().await?;
+        let channel: Channel = res.json().await?;
         self.import_channel_inner(remote, channel, puppet_id).await
     }
 

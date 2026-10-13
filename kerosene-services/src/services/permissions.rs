@@ -613,7 +613,7 @@ impl ServicePermissions {
         }
 
         let user_id = identity.user_id();
-        let mut perms = match requirements.get_context() {
+        let perms = match requirements.get_context() {
             RequirementsContext::Server => self.for_room3(user_id, SERVER_ROOM_ID).await?,
             RequirementsContext::Room(room_id) => self.for_room3(user_id, room_id).await?,
             RequirementsContext::Channel(channel_id) => {

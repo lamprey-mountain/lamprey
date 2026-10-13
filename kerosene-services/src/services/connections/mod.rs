@@ -1,10 +1,7 @@
-use common::{
-    v1::types::{
-        ConnectionId, MessageHello, SessionId, UserId,
+use common::v1::types::{
+        ConnectionId, MessageHello,
         presence::{Presence, Status},
-    },
-    v2::types::sync::stream::hello::Identify,
-};
+    };
 use dashmap::DashMap;
 use std::time::Duration;
 use std::{collections::HashMap, sync::atomic::AtomicUsize};

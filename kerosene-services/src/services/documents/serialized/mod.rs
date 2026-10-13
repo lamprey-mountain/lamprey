@@ -101,4 +101,3 @@ mod prose;
 mod redex;
 
 pub use prose::SerializedProse;
-pub use redex::SerializedRedex;

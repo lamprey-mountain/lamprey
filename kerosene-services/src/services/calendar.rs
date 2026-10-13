@@ -1,4 +1,3 @@
-use common::v1::types::calendar::{Calendar, CalendarEvent};
 
 use crate::prelude::*;
 

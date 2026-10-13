@@ -69,7 +69,7 @@ impl ScriptSyncer {
     }
 
     /// Check if client is actively subscribed to a script.
-    pub fn is_subscribed(&self, channel_id: &ChannelId, script_id: &RedexId) -> bool {
+    pub fn is_subscribed(&self, channel_id: &ChannelId, _script_id: &RedexId) -> bool {
         self.current_rx
             .as_ref()
             .map(|(current_channel, _)| current_channel == channel_id)

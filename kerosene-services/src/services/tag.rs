@@ -53,7 +53,7 @@ impl ServiceTags {
         channel_id: ChannelId,
         auth: &mut A,
         create: TagCreate,
-        nonce: Option<String>,
+        _nonce: Option<String>,
     ) -> Result<Tag> {
         create.validate()?;
         let mut data = self.state.begin().await?;

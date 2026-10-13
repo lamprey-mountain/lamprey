@@ -108,7 +108,7 @@ impl ServiceVoice {
             // TODO: split out this code
             let globals = self.state.clone();
             tokio::spawn(async move {
-                let srv = globals.services();
+                let _srv = globals.services();
                 // TODO(?): move this logic to messages service
                 let mut txn = globals.begin().await?;
                 let message_id = txn
@@ -193,7 +193,7 @@ impl ServiceVoice {
                         // PERF: don't read message from db, store metadata in memory
                         let message = txn.message_get(channel_id, message_id).await?;
 
-                        let MessageType::Call(mut message_call) =
+                        let MessageType::Call(message_call) =
                             message.latest_version.message_type
                         else {
                             return Ok(());

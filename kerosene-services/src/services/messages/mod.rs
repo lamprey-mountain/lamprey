@@ -675,7 +675,7 @@ impl ServiceMessages {
         query: RepliesQuery,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<RepliesResponse> {
-        let ancestors = match (query.context, root_message_id) {
+        let _ancestors = match (query.context, root_message_id) {
             (Some(context), Some(start_id)) if context > 0 && pagination.from.is_none() => {
                 self.message_reply_context(channel_id, Some(start_id), user_id, context)
                     .await?

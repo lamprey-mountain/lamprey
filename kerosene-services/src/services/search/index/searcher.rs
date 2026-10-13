@@ -5,16 +5,12 @@ use tantivy::{
     query::{Query, QueryParser},
 };
 
-use common::v1::types::{
-    RoomMember,
-    search::{
+use common::v1::types::search::{
         AuditLogSearchOrderField, AuditLogSearchRequest, ChannelSearchOrderField,
         ChannelSearchRequest, Doctype, EverythingSearchRequest, MediaSearchOrderField,
-        MediaSearchRequest, MessageSearchOrderField, MessageSearchRequest,
-        RoomMemberSearchOrderField, RoomMemberSearchRequest, RoomSearchOrderField,
+        MediaSearchRequest, MessageSearchOrderField, MessageSearchRequest, RoomMemberSearchRequest, RoomSearchOrderField,
         RoomSearchRequest, UserSearchOrderField, UserSearchRequest,
-    },
-};
+    };
 
 use crate::prelude::*;
 use crate::services::search::{

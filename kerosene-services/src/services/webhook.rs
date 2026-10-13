@@ -54,7 +54,7 @@ impl ServiceWebhooks {
         channel_id: ChannelId,
         auth: &mut A,
         json: WebhookCreate,
-        nonce: Option<String>,
+        _nonce: Option<String>,
     ) -> Result<Webhook> {
         json.validate()?;
         let mut data = self.state.begin().await?;

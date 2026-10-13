@@ -128,7 +128,7 @@ impl<'a> RoomPermissions<'a> {
         channel_locked: bool,
         member: Option<&RoomMember>,
         timed_out: bool,
-        quarantined: bool,
+        _quarantined: bool,
     ) -> Permissions2<CheckVisibility> {
         let room_id = self.room.room.id;
         let context = match channel {
@@ -291,7 +291,7 @@ impl<'a> RoomPermissions<'a> {
 
     fn apply_channel_locked(
         &self,
-        bits: &PermissionBits,
+        _bits: &PermissionBits,
         channel_locked: &mut bool,
         timed_out: &mut bool,
         cc: &CachedChannel,

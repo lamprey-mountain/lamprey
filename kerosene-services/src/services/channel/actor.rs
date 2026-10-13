@@ -192,7 +192,7 @@ impl ChannelHandle {
     /// wait until the channel has successfully loaded
     ///
     /// `with_members` will wait until channel members are loaded
-    pub async fn ready(&self, with_members: bool) -> Result<Arc<LoadedChannel>> {
+    pub async fn ready(&self, _with_members: bool) -> Result<Arc<LoadedChannel>> {
         todo!()
     }
 

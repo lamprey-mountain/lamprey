@@ -370,7 +370,7 @@ impl ServiceEmbed {
         txn.commit().await?;
 
         if message.latest_version.version_id == mref.version_id {
-            let uid = user_id.expect("embed queue always has user_id");
+            let _uid = user_id.expect("embed queue always has user_id");
             state
                 .messaging()
                 .broadcast_channel(mref.thread_id, MessageSync::MessageUpdate { message })

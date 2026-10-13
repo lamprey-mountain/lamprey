@@ -399,7 +399,7 @@ impl RoomSnapshot {
     pub fn channel_visibilities(
         self: Arc<Self>,
         user_id: UserId,
-        state: Globals,
+        _state: Globals,
     ) -> Vec<ChannelVisibility> {
         let Some(loaded) = self.get_data() else {
             // TODO(?): error log

@@ -109,11 +109,11 @@ pub struct Draft<'a> {
 }
 
 impl Draft<'_> {
-    pub fn from_create(c: ChannelCreate) -> Self {
+    pub fn from_create(_c: ChannelCreate) -> Self {
         todo!()
     }
 
-    pub fn from_update(c: Channel, update: ChannelPatch) -> Self {
+    pub fn from_update(_c: Channel, _update: ChannelPatch) -> Self {
         // patch.apply(chan_old);
         // archived_at needs special handling
         todo!()
@@ -182,7 +182,7 @@ impl ServiceChannels {
     }
 
     async fn create2_inner(&self, create: Create) -> Result<Arc<Channel>> {
-        let srv = self.globals.services();
+        let _srv = self.globals.services();
 
         // 1. validate/authorize
         create.payload.validate()?;

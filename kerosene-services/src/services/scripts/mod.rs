@@ -200,8 +200,8 @@ impl ServiceScripts {
 
         let bytes = match &redex.latest_version.location {
             // TODO: implement Local, Remote
-            RedexLocation::Local { path } => return Err(Error::Unimplemented),
-            RedexLocation::Remote { media, url } => return Err(Error::Unimplemented),
+            RedexLocation::Local { path: _ } => return Err(Error::Unimplemented),
+            RedexLocation::Remote { media: _, url: _ } => return Err(Error::Unimplemented),
             RedexLocation::Hosted { media } => {
                 let item = srv.media.get(media.id).await?;
                 let bytes = item.download_bytes().await?;
@@ -254,7 +254,7 @@ impl ServiceScripts {
     /// - does basic validation
     /// - extracts script inputs and metadata
     /// - optionally process a specific version of a script
-    async fn process(&self, redex: Redex, ver: Option<RedexVersion>) -> Result<ScriptExtracted> {
+    async fn process(&self, redex: Redex, _ver: Option<RedexVersion>) -> Result<ScriptExtracted> {
         let handle = self.spawn_inner(redex, None, EvalInput::Extraction).await?;
         let extracted = handle.done().await?;
         Ok(extracted)
@@ -263,9 +263,9 @@ impl ServiceScripts {
     /// spawn a script
     pub async fn spawn(
         &self,
-        channel_id: ChannelId,
+        _channel_id: ChannelId,
         redex_id: RedexId,
-        redex_version_id: RedexVerId,
+        _redex_version_id: RedexVerId,
         input: EvalInput,
     ) -> Result<AnyExecutionHandle> {
         // load redex

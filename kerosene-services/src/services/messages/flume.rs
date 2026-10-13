@@ -214,7 +214,7 @@ impl ServiceMessages {
             Ok(media_id)
         };
 
-        let delete = delta.delete.clone();
+        let _delete = delta.delete.clone();
         let thin_delta: FlumeDeltaThin = flume_ref.content.apply(delta, resolve_media)?;
 
         // 3. resolve media for delta_canonical

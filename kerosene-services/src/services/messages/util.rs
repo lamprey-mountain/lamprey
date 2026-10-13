@@ -1,7 +1,7 @@
 use crate::{Error, Result};
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v2::types::media::{Media, MediaReference};
-use common::v2::types::{MediaId, UserId};
+use common::v2::types::media::MediaReference;
+use common::v2::types::MediaId;
 use std::collections::HashSet;
 
 #[derive(Default)]

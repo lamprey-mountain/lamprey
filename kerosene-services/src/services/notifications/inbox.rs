@@ -108,7 +108,7 @@ impl ServiceNotifications {
         let mut reply_ids: HashMap<ChannelId, HashSet<MessageId>> = HashMap::new();
         while let Some(res) = message_futs.next().await {
             if let Ok((channel_id, msgs)) = res {
-                let reply_ids_for_channel = reply_ids.entry(channel_id).or_default();
+                let _reply_ids_for_channel = reply_ids.entry(channel_id).or_default();
                 for msg in &msgs {
                     user_ids.insert(*msg.author_id);
                     user_ids_by_channel
@@ -180,7 +180,7 @@ impl ServiceNotifications {
         let users = srv.users.get_many(&user_ids);
 
         let room_members = async {
-            let mut room_member_futs = FuturesUnordered::new();
+            let room_member_futs = FuturesUnordered::new();
             for (room_id, user_ids) in &mut user_ids_by_room {
                 // also fetch room member for the requesting user
                 user_ids.insert(user_id);

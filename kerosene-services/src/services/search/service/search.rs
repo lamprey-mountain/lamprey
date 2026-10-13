@@ -230,7 +230,7 @@ impl ServiceSearch {
         req: ChannelSearchRequest,
     ) -> Result<ChannelSearch> {
         let srv = self.state.services();
-        let mut data = self.state.begin_read().await?;
+        let _data = self.state.begin_read().await?;
         let index = self.get_index().await?;
         let searcher = index.searcher().await?;
         let cs = ContentSearcher::new(searcher);

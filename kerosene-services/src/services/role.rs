@@ -57,7 +57,7 @@ impl ServiceRoles {
         room_id: RoomId,
         auth: &mut A,
         json: RoleCreate,
-        nonce: Option<String>,
+        _nonce: Option<String>,
     ) -> Result<Role> {
         json.validate()?;
         let mut data = self.state.begin().await?;

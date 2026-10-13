@@ -87,7 +87,7 @@ impl ServiceUsers {
 
         if !missing.is_empty() {
             let mut txn = self.globals.begin_read().await?;
-            let mut users = txn.user_get_many(&missing).await?;
+            let users = txn.user_get_many(&missing).await?;
             drop(txn);
             for mut user in users {
                 user.presence = srv.presence.get(user.id);

@@ -1,12 +1,11 @@
 use common::v1::types::MessageSync;
-use common::v1::types::ack::{AckBulk, AckBulkItem, AckCreate, AckState, AckType};
+use common::v1::types::ack::{AckBulk, AckBulkItem, AckCreate, AckType};
 use common::v1::types::util::Time;
 use common::v2::types::{ChannelId, MessageId, MessageVerId, UserId};
 use dashmap::DashMap;
 use moka::future::Cache;
 
 use crate::prelude::*;
-use crate::services::notifications::ServiceNotifications;
 
 /// a user's full read state
 #[derive(Debug, Default)]
@@ -84,7 +83,7 @@ impl ServiceAck {
     }
 
     /// update a user's ack state en masse
-    pub async fn bulk(&self, user_id: UserId, acks: &AckBulk) -> Result<()> {
+    pub async fn bulk(&self, _user_id: UserId, _acks: &AckBulk) -> Result<()> {
         // let mut channel_ids = HashSet::new();
         // let mut unknown_auth = false;
 
@@ -138,7 +137,7 @@ impl ServiceAck {
     /// update ack caches via a sync event
     pub async fn handle(&self, sync: &MessageSync) -> Result<()> {
         match sync {
-            MessageSync::MessageCreate { message } => {
+            MessageSync::MessageCreate { message: _ } => {
                 // if is_in_dm {
                 //     if matches!(message type, MessageType::MemberRemove(_)); skip next for loop
                 //
@@ -159,7 +158,7 @@ impl ServiceAck {
 
                 // TODO: bump channel read metadata (last_message_id)
             }
-            MessageSync::MessageUpdate { message } => {
+            MessageSync::MessageUpdate { message: _ } => {
                 // handle pins updates
             }
             MessageSync::ChannelCreate { channel } => {

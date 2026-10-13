@@ -13,7 +13,7 @@ use common::{
 use futures::{FutureExt, TryFutureExt, try_join};
 use futures_util::future::try_join_all;
 use kerosene_core::types::permission::requirements::Requirements;
-use lamprey_backend_data_postgres::{DbMessageAttachment, MediaLinkType as DbMediaLinkType};
+use lamprey_backend_data_postgres::DbMessageAttachment;
 use lamprey_markdown::{Parser, query::QueryableExt};
 use tracing::error;
 use url::Url;
@@ -207,7 +207,7 @@ fn calculate_requirements_create(create: &Create, channel: &Channel) -> Requirem
     re
 }
 
-fn calculate_requirements_edit(edit: &Edit, channel: &Channel, message: &Message) -> Requirements {
+fn calculate_requirements_edit(edit: &Edit, channel: &Channel, _message: &Message) -> Requirements {
     let mut re = Requirements::new_channel(edit.channel_id);
 
     if channel.is_thread() {
@@ -540,7 +540,7 @@ impl ServiceMessages {
                 }
 
                 let media_fetched = try_join_all(futs).await?;
-                let mut media_map: HashMap<_, _> =
+                let media_map: HashMap<_, _> =
                     media_refs.into_iter().zip(media_fetched.clone()).collect();
 
                 let parsed = components.clone().parse(None, &|m| {
@@ -770,7 +770,7 @@ impl ServiceMessages {
         Ok(message)
     }
 
-    pub async fn edit2(&self, edit: Edit) -> Result<Message> {
+    pub async fn edit2(&self, _edit: Edit) -> Result<Message> {
         todo!()
     }
 

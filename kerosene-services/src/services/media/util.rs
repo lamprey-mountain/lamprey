@@ -141,7 +141,7 @@ impl MediaItem {
         let state = match media.status {
             MediaStatus::Uploaded | MediaStatus::Consumed => MediaItemState::Ready,
             // TODO: better error
-            status => return Err(Error::BadStatic("wrong media status")),
+            _status => return Err(Error::BadStatic("wrong media status")),
         };
 
         let (_tm, rm) = watch::channel(Arc::new(media));

@@ -301,12 +301,12 @@ impl Compiled {
         &self,
         media: &Media,
         target: AutomodTarget,
-        location: AutomodMediaLocation,
+        _location: AutomodMediaLocation,
         relevant_rule_ids: &[AutomodRuleId],
     ) -> AutomodScan {
         let mut scan = AutomodScan::default();
 
-        for (idx, rule) in self.rules.iter().enumerate() {
+        for (_idx, rule) in self.rules.iter().enumerate() {
             if rule.target != target || !relevant_rule_ids.contains(&rule.id) {
                 continue;
             }

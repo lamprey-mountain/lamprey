@@ -10,7 +10,6 @@ use crate::services::member_lists::{
     visibility::ListVisibility,
 };
 use crate::services::rooms::actor::MemberListSubscribeMsg;
-use crate::services::rooms::{RoomActor, RoomHandle};
 
 pub mod actor;
 pub mod syncer;

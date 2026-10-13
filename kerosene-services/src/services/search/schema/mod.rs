@@ -14,4 +14,3 @@ mod doctype;
 pub mod unified;
 
 pub use doctype::Doctype;
-pub use unified::UnifiedSchema;

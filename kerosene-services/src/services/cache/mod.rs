@@ -6,7 +6,7 @@ use std::time::Duration;
 use crate::{
     globals::messaging::Broadcast,
     prelude::*,
-    services::rooms::{LoadedRoom, actor::SyncMessage},
+    services::rooms::actor::SyncMessage,
 };
 
 use common::v1::types::{
@@ -468,7 +468,7 @@ impl ServiceCache {
             MessageSync::EmojiDelete { emoji_id, .. } => {
                 srv.emoji.cache.invalidate(emoji_id).await;
             }
-            MessageSync::PresenceUpdate { user_id, presence } => {
+            MessageSync::PresenceUpdate { user_id, presence: _ } => {
                 // Find all rooms this user is in and notify their actors
                 let rooms_to_notify = if let Some(rooms_set) = srv.rooms.user_rooms.get(user_id) {
                     rooms_set.iter().map(|r| *r).collect::<Vec<_>>()

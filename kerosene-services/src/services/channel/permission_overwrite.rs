@@ -6,7 +6,7 @@ use common::v1::types::{AuditLogEntryType, MessageSync};
 use common::v1::types::{
     ChannelId, Permission, PermissionOverwriteSet, PermissionOverwriteType, util::Changes,
 };
-use common::v2::types::{PermissionOverwriteId, UserId};
+use common::v2::types::PermissionOverwriteId;
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
 
 impl ServiceChannels {

@@ -2,9 +2,9 @@ use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
 use common::v1::types::presence::Status;
-use common::v1::types::util::{Changes, Diff, Time};
+use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
-    AuditLogEntryType, Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message,
+    Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message,
     MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageChannelTagged, MessageId,
     MessageSync, MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomFeature,
     RoomId, ThreadMemberCreate, UserId,
@@ -326,7 +326,7 @@ impl ServiceChannels {
     ) -> Result<Channel> {
         json.validate()?;
         // TODO(al2): use this when creating a channel
-        let channel_id = ChannelId::new();
+        let _channel_id = ChannelId::new();
 
         let srv = self.globals.services();
         let mut data = self.globals.begin().await?;
