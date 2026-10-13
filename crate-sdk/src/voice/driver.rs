@@ -12,13 +12,13 @@ use common::{
 };
 use str0m::{Candidate, Rtc};
 use tokio::{sync::mpsc, time};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::{
     syncer::SyncerHandle,
     voice::{
         VoiceError,
-        client::{LocalVoiceState, Shared},
+        client::{ConnectionState, LocalVoiceState, Shared},
         track::Inbound,
     },
 };
@@ -148,11 +148,22 @@ impl Driver {
             } if channel_id == &self.channel_id => match payload {
                 SignallingEvent::Connected { .. } => {
                     info!("Connected to SFU");
-                    // TODO: update connection state
+                    self.shared.conn_state.send_modify(|state| {
+                        if matches!(
+                            *state,
+                            ConnectionState::Disconnected
+                                | ConnectionState::Pending
+                                | ConnectionState::Failed
+                        ) {
+                            *state = ConnectionState::Checking;
+                        }
+                    });
                 }
                 SignallingEvent::Disconnected => {
                     info!("Disconnected from SFU");
-                    // TODO: update connection state
+                    self.shared
+                        .conn_state
+                        .send_replace(ConnectionState::Disconnected);
                 }
                 SignallingEvent::Offer { sdp, .. } => {
                     let sdp = str0m::change::SdpOffer::from_sdp_string(&sdp.0)?;
@@ -198,7 +209,7 @@ impl Driver {
                         self.shared.tracks.inbound.remove(&track_id);
                     }
                 }
-                SignallingEvent::Subscribe(subs) => {
+                SignallingEvent::Subscribe(_subs) => {
                     // TODO: handle subscribe
                     // subs.add;
                     // subs.remove;
@@ -315,6 +326,17 @@ impl Driver {
     async fn handle_str0m_event(&mut self, event: str0m::Event) -> Result<(), VoiceError> {
         match event {
             str0m::Event::Connected => info!("rtc connected!"),
+            str0m::Event::IceConnectionStateChange(state) => {
+                debug!("ICE state changed to: {:?}", state);
+                let conn_state = match state {
+                    str0m::IceConnectionState::New => return Ok(()),
+                    str0m::IceConnectionState::Checking => ConnectionState::Checking,
+                    str0m::IceConnectionState::Connected => ConnectionState::Connected,
+                    str0m::IceConnectionState::Completed => ConnectionState::Ready,
+                    str0m::IceConnectionState::Disconnected => ConnectionState::Disconnected,
+                };
+                self.shared.conn_state.send_replace(conn_state);
+            }
 
             // media
             // str0m::Event::MediaAdded(_) => todo!(),

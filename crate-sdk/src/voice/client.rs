@@ -40,6 +40,8 @@ pub(crate) struct Shared {
     pub(crate) conn_state: watch::Sender<ConnectionState>,
 }
 
+// NOTE: this could be done with a struct?
+// desired: VoiceStateUpdate, confirmed: Option<VoiceState>
 pub(crate) enum LocalVoiceState {
     Connecting(VoiceStateUpdate),
     Pending(VoiceState, VoiceStateUpdate),
