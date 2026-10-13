@@ -81,6 +81,7 @@ pub enum ConnectionState {
     Failed,
 }
 
+// TODO: add a way to get some events from the client? receiving new inbound tracks, etc...
 impl Voice {
     /// get the id we're connected to
     pub fn channel_id(&self) -> ChannelId {
@@ -106,22 +107,6 @@ impl Voice {
     pub fn tracks(&self) -> &Tracks {
         &self.state.tracks
     }
-
-    // /// get a stream of events
-    // pub fn events(&self) -> BoxStream<'static, VoiceEvent> {
-    //     let rx = self.state.rx.subscribe();
-    //     let rx = tokio_stream::wrappers::BroadcastStream::new(rx);
-    //     rx.filter_map(|evt| async move {
-    //         match evt {
-    //             Ok(RtcEvent::Signalling(_cmd)) => {
-    //                 // FIXME: Map RtcEvent to VoiceEvent
-    //                 None
-    //             }
-    //             Err(_) => None,
-    //         }
-    //     })
-    //     .boxed()
-    // }
 
     // /// get a stream of incoming tracks
     // pub fn inbound(&self) -> BoxStream<'static, Inbound> {
