@@ -192,6 +192,16 @@ impl Cache {
         }
     }
 
+    /// get the id of the user the client is authenticating as
+    pub fn current_user_id(&self) -> Option<UserId> {
+        self.inner.current.load().user_id
+    }
+
+    /// get the id of the session the client is authenticating as
+    pub fn current_session_id(&self) -> Option<SessionId> {
+        self.inner.current.load().session_id
+    }
+
     /// iterate over all cached rooms
     pub fn rooms(&self) -> impl Iterator<Item = RoomId> {
         self.inner.rooms.iter().map(|e| *e.key())
