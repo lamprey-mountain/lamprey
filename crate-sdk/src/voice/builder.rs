@@ -1,28 +1,26 @@
-use std::{
-    net::{SocketAddr, ToSocketAddrs},
-    sync::Arc,
-    time::Instant,
-};
+use std::{net::SocketAddr, sync::Arc, time::Instant};
 
-use common::v2::types::ChannelId;
+use common::{
+    v1::types::{MessageClient, voice::VoiceStateUpdate},
+    v2::types::ChannelId,
+};
 use futures::future::BoxFuture;
-use str0m::{Candidate, Rtc};
-use stunclient::StunClient;
+use str0m::Rtc;
 use tokio::{
     net::UdpSocket,
-    sync::{broadcast, mpsc},
+    sync::{mpsc, watch},
 };
-use tracing::debug;
 
 use crate::{
     Client,
     voice::{
-        VoiceError,
-        client::{Shared, Voice},
+        ConnectionState, VoiceError,
+        client::{LocalVoiceState, Shared, Voice},
         driver::{Driver, RtcCommand},
     },
 };
 
+/// a builder to connect to a voice channel
 pub struct VoiceBuilder<'a> {
     client: &'a Client,
     channel_id: ChannelId,
@@ -41,18 +39,21 @@ impl<'a> VoiceBuilder<'a> {
     }
 
     /// change which channel to connect to
+    #[inline]
     pub fn channel(mut self, channel_id: ChannelId) -> Self {
         self.channel_id = channel_id;
         self
     }
 
     /// set whether we're muted
+    #[inline]
     pub fn mute(mut self, mute: bool) -> Self {
         self.self_mute = mute;
         self
     }
 
     /// set whether we're deafened
+    #[inline]
     pub fn deaf(mut self, deaf: bool) -> Self {
         self.self_deaf = deaf;
         self
@@ -61,32 +62,40 @@ impl<'a> VoiceBuilder<'a> {
     async fn connect(self) -> Result<Voice, VoiceError> {
         let channel_id = self.channel_id;
 
-        // find public addr via stun
-        // TODO: don't panic
-        // TODO: configurable stun addr
-        let local_addr: SocketAddr = "0.0.0.0:0".parse().unwrap();
-        let sock = UdpSocket::bind(local_addr).await?;
-        let stun_addr = "stun.l.google.com:19302"
-            .to_socket_addrs()?
-            .filter(|x| x.is_ipv4()) // TODO: support ipv6
-            .next()
-            .unwrap();
-        let c = StunClient::new(stun_addr);
-        let addr = c.query_external_address_async(&sock).await.unwrap();
-        debug!("listen on {}", sock.local_addr()?);
-        debug!("public addr {}", addr);
-
-        let candidate = Candidate::host(addr, "udp").unwrap();
-        let mut rtc = Rtc::builder().build(Instant::now());
-        rtc.add_local_candidate(candidate);
-
         let (tx, rx) = mpsc::channel::<RtcCommand>(64);
-        // let (evt_tx, _) = broadcast::channel::<RtcEvent>(64);
-        let worker = Driver::new(rtc, rx, self.client.syncer(), sock, channel_id);
+
+        let local_addr: SocketAddr = "0.0.0.0:0".parse().expect("always valid");
+        let sock = UdpSocket::bind(local_addr).await?;
+
+        let vs = VoiceStateUpdate {
+            channel_id,
+            self_mute: self.self_mute,
+            self_deaf: self.self_deaf,
+            self_video: false,
+            screenshare: None,
+        };
+        let state = Arc::new(Shared {
+            tx,
+            sock,
+            tracks: Default::default(),
+            voice_state: watch::channel(LocalVoiceState::Connecting(vs.clone())).0,
+            conn_state: watch::channel(ConnectionState::Pending).0,
+        });
+
+        let rtc = Rtc::builder().build(Instant::now());
+        let worker = Driver::new(rtc, rx, self.client.syncer(), state.clone(), channel_id);
         tokio::spawn(worker.spawn());
 
-        // let state = Arc::new(Shared { tx, rx: evt_tx });
-        let state = Arc::new(Shared { tx });
+        // find public ipv4 addr via stun
+        tokio::spawn(state.clone().stun_v4());
+
+        // TODO: ipv6 support
+
+        self.client.syncer().send(MessageClient::VoiceConnect {
+            voice_state: vs,
+            nonce: None,
+        });
+
         Ok(Voice { state })
     }
 }

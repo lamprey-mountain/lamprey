@@ -2,8 +2,8 @@ use std::{hash::Hash, sync::Arc};
 
 use common::{
     v1::types::{
-        Channel, MessagePayload, MessageSync, PermissionBits, PermissionOverwrite, Relationship,
-        Role, Room, RoomMember, ThreadMember, User,
+        Channel, MessagePayload, MessageSync, PermissionBits, PermissionOverwrite, Role, Room,
+        RoomMember, ThreadMember, User,
     },
     v2::types::{ChannelId, RoleId, RoomId, UserId},
 };
@@ -210,19 +210,13 @@ impl Cache {
 impl Cache {
     pub fn update(&mut self, payload: &MessagePayload) {
         match payload {
-            MessagePayload::Sync { data, seq, nonce } => match &**data {
-                MessageSync::MessageCreate { message } => {
+            MessagePayload::Sync { data, .. } => match &**data {
+                MessageSync::MessageCreate { .. } => {
                     // TODO
                 }
                 _ => {}
             },
-            MessagePayload::Ready {
-                user,
-                application,
-                session,
-                conn,
-                seq,
-            } => {
+            MessagePayload::Ready { user, .. } => {
                 if let Some(user) = user {
                     self.inner.users.insert(
                         user.id,

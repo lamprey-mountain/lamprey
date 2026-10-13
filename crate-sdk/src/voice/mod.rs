@@ -6,15 +6,20 @@ mod builder;
 mod client;
 mod driver;
 mod error;
-mod player;
 mod track;
 
 // TODO: impl this
 // mod datachannel;
+// mod player;
+
+// TODO: store all voice states for all channels in client
+// map of channel id -> voice state
+// map of user id -> voice state
 
 pub use builder::VoiceBuilder;
 pub use client::{ConnectionState, Tracks, Voice};
 pub use error::VoiceError;
+pub use track::{Inbound, InboundStream, Outbound};
 
 pub enum VoiceEvent {
     /// voice connection state changed

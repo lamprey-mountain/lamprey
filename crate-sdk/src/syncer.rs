@@ -6,7 +6,7 @@ use std::{
 use crate::prelude::*;
 use common::v1::types::{
     MessageClient, MessageEnvelope, MessageHello, MessagePayload, MessageSync, SessionToken,
-    SyncResume, presence::Presence,
+    SyncResume,
 };
 use futures_util::{SinkExt, StreamExt, stream::BoxStream};
 use reqwest::Url;
@@ -235,7 +235,7 @@ impl Syncer {
 
     async fn handle_websocket_event(
         &mut self,
-        event: Option<core::result::Result<WsMessage, WsError>>,
+        event: Option<Result<WsMessage, WsError>>,
     ) -> Propagated {
         match event {
             Some(Ok(msg)) => {
@@ -422,5 +422,20 @@ impl SyncerHandle {
     /// attempt to reconnect the syncer
     pub fn connect(&self) {
         let _ = self.tx.try_send(SyncerCommand::Connect);
+    }
+
+    /// poll the next event
+    pub async fn poll(&mut self) -> Result<Arc<SyncerEvent>, broadcast::error::RecvError> {
+        self.rx.recv().await
+    }
+
+    /// poll the next sync message
+    pub async fn poll_sync(&mut self) -> Result<Arc<MessageSync>, broadcast::error::RecvError> {
+        loop {
+            let event = self.rx.recv().await?;
+            if let SyncerEvent::Sync(s) = &*event {
+                return Ok(Arc::clone(s));
+            }
+        }
     }
 }

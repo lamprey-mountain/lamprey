@@ -6,19 +6,30 @@ use futures::Stream;
 
 use crate::voice::VoiceError;
 
+#[derive(Debug, Clone)]
+pub enum Track {
+    Inbound(Inbound),
+    Outbound(Outbound),
+}
+
 /// a track that can be subscribed to
+#[derive(Debug, Clone)]
 pub struct Inbound {
-    // id: TrackId,
-    // user_id: UserId,
-    // kind: MediaKind,
-    // ...
+    pub(super) id: TrackId,
+    pub(super) user_id: UserId,
+    pub(super) kind: MediaKind,
+    pub(super) key: TrackKey,
+    // etc...
 }
 
 /// a track that you're publishing
+#[derive(Debug, Clone)]
 pub struct Outbound {
-    // id: TrackId,
-    // kind: MediaKind,
-    // ...
+    pub(super) mid: Mid,
+    pub(super) id: Option<TrackId>,
+    pub(super) kind: MediaKind,
+    pub(super) key: TrackKey,
+    // etc...
 }
 
 /// a stream of media from a track
@@ -29,27 +40,60 @@ pub struct InboundStream {
     // ...
 }
 
+impl Track {
+    /// get the kind of media this track contains
+    #[inline]
+    pub fn kind(&self) -> MediaKind {
+        match self {
+            Track::Inbound(t) => t.kind(),
+            Track::Outbound(t) => t.kind(),
+        }
+    }
+
+    /// get which stream this track is associated with
+    #[inline]
+    pub fn key(&self) -> &TrackKey {
+        match self {
+            Track::Inbound(t) => t.key(),
+            Track::Outbound(t) => t.key(),
+        }
+    }
+
+    /// get the assigned track id
+    #[inline]
+    pub fn track_id(&self) -> Option<TrackId> {
+        match self {
+            Track::Inbound(t) => Some(t.track_id()),
+            Track::Outbound(t) => t.track_id(),
+        }
+    }
+}
+
 // NOTE: could i deduplicate Inbound/Outbound structs?
 // maybe i could have Track and TrackWriter?
 impl Inbound {
     /// get the kind of media this track contains
+    #[inline]
     pub fn kind(&self) -> MediaKind {
-        todo!()
+        self.kind
     }
 
     /// get which stream this track is associated with
-    pub fn key(&self) -> TrackKey {
-        todo!()
+    #[inline]
+    pub fn key(&self) -> &TrackKey {
+        &self.key
     }
 
     /// get the assigned track id
+    #[inline]
     pub fn track_id(&self) -> TrackId {
-        todo!()
+        self.id
     }
 
     /// get which user is publishing this track
+    #[inline]
     pub fn user_id(&self) -> UserId {
-        todo!()
+        self.user_id
     }
 
     /// stream media from this track
@@ -60,25 +104,29 @@ impl Inbound {
 
 impl Outbound {
     /// get the kind of media this track contains
+    #[inline]
     pub fn kind(&self) -> MediaKind {
-        todo!()
+        self.kind
     }
 
     /// get which stream this track is associated with
-    pub fn key(&self) -> TrackKey {
-        todo!()
+    #[inline]
+    pub fn key(&self) -> &TrackKey {
+        &self.key
     }
 
     /// get the local mid of this track
+    #[inline]
     pub fn mid(&self) -> Mid {
-        todo!()
+        self.mid
     }
 
     /// get the assigned track id
     ///
     /// only exists after signalling
+    #[inline]
     pub fn track_id(&self) -> Option<TrackId> {
-        todo!()
+        self.id
     }
 
     // /// create a new audio track
@@ -103,10 +151,20 @@ impl InboundStream {
         todo!()
     }
 
-    // // for video, request a pli keyframe?
-    // pub fn request_keyframe(&self);
-    //
-    // select rid/simulcast layer
+    /// request a pli keyframe from the sender
+    ///
+    /// only valid for video
+    pub fn request_keyframe(&self) {
+        todo!()
+    }
+
+    /// select which simulcast layer to receive
+    ///
+    /// only valid for video
+    pub fn request_layer(&self, _rid: str0m::media::Rid) {
+        // TODO: how does this work? do i use str0m's rid type or a custom lamprey rid type? probably just str0m's Rid.
+        todo!()
+    }
 }
 
 impl Stream for InboundStream {

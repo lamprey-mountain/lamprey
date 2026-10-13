@@ -19,14 +19,15 @@ pub enum VoiceError {
     #[error("rtc error: {0}")]
     Rtc(#[from] str0m::error::RtcError),
 
-    #[error("internal error")]
-    Internal,
+    #[error("ice error: {0}")]
+    Ice(#[from] str0m::error::IceError),
 
-    #[error("no matching track")]
-    NoMatchingTrack,
+    #[error("stun error: {0}")]
+    Stun(#[from] stunclient::Error),
 
     #[error("rtc peer is dead")]
     Dead,
-    // #[error("other unknown error")]
-    // Other,
+
+    #[error("connection closed")]
+    ConnectionClosed,
 }
