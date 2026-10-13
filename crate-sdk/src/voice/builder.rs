@@ -82,13 +82,7 @@ impl<'a> VoiceBuilder<'a> {
 
         let (tx, rx) = mpsc::channel::<RtcCommand>(64);
         // let (evt_tx, _) = broadcast::channel::<RtcEvent>(64);
-        let worker = Driver::new(
-            rtc,
-            rx,
-            self.client.syncer(),
-            sock,
-            channel_id,
-        );
+        let worker = Driver::new(rtc, rx, self.client.syncer(), sock, channel_id);
         tokio::spawn(worker.spawn());
 
         // let state = Arc::new(Shared { tx, rx: evt_tx });

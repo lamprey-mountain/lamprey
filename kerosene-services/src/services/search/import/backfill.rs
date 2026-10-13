@@ -6,11 +6,11 @@ use common::v1::types::{
     UserId,
 };
 use dashmap::DashSet;
-use lamprey_backend_core::types::data::{SearchReindexQueue, SearchReindexQueueTarget};
 use kerosene_search::transform::{
     SearchAuditLogEntry, SearchChannel, SearchMedia, SearchMessage, SearchRoom, SearchRoomMember,
     SearchUser,
 };
+use lamprey_backend_core::types::data::{SearchReindexQueue, SearchReindexQueueTarget};
 use tantivy::Term;
 use tokio::task::JoinSet;
 use tracing::error;

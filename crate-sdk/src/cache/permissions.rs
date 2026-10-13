@@ -95,7 +95,12 @@ impl<'a> RoomPermissions<'a> {
 
         if !bits.has(Permission::Admin) {
             if let Some(channel) = channel {
-                self.calculate_channel_permissions(&mut bits, &mut timed_out, channel, member.as_deref());
+                self.calculate_channel_permissions(
+                    &mut bits,
+                    &mut timed_out,
+                    channel,
+                    member.as_deref(),
+                );
 
                 // private thread logic
                 if channel.inner.ty == ChannelType::ThreadPrivate {
