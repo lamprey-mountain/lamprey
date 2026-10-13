@@ -1,5 +1,6 @@
 //! Builtin plugins that may be used by the unfurler.
 
+use encoding_rs::UTF_8;
 use std::{cell::RefCell, ops::ControlFlow};
 
 use async_trait::async_trait;
@@ -149,12 +150,12 @@ impl PluginHttp for ForwardHtmlPlugin {
             let sink = MultiSink(RefCell::new(sinks));
             let tokenizer = Tokenizer::new(sink, TokenizerOpts::default());
             let mut queue = BufferQueue::default();
-
-            let mut tail = Vec::new();
+            let mut decoder = UTF_8.new_decoder();
 
             while let Some(chunk) = rx.blocking_recv() {
-                let s = decode_chunk(&mut tail, &chunk);
-                queue.push_back(StrTendril::from_slice(&s));
+                let mut output = String::with_capacity(chunk.len());
+                let (_result, _read, _had_errors) = decoder.decode_to_string(&chunk, &mut output, false);
+                queue.push_back(StrTendril::from_slice(&output));
                 let _ = tokenizer.feed(&mut queue);
             }
 
@@ -231,31 +232,5 @@ impl TokenSink for MultiSink {
             }
         }
         TokenSinkResult::Continue
-    }
-}
-
-/// Merges `tail` with `chunk`, returning the valid UTF-8 string and
-/// storing any incomplete trailing bytes back into `tail`.
-fn decode_chunk<'a>(tail: &mut Vec<u8>, chunk: &[u8]) -> String {
-    let bytes = if tail.is_empty() {
-        // PERF: don't clone chunk
-        chunk.to_vec()
-    } else {
-        let mut b = std::mem::take(tail);
-        b.extend_from_slice(chunk);
-        b
-    };
-
-    match std::str::from_utf8(&bytes) {
-        Ok(s) => s.to_string(),
-        Err(e) => {
-            // FIXME: handle incomplete vs invalid byte sequences
-            // currently, this code treats all errors as incomplete sequences.
-            // this can cause all data to be stored in tail, rather than be
-            // properly parsed.
-            let valid = &bytes[..e.valid_up_to()];
-            tail.extend_from_slice(&bytes[e.valid_up_to()..]);
-            std::str::from_utf8(valid).unwrap().to_string()
-        }
     }
 }
