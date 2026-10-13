@@ -57,7 +57,7 @@ pub mod metrics;
 pub mod util;
 
 fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
-    let mut router = OpenApiRouter::new()
+    let router = OpenApiRouter::new()
         .merge(admin::routes())
         .merge(application::routes())
         .merge(auth::routes())

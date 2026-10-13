@@ -44,7 +44,7 @@ async fn channel_create_room(
     room.room_type.ensure_channels_manageable()?;
 
     let json = req.channel;
-    let user = auth.ensure_user()?;
+    let _user = auth.ensure_user()?;
 
     json.validate()?;
     let channel = s
@@ -723,7 +723,7 @@ async fn channel_upgrade(
 
     // FIXME: run media_link_delete in the same transaction as the room create
     let mut txn = s.globals.begin().await?;
-    if let Some(icon) = chan.icon {
+    if let Some(_icon) = chan.icon {
         txn.media_link_delete(*req.channel_id, MediaLinkType::ChannelIcon)
             .await?;
     }

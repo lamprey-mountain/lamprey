@@ -859,7 +859,7 @@ async fn message_list_removed(
 #[handler(routes::message_nudge)]
 pub async fn message_nudge(
     State(globals): State<Globals>,
-    mut req: UniversalExtractor<routes::message_nudge::Request>,
+    req: UniversalExtractor<routes::message_nudge::Request>,
 ) -> Result<impl IntoResponse> {
     let user = req.auth.ensure_user()?;
     user.ensure_unsuspended()?;

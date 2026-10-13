@@ -47,7 +47,7 @@ pub async fn search_channels(
 /// Search public rooms
 #[handler(routes::search_rooms)]
 pub async fn search_rooms(
-    auth: Auth,
+    _auth: Auth,
     State(s): State<Arc<ServerState>>,
     req: routes::search_rooms::Request,
 ) -> Result<impl IntoResponse> {

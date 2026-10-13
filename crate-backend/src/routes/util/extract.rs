@@ -57,7 +57,7 @@ impl<T> UniversalExtractor<T> {
 }
 
 impl UniversalExtractorMedia {
-    pub fn get(&self, media_ref: &MediaReference) -> &Media {
+    pub fn get(&self, _media_ref: &MediaReference) -> &Media {
         todo!()
     }
 }

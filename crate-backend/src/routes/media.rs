@@ -141,7 +141,7 @@ async fn media_get(
     req: routes::media_get::Request,
 ) -> Result<impl IntoResponse> {
     let srv = globals.services();
-    let mut media = match req.media_id {
+    let media = match req.media_id {
         MediaIdReq::MediaId(media_id) => srv.media.get(media_id).await?.media(),
         MediaIdReq::MediaRemote(origin_id, hostname) => {
             srv.federation

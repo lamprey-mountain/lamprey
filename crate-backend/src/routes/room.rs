@@ -271,7 +271,7 @@ async fn room_edit(
         }
     }
 
-    let user_id = user.id;
+    let _user_id = user.id;
 
     let room = s
         .services()
