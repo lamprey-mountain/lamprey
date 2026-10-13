@@ -4,12 +4,10 @@ use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use common::v1::routes;
-use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::util::{Changes, Diff, Time};
+use common::v1::types::util::{Changes, Time};
 use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, SessionStatus, UserPatch,
-    UserWithRelationship,
 };
 use common::v1::types::{AuditLogEntryStatus, Permission, SERVER_ROOM_ID, Suspended};
 use http::StatusCode;
@@ -17,9 +15,8 @@ use lamprey_macros::handler;
 use tracing::warn;
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::routes::util::{Auth, Auth3, AuthRelaxed2};
-use crate::state::Globals;
-use crate::types::{DbUserCreate, MediaLinkType, RoomMemberPut, UserIdReq};
+use crate::routes::util::{Auth, AuthRelaxed2};
+use crate::types::{DbUserCreate, MediaLinkType, RoomMemberPut};
 use crate::{ServerState, routes2};
 
 use crate::error::{Error, Result};

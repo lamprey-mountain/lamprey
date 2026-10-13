@@ -11,8 +11,7 @@ use common::{
 use kerosene_core::types::documents::EditContextId;
 use kerosene_services::services::connections::ConnectionHandle;
 use kerosene_sync::transport::{
-    Compression, Transport, TransportEvent, TransportStream, WebtransportTransport,
-    WrapperTransport,
+    Transport, TransportEvent, WebtransportTransport, WrapperTransport,
 };
 use tokio::{spawn, sync::Mutex, task::JoinSet};
 use tokio_util::sync::CancellationToken;
@@ -400,7 +399,6 @@ async fn handle_stream_inner(send: SendStream, recv: RecvStream, state: WtState)
 
 mod v2 {
     use super::*;
-    use crate::prelude::*;
     use common::v2::types::sync::dispatch::channel::{
         ChannelCreate, ChannelUpdate, DispatchChannel, MessageCreate,
     };

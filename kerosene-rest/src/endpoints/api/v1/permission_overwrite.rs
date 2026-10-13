@@ -1,6 +1,5 @@
 use crate::{prelude::*, util::request::ReqAuth};
 use common::v1::{routes, types::oauth::Scope};
-use http::StatusCode;
 
 #[handler(routes::permission_set)]
 pub async fn set(

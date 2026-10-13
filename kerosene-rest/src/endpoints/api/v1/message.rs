@@ -1,6 +1,5 @@
 use common::{
     v1::types::{
-        MessageSync,
         ack::{AckBulkItem, AckType},
         oauth::Scope,
         util::Time,
@@ -8,7 +7,6 @@ use common::{
     v2::types::MessageId,
 };
 use http::StatusCode;
-use tracing::warn;
 
 use crate::prelude::*;
 

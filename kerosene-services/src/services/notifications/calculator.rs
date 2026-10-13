@@ -4,13 +4,10 @@ use crate::{
 };
 use common::{
     v1::types::{
-        Channel, ChannelId, Message, Room, RoomId, UserId,
+        Channel, Message, Room, UserId,
         notifications::{
             Notification, NotificationType,
-            preferences::{
-                Mute, NotifsChannel, NotifsGlobal, NotifsMessages, NotifsReactions, NotifsReplies,
-                NotifsRoom, NotifsThreads,
-            },
+            preferences::{NotifsMessages, NotifsReplies, NotifsThreads},
         },
         util::Time,
     },

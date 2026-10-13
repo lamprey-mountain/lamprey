@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use common::v1::types::UserListFilter::Registered;
 use common::v1::types::defaults::{ADMIN_ROOM, EVERYONE_TRUSTED, EVERYONE_UNTRUSTED, MODERATOR};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::room_template::{

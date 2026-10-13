@@ -80,7 +80,7 @@ impl IntoResponse for ExtractorRejection {
                     _ => StatusCode::BAD_REQUEST,
                 };
 
-                let code = match err {
+                let _code = match err {
                     // TODO: better error codes
                     _ => ErrorCode::InvalidData,
                 };

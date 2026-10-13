@@ -1,20 +1,14 @@
 use common::{
     util::Diff,
     v1::types::{
-        AuditLogEntryType, MessageSync, Permission, SERVER_ROOM_ID, UserPatch,
+        AuditLogEntryType, Permission, SERVER_ROOM_ID,
         UserWithRelationship,
-        ack::{AckBulkItem, AckType},
         oauth::Scope,
-        util::{Changes, Time},
+        util::Changes,
     },
-    v2::types::{MessageId, media::MediaLinkType},
+    v2::types::media::MediaLinkType,
 };
-use http::StatusCode;
-use lamprey_backend_services::{
-    compat::types::UserIdReq,
-    services::{media::MediaLinker, messages::create2::Create},
-};
-use tracing::warn;
+use lamprey_backend_services::{compat::types::UserIdReq, services::media::MediaLinker};
 
 use crate::prelude::*;
 

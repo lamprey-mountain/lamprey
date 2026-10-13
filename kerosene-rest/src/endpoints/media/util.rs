@@ -10,7 +10,7 @@ use crate::{
 };
 use common::v2::types::media::Media;
 use headers::{
-    AcceptRanges, CacheControl, ContentDisposition, ContentLength, ContentRange, ContentType, ETag,
+    AcceptRanges, CacheControl, ContentLength, ContentRange, ContentType, ETag,
     LastModified,
 };
 use http::StatusCode;

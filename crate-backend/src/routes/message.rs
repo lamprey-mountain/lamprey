@@ -868,7 +868,7 @@ pub async fn message_nudge(
     let user_id = user.id;
     let channel_id = req.body.channel_id;
 
-    use kerosene_services::services::messages::create2::{Create, CreateType};
+    use kerosene_services::services::messages::create2::CreateType;
 
     let srv = globals.services();
     let chan = srv.channels.get(channel_id, None).await?;

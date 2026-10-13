@@ -1,6 +1,5 @@
 use std::time::Duration;
 
-use axum::http::request::Parts;
 use common::{
     v1::types::{
         Session, SessionImprint, SessionStatus, SessionToken, SessionType,
@@ -21,7 +20,7 @@ pub async fn calculate(headers: &HeadersRequest, globals: &Globals) -> Result<Id
         let token = auth.token();
 
         // static admin token, used for initial setup and maintenence
-        let session = if srv.admin.verify_admin_token(token).await {
+        let identity = if srv.admin.verify_admin_token(token).await {
             let user = srv.users.get(SERVER_USER_ID, None).await.cast_internal()?;
             let session = Session {
                 id: SERVER_TOKEN_SESSION_ID,
@@ -46,11 +45,11 @@ pub async fn calculate(headers: &HeadersRequest, globals: &Globals) -> Result<Id
             };
 
             // TODO(?): puppetting another user as the server
-            return Ok(Identity::User {
+            Identity::User {
                 user,
                 session,
                 scopes: Scopes(vec![Scope::Full]),
-            });
+            }
         } else {
             // user session
             let session = srv
@@ -203,20 +202,21 @@ pub async fn calculate(headers: &HeadersRequest, globals: &Globals) -> Result<Id
             };
 
             if acting_user.id != real_user.id {
-                return Ok(Identity::Puppet {
+                Identity::Puppet {
                     puppet: acting_user,
                     puppeteer: real_user,
                     session: (*session).to_owned(),
                     scopes,
-                });
+                }
             } else {
-                return Ok(Identity::User {
+                Identity::User {
                     user: real_user,
                     session: (*session).to_owned(),
                     scopes,
-                });
+                }
             }
         };
+        return Ok(identity);
     }
 
     // FIXME: federation auth

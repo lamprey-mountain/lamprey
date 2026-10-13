@@ -1,20 +1,10 @@
-use crate::{
-    prelude::*,
-    services::notifications::{MentionedUsers, ServiceNotifications},
-};
-use common::{
-    v1::types::{
-        Channel, ChannelId, Message, Room, RoomId, UserId,
-        notifications::{
-            Notification, NotificationType,
-            preferences::{
-                Mute, NotifsChannel, NotifsGlobal, NotifsMessages, NotifsReactions, NotifsReplies,
-                NotifsRoom, NotifsThreads,
-            },
-        },
-        util::Time,
+use crate::{prelude::*, services::notifications::ServiceNotifications};
+use common::v1::types::{
+    ChannelId, RoomId, UserId,
+    notifications::preferences::{
+        Mute, NotifsChannel, NotifsGlobal, NotifsMessages, NotifsReplies, NotifsRoom, NotifsThreads,
     },
-    v2::types::NotificationId,
+    util::Time,
 };
 
 /// a set of notification preferences for a user

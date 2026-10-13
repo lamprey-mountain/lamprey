@@ -1,23 +1,13 @@
 use common::{
     v1::types::{
-        Embed, MessageSync, UserWithRelationship,
-        ack::{AckBulkItem, AckType},
+        Embed,
         oauth::Scope,
         unfurl::{UnfurlerDebugResponse, UnfurlerResponse},
-        util::Time,
     },
-    v2::types::{
-        MessageId,
-        media::{MediaCreate, MediaCreateSource},
-    },
+    v2::types::media::{MediaCreate, MediaCreateSource},
 };
-use futures::stream::{FuturesOrdered, FuturesUnordered, StreamExt};
-use http::StatusCode;
-use lamprey_backend_services::{
-    compat::types::UserIdReq,
-    services::{media::Import, messages::create2::Create},
-};
-use tracing::warn;
+use futures::stream::{FuturesUnordered, StreamExt};
+use lamprey_backend_services::services::media::Import;
 
 use crate::prelude::*;
 
@@ -39,7 +29,7 @@ pub async fn debug(
         .await
         .cast_internal()?;
 
-    let mut embeds = FuturesUnordered::new();
+    let embeds = FuturesUnordered::new();
 
     for mut g in generations {
         let srv = srv.clone();
@@ -108,14 +98,14 @@ pub async fn unfurl(
         .cast_internal()?;
 
     let srv = req.services();
-    let mut tasks = FuturesUnordered::new();
+    let tasks = FuturesUnordered::new();
 
     for url in &req.inner().body.urls {
         let srv = srv.clone();
         let user_id = user.id;
         let url = url.clone();
         tasks.push(async move {
-            let mut embeds = FuturesUnordered::new();
+            let embeds = FuturesUnordered::new();
 
             let Ok(generations) = srv.embed.unfurl(&url).await else {
                 return vec![];

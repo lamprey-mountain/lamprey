@@ -1,14 +1,10 @@
-use std::time::Duration;
 
 use crate::{
     endpoints::media::util::{MediaInfo, calculate_response_metadata},
     prelude::*,
-    util::headers::{HeadersRequest, HeadersResponse},
 };
 
 use common::util::body::Body;
-use headers::CacheControl;
-use http::StatusCode;
 use kerosene_core::types::media::MediaPaths;
 use routes::media_proxy as routes;
 
@@ -20,7 +16,7 @@ async fn get(req: Req<routes::media_get::Endpoint>) -> Result<routes::media_get:
     let globals = req.globals();
     let srv = req.services();
     let media_id = req.inner().media_id;
-    let wait = req.inner().query.wait;
+    let _wait = req.inner().query.wait;
 
     let media = srv.media.get(media_id).await.cast_internal()?.ready().await;
     let meta = calculate_response_metadata(req.headers(), &MediaInfo::Media(&media))?;
@@ -64,7 +60,7 @@ async fn get_filename(
     let srv = req.services();
     let media_id = req.inner().media_id;
     let filename = &req.inner().filename;
-    let wait = req.inner().query.wait;
+    let _wait = req.inner().query.wait;
 
     let media = srv.media.get(media_id).await.cast_internal()?.ready().await;
     if &media.filename != filename {

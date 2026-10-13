@@ -7,7 +7,7 @@ use axum::response::IntoResponse;
 use common::v1::routes;
 use common::v1::types::NotificationId;
 use common::v1::types::application::Scope;
-use common::v1::types::notifications::{Notification, NotificationPagination, NotificationType};
+use common::v1::types::notifications::{Notification, NotificationType};
 use common::v1::types::util::Time;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;

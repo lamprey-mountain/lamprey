@@ -5,7 +5,6 @@ use axum::{
     response::IntoResponse,
 };
 use common::v1::types::{EmbedCreate, MessageCreate, UserId, WebhookId};
-use kerosene_core::error::{ApiError, ErrorCode};
 use serde::Deserialize;
 use tracing::debug;
 

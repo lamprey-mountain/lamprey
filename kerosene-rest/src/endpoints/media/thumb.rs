@@ -3,9 +3,6 @@ use crate::{
     prelude::*,
 };
 use common::util::body::Body;
-use common::v1::types::MediaId;
-use common::v2::types::media::proxy::ThumbQuery;
-use http::StatusCode;
 use kerosene_core::types::media::MediaPaths;
 use routes::media_proxy as routes;
 

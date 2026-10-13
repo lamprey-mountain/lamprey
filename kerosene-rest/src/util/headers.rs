@@ -1,15 +1,11 @@
-use std::{net::IpAddr, sync::Arc};
+use std::net::IpAddr;
 
 use crate::prelude::*;
-use axum::{
-    extract::FromRequestParts,
-    response::{IntoResponseParts, ResponseParts},
-};
+use axum::response::{IntoResponseParts, ResponseParts};
 use common::v1::types::{UserId, util::Time};
 use headers::{
-    AcceptRanges, Authorization, CacheControl, ContentDisposition, ContentLength, ETag,
-    HeaderMapExt, IfMatch, IfModifiedSince, IfNoneMatch, IfRange, LastModified,
-    authorization::Bearer,
+    AcceptRanges, Authorization, CacheControl, ContentLength, ETag, HeaderMapExt, IfMatch,
+    IfModifiedSince, IfNoneMatch, IfRange, LastModified, authorization::Bearer,
 };
 use http::{HeaderMap, HeaderValue, request::Parts};
 use kerosene_core::error::ErrorCode;

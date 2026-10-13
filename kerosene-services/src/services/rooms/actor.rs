@@ -11,8 +11,8 @@ use tokio::time::Duration;
 use tracing::{Instrument, debug};
 
 use super::{
-    CachedPermissionOverwrite, CachedRole, CachedRoomMember, CachedThread, LoadedRoom,
-    RoomSnapshot, RoomUnavailable,
+    CachedPermissionOverwrite, CachedRoomMember, CachedThread, LoadedRoom, RoomSnapshot,
+    RoomUnavailable,
 };
 use crate::prelude::*;
 use crate::services::member_lists::actor::{MemberList, MemberListCommand, MemberListEvent};

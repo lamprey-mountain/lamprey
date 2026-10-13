@@ -1,9 +1,9 @@
-use std::{any::TypeId, collections::HashMap, error::Error, sync::Arc};
+use std::{ collections::HashMap, error::Error, sync::Arc};
 
 use crate::{
     prelude::*,
     util::{
-        audit_log::{ActorInfo, AuditLoggerHandle, AuditLoggerSlot, Entry},
+        audit_log::{ActorInfo, AuditLoggerHandle, AuditLoggerSlot, },
         error::{ExtractorError, ExtractorRejection},
         headers::{ContentType, HeadersRequest},
         multipart::MultipartCollector,
@@ -13,28 +13,18 @@ use crate::{
 
 use axum::{
     extract::{FromRequest, rejection::LengthLimitError},
-    response::IntoResponse,
 };
 use common::{
-    util::{body::Body, routes::Endpoint},
+    util::routes::Endpoint,
     v1::{
         routes::ExtractableRequest,
-        types::{
-            AuditLogEntryStatus, AuditLogEntryType,
-            error::{ErrorField, ErrorFieldType},
-        },
+        types::{AuditLogEntryStatus, AuditLogEntryType},
     },
-    v2::types::{
-        RoomId,
-        media::{Media, MediaReference},
-    },
+    v2::types::{RoomId, media::MediaReference},
 };
 use futures::stream;
-use http::{Method, StatusCode};
-use kerosene_core::{
-    error::ErrorCode,
-    types::auth::{Auth5, Identity},
-};
+use http::Method;
+use kerosene_core::types::auth::{Auth5, Identity};
 use lamprey_backend_services::services::{
     Services,
     media::{Import, MediaItem},
