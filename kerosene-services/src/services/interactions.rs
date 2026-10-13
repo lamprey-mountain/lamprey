@@ -4,6 +4,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::time::Duration;
 
+use common::v1::types::interactions::inner::Context;
 use common::v1::types::interactions::{
     Interaction, InteractionCreate, InteractionCreateType, InteractionErrorCode,
     InteractionResponse, InteractionResponseCreate, InteractionResponseCreateType, InteractionType,
@@ -112,11 +113,11 @@ impl ServiceInteractions {
             token: Some(Uuid::new_v4().to_string()),
             version: 1,
             ty: match create.ty {
-                InteractionCreateType::Button {
-                    channel_id,
-                    message_id,
-                    custom_id,
-                } => {
+                InteractionCreateType::Button(button) => {
+                    let channel_id = button.channel_id;
+                    let message_id = button.message_id;
+                    let custom_id = button.custom_id;
+
                     let channel = srv.channels.get(channel_id, Some(user_id)).await?;
                     let room = if let Some(room_id) = channel.room_id {
                         Some(srv.rooms.get(room_id, Some(user_id)).await?)
@@ -147,7 +148,7 @@ impl ServiceInteractions {
                         .perms()
                         .into();
 
-                    InteractionType::Button {
+                    let context = Context {
                         room,
                         channel,
                         message,
@@ -155,8 +156,12 @@ impl ServiceInteractions {
                         room_member,
                         user_permissions,
                         application_permissions,
+                    };
+
+                    InteractionType::Button(common::v1::types::interactions::inner::Button {
+                        context,
                         custom_id,
-                    }
+                    })
                 }
             },
         };
@@ -245,17 +250,17 @@ impl ServiceInteractions {
             InteractionResponseCreateType::Pong => return Err(Error::Unimplemented),
             InteractionResponseCreateType::Reply { message } => {
                 let channel_id = match &entry.interaction.ty {
-                    InteractionType::Button { channel, .. } => channel.id,
+                    InteractionType::Button(button) => button.context.channel.id,
                     InteractionType::Ping => {
                         return Err(Error::BadStatic("cannot reply to ping interaction"));
                     }
-                    InteractionType::Unfurl { channel, .. } => channel.id,
+                    InteractionType::Unfurl(unfurl) => unfurl.context.channel.id,
                 };
 
                 let original_message_id = match &entry.interaction.ty {
-                    InteractionType::Button { message, .. } => Some(message.id),
+                    InteractionType::Button(button) => Some(button.context.message.id),
                     InteractionType::Ping => unreachable!(),
-                    InteractionType::Unfurl { message, .. } => Some(message.id),
+                    InteractionType::Unfurl(unfurl) => Some(unfurl.context.message.id),
                 };
 
                 let mut reply_message = message;
@@ -264,17 +269,21 @@ impl ServiceInteractions {
                 }
 
                 let user = match &entry.interaction.ty {
-                    InteractionType::Button { user, .. } => user.clone(),
+                    InteractionType::Button(button) => button.context.user.clone(),
                     InteractionType::Ping => unreachable!(),
-                    InteractionType::Unfurl { user, .. } => user.clone(),
+                    InteractionType::Unfurl(unfurl) => unfurl.context.user.clone(),
                 };
 
                 let (user_id, source_message_id) = match &entry.interaction.ty {
                     InteractionType::Ping => {
                         unreachable!("validated that pings cant be replied to already")
                     }
-                    InteractionType::Button { user, message, .. } => (user.id, Some(message.id)),
-                    InteractionType::Unfurl { user, message, .. } => (user.id, Some(message.id)),
+                    InteractionType::Button(button) => {
+                        (button.context.user.id, Some(button.context.message.id))
+                    }
+                    InteractionType::Unfurl(unfurl) => {
+                        (unfurl.context.user.id, Some(unfurl.context.message.id))
+                    }
                 };
                 let message_interaction = MessageInteraction {
                     id,
@@ -299,23 +308,23 @@ impl ServiceInteractions {
             }
             InteractionResponseCreateType::MessageUpdate { patch } => {
                 let channel_id = match &entry.interaction.ty {
-                    InteractionType::Button { channel, .. } => channel.id,
+                    InteractionType::Button(button) => button.context.channel.id,
                     InteractionType::Ping => {
                         return Err(Error::BadStatic("cannot edit message in ping interaction"));
                     }
-                    InteractionType::Unfurl { channel, .. } => channel.id,
+                    InteractionType::Unfurl(unfurl) => unfurl.context.channel.id,
                 };
 
                 let message_id = match &entry.interaction.ty {
-                    InteractionType::Button { message, .. } => message.id,
+                    InteractionType::Button(button) => button.context.message.id,
                     InteractionType::Ping => unreachable!(),
-                    InteractionType::Unfurl { message, .. } => message.id,
+                    InteractionType::Unfurl(unfurl) => unfurl.context.message.id,
                 };
 
                 let webhook_user_id = match &entry.interaction.ty {
-                    InteractionType::Button { user, .. } => user.id,
+                    InteractionType::Button(button) => button.context.user.id,
                     InteractionType::Ping => unreachable!(),
-                    InteractionType::Unfurl { user, .. } => user.id,
+                    InteractionType::Unfurl(unfurl) => unfurl.context.user.id,
                 };
 
                 let (_, _message) = srv
@@ -333,13 +342,13 @@ impl ServiceInteractions {
         };
 
         let interaction_user_id = match &entry.interaction.ty {
-            InteractionType::Button { user, .. } => user.id,
+            InteractionType::Button(button) => button.context.user.id,
             InteractionType::Ping => {
                 return Err(Error::BadStatic(
                     "probably should design types to avoid this",
                 ));
             }
-            InteractionType::Unfurl { user, .. } => user.id,
+            InteractionType::Unfurl(unfurl) => unfurl.context.user.id,
         };
 
         let nonce = entry.nonce.clone();
@@ -387,9 +396,9 @@ impl ServiceInteractions {
         };
 
         let interaction_user_id = match &i.interaction.ty {
-            InteractionType::Button { user, .. } => user.id,
+            InteractionType::Button(button) => button.context.user.id,
             InteractionType::Ping => return Err(Error::BadStatic("what do i do here?")),
-            InteractionType::Unfurl { user, .. } => user.id,
+            InteractionType::Unfurl(unfurl) => unfurl.context.user.id,
         };
 
         self.state

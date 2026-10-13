@@ -1,13 +1,10 @@
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use lamprey_macros::record;
+use thiserror::Error;
 
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
-pub enum InteractionErrorCode {
+#[record]
+#[derive(Error)]
+pub enum ErrorCode {
     /// application did not respond in time
+    #[error("application did not respond in time")]
     Timeout,
 }
