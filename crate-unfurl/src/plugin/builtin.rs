@@ -16,7 +16,6 @@ use crate::{
     Plugin, PluginHttp, PluginUrl, Unfurler,
     plugin::{Head, HtmlSink, HttpSink, UnfurlResult},
     unfurler::UnfurlerBuilder,
-    util::AbyssSink,
 };
 
 /// a plugin which forwards http responses to http plugins
@@ -60,12 +59,18 @@ impl PluginUrl for ForwardHttpPlugin {
 
         let mut sinks = vec![];
         for plugin in &unfurler.http_plugins {
-            info!(
-                plugin = %plugin.name(),
-                kind = "http",
-                "Selected plugin"
-            );
-            sinks.push(plugin.accept(unfurler, &head).await);
+            if let Some(sink) = plugin.accept(unfurler, &head).await {
+                info!(
+                    plugin = %plugin.name(),
+                    kind = "http",
+                    "Select plugin"
+                );
+                sinks.push(sink);
+            }
+        }
+
+        if sinks.is_empty() {
+            return UnfurlResult::skip();
         }
 
         let mut embeds = vec![];
@@ -111,7 +116,7 @@ impl PluginUrl for ForwardHttpPlugin {
 
 #[async_trait]
 impl PluginHttp for ForwardHtmlPlugin {
-    async fn accept(&self, unfurler: &Unfurler, head: &Head<'_>) -> Box<dyn HttpSink> {
+    async fn accept(&self, unfurler: &Unfurler, head: &Head<'_>) -> Option<Box<dyn HttpSink>> {
         let is_html = head
             .headers
             .get(reqwest::header::CONTENT_TYPE)
@@ -119,17 +124,23 @@ impl PluginHttp for ForwardHtmlPlugin {
             .map(|s| s.contains("text/html"))
             .unwrap_or(false); // Default to false, some sites might be sneaky though
         if !is_html {
-            return Box::new(AbyssSink);
+            return None;
         }
 
         let mut sinks = vec![];
         for plugin in &unfurler.html_plugins {
-            info!(
-                plugin = %plugin.name(),
-                kind = "html",
-                "Selected plugin"
-            );
-            sinks.push(plugin.create_sink(unfurler, head));
+            if let Some(sink) = plugin.accept(unfurler, head).await {
+                info!(
+                    plugin = %plugin.name(),
+                    kind = "html",
+                    "Select plugin"
+                );
+                sinks.push(sink);
+            }
+        }
+
+        if sinks.is_empty() {
+            return None;
         }
 
         // the html parser is !Send due to Rc, so spawn a blocking task
@@ -151,11 +162,11 @@ impl PluginHttp for ForwardHtmlPlugin {
             tokenizer.sink
         });
 
-        Box::new(HtmlHttpSink {
+        Some(Box::new(HtmlHttpSink {
             tx,
             parse_task,
             bytes_read: 0,
-        })
+        }))
     }
 }
 
@@ -225,7 +236,6 @@ impl TokenSink for MultiSink {
 
 /// Merges `tail` with `chunk`, returning the valid UTF-8 string and
 /// storing any incomplete trailing bytes back into `tail`.
-// TEMP: pub
 fn decode_chunk<'a>(tail: &mut Vec<u8>, chunk: &[u8]) -> String {
     let bytes = if tail.is_empty() {
         // PERF: don't clone chunk

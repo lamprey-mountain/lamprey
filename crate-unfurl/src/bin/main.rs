@@ -7,6 +7,7 @@ use url::Url;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt::init();
     let args = Args::parse();
 
     match args.command {

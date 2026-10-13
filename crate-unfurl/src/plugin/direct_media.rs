@@ -9,7 +9,7 @@ use crate::{
     Plugin, PluginHttp, Unfurler,
     plugin::{Head, HttpSink, UnfurlResult},
     unfurler::{EmbedGeneration, UnfurlerBuilder},
-    util::{AbyssSink, EmbedGenerationTemplate, EmbedMedia, EmbedMediaPending},
+    util::{EmbedGenerationTemplate, EmbedMedia, EmbedMediaPending},
 };
 
 /// a plugin which handles links to media files
@@ -23,7 +23,7 @@ impl Plugin for DirectMediaPlugin {
 
 #[async_trait]
 impl PluginHttp for DirectMediaPlugin {
-    async fn accept(&self, _unfurler: &Unfurler, head: &Head<'_>) -> Box<dyn HttpSink> {
+    async fn accept(&self, _unfurler: &Unfurler, head: &Head<'_>) -> Option<Box<dyn HttpSink>> {
         let accepts_response =
             if let Some(content_type) = head.headers.get(reqwest::header::CONTENT_TYPE) {
                 let ct = content_type.to_str().unwrap_or_default();
@@ -33,16 +33,16 @@ impl PluginHttp for DirectMediaPlugin {
             };
 
         if accepts_response {
-            Box::new(DirectMediaSink {
+            Some(Box::new(DirectMediaSink {
                 url: head.url.clone(),
                 content_type: head
                     .headers
                     .get(reqwest::header::CONTENT_TYPE)
                     .and_then(|v| v.to_str().ok())
                     .map(|s| s.to_string()),
-            })
+            }))
         } else {
-            Box::new(AbyssSink)
+            None
         }
     }
 }

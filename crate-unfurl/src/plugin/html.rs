@@ -1,5 +1,6 @@
 use std::{ops::ControlFlow, str::FromStr};
 
+use async_trait::async_trait;
 use html5ever::{
     local_name,
     tokenizer::{TagKind, Token},
@@ -29,12 +30,13 @@ impl Plugin for HtmlStreamPlugin {
     }
 }
 
+#[async_trait]
 impl PluginHtml for HtmlStreamPlugin {
-    fn create_sink(&self, _unfurler: &Unfurler, head: &Head<'_>) -> Box<dyn HtmlSink> {
-        Box::new(HtmlStreamSink {
+    async fn accept(&self, _unfurler: &Unfurler, head: &Head<'_>) -> Option<Box<dyn HtmlSink>> {
+        Some(Box::new(HtmlStreamSink {
             data: ExtractedData::default(),
             url: head.url.clone(),
-        })
+        }))
     }
 }
 

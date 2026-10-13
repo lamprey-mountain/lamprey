@@ -63,13 +63,17 @@ impl Unfurler {
         let mut embeds = vec![];
 
         for plugin in &self.url_plugins {
-            info!(
-                plugin = %plugin.name(),
-                kind = "url",
-                "Selected plugin"
-            );
-
             let res = plugin.handle(self, url).await;
+
+            // TODO: make handle return an option instead of guessing if the plugin accepts the input based on res.embeds
+            if !res.embeds.is_empty() {
+                info!(
+                    plugin = %plugin.name(),
+                    kind = "url",
+                    "Select plugin"
+                );
+            }
+
             embeds.extend(res.embeds);
             // TODO: handle res.errors
 

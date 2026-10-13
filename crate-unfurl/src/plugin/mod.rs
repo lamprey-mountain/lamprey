@@ -78,10 +78,11 @@ pub trait PluginHttp: Send + Sync {
     }
 
     /// attempt to handle a http response
-    async fn accept(&self, unfurler: &Unfurler, head: &Head<'_>) -> Box<dyn HttpSink>;
+    async fn accept(&self, unfurler: &Unfurler, head: &Head<'_>) -> Option<Box<dyn HttpSink>>;
 }
 
 /// an unfurler plugin that handles html responses
+#[async_trait]
 pub trait PluginHtml: Send + Sync {
     // TODO(?): associated type for PluginHtml
     // type Handler: HtmlSink;
@@ -92,7 +93,7 @@ pub trait PluginHtml: Send + Sync {
     }
 
     /// create a new html sink
-    fn create_sink(&self, unfurler: &Unfurler, head: &Head<'_>) -> Box<dyn HtmlSink>;
+    async fn accept(&self, unfurler: &Unfurler, head: &Head<'_>) -> Option<Box<dyn HtmlSink>>;
 }
 
 #[async_trait]
