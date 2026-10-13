@@ -56,11 +56,15 @@ impl Inner {
                 write!(self.writer, "</h{}>", level)?;
             }
             Block::Paragraph(paragraph) => {
-                write!(self.writer, "<p>")?;
-                for child in paragraph.children() {
-                    self.render_inline(child)?;
+                if paragraph.is_empty() {
+                    write!(self.writer, "<br />")?;
+                } else {
+                    write!(self.writer, "<p>")?;
+                    for child in paragraph.children() {
+                        self.render_inline(child)?;
+                    }
+                    write!(self.writer, "</p>")?;
                 }
-                write!(self.writer, "</p>")?;
             }
             Block::Blockquote(blockquote) => {
                 write!(self.writer, "<blockquote>")?;

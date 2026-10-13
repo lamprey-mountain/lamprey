@@ -26,7 +26,7 @@ fn test_codeblocks() {
 
     assert_eq!(
         parsed.to_html(),
-        "<pre><code class=\"language-rust\">fn main() {}</code></pre><p></p><pre><code class=\"language-text\">no lang</code></pre>"
+        "<pre><code class=\"language-rust\">fn main() {}</code></pre><br /><pre><code class=\"language-text\">no lang</code></pre>"
     );
 }
 
@@ -38,6 +38,6 @@ fn test_quotes() {
 
     assert_eq!(
         parsed.to_html(),
-        "<blockquote><p>quote</p><p>line 2</p></blockquote><p></p><blockquote><p>another quote</p></blockquote>"
+        "<blockquote><p>quote</p><p>line 2</p></blockquote><br /><blockquote><p>another quote</p></blockquote>"
     );
 }

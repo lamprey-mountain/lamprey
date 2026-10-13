@@ -12,7 +12,7 @@ export function serdocToDoc(serdoc: Serdoc) {
 		}
 	}
 	if (htmlParts.length === 0) {
-		htmlParts.push("<p></p>");
+		htmlParts.push("<br />");
 	}
 	// FIXME: potential xss vector
 	// will be fixed when i switch to serdocToDoc2
