@@ -1,5 +1,6 @@
 use crate::{bot::Bot, prelude::*};
 use common::v1::types::{Message, MessageCreate, misc::duration::Duration, util::Time};
+use sdk::voice::{FileSource, Player};
 
 #[derive(Debug, clap::Parser)]
 pub enum Command {
@@ -73,45 +74,64 @@ impl Bot {
             Command::Ping => "pong!".to_string(),
             Command::Voice(v) => match v {
                 VoiceCommand::Join => {
-                    // TODO
-                    "joined".to_string()
+                    if self.voice.is_some() {
+                        "already joined".to_string()
+                    } else {
+                        let voice = self.client.voice(message.channel_id).await?;
+                        let (player, producer) = Player::new_audio();
+                        voice.publish(producer).await?;
+                        self.player = Some(player);
+                        self.voice = Some(voice);
+                        "joined".to_string()
+                    }
                 }
                 VoiceCommand::Leave => {
-                    // TODO
-                    "left".to_string()
+                    if let Some(voice) = self.voice.take() {
+                        if let Some(player) = self.player.take() {
+                            player.stop();
+                        }
+                        voice.disconnect().await?;
+                        "left".to_string()
+                    } else {
+                        "not joined".to_string()
+                    }
                 }
                 VoiceCommand::Play => {
-                    // new code:
-                    // let voice = self.client.voice(message.channel_id).connect().await?;
-
-                    // old code:
-                    // let _ = self.join_voice(message).await;
-                    // if let Some(p) = &*self.player.lock().await {
-                    //     p.send(PlayerCommand::Play(self.config.music_path.clone().into()))
-                    //         .await?;
-                    //     "playing".to_string()
-                    // } else {
-                    //     "no player".to_string()
-                    // }
-                    todo!()
+                    if let Some(player) = self.player.clone() {
+                        player.set_paused(false);
+                        "playing".to_string()
+                    } else {
+                        let voice = match self.voice.clone() {
+                            Some(voice) => voice,
+                            None => {
+                                let voice = self.client.voice(message.channel_id).await?;
+                                self.voice = Some(voice.clone());
+                                voice
+                            }
+                        };
+                        let source = FileSource::from_path(&self.config.music_path)?;
+                        let (player, producer) = Player::new_audio();
+                        player.play(source);
+                        voice.publish(producer).await?;
+                        self.player = Some(player);
+                        "playing".to_string()
+                    }
                 }
-                VoiceCommand::Pause { paused } => {
-                    // if let Some(p) = &*self.player.lock().await {
-                    //     p.send(PlayerCommand::Pause(paused)).await?;
-                    //     "(un)paused".to_string()
-                    // } else {
-                    //     "no player".to_string()
-                    // }
-                    todo!()
-                }
+                VoiceCommand::Pause { paused } => match &self.player {
+                    Some(player) => {
+                        let paused = paused.unwrap_or(!player.paused());
+                        player.set_paused(paused);
+                        if paused { "paused" } else { "resumed" }.to_string()
+                    }
+                    None => "no player".to_string(),
+                },
                 VoiceCommand::Stop => {
-                    // if let Some(p) = &*self.player.lock().await {
-                    //     p.send(PlayerCommand::Stop).await?;
-                    //     "stopped".to_string()
-                    // } else {
-                    //     "no player".to_string()
-                    // }
-                    todo!()
+                    if let Some(player) = self.player.take() {
+                        player.stop();
+                        "stopped".to_string()
+                    } else {
+                        "no player".to_string()
+                    }
                 }
             },
             Command::Remind(cmd) => match cmd {

@@ -13,6 +13,7 @@ use common::v2::types::UserId;
 use futures::StreamExt;
 use sdk::Client;
 use sdk::syncer::SyncerEvent;
+use sdk::voice::{Player, Voice};
 use sqlx::SqlitePool;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
@@ -23,6 +24,8 @@ pub struct Bot {
     pub(crate) user_id: Option<UserId>, // surely there's a better way to do this?
     pub(crate) client: Client,
     pub(crate) db: BotDatabase,
+    pub(crate) voice: Option<Voice>,
+    pub(crate) player: Option<Player>,
     control_rx: mpsc::Receiver<BotCommand>,
     control_tx: mpsc::Sender<BotCommand>,
     shutdown_token: CancellationToken,
@@ -76,6 +79,8 @@ impl Bot {
             user_id: None,
             client,
             db,
+            voice: None,
+            player: None,
             control_rx,
             control_tx,
             shutdown_token,
