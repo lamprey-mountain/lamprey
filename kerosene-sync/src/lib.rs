@@ -1,10 +1,10 @@
-//! websocket sync
+//! sync stuff
 
-pub mod permissions;
-pub mod queue;
-pub mod transport;
-pub mod util;
+pub mod v1;
 pub mod v2;
+
+// TEMP: compat
+pub use v1::*;
 
 // TODO: implement these?
 // pub mod error;
