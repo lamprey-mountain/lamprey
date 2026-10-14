@@ -1,10 +1,12 @@
+use std::net::IpAddr;
 use std::sync::Arc;
 
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{Json, extract::State};
+use axum::{Json, extract::Path, extract::State};
 use common::v1::types::SERVER_ROOM_ID;
 use common::v1::types::application::Scope;
+use common::v1::types::federation::ip_addr::IpMetadata;
 use common::v1::types::{ChannelId, Permission, RoomId, UserId};
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -14,7 +16,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use crate::ServerState;
 
 use super::util::Auth;
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 #[derive(Debug, Serialize, ToSchema)]
 struct ServerInfo {
@@ -390,6 +392,41 @@ async fn debug_doctor(auth: Auth, State(s): State<Arc<ServerState>>) -> Result<i
     Ok(Json(health))
 }
 
+/// Look up IP metadata
+///
+/// Get geolocation metadata about an ip address
+#[utoipa::path(
+    get,
+    path = "/debug/lookup-ip/{ip}",
+    tags = ["debug", "badge.admin_only", "badge.scope.auth"],
+    params(
+        ("ip" = String, Path, description = "IP address to look up"),
+    ),
+    responses(
+        (status = OK, body = IpMetadata, description = "success"),
+        (status = NOT_FOUND, description = "no metadata available for this ip address"),
+    )
+)]
+async fn debug_lookup_ip(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    Path(ip): Path<IpAddr>,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Auth])?;
+    auth.user.ensure_unsuspended()?;
+
+    s.services()
+        .perms
+        .for_room3(Some(auth.user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::Admin)
+        .check()?;
+
+    let metadata = s.services().ips.lookup(ip)?.ok_or(Error::NotFound)?;
+    Ok(Json(metadata))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes!(debug_info))
@@ -399,4 +436,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes!(debug_health))
         .routes(routes!(debug_ready))
         .routes(routes!(debug_doctor))
+        .routes(routes!(debug_lookup_ip))
 }
