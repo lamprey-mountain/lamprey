@@ -1,3 +1,5 @@
+//! types describing a connection to a voice channel
+
 use lamprey_macros::record;
 
 #[cfg(feature = "serde")]

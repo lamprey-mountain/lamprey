@@ -1,5 +1,5 @@
-//! routing logic
-// TODO: remove? or move to utils
+//! sfu routing logic
+// TODO: probably will remove this
 
 use std::collections::{HashMap, HashSet};
 

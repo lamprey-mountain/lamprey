@@ -1,3 +1,5 @@
+//! types for ringing users into a call
+
 use lamprey_macros::record;
 
 use crate::v1::types::UserId;

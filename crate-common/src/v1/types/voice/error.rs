@@ -1,14 +1,10 @@
+//! voice error codes
+
+use lamprey_macros::record;
 use thiserror::Error;
 
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
-
-#[cfg(feature = "utoipa")]
-use utoipa::ToSchema;
-
-#[derive(Debug, Clone, Error)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(Error)]
 pub enum VoiceErrorCode {
     /// unknown mid
     ///

@@ -1,3 +1,5 @@
+//! sfu info and stats, mostly internal
+
 use lamprey_macros::record;
 
 use crate::v1::types::{SfuId, UserId};

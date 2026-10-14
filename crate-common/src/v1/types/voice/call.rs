@@ -1,13 +1,14 @@
-use lamprey_macros::record;
+//! Each voice or broadcast channel is optionally associated with a [`Call`].
+//! Calls are automatically created when the first user joins, and deleted when the
+//! last user leaves.
 
-#[cfg(feature = "utoipa")]
-use utoipa::IntoParams;
+use lamprey_macros::record;
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
 use crate::v1::types::{ChannelId, RoomId, misc::Time};
 
-/// a currently active voice session
+/// info about a currently active voice channel, with ids
 #[record]
 pub struct CallMetadata {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -27,7 +28,7 @@ pub struct CallMetadata {
     pub audience_count: Option<u64>,
 }
 
-/// a currently active voice session, with ids
+/// info about a currently active voice channel, with extra ids
 #[record]
 pub struct Call {
     pub channel_id: ChannelId,
@@ -61,8 +62,7 @@ pub struct CallPatch {
     pub topic: Option<Option<String>>,
 }
 
-#[record]
-#[cfg_attr(feature = "utoipa", derive(IntoParams))]
+#[record(params)]
 pub struct CallDeleteParams {
     /// if people are still connected to this channel, try to forcibly disconnect them
     ///

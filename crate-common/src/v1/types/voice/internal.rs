@@ -1,3 +1,5 @@
+//! internal types, used by sfus to communicate with the api server
+
 // TODO: move this out of common?
 
 use bitflags::bitflags;

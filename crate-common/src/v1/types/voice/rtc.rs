@@ -1,23 +1,20 @@
+//! webrtc types such as [`SessionDescription`] and [`IceCandidate`]
+
 use std::ops::Deref;
 
 use lamprey_macros::record;
-
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
 /// webrtc session description
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct SessionDescription(pub String);
 
 /// webrtc ice candidate
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub struct IceCandidate(pub String);
 
 /// a unique identifier for a media track

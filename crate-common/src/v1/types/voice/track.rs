@@ -1,3 +1,5 @@
+//! types for voice media tracks, like [`Track`] and [`TrackMetadata`]
+
 use lamprey_macros::record;
 
 #[cfg(feature = "serde")]
@@ -38,10 +40,12 @@ mod _s {
     }
 }
 
+// TEMP: compat
+pub use TrackMetadata as TrackMetadata2;
+
 /// the metadata for a track
-// TODO: rename to TrackMetadata
 #[record]
-pub struct TrackMetadata2 {
+pub struct TrackMetadata {
     /// whether this track is for audio or video
     pub kind: MediaKind,
 
@@ -79,7 +83,7 @@ pub struct TrackWhisper {
 #[record]
 pub struct TrackCreate {
     #[serde(flatten)]
-    pub inner: TrackMetadata2,
+    pub inner: TrackMetadata,
     pub mid: Mid,
 }
 
@@ -96,7 +100,7 @@ pub struct TrackMapping {
 #[record]
 pub struct TrackAnnouncement {
     #[serde(flatten)]
-    pub inner: TrackMetadata2,
+    pub inner: TrackMetadata,
     pub id: TrackId,
 }
 
@@ -170,9 +174,8 @@ mod _u {
 /// the encoding of the track
 // TODO: provide a way to explicitly specify bitrate, framerate, resolution instead of only providing presets?
 // TODO: remove this?
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "utoipa", derive(ToSchema))]
+#[record]
+#[derive(PartialEq, Eq)]
 pub enum TrackEncoding {
     /// pass the source video through untouched
     Source,

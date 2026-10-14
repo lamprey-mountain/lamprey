@@ -1,4 +1,10 @@
-// TODO: add doc comments
+//! types for the voice protocol
+//!
+//! Voice connections typically use webrtc. Each connection is represented with
+//! a [`VoiceState`]. Voice states exist in channels of specific types: voice,
+//! broadcast, dm, and gdm.
+
+// TODO: add more doc comments
 
 pub mod call;
 pub mod channel;
@@ -23,4 +29,12 @@ pub use ring::*;
 pub use rtc::*;
 pub use sfu::*;
 pub use track::*;
-pub use voice_state::*;
+pub use voice_state::{
+    VoiceStateFull, VoiceStateMove, VoiceStateMoveBulk, VoiceStateParams, VoiceStateScreenshare,
+    VoiceStateScreenshareUpdate,
+};
+
+// TODO: better names for VoiceState{Patch,Update}?
+
+#[doc(inline)]
+pub use voice_state::{VoiceState, VoiceStatePatch, VoiceStateUpdate};
