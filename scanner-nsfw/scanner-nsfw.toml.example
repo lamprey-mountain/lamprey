@@ -1,0 +1,15 @@
+# RUST_LOG configuration
+rust_log = "info,scanner_nsfw=debug"
+
+# Directory containing the nsfw model(s)
+models_path = "/models"
+
+# Model file to load, relative to models_path
+# model = "model.onnx"
+
+# Listen configuration
+# Can be either TCP:
+listen = { address = "127.0.0.1", port = 4100 }
+
+# Or Unix socket:
+# listen = { path = "/var/run/scanner-nsfw.sock" }

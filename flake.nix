@@ -148,6 +148,7 @@
         bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" "crate-backend-core" "crate-script" "crate-markdown" ];
         voice = mkCrate "lamprey-voice" [ "crate-voice" "kerosene-core" "crate-backend-core" "crate-script" ];
         scanner-malware = mkCrate "scanner-malware" [ "scanner-malware" ];
+        scanner-nsfw = mkCrate "scanner-nsfw" [ "scanner-nsfw" ];
 
         wasm-cargo-artifacts = craneLib.buildDepsOnly (common // {
           pname = "lamprey-markdown-wasm-deps";
@@ -318,16 +319,7 @@
         });
       in {
         packages = rec {
-          inherit backend bridge voice frontend scanner-malware wasm-markdown emoji emoji-spritesheets agent-sandbox spawn-sandbox;
-
-          scanner-nsfw = pkgs.writeShellApplication {
-            name = "run-scanner-nsfw";
-            runtimeInputs = [ python-env ];
-            text = ''
-              cd ${./scanner-nsfw}
-              uvicorn app:app --host 0.0.0.0 --port 4100
-            '';
-          };
+          inherit backend bridge voice frontend scanner-malware scanner-nsfw wasm-markdown emoji emoji-spritesheets agent-sandbox spawn-sandbox;
 
           cargo-deps = cargoArtifacts;
 
@@ -442,23 +434,53 @@
               };
             };
 
-          scanner-nsfw-oci = pkgs.dockerTools.streamLayeredImage {
-            name = "scanner-nsfw";
-            tag = "latest";
-            contents = [
-              pkgs.cacert
-              python-env
-            ];
-            config = {
-              WorkingDir = "/scanner-nsfw";
-              Entrypoint = [
-                "${pkgs.tini}/bin/tini"
-                "--"
-                "${python-env}/bin/uvicorn"
+          scanner-nsfw-oci =
+            let
+              scannerNsfwConfig = pkgs.writeTextFile {
+                name = "scanner-nsfw-config";
+                destination = "/etc/scanner-nsfw.toml";
+                text = ''
+                  rust_log = "info"
+                  listen = { address = "0.0.0.0", port = 4100 }
+                  models_path = "/models"
+
+                  # [clamav]
+                  # type = "local"
+                  # socket = "/run/clamav/clamd.sock"
+                  # pid_file = "/run/clamav/clamd.pid"
+                  # database_directory = "/var/run/clamav"
+                  # database_mirror = "database.clamav.net"
+                '';
+              };
+            in
+            pkgs.dockerTools.streamLayeredImage {
+              name = "scanner-nsfw";
+              tag = "latest";
+              contents = [
+                pkgs.cacert
+                pkgs.dockerTools.caCertificates
               ];
-              Cmd = [ "app:app" "--host" "0.0.0.0" "--port" "4100" ];
+              config = {
+                WorkingDir = "/";
+                Entrypoint = [
+                  "${pkgs.tini}/bin/tini"
+                  "--"
+                  "${scanner-malware}/bin/scanner-nsfw"
+                  "--config"
+                  "/etc/scanner-nsfw.toml"
+                ];
+                Healthcheck = {
+                  Test = [ "CMD-SHELL" "curl -f http://localhost:4100/health || exit 1" ];
+                  Interval = 30000000000; # 30s
+                  Timeout = 10000000000; # 10s
+                  Retries = 3;
+                  StartPeriod = 5000000000; # 5s
+                };
+                Volumes = {
+                  "/models" = {};
+                };
+              };
             };
-          };
         };
 
         devShells.default = craneLib.devShell {
