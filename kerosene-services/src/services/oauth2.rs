@@ -1,39 +1,18 @@
-// TODO: port to https://docs.rs/oauth2/latest/oauth2/
-// TODO: make more generic
-
 use std::time::{Duration, Instant};
 
 use common::v1::types::SessionId;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::oauth::{OauthGrantType, OauthTokenRequest, OauthTokenResponse};
 use dashmap::DashMap;
 use http::HeaderValue;
+use kerosene_core::config::ConfigOauthProviderKind;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
 
 use crate::prelude::*;
 
-// TODO: move these structs to common?
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct OauthTokenExchange {
-    pub grant_type: String,
-    pub code: String,
-    pub redirect_uri: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_secret: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct OauthTokenResponse {
-    pub access_token: String,
-    pub token_type: String,
-    pub expires_in: u64,
-    pub scope: String,
-}
-
+// TODO: refactor and use RevokeForm in crate-common/src/v1/routes/oauth.rs (rename to OauthTokenRevoke, add field, etc)
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OauthTokenRevoke {
     pub token_type_hint: String,
@@ -74,6 +53,34 @@ pub struct GithubUser {
     pub bio: Option<String>,
 }
 
+// TODO: use Userinfo in common oauth
+/// openid connect userinfo response
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OidcUser {
+    /// the subject identifier, unique within the issuer
+    pub sub: String,
+
+    /// the user's full name
+    #[serde(default)]
+    pub name: Option<String>,
+
+    /// the user's preferred username
+    #[serde(default)]
+    pub preferred_username: Option<String>,
+
+    /// the user's email address (requires the `email` scope)
+    #[serde(default)]
+    pub email: Option<String>,
+
+    /// whether the email has been verified
+    #[serde(default)]
+    pub email_verified: Option<bool>,
+
+    /// url to the user's avatar image
+    #[serde(default)]
+    pub picture: Option<String>,
+}
+
 pub struct OauthState {
     provider: String,
     session_id: SessionId,
@@ -99,6 +106,7 @@ pub struct ServiceOauth {
     oauth_states: Arc<DashMap<Uuid, OauthState>>,
 }
 
+// TODO: use pkce/code_verifier s256 for oidc (and other oauth providers too?)
 impl ServiceOauth {
     pub fn new(state: Globals) -> Self {
         let s = Self {
@@ -106,6 +114,7 @@ impl ServiceOauth {
             oauth_states: Arc::new(DashMap::new()),
         };
 
+        // clean up expired oauth states
         let s_clone = s.oauth_states.clone();
         tokio::spawn(async move {
             loop {
@@ -137,6 +146,8 @@ impl ServiceOauth {
             [
                 ("client_id", p.client_id.as_str()),
                 ("redirect_uri", redirect_uri.as_str()),
+                ("response_type", "code"),
+                ("scope", p.scope()),
                 ("state", &state.to_string()),
             ],
         )?;
@@ -171,8 +182,8 @@ impl ServiceOauth {
             .api_url
             .join(&format!("/api/v1/auth/oauth/{}/redirect", s.provider))?;
 
-        let ua = match s.provider.as_str() {
-            "discord" => HeaderValue::from_static(
+        let ua = match p.kind {
+            ConfigOauthProviderKind::Discord => HeaderValue::from_static(
                 // TODO: get version from env at compile time
                 "DiscordBot (https://git.celery.eu.org/lamprey/lamprey, 0.1.0)",
             ),
@@ -188,25 +199,32 @@ impl ServiceOauth {
             .load()
             .map_err(|err| Error::Internal(err.to_string()))?
             .to_string();
-        let (use_basic_auth, body) = match s.provider.as_str() {
-            "github" => (
+        let (use_basic_auth, body) = match p.kind {
+            ConfigOauthProviderKind::Github => (
                 false,
-                OauthTokenExchange {
-                    grant_type: "authorization_code".to_string(),
-                    code,
-                    redirect_uri: redirect_uri.into(),
+                OauthTokenRequest {
+                    grant_type: OauthGrantType::AuthorizationCode,
+                    code: Some(code),
+                    redirect_uri: Some(redirect_uri),
                     client_id: Some(p.client_id.clone()),
                     client_secret: Some(client_secret.clone()),
+                    refresh_token: None,
+                    code_verifier: None,
                 },
             ),
+            // assume everything else uses http basic auth for now
+            // FIXME: this is probably not true at all
+            // maybe redo the oauth provider config struct?
             _ => (
                 true,
-                OauthTokenExchange {
-                    grant_type: "authorization_code".to_string(),
-                    code,
-                    redirect_uri: redirect_uri.into(),
+                OauthTokenRequest {
+                    grant_type: OauthGrantType::AuthorizationCode,
+                    code: Some(code),
+                    redirect_uri: Some(redirect_uri),
                     client_id: None,
                     client_secret: None,
+                    refresh_token: None,
+                    code_verifier: None,
                 },
             ),
         };
@@ -281,6 +299,40 @@ impl ServiceOauth {
             .get("https://api.github.com/user")
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
+            .header(
+                "User-Agent",
+                self.state
+                    .config()
+                    .user_agent_header_value()
+                    .map_err(|err| Error::Internal(err.to_string()))?,
+            )
+            .bearer_auth(token)
+            .send()
+            .await?
+            .error_for_status()?
+            .json()
+            .await?;
+        Ok(res)
+    }
+
+    /// fetch the profile of an openid connect user via the provider's userinfo endpoint
+    pub async fn oidc_get_user(&self, provider: &str, token: String) -> Result<OidcUser> {
+        // TODO: let users pass a well known autoconfig url
+        // TODO: make lint() check for userinfo_url
+        let p = self
+            .state
+            .config()
+            .oauth_provider
+            .get(provider)
+            .ok_or(ApiError::from_code(ErrorCode::UnknownOauth2Client))?;
+        let userinfo_url = p
+            .userinfo_url
+            .as_deref()
+            .ok_or_else(|| Error::Internal("oauth provider is missing userinfo_url".into()))?;
+        let client = reqwest::Client::new();
+        let res: OidcUser = client
+            .get(userinfo_url)
+            .header("Accept", "application/json")
             .header(
                 "User-Agent",
                 self.state

@@ -164,15 +164,58 @@ pub struct ConfigS3 {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigOauthProvider {
+    pub kind: ConfigOauthProviderKind,
     pub client_id: String,
     pub client_secret: Secret,
     pub authorization_url: String,
     pub token_url: String,
     pub revocation_url: String,
 
+    /// space-separated scopes to request during authorization
+    ///
+    /// defaults to the recommended scopes of [`ConfigOauthProviderKind`]
+    #[serde(default)]
+    pub scope: Option<String>,
+
+    /// openid connect userinfo endpoint
+    ///
+    /// required when `kind = "oidc"`
+    #[serde(default)]
+    pub userinfo_url: Option<String>,
+
     /// automatically mark users as registered if they create an account or link their account with this provider
     #[serde(default)]
     pub autoregister: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConfigOauthProviderKind {
+    Discord,
+    Github,
+
+    /// generic openid connect provider
+    Oidc,
+}
+
+impl ConfigOauthProvider {
+    /// the scopes to request during authorization
+    pub fn scope(&self) -> &str {
+        self.scope
+            .as_deref()
+            .unwrap_or_else(|| self.kind.default_scope())
+    }
+}
+
+impl ConfigOauthProviderKind {
+    /// scopes to request when the provider config does not specify any
+    pub fn default_scope(self) -> &'static str {
+        match self {
+            Self::Discord => "identify", // should i include email?
+            Self::Github => "read:user user:email",
+            Self::Oidc => "openid profile email",
+        }
+    }
 }
 
 // TODO: remove

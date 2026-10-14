@@ -19,18 +19,30 @@ access_key_id = "GK12345"
 secret_access_key = "12345"
 
 [oauth_provider.discord]
+kind = "discord"
 client_id = "12345"
 client_secret = "67890"
-authorization_url = "https://discord.com/oauth2/authorize?scope=identify&response_type=code"
+authorization_url = "https://discord.com/oauth2/authorize"
 token_url = "https://discord.com/api/v10/oauth2/token"
 revoke_url = "https://discord.com/api/v10/oauth2/token/revoke"
 
 [oauth_provider.github]
+kind = "github"
 client_id = "12345"
 client_secret = "67890"
 authorization_url = "https://github.com/login/oauth/authorize"
 token_url = "https://github.com/login/oauth/access_token"
 revocation_url = "https://github.com/login/oauth/access_token"
+
+[oauth_provider.keycloak]
+kind = "oidc"
+client_id = "lamprey"
+client_secret = "67890"
+authorization_url = "https://keycloak.example.com/realms/myrealm/protocol/openid-connect/auth"
+token_url = "https://keycloak.example.com/realms/myrealm/protocol/openid-connect/token"
+revocation_url = "https://keycloak.example.com/realms/myrealm/protocol/openid-connect/revoke"
+userinfo_url = "https://keycloak.example.com/realms/myrealm/protocol/openid-connect/userinfo"
+# scope = "openid profile email"
 
 [http]
 contact = "admin@example.com"

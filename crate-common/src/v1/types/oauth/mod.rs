@@ -220,11 +220,21 @@ pub enum OauthGrantType {
 pub struct OauthTokenRequest {
     // TODO: "You can also pass your client_id and client_secret as basic authentication with client_id as the username and client_secret as the password."
     pub grant_type: OauthGrantType,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub code: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub redirect_uri: Option<Url>,
-    pub client_id: Option<ApplicationId>,
+
+    /// client id
+    ///
+    /// when we're is acting as the authorization server this is an [`ApplicationId`]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub client_secret: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub code_verifier: Option<String>,
 }
 
@@ -232,12 +242,27 @@ pub struct OauthTokenRequest {
 pub struct OauthTokenResponse {
     pub access_token: String,
     pub token_type: String,
-    pub expires_in: u64,
+    /// when tis token expires
+    ///
+    /// omitted by some providers, eg. GitHub OAuth apps with non-expiring tokens
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_in: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub refresh_token: Option<String>,
+    #[serde(default)]
     pub scope: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id_token: Option<String>,
+}
+
+/// Token revocation request (RFC 7009). Used both for inbound `/oauth/revoke` requests and
+/// for outbound revocation against third-party providers.
+#[record]
+pub struct OauthTokenRevoke {
+    pub token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub token_type_hint: Option<String>,
 }
 
 #[record]

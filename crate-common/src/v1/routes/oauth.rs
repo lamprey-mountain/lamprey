@@ -132,17 +132,11 @@ pub mod oauth_userinfo {
     response(NO_CONTENT, description = "success"),
 )]
 pub mod oauth_revoke {
-    use serde::Deserialize;
-
-    #[derive(Debug, Deserialize, serde::Serialize)]
-    #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
-    pub struct RevokeForm {
-        pub token: String,
-    }
+    use crate::v1::types::oauth::OauthTokenRevoke;
 
     pub struct Request {
         #[form]
-        pub form: RevokeForm,
+        pub form: OauthTokenRevoke,
     }
 
     pub struct Response {}

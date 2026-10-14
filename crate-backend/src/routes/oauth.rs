@@ -10,7 +10,7 @@ use common::v1::types::oauth::{
     OauthGrantType, OauthResponseType,
 };
 use common::v1::types::{
-    AuditLogEntryType, SessionStatus, SessionToken, SessionType,
+    ApplicationId, AuditLogEntryType, SessionStatus, SessionToken, SessionType,
     application::{Application, Scope, Scopes},
     oauth::{
         Jwks, OauthAuthorizeInfo, OauthAuthorizeResponse, OauthIntrospectResponse,
@@ -152,8 +152,10 @@ async fn oauth_token(
         .map(ToString::to_string);
     let credentials: Option<headers::Authorization<headers::authorization::Basic>> =
         headers.typed_get();
-    let client_id = if let Some(client_id) = req.token.client_id {
+    let client_id: ApplicationId = if let Some(client_id) = req.token.client_id {
         client_id
+            .parse()
+            .map_err(|_| ApiError::from_code(ErrorCode::InvalidClientId))?
     } else if let Some(creds) = &credentials {
         creds
             .username()
@@ -273,7 +275,7 @@ async fn oauth_token(
             let response = OauthTokenResponse {
                 access_token: token.0,
                 token_type: "Bearer".to_string(),
-                expires_in,
+                expires_in: Some(expires_in),
                 refresh_token: Some(refresh_token_string),
                 scope: scopes
                     .into_iter()
@@ -348,7 +350,7 @@ async fn oauth_token(
             let response = OauthTokenResponse {
                 access_token: token.0,
                 token_type: "Bearer".to_string(),
-                expires_in,
+                expires_in: Some(expires_in),
                 refresh_token: Some(new_refresh_token_string),
                 scope: connection
                     .scopes
