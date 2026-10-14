@@ -173,7 +173,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
 
                     // send initial ambient state for the user
                     if let Some(user_id) = session.user_id() {
-                        let MessageSync::Ambient {
+                        if let MessageSync::Ambient {
                             rooms,
                             roles,
                             channels,
@@ -181,23 +181,25 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                             room_members,
                             config,
                             ..
-                        } = srv.cache.generate_ambient_message(user_id).await?;
-                        framed
-                            .send(hello::Event::Dispatch(hello::Dispatch {
-                                inner: Box::new(
-                                    DispatchGlobal::Ambient(Ambient {
-                                        config,
-                                        rooms,
-                                        roles,
-                                        channels,
-                                        threads,
-                                        room_members,
-                                    })
-                                    .into(),
-                                ),
-                                seq: 0,
-                            }))
-                            .await?;
+                        } = srv.cache.generate_ambient_message(user_id).await?
+                        {
+                            framed
+                                .send(hello::Event::Dispatch(hello::Dispatch {
+                                    inner: Box::new(
+                                        DispatchGlobal::Ambient(Ambient {
+                                            config,
+                                            rooms,
+                                            roles,
+                                            channels,
+                                            threads,
+                                            room_members,
+                                        })
+                                        .into(),
+                                    ),
+                                    seq: 0,
+                                }))
+                                .await?;
+                        }
                     }
 
                     // start main loop
