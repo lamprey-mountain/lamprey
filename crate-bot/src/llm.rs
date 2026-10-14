@@ -68,7 +68,9 @@ impl Llm {
                 return None;
             }
             let parsed = serde_json::from_str::<ChatCompletionChunk>(data).ok()?;
-            parsed.text()?;
+            if parsed.text()?.is_empty() {
+                return None;
+            }
             Some(parsed)
         }))
     }
