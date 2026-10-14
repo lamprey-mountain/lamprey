@@ -3,11 +3,11 @@ use crate::prelude::*;
 use crate::store::Store;
 use crate::{commands::Command, config::Config};
 use clap::Parser;
-use common::v1::types::MessageSync;
 use common::v1::types::components::{ComponentCreate, ComponentType, ComponentsCreate};
 use common::v1::types::flume::{FlumeAppendCreate, FlumeDeltaCreate, FlumeReplaceCreate};
 use common::v1::types::misc::duration::Duration;
 use common::v1::types::misc::{Time, UserIdReq};
+use common::v1::types::{ChannelCreate, ChannelType, MessageSync};
 use common::v1::types::{
     Message, MessageClient,
     presence::{Activity, Presence, Status},
@@ -421,13 +421,10 @@ impl Bot {
             return;
         };
 
-        let Some(current_user_id) = self.user_id else {
+        // don't respond to ourselves
+        if self.user_id == Some(message.author_id) {
             return;
         };
-
-        if message.author_id == current_user_id {
-            return;
-        }
 
         if !llm_config.channel_ids.contains(&message.channel_id) {
             return;
@@ -442,16 +439,47 @@ impl Bot {
             return;
         };
 
+        // clone stuff for tokio task
         let client = self.client.clone();
         let llm = Llm::new(llm_config.clone());
         let channel_id = message.channel_id;
-        let reply_id = message.id;
+        let message_id = message.id;
         let prompt = prompt.to_string();
+        let reply_in_thread = true; // TODO: make configurable
+        let model = llm_config.model.clone();
 
         tokio::spawn(async move {
-            let flume = match client
-                .flume(channel_id)
-                .reply_id(reply_id)
+            let (channel_id, reply_id) = if reply_in_thread {
+                match client
+                    .http()
+                    .thread_create_from_message(
+                        channel_id,
+                        message_id,
+                        &ChannelCreate {
+                            name: "llm thread".to_string(),
+                            description: Some(format!("with model: {model}")),
+                            ty: ChannelType::ThreadPublic,
+                            ..Default::default()
+                        },
+                    )
+                    .await
+                {
+                    Ok(thread) => (thread.id, None),
+                    Err(e) => {
+                        eprintln!("Failed to create thread: {:?}", e);
+                        return;
+                    }
+                }
+            } else {
+                (channel_id, Some(message_id))
+            };
+
+            let mut flume_builder = client.flume(channel_id);
+            if let Some(reply_id) = reply_id {
+                flume_builder = flume_builder.reply_id(reply_id);
+            }
+
+            let flume = match flume_builder
                 .components(ComponentsCreate {
                     inner: vec![ComponentCreate {
                         id: Some(ComponentId(0)),
