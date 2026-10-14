@@ -1140,7 +1140,7 @@ pub async fn fetch_auth_state(s: &ServerStateInner, user_id: UserId) -> Result<A
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
-        .routes(routes2!(auth_oauth_init))
+        // .routes(routes2!(auth_oauth_init))
         .routes(routes2!(auth_oauth_redirect))
         .routes(routes2!(auth_oauth_delete))
         .routes(routes2!(auth_email_exec))

@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 pub mod ack;
+pub mod auth;
 // pub mod media;
 pub mod message;
 pub mod permission_overwrite;
@@ -10,6 +11,7 @@ pub mod user;
 pub fn register(r: &mut Routes) {
     r.nest("/v1", |r| {
         ack::register(r);
+        auth::register(r);
         permission_overwrite::register(r);
         message::register(r);
         unfurler::register(r);
