@@ -420,7 +420,7 @@ mod v2 {
     use kerosene_sync::v2::transport::webtransport::WebtransportTransport;
     use tokio::io::AsyncReadExt;
 
-    const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(5);
+    const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
 
     struct StateInner {
         globals: Globals,
@@ -466,13 +466,38 @@ mod v2 {
         let mut transport = WebtransportTransport::new(connection);
         let mut stream_tasks = JoinSet::new();
 
-        // TODO: use proper sync error, close stream on auth fail
-        // TODO: timeout HANDSHAKE_TIMEOUT, close transport if no hello was received in time
+        // try to authenticate the client
+        let mut timeout = Box::pin(tokio::time::sleep(HANDSHAKE_TIMEOUT));
+        loop {
+            tokio::select! {
+                result = state.session() => {
+                    result?;
+                    break;
+                }
+                _ = &mut timeout => {
+                    // took too long without authenticating, close the connection
+                    debug!("handshake timed out before identify; disconnecting");
+                    transport.into_inner().close(
+                        wtransport::VarInt::from_u32(SyncErrorCode::AuthTimeout.code() as u32),
+                        b"handshake timeout",
+                    );
+                    return Ok(());
+                }
+                s = transport.next() => {
+                    let Some(s) = s else {
+                        // connection closed
+                        return Ok(());
+                    };
 
-        // let (session, hello_frames) =
-        //     tokio::time::timeout(HANDSHAKE_TIMEOUT, handshake(&mut transport, shared.clone()))
-        //         .await
-        //         .map_err(|_| Error::BadStatic("handshake timeout"))??;
+                    let state = state.clone();
+                    stream_tasks.spawn(async move {
+                        if let Err(err) = handle_stream(s, state).await {
+                            debug!("error while handling stream: {err}");
+                        }
+                    });
+                }
+            }
+        }
 
         // handle streams
         while let Some(s) = transport.next().await {

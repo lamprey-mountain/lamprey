@@ -240,6 +240,7 @@ impl Error {
             Error::SyncError(err) => match err {
                 SyncErrorCode::InvalidSeq => StatusCode::BAD_REQUEST,
                 SyncErrorCode::Timeout => StatusCode::BAD_REQUEST,
+                SyncErrorCode::AuthTimeout => StatusCode::UNAUTHORIZED,
                 SyncErrorCode::Unauthorized => StatusCode::FORBIDDEN,
                 SyncErrorCode::Unauthenticated => StatusCode::UNAUTHORIZED,
                 SyncErrorCode::AlreadyAuthenticated => StatusCode::BAD_REQUEST,

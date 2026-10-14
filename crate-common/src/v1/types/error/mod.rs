@@ -87,6 +87,10 @@ pub enum SyncErrorCode {
     #[error("you were sent a `Ping` but didn't respond with a `Pong` in time")]
     Timeout,
 
+    /// you didn't authenticate in time
+    #[error("you didn't authenticate in time")]
+    AuthTimeout,
+
     /// you tried to do something that you can't do
     #[error("you tried to do something that you can't do")]
     Unauthorized,
@@ -242,6 +246,7 @@ impl SyncErrorCode {
             SyncErrorCode::Unauthorized => 3003,
             SyncErrorCode::Unauthenticated => 3000,
             SyncErrorCode::Timeout => 3008,
+            SyncErrorCode::AuthTimeout => 4003,
             SyncErrorCode::AuthFailure => 4004,
             SyncErrorCode::AlreadyAuthenticated => 4005,
             SyncErrorCode::InvalidSeq => 4007,
