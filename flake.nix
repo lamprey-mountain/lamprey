@@ -146,7 +146,7 @@
         });
 
         bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" "crate-backend-core" "crate-script" "crate-markdown" ];
-        voice = mkCrate "lamprey-voice" [ "crate-voice" ];
+        voice = mkCrate "lamprey-voice" [ "crate-voice" "kerosene-core" "crate-backend-core" "crate-script" ];
         scanner-malware = mkCrate "scanner-malware" [ "scanner-malware" ];
 
         wasm-cargo-artifacts = craneLib.buildDepsOnly (common // {
