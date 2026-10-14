@@ -385,20 +385,34 @@ function RenderBlock(props: { block: SerializedBlock }) {
 			<Match when={props.block.type === "Codeblock" && props.block}>
 				{(b) => <CodeBlock text={b().content} lang={b().language} />}
 			</Match>
-			<Match when={props.block.type === "List" && props.block}>
+			<Match when={props.block.type === "ListOrdered" && props.block}>
 				{(b) => (
-					<ul>
-						<For each={b().items}>{(item) => <RenderBlock block={item} />}</For>
-					</ul>
+					<ol>
+						<For each={b().items}>
+							{(item) => (
+								<li>
+									<For each={item.children}>
+										{(child) => <RenderInline inline={child} />}
+									</For>
+								</li>
+							)}
+						</For>
+					</ol>
 				)}
 			</Match>
-			<Match when={props.block.type === "ListItem" && props.block}>
+			<Match when={props.block.type === "ListUnordered" && props.block}>
 				{(b) => (
-					<li>
-						<For each={b().content}>
-							{(child) => <RenderBlock block={child} />}
+					<ul>
+						<For each={b().items}>
+							{(item) => (
+								<li>
+									<For each={item.children}>
+										{(child) => <RenderInline inline={child} />}
+									</For>
+								</li>
+							)}
 						</For>
-					</li>
+					</ul>
 				)}
 			</Match>
 			<Match when={props.block.type === "Table" && props.block}>
@@ -492,7 +506,11 @@ function RenderInline(props: { inline: SerializedInline }) {
 			</Match>
 			<Match when={props.inline.type === "Link" && props.inline}>
 				{(i) => (
-					<a href={i().href} target="_blank" rel="noopener noreferrer nofollow ugc">
+					<a
+						href={i().href}
+						target="_blank"
+						rel="noopener noreferrer nofollow ugc"
+					>
 						<Show when={i().children.length} fallback={i().href}>
 							<For each={i().children}>
 								{(child) => <RenderInline inline={child} />}

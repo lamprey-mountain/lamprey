@@ -16,13 +16,22 @@ export type SerializedInline =
 	| { type: "CustomEmoji"; animated: boolean; name: string; id: string }
 	| { type: "UnicodeEmoji"; content: string };
 
+export type SerializedListItemOrdered = {
+	number: number | null;
+	children: SerializedInline[];
+};
+
+export type SerializedListItemUnordered = {
+	children: SerializedInline[];
+};
+
 export type SerializedBlock =
 	| { type: "Header"; level: number; children: SerializedInline[] }
 	| { type: "Paragraph"; children: SerializedInline[] }
 	| { type: "Blockquote"; children: SerializedBlock[] }
 	| { type: "Codeblock"; language: string | null; content: string }
-	| { type: "List"; items: SerializedBlock[] }
-	| { type: "ListItem"; content: SerializedBlock[] }
+	| { type: "ListOrdered"; items: SerializedListItemOrdered[] }
+	| { type: "ListUnordered"; items: SerializedListItemUnordered[] }
 	| {
 			type: "Table";
 			header: SerializedInline[][];
