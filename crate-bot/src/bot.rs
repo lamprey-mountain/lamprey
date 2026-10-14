@@ -24,7 +24,8 @@ use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
-use crate::llm::Llm;
+use crate::history;
+use crate::llm::{ChatMessage, Llm, Role};
 use crate::reminders;
 use crate::util::BotResponse;
 
@@ -266,7 +267,7 @@ impl Bot {
             }
         }
 
-        self.handle_llm(&message);
+        self.handle_llm(&message).await;
 
         Ok(())
     }
@@ -416,7 +417,7 @@ impl Bot {
         Ok(resp)
     }
 
-    fn handle_llm(&self, message: &Message) {
+    async fn handle_llm(&self, message: &Message) {
         let Some(llm_config) = &self.config.llm else {
             return;
         };
@@ -426,7 +427,17 @@ impl Bot {
             return;
         };
 
-        if !llm_config.channel_ids.contains(&message.channel_id) {
+        // respond in configured channels, and in threads that already have a
+        // conversation with us
+        let in_channel = llm_config.channel_ids.contains(&message.channel_id);
+        let has_history = match history::exists(&self.store, message.channel_id).await {
+            Ok(has_history) => has_history,
+            Err(e) => {
+                error!("failed to load llm history: {e}");
+                return;
+            }
+        };
+        if !in_channel && !has_history {
             return;
         }
 
@@ -441,6 +452,7 @@ impl Bot {
 
         // clone stuff for tokio task
         let client = self.client.clone();
+        let store = self.store.clone();
         let llm = Llm::new(llm_config.clone());
         let channel_id = message.channel_id;
         let message_id = message.id;
@@ -449,7 +461,9 @@ impl Bot {
         let model = llm_config.model.clone();
 
         tokio::spawn(async move {
-            let (channel_id, reply_id) = if reply_in_thread {
+            // messages in configured channels start a new thread, unless we are
+            // already in a thread with a conversation
+            let channel_id = if reply_in_thread && in_channel && !has_history {
                 match client
                     .http()
                     .thread_create_from_message(
@@ -464,22 +478,35 @@ impl Bot {
                     )
                     .await
                 {
-                    Ok(thread) => (thread.id, None),
+                    Ok(thread) => thread.id,
                     Err(e) => {
-                        eprintln!("Failed to create thread: {:?}", e);
+                        error!("Failed to create thread: {:?}", e);
                         return;
                     }
                 }
             } else {
-                (channel_id, Some(message_id))
+                channel_id
             };
 
-            let mut flume_builder = client.flume(channel_id);
-            if let Some(reply_id) = reply_id {
-                flume_builder = flume_builder.reply_id(reply_id);
+            let user_message = ChatMessage {
+                role: Role::User,
+                content: prompt,
+            };
+            if let Err(e) = history::append(&store, channel_id, &user_message).await {
+                error!("Failed to store llm message: {:?}", e);
+                return;
             }
 
-            let flume = match flume_builder
+            let messages = match history::list(&store, channel_id).await {
+                Ok(messages) => messages,
+                Err(e) => {
+                    error!("Failed to load llm history: {:?}", e);
+                    return;
+                }
+            };
+
+            let flume = match client
+                .flume(channel_id)
                 .components(ComponentsCreate {
                     inner: vec![ComponentCreate {
                         id: Some(ComponentId(0)),
@@ -500,7 +527,7 @@ impl Bot {
             {
                 Ok(flume) => flume,
                 Err(e) => {
-                    eprintln!("Failed to create flume: {:?}", e);
+                    error!("Failed to create flume: {:?}", e);
                     return;
                 }
             };
@@ -525,7 +552,7 @@ impl Bot {
                 }))
                 .await;
 
-            match llm.complete(prompt).await {
+            match llm.complete(&messages).await {
                 Ok(stream) => {
                     futures::pin_mut!(stream);
                     let mut buffer = String::new();
@@ -563,9 +590,17 @@ impl Bot {
                         };
                         flume.update(delta).await;
                     }
+
+                    let assistant_message = ChatMessage {
+                        role: Role::Assistant,
+                        content: buffer,
+                    };
+                    if let Err(e) = history::append(&store, channel_id, &assistant_message).await {
+                        error!("Failed to store llm reply: {:?}", e);
+                    }
                 }
                 Err(e) => {
-                    eprintln!("Error calling LLM: {:?}", e);
+                    error!("Error calling LLM: {:?}", e);
                 }
             }
 

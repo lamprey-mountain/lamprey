@@ -2,7 +2,7 @@
 
 use crate::config::ConfigLlm;
 use futures::{Stream, StreamExt, TryStreamExt};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio_util::codec::FramedRead;
 use tokio_util::codec::LinesCodec;
 use tokio_util::io::StreamReader;
@@ -20,6 +20,22 @@ pub struct Choice {
 #[derive(Debug, Deserialize)]
 pub struct Delta {
     pub content: Option<String>,
+}
+
+/// a single message in an llm conversation
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ChatMessage {
+    pub role: Role,
+    pub content: String,
+}
+
+/// the role of a [`ChatMessage`]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Role {
+    System,
+    User,
+    Assistant,
 }
 
 /// a client for an openai compatible api
@@ -40,7 +56,7 @@ impl Llm {
     /// generate a new chat completion, returning a stream of chunks
     pub async fn complete(
         &self,
-        prompt: String,
+        messages: &[ChatMessage],
     ) -> reqwest::Result<impl Stream<Item = ChatCompletionChunk>> {
         let response = self
             .http
@@ -48,7 +64,7 @@ impl Llm {
             .bearer_auth(&self.config.token)
             .json(&serde_json::json!({
                 "model": self.config.model,
-                "messages": [{"role": "user", "content": prompt}],
+                "messages": messages,
                 "stream": true,
             }))
             .send()
