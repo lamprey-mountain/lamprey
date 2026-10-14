@@ -159,3 +159,23 @@ pub struct MessageFlume {
     /// current state of the flume
     pub state: FlumeState,
 }
+
+impl FlumeDeltaCreate {
+    /// add a component to [`Self::append`]
+    pub fn append(mut self, append: FlumeAppendCreate) -> Self {
+        self.append.push(append);
+        self
+    }
+
+    /// add a component to [`Self::replace`]
+    pub fn replace(mut self, replace: FlumeReplaceCreate) -> Self {
+        self.replace.push(replace);
+        self
+    }
+
+    /// add a component to [`Self::delete`]
+    pub fn delete(mut self, delete: ComponentId) -> Self {
+        self.delete.push(delete);
+        self
+    }
+}

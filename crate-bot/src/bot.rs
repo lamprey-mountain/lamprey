@@ -444,28 +444,23 @@ impl Bot {
             };
 
             flume
-                .update(FlumeDeltaCreate {
-                    init: None,
-                    append: vec![],
-                    replace: vec![FlumeReplaceCreate {
-                        target: ComponentId(0),
-                        components: vec![ComponentCreate {
-                            id: Some(ComponentId(0)),
-                            ty: ComponentType::Container {
-                                components: vec![ComponentCreate {
-                                    id: Some(ComponentId(1)),
-                                    ty: ComponentType::Text {
-                                        content: "*loading...*".to_string(),
-                                    },
-                                    allow: None,
-                                }],
-                                color: "#517082".parse().ok(),
-                            },
-                            allow: None,
-                        }],
+                .update(FlumeDeltaCreate::default().replace(FlumeReplaceCreate {
+                    target: ComponentId(0),
+                    components: vec![ComponentCreate {
+                        id: Some(ComponentId(0)),
+                        ty: ComponentType::Container {
+                            components: vec![ComponentCreate {
+                                id: Some(ComponentId(1)),
+                                ty: ComponentType::Text {
+                                    content: "*loading...*".to_string(),
+                                },
+                                allow: None,
+                            }],
+                            color: "#517082".parse().ok(),
+                        },
+                        allow: None,
                     }],
-                    delete: vec![],
-                })
+                }))
                 .await;
 
             match llm.complete(prompt).await {
@@ -480,44 +475,31 @@ impl Bot {
                         };
                         buffer.push_str(content);
 
-                        if first {
+                        let delta = if first {
                             first = false;
-                            flume
-                                .update(FlumeDeltaCreate {
-                                    init: None,
-                                    append: vec![],
-                                    replace: vec![FlumeReplaceCreate {
-                                        target: ComponentId(1),
-                                        components: vec![ComponentCreate {
-                                            id: Some(ComponentId(1)),
-                                            ty: ComponentType::Text {
-                                                content: buffer.clone(),
-                                            },
-                                            allow: None,
-                                        }],
-                                    }],
-                                    delete: vec![],
-                                })
-                                .await;
+                            FlumeDeltaCreate::default().replace(FlumeReplaceCreate {
+                                target: ComponentId(1),
+                                components: vec![ComponentCreate {
+                                    id: Some(ComponentId(1)),
+                                    ty: ComponentType::Text {
+                                        content: buffer.clone(),
+                                    },
+                                    allow: None,
+                                }],
+                            })
                         } else {
-                            flume
-                                .update(FlumeDeltaCreate {
-                                    init: None,
-                                    append: vec![FlumeAppendCreate {
-                                        target: ComponentId(1),
-                                        components: vec![ComponentCreate {
-                                            id: Some(ComponentId(1)),
-                                            ty: ComponentType::Text {
-                                                content: content.to_string(),
-                                            },
-                                            allow: None,
-                                        }],
-                                    }],
-                                    replace: vec![],
-                                    delete: vec![],
-                                })
-                                .await;
-                        }
+                            FlumeDeltaCreate::default().append(FlumeAppendCreate {
+                                target: ComponentId(1),
+                                components: vec![ComponentCreate {
+                                    id: Some(ComponentId(1)),
+                                    ty: ComponentType::Text {
+                                        content: content.to_string(),
+                                    },
+                                    allow: None,
+                                }],
+                            })
+                        };
+                        flume.update(delta).await;
                     }
                 }
                 Err(e) => {
