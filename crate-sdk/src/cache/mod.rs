@@ -205,6 +205,16 @@ impl Cache {
         self.inner.current.load().session_id
     }
 
+    /// get the voice states of a user across all channels
+    pub fn user_voice_states(&self, user_id: UserId) -> impl Iterator<Item = Arc<VoiceState>> + '_ {
+        self.inner.channels.iter().filter_map(move |entry| {
+            entry
+                .voice_states
+                .get(&user_id)
+                .map(|state| state.value().clone())
+        })
+    }
+
     /// iterate over all cached rooms
     pub fn rooms(&self) -> impl Iterator<Item = RoomId> {
         self.inner.rooms.iter().map(|e| *e.key())

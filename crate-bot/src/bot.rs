@@ -13,6 +13,7 @@ use common::v1::types::{
     presence::{Activity, Presence, Status},
 };
 use common::v1::types::{MessagePayload, MessageType};
+use common::v2::types::ChannelId;
 use common::v2::types::UserId;
 use common::v2::types::components::ComponentId;
 use futures::StreamExt;
@@ -47,6 +48,9 @@ pub struct BotHandle {
 pub enum BotCommand {
     Send(MessageClient),
 }
+
+// TODO: re-add logging from old bot code
+// info!("joined voice channel: {:?}", author_voice_state.channel_id);
 
 impl Bot {
     /// initialize a bot from some config
@@ -267,119 +271,149 @@ impl Bot {
         Ok(())
     }
 
+    /// get the voice channel the message's author is connected to
+    fn sender_voice_channel(&self, message: &Message) -> Result<ChannelId> {
+        self.client
+            .cache()
+            .and_then(|cache| cache.user_voice_states(message.author_id).next())
+            .map(|state| state.channel_id)
+            .ok_or_else(|| anyhow::anyhow!("you aren't in a voice channel"))
+    }
+
     async fn handle_command(&mut self, message: &Message, cmd: Command) -> Result<BotResponse> {
-        let resp = match cmd {
-            Command::Ping => "pong!".to_string(),
-            Command::Voice(v) => match v {
-                VoiceCommand::Join => {
-                    if self.voice.is_some() {
-                        "already joined".to_string()
-                    } else {
-                        let voice = self.client.voice(message.channel_id).await?;
-                        let (player, producer) = Player::new_audio();
-                        voice.publish(producer).await?;
-                        self.player = Some(player);
-                        self.voice = Some(voice);
-                        "joined".to_string()
-                    }
+        let resp: BotResponse = match cmd {
+            Command::Ping => "pong!".into(),
+            Command::Voice(v) => self.handle_command_voice(message, v).await?,
+            Command::Remind(cmd) => self.handle_command_remind(message, cmd).await?,
+        };
+        Ok(resp)
+    }
+
+    async fn handle_command_voice(
+        &mut self,
+        message: &Message,
+        cmd: VoiceCommand,
+    ) -> Result<BotResponse> {
+        let resp: BotResponse = match cmd {
+            VoiceCommand::Join => {
+                if self.voice.is_some() {
+                    "already joined to a voice channel".into()
+                } else {
+                    let channel_id = self.sender_voice_channel(message)?;
+                    let voice = self.client.voice(channel_id).await?;
+                    let (player, producer) = Player::new_audio();
+                    voice.publish(producer).await?;
+                    self.player = Some(player);
+                    self.voice = Some(voice);
+                    "joined".into()
                 }
-                VoiceCommand::Leave => {
-                    if let Some(voice) = self.voice.take() {
-                        if let Some(player) = self.player.take() {
-                            player.stop();
-                        }
-                        voice.disconnect().await?;
-                        "left".to_string()
-                    } else {
-                        "not joined".to_string()
-                    }
-                }
-                VoiceCommand::Play => {
-                    if let Some(player) = self.player.clone() {
-                        player.set_paused(false);
-                        "playing".to_string()
-                    } else {
-                        let voice = match self.voice.clone() {
-                            Some(voice) => voice,
-                            None => {
-                                let voice = self.client.voice(message.channel_id).await?;
-                                self.voice = Some(voice.clone());
-                                voice
-                            }
-                        };
-                        let source = FileSource::from_path(&self.config.music_path)?;
-                        let (player, producer) = Player::new_audio();
-                        player.play(source);
-                        voice.publish(producer).await?;
-                        self.player = Some(player);
-                        "playing".to_string()
-                    }
-                }
-                VoiceCommand::Pause { paused } => match &self.player {
-                    Some(player) => {
-                        let paused = paused.unwrap_or(!player.paused());
-                        player.set_paused(paused);
-                        if paused { "paused" } else { "resumed" }.to_string()
-                    }
-                    None => "no player".to_string(),
-                },
-                VoiceCommand::Stop => {
+            }
+            VoiceCommand::Leave => {
+                if let Some(voice) = self.voice.take() {
                     if let Some(player) = self.player.take() {
                         player.stop();
-                        "stopped".to_string()
-                    } else {
-                        "no player".to_string()
                     }
+                    voice.disconnect().await?;
+                    "left".into()
+                } else {
+                    "not joined".into()
                 }
-            },
-            Command::Remind(cmd) => match cmd {
-                RemindCommand::Add { duration, text } => {
-                    let text = text.join(" ");
-                    let duration: Duration = duration
-                        .parse()
-                        .map_err(|_| anyhow::anyhow!("invalid duration (try e.g. 5m, 1h, 2d)"))?;
-                    let scheduled_at = Time::now_utc() + duration;
-                    let reminder =
-                        reminders::add(&self.store, message.author_id, text, scheduled_at).await?;
-                    format!(
-                        "Reminder #{} set for {}: {}",
-                        reminder.id,
-                        reminder.scheduled_at.to_string(),
-                        reminder.text
-                    )
-                }
-                RemindCommand::Remove { id } => {
-                    reminders::remove(&self.store, message.author_id, id).await?;
-                    format!("Removed reminder {id}")
-                }
-                RemindCommand::RemoveAll => {
-                    reminders::remove_all(&self.store, message.author_id).await?;
-                    "Removed all your reminders".to_string()
-                }
-                RemindCommand::List => {
-                    let reminders = reminders::list(&self.store, message.author_id).await?;
-
-                    if reminders.is_empty() {
-                        "No reminders".to_string()
-                    } else {
-                        let mut output = String::new();
-                        for reminder in &reminders {
-                            output.push_str(&format!(
-                                "[{}] {}",
-                                reminder.id,
-                                reminder.scheduled_at.to_string()
-                            ));
-                            if !reminder.text.is_empty() {
-                                output.push_str(&format!(": {}", reminder.text));
-                            }
-                            output.push('\n');
+            }
+            VoiceCommand::Play => {
+                if let Some(player) = self.player.clone() {
+                    player.set_paused(false);
+                    "playing".into()
+                } else {
+                    let voice = match self.voice.clone() {
+                        Some(voice) => voice,
+                        None => {
+                            let channel_id = self.sender_voice_channel(message)?;
+                            let voice = self.client.voice(channel_id).await?;
+                            self.voice = Some(voice.clone());
+                            voice
                         }
-                        output
-                    }
+                    };
+                    let source = FileSource::from_path(&self.config.music_path)?;
+                    let (player, producer) = Player::new_audio();
+                    player.play(source);
+                    voice.publish(producer).await?;
+                    self.player = Some(player);
+                    "playing".into()
                 }
+            }
+            VoiceCommand::Pause { paused } => match &self.player {
+                Some(player) => {
+                    let paused = paused.unwrap_or(!player.paused());
+                    player.set_paused(paused);
+                    if paused { "paused" } else { "resumed" }.into()
+                }
+                None => "no player".into(),
             },
+            VoiceCommand::Stop => {
+                if let Some(player) = self.player.take() {
+                    player.stop();
+                    "stopped".into()
+                } else {
+                    "no player".into()
+                }
+            }
         };
-        Ok(resp.into())
+        Ok(resp)
+    }
+
+    async fn handle_command_remind(
+        &mut self,
+        message: &Message,
+        cmd: RemindCommand,
+    ) -> Result<BotResponse> {
+        let resp: BotResponse = match cmd {
+            RemindCommand::Add { duration, text } => {
+                let text = text.join(" ");
+                let duration: Duration = duration
+                    .parse()
+                    .map_err(|_| anyhow::anyhow!("invalid duration (try e.g. 5m, 1h, 2d)"))?;
+                let scheduled_at = Time::now_utc() + duration;
+                let reminder =
+                    reminders::add(&self.store, message.author_id, text, scheduled_at).await?;
+                format!(
+                    "Reminder #{} set for {}: {}",
+                    reminder.id,
+                    reminder.scheduled_at.to_string(),
+                    reminder.text
+                )
+                .into()
+            }
+            RemindCommand::Remove { id } => {
+                reminders::remove(&self.store, message.author_id, id).await?;
+                format!("Removed reminder {id}").into()
+            }
+            RemindCommand::RemoveAll => {
+                reminders::remove_all(&self.store, message.author_id).await?;
+                "Removed all your reminders".into()
+            }
+            RemindCommand::List => {
+                let reminders = reminders::list(&self.store, message.author_id).await?;
+
+                if reminders.is_empty() {
+                    "No reminders".into()
+                } else {
+                    let mut output = String::new();
+                    for reminder in &reminders {
+                        output.push_str(&format!(
+                            "[{}] {}",
+                            reminder.id,
+                            reminder.scheduled_at.to_string()
+                        ));
+                        if !reminder.text.is_empty() {
+                            output.push_str(&format!(": {}", reminder.text));
+                        }
+                        output.push('\n');
+                    }
+                    output.into()
+                }
+            }
+        };
+        Ok(resp)
     }
 
     fn handle_llm(&self, message: &Message) {
