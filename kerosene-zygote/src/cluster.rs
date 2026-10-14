@@ -1,4 +1,25 @@
-//! clustering and pubsub using HyParView and Plumtree
+//! node clustering
+//!
+//! Cluster membership is done via [chitchat].
+//!
+//! [chitchat]: https://lib.rs/crates/chitchat
+
+// NOTE: i probably want to vendor chitchat, it's meant to be used in quickwit specifically?
+// eventually i'll rewrite it, but its probably fine to prototype on for now...
+
+// old plan below:
+// //! cluster membership
+// //!
+// //! Every node on the network is part of a [HyParView] overlay. Each node only
+// //! maintains a partial view of all nodes on the network.
+// //!
+// //! Publish-subscribe is done with [PlumTree], a self-healing and
+// //! self-optimizing gossip protocol.
+// //!
+// //! Some nodes also form [Raft] groups for strong consistency.
+// //!
+// //! [HyParView]: https://asc.di.fct.unl.pt/~jleitao/pdf/dsn07-leitao.pdf
+// //! [PlumTree]: https://asc.di.fct.unl.pt/~jleitao/pdf/srds07-leitao.pdf
 
 use std::{
     collections::{HashMap, HashSet},
@@ -60,7 +81,7 @@ pub struct Node {
 #[derive(Debug)]
 pub struct Peer {
     addr: NodeAddr,
-    connection: quinn::Connection,
+    connection: quinn::Connection, // maybe don't have this if i want to do sans io?
 }
 
 /// a broadcast/gossip tree

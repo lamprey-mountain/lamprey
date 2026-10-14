@@ -72,9 +72,7 @@ async fn example() {
     while let Some(incoming) = server.accept().await {
         tokio::spawn(async move {
             let conn = incoming.await.unwrap();
-            let stream = conn.accept_bi().await;
-            futures::select! {}
-            tokio::select! {}
+            let _stream = conn.accept_bi().await;
         });
     }
 }

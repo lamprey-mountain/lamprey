@@ -4,6 +4,7 @@ Distributed systems primitives for kerosene. **Not usable yet!**
 
 ## primitives
 
+- `broadcast`: publish/subscribe with plumtree (epidemic broadcast trees)
+- `cluster`: cluster membership
+- `journal`: multi writer durable streams
 - `net`: quic networking utils
-- `cluster`: peer membership and pubsub. based on HyParView (membership) and Plumtree (epidemic broadcast trees)
-- `stream`: extra fancy durable streams
