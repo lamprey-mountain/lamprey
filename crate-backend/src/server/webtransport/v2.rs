@@ -1,8 +1,8 @@
 use super::*;
 use common::v2::types::sync::dispatch::channel::{
-    ChannelCreate, ChannelUpdate, DispatchChannel, MessageCreate,
+    ChannelCreate, ChannelTyping, ChannelUpdate, DispatchChannel, MessageCreate,
 };
-use common::v2::types::sync::dispatch::global::DispatchGlobal;
+use common::v2::types::sync::dispatch::global::{Ambient, DispatchGlobal};
 use common::v2::types::sync::dispatch::room::RoomCreate;
 use common::v2::types::sync::dispatch::{Dispatch, Ready};
 use futures::SinkExt;
@@ -13,7 +13,7 @@ use tokio::sync::watch;
 use common::v1::types::presence::Presence;
 use common::v1::types::{MessageSync, Session};
 use common::v2::types::ConnectionId;
-use common::v2::types::sync::stream::hello;
+use common::v2::types::sync::stream::{hello, room};
 use common::v2::types::sync::transport::webtransport::Params;
 use kerosene_sync::v2::codec::Codec;
 use kerosene_sync::v2::transport::TransportStream;
@@ -22,6 +22,7 @@ use tokio::io::AsyncReadExt;
 
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
 
+// rename to struct Connection?
 struct StateInner {
     globals: Globals,
     id: ConnectionId,
@@ -46,11 +47,7 @@ impl StateInner {
     }
 }
 
-pub async fn accept(
-    globals: Globals,
-    connection: Connection,
-    params: SyncParams,
-) -> Result<()> {
+pub async fn accept(globals: Globals, connection: Connection, params: SyncParams) -> Result<()> {
     let (session_tx, _) = watch::channel(None);
     let state = Arc::new(StateInner {
         globals,
@@ -174,6 +171,35 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                         }))
                         .await?;
 
+                    // send initial ambient state for the user
+                    if let Some(user_id) = session.user_id() {
+                        let MessageSync::Ambient {
+                            rooms,
+                            roles,
+                            channels,
+                            threads,
+                            room_members,
+                            config,
+                            ..
+                        } = srv.cache.generate_ambient_message(user_id).await?;
+                        framed
+                            .send(hello::Event::Dispatch(hello::Dispatch {
+                                inner: Box::new(
+                                    DispatchGlobal::Ambient(Ambient {
+                                        config,
+                                        rooms,
+                                        roles,
+                                        channels,
+                                        threads,
+                                        room_members,
+                                    })
+                                    .into(),
+                                ),
+                                seq: 0,
+                            }))
+                            .await?;
+                    }
+
                     // start main loop
                     let mut timeout = Timeout::for_ping();
                     let mut broadcast_stream = state.globals.messaging().subscribe().await?;
@@ -185,12 +211,13 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                                     timeout = Timeout::for_close();
                                 }
                                 Timeout::Close(_) => {
+                                    // TODO: use SyncErrorCode::Timeout
                                     return Err(Error::BadStatic("ping timeout"));
                                 }
                             },
                             broadcast = broadcast_stream.next() => {
                                 if let Some(msg) = broadcast {
-                                    if let Some(msg) = broadcast_to_dispatch(msg) {
+                                    if let Some(msg) = broadcast_to_dispatch(state.globals.clone(), msg).await {
                                         framed.send(hello::Event::Dispatch(hello::Dispatch {
                                             inner: Box::new(msg),
                                             seq: 0, // TODO: populate seq
@@ -224,6 +251,84 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                 _ => Err(Error::Unimplemented),
             }
         }
+        StreamHeader::Room => {
+            let session = state.session().await?;
+            let codec = Codec::<room::Protocol>::new(state.params.clone());
+            let (init, mut framed) = codec.accept(stream).await?;
+
+            let srv = state.globals.services();
+            srv.perms
+                .for_room3(session.user_id(), init.room_id)
+                .await?
+                .ensure_view()?;
+
+            // send typing states that were set before subscribing
+            // PERF: this is terrible
+            for (channel_id, user_id, until) in srv.channels.typing_list() {
+                let Ok(channel) = srv.channels.get(channel_id, session.user_id()).await else {
+                    continue;
+                };
+                if channel.room_id != Some(init.room_id) {
+                    continue;
+                }
+                if !srv
+                    .perms
+                    .for_channel3(session.user_id(), channel_id)
+                    .await
+                    .map(|perms| perms.visible)
+                    .unwrap_or(false)
+                {
+                    continue;
+                }
+                framed
+                    .send(room::Event::Typing {
+                        channel_id,
+                        user_id,
+                        until: until.into(),
+                    })
+                    .await?;
+            }
+
+            // we're tailing live events
+            framed.send(room::Event::Subscribed).await?;
+
+            // forward live typing events for channels in this room
+            let mut broadcast_stream = state.globals.messaging().subscribe().await?;
+            loop {
+                tokio::select! {
+                    broadcast = broadcast_stream.next() => {
+                        let Some(Broadcast::Sync(sync)) = broadcast else {
+                            continue;
+                        };
+                        let MessageSync::ChannelTyping {
+                            channel_id,
+                            user_id,
+                            until,
+                            room_id,
+                        } = sync.message
+                        else {
+                            continue;
+                        };
+                        if room_id != Some(init.room_id) {
+                            continue;
+                        }
+                        framed
+                            .send(room::Event::Typing {
+                                channel_id,
+                                user_id,
+                                until,
+                            })
+                            .await?;
+                    }
+                    _ = framed.next() => {
+                        // room stream has no commands so this must be None (stream close)
+                        break;
+                    }
+                }
+            }
+
+            Ok(())
+        }
         _ => {
             let _session = state.session().await?;
             // TODO: do stuff with session
@@ -233,7 +338,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
 }
 
 // TODO: implement this, slowly and painfully
-fn broadcast_to_dispatch(broadcast: Broadcast) -> Option<Dispatch> {
+async fn broadcast_to_dispatch(globals: Globals, broadcast: Broadcast) -> Option<Dispatch> {
     let Broadcast::Sync(sync) = broadcast else {
         return None;
     };
@@ -260,6 +365,25 @@ fn broadcast_to_dispatch(broadcast: Broadcast) -> Option<Dispatch> {
             DispatchChannel::MessageCreate(MessageCreate {
                 message: Box::new(message),
                 seq: 0.into(), // TODO: use actual channel seq
+            })
+            .into()
+        }
+        MessageSync::ChannelTyping {
+            channel_id,
+            user_id,
+            until,
+            room_id,
+        } => {
+            // typing in room channels requires a room subscription
+            if room_id.is_some() {
+                return None;
+            }
+
+            DispatchChannel::ChannelTyping(ChannelTyping {
+                channel_id,
+                user_id,
+                until,
+                room_id,
             })
             .into()
         }
