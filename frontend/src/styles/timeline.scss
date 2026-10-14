@@ -407,7 +407,7 @@
 			display: grid;
 			place-items: center;
 			margin-right: 3px;
-			translate: 0 1px;
+			height: 100%;
 
 			& > .icon2 {
 				animation: spin infinite 1.5s linear;
