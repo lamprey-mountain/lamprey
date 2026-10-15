@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use crate::commands::{RemindCommand, VoiceCommand};
 use crate::prelude::*;
 use crate::store::Store;
@@ -25,7 +28,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 use crate::history;
-use crate::llm::{ChatMessage, Llm, Role};
+use crate::llm::{ChatMessage, CompletionChunk, ContentPart, Context, Llm, Role};
 use crate::reminders;
 use crate::util::BotResponse;
 
@@ -34,6 +37,7 @@ pub struct Bot {
     user_id: Option<UserId>, // surely there's a better way to do this?
     client: Client,
     store: Store,
+    llm: Option<Arc<Llm>>,
     voice: Option<Voice>,
     player: Option<Player>,
     control_rx: mpsc::Receiver<BotCommand>,
@@ -84,12 +88,14 @@ impl Bot {
         }
 
         let client = client.build().await?;
+        let llm = config.llm.clone().map(|config| Arc::new(Llm::new(config)));
 
         Ok(Self {
             config,
             user_id: None,
             client,
             store,
+            llm,
             voice: None,
             player: None,
             control_rx,
@@ -418,9 +424,10 @@ impl Bot {
     }
 
     async fn handle_llm(&self, message: &Message) {
-        let Some(llm_config) = &self.config.llm else {
+        let Some(llm) = &self.llm else {
             return;
         };
+        let llm_config = llm.config();
 
         // don't respond to ourselves
         if self.user_id == Some(message.author_id) {
@@ -453,7 +460,7 @@ impl Bot {
         // clone stuff for tokio task
         let client = self.client.clone();
         let store = self.store.clone();
-        let llm = Llm::new(llm_config.clone());
+        let llm = Arc::clone(llm);
         let channel_id = message.channel_id;
         let message_id = message.id;
         let prompt = prompt.to_string();
@@ -490,7 +497,9 @@ impl Bot {
 
             let user_message = ChatMessage {
                 role: Role::User,
-                content: prompt,
+                content: vec![ContentPart::Text { text: prompt }],
+                tool_calls: None,
+                tool_call_id: None,
             };
             if let Err(e) = history::append(&store, channel_id, &user_message).await {
                 error!("Failed to store llm message: {:?}", e);
@@ -552,48 +561,25 @@ impl Bot {
                 }))
                 .await;
 
-            match llm.complete(&messages).await {
+            let ctx = Context {
+                http: client.http(),
+                store: store.clone(),
+            };
+
+            match llm.complete(ctx, &messages).await {
                 Ok(stream) => {
                     futures::pin_mut!(stream);
-                    let mut buffer = String::new();
-                    let mut first = true;
+                    let mut state = LlmFlumeState::new();
 
                     while let Some(chunk) = stream.next().await {
-                        let Some(content) = chunk.text() else {
-                            continue;
-                        };
-                        buffer.push_str(content);
-
-                        let delta = if first {
-                            first = false;
-                            FlumeDeltaCreate::default().replace(FlumeReplaceCreate {
-                                target: ComponentId(1),
-                                components: vec![ComponentCreate {
-                                    id: Some(ComponentId(1)),
-                                    ty: ComponentType::Text {
-                                        content: buffer.clone(),
-                                    },
-                                    allow: None,
-                                }],
-                            })
-                        } else {
-                            FlumeDeltaCreate::default().append(FlumeAppendCreate {
-                                target: ComponentId(1),
-                                components: vec![ComponentCreate {
-                                    id: Some(ComponentId(1)),
-                                    ty: ComponentType::Text {
-                                        content: content.to_string(),
-                                    },
-                                    allow: None,
-                                }],
-                            })
-                        };
-                        flume.update(delta).await;
+                        flume.update(state.apply(chunk)).await;
                     }
 
                     let assistant_message = ChatMessage {
                         role: Role::Assistant,
-                        content: buffer,
+                        content: vec![ContentPart::Text { text: state.buffer }],
+                        tool_calls: None,
+                        tool_call_id: None,
                     };
                     if let Err(e) = history::append(&store, channel_id, &assistant_message).await {
                         error!("Failed to store llm reply: {:?}", e);
@@ -614,5 +600,145 @@ impl BotHandle {
     pub fn shutdown(self) {
         self.shutdown_token.cancel();
         info!("Bot shutdown requested");
+    }
+}
+
+/// tracks component ids and text state while streaming an llm completion into a flume
+struct LlmFlumeState {
+    buffer: String,
+    next_id: u16,
+    cursor: TextCursor,
+
+    /// map from tool call id -> (section, child text)
+    tool_sections: HashMap<String, (ComponentId, ComponentId)>,
+}
+
+/// where response text should be appended to
+enum TextCursor {
+    /// initial loading placeholder, should be replaced by the first text chunk.
+    Loading(ComponentId),
+
+    /// actively appending to this text component
+    Active(ComponentId),
+
+    /// a tool call occurred. the next text chunk needs a fresh component.
+    NeedsNew,
+}
+
+impl LlmFlumeState {
+    fn new() -> Self {
+        Self {
+            buffer: String::new(),
+            // component 0 is the container, 1 is the loading placeholder
+            next_id: 2,
+            cursor: TextCursor::Loading(ComponentId(1)),
+            tool_sections: HashMap::new(),
+        }
+    }
+
+    // maybe reuse lamprey-common's id allocator thing?
+    fn alloc_id(&mut self) -> ComponentId {
+        let id = ComponentId(self.next_id);
+        self.next_id += 1;
+        id
+    }
+
+    fn apply(&mut self, chunk: CompletionChunk) -> FlumeDeltaCreate {
+        match chunk {
+            CompletionChunk::Text(content) => {
+                self.buffer.push_str(&content);
+
+                match self.cursor {
+                    TextCursor::Loading(id) => {
+                        self.cursor = TextCursor::Active(id);
+                        FlumeDeltaCreate::default().replace(FlumeReplaceCreate {
+                            target: id,
+                            components: vec![ComponentCreate {
+                                id: Some(id),
+                                ty: ComponentType::Text { content },
+                                allow: None,
+                            }],
+                        })
+                    }
+                    TextCursor::Active(id) => {
+                        FlumeDeltaCreate::default().append(FlumeAppendCreate {
+                            target: id,
+                            components: vec![ComponentCreate {
+                                id: Some(id),
+                                ty: ComponentType::Text { content },
+                                allow: None,
+                            }],
+                        })
+                    }
+                    TextCursor::NeedsNew => {
+                        let id = self.alloc_id();
+                        self.cursor = TextCursor::Active(id);
+                        FlumeDeltaCreate::default().append(FlumeAppendCreate {
+                            target: ComponentId(0),
+                            components: vec![ComponentCreate {
+                                id: Some(id),
+                                ty: ComponentType::Text { content },
+                                allow: None,
+                            }],
+                        })
+                    }
+                }
+            }
+            CompletionChunk::ToolCall(call) => {
+                let section = self.alloc_id();
+                let text = self.alloc_id();
+                self.tool_sections.insert(call.id, (section, text));
+                self.cursor = TextCursor::NeedsNew;
+
+                FlumeDeltaCreate::default().append(FlumeAppendCreate {
+                    target: ComponentId(0),
+                    components: vec![tool_section_component(
+                        section,
+                        text,
+                        "#ff0000",
+                        &call.function.name,
+                    )],
+                })
+            }
+            CompletionChunk::ToolResult(result) => {
+                let &(section, text) = self
+                    .tool_sections
+                    .get(&result.call.id)
+                    .expect("received tool call result before the tool was called");
+
+                FlumeDeltaCreate::default().replace(FlumeReplaceCreate {
+                    target: section,
+                    components: vec![tool_section_component(
+                        section,
+                        text,
+                        "#0000ff",
+                        &result.call.function.name,
+                    )],
+                })
+            }
+        }
+    }
+}
+
+/// build a section component showing a tool call with the given color
+fn tool_section_component(
+    section: ComponentId,
+    text: ComponentId,
+    color: &str,
+    name: &str,
+) -> ComponentCreate {
+    ComponentCreate {
+        id: Some(section),
+        ty: ComponentType::Section {
+            color: color.parse().ok(),
+            components: vec![ComponentCreate {
+                id: Some(text),
+                ty: ComponentType::Text {
+                    content: name.to_string(),
+                },
+                allow: None,
+            }],
+        },
+        allow: None,
     }
 }
