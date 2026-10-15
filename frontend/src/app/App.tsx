@@ -1,3 +1,4 @@
+import { MultiProvider } from "@solid-primitives/context";
 import type { MemoryHistory, RouteSectionProps } from "@solidjs/router";
 import { MemoryRouter, Route } from "@solidjs/router";
 import { type Component, createEffect, type ParentProps, Show } from "solid-js";
@@ -158,45 +159,45 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
 	g.store = store;
 	g.flags = flags;
 
+	// HACK: wrap some providers that too many params so they're compatible with MultiProvider
+	const ReadTracking = (p: ParentProps) => (
+		<ReadTrackingProvider
+			api={store}
+			channels2={store.channels}
+			channel_contexts={ctx.channel_contexts}
+			dataUpdate={ctx.dataUpdate}
+		>
+			{p.children}
+		</ReadTrackingProvider>
+	);
+
+	const Uploads = (p: ParentProps) => (
+		<UploadsProvider ctx={ctx}>{p.children}</UploadsProvider>
+	);
+
 	return (
-		<RootStoreContext.Provider value={store}>
-			<TooltipProvider>
-				<CurrentUserProvider>
-					<DisplayProvider>
-						<chatctx.Provider value={ctx}>
-							<ReadTrackingProvider
-								api={store}
-								channels2={store.channels}
-								channel_contexts={ctx.channel_contexts}
-								dataUpdate={ctx.dataUpdate}
-							>
-								<ModalsProvider>
-									<UploadsProvider ctx={ctx}>
-										<SearchProvider>
-											<VoiceProvider>
-												<SlashCommandsProvider value={ctx.slashCommands}>
-													<MenuProvider>
-														<AutocompleteProvider>
-															<FormattingToolbarProvider>
-																<UserPopoutProvider>
-																	<CalendarPopupProvider>
-																		<AppShell>{props.children}</AppShell>
-																	</CalendarPopupProvider>
-																</UserPopoutProvider>
-															</FormattingToolbarProvider>
-														</AutocompleteProvider>
-													</MenuProvider>
-												</SlashCommandsProvider>
-											</VoiceProvider>
-										</SearchProvider>
-									</UploadsProvider>
-								</ModalsProvider>
-							</ReadTrackingProvider>
-						</chatctx.Provider>
-					</DisplayProvider>
-				</CurrentUserProvider>
-			</TooltipProvider>
-		</RootStoreContext.Provider>
+		<MultiProvider
+			values={[
+				[RootStoreContext, store],
+				TooltipProvider,
+				CurrentUserProvider,
+				DisplayProvider,
+				[chatctx, ctx],
+				ReadTracking,
+				ModalsProvider,
+				Uploads,
+				SearchProvider,
+				VoiceProvider,
+				[SlashCommandsProvider, ctx.slashCommands],
+				MenuProvider,
+				AutocompleteProvider,
+				FormattingToolbarProvider,
+				UserPopoutProvider,
+				CalendarPopupProvider,
+			]}
+		>
+			<AppShell>{props.children}</AppShell>
+		</MultiProvider>
 	);
 };
 
