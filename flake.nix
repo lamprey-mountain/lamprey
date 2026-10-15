@@ -80,6 +80,7 @@
 
           buildInputs = with pkgs; [
             openssl
+            onnxruntime
           ] ++ lib.optionals pkgs.stdenv.isDarwin [
             pkgs.libiconv
           ];
@@ -91,6 +92,9 @@
             clang
             lld
           ];
+
+          ORT_LIB_LOCATION = "${pkgs.onnxruntime}/lib";
+          ORT_PREFER_DYNAMIC_LINK = "1";
 
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "${pkgs.clang}/bin/clang";
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-C link-arg=-fuse-ld=${pkgs.mold}/bin/mold";
@@ -443,13 +447,6 @@
                   rust_log = "info"
                   listen = { address = "0.0.0.0", port = 4100 }
                   models_path = "/models"
-
-                  # [clamav]
-                  # type = "local"
-                  # socket = "/run/clamav/clamd.sock"
-                  # pid_file = "/run/clamav/clamd.pid"
-                  # database_directory = "/var/run/clamav"
-                  # database_mirror = "database.clamav.net"
                 '';
               };
             in
@@ -465,7 +462,7 @@
                 Entrypoint = [
                   "${pkgs.tini}/bin/tini"
                   "--"
-                  "${scanner-malware}/bin/scanner-nsfw"
+                  "${scanner-nsfw}/bin/scanner-nsfw"
                   "--config"
                   "/etc/scanner-nsfw.toml"
                 ];
