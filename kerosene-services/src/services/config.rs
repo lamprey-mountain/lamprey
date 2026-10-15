@@ -14,20 +14,17 @@ pub struct ServiceConfig {
 
 impl ServiceConfig {
     pub fn new(globals: Globals) -> Self {
+        // TODO: automatically rotate webtransport_identity when it expires
+        #[cfg(feature = "webtransport")]
+        let webtransport_identity = wt::identity_from_config(globals.config());
+
         Self {
             globals,
             internal_config: RwLock::new(None),
             loaded_oidc_jwk: RwLock::new(None),
 
-            // TODO: automatically rotate webtransport_identity when it expires
-            // TODO: allow configuring identity
             #[cfg(feature = "webtransport")]
-            webtransport_identity: wtransport::Identity::self_signed(&[
-                "localhost",
-                "127.0.0.1",
-                "::1",
-            ])
-            .unwrap(),
+            webtransport_identity,
         }
     }
 
@@ -70,12 +67,41 @@ impl ServiceConfig {
 }
 
 #[cfg(feature = "webtransport")]
-mod _webtransport {
+mod wt {
     use common::v1::types::{misc::binary::Binary, server::ServerWebtransportCert};
+    use lamprey_backend_core::config::Config;
     use sha2::{Digest, Sha256};
+    use std::collections::HashSet;
     use wtransport::Identity;
 
     use crate::services::config::ServiceConfig;
+
+    /// create a new self signed webtransport identity
+    ///
+    /// The certificate's subject alternative names (SANs) are taken from
+    /// config, along with loopback addresses.
+    pub(super) fn identity_from_config(config: &Config) -> Identity {
+        let wt_host = config
+            .webtransport
+            .as_ref()
+            .and_then(|wt| wt.url.as_ref())
+            .and_then(|url| url.host_str());
+
+        let hosts = [
+            config.api_url.host_str(),
+            config.html_url.host_str(),
+            config.hostname.as_deref(),
+            wt_host,
+        ];
+
+        let sans: HashSet<&str> = ["localhost", "127.0.0.1", "::1"]
+            .into_iter()
+            .chain(hosts.into_iter().flatten())
+            .filter(|h| !h.is_empty())
+            .collect();
+
+        Identity::self_signed(sans).expect("failed to generate webtransport identity")
+    }
 
     impl ServiceConfig {
         pub fn webtransport_identity(&self) -> &Identity {

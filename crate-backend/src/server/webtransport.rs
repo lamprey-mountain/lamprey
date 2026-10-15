@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use std::time::Duration;
 
 use crate::prelude::*;
@@ -54,12 +55,14 @@ impl WtServer {
 
         info!("starting webtransport server on port {}", wt_config.port);
 
-        // TODO: allow configuring what the wt server should bind to (change port, ip addr)
         let identity = srv.config.webtransport_identity();
-        let config = ServerConfig::builder()
-            .with_bind_default(wt_config.port)
-            .with_identity(identity.clone_identity())
-            .build();
+        let builder = match wt_config.address {
+            Some(address) => {
+                ServerConfig::builder().with_bind_address(SocketAddr::new(address, wt_config.port))
+            }
+            None => ServerConfig::builder().with_bind_default(wt_config.port),
+        };
+        let config = builder.with_identity(identity.clone_identity()).build();
         let server = Endpoint::server(config)?;
 
         // TODO: proper routing

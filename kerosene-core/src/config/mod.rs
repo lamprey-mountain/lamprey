@@ -408,8 +408,19 @@ pub struct ConfigVoice {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WebtransportConfig {
+    /// ip address to bind the udp socket to
+    ///
+    /// defaults to binding all interfaces (dual-stack)
+    pub address: Option<IpAddr>,
+
     #[serde(default = "default_webtransport_port")]
     pub port: u16,
+
+    /// public url that clients should connect to
+    ///
+    /// defaults to `api_url` with an `https` scheme, the configured port, and
+    /// the `/api/v1/sync-webtransport` path
+    pub url: Option<Url>,
 }
 
 fn default_webtransport_port() -> u16 {
@@ -662,6 +673,24 @@ impl Config {
             .clone()
             .ok_or_else(|| ServerError::internal(HostnameNotConfigured))?;
         Ok(Hostname::new(name)?)
+    }
+
+    /// get the public url that clients should use for webtransport sync
+    ///
+    /// returns `None` when webtransport is disabled. if `webtransport.url` is
+    /// set it's used verbatim, otherwise it's derived from `api_url`.
+    pub fn webtransport_url(&self) -> Option<Url> {
+        let wt = self.webtransport.as_ref()?;
+
+        if let Some(url) = &wt.url {
+            return Some(url.clone());
+        }
+
+        let mut url = self.api_url.clone();
+        url.set_scheme("https").ok()?;
+        url.set_path("/api/v1/sync-webtransport");
+        url.set_port(Some(wt.port)).ok()?;
+        Some(url)
     }
 
     /// get user agent string

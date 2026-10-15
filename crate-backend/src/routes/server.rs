@@ -84,17 +84,14 @@ async fn server_info(
             #[cfg(not(feature = "webtransport"))]
             webtransport: None,
             #[cfg(feature = "webtransport")]
-            webtransport: s.config.webtransport.as_ref().map(|wt_config| {
+            webtransport: s.config.webtransport.as_ref().and_then(|_| {
                 use common::v1::types::server::ServerWebtransport;
                 let cert = s.services.config.webtransport_cert();
-                let mut sync_url = s.config.api_url.clone();
-                sync_url.set_scheme("https").unwrap();
-                sync_url.set_path("/api/v1/sync-webtransport");
-                sync_url.set_port(Some(wt_config.port)).unwrap();
-                ServerWebtransport {
+                let sync_url = s.config.webtransport_url()?;
+                Some(ServerWebtransport {
                     certificate_hashes: vec![cert],
                     sync_url,
-                }
+                })
             }),
         },
         version: ServerVersion {
