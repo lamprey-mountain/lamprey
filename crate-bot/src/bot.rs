@@ -616,6 +616,7 @@ struct LlmFlumeState {
 /// where response text should be appended to
 enum TextCursor {
     /// initial loading placeholder, should be replaced by the first text chunk.
+    // TODO: properly handle a tool getting called before loading is replaced (the initial text component gets stuck as "loading...")
     Loading(ComponentId),
 
     /// actively appending to this text component
@@ -695,7 +696,7 @@ impl LlmFlumeState {
                     components: vec![tool_section_component(
                         section,
                         text,
-                        "#ff0000",
+                        "#537e5a",
                         &call.function.name,
                     )],
                 })
@@ -711,7 +712,7 @@ impl LlmFlumeState {
                     components: vec![tool_section_component(
                         section,
                         text,
-                        "#0000ff",
+                        "#57c750",
                         &result.call.function.name,
                     )],
                 })
