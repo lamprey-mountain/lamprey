@@ -13,7 +13,7 @@ use tokio::sync::watch;
 use common::v1::types::presence::Presence;
 use common::v1::types::{MessageSync, Session};
 use common::v2::types::ConnectionId;
-use common::v2::types::sync::stream::{hello, room};
+use common::v2::types::sync::stream::{channel, hello, room};
 use common::v2::types::sync::transport::webtransport::Params;
 use kerosene_sync::v2::codec::Codec;
 use kerosene_sync::v2::transport::TransportStream;
@@ -324,6 +324,72 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                     }
                     _ = framed.next() => {
                         // room stream has no commands so this must be None (stream close)
+                        break;
+                    }
+                }
+            }
+
+            Ok(())
+        }
+        StreamHeader::Channel => {
+            let session = state.session().await?;
+            let codec = Codec::<channel::Protocol>::new(state.params.clone());
+            let (init, mut framed) = codec.accept(stream).await?;
+
+            let srv = state.globals.services();
+            srv.perms
+                .for_channel3(session.user_id(), init.channel_id)
+                .await?
+                .ensure_view()?;
+
+            // send initial snapshots for active flumes in this channel
+            for entry in &srv.messages.flumes {
+                let flume = entry.value();
+                if flume.channel_id != init.channel_id {
+                    continue;
+                }
+                let delta = srv.messages.flume_initial(flume).await?;
+                framed
+                    .send(channel::Event::FlumeInit {
+                        channel_id: flume.channel_id,
+                        message_id: *entry.key(),
+                        delta,
+                    })
+                    .await?;
+            }
+
+            // we're tailing live events
+            framed.send(channel::Event::Subscribed).await?;
+
+            // forward live flume deltas for this channel
+            let mut broadcast_stream = state.globals.messaging().subscribe().await?;
+            loop {
+                tokio::select! {
+                    broadcast = broadcast_stream.next() => {
+                        let Some(Broadcast::Sync(sync)) = broadcast else {
+                            continue;
+                        };
+                        let MessageSync::FlumeDelta {
+                            channel_id,
+                            message_id,
+                            delta,
+                        } = sync.message
+                        else {
+                            continue;
+                        };
+                        if channel_id != init.channel_id {
+                            continue;
+                        }
+                        framed
+                            .send(channel::Event::FlumeDelta {
+                                channel_id,
+                                message_id,
+                                delta,
+                            })
+                            .await?;
+                    }
+                    _ = framed.next() => {
+                        // channel stream has no commands so this must be None (stream close)
                         break;
                     }
                 }
