@@ -1,8 +1,8 @@
 //! tool definitions and the [`define_tool!`] macro
 
+use sdk::http::Http;
 use serde::Serialize;
 use serde_json::Value;
-use sdk::http::Http;
 
 use crate::store::Store;
 
