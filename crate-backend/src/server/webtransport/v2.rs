@@ -10,15 +10,18 @@ use kerosene_services::globals::messaging::Broadcast;
 use kerosene_sync::util::Timeout;
 use tokio::sync::watch;
 
+use common::v1::types::oauth::{Scope, Scopes};
 use common::v1::types::presence::Presence;
 use common::v1::types::{MemberListOp, MessageSync, Permission, SERVER_ROOM_ID, Session};
 use common::v2::types::ConnectionId;
-use common::v2::types::sync::stream::{channel, hello, member_list, room};
+use common::v2::types::sync::stream::{channel, flume, hello, member_list, room};
 use common::v2::types::sync::transport::webtransport::Params;
+use kerosene_services::compat::routes::util::auth::Auth4;
 use kerosene_services::services::member_lists::util::MemberListTarget as ServiceMemberListTarget;
 use kerosene_sync::v2::codec::Codec;
 use kerosene_sync::v2::transport::TransportStream;
 use kerosene_sync::v2::transport::webtransport::WebtransportTransport;
+use lamprey_backend_core::types::auth::Identity;
 use tokio::io::AsyncReadExt;
 
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
@@ -391,6 +394,60 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                     }
                     _ = framed.next() => {
                         // channel stream has no commands so this must be None (stream close)
+                        break;
+                    }
+                }
+            }
+
+            Ok(())
+        }
+        StreamHeader::Flume => {
+            let session = state.session().await?;
+            let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+            let codec = Codec::<flume::Protocol>::new(state.params.clone());
+            let (init, mut framed) = codec.accept(stream).await?;
+
+            let srv = state.globals.services();
+            srv.perms
+                .for_channel3(Some(user_id), init.channel_id)
+                .await?
+                .ensure_view()?;
+
+            let user = srv.users.get(user_id, Some(user_id)).await?;
+            user.ensure_unsuspended()?;
+
+            // TODO: handle puppets
+            let auth = Auth4::temp_wrap(Identity::User {
+                user,
+                session: (*session).clone(),
+                scopes: Scopes(vec![Scope::Auth]),
+            });
+
+            // PERF: maybe inline logic here
+            while let Some(command) = framed.next().await.transpose()? {
+                match command {
+                    flume::Command::Ping => {
+                        srv.messages
+                            .flume_ping(init.channel_id, init.message_id, &auth)
+                            .await?;
+                    }
+                    flume::Command::Delta { delta, seq } => {
+                        srv.messages
+                            .flume_update(init.channel_id, init.message_id, &auth, delta)
+                            .await?;
+                        framed.send(flume::Event::Ack { seq }).await?;
+                    }
+                    flume::Command::Commit => {
+                        let message = srv
+                            .messages
+                            .flume_commit(init.channel_id, init.message_id)
+                            .await?;
+                        framed
+                            .send(flume::Event::Committed {
+                                message: Box::new(message),
+                            })
+                            .await?;
+                        // the flume is committed and can no longer be controlled
                         break;
                     }
                 }
