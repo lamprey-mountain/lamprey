@@ -10,7 +10,7 @@ use tantivy::{
     space_usage::SearcherSpaceUsage,
 };
 use tokio::sync::{mpsc, oneshot};
-use tracing::error;
+use tracing::{debug, error};
 
 use crate::{
     prelude::*,
@@ -276,6 +276,7 @@ impl AsyncIndex {
     }
 
     fn commit(&mut self) -> Result<()> {
+        debug!(change_count = %self.uncommitted_count, "Tantivy commit");
         self.writer.commit()?;
         self.reader.reload()?;
         self.uncommitted_count = 0;

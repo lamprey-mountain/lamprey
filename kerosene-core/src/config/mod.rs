@@ -502,7 +502,7 @@ fn default_indexing_buffer_size() -> usize {
 }
 
 fn default_commit_interval() -> u64 {
-    5
+    15
 }
 
 fn default_max_uncommitted() -> usize {
