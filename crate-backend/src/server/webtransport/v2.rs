@@ -11,10 +11,11 @@ use kerosene_sync::util::Timeout;
 use tokio::sync::watch;
 
 use common::v1::types::presence::Presence;
-use common::v1::types::{MessageSync, Session};
+use common::v1::types::{MemberListOp, MessageSync, Permission, Session, SERVER_ROOM_ID};
 use common::v2::types::ConnectionId;
-use common::v2::types::sync::stream::{channel, hello, room};
+use common::v2::types::sync::stream::{channel, hello, member_list, room};
 use common::v2::types::sync::transport::webtransport::Params;
+use kerosene_services::services::member_lists::util::MemberListTarget as ServiceMemberListTarget;
 use kerosene_sync::v2::codec::Codec;
 use kerosene_sync::v2::transport::TransportStream;
 use kerosene_sync::v2::transport::webtransport::WebtransportTransport;
@@ -397,12 +398,119 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
 
             Ok(())
         }
+        StreamHeader::MemberList => {
+            let session = state.session().await?;
+            let codec = Codec::<member_list::Protocol>::new(state.params.clone());
+            let (init, mut framed) = codec.accept(stream).await?;
+
+            let srv = state.globals.services();
+            let user_id = session.user_id();
+
+            let target = match init.target {
+                member_list::MemberListTarget::Room { room_id } => {
+                    let mut perms = srv.perms.for_room3(user_id, room_id).await?.ensure_view()?;
+                    if room_id == SERVER_ROOM_ID {
+                        perms.needs(Permission::ServerOversee);
+                    }
+                    perms.check()?;
+                    ServiceMemberListTarget::Room(room_id)
+                }
+                member_list::MemberListTarget::Channel { channel_id, .. } => {
+                    srv.perms
+                        .for_channel3(user_id, channel_id)
+                        .await?
+                        .ensure_view()?;
+                    ServiceMemberListTarget::Channel(channel_id)
+                }
+            };
+
+            let ranges: Vec<(u64, u64)> = init
+                .ranges
+                .iter()
+                .map(|range| match range {
+                    member_list::MemberListRange::Static(start, end) => (*start, *end),
+                })
+                .collect();
+
+            let mut syncer = srv.member_lists.create_syncer(state.id);
+            syncer.set_user_id(user_id).await;
+            syncer.set_query(target, &ranges).await?;
+
+            loop {
+                tokio::select! {
+                    msg = syncer.poll() => {
+                        let msg = msg?;
+                        if let Some(event) = member_list_event(msg) {
+                            framed.send(event).await?;
+                        }
+                    }
+                    _ = framed.next() => {
+                        // member list stream has no commands; None means stream close
+                        break;
+                    }
+                }
+            }
+
+            Ok(())
+        }
         _ => {
             let _session = state.session().await?;
             // TODO: do stuff with session
             Err(Error::Unimplemented)
         }
     }
+}
+
+/// convert a member list sync message into a member list stream event
+fn member_list_event(msg: MessageSync) -> Option<member_list::Event> {
+    let MessageSync::MemberListSync { ops, groups, .. } = msg else {
+        return None;
+    };
+
+    let mut room_members = Vec::new();
+    let mut thread_members = Vec::new();
+    let mut users = Vec::new();
+    let mut new_ops = Vec::with_capacity(ops.len());
+
+    for op in ops {
+        match op {
+            MemberListOp::Sync {
+                position,
+                items,
+                room_members: rm,
+                thread_members: tm,
+                users: us,
+            } => {
+                new_ops.push(member_list::Operation::Sync { position, items });
+                room_members.extend(rm.into_iter().flatten());
+                thread_members.extend(tm.into_iter().flatten());
+                users.extend(us.into_iter().flatten());
+            }
+            MemberListOp::Insert {
+                position,
+                user_id,
+                room_member,
+                thread_member,
+                user,
+            } => {
+                new_ops.push(member_list::Operation::Insert { position, user_id });
+                room_members.extend(room_member);
+                thread_members.extend(thread_member);
+                users.extend(user.map(|user| *user));
+            }
+            MemberListOp::Delete { position, count } => {
+                new_ops.push(member_list::Operation::Delete { position, count });
+            }
+        }
+    }
+
+    Some(member_list::Event {
+        ops: new_ops,
+        groups,
+        room_members,
+        thread_members,
+        users,
+    })
 }
 
 // TODO: implement this, slowly and painfully
