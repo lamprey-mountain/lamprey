@@ -11,7 +11,7 @@ use kerosene_sync::util::Timeout;
 use tokio::sync::watch;
 
 use common::v1::types::presence::Presence;
-use common::v1::types::{MemberListOp, MessageSync, Permission, Session, SERVER_ROOM_ID};
+use common::v1::types::{MemberListOp, MessageSync, Permission, SERVER_ROOM_ID, Session};
 use common::v2::types::ConnectionId;
 use common::v2::types::sync::stream::{channel, hello, member_list, room};
 use common::v2::types::sync::transport::webtransport::Params;
@@ -424,17 +424,11 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                 }
             };
 
-            let ranges: Vec<(u64, u64)> = init
-                .ranges
-                .iter()
-                .map(|range| match range {
-                    member_list::MemberListRange::Static(start, end) => (*start, *end),
-                })
-                .collect();
+            let ranges = member_list_ranges(&init.ranges);
 
             let mut syncer = srv.member_lists.create_syncer(state.id);
             syncer.set_user_id(user_id).await;
-            syncer.set_query(target, &ranges).await?;
+            syncer.set_query(target.clone(), &ranges).await?;
 
             loop {
                 tokio::select! {
@@ -444,9 +438,15 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                             framed.send(event).await?;
                         }
                     }
-                    _ = framed.next() => {
-                        // member list stream has no commands; None means stream close
-                        break;
+                    command = framed.next() => {
+                        match command.transpose()? {
+                            Some(member_list::Command::Ranges { ranges }) => {
+                                syncer
+                                    .set_query(target.clone(), &member_list_ranges(&ranges))
+                                    .await?;
+                            }
+                            None => break,
+                        }
                     }
                 }
             }
@@ -459,6 +459,16 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
             Err(Error::Unimplemented)
         }
     }
+}
+
+/// convert member list ranges into service ranges
+fn member_list_ranges(ranges: &[member_list::MemberListRange]) -> Vec<(u64, u64)> {
+    ranges
+        .iter()
+        .map(|range| match range {
+            member_list::MemberListRange::Static(start, end) => (*start, *end),
+        })
+        .collect()
 }
 
 /// convert a member list sync message into a member list stream event

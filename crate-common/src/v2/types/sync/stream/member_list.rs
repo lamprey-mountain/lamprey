@@ -55,9 +55,10 @@ pub enum MemberListRange {
 }
 
 #[record]
+#[serde(tag = "op")]
 pub enum Command {
-    // /// update subscribed ranges
-    // Range(...),
+    /// replace the ranges to subscribe to
+    Ranges { ranges: Vec<MemberListRange> },
 }
 
 #[record]
