@@ -2,6 +2,7 @@ import {
 	type Attachment,
 	type Channel as ChannelT,
 	getTimestampFromUUID,
+	type LampreyComponent,
 	type Message as MessageT,
 	type Preferences,
 	type UserWithRelationship,
@@ -102,14 +103,46 @@ export function MessageTextMarkdown(props: {
 	);
 }
 
+function componentsPreviewText(components: LampreyComponent[]): string {
+	const parts: string[] = [];
+
+	// TODO: maybe push media descriptions for media/gallery?
+	const walk = (component: LampreyComponent) => {
+		switch (component.type) {
+			case "Text":
+				parts.push(component.content);
+				break;
+			case "Button":
+			case "LinkButton":
+				parts.push(component.label);
+				break;
+			case "Container":
+			case "Section":
+				for (const child of component.components) walk(child);
+				break;
+			case "Details":
+				for (const child of component.summary) walk(child);
+				break;
+			default:
+				break;
+		}
+	};
+
+	for (const component of components) walk(component);
+
+	return parts.join(" ").replace(/\s+/g, " ").trim();
+}
+
 function messagePreviewContent(message: MessageT): string {
 	const v = message.latest_version;
 	switch (v.type) {
 		case "DefaultMarkdown":
 		case "ThreadInitial": {
 			if (v.content) return v.content;
+			const components = componentsPreviewText(v.components ?? []);
+			if (components) return components;
 			if (v.attachments.length) return `${v.attachments.length} attachment(s)`;
-			// TODO: handle embeds, components only messages
+			// TODO: handle embeds
 			// TODO: apply different style for messages without content
 			return "*TODO: more robust renderer*";
 		}
