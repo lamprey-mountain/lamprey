@@ -34,7 +34,7 @@ import {
 	icThread,
 } from "@/utils/icons.ts";
 import { useVoice } from "../voice/context.tsx";
-import { UserDisplayName } from "./Message";
+import { MessageThread, UserDisplayName } from "./Message";
 import { useMessageToolbar } from "./message-toolbar-context";
 
 export type SystemMessageBaseProps = {
@@ -53,6 +53,7 @@ export type SystemMessageBaseProps = {
 export type SystemMessageProps = SystemMessageBaseProps & {
 	icon: string;
 	content: JSX.Element;
+	accessories?: JSX.Element;
 	class?: string;
 };
 
@@ -91,6 +92,9 @@ export const SystemMessage = (props: ParentProps<SystemMessageProps>) => {
 		>
 			<aside class="aside">
 				<img class="icon" src={props.icon} />
+				<Show when={props.message.thread}>
+					<div class="thread-spine"></div>
+				</Show>
 			</aside>
 			<div class="content">
 				{props.content}
@@ -107,6 +111,9 @@ export const SystemMessage = (props: ParentProps<SystemMessageProps>) => {
 					format="full"
 				/>
 			</div>
+			<Show when={props.accessories}>
+				<div class="accessories">{props.accessories}</div>
+			</Show>
 		</article>
 	);
 };
@@ -526,7 +533,22 @@ export function SystemMessageThreadCreated(props: SystemMessageBaseProps) {
 					)}
 				</div>
 			}
-		/>
+			accessories={
+				<Show when={thread()}>
+					{(thread) => (
+						<Show when={channels.get(props.message.channel_id)}>
+							{(parentChannel) => (
+								<MessageThread
+									thread={thread()}
+									parentChannel={parentChannel()}
+									preferences={ctx.preferences()}
+								/>
+							)}
+						</Show>
+					)}
+				</Show>
+			}
+		></SystemMessage>
 	);
 }
 
