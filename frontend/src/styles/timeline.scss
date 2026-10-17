@@ -141,13 +141,15 @@
 		margin-top: 2px;
 		background: $bg-150;
 		cursor: pointer;
+		transition: background 100ms, border 100ms;
 
 		& .name {
 			color: $link-500;
 		}
 
 		&:hover {
-			background: $bg-200;
+			background: oklch(from $bg-150 calc(l + .04) c h);
+			border: solid oklch(from $sep-300 calc(l + .04) c h) 1px;
 		}
 
 		&:hover .name {
