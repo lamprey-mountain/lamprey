@@ -192,7 +192,7 @@ export const CalendarMonth = (props: {
 											}
 										}}
 									>
-										{event.title}
+										{event.title || <em>missing name</em>}
 									</div>
 								)}
 							</For>
