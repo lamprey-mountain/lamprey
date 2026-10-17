@@ -229,10 +229,11 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	return (
 		<div class="channel-settings-info">
 			<h2>info</h2>
+			<br />
 			<div class="channel-profile">
 				<Show when={isGdm()}>
-					<label class="channel-icon">
-						<h3 class="dim">icon</h3>
+					<label class="channel-icon-upload">
+						<h3 class="label">icon</h3>
 						<div class="avatar-uploader" onClick={openIconPicker}>
 							<div class="avatar-inner">
 								<ChannelIconGdm id={props.channel.id} icon={draft.icon} />
@@ -265,7 +266,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				</Show>
 				<div class="name-description">
 					<label class="name">
-						<h3 class="dim">name</h3>
+						<h3 class="label">name</h3>
 						<input
 							value={draft.name}
 							type="text"
@@ -275,7 +276,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 						/>
 					</label>
 					<label class="description">
-						<h3 class="dim">description</h3>
+						<h3 class="label">description</h3>
 						<editor.View
 							onChange={(state) => setDescription(state.doc.textContent)}
 							channelId={props.channel.id}
@@ -287,122 +288,176 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				</div>
 			</div>
 			<Show when={hasDefaultAutoArchive()}>
-				<label>
-					<h3 class="dim">automatically archive threads after</h3>
-					<DurationInput
-						value={draft.defaultAutoArchive}
-						onInput={(d) =>
-							setDraft("defaultAutoArchive", typeof d === "number" ? d : null)
-						}
-						presets={autoArchivePresets}
-						placeholder="disabled"
-					/>
-				</label>
+				<div class="settings-group">
+					<label>
+						<h3 class="label">Archive threads after</h3>
+						<p class="description">
+							Automatically archive new threads after being inactive for this
+							long.
+						</p>
+						<DurationInput
+							value={draft.defaultAutoArchive}
+							onInput={(d) =>
+								setDraft("defaultAutoArchive", typeof d === "number" ? d : null)
+							}
+							presets={autoArchivePresets}
+							placeholder="disabled"
+						/>
+					</label>
+				</div>
 			</Show>
 			<Show when={hasAutoArchive()}>
-				<label>
-					<h3 class="dim">automatically archive after</h3>
-					<DurationInput
-						value={draft.autoArchive}
-						onInput={(d) =>
-							setDraft("autoArchive", typeof d === "number" ? d : null)
-						}
-						presets={autoArchivePresets}
-						placeholder="disabled"
-					/>
-				</label>
+				<div class="settings-group">
+					<label>
+						<h3 class="label">Archive after</h3>
+						<p class="description">
+							Automatically archive this thread after being inactive for this
+							long.
+						</p>
+						<DurationInput
+							value={draft.autoArchive}
+							onInput={(d) =>
+								setDraft("autoArchive", typeof d === "number" ? d : null)
+							}
+							presets={autoArchivePresets}
+							placeholder="disabled"
+						/>
+					</label>
+				</div>
 			</Show>
-			<Show when={hasTextSlowmode()}>
-				<label>
-					<h3 class="dim">slowmode (messages)</h3>
-					<DurationInput
-						value={draft.slowmodeMessage}
-						onInput={(d) =>
-							setDraft("slowmodeMessage", typeof d === "number" ? d : null)
-						}
-						presets={slowmodePresets}
-						placeholder="disabled"
-					/>
-				</label>
-			</Show>
-			<Show when={hasThreadSlowmode()}>
-				<label>
-					<h3 class="dim">slowmode (threads)</h3>
-					<DurationInput
-						value={draft.slowmodeThread}
-						onInput={(d) =>
-							setDraft("slowmodeThread", typeof d === "number" ? d : null)
-						}
-						presets={slowmodePresets}
-						placeholder="disabled"
-					/>
-				</label>
-				<label>
-					<h3 class="dim">slowmode (messages default for threads)</h3>
-					<DurationInput
-						value={draft.defaultSlowmodeMessage}
-						onInput={(d) =>
-							setDraft(
-								"defaultSlowmodeMessage",
-								typeof d === "number" ? d : null,
-							)
-						}
-						presets={slowmodePresets}
-						placeholder="disabled"
-					/>
-				</label>
+			<Show when={hasTextSlowmode() || hasThreadSlowmode()}>
+				<div class="settings-group">
+					<h3 class="label">Slowmode</h3>
+					<p class="description">
+						Limit how quickly chatters can send messages and create threads.
+						Members with{" "}
+						<span
+							style="text-decoration:underline dotted"
+							// TODO: localize this
+							data-tooltip="ChannelManage, ThreadManage, MemberTimeout, ChannelSlowmodeBypass"
+						>
+							certain permissions
+						</span>{" "}
+						aren't affected by this.
+					</p>
+					<div style="display:flex;gap:8px">
+						<Show when={hasTextSlowmode()}>
+							<label>
+								<h3 class="dim" style="margin:0 2px">
+									messages
+								</h3>
+								<DurationInput
+									value={draft.slowmodeMessage}
+									onInput={(d) =>
+										setDraft(
+											"slowmodeMessage",
+											typeof d === "number" ? d : null,
+										)
+									}
+									presets={slowmodePresets}
+									placeholder="disabled"
+								/>
+							</label>
+						</Show>
+						<Show when={hasThreadSlowmode()}>
+							<label>
+								<h3 class="dim" style="margin:0 2px">
+									threads
+								</h3>
+								<DurationInput
+									value={draft.slowmodeThread}
+									onInput={(d) =>
+										setDraft("slowmodeThread", typeof d === "number" ? d : null)
+									}
+									presets={slowmodePresets}
+									placeholder="disabled"
+								/>
+							</label>
+							<label>
+								<h3
+									class="dim"
+									style="margin:0 2px"
+									data-tooltip="This is copied to newly created threads and does not apply retroactively"
+								>
+									messages in threads
+								</h3>
+								<DurationInput
+									value={draft.defaultSlowmodeMessage}
+									onInput={(d) =>
+										setDraft(
+											"defaultSlowmodeMessage",
+											typeof d === "number" ? d : null,
+										)
+									}
+									presets={slowmodePresets}
+									placeholder="disabled"
+								/>
+							</label>
+						</Show>
+					</div>
+				</div>
 			</Show>
 			<Show when={hasVoice()}>
-				<label style="margin-top: 8px; display: block">
-					<h3 class="dim">user limit</h3>
-					<div
-						class="slider-container"
-						style="display: flex; align-items: center; gap: 8px; margin: 8px 0; margin-top: 0"
-					>
-						<input
-							type="range"
-							min="0"
-							max="100"
-							value={draft.userLimit}
-							onInput={(e) =>
-								setDraft("userLimit", Number(e.currentTarget.value))
-							}
-							style="flex: 1;"
-						/>
-						<span style="min-width: 60px; text-align: right;">
-							{draft.userLimit === 0 ? "Unlimited" : draft.userLimit}
-						</span>
-					</div>
-				</label>
-				<label style="margin-top: 8px; display: block">
-					<h3 class="dim">bitrate</h3>
-					<div
-						class="slider-container"
-						style="display: flex; align-items: center; gap: 8px; margin: 8px 0; margin-top: 0"
-					>
-						<input
-							type="range"
-							min="0"
-							max="96000"
-							step="1000"
-							value={draft.bitrate}
-							onInput={(e) =>
-								setDraft("bitrate", Number(e.currentTarget.value))
-							}
-							style="flex: 1;"
-							list="bitrate-detents"
-						/>
-						<datalist id="bitrate-detents">
-							<option value="64000" label="64k" />
-						</datalist>
-						<span style="min-width: 60px; text-align: right;">
-							{Math.round(draft.bitrate / 1000)}k
-						</span>
-					</div>
-				</label>
+				<div class="settings-group">
+					<label>
+						<h3 class="label">User limit</h3>
+						<p class="description dim">
+							How many members can join this voice channel at once.
+						</p>
+						<div
+							class="slider-container"
+							style="display: flex; align-items: center; gap: 8px"
+						>
+							<input
+								type="range"
+								min="0"
+								max="100"
+								value={draft.userLimit}
+								onInput={(e) =>
+									setDraft("userLimit", Number(e.currentTarget.value))
+								}
+								style="flex: 1;"
+							/>
+							<span style="min-width: 80px; text-align: right;">
+								{draft.userLimit === 0 ? "Unlimited" : draft.userLimit}
+							</span>
+						</div>
+					</label>
+				</div>
+				<div class="settings-group">
+					<label>
+						<h3 class="label">Bitrate</h3>
+						<p class="description dim">
+							Set the audio quality fo this voice channel.
+						</p>
+						<div
+							class="slider-container"
+							style="display: flex; align-items: center; gap: 8px"
+						>
+							<input
+								type="range"
+								min="0"
+								max="96000"
+								step="1000"
+								value={draft.bitrate}
+								onInput={(e) =>
+									setDraft("bitrate", Number(e.currentTarget.value))
+								}
+								style="flex: 1;"
+								list="bitrate-detents"
+							/>
+							<datalist id="bitrate-detents">
+								<option value="64000" label="64k" />
+							</datalist>
+							<span style="min-width: 80px; text-align: right;">
+								{Math.round(draft.bitrate / 1000)}k
+							</span>
+						</div>
+					</label>
+				</div>
 			</Show>
 			<Show when={!isInfo() /* TODO: hasNsfw() */}>
-				<div>
+				<div class="settings-group">
 					<CheckboxOption
 						id={`channel-${props.channel.id}-nsfw`}
 						checked={draft.nsfw ?? false}
@@ -421,11 +476,10 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				</div>
 			</Show>
 			<Show when={isInfo()}>
-				<div>
+				<div class="settings-group">
 					<label style="display:flex;flex-direction:column">
-						<h3 class="dim" style="margin:0 4px">
-							url
-						</h3>
+						<h3 class="label">url</h3>
+						<p class="description">The link this info channel points to.</p>
 						<input
 							value={draft.url}
 							type="url"

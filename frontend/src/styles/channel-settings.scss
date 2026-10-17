@@ -1,6 +1,20 @@
 @use "./util.scss" as *;
 
 .channel-settings-info {
+	.label {
+		font-size: 1em;
+		margin: 0 2px;
+	}
+
+	p.description {
+		opacity: .8;
+		margin: 4px 2px;
+	}
+
+	.settings-group {
+		margin: 16px 0;
+	}
+
 	& > .channel-profile {
 		display: flex;
 		gap: 8px;
@@ -32,7 +46,7 @@
 			}
 		}
 
-		& > .channel-icon {
+		& > .channel-icon-upload {
 			& > .dim {
 				margin: 0 4px;
 			}
