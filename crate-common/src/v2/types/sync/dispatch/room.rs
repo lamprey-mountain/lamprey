@@ -1,7 +1,7 @@
 use lamprey_macros::record;
 
 use crate::v1::types::{
-    Channel, Role, RoleId, RoleReorderItem, Room, RoomId, RoomMember, mirror::RoomSeq,
+    Channel, Role, RoleId, RoleReorderItem, Room, RoomId, RoomMember, User, UserId, mirror::RoomSeq,
 };
 
 /// something happened in a room
@@ -10,10 +10,16 @@ use crate::v1::types::{
 #[record]
 #[serde(tag = "type")]
 pub enum DispatchRoom {
+    RoomCreate(RoomCreate),
+    RoomUpdate(RoomUpdate),
+    RoomDelete(RoomDelete),
     RoleCreate(RoleCreate),
     RoleUpdate(RoleUpdate),
     RoleDelete(RoleDelete),
     RoleReorder(RoleReorder),
+    RoomMemberCreate(RoomMemberCreate),
+    RoomMemberUpdate(RoomMemberUpdate),
+    RoomMemberDelete(RoomMemberDelete),
 }
 
 /// a room was created and/or you joined a room
@@ -77,14 +83,44 @@ pub struct RoleReorder {
     pub seq: RoomSeq,
 }
 
+/// a room member was created (join)
+#[record]
+pub struct RoomMemberCreate {
+    pub member: Box<RoomMember>,
+    pub user: Box<User>,
+    pub seq: RoomSeq,
+}
+
+/// a room member was updated
+#[record]
+pub struct RoomMemberUpdate {
+    pub member: Box<RoomMember>,
+    pub user: Box<User>,
+    pub seq: RoomSeq,
+}
+
+/// a room member was deleted (leave/kick/ban)
+#[record]
+pub struct RoomMemberDelete {
+    pub room_id: RoomId,
+    pub user_id: UserId,
+    pub seq: RoomSeq,
+}
+
 impl DispatchRoom {
     /// id of the room this event happened in
     pub fn room_id(&self) -> RoomId {
         match self {
+            DispatchRoom::RoomCreate(a) => a.room.id,
+            DispatchRoom::RoomUpdate(a) => a.room.id,
+            DispatchRoom::RoomDelete(a) => a.room_id,
             DispatchRoom::RoleCreate(a) => a.role.room_id,
             DispatchRoom::RoleUpdate(a) => a.role.room_id,
             DispatchRoom::RoleDelete(a) => a.room_id,
             DispatchRoom::RoleReorder(a) => a.room_id,
+            DispatchRoom::RoomMemberCreate(a) => a.member.room_id,
+            DispatchRoom::RoomMemberUpdate(a) => a.member.room_id,
+            DispatchRoom::RoomMemberDelete(a) => a.room_id,
         }
     }
 
@@ -93,10 +129,16 @@ impl DispatchRoom {
     /// if None, this event doesnt increment the seq. used for offline sync.
     pub fn seq(&self) -> Option<RoomSeq> {
         match self {
+            DispatchRoom::RoomCreate(a) => Some(a.seq),
+            DispatchRoom::RoomUpdate(a) => a.seq,
+            DispatchRoom::RoomDelete(a) => Some(a.seq),
             DispatchRoom::RoleCreate(a) => Some(a.seq),
             DispatchRoom::RoleUpdate(a) => Some(a.seq),
             DispatchRoom::RoleDelete(a) => Some(a.seq),
             DispatchRoom::RoleReorder(a) => Some(a.seq),
+            DispatchRoom::RoomMemberCreate(a) => Some(a.seq),
+            DispatchRoom::RoomMemberUpdate(a) => Some(a.seq),
+            DispatchRoom::RoomMemberDelete(a) => Some(a.seq),
         }
     }
 }

@@ -1,8 +1,8 @@
 use lamprey_macros::record;
 
 use crate::{
-    v1::types::{Channel, ChannelId, ChannelSeq, Message, misc::Time},
-    v2::types::{RoomId, UserId},
+    v1::types::{Channel, ChannelId, ChannelSeq, Message, misc::Time, reaction::ReactionKey},
+    v2::types::{MessageId, MessageVerId, RoomId, UserId},
 };
 
 /// something happened in a channel
@@ -16,6 +16,15 @@ pub enum DispatchChannel {
     ChannelTyping(ChannelTyping),
     MessageCreate(MessageCreate),
     MessageUpdate(MessageUpdate),
+    MessageDelete(MessageDelete),
+    MessageVersionDelete(MessageVersionDelete),
+    MessageDeleteBulk(MessageDeleteBulk),
+    MessageRemove(MessageRemove),
+    MessageRestore(MessageRestore),
+    ReactionCreate(ReactionCreate),
+    ReactionDelete(ReactionDelete),
+    ReactionDeleteKey(ReactionDeleteKey),
+    ReactionDeleteAll(ReactionDeleteAll),
 }
 
 /// a channel was created
@@ -77,6 +86,120 @@ pub struct MessageUpdate {
     // user: User,
 }
 
+/// a message was deleted
+#[record]
+pub struct MessageDelete {
+    pub channel_id: ChannelId,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    pub message_id: MessageId,
+    pub seq: ChannelSeq,
+}
+
+/// a specific version of a message was deleted
+#[record]
+pub struct MessageVersionDelete {
+    pub channel_id: ChannelId,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    pub message_id: MessageId,
+    pub version_id: MessageVerId,
+    pub seq: ChannelSeq,
+}
+
+/// multiple messages were deleted at once
+#[record]
+pub struct MessageDeleteBulk {
+    pub channel_id: ChannelId,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    pub message_ids: Vec<MessageId>,
+    pub seq: ChannelSeq,
+}
+
+/// multiple messages were removed (hidden) at once
+#[record]
+pub struct MessageRemove {
+    pub channel_id: ChannelId,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    pub message_ids: Vec<MessageId>,
+    pub seq: ChannelSeq,
+}
+
+/// multiple messages were restored after being removed
+#[record]
+pub struct MessageRestore {
+    pub channel_id: ChannelId,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    pub message_ids: Vec<MessageId>,
+    pub seq: ChannelSeq,
+}
+
+/// a reaction was added to a message
+#[record]
+pub struct ReactionCreate {
+    pub channel_id: ChannelId,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    pub user_id: UserId,
+    pub message_id: MessageId,
+    pub key: ReactionKey,
+    pub seq: ChannelSeq,
+}
+
+/// a specific user's reaction was removed from a message
+#[record]
+pub struct ReactionDelete {
+    pub channel_id: ChannelId,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    pub user_id: UserId,
+    pub message_id: MessageId,
+    pub key: ReactionKey,
+    pub seq: ChannelSeq,
+}
+
+/// all reactions for a key were removed from a message
+#[record]
+pub struct ReactionDeleteKey {
+    pub channel_id: ChannelId,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    pub message_id: MessageId,
+    pub key: ReactionKey,
+    pub seq: ChannelSeq,
+}
+
+/// all reactions were removed from a message
+#[record]
+pub struct ReactionDeleteAll {
+    pub channel_id: ChannelId,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    pub message_id: MessageId,
+    pub seq: ChannelSeq,
+}
+
 impl DispatchChannel {
     /// id of the channel this event happened in
     pub fn channel_id(&self) -> ChannelId {
@@ -86,6 +209,15 @@ impl DispatchChannel {
             DispatchChannel::ChannelTyping(a) => a.channel_id,
             DispatchChannel::MessageCreate(a) => a.message.channel_id,
             DispatchChannel::MessageUpdate(a) => a.message.channel_id,
+            DispatchChannel::MessageDelete(a) => a.channel_id,
+            DispatchChannel::MessageVersionDelete(a) => a.channel_id,
+            DispatchChannel::MessageDeleteBulk(a) => a.channel_id,
+            DispatchChannel::MessageRemove(a) => a.channel_id,
+            DispatchChannel::MessageRestore(a) => a.channel_id,
+            DispatchChannel::ReactionCreate(a) => a.channel_id,
+            DispatchChannel::ReactionDelete(a) => a.channel_id,
+            DispatchChannel::ReactionDeleteKey(a) => a.channel_id,
+            DispatchChannel::ReactionDeleteAll(a) => a.channel_id,
         }
     }
 
@@ -97,6 +229,15 @@ impl DispatchChannel {
             DispatchChannel::ChannelTyping(a) => a.room_id,
             DispatchChannel::MessageCreate(a) => a.message.room_id,
             DispatchChannel::MessageUpdate(a) => a.message.room_id,
+            DispatchChannel::MessageDelete(a) => a.room_id,
+            DispatchChannel::MessageVersionDelete(a) => a.room_id,
+            DispatchChannel::MessageDeleteBulk(a) => a.room_id,
+            DispatchChannel::MessageRemove(a) => a.room_id,
+            DispatchChannel::MessageRestore(a) => a.room_id,
+            DispatchChannel::ReactionCreate(a) => a.room_id,
+            DispatchChannel::ReactionDelete(a) => a.room_id,
+            DispatchChannel::ReactionDeleteKey(a) => a.room_id,
+            DispatchChannel::ReactionDeleteAll(a) => a.room_id,
         }
     }
 
@@ -108,6 +249,15 @@ impl DispatchChannel {
             DispatchChannel::ChannelTyping(_) => None,
             DispatchChannel::MessageCreate(a) => Some(a.seq),
             DispatchChannel::MessageUpdate(a) => Some(a.seq),
+            DispatchChannel::MessageDelete(a) => Some(a.seq),
+            DispatchChannel::MessageVersionDelete(a) => Some(a.seq),
+            DispatchChannel::MessageDeleteBulk(a) => Some(a.seq),
+            DispatchChannel::MessageRemove(a) => Some(a.seq),
+            DispatchChannel::MessageRestore(a) => Some(a.seq),
+            DispatchChannel::ReactionCreate(a) => Some(a.seq),
+            DispatchChannel::ReactionDelete(a) => Some(a.seq),
+            DispatchChannel::ReactionDeleteKey(a) => Some(a.seq),
+            DispatchChannel::ReactionDeleteAll(a) => Some(a.seq),
         }
     }
 }
@@ -135,35 +285,6 @@ pub enum DispatchChannelInner {
     // //     thread_id: ChannelId,
     // // },
 
-    // MessageDelete {
-    //     message_id: MessageId,
-    // },
-
-    // MessageVersionDelete {
-    //     message_id: MessageId,
-    //     version_id: MessageVerId,
-    // },
-
-    // /// delete multiple messages at once
-    // MessageDeleteBulk {
-    //     channel_id: ChannelId,
-    //     message_ids: Vec<MessageId>,
-    // },
-
-    // MessageRemove {
-    //     channel_id: ChannelId,
-    //     message_ids: Vec<MessageId>,
-    // },
-
-    // MessageRestore {
-    //     channel_id: ChannelId,
-
-    //     // TODO: remove `message_ids`
-    //     message_ids: Vec<MessageId>,
-    //     // TODO: add `messages`
-    //     // messages: Vec<Message>,
-    // },
-
     // ThreadMemberUpsert {
     //     room_id: Option<RoomId>,
     //     thread_id: ChannelId,
@@ -173,34 +294,6 @@ pub enum DispatchChannelInner {
 
     //     /// members that were removed from the thread
     //     removed: Vec<UserId>,
-    // },
-
-    // ReactionCreate {
-    //     user_id: UserId,
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
-    //     key: ReactionKey,
-    // },
-
-    // /// remove one specific emoji on a message
-    // ReactionDelete {
-    //     user_id: UserId,
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
-    //     key: ReactionKey,
-    // },
-
-    // /// remove all reactions for a reaction key on a message
-    // ReactionDeleteKey {
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
-    //     key: ReactionKey,
-    // },
-
-    // /// remove all reactions on a message
-    // ReactionDeleteAll {
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
     // },
 
     // TagCreate {
@@ -221,17 +314,6 @@ pub enum DispatchChannelInner {
     //     user_id: UserId,
     //     slowmode_thread_expire_at: Option<Time>,
     //     slowmode_message_expire_at: Option<Time>,
-    // },
-
-    // /// streaming message response
-    // ///
-    // /// when a user initially connects, a delta for all active flumes is sent
-    // /// containing the full content of each flume (apply to empty component to
-    // /// get current flume state)
-    // FlumeDelta {
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
-    //     delta: FlumeDelta,
     // },
 
     // CallCreate {
