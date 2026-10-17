@@ -132,9 +132,11 @@
 	margin-top: 2px;
 	position: relative;
 	display: flex;
+	max-width: 100%;
 	gap: 4px;
 
 	& > .main {
+		min-width: 0;
 		border: solid $sep-300 1px;
 		border-radius: 4px;
 		padding: 4px 6px;
@@ -177,10 +179,12 @@
 				color: $fg-600;
 				margin-left: 8px;
 				font-size: 1em;
+				white-space: nowrap;
 			}
 
 			& > .fallback {
 				color: $fg-500;
+				@include truncate;
 			}
 		}
 	}
@@ -421,6 +425,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: start;
+	min-width: 0;
 	padding-right: 8px;
 
 	& > .header {
@@ -513,6 +518,7 @@
 	display: flex;
 	flex-direction: column;
 	align-items: start;
+	min-width: 0;
 	padding-right: 8px;
 }
 
