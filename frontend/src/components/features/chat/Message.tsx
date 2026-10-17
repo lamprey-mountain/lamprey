@@ -169,27 +169,31 @@ export function MessageThread(props: {
 	const [chan, setChan] = useOptionalChannel();
 	const ctx = useCtx();
 
+	// HACK: resubscribe to the channel since reactivity breaks somewhere
+	const thread = api.channels.use(() => props.thread.id);
+
 	const openThreadClick = () => {
-		if (!props.thread.parent_id) return;
-		const parentChannel = api.channels.get(props.thread.parent_id);
+		const t = thread();
+		if (!t || !t.parent_id) return;
+		const parentChannel = api.channels.get(t.parent_id);
 		if (!chan || !parentChannel) return;
-		openThread(props.thread, parentChannel, ctx.preferences(), setChan, nav);
+		openThread(t, parentChannel, ctx.preferences(), setChan, nav);
 	};
 
 	const lastActivityAt = () =>
-		getTimestampFromUUID(props.thread.last_version_id ?? props.thread.id);
+		getTimestampFromUUID(thread()?.last_version_id ?? props.thread.id);
 
 	const lastMessage = api.messages.use(
 		() => props.thread.id,
-		() => props.thread.last_message_id ?? undefined,
+		() => thread()?.last_message_id ?? undefined,
 	);
 
 	return (
 		<div class="message-thread">
 			<div class="main" onClick={openThreadClick}>
 				<div class="top">
-					<div class="name">{props.thread.name}</div>
-					<div class="count">{props.thread.message_count} messages</div>
+					<div class="name">{thread()?.name}</div>
+					<div class="count">{thread()?.message_count} messages</div>
 				</div>
 				<div class="last-message">
 					<Show
