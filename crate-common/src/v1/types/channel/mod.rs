@@ -26,6 +26,9 @@ use super::calendar::{Calendar, CalendarPatch};
 use super::document::{Document, DocumentPatch, Wiki, WikiPatch};
 use super::{RoomId, UserId};
 
+/// default number of seconds after which inactive threads are auto-archived (3 days)
+pub const DEFAULT_AUTO_ARCHIVE_DURATION: u64 = 72 * 60 * 60;
+
 pub mod components;
 
 /// A channel
@@ -624,7 +627,11 @@ pub struct ChannelCreate {
 
     pub auto_archive_duration: Option<u64>,
 
-    pub default_auto_archive_duration: Option<u64>,
+    /// default auto archive duration in seconds to copy to threads created in this channel
+    ///
+    /// if unset, defaults to [`DEFAULT_AUTO_ARCHIVE_DURATION`]. set to `null` to disable.
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    pub default_auto_archive_duration: Option<Option<u64>>,
 
     pub slowmode_thread: Option<u64>,
 

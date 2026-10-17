@@ -154,7 +154,10 @@ async fn channel_create_dm(
             owner_id: Some(*user.id),
             invitable: json.invitable,
             auto_archive_duration: json.auto_archive_duration.map(|d| d as i64),
-            default_auto_archive_duration: json.default_auto_archive_duration.map(|d| d as i64),
+            default_auto_archive_duration: json
+                .default_auto_archive_duration
+                .flatten()
+                .map(|d| d as i64),
             slowmode_thread: json.slowmode_thread.map(|d| d as i64),
             slowmode_message: json.slowmode_message.map(|d| d as i64),
             default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),

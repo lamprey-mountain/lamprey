@@ -4,10 +4,10 @@ use std::time::Duration;
 use common::v1::types::presence::Status;
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
-    Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, Message, MessageChannelIcon,
-    MessageChannelMoved, MessageChannelRename, MessageChannelTagged, MessageId, MessageSync,
-    MessageThreadCreated, MessageType, Permission, PermissionOverwrite, RoomFeature, RoomId,
-    ThreadMemberCreate, UserId,
+    Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, DEFAULT_AUTO_ARCHIVE_DURATION,
+    Message, MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageChannelTagged,
+    MessageId, MessageSync, MessageThreadCreated, MessageType, Permission, PermissionOverwrite,
+    RoomFeature, RoomId, ThreadMemberCreate, UserId,
 };
 use common::v2::types::MessageVerId;
 use kerosene_core::error::{ApiError, ErrorCode};
@@ -347,6 +347,10 @@ impl ServiceChannels {
             }
         }
 
+        if json.ty.has_threads() && json.default_auto_archive_duration.is_none() {
+            json.default_auto_archive_duration = Some(Some(DEFAULT_AUTO_ARCHIVE_DURATION));
+        }
+
         let perms = if let Some(parent_id) = json.parent_id {
             srv.perms.for_channel(user.id, parent_id).await?
         } else if let Some(room_id) = room_id {
@@ -608,7 +612,10 @@ impl ServiceChannels {
                 icon: json.icon.map(|i| *i),
                 invitable: json.invitable,
                 auto_archive_duration: json.auto_archive_duration.map(|d| d as i64),
-                default_auto_archive_duration: json.default_auto_archive_duration.map(|d| d as i64),
+                default_auto_archive_duration: json
+                    .default_auto_archive_duration
+                    .flatten()
+                    .map(|d| d as i64),
                 slowmode_thread: json.slowmode_thread.map(|d| d as i64),
                 slowmode_message: json.slowmode_message.map(|d| d as i64),
                 default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
@@ -816,7 +823,10 @@ impl ServiceChannels {
             icon: None,
             invitable: json.invitable,
             auto_archive_duration: json.auto_archive_duration.map(|i| i as i64),
-            default_auto_archive_duration: json.default_auto_archive_duration.map(|i| i as i64),
+            default_auto_archive_duration: json
+                .default_auto_archive_duration
+                .flatten()
+                .map(|i| i as i64),
             slowmode_thread: json.slowmode_thread.map(|d| d as i64),
             slowmode_message: json.slowmode_message.map(|d| d as i64),
             default_slowmode_message: json.default_slowmode_message.map(|d| d as i64),
