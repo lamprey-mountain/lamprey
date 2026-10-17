@@ -1,16 +1,81 @@
 import { createSignal, For, Show } from "solid-js";
-import type { Embed, UnfurlerLogEntry } from "ts-sdk";
+import type { Embed } from "ts-sdk";
 import { useApi } from "@/api";
 import { CodeBlock } from "@/atoms/Markdown";
 import { EmbedView } from "@/components/shared/UrlEmbed";
 
+type LogLevel = "Trace" | "Debug" | "Info" | "Warning" | "Error";
+
+// TEMP: sdk types are stale, manually port crate-common/src/v1/types/unfurl.rs for now
+type LogEntry = {
+	id: number;
+	started: number;
+	ended: number;
+	level: LogLevel;
+	children?: LogEntry[];
+} & (
+	| {
+			type: "Http";
+			url: string;
+			status: number;
+			headers: [string, string][];
+			body_preview?: string | null;
+	  }
+	| {
+			type: "Other";
+			message: string;
+			attributes?: Record<string, string>;
+	  }
+);
+
 type UnfurlerDebug = {
 	embeds: Embed[];
-	log: UnfurlerLogEntry[];
+	log: LogEntry[];
+};
+
+const formatAttributes = (attributes?: Record<string, string>) =>
+	attributes
+		? Object.entries(attributes)
+				.map(([key, value]) => `${key}=${value}`)
+				.join(" ")
+		: "";
+
+const LogEntryView = (props: { entry: LogEntry }) => {
+	const detail = () =>
+		props.entry.type === "Http"
+			? props.entry.body_preview
+			: formatAttributes(props.entry.attributes);
+
+	return (
+		<Show when={props.entry.level !== "Trace"}>
+			<li>
+				<div>
+					{/* TODO: color log level, probably copy redex logs */}
+					<span style="display:inline-block;width:64px;text-align:right;color:oklch(var(--color-fg5))">
+						{props.entry.level}
+					</span>{" "}
+					<span>
+						{props.entry.type === "Http"
+							? `HTTP ${props.entry.status} ${props.entry.url}`
+							: props.entry.message}
+					</span>{" "}
+					{/* <span class="dim">{props.entry.ended - props.entry.started}ms</span> */}
+					<Show when={detail()}>{(d) => <span class="dim"> {d()}</span>}</Show>
+				</div>
+				<Show when={props.entry.children?.length}>
+					<ul style="padding-left:16px">
+						<For each={props.entry.children}>
+							{(child) => <LogEntryView entry={child} />}
+						</For>
+					</ul>
+				</Show>
+			</li>
+		</Show>
+	);
 };
 
 export const EmbedDebugger = () => {
-	const api2 = useApi();
+	const api = useApi();
 	const [url, setUrl] = createSignal("");
 	const [loading, setLoading] = createSignal(false);
 	const [data, setData] = createSignal<UnfurlerDebug | null>(null);
@@ -22,13 +87,14 @@ export const EmbedDebugger = () => {
 		if (!u) return;
 		try {
 			setLoading(true);
-			const { data, error } = await api2.client.http.POST(
+			const { data, error } = await api.client.http.POST(
 				"/api/v1/unfurler/debug",
 				{
 					body: { url: u },
 				},
 			);
-			setData(data ?? null);
+			// TODO: remove cast once the openapi schema is regenerated
+			setData((data as UnfurlerDebug | undefined) ?? null);
 			setError(error ?? null);
 		} finally {
 			setLoading(false);
@@ -66,23 +132,19 @@ export const EmbedDebugger = () => {
 				{(d) => (
 					<div>
 						<h3 class="dim" style="margin-top:8px">
-							log
-						</h3>
-						<ul style="list-style: disc inside">
-							<For each={d().log}>
-								{(entry) => (
-									<li>
-										<code>{JSON.stringify(entry)}</code>
-									</li>
-								)}
-							</For>
-						</ul>
-						<h3 class="dim" style="margin-top:8px">
 							rendered
 						</h3>
 						<For each={d().embeds}>
 							{(embed) => <EmbedView embed={embed} />}
 						</For>
+						<h3 class="dim" style="margin-top:8px">
+							log
+						</h3>
+						<ul>
+							<For each={d().log}>
+								{(entry) => <LogEntryView entry={entry} />}
+							</For>
+						</ul>
 						<h3 class="dim" style="margin-top:8px">
 							data
 						</h3>
