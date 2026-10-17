@@ -102,10 +102,16 @@ impl BackfillEtlInner {
             SearchReindexQueueTarget::RoomMembers(id) => self.spawn_room_members(*id).await,
         }
 
-        if let Ok(mut data) = self.s.begin().await {
-            if let Err(e) = data.search_reindex_queue_delete(queue.target.clone()).await {
-                error!("Failed to delete reindex queue entry: {e}");
+        match self.s.begin().await {
+            Ok(mut data) => {
+                if let Err(e) = data.search_reindex_queue_delete(queue.target.clone()).await {
+                    error!("Failed to delete reindex queue entry: {e}");
+                }
+                if let Err(e) = data.commit().await {
+                    error!("Failed to commit reindex queue deletion: {e}");
+                }
             }
+            Err(e) => error!("Failed to begin transaction: {e}"),
         }
 
         self.active.remove(&queue.target);
