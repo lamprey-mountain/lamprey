@@ -222,7 +222,7 @@ export function MessageThread(props: {
 	);
 
 	return (
-		<div class="message-thread">
+		<div class="message-thread menu-channel" data-channel-id={props.thread.id}>
 			<div class="main" onClick={openThreadClick}>
 				<div class="top">
 					<div class="name">{thread()?.name}</div>
