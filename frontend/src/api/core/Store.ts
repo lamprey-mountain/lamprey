@@ -470,6 +470,7 @@ export class RootStore {
 						...channel,
 						message_count: (channel.message_count ?? 0) + 1,
 						mention_count: 0,
+						last_message_id: m.id,
 						last_version_id: m.latest_version.version_id,
 						last_read_id: m.latest_version.version_id,
 						is_unread: false,
@@ -477,6 +478,7 @@ export class RootStore {
 				} else {
 					this.channels.cache.set(m.channel_id, {
 						...channel,
+						last_message_id: m.id,
 						last_version_id: m.latest_version.version_id,
 						is_unread: true,
 					});
