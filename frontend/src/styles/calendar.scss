@@ -100,12 +100,19 @@
 		}
 
 		.event {
-			border: solid $link-200 1px;
-			background: oklch(var(--color-link-500) / 0.2);
-			padding: 0 2px;
+			--color: oklch(var(--color-link-500));
+			border-left: solid var(--color) 3px;
+			background: oklch(from var(--color) calc(l - .15) c h / 0.2);
+			padding: 2px 4px;
 			margin-top: 2px;
-			color: $link-500;
-			min-height: 1em;
+			border-radius: 2px;
+			color: var(--color);
+			transition: background 100ms, color 100ms;
+
+			&:hover {
+				color: oklch(from var(--color) calc(l + .05) c h);
+				background: oklch(from var(--color) l c h / 0.2);
+			}
 		}
 	}
 }
