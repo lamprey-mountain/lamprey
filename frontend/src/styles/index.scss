@@ -3384,6 +3384,51 @@ button.link {
 	/* } */
 }
 
+.slider-field {
+	.slider-row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+
+		.slider-track {
+			position: relative;
+			flex: 1;
+
+			input[type="range"] {
+				display: block;
+				width: 100%;
+			}
+		}
+
+		.value {
+			min-width: 80px;
+			text-align: right;
+		}
+	}
+
+	.slider-marks {
+		position: relative;
+		height: 1em;
+		font-size: .8em;
+		color: $fg-500;
+
+		.mark {
+			position: absolute;
+			top: 0;
+			transform: translateX(-50%);
+			white-space: nowrap;
+
+			&.start {
+				transform: translateX(0);
+			}
+
+			&.end {
+				transform: translateX(-100%);
+			}
+		}
+	}
+}
+
 .friends {
 	& > header {
 		background-color: $bg-150;
