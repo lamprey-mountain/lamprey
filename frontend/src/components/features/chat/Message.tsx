@@ -102,25 +102,87 @@ export function MessageTextMarkdown(props: {
 	);
 }
 
+function messagePreviewContent(message: MessageT): string {
+	const v = message.latest_version;
+	switch (v.type) {
+		case "DefaultMarkdown":
+		case "ThreadInitial": {
+			if (v.content) return v.content;
+			if (v.attachments.length) return `${v.attachments.length} attachment(s)`;
+			// TODO: handle embeds, components only messages
+			// TODO: apply different style for messages without content
+			return "*TODO: more robust renderer*";
+		}
+
+		// TODO: handle more message types in replies
+		default: {
+			return `${v.type} message`;
+		}
+	}
+}
+
+function messagePreviewIcon(message: MessageT): string | undefined {
+	const v = message.latest_version;
+	if (isMarkdown2(v) && v.attachments.length) {
+		// NOTE: maybe theres a better way to get an icon than only using the first attachment?
+		return getMediaIcon(v.attachments[0].media);
+	}
+}
+
+function MessagePreview(props: {
+	message: MessageT;
+	channel_id: string;
+	room_id?: string | null;
+}) {
+	const users = useUsers();
+	const author = users.use(() => props.message.author_id);
+
+	return (
+		<>
+			<Show when={author()} fallback={<div class="avatar"></div>}>
+				{(a) => <Avatar animate={false} user={a()} />}
+			</Show>
+			<UserDisplayName
+				user_id={props.message.author_id}
+				room_id={props.room_id ?? undefined}
+				thread_id={props.message.channel_id}
+				onClick
+				class="author"
+			/>
+			<Show when={messagePreviewIcon(props.message)}>
+				{(icon) => <Icon src={icon()} />}
+			</Show>
+			<Show when={messagePreviewContent(props.message)}>
+				{(c) => <Markdown content={c()} channel_id={props.channel_id} inline />}
+			</Show>
+		</>
+	);
+}
+
 export function MessageThread(props: {
 	thread: ChannelT;
 	parentChannel: ChannelT;
 	preferences: Preferences;
 }) {
+	const api = useApi();
 	const nav = useNavigate();
 	const [chan, setChan] = useOptionalChannel();
-	const channels = useChannels();
 	const ctx = useCtx();
 
 	const openThreadClick = () => {
 		if (!props.thread.parent_id) return;
-		const parentChannel = channels.get(props.thread.parent_id);
+		const parentChannel = api.channels.get(props.thread.parent_id);
 		if (!chan || !parentChannel) return;
 		openThread(props.thread, parentChannel, ctx.preferences(), setChan, nav);
 	};
 
 	const lastActivityAt = () =>
 		getTimestampFromUUID(props.thread.last_version_id ?? props.thread.id);
+
+	const lastMessage = api.messages.use(
+		() => props.thread.id,
+		() => props.thread.last_message_id ?? undefined,
+	);
 
 	return (
 		<div class="message-thread">
@@ -129,8 +191,25 @@ export function MessageThread(props: {
 					<div class="name">{props.thread.name}</div>
 					<div class="count">{props.thread.message_count} messages</div>
 				</div>
-				<div>
-					last message <Time date={lastActivityAt()} />
+				<div class="last-message">
+					<Show
+						when={!lastMessage.loading}
+						fallback={<span class="fallback">Loading...</span>}
+					>
+						<Show
+							when={lastMessage()}
+							fallback={<span class="fallback">No recent messages</span>}
+						>
+							{(m) => (
+								<MessagePreview
+									message={m()}
+									channel_id={props.thread.id}
+									room_id={props.parentChannel.room_id}
+								/>
+							)}
+						</Show>
+					</Show>
+					<Time date={lastActivityAt()} />
 				</div>
 			</div>
 		</div>
@@ -144,49 +223,11 @@ export function ReplyView(props: {
 	room_id?: string;
 }) {
 	const messages = useMessages();
-	const users = useUsers();
 	const reply = messages.use(
 		() => props.channel_id,
 		() => props.reply_id,
 	);
 	const [ch, chUpdate] = useOptionalChannel();
-
-	const content = () => {
-		const r = reply();
-		if (!r) return "*loading...*";
-
-		const v = r.latest_version;
-		switch (v.type) {
-			case "DefaultMarkdown":
-			case "ThreadInitial": {
-				if (v.content) return v.content;
-				if (v.attachments.length)
-					return `${v.attachments.length} attachment(s)`;
-				// TODO: handle embeds, components only messages
-				// TODO: apply different style for messages without content
-				return "*TODO: more robust renderer*";
-			}
-
-			// TODO: handle more message types in replies
-			default: {
-				return `${v.type} message`;
-			}
-		}
-	};
-
-	const icon = () => {
-		const r = reply();
-		if (!r) return;
-
-		const v = r.latest_version;
-		if (isMarkdown2(v)) {
-			if (v.attachments.length) {
-				// NOTE: maybe theres a better way to get an icon than only using the first attacment?
-				return getMediaIcon(v.attachments[0].media);
-			}
-			return;
-		}
-	};
 
 	const scrollToReply = () => {
 		if (!chUpdate) return;
@@ -194,37 +235,18 @@ export function ReplyView(props: {
 		ch.timelineState.controller.jumpToMessage(props.reply_id, true, true);
 	};
 
-	const author = users.use(() => reply()?.author_id);
-
 	return (
 		<div class="reply" onClick={scrollToReply}>
 			<div class="spine"></div>
-			<Show when={true && author()} fallback={<div class="avatar"></div>}>
-				{(a) => <Avatar animate={false} user={a()} />}
-			</Show>
 			<div class="content">
 				<Show when={!reply.loading} fallback="loading...">
 					<Show when={reply()}>
 						{(r) => (
-							<>
-								<UserDisplayName
-									user_id={r().author_id}
-									room_id={props.room_id}
-									thread_id={r().channel_id}
-									onClick
-									class="author"
-								/>
-								<Show when={icon()}>{(icon) => <Icon src={icon()} />}</Show>
-								<Show when={content()}>
-									{(c) => (
-										<Markdown
-											content={c()}
-											channel_id={props.channel_id}
-											inline
-										/>
-									)}
-								</Show>
-							</>
+							<MessagePreview
+								message={r()}
+								channel_id={props.channel_id}
+								room_id={props.room_id}
+							/>
 						)}
 					</Show>
 				</Show>

@@ -1,6 +1,95 @@
 @use "./util.scss" as *;
 @use "./animation.scss" as *;
 
+@mixin message-preview-content {
+	display: flex;
+	align-items: center;
+	font-size: 0.9em;
+	overflow: hidden;
+
+	& > .avatar {
+		margin: 0;
+		height: 16px;
+		width: 16px;
+		min-width: 16px;
+		margin-right: 4px;
+		border-radius: 6px;
+		filter: brightness(0.8);
+	}
+
+	& > .author {
+		padding-right: 4px;
+		color: $fg-600;
+		white-space: nowrap;
+	}
+
+	& > .icon2 {
+		margin-right: 4px;
+		background-color: $fg-600;
+	}
+
+	& > .markdown {
+		display: block;
+		color: $fg-400;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+
+		* {
+			font-size: 1em;
+			display: inline;
+			white-space: inherit;
+		}
+
+		h1,
+		h2,
+		h3,
+		h4,
+		h5,
+		h6 {
+			margin-right: 4px;
+			font-weight: bold;
+		}
+
+		blockquote {
+			margin-right: 8px;
+		}
+
+		.code-block-header {
+			display: none;
+		}
+
+		.code-block-container {
+			// TODO: show border for code block
+			border: 0;
+			margin: 0;
+			padding: 0;
+
+			pre {
+				padding: 0 2px;
+			}
+		}
+
+		table {
+			border: 0;
+
+			& > * {
+				display: none;
+			}
+
+			& > .summary {
+				display: block;
+			}
+
+			&::after {
+				content: var(--summary);
+				font-style: italic;
+				color: $fg-500;
+			}
+		}
+	}
+}
+
 #root > .chat {
 	grid-area: main;
 }
@@ -72,6 +161,25 @@
 
 		.count {
 			color: $fg-500;
+		}
+
+		.last-message {
+			@include message-preview-content;
+
+			& > .user,
+			& > .markdown {
+				pointer-events: none;
+			}
+
+			& > .time {
+				color: $fg-600;
+				margin-left: 8px;
+				font-size: 1em;
+			}
+
+			& > .fallback {
+				color: $fg-500;
+			}
 		}
 	}
 }
@@ -257,94 +365,10 @@
 		border-left: solid $sep-800 2px;
 	}
 
-	& > .avatar {
-		height: 16px;
-		width: 16px;
-		min-width: 16px;
-		margin-right: 4px;
-		border-radius: 6px;
-		filter: brightness(0.8);
-	}
-
 	& > .content {
-		display: flex;
-		align-items: center;
+		@include message-preview-content;
 		padding-right: 24px;
-		font-size: 0.9em;
-		overflow: hidden;
 		pointer-events: none;
-
-		& > .author {
-			padding-right: 4px;
-			color: $fg-600;
-			white-space: nowrap;
-		}
-
-		& > .icon2 {
-			margin-right: 4px;
-			background-color: $fg-600;
-		}
-
-		& > .markdown {
-			display: block;
-			color: $fg-400;
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
-
-			* {
-				font-size: 1em;
-				display: inline;
-				white-space: inherit;
-			}
-
-			h1,
-			h2,
-			h3,
-			h4,
-			h5,
-			h6 {
-				margin-right: 4px;
-				font-weight: bold;
-			}
-
-			blockquote {
-				margin-right: 8px;
-			}
-
-			.code-block-header {
-				display: none;
-			}
-
-			.code-block-container {
-				// TODO: show border for code block
-				border: 0;
-				margin: 0;
-				padding: 0;
-
-				pre {
-					padding: 0 2px;
-				}
-			}
-
-			table {
-				border: 0;
-
-				& > * {
-					display: none;
-				}
-
-				& > .summary {
-					display: block;
-				}
-
-				&::after {
-					content: var(--summary);
-					font-style: italic;
-					color: $fg-500;
-				}
-			}
-		}
 	}
 
 	&:hover > .content {
