@@ -40,6 +40,7 @@ pub mod log {
 
     /// structured data for an unfurler log entry
     #[record]
+    #[serde(tag = "type")]
     pub enum EntryKind {
         /// http request
         Http {
