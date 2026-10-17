@@ -213,6 +213,7 @@ impl ServiceRoomTemplates {
                     default_auto_archive_duration: template_channel
                         .inner
                         .default_auto_archive_duration
+                        .flatten()
                         .map(|d| d as i64),
                     slowmode_thread: template_channel.inner.slowmode_thread.map(|d| d as i64),
                     slowmode_message: template_channel.inner.slowmode_message.map(|d| d as i64),
@@ -306,7 +307,7 @@ impl ServiceRoomTemplates {
                 url: chan.url.clone(),
                 bitrate: chan.bitrate,
                 user_limit: chan.user_limit,
-                default_auto_archive_duration: chan.default_auto_archive_duration,
+                default_auto_archive_duration: chan.default_auto_archive_duration.map(Some),
                 slowmode_thread: chan.slowmode_thread,
                 slowmode_message: chan.slowmode_message,
                 default_slowmode_message: chan.default_slowmode_message,
