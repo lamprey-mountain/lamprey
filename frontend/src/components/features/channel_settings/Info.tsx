@@ -8,6 +8,7 @@ import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { DurationInput, type DurationPreset } from "@/atoms/DurationInput.tsx";
 import { Checkbox } from "@/atoms/icons";
 import { Savebar } from "@/atoms/Savebar";
+import { Slider } from "@/atoms/Slider";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { ChannelIconGdm } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
@@ -404,24 +405,15 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 						<p class="description dim">
 							How many members can join this voice channel at once.
 						</p>
-						<div
-							class="slider-container"
-							style="display: flex; align-items: center; gap: 8px"
-						>
-							<input
-								type="range"
-								min="0"
-								max="100"
-								value={draft.userLimit}
-								onInput={(e) =>
-									setDraft("userLimit", Number(e.currentTarget.value))
-								}
-								style="flex: 1;"
-							/>
-							<span style="min-width: 80px; text-align: right;">
-								{draft.userLimit === 0 ? "Unlimited" : draft.userLimit}
-							</span>
-						</div>
+						<Slider
+							min={0}
+							max={100}
+							value={draft.userLimit}
+							valueLabel={
+								draft.userLimit === 0 ? "Unlimited" : String(draft.userLimit)
+							}
+							onInput={(v) => setDraft("userLimit", v)}
+						/>
 					</label>
 				</div>
 				<div class="settings-group">
@@ -430,29 +422,17 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 						<p class="description dim">
 							Set the audio quality fo this voice channel.
 						</p>
-						<div
-							class="slider-container"
-							style="display: flex; align-items: center; gap: 8px"
-						>
-							<input
-								type="range"
-								min="0"
-								max="96000"
-								step="1000"
-								value={draft.bitrate}
-								onInput={(e) =>
-									setDraft("bitrate", Number(e.currentTarget.value))
-								}
-								style="flex: 1;"
-								list="bitrate-detents"
-							/>
-							<datalist id="bitrate-detents">
-								<option value="64000" label="64k" />
-							</datalist>
-							<span style="min-width: 80px; text-align: right;">
-								{Math.round(draft.bitrate / 1000)}k
-							</span>
-						</div>
+						<Slider
+							min={8000}
+							max={96000}
+							step={1000}
+							value={draft.bitrate}
+							valueLabel={`${Math.round(draft.bitrate / 1000)}k`}
+							minLabel="8k"
+							maxLabel="96k"
+							detents={[{ value: 64000, label: "64k" }]}
+							onInput={(v) => setDraft("bitrate", v)}
+						/>
 					</label>
 				</div>
 			</Show>
