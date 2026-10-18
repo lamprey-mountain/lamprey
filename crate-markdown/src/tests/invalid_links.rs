@@ -52,7 +52,7 @@ fn test_link_nested() {
     let parsed = parser.parse(source);
     assert_eq!(
         parsed.to_html(),
-        "<p><a href=\"https://bad.com\">link https://example.com</a></p>"
+        "<p><a rel=\"noopener noreferrer nofollow ugc\" href=\"https://bad.com\">link https://example.com</a></p>"
     );
     assert_eq!(
         parsed.to_markdown(),

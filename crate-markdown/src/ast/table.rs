@@ -240,9 +240,15 @@ impl TableCell {
 
     /// get the content of this table cell
     pub fn children(&self) -> impl Iterator<Item = Inline> + '_ {
-        self.node
+        let mut iter = self
+            .node
             .children_with_tokens()
             .filter_map(|child| Inline::cast(child))
+            .peekable();
+        std::iter::from_fn(move || match iter.next()? {
+            Inline::Text(text) if iter.peek().is_none() && text.text().trim().is_empty() => None,
+            inline => Some(inline),
+        })
     }
 }
 

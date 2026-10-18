@@ -21,7 +21,7 @@ fn test() {
 
     assert_eq!(
         parsed.to_html(),
-        "<p>hello <em>world</em> this <a href=\"https://example.com\">is</a> a <strong>test</strong></p>"
+        "<p>hello <em>world</em> this <a rel=\"noopener noreferrer nofollow ugc\" href=\"https://example.com\">is</a> a <strong>test</strong></p>"
     );
     assert_eq!(
         parsed.to_markdown(),
@@ -36,7 +36,7 @@ fn test() {
 
     assert_eq!(
         parsed.to_html(),
-        "<p>goodbye <em>world</em> this <a href=\"https://example.com\">is</a> a <strong>test</strong></p>"
+        "<p>goodbye <em>world</em> this <a rel=\"noopener noreferrer nofollow ugc\" href=\"https://example.com\">is</a> a <strong>test</strong></p>"
     );
     assert_eq!(
         parsed.to_markdown(),
