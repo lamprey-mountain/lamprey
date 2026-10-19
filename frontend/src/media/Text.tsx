@@ -6,6 +6,7 @@ import {
 	For,
 	Show,
 } from "solid-js";
+import { useMessageTabbable } from "@/contexts/message-focus";
 import { useOptionalChannel } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
@@ -15,6 +16,8 @@ import { formatBytes, getUrl, type MediaProps } from "./util.tsx";
 const MAX_PREVIEW_SIZE = 16384;
 
 export const TextView = (props: MediaProps) => {
+	const tabbable = useMessageTabbable();
+
 	const isHtml = () =>
 		props.media.filename.endsWith(".html") ||
 		props.media.filename.endsWith(".htm") ||
@@ -134,6 +137,7 @@ export const TextView = (props: MediaProps) => {
 						class="filename"
 						download={props.media.filename}
 						href={getUrl(props.media)}
+						tabIndex={tabbable() ? 0 : -1}
 					>
 						{props.media.filename}
 					</a>

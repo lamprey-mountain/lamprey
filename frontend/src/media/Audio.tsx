@@ -17,6 +17,7 @@ import iconVolumeMedium from "@/assets/volume-medium.png";
 import iconVolumeMute from "@/assets/volume-mute.png";
 import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
+import { useMessageTabbable } from "@/contexts/message-focus";
 import {
 	formatBytes,
 	formatTime,
@@ -30,6 +31,7 @@ import {
 
 export const AudioView = (props: MediaProps) => {
 	const ctx = useCtx();
+	const tabbable = useMessageTabbable();
 
 	const audio = new Audio();
 	const actx = new AudioContext();
@@ -146,6 +148,60 @@ export const AudioView = (props: MediaProps) => {
 		}
 	};
 
+	const handleKeydown = (e: KeyboardEvent) => {
+		// ignore keys bubbling from nested controls (eg. the download link)
+		if (e.target !== e.currentTarget) return;
+		switch (e.code) {
+			case "ArrowLeft": {
+				e.preventDefault();
+				audio.currentTime = Math.max(audio.currentTime - 5, 0);
+				break;
+			}
+			case "ArrowRight": {
+				e.preventDefault();
+				audio.currentTime = Math.min(audio.currentTime + 5, duration());
+				break;
+			}
+			case "ArrowUp": {
+				e.preventDefault();
+				setVolume(Math.min(volume() + 0.05, 1));
+				break;
+			}
+			case "ArrowDown": {
+				e.preventDefault();
+				setVolume(Math.max(volume() - 0.05, 0));
+				break;
+			}
+			case "Space": {
+				e.preventDefault();
+				togglePlayPause();
+				break;
+			}
+			case "KeyM": {
+				toggleMute();
+				break;
+			}
+			case "Comma": {
+				audio.currentTime = Math.max(audio.currentTime - 0.05, 0);
+				break;
+			}
+			case "Period": {
+				audio.currentTime = Math.min(audio.currentTime + 0.05, duration());
+				break;
+			}
+			case "Home": {
+				e.preventDefault();
+				audio.currentTime = 0;
+				break;
+			}
+			case "End": {
+				e.preventDefault();
+				audio.currentTime = duration();
+				break;
+			}
+		}
+	};
+
 	const progressWidth = () => `${(progress() / duration()) * 100}%`;
 	const progressPreviewWidth = () =>
 		progressPreview()
@@ -228,7 +284,11 @@ export const AudioView = (props: MediaProps) => {
 	});
 
 	return (
-		<article class="media audio">
+		<article
+			class="media audio"
+			tabIndex={tabbable() ? 0 : -1}
+			onKeyDown={handleKeydown}
+		>
 			<svg
 				aria-hidden="true"
 				class="progress"
@@ -258,7 +318,11 @@ export const AudioView = (props: MediaProps) => {
 				<rect class="current" width={progressWidth()} />
 				<rect class="preview" width={progressPreviewWidth()} fill="#fff3" />
 			</svg>
-			<a class="thumb" href={getThumb(props.media)}>
+			<a
+				class="thumb"
+				href={getThumb(props.media)}
+				tabIndex={tabbable() ? 0 : -1}
+			>
 				<img
 					src={getThumb(props.media, 64)}
 					onError={(e) => {
@@ -273,6 +337,7 @@ export const AudioView = (props: MediaProps) => {
 					download={props.media.filename}
 					title={props.media.filename}
 					href={getUrl(props.media)}
+					tabIndex={tabbable() ? 0 : -1}
 				>
 					{props.media.filename}
 				</a>
@@ -285,6 +350,7 @@ export const AudioView = (props: MediaProps) => {
 				<button
 					type="button"
 					class="button"
+					tabIndex={-1}
 					onClick={togglePlayPause}
 					title={playing() ? "pause" : "play"}
 				>
@@ -296,6 +362,7 @@ export const AudioView = (props: MediaProps) => {
 				<button
 					type="button"
 					class="button"
+					tabIndex={-1}
 					onClick={toggleMute}
 					title={getVolumeText()}
 					onWheel={handleVolumeWheel}

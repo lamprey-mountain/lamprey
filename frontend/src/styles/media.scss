@@ -8,7 +8,11 @@
 }
 
 .media.image {
-	display: contents;
+	// NOTE: not `display: contents`, otherwise the article can't be focused
+	display: block;
+	position: relative;
+	height: 100%;
+	width: 100%;
 
 	& > .download,
 	& > .info {
@@ -44,13 +48,16 @@
 		clip-path: inset(4px 0 0 0);
 	}
 
-	&:hover > footer.info {
-		clip-path: inset(0 0 0 0);
-	}
+	&:hover,
+	&:focus-within {
+		& > footer.info {
+			clip-path: inset(0 0 0 0);
+		}
 
-	&:hover > .info,
-	&:hover > .download {
-		opacity: 1;
+		& > .info,
+		& > .download {
+			opacity: 1;
+		}
 	}
 
 	&.blurred > img {

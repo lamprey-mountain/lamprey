@@ -10,6 +10,7 @@ import {
 } from "solid-js";
 import { useCtx } from "@/app/context";
 import { Icon } from "@/atoms/Icon";
+import { useMessageTabbable } from "@/contexts/message-focus";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import {
 	icFullscreen,
@@ -39,6 +40,7 @@ import {
 
 export const VideoView = (props: MediaProps) => {
 	const ctx = useCtx();
+	const tabbable = useMessageTabbable();
 	const height = () => getHeight(props.media);
 	const width = () => getWidth(props.media);
 
@@ -300,6 +302,8 @@ export const VideoView = (props: MediaProps) => {
 	});
 
 	const handleKeydown = (e: KeyboardEvent) => {
+		// ignore keys bubbling from nested controls (eg. the download link)
+		if (e.target !== e.currentTarget) return;
 		switch (e.code) {
 			case "ArrowLeft": {
 				e.preventDefault();
@@ -370,7 +374,7 @@ export const VideoView = (props: MediaProps) => {
 				ref={wrapperEl!}
 				onKeyDown={handleKeydown}
 				onMouseMove={resetHideUiTimer}
-				tabIndex={0}
+				tabIndex={tabbable() ? 0 : -1}
 			>
 				<Loader loaded={loadingState() !== "empty"} />
 				<header class="header" onMouseMove={keepVisible}>
@@ -379,6 +383,7 @@ export const VideoView = (props: MediaProps) => {
 							download={props.media.filename}
 							title={props.media.filename}
 							href={getUrl(props.media)}
+							tabIndex={tabbable() ? 0 : -1}
 							// TODO: tooltip "download"
 						>
 							{props.media.filename}
@@ -393,6 +398,7 @@ export const VideoView = (props: MediaProps) => {
 					ref={video!}
 					src={getUrl(props.media)}
 					preload="metadata"
+					tabIndex={-1}
 					onClick={togglePlayPause}
 					onDblClick={fullScreenDblClick}
 					onDurationChange={() => setDuration(video.duration)}

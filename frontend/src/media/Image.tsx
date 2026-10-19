@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createSignal, on, Show } from "solid-js";
 import iconDownload from "@/assets/download.png";
 import { Icon } from "@/atoms/Icon";
+import { useMessageTabbable } from "@/contexts/message-focus";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags.ts";
 import { icWarning } from "@/utils/icons.ts";
@@ -21,10 +22,9 @@ type ImageViewProps = MediaProps & {
 	spoiler?: boolean;
 };
 
-// TODO: blur spoiler images
-
 export const ImageView = (props: ImageViewProps) => {
 	const [, modalctl] = useModals();
+	const tabbable = useMessageTabbable();
 	const [loaded, setLoaded] = createSignal(false);
 	const thumbUrl = () => getThumb(props.media, props.thumb_width ?? 320)!;
 
@@ -63,6 +63,15 @@ export const ImageView = (props: ImageViewProps) => {
 		),
 	);
 
+	const activate = (e: Event) => {
+		e.stopPropagation();
+		if (blurred2()) {
+			setBlurred(false);
+		} else {
+			modalctl.open({ type: "media", media: props.media });
+		}
+	};
+
 	// FIXME: media overlay text sometimes has very low contrast
 	// i should make it swap between light/dark text depending on the background?
 
@@ -71,12 +80,13 @@ export const ImageView = (props: ImageViewProps) => {
 			<article
 				class="media image"
 				classList={{ blurred: blurred2() }}
-				onClick={(e) => {
-					e.stopPropagation();
-					if (blurred2()) {
-						setBlurred(false);
-					} else {
-						modalctl.open({ type: "media", media: props.media });
+				tabIndex={tabbable() ? 0 : -1}
+				onClick={activate}
+				onKeyDown={(e) => {
+					if (e.target !== e.currentTarget) return;
+					if (e.key === "Enter" || e.key === " ") {
+						e.preventDefault();
+						activate(e);
 					}
 				}}
 			>
@@ -102,9 +112,10 @@ export const ImageView = (props: ImageViewProps) => {
 					class="download"
 					download={props.media.filename}
 					href={getUrl(props.media)}
+					tabIndex={tabbable() ? 0 : -1}
 					onClick={(e) => e.stopPropagation()}
 				>
-					<button type="button" class="button">
+					<button type="button" class="button" tabIndex={-1}>
 						<Icon src={iconDownload} alt="download" />
 					</button>
 				</a>

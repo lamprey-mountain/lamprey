@@ -1,6 +1,7 @@
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import type { Object3D, WebGLRenderer } from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { useMessageTabbable } from "@/contexts/message-focus";
 import { useConfig } from "@/lib/config";
 import {
 	COLOR_BACKGROUND,
@@ -16,6 +17,7 @@ import {
 } from "./util";
 
 export const ThreeView = (props: MediaProps) => {
+	const tabbable = useMessageTabbable();
 	const ty = createMemo(() => props.media.content_type.split(";")[0]);
 	const config = useConfig();
 	const [loaded, setLoaded] = createSignal(false);
@@ -131,7 +133,11 @@ export const ThreeView = (props: MediaProps) => {
 			<MediaLoader loaded={loaded()} />
 			<div class="top">
 				<div class="info">
-					<a download={props.media.filename} href={getUrl(props.media)}>
+					<a
+						download={props.media.filename}
+						href={getUrl(props.media)}
+						tabIndex={tabbable() ? 0 : -1}
+					>
 						download {props.media.filename}
 					</a>
 				</div>
