@@ -407,9 +407,7 @@ impl DataChannel for Postgres {
             locked_until,
             &locked_roles,
             patch.auto_name.unwrap_or(thread.auto_name),
-            patch
-                .auto_description
-                .unwrap_or(thread.auto_description),
+            patch.auto_description.unwrap_or(thread.auto_description),
         )
         .execute(tx.ext())
         .await?;

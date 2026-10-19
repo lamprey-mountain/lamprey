@@ -600,11 +600,17 @@ pub struct ChannelCreate {
     pub description: Option<String>,
 
     /// automatically generated name
-    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     pub auto_name: Option<String>,
 
     /// automatically generated description
-    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
     pub auto_description: Option<String>,
 
     #[cfg_attr(

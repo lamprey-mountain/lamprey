@@ -173,7 +173,10 @@ impl Llm {
         });
         title_messages.extend_from_slice(messages);
 
-        let stream = self.complete_without_tools(ctx, &title_messages).await.ok()?;
+        let stream = self
+            .complete_without_tools(ctx, &title_messages)
+            .await
+            .ok()?;
         futures::pin_mut!(stream);
 
         let mut title = String::new();
