@@ -12,11 +12,12 @@ use tokio::sync::watch;
 
 use common::v1::types::oauth::{Scope, Scopes};
 use common::v1::types::presence::Presence;
+use common::v1::types::voice::messages::SignallingCommand;
 use common::v1::types::{
     ChannelType, MemberListOp, MessageSync, Permission, SERVER_ROOM_ID, Session, UserId,
 };
 use common::v2::types::ConnectionId;
-use common::v2::types::sync::stream::{channel, flume, hello, member_list, room};
+use common::v2::types::sync::stream::{channel, flume, hello, member_list, room, voice};
 use common::v2::types::sync::transport::webtransport::Params;
 use kerosene_services::compat::routes::util::auth::Auth4;
 use kerosene_services::services::member_lists::util::MemberListTarget as ServiceMemberListTarget;
@@ -453,6 +454,87 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                         break;
                     }
                 }
+            }
+
+            Ok(())
+        }
+        StreamHeader::Voice => {
+            let session = state.session().await?;
+            let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+            let codec = Codec::<voice::Protocol>::new(state.params.clone());
+            let (init, mut framed) = codec.accept(stream).await?;
+
+            let srv = state.globals.services();
+            let channel_id = init.0.channel_id;
+
+            srv.perms
+                .for_channel3(Some(user_id), channel_id)
+                .await?
+                .ensure_view()?;
+
+            // subscribe before connecting so we don't miss the initial signalling events
+            let mut broadcast_stream = state.globals.messaging().subscribe().await?;
+
+            srv.voice
+                .handle_voice_connect((*session).clone(), state.id, init.0, None)
+                .await?;
+
+            let mut disconnected = false;
+            loop {
+                tokio::select! {
+                    broadcast = broadcast_stream.next() => {
+                        let Some(Broadcast::Sync(sync)) = broadcast else {
+                            continue;
+                        };
+                        let MessageSync::VoiceDispatch {
+                            user_id: target_user_id,
+                            channel_id: event_channel_id,
+                            payload,
+                        } = sync.message
+                        else {
+                            continue;
+                        };
+                        // voice dispatches are targeted at a single user
+                        if target_user_id != user_id || event_channel_id != channel_id {
+                            continue;
+                        }
+                        framed.send(voice::Event(payload)).await?;
+                    }
+                    command = framed.next() => {
+                        match command.transpose()? {
+                            Some(voice::Command(command)) => {
+                                if matches!(command, SignallingCommand::Disconnect) {
+                                    disconnected = true;
+                                }
+                                srv.voice
+                                    .handle_voice_dispatch(
+                                        (*session).clone(),
+                                        channel_id,
+                                        None,
+                                        command,
+                                    )
+                                    .await?;
+                                if disconnected {
+                                    break;
+                                }
+                            }
+                            None => break,
+                        }
+                    }
+                }
+            }
+
+            // the stream closed without an explicit disconnect, so clean up the voice state
+            if !disconnected {
+                let _ = srv
+                    .voice
+                    .handle_voice_dispatch(
+                        (*session).clone(),
+                        channel_id,
+                        None,
+                        SignallingCommand::Disconnect,
+                    )
+                    .await;
             }
 
             Ok(())
