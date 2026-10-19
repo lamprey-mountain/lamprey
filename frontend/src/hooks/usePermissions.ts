@@ -1,6 +1,7 @@
-import type { Permission } from "sdk";
+import type { Channel, Permission } from "sdk";
 import { createMemo } from "solid-js";
 import { useApi, useUsers } from "@/api";
+import { useCurrentUser } from "@/contexts/currentUser";
 import {
 	calculatePermissions,
 	type PermissionContext,
@@ -106,4 +107,31 @@ export function usePermissions(
 	};
 
 	return { permissions, has };
+}
+
+export function useCanViewChannel(
+	room_id: () => string | undefined,
+): (channel: Channel) => boolean {
+	const api2 = useApi();
+	const user = useCurrentUser();
+	const currentUserId = () => user()?.id;
+
+	return (channel: Channel): boolean => {
+		const rid = channel.room_id ?? room_id();
+		const uid = currentUserId();
+		if (!rid || !uid) return true;
+
+		// Optimization: owners can always view all channels.
+		if (api2.rooms.cache.get(rid)?.owner_id === uid) return true;
+
+		const permissionContext: PermissionContext = {
+			api: api2,
+			room_id: rid,
+			channel_id: channel.id,
+		};
+
+		const { permissions } = calculatePermissions(permissionContext, uid);
+
+		return permissions.has("ChannelView");
+	};
 }

@@ -37,13 +37,12 @@ import {
 	type NavItem,
 	useChannelNavKeybinds,
 } from "@/hooks/useChannelNavKeybinds";
-import { usePermissions } from "@/hooks/usePermissions";
+import {
+	useCanViewChannel,
+	usePermissions,
+} from "@/hooks/usePermissions";
 import { colors } from "@/lib/colors";
 import { flags } from "@/lib/flags";
-import {
-	calculatePermissions,
-	type PermissionContext,
-} from "@/lib/permissions/calculator";
 import {
 	VIEW_UNCATEGORIZED_KEY,
 	updateRoomNavView,
@@ -205,29 +204,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 	const room = rooms2.use(() => props.room_id || undefined);
 	const roomMembers2 = useRoomMembers();
 
-	const canViewChannel = (channel: Channel): boolean => {
-		const rid = channel.room_id ?? props.room_id;
-		if (!rid || !currentUserId()) {
-			return true;
-		}
-
-		const uid = currentUserId();
-
-		// Optimization: Owners can always view all channels.
-		if (uid && rooms2.cache.get(rid)?.owner_id === uid) return true;
-
-		const permissionContext: PermissionContext = {
-			api: api2,
-			room_id: rid,
-			channel_id: channel.id,
-		};
-
-		if (!uid) return false;
-
-		const { permissions } = calculatePermissions(permissionContext, uid);
-
-		return permissions.has("ChannelView");
-	};
+	const canViewChannel = useCanViewChannel(() => props.room_id);
 
 	const viewChannel = (
 		channel: api["ViewChannel"],
@@ -284,7 +261,10 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 			}
 		}
 
-		return result;
+		// only show categories that contain visible channels
+		return result.filter(
+			({ category, channels }) => !category || channels.length > 0,
+		);
 	};
 
 	const categories = createMemo<NavCategory[]>(() => {
@@ -399,6 +379,8 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 					channels: cs,
 				};
 			})
+			// only show categories that contain visible channels
+			.filter(({ category, channels }) => !category || channels.length > 0)
 			.sort((a, b) => {
 				const aPosition = a.category?.channel?.position;
 				const bPosition = b.category?.channel?.position;

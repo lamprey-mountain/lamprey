@@ -9,7 +9,10 @@ import { MemberList } from "@/components/shared/MemberList";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
-import { usePermissions } from "@/hooks/usePermissions";
+import {
+	useCanViewChannel,
+	usePermissions,
+} from "@/hooks/usePermissions";
 import type { RoomT } from "@/types";
 import { ChannelIcon } from "./User.tsx";
 
@@ -28,8 +31,14 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const room_id = () => props.room.id;
 
 	const channels2 = useChannels();
+	const canViewChannel = useCanViewChannel(room_id);
 	const threadsResource = createMemo(() =>
-		[...channels2.cache.values()].filter((c) => c.room_id === room_id()),
+		[...channels2.cache.values()].filter(
+			(c) =>
+				c.room_id === room_id() &&
+				!c.deleted_at &&
+				canViewChannel(c),
+		),
 	);
 
 	const categorizedChannels = createMemo(() => {
@@ -115,7 +124,9 @@ export const RoomHome = (props: { room: RoomT }) => {
 				}
 
 				return p;
-			});
+			})
+			// only show categories that contain visible channels
+			.filter(({ channels }) => channels.length > 0);
 		return list;
 	});
 
