@@ -266,11 +266,13 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 	const search = () => states[props.channel.id];
 	const showMembers = () =>
 		props.channel.type !== "Voice" &&
+		props.channel.type !== "Broadcast" &&
 		flags.has("channel_member_list") &&
 		ctx.preferences().frontend.showMembers !== false;
 	const showPinned = () => ch.pinned_view ?? false;
 	const showVoiceChat = () =>
-		props.channel.type === "Voice" && ch.voice_chat_sidebar_open;
+		(props.channel.type === "Voice" || props.channel.type === "Broadcast") &&
+		ch.voice_chat_sidebar_open;
 	const showHistory = () =>
 		props.channel.type === "Document" && ch.history_view;
 	const showDocumentSidebar = () => ch.sidebar_document_id;
@@ -441,7 +443,11 @@ export const RouteChannel = (
 						{(ch) => (
 							<>
 								<Switch>
-									<Match when={ch().type === "Voice"}>
+									<Match
+										when={
+											ch().type === "Voice" || ch().type === "Broadcast"
+										}
+									>
 										<Voice channel={ch()} />
 									</Match>
 									<Match

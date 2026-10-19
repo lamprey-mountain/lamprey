@@ -167,6 +167,14 @@ export const Voice = (p: { channel: Channel }) => {
 		((p.channel.preferences?.frontend as any)?.grid_view as boolean) ?? false;
 
 	const autoFocusedStreamId = () => {
+		const broadcasterId = p.channel.broadcaster_id;
+		if (broadcasterId) {
+			const broadcasterStream = [...(voice.vc.streams.values() ?? [])].find(
+				(s) => s.user_id === broadcasterId,
+			);
+			if (broadcasterStream) return broadcasterStream.id;
+		}
+
 		const watched = [...watchedScreenshares()];
 		if (watched.length > 0) return watched[0];
 		const streams = [...(voice.vc.streams.values() ?? [])];
