@@ -12,7 +12,9 @@ use tokio::sync::watch;
 
 use common::v1::types::oauth::{Scope, Scopes};
 use common::v1::types::presence::Presence;
-use common::v1::types::{MemberListOp, MessageSync, Permission, SERVER_ROOM_ID, Session};
+use common::v1::types::{
+    ChannelType, MemberListOp, MessageSync, Permission, SERVER_ROOM_ID, Session, UserId,
+};
 use common::v2::types::ConnectionId;
 use common::v2::types::sync::stream::{channel, flume, hello, member_list, room};
 use common::v2::types::sync::transport::webtransport::Params;
@@ -223,7 +225,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                             },
                             broadcast = broadcast_stream.next() => {
                                 if let Some(msg) = broadcast {
-                                    if let Some(msg) = broadcast_to_dispatch(state.globals.clone(), msg).await {
+                                    if let Some(msg) = broadcast_to_dispatch(state.globals.clone(), session.user_id(), msg).await {
                                         framed.send(hello::Event::Dispatch(hello::Dispatch {
                                             inner: Box::new(msg),
                                             seq: 0, // TODO: populate seq
@@ -581,21 +583,81 @@ fn member_list_event(msg: MessageSync) -> Option<member_list::Event> {
 }
 
 // TODO: implement this, slowly and painfully
-async fn broadcast_to_dispatch(globals: Globals, broadcast: Broadcast) -> Option<Dispatch> {
+async fn broadcast_to_dispatch(
+    globals: Globals,
+    user_id: Option<UserId>,
+    broadcast: Broadcast,
+) -> Option<Dispatch> {
     let Broadcast::Sync(sync) = broadcast else {
         return None;
     };
 
     let dispatch: Dispatch = match sync.message {
-        MessageSync::RoomCreate { room } => DispatchGlobal::RoomCreate(RoomCreate {
-            room: Box::new(room),
-            roles: todo!(),
-            channels: todo!(),
-            threads: todo!(),
-            room_member: todo!(),
-            seq: todo!(),
-        })
-        .into(),
+        MessageSync::RoomCreate { mut room } => {
+            let srv = globals.services();
+            let room_id = room.id;
+            let snapshot = srv
+                .rooms
+                .load_snapshot(room_id, user_id.is_some())
+                .await
+                .ok()?;
+            let data = snapshot.get_data()?;
+
+            let roles = snapshot.get_roles().unwrap_or_default();
+            let mut channels: Vec<_> = data.channels.values().map(|c| c.inner.clone()).collect();
+            let mut threads: Vec<_> = data
+                .threads
+                .iter()
+                .flat_map(|threads| threads.values())
+                .filter_map(|thread| {
+                    let channel = &thread.thread;
+                    if channel.archived_at.is_some() {
+                        return None;
+                    }
+
+                    if channel.ty == ChannelType::ThreadPrivate {
+                        let user_id = user_id?;
+                        let perms = data
+                            .permissions()
+                            .query(Some(user_id), Some(&channel.clone().into()));
+                        if !perms.visible {
+                            return None;
+                        }
+                    }
+
+                    Some(channel.clone())
+                })
+                .collect();
+
+            let mut room_member = None;
+            if let Some(user_id) = user_id {
+                srv.rooms
+                    .populate_private(std::slice::from_mut(&mut room), user_id)
+                    .await
+                    .ok()?;
+                srv.channels
+                    .populate_private(&mut channels, user_id)
+                    .await
+                    .ok()?;
+                srv.channels
+                    .populate_private(&mut threads, user_id)
+                    .await
+                    .ok()?;
+                room_member = snapshot
+                    .get_member(&user_id)
+                    .map(|member| Box::new(member.member.clone()));
+            }
+
+            DispatchGlobal::RoomCreate(RoomCreate {
+                room: Box::new(room),
+                roles,
+                channels,
+                threads,
+                room_member,
+                seq: 0.into(), // TODO: room sequences are not implemented yet
+            })
+            .into()
+        }
         MessageSync::ChannelCreate { channel } => {
             let seq = channel.latest_seq;
             DispatchGlobal::ChannelCreate(ChannelCreate { channel, seq }).into()
