@@ -78,6 +78,7 @@ export const MemberList = (props: MemberListProps) => {
 	const [collapsedGroups, setCollapsedGroups] = createSignal(
 		new ReactiveMap<string, boolean>(),
 	);
+	const [focusedIndex, setFocusedIndex] = createSignal(0);
 
 	const rows = createMemo(() => {
 		if (props.type === "thread") {
@@ -223,12 +224,55 @@ export const MemberList = (props: MemberListProps) => {
 
 	const isLoading = () => !list();
 
+	const focusRow = (index: number) => {
+		const row = parentRef.querySelector<HTMLElement>(
+			`[data-index="${index}"]`,
+		);
+		const button = row?.querySelector<HTMLElement>("button");
+		if (button) {
+			button.focus();
+			button.scrollIntoView({ block: "nearest" });
+			return;
+		}
+
+		// row isn't rendered yet
+		virt.scrollToIndex(index, { align: "auto" });
+		setTimeout(() => {
+			const nextRow = parentRef.querySelector<HTMLElement>(
+				`[data-index="${index}"]`,
+			);
+			nextRow?.querySelector<HTMLElement>("button")?.focus();
+		}, 0);
+	};
+
+	const handleListKeyDown = (e: KeyboardEvent) => {
+		if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+
+		const target = e.target as HTMLElement | null;
+		const button = target?.closest("button");
+		if (!button || !parentRef.contains(button)) return;
+
+		e.preventDefault();
+		const direction = e.key === "ArrowDown" ? 1 : -1;
+		const row = button.closest<HTMLElement>("[data-index]");
+		const rowIndex = row ? Number(row.dataset.index) : -1;
+		if (rowIndex === -1) return;
+
+		const nextIndex = rowIndex + direction;
+		if (nextIndex < 0 || nextIndex >= rows().length) return;
+
+		setFocusedIndex(nextIndex);
+		focusRow(nextIndex);
+	};
+
 	return (
 		<div
 			ref={parentRef}
 			class="member-list"
 			classList={{ skeleton: isLoading() }}
 			data-room-id={props.id}
+			onKeyDown={handleListKeyDown}
+			tabindex={-1}
 		>
 			<div
 				style={{
@@ -272,8 +316,13 @@ export const MemberList = (props: MemberListProps) => {
 												<button
 													type="button"
 													class="member-group"
+													tabIndex={
+														focusedIndex() === virtualRow.index ? 0 : -1
+													}
+													onFocus={() => setFocusedIndex(virtualRow.index)}
 													onClick={() => toggleGroup(group())}
 													onKeyDown={(e) => handleGroupKeyDown(e, group())}
+													data-focus-ring-padding-inline={8}
 												>
 													{getGroupName(group())} — {group().count}
 												</button>
@@ -319,6 +368,10 @@ export const MemberList = (props: MemberListProps) => {
 														type="button"
 														class="menu-user"
 														data-user-id={item().user.id}
+														tabIndex={
+															focusedIndex() === virtualRow.index ? 0 : -1
+														}
+														onFocus={() => setFocusedIndex(virtualRow.index)}
 														classList={{
 															active: false,
 															offline: isOffline(),

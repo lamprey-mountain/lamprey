@@ -21,7 +21,6 @@
 		align-items: center;
 		background: none;
 		border: none;
-		width: 100%;
 		text-align: left;
 		padding: 0;
 	}
@@ -82,7 +81,8 @@
 		}
 
 		&.active > .inner,
-		&:hover > .inner {
+		&:hover > .inner,
+		&:focus > .inner {
 			background: #fff1;
 
 			& > .text > .name {
