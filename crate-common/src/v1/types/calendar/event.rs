@@ -76,6 +76,7 @@ pub struct CalendarEvent {
     ///
     /// if true, use dates rather than datetimes for `starts_at`/`ends_at`.
     // TODO: skip serializing if is false
+    #[serde(default)]
     pub all_day: bool,
 
     pub participant_counts: CalendarParticipantCounts,
@@ -98,6 +99,7 @@ pub struct CalendarEventCreate {
     pub starts_at: Time,
     pub ends_at: Option<Time>,
     pub media_id: Option<MediaId>,
+    #[serde(default)]
     pub all_day: bool,
 }
 
