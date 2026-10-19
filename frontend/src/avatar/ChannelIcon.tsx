@@ -1,6 +1,7 @@
 import type { Channel, ChannelType } from "sdk";
 import { createMemo, Match, Show, Switch } from "solid-js";
 import { useApi } from "@/api";
+import icChanBroadcast1 from "@/assets/camera.png";
 import icChanCalendar1 from "@/assets/channel-calendar-1.png";
 import icChanDocument1 from "@/assets/channel-document-1.png";
 import icChanForum1 from "@/assets/channel-forum-1.png";
@@ -34,6 +35,8 @@ export const channelIcon = (channelType: ChannelType, seed: string) => {
 	switch (channelType) {
 		case "Voice":
 			return rnd([icChanVoice1, icChanVoice2]);
+		case "Broadcast":
+			return rnd([icChanBroadcast1]);
 		case "Forum":
 			return rnd([icChanForum1]);
 		case "Forum2":
@@ -59,6 +62,9 @@ export const channelIcon = (channelType: ChannelType, seed: string) => {
 			return rnd([icChanInfo1]);
 		case "Text":
 			return rnd([icChanText1, icChanText2, icChanText3, icChanText4]);
+		// TODO: case "Announcement":
+		// TODO: case "DocumentComment":
+		// TODO: case "DocumentBranch":
 		default:
 			return rnd([icChanUnknown]);
 	}
@@ -102,25 +108,7 @@ export const ChannelIcon = (props: {
 					animate={props.animate}
 				/>
 			</Match>
-			<Match
-				when={(
-					[
-						"Text",
-						"Voice",
-						"Forum",
-						"Calendar",
-						"Document",
-						"Wiki",
-						"Scripts",
-						"ThreadPublic",
-						"ThreadPrivate",
-						"ThreadForum2",
-						"Forum2",
-						"Ticket",
-						"Info",
-					] as ChannelType[]
-				).includes(props.channel.type)}
-			>
+			<Match when={true}>
 				<ChannelIconRoom
 					id={props.channel.id}
 					type={props.channel.type}
