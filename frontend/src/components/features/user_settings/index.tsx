@@ -20,6 +20,7 @@ import {
 	Sessions,
 	Voice,
 } from "@/components/features/user_settings/mod";
+import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
 
 // Tab type definitions with proper discriminated unions
@@ -110,6 +111,7 @@ function groupTabsByCategory(tabs: TabItem[]): GroupedTab[] {
 
 export const UserSettings = (props: { user: User; page: string }) => {
 	const nav = useNavigate();
+	const [, modalCtl] = useModals();
 	const currentTab = (): PageTab | undefined => {
 		const tab = tabs.find((i) => isPageTab(i) && i.path === (props.page ?? ""));
 		return tab && isPageTab(tab) ? tab : undefined;
@@ -154,6 +156,13 @@ export const UserSettings = (props: { user: User; page: string }) => {
 						)}
 					</For>
 				</ul>
+				<button
+					type="button"
+					class="action danger"
+					onClick={() => modalCtl.open({ type: "logout" })}
+				>
+					log out
+				</button>
 			</nav>
 			<main classList={{ padded: !currentTab()?.noPad }}>
 				<Show when={currentTab()} fallback="unknown page">

@@ -17,8 +17,8 @@ export const Home = () => {
 		});
 	}
 
-	async function logout() {
-		await api.logout();
+	function logout() {
+		modalctl.open({ type: "logout" });
 	}
 
 	const isAuthorized = () => {

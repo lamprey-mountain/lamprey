@@ -14,6 +14,7 @@ import { ModalExportData } from "./ModalExportData.tsx";
 import { ModalInviteCreate } from "./ModalInviteCreate.tsx";
 import { ModalKick } from "./ModalKick.tsx";
 import { ModalLink } from "./ModalLink.tsx";
+import { ModalLogout } from "./ModalLogout.tsx";
 import { ModalMedia } from "./ModalMedia.tsx";
 import { ModalMessageEdits } from "./ModalMessageEdits.tsx";
 import { ModalNotifications } from "./ModalNotifications.tsx";
@@ -91,6 +92,12 @@ function isResetPassword(
 	modal: ModalType,
 ): modal is Extract<ModalType, { type: "reset_password" }> {
 	return modal.type === "reset_password";
+}
+
+function isLogout(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "logout" }> {
+	return modal.type === "logout";
 }
 
 function isPalette(
@@ -247,6 +254,9 @@ export function getModal(modal: ModalType) {
 	}
 	if (isResetPassword(modal)) {
 		return <ModalResetPassword />;
+	}
+	if (isLogout(modal)) {
+		return <ModalLogout />;
 	}
 	if (isPalette(modal)) {
 		return <ModalPalette />;

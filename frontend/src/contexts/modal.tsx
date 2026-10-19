@@ -55,6 +55,9 @@ export type Modal =
 			type: "reset_password";
 	  }
 	| {
+			type: "logout";
+	  }
+	| {
 			type: "palette";
 	  }
 	| {
