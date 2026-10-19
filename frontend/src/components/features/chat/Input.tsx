@@ -17,11 +17,12 @@ import {
 	useRoomMembers,
 	useUsers,
 } from "@/api";
-import type { Attachment } from "@/app/context";
+import { type Attachment, useCtx } from "@/app/context";
 import icDelete from "@/assets/delete.png";
 import icEdit from "@/assets/edit.png";
 import cancelIc from "@/assets/x.png";
 import { EmojiButton } from "@/atoms/EmojiButton.tsx";
+import { useFocusRing } from "@/contexts/focus-ring";
 import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
@@ -31,6 +32,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal.tsx";
 import { useUploads } from "@/contexts/uploads.tsx";
+import { useMessageNav } from "@/hooks/useMessageNav";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { getThumbFromId } from "@/media/util.tsx";
@@ -45,12 +47,14 @@ type InputProps = {
 };
 
 export function Input(props: InputProps) {
+	const ctx = useCtx();
 	const channels2 = useChannels();
 	const messagesService = useMessages();
 	const users2 = useUsers();
 	const roomMembers2 = useRoomMembers();
 	const store = useApi();
 	const [ch, chUpdate] = useChannel()!;
+	const focusRing = useFocusRing();
 	const submit = useMessageSubmit(() => props.channel.id);
 	const reply_id = () => ch.reply_id;
 	const reply = () => messagesService.cache.get(reply_id()!);
@@ -58,6 +62,18 @@ export function Input(props: InputProps) {
 	const currentUser = useCurrentUser();
 	const timeline = useTimeline();
 	const [scrollIndex, setScrollIndex] = createSignal(0);
+	const [composerFocused, setComposerFocused] = createSignal(false);
+	let textEl: HTMLDivElement | undefined;
+
+	// special handling for composer keyboard nav (press tab to activate nav)
+	createEffect(() => {
+		focusRing.setOverride(
+			ch.messageNavActive && !ch.focusedMessageId && composerFocused()
+				? (textEl ?? null)
+				: null,
+		);
+	});
+	onCleanup(() => focusRing.setOverride(null));
 
 	timeline.events.on("scrollIndex", setScrollIndex);
 
@@ -182,6 +198,33 @@ export function Input(props: InputProps) {
 
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
+	const messageNav = useMessageNav(() => props.channel.id);
+
+	const focusOnMessage = () => {
+		const active = document.activeElement;
+		return active instanceof HTMLElement && !!active.closest("[data-message-id]");
+	};
+
+	const isThread = () =>
+		props.channel.type === "ThreadPublic" ||
+		props.channel.type === "ThreadPrivate" ||
+		props.channel.type === "ThreadForum2";
+
+	const closeThreadChat = () => {
+		let parent_id = props.channel.parent_id;
+
+		// NOTE: threads currently can only be one "layer" deep, so this is currently unnecessary
+		while (parent_id) {
+			const cc = ctx.channel_contexts.get(parent_id);
+			if (cc?.[0].thread_chat_sidebar_thread_id === props.channel.id) {
+				cc[1]("thread_chat_sidebar_thread_id", undefined);
+				cc[0].input_focus?.();
+				return true;
+			}
+			parent_id = channels2.cache.get(parent_id)?.parent_id;
+		}
+		return false;
+	};
 
 	const editor = createEditor({
 		channelId: () => props.channel.id ?? "",
@@ -189,7 +232,45 @@ export function Input(props: InputProps) {
 		toolbar,
 		autocomplete,
 		keymap: {
+			Tab: () => {
+				if (ch.messageNavActive) {
+					chUpdate("messageNavActive", false);
+					chUpdate("focusedMessageId", undefined);
+					return false;
+				}
+				messageNav.enter();
+				return true;
+			},
+			Escape: () => {
+				if (ch.reply_id) {
+					chUpdate("reply_id", undefined);
+					return true;
+				}
+				if (ch.messageNavActive) {
+					messageNav.exit();
+					return true;
+				}
+				// jump to the newest message and mark the channel read before
+				// closing a thread chat
+				messageNav.jumpToEnd();
+				if (isThread() && closeThreadChat()) return true;
+				return true;
+			},
+			"Alt-Enter": () => {
+				if (!ch.focusedMessageId || !focusOnMessage()) return false;
+				messageNav.markUnread();
+				return true;
+			},
+			r: () => {
+				if (!ch.focusedMessageId || !focusOnMessage()) return false;
+				messageNav.reply();
+				return true;
+			},
 			ArrowUp: (state) => {
+				if (ch.messageNavActive) {
+					messageNav.navigate(-1);
+					return true;
+				}
 				if (state.doc.textContent.length > 0) {
 					return false; // not empty, do default behavior
 				}
@@ -216,11 +297,17 @@ export function Input(props: InputProps) {
 
 				return false;
 			},
+			ArrowDown: () => {
+				if (!ch.messageNavActive) return false;
+				messageNav.navigate(1);
+				return true;
+			},
 		},
 	});
 
 	onMount(() => {
-		chUpdate("input_focus", () => editor.focus());
+		// NOTE: solid store set() calls function values as updaters, so wrap it
+		chUpdate("input_focus", () => () => editor.focus());
 		onCleanup(() => {
 			chUpdate("input_focus", undefined);
 		});
@@ -357,6 +444,8 @@ export function Input(props: InputProps) {
 	return (
 		<div
 			class="message-input"
+			onFocusIn={() => setComposerFocused(true)}
+			onFocusOut={() => setComposerFocused(false)}
 			classList={{
 				locked: locked() ?? false,
 			}}
@@ -395,7 +484,7 @@ export function Input(props: InputProps) {
 			<Show when={reply()}>
 				<InputReply thread={props.channel} reply={reply()!} />
 			</Show>
-			<div class="text" enterkeyhint="send">
+			<div class="text" enterkeyhint="send" ref={(el) => (textEl = el)}>
 				<label class="upload">
 					<Icon src={icAdd} />
 					<input
