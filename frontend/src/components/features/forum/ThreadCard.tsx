@@ -69,10 +69,10 @@ export const ThreadCard = (props: ThreadCardProps) => {
 				<Show when={props.thread.tags?.length}>
 					<ThreadTags thread={props.thread} />
 				</Show>
+				<Show when={props.thread.description}>
+					{(desc) => <Markdown content={desc()} class="description" />}
+				</Show>
 			</div>
-			<Show when={props.thread.description}>
-				{(desc) => <Markdown content={desc()} class="description" />}
-			</Show>
 			<div class="preview">
 				<MessageToolbarProvider>
 					<Show when={message()}>
