@@ -434,9 +434,16 @@ impl Bot {
             return;
         };
 
-        // respond in configured channels, and in threads that already have a
-        // conversation with us
-        let in_channel = llm_config.channel_ids.contains(&message.channel_id);
+        // respond in configured channels and in threads in them, as well as in
+        // channels that already have a conversation
+        let parent_id = self
+            .client
+            .cache()
+            .and_then(|cache| cache.channel(message.channel_id))
+            .and_then(|channel| channel.inner.load().parent_id);
+        let in_thread = parent_id.is_some();
+        let in_channel = llm_config.channel_ids.contains(&message.channel_id)
+            || parent_id.is_some_and(|id| llm_config.channel_ids.contains(&id));
         let has_history = match history::exists(&self.store, message.channel_id).await {
             Ok(has_history) => has_history,
             Err(e) => {
@@ -468,9 +475,9 @@ impl Bot {
         let model = llm_config.model.clone();
 
         tokio::spawn(async move {
-            // messages in configured channels start a new thread, unless we are
-            // already in a thread with a conversation
-            let channel_id = if reply_in_thread && in_channel && !has_history {
+            // top-level messages in configured channels start a new thread,
+            // unless we are already in a thread with a conversation
+            let channel_id = if reply_in_thread && in_channel && !in_thread && !has_history {
                 match client
                     .http()
                     .thread_create_from_message(
