@@ -61,6 +61,11 @@ export type Client = {
 
 	// TODO: isWebtransport: this is WebtransportClient;
 	isWebtransport: boolean;
+
+	// Only available when `isWebtransport` is true.
+	subscribeDocument?: (options: DocumentOptions) => Stream;
+	subscribeChannel?: (options: SubscribeChannelOptions) => Stream;
+	subscribeRoom?: (options: SubscribeRoomOptions) => Stream;
 };
 
 type Resume = {
@@ -109,6 +114,13 @@ export function createClient(opts: ClientOptions): Client {
 			client.send(data);
 		}
 		queue.length = 0;
+	}
+
+	function requireWebtransport(): WebtransportClient {
+		if (!inner?.isWebtransport) {
+			throw new Error("WebTransport is not available");
+		}
+		return inner as WebtransportClient;
 	}
 
 	async function connect(token?: string) {
@@ -198,6 +210,11 @@ export function createClient(opts: ClientOptions): Client {
 		get isWebtransport() {
 			return inner ? inner.isWebtransport : false;
 		},
+		subscribeDocument: (options) =>
+			requireWebtransport().subscribeDocument(options),
+		subscribeChannel: (options) =>
+			requireWebtransport().subscribeChannel(options),
+		subscribeRoom: (options) => requireWebtransport().subscribeRoom(options),
 	};
 }
 
