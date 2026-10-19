@@ -4,14 +4,21 @@ import type {
 	CalendarEventCreate,
 	CalendarEventPatch,
 } from "sdk/types";
+import { createResource, type Resource } from "solid-js";
 import type { ApiDB } from "@/lib/sync/db";
+import { PaginatedList } from "../core/PaginatedList";
 import { BaseService } from "../core/Service";
 import type { RootStore } from "../core/Store";
 
-// TODO: caching for calendar events and overwrites
-// cf. frontend/src/api/services/AuditLogService.ts; maybe copy useList?
+// TODO: caching for calendar overwrites
+// cf. frontend/src/api/services/AuditLogService.ts
+// sync events are applied by the store, which upserts/deletes through this
+// service; the afterUpsert/afterDelete hooks keep the per-channel id lists in
+// sync so the UI can render reactively.
 export class CalendarService extends BaseService<CalendarEvent> {
 	protected cacheName = "calendar_events";
+
+	private eventLists = new Map<string, PaginatedList>();
 
 	constructor(store: RootStore, getDb?: () => IDBPDatabase<ApiDB> | undefined) {
 		super(store, getDb);
@@ -23,6 +30,54 @@ export class CalendarService extends BaseService<CalendarEvent> {
 
 	async fetch(_id: string): Promise<CalendarEvent> {
 		throw new Error("fetch not implemented for CalendarService");
+	}
+
+	useList(
+		channel_id: () => string | undefined,
+	): Resource<PaginatedList | undefined> {
+		const [resource] = createResource(channel_id, async (id) => {
+			if (!id) return undefined;
+
+			let list = this.eventLists.get(id);
+			if (!list) {
+				list = new PaginatedList({ has_more: false });
+				this.eventLists.set(id, list);
+			}
+
+			if (list.state.ids.length === 0 && !list.state.isLoading) {
+				list.setLoading(true);
+				try {
+					await this.listEvents(id);
+				} catch (e) {
+					list.setError(e);
+				} finally {
+					list.setLoading(false);
+				}
+			}
+
+			return list;
+		});
+
+		return resource;
+	}
+
+	protected afterUpsert(item: CalendarEvent): void {
+		const list = this.eventLists.get(item.channel_id);
+		if (list) list.appendId(item.id);
+	}
+
+	protected afterDelete(id: string, item?: CalendarEvent): void {
+		if (!item) return;
+		const list = this.eventLists.get(item.channel_id);
+		list?.removeId(id);
+	}
+
+	clear() {
+		super.clear();
+		for (const list of this.eventLists.values()) {
+			list.clear();
+		}
+		this.eventLists.clear();
 	}
 
 	async listEvents(channelId: string): Promise<CalendarEvent[]> {

@@ -1,7 +1,7 @@
 import type { CalendarEvent, Channel } from "sdk";
 import {
 	createEffect,
-	createResource,
+	createMemo,
 	createSignal,
 	Match,
 	Switch,
@@ -43,14 +43,13 @@ export const Calendar = (props: { channel: Channel }) => {
 		currentDate().toLocaleString("default", { month: "long" });
 	const year = () => currentDate().getFullYear();
 
-	// FIXME: update events on sync
-	const [events] = createResource(
-		() => props.channel.id,
-		async (cid) => {
-			const events = await api.calendar.listEvents(cid);
-			return events;
-		},
-	);
+	const eventList = api.calendar.useList(() => props.channel.id);
+	const events = createMemo(() => {
+		const ids = eventList()?.state.ids ?? [];
+		return ids
+			.map((id) => api.calendar.cache.get(id))
+			.filter((e): e is CalendarEvent => e !== undefined);
+	});
 
 	const [view, setView] = createSignal<"week" | "month" | "timeline">("month");
 
@@ -139,7 +138,7 @@ export const Calendar = (props: { channel: Channel }) => {
 						<Match when={view() === "month"}>
 							<CalendarMonth
 								channel={props.channel}
-								events={events() ?? []}
+								events={events()}
 								onDayClick={handleDayClick}
 								onEventClick={handleEventClick}
 							/>
