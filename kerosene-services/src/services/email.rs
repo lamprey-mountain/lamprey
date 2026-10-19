@@ -51,17 +51,16 @@ impl ServiceEmail {
         html_body: Option<String>,
     ) -> Result<()> {
         let from_addr = self.state.config().smtp.from.clone();
-        self.state
-            .begin()
-            .await?
-            .email_queue_insert(
-                to.into_inner(),
-                from_addr,
-                subject,
-                plain_text_body,
-                html_body,
-            )
-            .await?;
+        let mut txn = self.state.begin().await?;
+        txn.email_queue_insert(
+            to.into_inner(),
+            from_addr,
+            subject,
+            plain_text_body,
+            html_body,
+        )
+        .await?;
+        txn.commit().await?;
         Ok(())
     }
 
@@ -117,6 +116,7 @@ impl ServiceEmail {
                     data.email_queue_fail(e.to_string(), item.id).await?;
                 }
             }
+            data.commit().await?;
             Ok(true)
         } else {
             data.rollback().await?;

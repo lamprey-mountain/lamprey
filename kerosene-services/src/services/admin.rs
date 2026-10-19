@@ -98,6 +98,8 @@ impl ServiceAdmin {
             });
         }
 
+        data.commit().await?;
+
         Ok(AdminCollectGarbageResponse { stats })
     }
 

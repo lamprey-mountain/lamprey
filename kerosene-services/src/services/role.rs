@@ -117,6 +117,7 @@ impl ServiceRoles {
             .await?;
 
         data.room_template_mark_dirty(room_id).await?;
+        data.commit().await?;
 
         let changes = Changes::new()
             .add("name", &role.name)
@@ -196,6 +197,7 @@ impl ServiceRoles {
             .into_iter()
             .next()
             .ok_or(Error::ApiError(ApiError::from_code(ErrorCode::UnknownRole)))?;
+        data.commit().await?;
 
         let changes = Changes::new()
             .change("name", &role_before.name, &role.name)
@@ -265,6 +267,7 @@ impl ServiceRoles {
 
         data.role_delete(room_id, role_id).await?;
         data.room_template_mark_dirty(room_id).await?;
+        data.commit().await?;
 
         let changes = Changes::new()
             .remove("name", &role.name)
@@ -294,6 +297,7 @@ impl ServiceRoles {
 
         data.role_reorder(room_id, reorder).await?;
         data.room_template_mark_dirty(room_id).await?;
+        data.commit().await?;
         srv.perms.invalidate_user_ranks(room_id);
 
         Ok(())
@@ -316,6 +320,7 @@ impl ServiceRoles {
 
         data.role_member_bulk_edit(room_id, role_id, apply_user_ids, remove_user_ids)
             .await?;
+        data.commit().await?;
         srv.perms.invalidate_user_ranks(room_id);
 
         Ok(())

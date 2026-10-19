@@ -69,6 +69,7 @@ impl ServiceTags {
         }
 
         let tag = data.tag_create(channel_id, create.clone()).await?;
+        data.commit().await?;
 
         if let Some(room_id) = channel.room_id {
             auth.set_room_id(room_id);
@@ -119,6 +120,7 @@ impl ServiceTags {
 
         let tag_old = data.tag_get(tag_id).await?;
         let tag = data.tag_update(tag_id, patch).await?;
+        data.commit().await?;
 
         let channel = srv.channels.get(channel_id, Some(user_id)).await?;
         if let Some(room_id) = channel.room_id {
@@ -173,6 +175,7 @@ impl ServiceTags {
 
         let channel = srv.channels.get(channel_id, Some(user_id)).await?;
         data.tag_delete(tag_id).await?;
+        data.commit().await?;
 
         if let Some(room_id) = channel.room_id {
             auth.set_room_id(room_id);

@@ -510,6 +510,7 @@ async fn document_branch_merge(
     let branch = data
         .document_branch_get(req.channel_id, req.branch_id)
         .await?;
+    data.commit().await?;
 
     s.broadcast(MessageSync::DocumentBranchUpdate {
         branch: branch.clone(),

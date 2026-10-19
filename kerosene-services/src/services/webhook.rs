@@ -75,6 +75,7 @@ impl ServiceWebhooks {
         let webhook = data
             .webhook_create(channel_id, user_id, json.clone())
             .await?;
+        data.commit().await?;
 
         auth.set_room_id(room_id);
         auth.al_push(AuditLogEntryType::WebhookCreate {
@@ -122,6 +123,7 @@ impl ServiceWebhooks {
 
         let webhook_before = webhook.clone();
         let webhook = data.webhook_update(webhook_id, json).await?;
+        data.commit().await?;
 
         auth.set_room_id(room_id);
         auth.al_push(AuditLogEntryType::WebhookUpdate {
@@ -163,6 +165,7 @@ impl ServiceWebhooks {
         perms.ensure(Permission::IntegrationsManage)?;
 
         data.webhook_delete(webhook_id).await?;
+        data.commit().await?;
 
         auth.set_room_id(room_id);
         auth.al_push(AuditLogEntryType::WebhookDelete {
