@@ -17,6 +17,7 @@ import icHome from "@/assets/home.png";
 import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip";
 import { useMenu } from "@/contexts/mod";
+import { useNavigate } from "@/contexts/router";
 import { useCurrentRoomId } from "@/hooks/useCurrentRoomId";
 import { useRoomDnd } from "@/hooks/useRoomDnd";
 import {
@@ -24,6 +25,7 @@ import {
 	useRoomNavKeybinds,
 } from "@/hooks/useRoomNavKeybinds";
 import { flags } from "@/lib/flags";
+import { getLastViewedChannel } from "@/lib/room-nav";
 import type { RoomNavConfig } from "@/types/room-nav";
 import { RoomIcon } from "./User";
 
@@ -146,10 +148,30 @@ export const RoomNav = () => {
 	const currentRoomId = useCurrentRoomId();
 	const selectedNavId = () => params.view_id ?? (currentRoomId() || "home");
 
+	const nav = useNavigate();
+
 	const keybinds = useRoomNavKeybinds({
 		items: navItems,
 		selectedId: selectedNavId,
 		onToggleFolder: toggleFolder,
+		onSelectRoom: (id) => {
+			if (id === "home") {
+				nav("/");
+				return;
+			}
+
+			// jump straight to the last channel the user viewed in this room
+			const lastChannelId = getLastViewedChannel(id);
+			const lastChannel = lastChannelId
+				? channels2.cache.get(lastChannelId)
+				: undefined;
+			if (lastChannel && !lastChannel.deleted_at && lastChannel.room_id === id) {
+				nav(`/channel/${lastChannelId}`);
+				return;
+			}
+
+			nav(`/room/${id}`);
+		},
 	});
 
 	const isFocused = (id: string) => {

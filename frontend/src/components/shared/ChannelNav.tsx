@@ -44,6 +44,8 @@ import {
 import { colors } from "@/lib/colors";
 import { flags } from "@/lib/flags";
 import {
+	getLastViewedChannel,
+	setLastViewedChannel,
 	VIEW_UNCATEGORIZED_KEY,
 	updateRoomNavView,
 	viewCategoryKey,
@@ -75,17 +77,6 @@ const CHANNEL_TYPES_HAS_UNREAD = new Set<ChannelType>([
 	"Announcement",
 ]);
 
-// TODO: move last viewed channel into a context
-function getLastViewedChannel(roomId: string): string | null {
-	const key = `last_channel_${roomId}`;
-	return localStorage.getItem(key);
-}
-
-function setLastViewedChannel(roomId: string, channelId: string): void {
-	const key = `last_channel_${roomId}`;
-	localStorage.setItem(key, channelId);
-}
-
 export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 	const ctx = useCtx();
 	const api2 = useApi();
@@ -99,6 +90,14 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 	const nav = useNavigate();
 	const dnd = useChannelDnd();
 	const router = useRouter();
+
+	// the currently selected nav item, including the special home/inbox/friends pages
+	const selectedNavId = () => {
+		if (params.channel_id) return params.channel_id;
+		if (router.main === "/inbox") return "inbox";
+		if (router.main === "/friends") return "friends";
+		return "home";
+	};
 
 	const user = useCurrentUser();
 	const currentUserId = () => user()?.id;
@@ -460,24 +459,38 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 					channelId: null,
 				});
 			}
-			if (!cat || !collapsedCategories().has(cat.id)) {
-				for (const channel of channels) {
-					items.push({
-						id: channel.id,
-						type: "channel",
-						categoryId: catId,
-						channelId: channel.id,
-						hasThreads: !!channel.threads?.length,
-					});
-					if (channel.threads?.length) {
-						for (const thread of channel.threads) {
-							items.push({
-								id: thread.id,
-								type: "thread",
-								categoryId: catId,
-								channelId: channel.id,
-							});
-						}
+			const collapsed = cat ? collapsedCategories().has(cat.id) : false;
+			for (const channel of channels) {
+				// a collapsed category still shows the channel that's currently open
+				const isCurrent =
+					channel.id === params.channel_id ||
+					channel.threads?.some((t) => t.id === params.channel_id);
+				if (collapsed && !isCurrent) continue;
+
+				items.push({
+					id: channel.id,
+					type: "channel",
+					categoryId: catId,
+					channelId: channel.id,
+					hasThreads: !!channel.threads?.length,
+					info: channel.type === "Info",
+					unread:
+						CHANNEL_TYPES_HAS_UNREAD.has(channel.type) &&
+						!!channel.last_read_id &&
+						channel.last_read_id !== channel.last_message_id,
+				});
+				if (channel.threads?.length) {
+					for (const thread of channel.threads) {
+						if (collapsed && thread.id !== params.channel_id) continue;
+						items.push({
+							id: thread.id,
+							type: "thread",
+							categoryId: catId,
+							channelId: channel.id,
+							unread:
+								CHANNEL_TYPES_HAS_UNREAD.has(thread.type) &&
+								thread.last_read_id !== thread.last_message_id,
+						});
 					}
 				}
 			}
@@ -488,7 +501,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 	const keybinds = useChannelNavKeybinds({
 		items: navItems,
 		categories: categories,
-		selectedId: () => params.channel_id ?? "home",
+		selectedId: selectedNavId,
 		onToggleCategory: (id) => {
 			setCollapsedCategories((prev) => {
 				const newSet = new Set(prev);
@@ -500,13 +513,39 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 				return newSet;
 			});
 		},
-		onSelectChannel: () => {},
+		onSelectChannel: (id) => {
+			switch (id) {
+				case "home":
+					nav(props.room_id ? `/room/${props.room_id}` : "/");
+					return;
+				case "inbox":
+					nav("/inbox");
+					return;
+				case "friends":
+					nav("/friends");
+					return;
+			}
+
+			const channel = channels2.cache.get(id) ?? dms2.cache.get(id);
+			if (!channel) return;
+
+			if (channel.type === "Info") {
+				if (channel.url) window.open(channel.url, "_self");
+				return;
+			}
+
+			if (props.view_id) {
+				nav(`/view/${props.view_id}/channel/${id}`);
+			} else {
+				nav(`/channel/${id}`);
+			}
+		},
 	});
 
 	const isFocused = (id: string) => {
 		const focused = keybinds.focusedId();
 		if (focused !== null) return focused === id;
-		const selected = params.channel_id ?? "home";
+		const selected = selectedNavId();
 		return selected === id;
 	};
 

@@ -6,6 +6,17 @@ type ViewCategory = api["ViewCategory"];
 
 export const VIEW_UNCATEGORIZED_KEY = "__view_uncategorized__";
 
+/** the last channel the user viewed in a room, persisted in localStorage */
+export const getLastViewedChannel = (roomId: string): string | null =>
+	localStorage.getItem(`last_channel_${roomId}`);
+
+export const setLastViewedChannel = (
+	roomId: string,
+	channelId: string,
+): void => {
+	localStorage.setItem(`last_channel_${roomId}`, channelId);
+};
+
 export const viewCategoryKey = (viewId: string, index: number) =>
 	`view-category:${viewId}:${index}`;
 

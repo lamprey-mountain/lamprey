@@ -13,6 +13,7 @@ export type RoomKeyboardListProps = {
 	items: Accessor<RoomNavFocusItem[]>;
 	selectedId: Accessor<string | null>;
 	onToggleFolder: (id: string) => void;
+	onSelectRoom: (id: string) => void;
 };
 
 export const useRoomNavKeybinds = (props: RoomKeyboardListProps) => {
@@ -64,6 +65,35 @@ export const useRoomNavKeybinds = (props: RoomKeyboardListProps) => {
 		}
 		return blocks;
 	};
+
+	// move to the next/previous room (or home) in the list
+	const moveRoom = (direction: 1 | -1) => {
+		const rooms = props
+			.items()
+			.filter((i) => i.type === "room" || i.type === "home");
+		if (!rooms.length) return;
+
+		const currentId = props.selectedId() ?? focusedId();
+		let currentIndex = rooms.findIndex((i) => i.id === currentId);
+		if (currentIndex === -1) {
+			currentIndex = direction === 1 ? -1 : rooms.length;
+		}
+
+		const nextIndex = currentIndex + direction;
+		if (nextIndex < 0 || nextIndex >= rooms.length) return;
+		props.onSelectRoom(rooms[nextIndex].id);
+	};
+
+	const globalBinds = createKeybinds({
+		"Ctrl-Alt-ArrowDown": (e) => {
+			e.preventDefault();
+			moveRoom(1);
+		},
+		"Ctrl-Alt-ArrowUp": (e) => {
+			e.preventDefault();
+			moveRoom(-1);
+		},
+	});
 
 	const binds = createKeybinds({
 		ArrowDown: (e) => {
@@ -172,9 +202,12 @@ export const useRoomNavKeybinds = (props: RoomKeyboardListProps) => {
 		containerEl = el;
 		el.addEventListener("keydown", binds);
 		el.addEventListener("focusout", onFocusOut);
+		// global shortcuts for jumping between rooms
+		window.addEventListener("keydown", globalBinds);
 		onCleanup(() => {
 			el.removeEventListener("keydown", binds);
 			el.removeEventListener("focusout", onFocusOut);
+			window.removeEventListener("keydown", globalBinds);
 		});
 	};
 

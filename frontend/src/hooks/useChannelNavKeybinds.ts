@@ -9,6 +9,9 @@ export type NavItem = {
 	categoryId: string | null;
 	channelId: string | null;
 	hasThreads?: boolean;
+	unread?: boolean;
+	/** info channels link out to an external url and are skipped when navigating */
+	info?: boolean;
 };
 
 export type KeyboardListProps = {
@@ -70,6 +73,59 @@ export const useChannelNavKeybinds = (props: KeyboardListProps) => {
 		}
 		return blocks;
 	};
+
+	// move the selection to the next/previous channel in the list, optionally
+	// only stopping at unread channels (wrapping around when searching)
+	const moveChannel = (direction: 1 | -1, unreadOnly: boolean) => {
+		const channels = props
+			.items()
+			.filter(
+				(i) => (i.type === "channel" || i.type === "thread") && !i.info,
+			);
+		if (!channels.length) return;
+
+		const currentId = props.selectedId() ?? focusedId();
+		let currentIndex = channels.findIndex((i) => i.id === currentId);
+		if (currentIndex === -1) {
+			currentIndex = direction === 1 ? -1 : channels.length;
+		}
+
+		if (!unreadOnly) {
+			const nextIndex = currentIndex + direction;
+			if (nextIndex < 0 || nextIndex >= channels.length) return;
+			props.onSelectChannel(channels[nextIndex].id);
+			return;
+		}
+
+		const len = channels.length;
+		for (let step = 1; step <= len; step++) {
+			const idx = (((currentIndex + direction * step) % len) + len) % len;
+			if (idx === currentIndex) break;
+			if (channels[idx].unread) {
+				props.onSelectChannel(channels[idx].id);
+				return;
+			}
+		}
+	};
+
+	const globalBinds = createKeybinds({
+		"Alt-ArrowDown": (e) => {
+			e.preventDefault();
+			moveChannel(1, false);
+		},
+		"Alt-ArrowUp": (e) => {
+			e.preventDefault();
+			moveChannel(-1, false);
+		},
+		"Alt-Shift-ArrowDown": (e) => {
+			e.preventDefault();
+			moveChannel(1, true);
+		},
+		"Alt-Shift-ArrowUp": (e) => {
+			e.preventDefault();
+			moveChannel(-1, true);
+		},
+	});
 
 	const binds = createKeybinds({
 		ArrowDown: (e) => {
@@ -258,9 +314,12 @@ export const useChannelNavKeybinds = (props: KeyboardListProps) => {
 		containerEl = el;
 		el.addEventListener("keydown", binds);
 		el.addEventListener("focusout", onFocusOut);
+		// global shortcuts for jumping between channels
+		window.addEventListener("keydown", globalBinds);
 		onCleanup(() => {
 			el.removeEventListener("keydown", binds);
 			el.removeEventListener("focusout", onFocusOut);
+			window.removeEventListener("keydown", globalBinds);
 		});
 	};
 
