@@ -337,6 +337,7 @@ impl DocumentActor {
         }
 
         let _ = self.update_tx.send(DocumentEvent::Update {
+            user_id: author_id,
             origin_conn_id: None,
             update: broadcast_bytes,
         });
@@ -531,6 +532,7 @@ impl DocumentActor {
         }
 
         let _ = self.update_tx.send(DocumentEvent::Update {
+            user_id: author_id,
             origin_conn_id,
             update: broadcast_bytes,
         });

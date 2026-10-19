@@ -160,7 +160,11 @@ impl DocumentSyncer {
                     res = rx.recv() => {
                         match res {
                             Ok(event) => match event {
-                                DocumentEvent::Update { origin_conn_id, update } => {
+                                DocumentEvent::Update {
+                                    origin_conn_id,
+                                    update,
+                                    ..
+                                } => {
                                     if origin_conn_id == Some(self.conn_id) {
                                         continue;
                                     }

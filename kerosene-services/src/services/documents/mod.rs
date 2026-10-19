@@ -36,6 +36,7 @@ pub struct ServiceDocuments {
 #[derive(Clone, Debug)]
 pub enum DocumentEvent {
     Update {
+        user_id: UserId,
         origin_conn_id: Option<ConnectionId>,
         update: Vec<u8>,
     },

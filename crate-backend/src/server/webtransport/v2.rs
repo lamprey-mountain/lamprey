@@ -8,8 +8,9 @@ use common::v2::types::sync::dispatch::{Dispatch, Ready};
 use futures::SinkExt;
 use kerosene_services::globals::messaging::Broadcast;
 use kerosene_sync::util::Timeout;
-use tokio::sync::watch;
+use tokio::sync::{broadcast, watch};
 
+use common::v1::types::document::DocumentUpdate;
 use common::v1::types::oauth::{Scope, Scopes};
 use common::v1::types::presence::Presence;
 use common::v1::types::voice::messages::SignallingCommand;
@@ -17,9 +18,10 @@ use common::v1::types::{
     ChannelType, MemberListOp, MessageSync, Permission, SERVER_ROOM_ID, Session, UserId,
 };
 use common::v2::types::ConnectionId;
-use common::v2::types::sync::stream::{channel, flume, hello, member_list, room, voice};
+use common::v2::types::sync::stream::{channel, document, flume, hello, member_list, room, voice};
 use common::v2::types::sync::transport::webtransport::Params;
 use kerosene_services::compat::routes::util::auth::Auth4;
+use kerosene_services::services::documents::DocumentEvent;
 use kerosene_services::services::member_lists::util::MemberListTarget as ServiceMemberListTarget;
 use kerosene_sync::v2::codec::Codec;
 use kerosene_sync::v2::transport::TransportStream;
@@ -536,6 +538,182 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                     )
                     .await;
             }
+
+            Ok(())
+        }
+        StreamHeader::Document => {
+            let session = state.session().await?;
+            let user_id = session.user_id().ok_or(Error::UnauthSession)?;
+            let codec = Codec::<document::Protocol>::new(state.params.clone());
+            let (init, mut framed) = codec.accept(stream).await?;
+
+            let srv = state.globals.services();
+
+            // resolve edit context
+            let context_id = match init.branch_id {
+                Some(branch_id) => EditContextId::from_prose(init.document_id.cast(), branch_id),
+                None => {
+                    let document_uuid = *init.document_id;
+                    let mut d = state.globals.begin_read().await?;
+                    match d.script_get(document_uuid.into()).await? {
+                        Some(redex) => EditContextId::from_redex(redex.channel_id, redex.id),
+                        None => {
+                            EditContextId::from_prose(document_uuid.into(), document_uuid.into())
+                        }
+                    }
+                }
+            };
+
+            // check perms
+            let channel_id = context_id.channel_id();
+            srv.perms
+                .for_channel3(Some(user_id), channel_id)
+                .await?
+                .ensure_view()?;
+
+            // ensure the branch exists and is visible to this user
+            let branch = state
+                .globals
+                .begin_read()
+                .await?
+                .document_branch_get(context_id.document_id().cast(), context_id.branch_id())
+                .await;
+            match branch {
+                Ok(branch) => {
+                    if branch.private && branch.creator_id != user_id {
+                        return Err(ApiError::from_code(ErrorCode::UnknownDocumentBranch).into());
+                    }
+                }
+                Err(_) if *context_id.branch_id() == *context_id.document_id() => {
+                    // this is the default branch
+                }
+                Err(_) => {
+                    return Err(ApiError::from_code(ErrorCode::UnknownDocumentBranch).into());
+                }
+            }
+
+            // subscribe before computing the initial snapshot so we don't miss updates
+            let mut document_rx = srv.documents.subscribe(context_id, Some(user_id)).await?;
+
+            // send the initial document state
+            let update = if let Some(sv) = &init.state_vector {
+                srv.documents.diff(context_id, Some(user_id), &sv.0).await?
+            } else {
+                srv.documents.get_snapshot(context_id).await?
+            };
+            framed
+                .send(document::Event::Edit {
+                    user_id,
+                    update: DocumentUpdate(update),
+                })
+                .await?;
+
+            // send presence
+            for (presence_user_id, cursor_head, cursor_tail, conn_id) in
+                srv.documents.get_presence(context_id).await?
+            {
+                if conn_id == state.id {
+                    continue;
+                }
+                framed
+                    .send(document::Event::Presence {
+                        user_id: presence_user_id,
+                        cursor_head,
+                        cursor_tail,
+                    })
+                    .await?;
+            }
+
+            framed.send(document::Event::Subscribed).await?;
+
+            loop {
+                tokio::select! {
+                    event = document_rx.recv() => {
+                        match event {
+                            Ok(DocumentEvent::Update {
+                                user_id: author_id,
+                                origin_conn_id,
+                                update,
+                            }) => {
+                                // don't echo edits
+                                if origin_conn_id == Some(state.id) {
+                                    continue;
+                                }
+
+                                framed
+                                    .send(document::Event::Edit {
+                                        user_id: author_id,
+                                        update: DocumentUpdate(update),
+                                    })
+                                    .await?;
+                            }
+                            Ok(DocumentEvent::Presence {
+                                user_id: presence_user_id,
+                                origin_conn_id,
+                                cursor_head,
+                                cursor_tail,
+                            }) => {
+                                if origin_conn_id == Some(state.id) {
+                                    continue;
+                                }
+                                framed
+                                    .send(document::Event::Presence {
+                                        user_id: presence_user_id,
+                                        cursor_head,
+                                        cursor_tail,
+                                    })
+                                    .await?;
+                            }
+                            Err(broadcast::error::RecvError::Closed) => break,
+                            Err(broadcast::error::RecvError::Lagged(_)) => continue, // TODO: send missed updates?
+                        }
+                    }
+                    command = framed.next() => {
+                        match command.transpose()? {
+                            Some(document::Command::Edit { update }) => {
+                                // PERF: cache this!
+                                let mut perms = srv
+                                    .perms
+                                    .for_channel3(Some(user_id), channel_id)
+                                    .await?
+                                    .ensure_view()?;
+                                perms.needs(Permission::DocumentEdit);
+                                perms.check()?;
+
+                                srv.documents
+                                    .apply_update(context_id, user_id, Some(state.id), &update.0)
+                                    .await?;
+                            }
+                            Some(document::Command::Presence {
+                                cursor_head,
+                                cursor_tail,
+                            }) => {
+                                // PERF: cache this!
+                                srv.perms
+                                    .for_channel3(Some(user_id), channel_id)
+                                    .await?
+                                    .ensure_view()?;
+
+                                srv.documents
+                                    .broadcast_presence(
+                                        context_id,
+                                        user_id,
+                                        Some(state.id),
+                                        cursor_head,
+                                        cursor_tail,
+                                    )
+                                    .await?;
+                            }
+                            None => break,
+                        }
+                    }
+                }
+            }
+
+            let _ = srv
+                .documents
+                .remove_presence(context_id, user_id, state.id)
+                .await;
 
             Ok(())
         }
