@@ -1,11 +1,13 @@
 //! things that the user can configure
-// TODO: strongly type user settings
 
 use lamprey_macros::record;
 
-use crate::v1::types::{
-    misc::Time,
-    notifications::preferences::{NotifsChannel, NotifsGlobal, NotifsRoom},
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        misc::Time,
+        notifications::preferences::{NotifsChannel, NotifsGlobal, NotifsRoom},
+    },
 };
 
 pub mod frontend;
@@ -176,3 +178,16 @@ impl Default for PreferencesRoomPrivacy {
         }
     }
 }
+
+export_models!(
+    PreferencesGlobal,
+    PreferencesRoom,
+    PreferencesChannel,
+    PreferencesUser,
+    VoiceConfig,
+    PreferencesGlobalFriends,
+    PreferencesGlobalPrivacy,
+    PreferencesRoomPrivacy,
+    use frontend,
+    use room_sidebar,
+);

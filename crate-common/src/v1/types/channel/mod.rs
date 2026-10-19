@@ -8,6 +8,7 @@ use utoipa::{IntoParams, ToSchema};
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::util::registry::export_models;
 use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::federation::Remote;
 use crate::v1::types::preferences::PreferencesChannel;
@@ -1492,3 +1493,15 @@ pub struct ChannelListRemovedQuery {
 
 // TEMP: reexport
 pub use super::mirror::ChannelSeq;
+
+export_models!(
+    Channel,
+    ChannelType,
+    ChannelCreate,
+    ChannelPatch,
+    Locked,
+    ChannelReorder,
+    ChannelReorderItem,
+    ChannelListRemovedQuery,
+    use components,
+);

@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{
     reaction::ReactionKeyField,
     search::{ChannelSearchOrderField, Order},
@@ -53,3 +54,5 @@ pub enum ForumLayout {
     /// display posts as an image gallery
     Gallery,
 }
+
+export_models!(ForumSorting, DefaultForumReaction, ForumSort, ForumLayout);

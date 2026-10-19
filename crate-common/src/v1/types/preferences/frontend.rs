@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use lamprey_macros::record;
 
 use super::room_sidebar;
+use crate::util::registry::export_models;
 
 /// how messages are displayed in the chat
 #[record]
@@ -367,3 +368,16 @@ impl Default for PreferencesChannelFrontend {
         }
     }
 }
+
+export_models!(
+    MessageStyle,
+    Spoilers,
+    Theme,
+    DateFormat,
+    TimeFormat,
+    VoiceInputMode,
+    PreferencesGlobalFrontend,
+    PreferencesRoomFrontend,
+    PreferencesChannelFrontend,
+    PreferencesUserFrontend,
+);

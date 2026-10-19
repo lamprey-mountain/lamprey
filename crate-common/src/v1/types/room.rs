@@ -6,6 +6,7 @@ use uuid::Uuid;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{
     ChannelId, MediaId, Permission, UserId,
     error::{ApiError, ApiResult, ErrorCode},
@@ -342,3 +343,17 @@ impl RoomFeatures {
 
 // TODO: move
 pub use super::search::RoomSearchRequest as SearchRooms;
+
+export_models!(
+    Room,
+    RoomSecurity,
+    RoomPreview,
+    RoomPrivate,
+    RoomCreate,
+    RoomPatch,
+    RoomSecurityUpdate,
+    RoomType,
+    RoomFeature,
+    RoomFeatures,
+    TransferOwnership,
+);

@@ -8,7 +8,10 @@ use utoipa::ToSchema;
 
 use uuid::Uuid;
 
-use crate::v1::types::{ChannelId, RoomId};
+use crate::{
+    util::registry::export_models,
+    v1::types::{ChannelId, RoomId},
+};
 
 // probably won't do these?
 // TODO: server side validate that rooms/channels exist?
@@ -90,3 +93,13 @@ impl Sidebar {
         self.0.is_empty()
     }
 }
+
+export_models!(
+    Sidebar,
+    Item,
+    Toplevel,
+    Folder,
+    View,
+    ViewCategory,
+    ViewChannel,
+);
