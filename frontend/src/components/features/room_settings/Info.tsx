@@ -12,10 +12,10 @@ import { RoomIcon } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
+import { getThumbFromId } from "@/media/util";
 import type { ChannelT, RoomT } from "@/types";
 
 // TODO: add welcome channel id config
-// TODO: configure or remove room banner
 
 export function Info(props: VoidProps<{ room: RoomT }>) {
 	const [, modalCtl] = useModals();
@@ -25,6 +25,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 
 	const api2 = useApi();
 	const [roomIcon, setRoomIcon] = createSignal(props.room.icon);
+	const [editingBanner, setEditingBanner] = createSignal(props.room.banner);
 
 	const setAvatarFile = async (f: File) => {
 		await createUpload({
@@ -54,6 +55,30 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 
 	const openAvatarPicker = () => {
 		avatarInputEl?.click();
+	};
+
+	let bannerInputEl!: HTMLInputElement;
+
+	const setBannerFile = async (f: File) => {
+		await createUpload({
+			client: api2.client,
+			file: f,
+			onComplete(media) {
+				setEditingBanner(media.id);
+			},
+			onFail(_error) {},
+			onPause() {},
+			onResume() {},
+			onProgress(_progress) {},
+		});
+	};
+
+	const removeBanner = () => {
+		setEditingBanner(null);
+	};
+
+	const openBannerPicker = () => {
+		bannerInputEl?.click();
 	};
 
 	const [editingName, setEditingName] = createSignal(props.room.name);
@@ -101,6 +126,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	const isDirty = () =>
 		editingName() !== props.room.name ||
 		getDescriptionFromState() !== props.room.description ||
+		editingBanner() !== props.room.banner ||
 		editingPublic() !== props.room.public ||
 		(editingAfkChannel()?.id ?? null) !== (props.room.afk_channel_id ?? null) ||
 		(editingWelcomeChannel()?.id ?? null) !==
@@ -119,12 +145,14 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			name: string;
 			public: boolean;
 			description?: string;
+			banner?: string | null;
 			afk_channel_id?: string | null;
 			welcome_channel_id?: string | null;
 			afk_channel_timeout?: number;
 		} = {
 			name: editingName(),
 			public: editingPublic(),
+			banner: editingBanner(),
 			afk_channel_id: editingAfkChannel()?.id ?? null,
 			welcome_channel_id: editingWelcomeChannel()?.id ?? null,
 			afk_channel_timeout: editingAfkTimeout() * 1000,
@@ -155,6 +183,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	const reset = () => {
 		setEditingName(props.room.name);
 		setEditingDescription(props.room.description);
+		setEditingBanner(props.room.banner);
 		setEditingPublic(props.room.public);
 		setEditingAfkChannel(
 			[...channels.cache.values()].find(
@@ -224,6 +253,38 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 						/>
 					</label>
 				</div>
+			</div>
+			<div class="banner-uploader">
+				<h3 class="banner-label dim">
+					banner
+					<Show when={editingBanner()} fallback=" (no banner, click to upload)">
+						{" - "}
+						<button type="button" class="button remove" onClick={removeBanner}>
+							remove
+						</button>
+					</Show>
+				</h3>
+				<div
+					class="banner"
+					onClick={openBannerPicker}
+					style={{
+						"background-image":
+							(editingBanner() &&
+								`url(${getThumbFromId(editingBanner()!, 640)})`) ||
+							undefined,
+					}}
+				>
+					<div class="overlay">upload banner</div>
+				</div>
+				<input
+					style="display:none"
+					ref={bannerInputEl}
+					type="file"
+					onInput={(e) => {
+						const f = e.target.files?.[0];
+						if (f) setBannerFile(f);
+					}}
+				/>
 			</div>
 			<br />
 			<CheckboxOption
