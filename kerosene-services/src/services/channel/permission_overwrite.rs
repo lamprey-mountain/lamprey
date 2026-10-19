@@ -50,7 +50,7 @@ impl ServiceChannels {
         let room = room_handle.ready(false).await.cast_internal()?;
 
         // only top level channels can have overwrites
-        if room.channels.contains_key(&channel.id) {
+        if !room.channels.contains_key(&channel.id) {
             return Err(
                 ApiError::from_code(ErrorCode::CannotSetPermissionsOnThisChannelType).into(),
             );
