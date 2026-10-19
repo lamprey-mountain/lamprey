@@ -18,6 +18,7 @@ import { Markdown } from "@/atoms/Markdown.tsx";
 import { Time } from "@/atoms/Time";
 import { Avatar } from "@/avatar/UserAvatar.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useMessageTabbable } from "@/contexts/message-focus";
 import { useNavigate } from "@/contexts/router.tsx";
 import { MARK_END, MARK_START, PUA_REGEX } from "@/utils/diff.ts";
 import { getDate } from "@/utils/general.tsx";
@@ -229,6 +230,7 @@ export function SystemMessageMemberJoin(props: SystemMessageBaseProps) {
 export function SystemMessagePinned(props: SystemMessageBaseProps) {
 	const { t } = useCtx();
 	const navigate = useNavigate();
+	const tabbable = useMessageTabbable();
 	const version = () =>
 		props.message.latest_version as MessageVersionT & {
 			pinned_message_id: string;
@@ -258,6 +260,7 @@ export function SystemMessagePinned(props: SystemMessageBaseProps) {
 								type="button"
 								style="color: oklch(var(--color-fg1))"
 								class="link"
+								tabIndex={tabbable() ? 0 : -1}
 								onClick={(e) => {
 									e.stopPropagation();
 									navigate(
@@ -313,6 +316,7 @@ export function SystemMessageCall(props: SystemMessageBaseProps) {
 	const { t } = useCtx();
 	const [voice, voiceActions] = useVoice();
 	const getMe = useCurrentUser();
+	const tabbable = useMessageTabbable();
 	const version = () =>
 		props.message.latest_version as MessageVersionT & {
 			ended_at?: string | null;
@@ -387,6 +391,7 @@ export function SystemMessageCall(props: SystemMessageBaseProps) {
 									type="button"
 									class="button link"
 									style="display:inline-block"
+									tabIndex={tabbable() ? 0 : -1}
 									onClick={joinCall}
 								>
 									{t("message_content.call_join")}
@@ -461,6 +466,7 @@ export function SystemMessageThreadCreated(props: SystemMessageBaseProps) {
 	const navigate = useNavigate();
 	const ctx = useCtx();
 	const channels = useChannels();
+	const tabbable = useMessageTabbable();
 
 	const threadId = () =>
 		(props.message.latest_version as MessageVersionT & { thread_id: string })
@@ -471,6 +477,7 @@ export function SystemMessageThreadCreated(props: SystemMessageBaseProps) {
 		<button
 			type="button"
 			class="link"
+			tabIndex={tabbable() ? 0 : -1}
 			onClick={(e) => {
 				e.stopPropagation();
 				if (threadId()) {
@@ -491,6 +498,7 @@ export function SystemMessageThreadCreated(props: SystemMessageBaseProps) {
 		<button
 			type="button"
 			class="link"
+			tabIndex={tabbable() ? 0 : -1}
 			onClick={(e) => {
 				if (!ctx.threadsView()) {
 					e.stopPropagation();
@@ -556,6 +564,7 @@ export function SystemMessageChannelMoved(props: SystemMessageBaseProps) {
 	const { t } = useCtx();
 	const navigate = useNavigate();
 	const channels = useChannels();
+	const tabbable = useMessageTabbable();
 
 	const m = () =>
 		props.message.latest_version as MessageVersionT & { type: "ChannelMoved" };
@@ -584,6 +593,7 @@ export function SystemMessageChannelMoved(props: SystemMessageBaseProps) {
 						<button
 							type="button"
 							class="link"
+							tabIndex={tabbable() ? 0 : -1}
 							onClick={(e) => {
 								e.stopPropagation();
 								const oldId = m().parent_id_old;
@@ -607,6 +617,7 @@ export function SystemMessageAutomodExecution(props: SystemMessageBaseProps) {
 	const api = useApi();
 	const navigate = useNavigate();
 	const toolbar = useMessageToolbar();
+	const tabbable = useMessageTabbable();
 
 	const m = () =>
 		props.message.latest_version as MessageVersionT & {
@@ -688,7 +699,12 @@ export function SystemMessageAutomodExecution(props: SystemMessageBaseProps) {
 			<div class="content">
 				<div class="automod-execution markdown">
 					<div class="automod-execution-header">
-						<a href={`/room/${props.room_id}/settings/automod`}>automod</a>{" "}
+						<a
+							href={`/room/${props.room_id}/settings/automod`}
+							tabIndex={tabbable() ? 0 : -1}
+						>
+							automod
+						</a>{" "}
 						execution
 						<Show when={channel()}>
 							{(ch) => (
@@ -750,7 +766,12 @@ export function SystemMessageAutomodExecution(props: SystemMessageBaseProps) {
 					<div class="automod-execution-details">
 						<Show when={m().flagged_message_id}>
 							{(mid) => (
-								<a href={`/channel/${m().channel_id}/message/${mid()}`}>jump</a>
+								<a
+									href={`/channel/${m().channel_id}/message/${mid()}`}
+									tabIndex={tabbable() ? 0 : -1}
+								>
+									jump
+								</a>
 							)}
 						</Show>
 						<div class="rules">
