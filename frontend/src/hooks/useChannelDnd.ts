@@ -5,6 +5,8 @@ import { logger } from "@/utils/logger";
 
 const log = logger.for("channel_nav/dnd");
 
+export const UNCATEGORIZED_CHANNEL_ID = "__uncategorized__";
+
 type DndStateNone = { type: "none" };
 
 type DndStateChannel = {
@@ -178,6 +180,13 @@ export const useChannelDnd = () => {
 			}
 
 			if (!targetId || !place) return;
+
+			if (targetId === UNCATEGORIZED_CHANNEL_ID) {
+				log.info("drop", "move to uncategorized");
+				channels.update(cd.id, { parent_id: null });
+				return;
+			}
+
 			const ct = channels.cache.get(targetId);
 			const roomId = ct?.room_id;
 			if (!ct || !roomId) return;
@@ -293,6 +302,13 @@ export const useChannelDnd = () => {
 		const el = e.currentTarget as HTMLElement;
 		const channelId = el.dataset.channelId;
 		if (!channelId) return;
+
+		if (channelId === UNCATEGORIZED_CHANNEL_ID) {
+			if (s.type === "channel") {
+				setState({ ...s, targetId: channelId, place: "inside-category" });
+			}
+			return;
+		}
 
 		const ct = channels.cache.get(channelId);
 		if (!ct) return;

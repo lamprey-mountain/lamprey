@@ -28,7 +28,10 @@ import { useCurrentUser } from "@/contexts/currentUser";
 import { useDisplay, useMenu } from "@/contexts/mod";
 import { useModals } from "@/contexts/modal";
 import { useNavigate, useRouter } from "@/contexts/router";
-import { useChannelDnd } from "@/hooks/useChannelDnd";
+import {
+	UNCATEGORIZED_CHANNEL_ID,
+	useChannelDnd,
+} from "@/hooks/useChannelDnd";
 import { useViewDnd } from "@/hooks/useViewDnd";
 import {
 	type NavItem,
@@ -242,9 +245,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 			.map(viewChannel)
 			.filter((channel): channel is NavChannel => !!channel);
 
-		if (uncategorized.length > 0) {
-			result.push({ category: null, channels: uncategorized });
-		}
+		result.push({ category: null, channels: uncategorized });
 
 		for (const [index, category] of
 			currentView.categories?.entries() ?? []) {
@@ -534,6 +535,17 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 		return !isCollapsed || isFocused;
 	};
 
+	// event handlers are not reactive in solid, so branch on view() at call time
+	const handleHomeDragOver = (e: DragEvent) => {
+		if (view()) viewDnd.overUncategorized(e);
+		else dnd.handle(e);
+	};
+
+	const handleHomeDrop = (e: DragEvent) => {
+		if (view()) viewDnd.handleDrop(e);
+		else dnd.handle(e);
+	};
+
 	return (
 		<nav
 			id="channel-nav"
@@ -585,6 +597,16 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 					class="channel-item"
 					data-nav-id="home"
 					tabIndex={isFocused("home") ? 0 : -1}
+					data-dnd-placement={
+						view()
+							? viewDnd.placement(VIEW_UNCATEGORIZED_KEY)
+							: dnd.placement(UNCATEGORIZED_CHANNEL_ID)
+					}
+					data-channel-id={
+						!view() && props.room_id ? UNCATEGORIZED_CHANNEL_ID : undefined
+					}
+					onDragOver={handleHomeDragOver}
+					onDrop={handleHomeDrop}
 				>
 					<a
 						href={props.room_id ? `/room/${props.room_id}` : "/"}
@@ -714,12 +736,22 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 							</Show>
 							<ul
 								class="category-channels"
+								data-channel-id={
+									category?.channel?.id ??
+									(view() || !props.room_id
+										? undefined
+										: UNCATEGORIZED_CHANNEL_ID)
+								}
 								data-dnd-placement={
-									view() && !category?.channel
-										? viewDnd.placement(
-												category ? category.id : VIEW_UNCATEGORIZED_KEY,
-											)
-										: undefined
+									view()
+										? category?.channel
+											? undefined
+											: viewDnd.placement(
+													category ? category.id : VIEW_UNCATEGORIZED_KEY,
+												)
+										: category
+											? undefined
+											: dnd.placement(UNCATEGORIZED_CHANNEL_ID)
 								}
 								onDragOver={
 									view()
@@ -735,20 +767,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 								<For
 									each={channels}
 									fallback={
-										<Show
-											when={!props.room_id && !view()}
-											fallback={
-												<div
-													class="empty-text"
-													style="margin-left: 16px"
-													data-channel-id={category?.channel?.id}
-													onDragOver={view() ? undefined : dnd.handle}
-													onDrop={view() ? undefined : dnd.handle}
-												>
-													(no channels)
-												</div>
-											}
-										>
+										<Show when={!props.room_id && !view()}>
 											<Index each={Array(10).fill(0)}>
 												{(_, index) => (
 													<li
