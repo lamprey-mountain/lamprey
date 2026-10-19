@@ -12,7 +12,7 @@ use common::v1::types::misc::duration::Duration;
 use common::v1::types::misc::{Time, UserIdReq};
 use common::v1::types::{ChannelCreate, ChannelPatch, ChannelType, MessageSync};
 use common::v1::types::{
-    Message, MessageClient,
+    Message, MessageAttachmentType, MessageClient,
     presence::{Activity, Presence, Status},
 };
 use common::v1::types::{MessagePayload, MessageType};
@@ -28,7 +28,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 use crate::history;
-use crate::llm::{ChatMessage, CompletionChunk, ContentPart, Context, Llm, Role};
+use crate::llm::{ChatMessage, CompletionChunk, ContentPart, Context, ImageUrl, Llm, Role};
 use crate::reminders;
 use crate::util::BotResponse;
 
@@ -455,13 +455,35 @@ impl Bot {
             return;
         }
 
-        let content = match &message.latest_version.message_type {
-            MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => m.content.as_deref(),
-            _ => None,
+        let (content, attachments) = match &message.latest_version.message_type {
+            MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => {
+                (m.content.as_deref(), m.attachments.as_slice())
+            } // TODO: handle forwards
+              // _ => (None, &[][..]),
         };
 
         let Some(prompt) = content else {
             return;
+        };
+
+        let images: Vec<String> = if llm_config.vision {
+            attachments
+                .iter()
+                .filter_map(|attachment| match &attachment.ty {
+                    MessageAttachmentType::Media { media } => {
+                        let content_type = media.content_type.as_str();
+                        let content_type = content_type
+                            .split(';')
+                            .next()
+                            .unwrap_or(content_type)
+                            .trim();
+                        matches!(content_type, "image/png" | "image/jpeg" | "image/webp")
+                            .then(|| format!("{}/media/{}", self.client.http().cdn_url(), media.id))
+                    }
+                })
+                .collect()
+        } else {
+            vec![]
         };
 
         // clone stuff for tokio task
@@ -502,9 +524,15 @@ impl Bot {
                 channel_id
             };
 
+            let mut content = Vec::with_capacity(1 + images.len());
+            content.push(ContentPart::Text { text: prompt });
+            content.extend(images.into_iter().map(|url| ContentPart::ImageUrl {
+                image_url: ImageUrl { url },
+            }));
+
             let user_message = ChatMessage {
                 role: Role::User,
-                content: vec![ContentPart::Text { text: prompt }],
+                content,
                 tool_calls: None,
                 tool_call_id: None,
             };

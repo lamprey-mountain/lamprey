@@ -29,4 +29,8 @@ pub struct ConfigLlm {
     pub token: String,
     pub model: String,
     pub channel_ids: Vec<ChannelId>,
+
+    /// whether the model accepts image inputs
+    #[serde(default)]
+    pub vision: bool,
 }
