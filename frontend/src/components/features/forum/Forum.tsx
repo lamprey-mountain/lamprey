@@ -376,6 +376,7 @@ const QuickCreate = (props: { channel: Channel }) => {
 						.create(rid, {
 							name: "thread",
 							parent_id: props.channel.id,
+							type: "ThreadPublic",
 						})
 						.then((t) => {
 							if (!t) return;
