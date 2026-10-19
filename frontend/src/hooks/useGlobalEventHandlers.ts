@@ -8,7 +8,7 @@ export function useGlobalEventHandlers() {
 	const ctx = useCtx();
 	const [modals, modalCtl] = useModals();
 	const { menu, setMenu } = useMenu();
-	const { setUserView } = useUserPopout();
+	const { userView, setUserView } = useUserPopout();
 	const { handleContextMenu } = useContextMenu(setMenu);
 
 	const handleClick = (e: MouseEvent) => {
@@ -45,6 +45,11 @@ export function useGlobalEventHandlers() {
 		if (e.key === "Escape") {
 			if (modals.length) {
 				modalCtl.close();
+			} else if (userView()) {
+				// return focus to whatever opened the user popout
+				const ref = userView()?.ref;
+				if (ref && document.contains(ref)) ref.focus();
+				setUserView(null);
 			}
 		} else if (e.key === "k" && e.ctrlKey) {
 			e.preventDefault();

@@ -161,6 +161,22 @@ export const ModalsProvider = (p: ParentProps) => {
 	const router = useRouter();
 	const [modals, setModals] = createStore<Modal[]>([]);
 
+	// remember what was focused before each modal opened so focus can be
+	// restored when it closes (eg. message keyboard navigation)
+	const focusStack: (HTMLElement | null)[] = [];
+	const rememberFocus = () => {
+		const el = document.activeElement;
+		focusStack.push(el instanceof HTMLElement ? el : null);
+	};
+	const restoreFocus = () => {
+		const el = focusStack.pop();
+		if (!el) return;
+		// defer so `inert` is removed from the root before focusing
+		queueMicrotask(() => {
+			if (document.contains(el)) el.focus();
+		});
+	};
+
 	const controller: ModalsController = {
 		close() {
 			const closingModal = modals.at(-1);
@@ -176,8 +192,11 @@ export const ModalsProvider = (p: ParentProps) => {
 			if (wasSettings) {
 				window.history.pushState(null, "", router.main);
 			}
+
+			restoreFocus();
 		},
 		open(modal: Modal) {
+			rememberFocus();
 			setModals((prev) => [...prev, modal]);
 		},
 		replace(modal: Modal) {
@@ -188,6 +207,7 @@ export const ModalsProvider = (p: ParentProps) => {
 			}
 		},
 		alert(text: string) {
+			rememberFocus();
 			setModals((prev) => [...prev, { type: "alert", text }]);
 		},
 		prompt(text: string, cont: (text: string | null) => void) {
@@ -196,6 +216,7 @@ export const ModalsProvider = (p: ParentProps) => {
 				text,
 				cont,
 			};
+			rememberFocus();
 			setModals((prev) => [...prev, modal]);
 		},
 		confirm(text: string, cont: (confirmed: boolean) => void) {
@@ -204,6 +225,7 @@ export const ModalsProvider = (p: ParentProps) => {
 				text,
 				cont,
 			};
+			rememberFocus();
 			setModals((prev) => [...prev, modal]);
 		},
 	};
