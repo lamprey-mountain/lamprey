@@ -10,7 +10,7 @@ use common::v1::types::components::{ComponentCreate, ComponentType, ComponentsCr
 use common::v1::types::flume::{FlumeAppendCreate, FlumeDeltaCreate, FlumeReplaceCreate};
 use common::v1::types::misc::duration::Duration;
 use common::v1::types::misc::{Time, UserIdReq};
-use common::v1::types::{ChannelCreate, ChannelType, MessageSync};
+use common::v1::types::{ChannelCreate, ChannelPatch, ChannelType, MessageSync};
 use common::v1::types::{
     Message, MessageClient,
     presence::{Activity, Presence, Status},
@@ -573,7 +573,7 @@ impl Bot {
                 store: store.clone(),
             };
 
-            match llm.complete(ctx, &messages).await {
+            match llm.complete(ctx.clone(), &messages).await {
                 Ok(stream) => {
                     futures::pin_mut!(stream);
                     let mut state = LlmFlumeState::new();
@@ -584,12 +584,43 @@ impl Bot {
 
                     let assistant_message = ChatMessage {
                         role: Role::Assistant,
-                        content: vec![ContentPart::Text { text: state.buffer }],
+                        content: vec![ContentPart::Text {
+                            text: state.buffer.clone(),
+                        }],
                         tool_calls: None,
                         tool_call_id: None,
                     };
                     if let Err(e) = history::append(&store, channel_id, &assistant_message).await {
                         error!("Failed to store llm reply: {:?}", e);
+                    }
+
+                    // automatically generate a name for the thread
+                    let has_auto_name = client
+                        .cache()
+                        .and_then(|cache| cache.channel(channel_id))
+                        .is_some_and(|channel| channel.inner.load().auto_name.is_some());
+                    if messages.len() == 1 && !has_auto_name {
+                        let llm = Arc::clone(&llm);
+                        let ctx = ctx.clone();
+                        let client = client.clone();
+                        tokio::spawn(async move {
+                            let Some(title) = llm.generate_title(ctx, &messages).await else {
+                                return;
+                            };
+                            if let Err(e) = client
+                                .http()
+                                .channel_update(
+                                    channel_id,
+                                    &ChannelPatch {
+                                        auto_name: Some(Some(title)),
+                                        ..Default::default()
+                                    },
+                                )
+                                .await
+                            {
+                                error!("Failed to set channel auto name: {:?}", e);
+                            }
+                        });
                     }
                 }
                 Err(e) => {

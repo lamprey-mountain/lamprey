@@ -136,6 +136,41 @@ impl Llm {
         }))
     }
 
+    /// ask the model for a short title describing a conversation
+    pub async fn generate_title(&self, ctx: Context, messages: &[ChatMessage]) -> Option<String> {
+        let mut title_messages = Vec::with_capacity(messages.len() + 1);
+        title_messages.push(ChatMessage {
+            role: Role::System,
+            content: vec![ContentPart::Text {
+                text: "Generate a short title (a few words) describing the following \
+                       conversation. Respond with only the title, without quotes or \
+                       trailing punctuation."
+                    .to_string(),
+            }],
+            tool_calls: None,
+            tool_call_id: None,
+        });
+        title_messages.extend_from_slice(messages);
+
+        let stream = self.complete(ctx, &title_messages).await.ok()?;
+        futures::pin_mut!(stream);
+
+        let mut title = String::new();
+        while let Some(chunk) = stream.next().await {
+            if let CompletionChunk::Text(text) = chunk {
+                title.push_str(&text);
+            }
+        }
+
+        let title = title
+            .lines()
+            .map(str::trim)
+            .find(|line| !line.is_empty())?
+            .trim_matches('"')
+            .trim();
+        (!title.is_empty()).then(|| title.chars().take(64).collect())
+    }
+
     /// send a single streaming request to the api
     async fn complete_step(
         &self,
