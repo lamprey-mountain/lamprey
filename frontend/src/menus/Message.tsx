@@ -117,13 +117,9 @@ export function MessageMenu(props: MessageMenuProps) {
 
 	const addReaction = () => {
 		// HACK: open reaction picker next to toolbar button by clicking it
-		const messageEl = document.querySelector(
-			`[data-message-id="${props.message_id}"]`,
-		);
-		if (!messageEl) return;
-		const button = messageEl.querySelector(
-			'.message-toolbar button[title="Add reaction"]',
-		) as HTMLElement;
+		const button = document.querySelector(
+			`[data-message-toolbar="${props.message_id}"] button[title="Add reaction"]`,
+		) as HTMLElement | null;
 		if (!button) return;
 		button.click();
 	};

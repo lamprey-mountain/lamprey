@@ -237,6 +237,10 @@
 .timeline-item {
 	/* overflow-anchor: none; */ // useless?
 
+	& > li:focus {
+		outline: none;
+	}
+
 	&:hover > .message {
 		background-color: oklch(var(--color-bg1) / 0.3);
 	}

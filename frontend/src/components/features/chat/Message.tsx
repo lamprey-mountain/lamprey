@@ -7,7 +7,16 @@ import {
 	type Preferences,
 	type UserWithRelationship,
 } from "sdk";
-import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	Match,
+	on,
+	Show,
+	Switch,
+} from "solid-js";
 import { useApi, useChannels, useFlumes, useMessages, useUsers } from "@/api";
 import { useCtx } from "@/app/context";
 import icGear from "@/assets/gear.png";
@@ -18,6 +27,10 @@ import { Time } from "@/atoms/Time";
 import { EmbedView } from "@/components/shared/UrlEmbed";
 import { Avatar } from "@/components/shared/User";
 import { useOptionalChannel } from "@/contexts/channel";
+import {
+	MessageTabbableContext,
+	useMessageTabbable,
+} from "@/contexts/message-focus";
 import { useMenu } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
 import { useReadTracking } from "@/contexts/read-tracking.tsx";
@@ -201,6 +214,7 @@ export function MessageThread(props: {
 	const nav = useNavigate();
 	const [chan, setChan] = useOptionalChannel();
 	const ctx = useCtx();
+	const tabbable = useMessageTabbable();
 
 	// HACK: resubscribe to the channel since reactivity breaks somewhere
 	const thread = api.channels.use(() => props.thread.id);
@@ -222,7 +236,18 @@ export function MessageThread(props: {
 	);
 
 	return (
-		<div class="message-thread menu-channel" data-channel-id={props.thread.id}>
+		<div
+			class="message-thread menu-channel"
+			data-channel-id={props.thread.id}
+			tabIndex={tabbable() ? 0 : -1}
+			onKeyDown={(e) => {
+				if (e.target !== e.currentTarget) return;
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					openThreadClick();
+				}
+			}}
+		>
 			<div class="main" onClick={openThreadClick}>
 				<div class="top">
 					<div class="name">{thread()?.name}</div>
@@ -310,8 +335,37 @@ export const MessageView = (props: MessageProps) => {
 	const thread = channels.use(() => props.message.channel_id);
 	const [ch, chUpdate] = useOptionalChannel();
 	const readTracking = useReadTracking();
+	const toolbar = useMessageToolbar();
 	let messageArticleRef: HTMLElement | undefined;
 	const [hovered, setHovered] = createSignal(false);
+
+	const isKeyboardFocused = () =>
+		!!ch?.messageNavActive && ch.focusedMessageId === props.message.id;
+
+	// clear the keyboard toolbar when this message loses keyboard focus. only
+	// react to focus transitions so hovering a message doesn't cause a conflict
+	createEffect(
+		on(isKeyboardFocused, (focused) => {
+			if (!focused && toolbar.target()?.message.id === props.message.id) {
+				toolbar.setTarget(null);
+			}
+		}),
+	);
+
+	// always keep the toolbar visible while keyboard focused
+	createEffect(() => {
+		if (!isKeyboardFocused()) return;
+		const current = toolbar.target();
+		if (
+			current?.message.id !== props.message.id &&
+			messageArticleRef !== undefined
+		) {
+			toolbar.setTarget({
+				message: props.message,
+				element: messageArticleRef,
+			});
+		}
+	});
 
 	const users2 = useUsers();
 	const user = users2.use(() => props.message.author_id);
@@ -435,8 +489,12 @@ export const MessageView = (props: MessageProps) => {
 		},
 	};
 
+	const tabbable = () =>
+		!!ch?.messageNavActive && ch.focusedMessageId === props.message.id;
+
 	return (
-		<Switch
+		<MessageTabbableContext.Provider value={tabbable}>
+			<Switch
 			fallback={
 				<article
 					ref={messageArticleRef}
@@ -504,7 +562,8 @@ export const MessageView = (props: MessageProps) => {
 					ctx={ctx}
 				/>
 			</Match>
-		</Switch>
+			</Switch>
+		</MessageTabbableContext.Provider>
 	);
 };
 
@@ -522,6 +581,7 @@ function DefaultMessage(
 	const api = useApi();
 	const flumes = useFlumes();
 	const toolbar = useMessageToolbar();
+	const tabbable = useMessageTabbable();
 	const version = () => asMarkdown2(props.message.latest_version);
 	const flume = () =>
 		props.message.flume?.state === "Live" && flumes.get(props.message.id);
@@ -608,6 +668,7 @@ function DefaultMessage(
 						thread_id={props.message.channel_id}
 						onClick
 						class="author"
+						tabIndex={tabbable() ? 0 : -1}
 					/>
 					<Time
 						date={props.date}

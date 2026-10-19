@@ -1,6 +1,7 @@
 import { autoUpdate, offset, shift } from "@floating-ui/dom";
 import { useFloating } from "solid-floating-ui";
 import { createEffect, createSignal, onCleanup, Show } from "solid-js";
+import { Portal } from "solid-js/web";
 import { useApi } from "@/api";
 import { areReactionKeysEqual } from "@/api/services/ReactionsService.ts";
 import { useCtx } from "@/app/context";
@@ -177,7 +178,7 @@ export const MessageToolbarMount = () => {
 
 	const pos = useFloating(() => target()?.element ?? null, tipEl, {
 		whileElementsMounted: autoUpdate,
-		strategy: "absolute",
+		strategy: "fixed",
 		placement: "top-end",
 		middleware: [shift({ padding: 8 }), offset({ mainAxis: -8 })],
 	});
@@ -195,27 +196,30 @@ export const MessageToolbarMount = () => {
 	return (
 		<Show when={target()}>
 			{(t) => (
-				<div
-					ref={(el) => {
-						setTipEl(el);
-						setContainerRef(el);
-					}}
-					style={{
-						position: pos.strategy,
-						top: `${pos.y ?? 0}px`,
-						left: `${pos.x ?? 0}px`,
-						"z-index": 1000,
-					}}
-					onMouseLeave={(e) => {
-						const related = e.relatedTarget;
-						const msgEl = t().element;
-						// don't clear if moving back onto the message that owns this toolbar
-						if (related instanceof Node && msgEl?.contains(related)) return;
-						setTarget(null);
-					}}
-				>
-					<MessageToolbar message={t().message} />
-				</div>
+				<Portal>
+					<div
+						data-message-toolbar={t().message.id}
+						ref={(el) => {
+							setTipEl(el);
+							setContainerRef(el);
+						}}
+						style={{
+							position: pos.strategy,
+							top: `${pos.y ?? 0}px`,
+							left: `${pos.x ?? 0}px`,
+							"z-index": 1000,
+						}}
+						onMouseLeave={(e) => {
+							const related = e.relatedTarget;
+							const msgEl = t().element;
+							// don't clear if moving back onto the message that owns this toolbar
+							if (related instanceof Node && msgEl?.contains(related)) return;
+							setTarget(null);
+						}}
+					>
+						<MessageToolbar message={t().message} />
+					</div>
+				</Portal>
 			)}
 		</Show>
 	);

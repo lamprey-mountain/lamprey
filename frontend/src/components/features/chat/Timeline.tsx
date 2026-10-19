@@ -281,6 +281,7 @@ export const Timeline = (props: ChatProps) => {
 		<div
 			class="timeline"
 			role="log"
+			tabindex={-1}
 			ref={setScrollEl}
 			onScrollEnd={handleScrollEnd}
 			onScroll={handleScroll}
@@ -436,6 +437,13 @@ export const TimelineItem2 = (props: {
 
 	return (
 		<li
+			data-message-id={
+				props.item.type === "message" ? props.item.message.id : undefined
+			}
+			data-focus-ring-padding-block={
+				props.item.type === "message" && props.item.separate ? "8" : undefined
+			}
+			tabIndex={props.item.type === "message" ? -1 : undefined}
 			classList={{
 				mentioned: is_mentioned(),
 				flume: hasFlume(),
