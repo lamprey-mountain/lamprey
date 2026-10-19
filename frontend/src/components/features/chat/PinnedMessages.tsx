@@ -2,6 +2,7 @@ import type { Channel, Message } from "sdk";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { useMessages } from "@/api";
 import { MessageView } from "./Message.tsx";
+import { MessageToolbarProvider } from "./message-toolbar-context.tsx";
 
 type PinnedMessagesProps = {
 	channel: Channel;
@@ -120,49 +121,51 @@ export function PinnedMessages(props: PinnedMessagesProps) {
 	});
 
 	return (
-		<div class="pinned-messages-list" data-channel-id={props.channel.id}>
-			<Show
-				when={pinnedMessages.loading}
-				fallback={
-					<Show
-						when={pinnedMessages()?.items?.length}
-						fallback={
-							<div class="dim" style="text-align: center; margin-top: 8px">
-								no pinned messages
-							</div>
-						}
-					>
-						<header>{pinnedMessages()?.total} pinned messages</header>
-						<ul>
-							<For each={previewedMessages()}>
-								{(message: Message) => (
-									<li
-										class="pinned-message-item"
-										data-message-id={message.id}
-										draggable="true"
-										onDragStart={handleDragStart}
-										onDragOver={handleDragOver}
-										onDrop={handleDrop}
-										onDragEnd={() => {
-											setDragging(null);
-											setTarget(null);
-										}}
-										classList={{
-											dragging: dragging() === message.id,
-										}}
-									>
-										<MessageView message={message} separate={true} />
-									</li>
-								)}
-							</For>
-						</ul>
-					</Show>
-				}
-			>
-				<div class="dim" style="text-align: center; margin-top: 8px">
-					loading...
-				</div>
-			</Show>
-		</div>
+		<MessageToolbarProvider>
+			<div class="pinned-messages-list" data-channel-id={props.channel.id}>
+				<Show
+					when={pinnedMessages.loading}
+					fallback={
+						<Show
+							when={pinnedMessages()?.items?.length}
+							fallback={
+								<div class="dim" style="text-align: center; margin-top: 8px">
+									no pinned messages
+								</div>
+							}
+						>
+							<header>{pinnedMessages()?.total} pinned messages</header>
+							<ul>
+								<For each={previewedMessages()}>
+									{(message: Message) => (
+										<li
+											class="pinned-message-item"
+											data-message-id={message.id}
+											draggable="true"
+											onDragStart={handleDragStart}
+											onDragOver={handleDragOver}
+											onDrop={handleDrop}
+											onDragEnd={() => {
+												setDragging(null);
+												setTarget(null);
+											}}
+											classList={{
+												dragging: dragging() === message.id,
+											}}
+										>
+											<MessageView message={message} separate={true} />
+										</li>
+									)}
+								</For>
+							</ul>
+						</Show>
+					}
+				>
+					<div class="dim" style="text-align: center; margin-top: 8px">
+						loading...
+					</div>
+				</Show>
+			</div>
+		</MessageToolbarProvider>
 	);
 }
