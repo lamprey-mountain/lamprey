@@ -476,11 +476,36 @@ export class RootStore {
 						is_unread: false,
 					});
 				} else {
+					// TODO: handle notification preferences
+					const mentions = m.latest_version.mentions;
+					let isMentioned = channel.type === "Dm" || channel.type === "Gdm";
+					if (!isMentioned && sessionUserId && mentions) {
+						if (mentions.users?.some((u) => u.id === sessionUserId)) {
+							isMentioned = true;
+						}
+						if (!isMentioned && mentions.everyone) {
+							isMentioned = true;
+						}
+						if (!isMentioned && mentions.roles?.length && channel.room_id) {
+							const member = this.roomMembers.get(
+								`${channel.room_id}:${sessionUserId}`,
+							);
+							if (member) {
+								isMentioned = mentions.roles.some((role) =>
+									member.roles.some((r) => r === role.id),
+								);
+							}
+						}
+					}
+
 					this.channels.cache.set(m.channel_id, {
 						...channel,
 						last_message_id: m.id,
 						last_version_id: m.latest_version.version_id,
 						is_unread: true,
+						mention_count: isMentioned
+							? (channel.mention_count ?? 0) + 1
+							: channel.mention_count,
 					});
 				}
 			}

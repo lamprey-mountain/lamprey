@@ -953,6 +953,10 @@ export const ItemChannel = (props: {
 	const [hovered, setHovered] = createSignal(false);
 	const [voice, voiceActions] = useVoice();
 	const { isMobile } = useDisplay();
+	const channels2 = useChannels();
+	const mentionCount = createMemo(
+		() => channels2.cache.get(props.channel.id)?.mention_count ?? 0,
+	);
 
 	const handleClick = (_e: MouseEvent) => {
 		const roomId = props.channel.room_id ?? props.room_id;
@@ -1074,8 +1078,8 @@ export const ItemChannel = (props: {
 							{(t) => <span class="channel-status dim">{t()}</span>}
 						</Show>
 					</div>
-					<Show when={props.channel.mention_count}>
-						<div class="mentions">{props.channel.mention_count}</div>
+					<Show when={mentionCount()}>
+						<div class="mentions">{mentionCount()}</div>
 					</Show>
 
 					<Show when={!isDm()}>
@@ -1149,8 +1153,8 @@ export const ItemChannel = (props: {
 							{(t) => <span class="channel-status dim">{t()}</span>}
 						</Show>
 					</div>
-					<Show when={props.channel.mention_count}>
-						<div class="mentions">{props.channel.mention_count}</div>
+					<Show when={mentionCount()}>
+						<div class="mentions">{mentionCount()}</div>
 					</Show>
 
 					<Show when={!isDm()}>

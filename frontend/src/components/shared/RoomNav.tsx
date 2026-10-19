@@ -34,15 +34,21 @@ export const RoomNav = () => {
 	const { setMenu } = useMenu();
 	const rooms = createMemo(() => [...rooms2.cache.values()]);
 
-	const getRoomMentionCount = (roomId: string) => {
-		let totalMentions = 0;
+	const roomMentionCounts = createMemo(() => {
+		const counts = new Map<string, number>();
 		for (const channel of channels2.cache.values()) {
-			if (channel.room_id === roomId && channel.mention_count) {
-				totalMentions += channel.mention_count;
+			if (channel.room_id && channel.mention_count) {
+				counts.set(
+					channel.room_id,
+					(counts.get(channel.room_id) ?? 0) + channel.mention_count,
+				);
 			}
 		}
-		return totalMentions;
-	};
+		return counts;
+	});
+
+	const getRoomMentionCount = (roomId: string) =>
+		roomMentionCounts().get(roomId) ?? 0;
 
 	const getRoomUnread = (roomId: string) => {
 		for (const channel of channels2.cache.values()) {
