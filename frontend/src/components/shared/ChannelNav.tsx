@@ -799,6 +799,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 												class="channel-item"
 												classList={{
 													dm: channel.type === "Dm" || channel.type === "Gdm",
+													view: !!view(),
 												}}
 												data-dnd-placement={
 													view()
@@ -1050,7 +1051,11 @@ export const ItemChannel = (props: {
 					tabIndex={-1} // TODO: move tab index here?
 				>
 					<Show when={props.icon}>
-						<ChannelIcon channel={props.channel} animate={hovered()} />
+						<ChannelIcon
+							channel={props.channel}
+							animate={hovered()}
+							extraSpacing
+						/>
 					</Show>
 
 					<div class="channel-details">
@@ -1121,7 +1126,11 @@ export const ItemChannel = (props: {
 					tabIndex={-1} // TODO: move tab index here?
 				>
 					<Show when={props.icon}>
-						<ChannelIcon channel={props.channel} animate={hovered()} />
+						<ChannelIcon
+							channel={props.channel}
+							animate={hovered()}
+							extraSpacing
+						/>
 					</Show>
 
 					<div class="channel-details">

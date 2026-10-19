@@ -151,11 +151,20 @@
 
 		@include drop-target-styles;
 
+		&.view.dm .avatar {
+			--size: calc(1em + 4px);
+			height: var(--size);
+			width: calc(44 / 36 * var(--size));
+		}
+
+		&.view .channel-status {
+			display: none;
+		}
+
 		&.dm .avatar {
 			margin: -4px;
-			margin-right: 0;
 			height: 36px;
-			width: 36px;
+			width: 44px;
 		}
 
 		&.dm .channel-link::before {

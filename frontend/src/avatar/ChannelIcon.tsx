@@ -1,5 +1,6 @@
 import type { Channel, ChannelType } from "sdk";
 import { createMemo, Match, Show, Switch } from "solid-js";
+import { useApi } from "@/api";
 import icChanCalendar1 from "@/assets/channel-calendar-1.png";
 import icChanDocument1 from "@/assets/channel-document-1.png";
 import icChanForum1 from "@/assets/channel-forum-1.png";
@@ -67,7 +68,9 @@ export const ChannelIcon = (props: {
 	channel: Channel;
 	animate?: boolean;
 	style?: string;
+	extraSpacing?: boolean;
 }) => {
+	const api = useApi();
 	const currentUser = useCurrentUser();
 	const otherUser = createMemo(() => {
 		if (props.channel.type === "Dm") {
@@ -76,11 +79,21 @@ export const ChannelIcon = (props: {
 		}
 		return undefined;
 	});
+	const typing = createMemo(() => {
+		const other = otherUser();
+		if (!other) return false;
+		return api.typing.get(props.channel.id)?.has(other.id) ?? false;
+	});
 
 	return (
 		<Switch>
 			<Match when={props.channel.type === "Dm" && otherUser()}>
-				<AvatarWithStatus user={otherUser()} animate={props.animate} />
+				<AvatarWithStatus
+					user={otherUser()}
+					animate={props.animate}
+					typing={typing()}
+					extraSpacing={props.extraSpacing}
+				/>
 			</Match>
 			<Match when={props.channel.type === "Gdm"}>
 				<ChannelIconGdm
