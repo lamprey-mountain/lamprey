@@ -371,11 +371,7 @@ async fn document_branch_fork(
                     .clone()
                     .unwrap_or_else(|| "Branch".to_string()),
                 description: None,
-                auto_name: req
-                    .branch
-                    .name
-                    .is_none()
-                    .then(|| "Branch".to_string()),
+                auto_name: req.branch.name.is_none().then(|| "Branch".to_string()),
                 auto_description: None,
                 url: None,
                 icon: None,
@@ -402,7 +398,7 @@ async fn document_branch_fork(
         let message_id = txn
             .message_create(DbMessageCreate {
                 id: None,
-                channel_id,
+                channel_id: (*req.channel_id).into(),
                 attachments: vec![],
                 author_id: user_id,
                 embeds: vec![],
@@ -419,7 +415,9 @@ async fn document_branch_fork(
                 ephemeral: false,
             })
             .await?;
-        let message = txn.message_get(channel_id, message_id).await?;
+        let message = txn
+            .message_get((*req.channel_id).into(), message_id)
+            .await?;
         txn.commit().await?;
 
         s.globals
