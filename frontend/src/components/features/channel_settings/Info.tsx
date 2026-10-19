@@ -4,7 +4,9 @@ import { createUpload } from "sdk";
 import { createSignal, onMount, Show, type VoidProps } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi, useChannels } from "@/api";
+import { ChannelPicker } from "@/atoms/ChannelPicker";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { UserRoleSelect } from "@/atoms/UserRoleSelect";
 import { DurationInput, type DurationPreset } from "@/atoms/DurationInput.tsx";
 import { Checkbox } from "@/atoms/icons";
 import { Savebar } from "@/atoms/Savebar";
@@ -55,6 +57,8 @@ type Draft = {
 	bitrate: number;
 	icon: string | null;
 	url: string;
+	broadcasterId: string | null;
+	scheduleId: string | null;
 };
 
 const toDraft = (c: Channel): Draft => ({
@@ -69,6 +73,8 @@ const toDraft = (c: Channel): Draft => ({
 	bitrate: c.bitrate ?? 65535,
 	icon: c.icon ?? null,
 	url: c.url ?? "",
+	broadcasterId: c.broadcaster_id ?? null,
+	scheduleId: c.schedule_id ?? null,
 });
 
 export function Info(props: VoidProps<{ channel: Channel }>) {
@@ -93,6 +99,14 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const isGdm = () => props.channel.type === "Gdm";
 	const isInfo = () => props.channel.type === "Info";
+	const isBroadcast = () => props.channel.type === "Broadcast";
+
+	const roomChannels = () =>
+		props.channel.room_id
+			? [...channels.cache.values()].filter(
+					(c) => c.room_id === props.channel.room_id,
+				)
+			: [];
 
 	const setIconFile = async (f: File) => {
 		await createUpload({
@@ -194,6 +208,10 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 			...(hasVoice() && {
 				user_limit: draft.userLimit === 0 ? null : draft.userLimit,
 				bitrate: draft.bitrate,
+			}),
+			...(isBroadcast() && {
+				broadcaster_id: draft.broadcasterId,
+				schedule_id: draft.scheduleId,
 			}),
 			...(isGdm() && { icon: draft.icon }),
 			...(isInfo() && { url: draft.url || null }),
@@ -432,6 +450,45 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 							maxLabel="96k"
 							detents={[{ value: 64000, label: "64k" }]}
 							onInput={(v) => setDraft("bitrate", v)}
+						/>
+					</label>
+				</div>
+			</Show>
+			<Show when={isBroadcast()}>
+				<div class="settings-group">
+					<label style="display:flex;flex-direction:column">
+						<h3 class="label">Broadcaster</h3>
+						<p class="description dim">
+							The user that this broadcast channel belongs to. Connecting clients
+							will automatically focus this user's stream if one exists.
+						</p>
+						<UserRoleSelect
+							room_id={props.channel.room_id ?? ""}
+							types={["User"]}
+							selected={draft.broadcasterId}
+							onSelect={(id) => setDraft("broadcasterId", id)}
+							placeholder="Select a member..."
+						/>
+					</label>
+					<label style="display:block;margin-top:12px">
+						<h3 class="label">Schedule</h3>
+						<p class="description dim">
+							Use this channel as this broadcast channel's schedule. Calendar events should
+							correspond to broadcast times.
+						</p>
+						<ChannelPicker
+							selected={
+								draft.scheduleId
+									? (channels.cache.get(draft.scheduleId) ?? null)
+									: null
+							}
+							channels={roomChannels}
+							filter={(c) => c.type === "Calendar"}
+							onSelect={(channel) =>
+								setDraft("scheduleId", channel?.id ?? null)
+							}
+							placeholder="Select a calendar channel..."
+							required={false}
 						/>
 					</label>
 				</div>

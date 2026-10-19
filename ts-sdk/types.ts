@@ -5,6 +5,10 @@ export type RoomType = components["schemas"]["RoomType"];
 export type RolePatch = components["schemas"]["RolePatch"];
 export type Channel = Omit<components["schemas"]["Channel"], "type"> & {
 	type: ChannelType;
+	/** @description the user this broadcast channel belongs to */
+	broadcaster_id?: string | null;
+	/** @description the stream schedule, points to a calendar channel */
+	schedule_id?: string | null;
 };
 export type ChannelType = components["schemas"]["ChannelType"] | "Scripts";
 export type User = components["schemas"]["User"] & {
@@ -103,7 +107,12 @@ export type ReactionKey = components["schemas"]["ReactionKey"];
 export type RelationshipType = components["schemas"]["RelationshipType"];
 export type MemberListGroup = components["schemas"]["MemberListGroup"];
 export type MemberListOp = components["schemas"]["MemberListOp"];
-export type ChannelPatch = components["schemas"]["ChannelPatch"];
+export type ChannelPatch = components["schemas"]["ChannelPatch"] & {
+	/** @description the user this broadcast channel belongs to */
+	broadcaster_id?: string | null;
+	/** @description the stream schedule, points to a calendar channel */
+	schedule_id?: string | null;
+};
 export type HistoryPagination = components["schemas"]["HistoryPagination"];
 export type DocumentBranchState = components["schemas"]["DocumentBranchState"];
 export type DocumentBranch = components["schemas"]["DocumentBranch"];
