@@ -2,6 +2,7 @@ import type { NotifsRoom, PreferencesRoom, Room } from "sdk";
 import { Show } from "solid-js";
 import { useApi, useRooms } from "@/api";
 import { useCtx } from "@/app/context";
+import { formatDuration } from "@/atoms/Duration";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Checkbox } from "@/atoms/icons";
 import { timeAgo } from "@/atoms/Time.tsx";
@@ -140,6 +141,7 @@ export function RoomMenu(props: { room_id: string }) {
 
 function RoomNotificationMenu(props: { room: Room }) {
 	const ctx = useCtx();
+	const { t } = ctx;
 	const api2 = useApi();
 	const rooms2 = useRooms();
 	const roomConfig = () => props.room.preferences;
@@ -201,7 +203,7 @@ function RoomNotificationMenu(props: { room: Room }) {
 	return (
 		<>
 			<Submenu
-				content={"notifications"}
+				content={t("notifs.title")}
 				onClick={() =>
 					modalctl.open({ type: "notifications", room_id: props.room.id })
 				}
@@ -212,10 +214,11 @@ function RoomNotificationMenu(props: { room: Room }) {
 						selected: roomConfig()?.notifs.messages === undefined,
 					}}
 				>
-					<div>default</div>
+					<div>{t("notifs.default")}</div>
 					<div class="subtext">
-						Uses your default notification setting (
-						{ctx.preferences().notifs.messages.toLowerCase()}).
+						{t("notifs.default_messages_user", {
+							value: ctx.preferences().notifs.messages.toLowerCase(),
+						})}
 					</div>
 				</Item>
 				<Item
@@ -224,63 +227,62 @@ function RoomNotificationMenu(props: { room: Room }) {
 						selected: roomConfig()?.notifs.messages === "Everything",
 					}}
 				>
-					<div>everything</div>
-					<div class="subtext">You will be notified for all messages.</div>
+					<div>{t("notifs.everything")}</div>
+					<div class="subtext">{t("notifs.everything_room")}</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ messages: "Watching" })}
 					classList={{ selected: roomConfig()?.notifs.messages === "Watching" }}
 				>
-					<div>watching</div>
-					<div class="subtext">
-						Messages in this room will show up in your inbox.
-					</div>
+					<div>{t("notifs.watching")}</div>
+					<div class="subtext">{t("notifs.watching_room")}</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ messages: "Mentions" })}
 					classList={{ selected: roomConfig()?.notifs.messages === "Mentions" }}
 				>
-					<div>mentions</div>
-					<div class="subtext">You will only be notified on @mention</div>
+					<div>{t("notifs.mentions")}</div>
+					<div class="subtext">{t("notifs.mentions_description")}</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ messages: "Nothing" })}
 					classList={{ selected: roomConfig()?.notifs.messages === "Nothing" }}
 				>
-					<div>nothing</div>
-					<div class="subtext">You won't be notified for anything.</div>
+					<div>{t("notifs.nothing")}</div>
+					<div class="subtext">{t("notifs.nothing_description")}</div>
 				</Item>
 				<Separator />
 				<Item
 					onClick={() => setNotifs({ threads: undefined })}
 					classList={{ selected: roomConfig()?.notifs.threads === undefined }}
 				>
-					<div>default</div>
+					<div>{t("notifs.default")}</div>
 					<div class="subtext">
-						Uses your default notification setting for threads (
-						{ctx.preferences().notifs.threads.toLowerCase()}).
+						{t("notifs.default_threads_user", {
+							value: ctx.preferences().notifs.threads.toLowerCase(),
+						})}
 					</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ threads: "Notify" })}
 					classList={{ selected: roomConfig()?.notifs.threads === "Notify" }}
 				>
-					<div>new threads</div>
-					<div class="subtext">You will be notified for new threads.</div>
+					<div>{t("notifs.new_threads")}</div>
+					<div class="subtext">{t("notifs.new_threads_room")}</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ threads: "Inbox" })}
 					classList={{ selected: roomConfig()?.notifs.threads === "Inbox" }}
 				>
-					<div>threads to inbox</div>
-					<div class="subtext">New threads will show up in your inbox.</div>
+					<div>{t("notifs.threads_to_inbox")}</div>
+					<div class="subtext">{t("notifs.threads_to_inbox_description")}</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ threads: "Nothing" })}
 					classList={{ selected: roomConfig()?.notifs.threads === "Nothing" }}
 				>
-					<div>ignore threads</div>
-					<div class="subtext">You won't be notified for new threads.</div>
+					<div>{t("notifs.ignore_threads")}</div>
+					<div class="subtext">{t("notifs.ignore_threads_description")}</div>
 				</Item>
 				<Separator />
 				<CheckboxOption
@@ -297,11 +299,8 @@ function RoomNotificationMenu(props: { room: Room }) {
 						seed={`menu-room-${props.room.id}-everyone`}
 					/>
 					<label for="room-mention-everyone" style="margin-left: 8px;">
-						<div>Enable @everyone and @here</div>
-						<div class="dim">
-							You will receive notifications when @everyone or @here is
-							mentioned.
-						</div>
+						<div>{t("notifs.mention_everyone")}</div>
+						<div class="dim">{t("notifs.mention_everyone_description")}</div>
 					</label>
 				</CheckboxOption>
 				<CheckboxOption
@@ -318,32 +317,49 @@ function RoomNotificationMenu(props: { room: Room }) {
 						seed={`menu-room-${props.room.id}-roles`}
 					/>
 					<label for="room-mention-roles" style="margin-left: 8px;">
-						<div>Enable all role mentions</div>
-						<div class="dim">
-							You will receive notifications when any @role you have is
-							mentioned.
-						</div>
+						<div>{t("notifs.mention_roles")}</div>
+						<div class="dim">{t("notifs.mention_roles_description")}</div>
 					</label>
 				</CheckboxOption>
 			</Submenu>
 			<Show
 				when={isMuted()}
 				fallback={
-					<Submenu content={"mute"} onClick={() => setMute(null)}>
-						<Item onClick={() => setMute(fifteen_mins)}>for 15 minutes</Item>
-						<Item onClick={() => setMute(three_hours)}>for 3 hours</Item>
-						<Item onClick={() => setMute(eight_hours)}>for 8 hours</Item>
-						<Item onClick={() => setMute(one_day)}>for 1 day</Item>
-						<Item onClick={() => setMute(one_week)}>for 1 week</Item>
-						<Item onClick={() => setMute(null)}>forever</Item>
+					<Submenu content={t("notifs.mute")} onClick={() => setMute(null)}>
+						<Item onClick={() => setMute(fifteen_mins)}>
+							{t("notifs.for_duration", {
+								duration: formatDuration(fifteen_mins),
+							})}
+						</Item>
+						<Item onClick={() => setMute(three_hours)}>
+							{t("notifs.for_duration", {
+								duration: formatDuration(three_hours),
+							})}
+						</Item>
+						<Item onClick={() => setMute(eight_hours)}>
+							{t("notifs.for_duration", {
+								duration: formatDuration(eight_hours),
+							})}
+						</Item>
+						<Item onClick={() => setMute(one_day)}>
+							{t("notifs.for_duration", { duration: formatDuration(one_day) })}
+						</Item>
+						<Item onClick={() => setMute(one_week)}>
+							{t("notifs.for_duration", { duration: formatDuration(one_week) })}
+						</Item>
+						<Item onClick={() => setMute(null)}>{t("notifs.forever")}</Item>
 					</Submenu>
 				}
 			>
 				<Item onClick={unmute}>
-					<div>unmute</div>
+					<div>{t("notifs.unmute")}</div>
 					<Show when={roomConfig()?.notifs.mute?.expires_at}>
 						<div class="subtext">
-							unmutes {timeAgo(getDate(roomConfig()?.notifs.mute?.expires_at!))}
+							{t("notifs.unmutes", {
+								time: timeAgo(
+									getDate(roomConfig()?.notifs.mute?.expires_at!),
+								),
+							})}
 						</div>
 					</Show>
 				</Item>

@@ -10,6 +10,7 @@ import {
 } from "solid-js";
 import { useApi, useChannels, useRooms, useTags, useThreadMembers } from "@/api";
 import { useCtx } from "@/app/context";
+import { formatDuration } from "@/atoms/Duration";
 import { Checkbox } from "@/atoms/icons";
 import { Search } from "@/atoms/Search.tsx";
 import { timeAgo } from "@/atoms/Time.tsx";
@@ -364,6 +365,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 
 export function ChannelNotificationMenu(props: { channel: Channel }) {
 	const ctx = useCtx();
+	const { t } = ctx;
 	const api2 = useApi();
 	const channels2 = useChannels();
 	const rooms2 = useRooms();
@@ -426,17 +428,18 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 
 	return (
 		<>
-			<Submenu content={"notifications"}>
+			<Submenu content={t("notifs.title")}>
 				<Item
 					onClick={() => setNotifs({ messages: undefined })}
 					classList={{
 						selected: channelConfig()?.notifs.messages === undefined,
 					}}
 				>
-					<div>default</div>
+					<div>{t("notifs.default")}</div>
 					<div class="subtext">
-						Uses the room's default notification setting (
-						{defaultMessages().toLowerCase()}).
+						{t("notifs.default_messages_room", {
+							value: defaultMessages().toLowerCase(),
+						})}
 					</div>
 				</Item>
 				<Item
@@ -445,10 +448,8 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 						selected: channelConfig()?.notifs.messages === "Everything",
 					}}
 				>
-					<div>everything</div>
-					<div class="subtext">
-						You will be notified of all new messages in this channel.
-					</div>
+					<div>{t("notifs.everything")}</div>
+					<div class="subtext">{t("notifs.everything_channel")}</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ messages: "Watching" })}
@@ -456,10 +457,8 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 						selected: channelConfig()?.notifs.messages === "Watching",
 					}}
 				>
-					<div>watching</div>
-					<div class="subtext">
-						Messages in this channel will show up in your inbox.
-					</div>
+					<div>{t("notifs.watching")}</div>
+					<div class="subtext">{t("notifs.watching_channel")}</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ messages: "Mentions" })}
@@ -467,8 +466,8 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 						selected: channelConfig()?.notifs.messages === "Mentions",
 					}}
 				>
-					<div>mentions</div>
-					<div class="subtext">You will only be notified on @mention</div>
+					<div>{t("notifs.mentions")}</div>
+					<div class="subtext">{t("notifs.mentions_description")}</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ messages: "Nothing" })}
@@ -476,8 +475,8 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 						selected: channelConfig()?.notifs.messages === "Nothing",
 					}}
 				>
-					<div>nothing</div>
-					<div class="subtext">You won't be notified for anything.</div>
+					<div>{t("notifs.nothing")}</div>
+					<div class="subtext">{t("notifs.nothing_description")}</div>
 				</Item>
 				<Separator />
 				<Item
@@ -486,27 +485,26 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 						selected: channelConfig()?.notifs.threads === undefined,
 					}}
 				>
-					<div>default</div>
+					<div>{t("notifs.default")}</div>
 					<div class="subtext">
-						Uses the room's default notification setting for threads (
-						{defaultThreads().toLowerCase()}).
+						{t("notifs.default_threads_room", {
+							value: defaultThreads().toLowerCase(),
+						})}
 					</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ threads: "Notify" })}
 					classList={{ selected: channelConfig()?.notifs.threads === "Notify" }}
 				>
-					<div>new threads</div>
-					<div class="subtext">
-						You will be notified when a new thread is created.
-					</div>
+					<div>{t("notifs.new_threads")}</div>
+					<div class="subtext">{t("notifs.new_threads_channel")}</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ threads: "Inbox" })}
 					classList={{ selected: channelConfig()?.notifs.threads === "Inbox" }}
 				>
-					<div>threads to inbox</div>
-					<div class="subtext">New threads will show up in your inbox.</div>
+					<div>{t("notifs.threads_to_inbox")}</div>
+					<div class="subtext">{t("notifs.threads_to_inbox_description")}</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ threads: "Nothing" })}
@@ -514,38 +512,57 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 						selected: channelConfig()?.notifs.threads === "Nothing",
 					}}
 				>
-					<div>ignore threads</div>
-					<div class="subtext">You won't be notified for new threads.</div>
+					<div>{t("notifs.ignore_threads")}</div>
+					<div class="subtext">{t("notifs.ignore_threads_description")}</div>
 				</Item>
 				<Separator />
-				<Item>bookmark</Item>
-				<Submenu content={"remind me"}>
-					<Item>in 15 minutes</Item>
-					<Item>in 3 hours</Item>
-					<Item>in 8 hours</Item>
-					<Item>in 1 day</Item>
-					<Item>in 1 week</Item>
+				<Item>{t("notifs.bookmark")}</Item>
+				<Submenu content={t("notifs.remind_me")}>
+					<Item>{timeAgo(new Date(Date.now() + fifteen_mins))}</Item>
+					<Item>{timeAgo(new Date(Date.now() + three_hours))}</Item>
+					<Item>{timeAgo(new Date(Date.now() + eight_hours))}</Item>
+					<Item>{timeAgo(new Date(Date.now() + one_day))}</Item>
+					<Item>{timeAgo(new Date(Date.now() + one_week))}</Item>
 				</Submenu>
 			</Submenu>
 			<Show
 				when={isMuted()}
 				fallback={
-					<Submenu content={"mute"} onClick={() => setMute(null)}>
-						<Item onClick={() => setMute(fifteen_mins)}>for 15 minutes</Item>
-						<Item onClick={() => setMute(three_hours)}>for 3 hours</Item>
-						<Item onClick={() => setMute(eight_hours)}>for 8 hours</Item>
-						<Item onClick={() => setMute(one_day)}>for 1 day</Item>
-						<Item onClick={() => setMute(one_week)}>for 1 week</Item>
-						<Item onClick={() => setMute(null)}>forever</Item>
+					<Submenu content={t("notifs.mute")} onClick={() => setMute(null)}>
+						<Item onClick={() => setMute(fifteen_mins)}>
+							{t("notifs.for_duration", {
+								duration: formatDuration(fifteen_mins),
+							})}
+						</Item>
+						<Item onClick={() => setMute(three_hours)}>
+							{t("notifs.for_duration", {
+								duration: formatDuration(three_hours),
+							})}
+						</Item>
+						<Item onClick={() => setMute(eight_hours)}>
+							{t("notifs.for_duration", {
+								duration: formatDuration(eight_hours),
+							})}
+						</Item>
+						<Item onClick={() => setMute(one_day)}>
+							{t("notifs.for_duration", { duration: formatDuration(one_day) })}
+						</Item>
+						<Item onClick={() => setMute(one_week)}>
+							{t("notifs.for_duration", { duration: formatDuration(one_week) })}
+						</Item>
+						<Item onClick={() => setMute(null)}>{t("notifs.forever")}</Item>
 					</Submenu>
 				}
 			>
 				<Item onClick={unmute}>
-					<div>unmute</div>
+					<div>{t("notifs.unmute")}</div>
 					<Show when={channelConfig()?.notifs.mute?.expires_at}>
 						<div class="subtext">
-							unmutes{" "}
-							{timeAgo(getDate(channelConfig()?.notifs.mute?.expires_at!))}
+							{t("notifs.unmutes", {
+								time: timeAgo(
+									getDate(channelConfig()?.notifs.mute?.expires_at!),
+								),
+							})}
 						</div>
 					</Show>
 				</Item>
