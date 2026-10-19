@@ -1,4 +1,5 @@
-import { createSignal } from "solid-js";
+import type { PreferencesRoom } from "sdk";
+import { useApi, useRooms } from "@/api";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Checkbox } from "@/atoms/icons";
 import { Modal } from "./mod";
@@ -7,11 +8,50 @@ interface ModalPrivacyProps {
 	room_id: string;
 }
 
+type RoomPrivacy = PreferencesRoom["privacy"];
+type RoomPrivacyKey = keyof RoomPrivacy;
+
+const DEFAULT_PRIVACY: RoomPrivacy = {
+	dms: true,
+	friends: true,
+	rpc: true,
+	exif: true,
+};
+
+const DEFAULT_NOTIFS: PreferencesRoom["notifs"] = {
+	mention_everyone: true,
+	mention_roles: true,
+	messages: null,
+	mute: null,
+	replies: null,
+	threads: null,
+};
+
 export const ModalPrivacy = (props: ModalPrivacyProps) => {
-	const [dms, setDms] = createSignal(false);
-	const [friends, setFriends] = createSignal(false);
-	const [rpc, setRpc] = createSignal(false);
-	const [exif, setExif] = createSignal(false);
+	const api = useApi();
+	const rooms2 = useRooms();
+	const room = rooms2.use(() => props.room_id);
+
+	const privacy = (): RoomPrivacy =>
+		room()?.preferences?.privacy ?? DEFAULT_PRIVACY;
+
+	const setPrivacy = (key: RoomPrivacyKey, value: boolean) => {
+		const r = room();
+		if (!r) return;
+
+		const current = r.preferences;
+		const newPreferences: PreferencesRoom = {
+			notifs: current?.notifs ?? DEFAULT_NOTIFS,
+			frontend: current?.frontend ?? {},
+			privacy: { ...(current?.privacy ?? DEFAULT_PRIVACY), [key]: value },
+		};
+
+		rooms2.cache.set(r.id, { ...r, preferences: newPreferences });
+		api.client.http.PUT("/api/v1/preferences/room/{room_id}", {
+			params: { path: { room_id: r.id } } as any,
+			body: newPreferences as any,
+		});
+	};
 
 	return (
 		<Modal>
@@ -19,12 +59,12 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 				<h3>privacy</h3>
 				<CheckboxOption
 					id="opt-dms"
-					checked={dms()}
-					onChange={setDms}
+					checked={privacy().dms}
+					onChange={(checked) => setPrivacy("dms", checked)}
 					seed={`modal-privacy-${props.room_id}-dms`}
 				>
 					<Checkbox
-						checked={dms()}
+						checked={privacy().dms}
 						seed={`modal-privacy-${props.room_id}-dms`}
 					/>
 					<label for="opt-dms">
@@ -37,12 +77,12 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 				</CheckboxOption>
 				<CheckboxOption
 					id="opt-friends"
-					checked={friends()}
-					onChange={setFriends}
+					checked={privacy().friends}
+					onChange={(checked) => setPrivacy("friends", checked)}
 					seed={`modal-privacy-${props.room_id}-friends`}
 				>
 					<Checkbox
-						checked={friends()}
+						checked={privacy().friends}
 						seed={`modal-privacy-${props.room_id}-friends`}
 					/>
 					<label for="opt-friends">
@@ -52,12 +92,12 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 				</CheckboxOption>
 				<CheckboxOption
 					id="opt-rpc"
-					checked={rpc()}
-					onChange={setRpc}
+					checked={privacy().rpc}
+					onChange={(checked) => setPrivacy("rpc", checked)}
 					seed={`modal-privacy-${props.room_id}-rpc`}
 				>
 					<Checkbox
-						checked={rpc()}
+						checked={privacy().rpc}
 						seed={`modal-privacy-${props.room_id}-rpc`}
 					/>
 					<label for="opt-rpc">
@@ -70,12 +110,12 @@ export const ModalPrivacy = (props: ModalPrivacyProps) => {
 				</CheckboxOption>
 				<CheckboxOption
 					id="opt-exif"
-					checked={exif()}
-					onChange={setExif}
+					checked={!privacy().exif}
+					onChange={(checked) => setPrivacy("exif", !checked)}
 					seed={`modal-privacy-${props.room_id}-exif`}
 				>
 					<Checkbox
-						checked={exif()}
+						checked={!privacy().exif}
 						seed={`modal-privacy-${props.room_id}-exif`}
 					/>
 					<label for="opt-exif">
