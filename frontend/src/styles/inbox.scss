@@ -36,7 +36,12 @@
 		border: solid 1px $sep-400;
 		border-radius: 4px;
 		margin-bottom: 8px;
+		cursor: pointer;
 		overflow: hidden;
+
+		&:hover {
+			background-color: oklch(from $bg-300 calc(l + .03) c h);
+		}
 
 		/* &[data-type="Message"] { */
 		/* border-left: 3px solid $link-500; */
@@ -95,6 +100,14 @@
 
 		& > .notification-content {
 			padding: 8px 0;
+
+			.body-link:hover {
+				background: none;
+			}
+
+			.message:hover {
+				background: none;
+			}
 		}
 
 		.body-link {

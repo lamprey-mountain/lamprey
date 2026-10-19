@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT\n    id,\n    user_id as \"user_id!\",\n    info,\n    channel_id,\n    room_id,\n    added_at as \"added_at!\",\n    read_at\nFROM inbox\nWHERE pushed_at IS NULL\n    AND read_at IS NULL\nORDER BY added_at ASC\nLIMIT $1;\n",
+  "query": "SELECT\n    id,\n    user_id as \"user_id!\",\n    info,\n    channel_id,\n    room_id,\n    added_at as \"added_at!\",\n    read_at\nFROM inbox\nWHERE pushed_at IS NULL\n    AND read_at IS NULL\n    AND added_at <= now()\nORDER BY added_at ASC\nLIMIT $1;\n",
   "describe": {
     "columns": [
       {
@@ -54,5 +54,5 @@
       true
     ]
   },
-  "hash": "a9729c4286f5b2f888a63e9c606c7ace438d46878dcc7055cb05582c225f3f23"
+  "hash": "3a3d81fd80be737b6c684ebaa58268c6ac53ace6b1da8df0a3f477b42eff48ee"
 }

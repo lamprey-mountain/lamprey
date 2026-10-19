@@ -181,18 +181,36 @@ export function MessageMenu(props: MessageMenuProps) {
 	const one_day = 24 * 60 * 60 * 1000;
 	const one_week = 7 * one_day;
 
+	const remind = (delay?: number) => {
+		api2.inbox.createReminder(
+			props.channel_id,
+			props.message_id,
+			delay === undefined ? undefined : new Date(Date.now() + delay),
+		);
+	};
+
 	return (
 		<Menu>
 			<Item onClick={markUnread}>mark unread</Item>
 			<Item onClick={copyLink}>copy link</Item>
 			<Submenu content={t("notifs.remind_me")}>
-				<Item>{t("notifs.bookmark")}</Item>
+				<Item onClick={() => remind()}>{t("notifs.bookmark")}</Item>
 				<Separator />
-				<Item>{timeAgo(new Date(Date.now() + fifteen_mins))}</Item>
-				<Item>{timeAgo(new Date(Date.now() + three_hours))}</Item>
-				<Item>{timeAgo(new Date(Date.now() + eight_hours))}</Item>
-				<Item>{timeAgo(new Date(Date.now() + one_day))}</Item>
-				<Item>{timeAgo(new Date(Date.now() + one_week))}</Item>
+				<Item onClick={() => remind(fifteen_mins)}>
+					{timeAgo(new Date(Date.now() + fifteen_mins))}
+				</Item>
+				<Item onClick={() => remind(three_hours)}>
+					{timeAgo(new Date(Date.now() + three_hours))}
+				</Item>
+				<Item onClick={() => remind(eight_hours)}>
+					{timeAgo(new Date(Date.now() + eight_hours))}
+				</Item>
+				<Item onClick={() => remind(one_day)}>
+					{timeAgo(new Date(Date.now() + one_day))}
+				</Item>
+				<Item onClick={() => remind(one_week)}>
+					{timeAgo(new Date(Date.now() + one_week))}
+				</Item>
 			</Submenu>
 			<Separator />
 			<Show when={canAddReaction()}>

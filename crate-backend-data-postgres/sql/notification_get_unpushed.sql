@@ -9,5 +9,6 @@ SELECT
 FROM inbox
 WHERE pushed_at IS NULL
     AND read_at IS NULL
+    AND added_at <= now()
 ORDER BY added_at ASC
 LIMIT $1;

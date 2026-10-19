@@ -112,6 +112,7 @@ const flagsProd: Flag[] = [
 	"automod",
 	"markdown_code_components",
 	"media_three",
+	"inbox",
 ];
 
 export const flags = new ReactiveSet(

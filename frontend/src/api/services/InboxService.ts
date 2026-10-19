@@ -106,6 +106,28 @@ export class InboxService extends BaseService<Notification> {
 		return { resource, refetch };
 	}
 
+	async createReminder(
+		channel_id: string,
+		message_id: string,
+		added_at?: Date,
+	): Promise<Notification> {
+		const notification = await this.retryWithBackoff<Notification>(() =>
+			this.client.http.POST("/api/v1/inbox", {
+				body: {
+					channel_id,
+					message_id,
+					added_at: added_at?.toISOString(),
+				},
+			}),
+		);
+
+		this.upsert(notification);
+		for (const v of this._listings.values()) {
+			v.refetch();
+		}
+		return notification;
+	}
+
 	async markRead(message_ids: string[]): Promise<void> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/inbox/mark-read", {
