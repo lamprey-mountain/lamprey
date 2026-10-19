@@ -75,6 +75,20 @@ pub struct Channel {
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub description: Option<String>,
 
+    /// automatically generated name
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
+    pub auto_name: Option<String>,
+
+    /// automatically generated description
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
+    pub auto_description: Option<String>,
+
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub preferences: Option<Box<PreferencesChannel>>,
 

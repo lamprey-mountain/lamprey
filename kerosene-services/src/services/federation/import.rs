@@ -725,6 +725,8 @@ impl ServiceFederation {
                     //     .ok_or(Error::BadStatic("channel must have room_id"))?,
                     name: channel.name.clone(),
                     description: channel.description.clone(),
+                    auto_name: channel.auto_name.clone(),
+                    auto_description: channel.auto_description.clone(),
                     url: channel.url.clone(),
                     ty: channel.ty.into(),
                     nsfw: channel.nsfw,

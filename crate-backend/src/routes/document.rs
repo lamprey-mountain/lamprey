@@ -371,6 +371,12 @@ async fn document_branch_fork(
                     .clone()
                     .unwrap_or_else(|| "Branch".to_string()),
                 description: None,
+                auto_name: req
+                    .branch
+                    .name
+                    .is_none()
+                    .then(|| "Branch".to_string()),
+                auto_description: None,
                 url: None,
                 icon: None,
                 ty: DbChannelType::DocumentBranch,
@@ -396,7 +402,7 @@ async fn document_branch_fork(
         let message_id = txn
             .message_create(DbMessageCreate {
                 id: None,
-                channel_id: req.channel_id,
+                channel_id,
                 attachments: vec![],
                 author_id: user_id,
                 embeds: vec![],
@@ -413,12 +419,12 @@ async fn document_branch_fork(
                 ephemeral: false,
             })
             .await?;
-        let message = txn.message_get(req.channel_id, message_id).await?;
+        let message = txn.message_get(channel_id, message_id).await?;
         txn.commit().await?;
 
         s.globals
             .messaging()
-            .broadcast_channel(req.channel_id, MessageSync::MessageCreate { message })
+            .broadcast_channel(channel_id, MessageSync::MessageCreate { message })
             .await?;
 
         Result::Ok(())

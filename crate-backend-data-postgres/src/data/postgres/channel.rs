@@ -78,8 +78,8 @@ impl DataChannel for Postgres {
 
         query!(
             "
-			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration, slowmode_thread, slowmode_message, default_slowmode_message, url, locked_until, locked_roles, last_message_id, last_version_id)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $21, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, null, $22, null, null)
+			INSERT INTO channel (id, version_id, creator_id, room_id, name, description, type, nsfw, locked, bitrate, user_limit, parent_id, owner_id, icon, invitable, auto_archive_duration, default_auto_archive_duration, slowmode_thread, slowmode_message, default_slowmode_message, url, locked_until, locked_roles, last_message_id, last_version_id, auto_name, auto_description)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $21, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, null, $22, null, null, $23, $24)
         ",
             channel_id.into_inner(),
             channel_id.into_inner(),
@@ -103,6 +103,8 @@ impl DataChannel for Postgres {
             create.url,
             create.locked,
             &[],
+            create.auto_name,
+            create.auto_description,
         )
         .execute(tx.ext())
         .await?;
@@ -355,7 +357,9 @@ impl DataChannel for Postgres {
                 last_activity_at = $20,
                 url = $21,
                 locked_until = $22,
-                locked_roles = $23
+                locked_roles = $23,
+                auto_name = $24,
+                auto_description = $25
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -402,6 +406,10 @@ impl DataChannel for Postgres {
             patch.url.unwrap_or(thread.url),
             locked_until,
             &locked_roles,
+            patch.auto_name.unwrap_or(thread.auto_name),
+            patch
+                .auto_description
+                .unwrap_or(thread.auto_description),
         )
         .execute(tx.ext())
         .await?;

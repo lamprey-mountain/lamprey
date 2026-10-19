@@ -145,6 +145,8 @@ async fn channel_create_dm(
             creator_id: user.id,
             name: json.name.clone(),
             description: json.description.clone(),
+            auto_name: json.auto_name,
+            auto_description: json.auto_description,
             icon: json.icon.map(|i| *i),
             ty: DbChannelType::Gdm,
             nsfw: json.nsfw,

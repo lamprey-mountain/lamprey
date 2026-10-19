@@ -60,6 +60,14 @@ pub struct Channel {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
 
+    /// automatically generated name
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub auto_name: Option<String>,
+
+    /// automatically generated description
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub auto_description: Option<String>,
+
     /// url that this info channel should link to
     #[cfg_attr(
         feature = "utoipa",
@@ -233,6 +241,10 @@ impl Serialize for Channel {
             #[serde(skip_serializing_if = "Option::is_none")]
             description: Option<&'a str>,
             #[serde(skip_serializing_if = "Option::is_none")]
+            auto_name: Option<&'a str>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            auto_description: Option<&'a str>,
+            #[serde(skip_serializing_if = "Option::is_none")]
             url: Option<&'a str>,
             #[serde(rename = "type")]
             ty: ChannelType,
@@ -343,6 +355,8 @@ impl Serialize for Channel {
             version_id: self.version_id.clone(),
             name: &self.name,
             description: self.description.as_deref(),
+            auto_name: self.auto_name.as_deref(),
+            auto_description: self.auto_description.as_deref(),
             url: if self.ty.has_url() {
                 self.url.as_deref()
             } else {
@@ -584,6 +598,14 @@ pub struct ChannelCreate {
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 2048)))]
     pub description: Option<String>,
 
+    /// automatically generated name
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    pub auto_name: Option<String>,
+
+    /// automatically generated description
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    pub auto_description: Option<String>,
+
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, format = Uri, max_length = 1, min_length = 2048)
@@ -660,6 +682,22 @@ pub struct ChannelPatch {
         skip_serializing_if = "Option::is_none"
     )]
     pub description: Option<Option<String>>,
+
+    /// automatically generated name
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub auto_name: Option<Option<String>>,
+
+    /// automatically generated description
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub auto_description: Option<Option<String>>,
 
     #[
         schema(required = false, format = Uri, max_length = 1, min_length = 2048)
@@ -877,6 +915,16 @@ impl Diff for ChannelPatch {
                 return true;
             }
         }
+        if let Some(ref val) = self.auto_name {
+            if val != &other.auto_name {
+                return true;
+            }
+        }
+        if let Some(ref val) = self.auto_description {
+            if val != &other.auto_description {
+                return true;
+            }
+        }
         if let Some(val) = self.invitable {
             if val != other.invitable {
                 return true;
@@ -972,6 +1020,12 @@ impl Diff for ChannelPatch {
         }
         if let Some(val) = self.locked {
             other.locked = val;
+        }
+        if let Some(val) = self.auto_name {
+            other.auto_name = val;
+        }
+        if let Some(val) = self.auto_description {
+            other.auto_description = val;
         }
         other.invitable = self.invitable.unwrap_or(other.invitable);
         // NOTE: archived is special - it sets archived_at based on the bool value

@@ -23,6 +23,8 @@ select
     channel.name,
     channel.version_id,
     channel.description,
+    channel.auto_name,
+    channel.auto_description,
     channel.url,
     channel.nsfw,
     channel.latest_seq,

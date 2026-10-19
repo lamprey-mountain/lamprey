@@ -30,6 +30,12 @@ pub struct ChannelCreateRoom {
 
     pub name: Option<String>,
     pub description: Option<String>,
+    /// automatically generated name
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub auto_name: Option<String>,
+    /// automatically generated description
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub auto_description: Option<String>,
     #[cfg_attr(feature = "serde", serde(default))]
     pub nsfw: bool,
     pub bitrate: Option<u64>,
@@ -61,6 +67,12 @@ pub struct ChannelCreateDm {
 
     pub name: Option<String>,
     pub description: Option<String>,
+    /// automatically generated name
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub auto_name: Option<String>,
+    /// automatically generated description
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub auto_description: Option<String>,
     pub icon: Option<MediaId>,
 
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 16)))]
@@ -81,6 +93,12 @@ pub struct ThreadCreate {
 
     pub name: String,
     pub description: Option<String>,
+    /// automatically generated name
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub auto_name: Option<String>,
+    /// automatically generated description
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub auto_description: Option<String>,
 
     /// Tags to apply, only usable in forums
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 256)))]
@@ -109,6 +127,12 @@ pub struct ThreadCreateFromMessage {
 
     pub name: Option<String>,
     pub description: Option<String>,
+    /// automatically generated name
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub auto_name: Option<String>,
+    /// automatically generated description
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub auto_description: Option<String>,
     pub auto_archive_duration: Option<u64>,
     pub slowmode_message: Option<u64>,
 }

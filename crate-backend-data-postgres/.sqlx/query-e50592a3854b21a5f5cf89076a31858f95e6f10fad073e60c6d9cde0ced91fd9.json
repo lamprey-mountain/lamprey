@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            UPDATE channel SET\n                version_id = $2,\n                name = $3,\n                description = $4,\n                nsfw = $5,\n                bitrate = $6,\n                user_limit = $7,\n                owner_id = $8,\n                icon = $9,\n                locked = $10,\n                archived_at = $11,\n                invitable = $12,\n                type = $13,\n                parent_id = $14,\n                auto_archive_duration = $15,\n                default_auto_archive_duration = $16,\n                slowmode_thread = $17,\n                slowmode_message = $18,\n                default_slowmode_message = $19,\n                last_activity_at = $20,\n                url = $21,\n                locked_until = $22,\n                locked_roles = $23\n            WHERE id = $1\n        ",
+  "query": "\n            UPDATE channel SET\n                version_id = $2,\n                name = $3,\n                description = $4,\n                nsfw = $5,\n                bitrate = $6,\n                user_limit = $7,\n                owner_id = $8,\n                icon = $9,\n                locked = $10,\n                archived_at = $11,\n                invitable = $12,\n                type = $13,\n                parent_id = $14,\n                auto_archive_duration = $15,\n                default_auto_archive_duration = $16,\n                slowmode_thread = $17,\n                slowmode_message = $18,\n                default_slowmode_message = $19,\n                last_activity_at = $20,\n                url = $21,\n                locked_until = $22,\n                locked_roles = $23,\n                auto_name = $24,\n                auto_description = $25\n            WHERE id = $1\n        ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -56,10 +56,12 @@
         "Timestamp",
         "Text",
         "Timestamp",
-        "UuidArray"
+        "UuidArray",
+        "Text",
+        "Text"
       ]
     },
     "nullable": []
   },
-  "hash": "f56e2726ba843d530e5ced8dcb75d25c5a37e52d64b879b61f1ef0be6ac5f7e8"
+  "hash": "e50592a3854b21a5f5cf89076a31858f95e6f10fad073e60c6d9cde0ced91fd9"
 }

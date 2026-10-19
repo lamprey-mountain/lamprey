@@ -146,6 +146,8 @@ impl ServiceUsers {
                 creator_id: user_id,
                 name: "dm".to_string(),
                 description: None,
+                auto_name: None,
+                auto_description: None,
                 url: None,
                 ty: DbChannelType::Dm,
                 nsfw: false,

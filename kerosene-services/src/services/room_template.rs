@@ -193,6 +193,8 @@ impl ServiceRoomTemplates {
                     creator_id,
                     name: template_channel.inner.name.clone(),
                     description: template_channel.inner.description.clone(),
+                    auto_name: template_channel.inner.auto_name.clone(),
+                    auto_description: template_channel.inner.auto_description.clone(),
                     ty: DbChannelType::from(template_channel.inner.ty),
                     nsfw: template_channel.inner.nsfw,
                     bitrate: template_channel.inner.bitrate.map(|b| b as i32),

@@ -9922,6 +9922,10 @@ export interface components {
 			 * @description when to automatically archive this thread due to inactivity, in seconds
 			 */
 			auto_archive_duration?: number | null;
+			/** @description automatically generated description */
+			auto_description?: null | string;
+			/** @description automatically generated name */
+			auto_name?: null | string;
 			/**
 			 * Format: int64
 			 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
@@ -10036,6 +10040,10 @@ export interface components {
 		ChannelCreate: {
 			/** Format: int64 */
 			auto_archive_duration?: number | null;
+			/** @description automatically generated description */
+			auto_description?: null | string;
+			/** @description automatically generated name */
+			auto_name?: null | string;
 			/** Format: int64 */
 			bitrate?: number | null;
 			/** Format: int64 */
@@ -10071,6 +10079,10 @@ export interface components {
 			archived?: boolean | null;
 			/** Format: int64 */
 			auto_archive_duration?: number | null;
+			/** @description automatically generated description */
+			auto_description?: null | string;
+			/** @description automatically generated name */
+			auto_name?: null | string;
 			/** Format: int64 */
 			bitrate?: number | null;
 			calendar?: null | components["schemas"]["CalendarPatch"];

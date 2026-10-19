@@ -6,6 +6,8 @@ SELECT
     t.version_id,
     t.name,
     t.description,
+    t.auto_name,
+    t.auto_description,
     t.icon,
     t.url,
     t.type as "ty: _",

@@ -45,6 +45,14 @@ pub struct ChannelUpdate {
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub description: Option<Option<String>>,
 
+    /// automatically generated name
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    pub auto_name: Option<Option<String>>,
+
+    /// automatically generated description
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    pub auto_description: Option<Option<String>>,
+
     // NOTE: this should probably be removed, no api allows patching owner_id
     #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
     pub owner_id: Option<Option<UserId>>,
@@ -199,6 +207,20 @@ impl Diff for ChannelUpdate {
         {
             return true;
         }
+        if self
+            .auto_name
+            .as_ref()
+            .is_some_and(|v| v != &other.auto_name)
+        {
+            return true;
+        }
+        if self
+            .auto_description
+            .as_ref()
+            .is_some_and(|v| v != &other.auto_description)
+        {
+            return true;
+        }
         if self.owner_id.as_ref().is_some_and(|v| v != &other.owner_id) {
             return true;
         }
@@ -274,6 +296,12 @@ impl Diff for ChannelUpdate {
         }
         if let Some(v) = self.description {
             other.description = v;
+        }
+        if let Some(v) = self.auto_name {
+            other.auto_name = v;
+        }
+        if let Some(v) = self.auto_description {
+            other.auto_description = v;
         }
         if let Some(v) = self.owner_id {
             other.owner_id = v;

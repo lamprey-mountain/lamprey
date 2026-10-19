@@ -597,6 +597,8 @@ impl ServiceChannels {
                 creator_id: user.id,
                 name: json.name.clone(),
                 description: json.description.clone(),
+                auto_name: json.auto_name,
+                auto_description: json.auto_description,
                 ty: match json.ty {
                     ChannelType::Dm | ChannelType::Gdm => {
                         // this should be unreachable due to the check above
@@ -809,6 +811,8 @@ impl ServiceChannels {
             creator_id: user.id,
             name: json.name.clone(),
             description: json.description.clone(),
+            auto_name: json.auto_name,
+            auto_description: json.auto_description,
             url: json.url.clone(),
             ty: if parent_channel.ty.has_forum2_threads() {
                 DbChannelType::ThreadForum2
