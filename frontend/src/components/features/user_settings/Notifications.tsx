@@ -12,6 +12,7 @@ type NotifsMessages = "Everything" | "Watching" | "Mentions" | "Nothing";
 type NotifsThreads = "Notify" | "Inbox" | "Nothing";
 type NotifsReactions = "Always" | "Restricted" | "Dms" | "Nothing";
 type NotifsTts = "Always" | "Mentions" | "Nothing";
+type BooleanSetting = "desktop_notifs" | "push_notifs" | "tts_notifs";
 
 function urlBase64ToUint8Array(base64String: string) {
 	const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -50,11 +51,11 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 		});
 	};
 
-	const setFrontendConfig = async (setting: string, value: string) => {
+	const setFrontendConfig = async (setting: BooleanSetting, value: boolean) => {
 		const c = ctx.preferences();
 
 		if (setting === "push_notifs") {
-			if (value === "yes") {
+			if (value) {
 				try {
 					const permission = await Notification.requestPermission();
 					if (permission !== "granted") {
@@ -123,8 +124,8 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 		});
 	};
 
-	const isFrontendConfigEnabled = (setting: string) => {
-		return ctx.preferences().frontend[setting] === "yes";
+	const isFrontendConfigEnabled = (setting: BooleanSetting) => {
+		return ctx.preferences().frontend[setting];
 	};
 
 	createEffect(async () => {
@@ -132,7 +133,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 			const registration = await navigator.serviceWorker.ready;
 			const subscription = await registration.pushManager.getSubscription();
 			const isEnabled = !!subscription;
-			const currentConfig = ctx.preferences().frontend.push_notifs === "yes";
+			const currentConfig = ctx.preferences().frontend.push_notifs;
 
 			if (isEnabled !== currentConfig) {
 				// TODO: sync config
@@ -159,7 +160,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				id={`user-${_props.user?.id ?? "@self"}-desktop-notifs`}
 				checked={isFrontendConfigEnabled("desktop_notifs")}
 				onChange={(checked) =>
-					setFrontendConfig("desktop_notifs", checked ? "yes" : "no")
+					setFrontendConfig("desktop_notifs", checked)
 				}
 				seed={`user-${_props.user?.id ?? "@self"}-desktop-notifs`}
 			>
@@ -176,7 +177,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				id={`user-${_props.user?.id ?? "@self"}-push-notifs`}
 				checked={isFrontendConfigEnabled("push_notifs")}
 				onChange={(checked) =>
-					setFrontendConfig("push_notifs", checked ? "yes" : "no")
+					setFrontendConfig("push_notifs", checked)
 				}
 				seed={`user-${_props.user?.id ?? "@self"}-push-notifs`}
 			>
@@ -193,7 +194,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 				id={`user-${_props.user?.id ?? "@self"}-tts-notifs`}
 				checked={isFrontendConfigEnabled("tts_notifs")}
 				onChange={(checked) =>
-					setFrontendConfig("tts_notifs", checked ? "yes" : "no")
+					setFrontendConfig("tts_notifs", checked)
 				}
 				seed={`user-${_props.user?.id ?? "@self"}-tts-notifs`}
 			>

@@ -235,9 +235,8 @@ export const AppShell: Component<ParentProps> = (props) => {
 				id="root"
 				class="root precedence-hack"
 				classList={{
-					"underline-links":
-						ctx.preferences().frontend.underline_links === "yes",
-					"reduce-motion": ctx.preferences().frontend.reduced_motion === "yes",
+					"underline-links": ctx.preferences().frontend.underline_links,
+					"reduce-motion": ctx.preferences().frontend.reduced_motion,
 				}}
 				data-message-style={
 					ctx.preferences().frontend.message_style === "compact"
@@ -278,9 +277,8 @@ export const AppShell: Component<ParentProps> = (props) => {
 				id="overlay"
 				class="root"
 				classList={{
-					"underline-links":
-						ctx.preferences().frontend.underline_links === "yes",
-					"reduce-motion": ctx.preferences().frontend.reduced_motion === "yes",
+					"underline-links": ctx.preferences().frontend.underline_links,
+					"reduce-motion": ctx.preferences().frontend.reduced_motion,
 				}}
 				data-message-style={
 					ctx.preferences().frontend.message_style === "compact"

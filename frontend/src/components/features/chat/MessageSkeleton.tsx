@@ -4,7 +4,7 @@ import { useCtx } from "@/app/context";
 // TODO: add messageGroupLengths, make MessageSkeletons pass `separate` prop/class
 export const MessageSkeleton = () => {
 	const ctx = useCtx();
-	const messageStyle = () => ctx.preferences().frontend.message_style || "cozy";
+	const messageStyle = () => ctx.preferences().frontend.message_style;
 
 	// TODO: make this reactive
 	const isCozy = messageStyle() === "cozy";

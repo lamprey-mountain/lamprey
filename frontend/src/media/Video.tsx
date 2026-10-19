@@ -463,6 +463,7 @@ export const VideoView = (props: MediaProps) => {
 						<button
 							type="button"
 							class="button icon-button"
+							tabIndex={-1}
 							onClick={togglePlayPause}
 							title={playing() ? "pause" : "play"}
 						>
@@ -487,6 +488,7 @@ export const VideoView = (props: MediaProps) => {
 						<button
 							type="button"
 							class="button icon-button"
+							tabIndex={-1}
 							onClick={toggleMute}
 							title={getVolumeText()}
 							onWheel={handleVolumeWheel}
@@ -497,6 +499,7 @@ export const VideoView = (props: MediaProps) => {
 						<button
 							type="button"
 							class="button icon-button"
+							tabIndex={-1}
 							onClick={toggleFullscreen}
 							title={fullscreen() ? "exit fullscreen" : "enter fullscreen"}
 						>

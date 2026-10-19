@@ -70,7 +70,7 @@ export const Forum = (props: { channel: Channel }) => {
 	const user = useCurrentUser();
 	const user_id = () => user()?.id;
 	const perms = usePermissions(user_id, room_id, () => undefined);
-	const openInSidebar = () => prefs.frontend.threads_sidebar_forum === "yes";
+	const openInSidebar = () => prefs.frontend.threads_sidebar_forum;
 
 	// TODO: deduplicate Forum and Forum2 code
 

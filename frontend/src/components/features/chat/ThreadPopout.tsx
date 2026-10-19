@@ -28,7 +28,7 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 	const [debouncedSearch, setDebouncedSearch] = createSignal("");
 	const prefsService = usePreferences();
 	const prefs = prefsService.useRead();
-	const openInSidebar = () => prefs.frontend.threads_sidebar_text === "yes"; // TODO: use this
+	const openInSidebar = () => prefs.frontend.threads_sidebar_text; // TODO: use this
 
 	const debouncedSetSearch = debounce(
 		(value: string) => setDebouncedSearch(value),

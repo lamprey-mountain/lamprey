@@ -114,7 +114,7 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const forum_id = () => props.channel.id;
 	const prefsService = usePreferences();
 	const prefs = prefsService.useRead();
-	const openInSidebar = () => prefs.frontend.threads_sidebar_forum === "yes";
+	const openInSidebar = () => prefs.frontend.threads_sidebar_forum;
 
 	const [sortBy, setSortBy] = createSignal<Forum2Sort>("new");
 	const [viewAs, setViewAs] = createSignal<Forum2View>("compact");

@@ -10,9 +10,9 @@ const log = logger.for("api/preferences");
 
 export const DEFAULT_PREFERENCES: Preferences = {
 	frontend: {
-		desktop_notifs: "yes",
-		push_notifs: "yes",
-		tts_notifs: "no",
+		desktop_notifs: true,
+		push_notifs: true,
+		tts_notifs: false,
 		message_style: "cozy",
 	},
 	notifs: {

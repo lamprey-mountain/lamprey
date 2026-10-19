@@ -4,7 +4,7 @@ export const DocumentComments = (props: { channel_id: string }) => {
 	const api = useApi();
 	const prefs = api.preferences.useRead();
 
-	const openInSidebar = () => prefs.frontend.threads_sidebar_text === "yes"; // TODO: use this
+	const openInSidebar = () => prefs.frontend.threads_sidebar_text; // TODO: use this
 
 	return (
 		<div class="document-comments">

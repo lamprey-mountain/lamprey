@@ -1,4 +1,4 @@
-import type { User } from "sdk";
+import type { Preferences, User } from "sdk";
 import { Show, type VoidProps } from "solid-js";
 import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
@@ -11,17 +11,27 @@ import { useCurrentUser } from "@/contexts/currentUser";
 import { flags } from "@/lib/flags";
 import { MessageView, UserDisplayName } from "../chat/Message";
 
+type Theme = Preferences["frontend"]["theme"];
+type MessageStyle = Preferences["frontend"]["message_style"];
+type BooleanSetting =
+	| "underline_links"
+	| "show_send_button"
+	| "reduced_motion"
+	| "reduced_motion_sync"
+	| "autoplay_emoji"
+	| "autoplay_gifs";
+
 export function Appearance(props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
 	const { t } = useCtx();
 
-	const toggle = (setting: string) => () => {
+	const toggle = (setting: BooleanSetting) => () => {
 		const c = ctx.preferences();
 		ctx.setPreferences({
 			...c,
 			frontend: {
 				...c.frontend,
-				[setting]: c.frontend[setting] === "yes" ? "no" : "yes",
+				[setting]: !c.frontend[setting],
 			},
 		});
 	};
@@ -60,8 +70,8 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 							"Choose your preferred theme"}
 					</div>
 				</div>
-				<Dropdown
-					selected={ctx.preferences().frontend.theme || "auto"}
+				<Dropdown<Theme>
+					selected={ctx.preferences().frontend.theme}
 					onSelect={(value) => {
 						if (value) {
 							const c = ctx.preferences();
@@ -105,24 +115,24 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 			<div class="options">
 				<CheckboxOption
 					id={`user-${props.user?.id ?? "@self"}-underline-links`}
-					checked={ctx.preferences().frontend.underline_links === "yes"}
+					checked={ctx.preferences().frontend.underline_links}
 					onChange={() => toggle("underline_links")()}
 					seed={`user-${props.user?.id ?? "@self"}-underline-links`}
 				>
 					<Checkbox
-						checked={ctx.preferences().frontend.underline_links === "yes"}
+						checked={ctx.preferences().frontend.underline_links}
 						seed={`user-${props.user?.id ?? "@self"}-underline-links`}
 					/>
 					<span>{t("user_settings.underline_links")}</span>
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user?.id ?? "@self"}-show-send-button`}
-					checked={ctx.preferences().frontend.show_send_button === "yes"}
+					checked={ctx.preferences().frontend.show_send_button}
 					onChange={() => toggle("show_send_button")()}
 					seed={`user-${props.user?.id ?? "@self"}-show-send-button`}
 				>
 					<Checkbox
-						checked={ctx.preferences().frontend.show_send_button === "yes"}
+						checked={ctx.preferences().frontend.show_send_button}
 						seed={`user-${props.user?.id ?? "@self"}-show-send-button`}
 					/>
 					<span>{t("user_settings.show_send_button")}</span>
@@ -135,8 +145,8 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 								"Choose how messages are displayed"}
 						</div>
 					</div>
-					<Dropdown
-						selected={ctx.preferences().frontend.message_style || "cozy"}
+					<Dropdown<MessageStyle>
+						selected={ctx.preferences().frontend.message_style}
 						onSelect={(value) => {
 							if (value) {
 								const c = ctx.preferences();
@@ -173,18 +183,14 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						type="range"
 						min="0"
 						max="24"
-						value={
-							(ctx.preferences().frontend.message_spacing as
-								| number
-								| undefined) || 8
-						}
+						value={ctx.preferences().frontend.message_spacing ?? 8}
 						onChange={(e) => {
 							const c = ctx.preferences();
 							ctx.setPreferences({
 								...c,
 								frontend: {
 									...c.frontend,
-									message_spacing: e.target.value,
+									message_spacing: e.currentTarget.valueAsNumber,
 								},
 							});
 						}}
@@ -203,18 +209,14 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						type="range"
 						min="80"
 						max="150"
-						value={
-							(ctx.preferences().frontend.chat_font_scale as
-								| number
-								| undefined) || 100
-						}
+						value={ctx.preferences().frontend.chat_font_scale ?? 100}
 						onChange={(e) => {
 							const c = ctx.preferences();
 							ctx.setPreferences({
 								...c,
 								frontend: {
 									...c.frontend,
-									chat_font_scale: e.target.value,
+									chat_font_scale: e.currentTarget.valueAsNumber,
 								},
 							});
 						}}
@@ -233,17 +235,14 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						type="range"
 						min="80"
 						max="150"
-						value={
-							(ctx.preferences().frontend.app_scale as number | undefined) ||
-							100
-						}
+						value={ctx.preferences().frontend.app_scale ?? 100}
 						onChange={(e) => {
 							const c = ctx.preferences();
 							ctx.setPreferences({
 								...c,
 								frontend: {
 									...c.frontend,
-									app_scale: e.target.value,
+									app_scale: e.currentTarget.valueAsNumber,
 								},
 							});
 						}}
@@ -262,17 +261,14 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						type="range"
 						min="0"
 						max="100"
-						value={
-							(ctx.preferences().frontend.saturation as number | undefined) ||
-							100
-						}
+						value={ctx.preferences().frontend.saturation ?? 100}
 						onChange={(e) => {
 							const c = ctx.preferences();
 							ctx.setPreferences({
 								...c,
 								frontend: {
 									...c.frontend,
-									saturation: e.target.value,
+									saturation: e.currentTarget.valueAsNumber,
 								},
 							});
 						}}
@@ -282,48 +278,48 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 				<h3 class="dim">{t("user_settings.reduced_motion")}</h3>
 				<CheckboxOption
 					id={`user-${props.user?.id ?? "@self"}-reduced-motion`}
-					checked={ctx.preferences().frontend.reduced_motion === "yes"}
+					checked={ctx.preferences().frontend.reduced_motion}
 					onChange={() => toggle("reduced_motion")()}
 					seed={`user-${props.user?.id ?? "@self"}-reduced-motion`}
 				>
 					<Checkbox
-						checked={ctx.preferences().frontend.reduced_motion === "yes"}
+						checked={ctx.preferences().frontend.reduced_motion}
 						seed={`user-${props.user?.id ?? "@self"}-reduced-motion`}
 					/>
 					<span>{t("user_settings.reduced_motion")}</span>
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user?.id ?? "@self"}-reduced-motion-sync`}
-					checked={ctx.preferences().frontend.reduced_motion_sync === "yes"}
+					checked={ctx.preferences().frontend.reduced_motion_sync}
 					onChange={() => toggle("reduced_motion_sync")()}
 					seed={`user-${props.user?.id ?? "@self"}-reduced-motion-sync`}
 				>
 					<Checkbox
-						checked={ctx.preferences().frontend.reduced_motion_sync === "yes"}
+						checked={ctx.preferences().frontend.reduced_motion_sync}
 						seed={`user-${props.user?.id ?? "@self"}-reduced-motion-sync`}
 					/>
 					<span>{t("user_settings.reduced_motion_sync")}</span>
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user?.id ?? "@self"}-autoplay-gifs`}
-					checked={ctx.preferences().frontend.autoplay_gifs === "yes"}
+					checked={ctx.preferences().frontend.autoplay_gifs}
 					onChange={() => toggle("autoplay_gifs")()}
 					seed={`user-${props.user?.id ?? "@self"}-autoplay-gifs`}
 				>
 					<Checkbox
-						checked={ctx.preferences().frontend.autoplay_gifs === "yes"}
+						checked={ctx.preferences().frontend.autoplay_gifs}
 						seed={`user-${props.user?.id ?? "@self"}-autoplay-gifs`}
 					/>
 					<span>{t("user_settings.autoplay_gifs")}</span>
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user?.id ?? "@self"}-autoplay-emoji`}
-					checked={ctx.preferences().frontend.autoplay_emoji === "yes"}
+					checked={ctx.preferences().frontend.autoplay_emoji}
 					onChange={() => toggle("autoplay_emoji")()}
 					seed={`user-${props.user?.id ?? "@self"}-autoplay-emoji`}
 				>
 					<Checkbox
-						checked={ctx.preferences().frontend.autoplay_emoji === "yes"}
+						checked={ctx.preferences().frontend.autoplay_emoji}
 						seed={`user-${props.user?.id ?? "@self"}-autoplay-emoji`}
 					/>
 					<span>{t("user_settings.autoplay_emoji")}</span>

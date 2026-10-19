@@ -188,7 +188,7 @@ export const Wiki = (props: { channel: Channel }) => {
 
 	const prefsService = usePreferences();
 	const prefs = prefsService.useRead();
-	const openInSidebar = () => prefs.frontend.threads_sidebar_document === "yes";
+	const openInSidebar = () => prefs.frontend.threads_sidebar_document;
 
 	// TODO: make "n documents" text show how many search results there are
 	// TODO: reactively update document list

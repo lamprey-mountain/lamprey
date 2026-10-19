@@ -26,6 +26,15 @@ export function getChannelTypeCategory(
 }
 
 /**
+ * Map a channel type to the corresponding thread sidebar preference
+ */
+const THREAD_SIDEBAR_PREFS = {
+	text: "threads_sidebar_text",
+	document: "threads_sidebar_document",
+	forum: "threads_sidebar_forum",
+} as const;
+
+/**
  * Check if threads should open in sidebar for a given channel based on user preferences
  */
 export function shouldUseThreadSidebar(
@@ -35,8 +44,7 @@ export function shouldUseThreadSidebar(
 	const category = getChannelTypeCategory(channel.type);
 	if (!category) return false;
 
-	const prefKey = `threads_sidebar_${category}`;
-	return preferences.frontend[prefKey] === "yes";
+	return preferences.frontend[THREAD_SIDEBAR_PREFS[category]];
 }
 
 /**
