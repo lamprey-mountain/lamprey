@@ -76,9 +76,19 @@ const tabs: TabItem[] = [
 		component: Analytics,
 		permissionCheck: (p) => p.has("AnalyticsView"),
 	},
-	{ name: "emoji", path: "emoji", component: Emoji },
+	{
+		name: "emoji",
+		path: "emoji",
+		component: Emoji,
+		permissionCheck: (p) => p.has("EmojiManage"),
+	},
 	{ category: "integrations" },
-	{ name: "bots", path: "bots", component: Bots },
+	{
+		name: "bots",
+		path: "bots",
+		component: Bots,
+		permissionCheck: (p) => p.has("IntegrationsManage"),
+	},
 	{
 		name: "webhooks",
 		path: "webhooks",

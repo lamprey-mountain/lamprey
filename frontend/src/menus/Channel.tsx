@@ -233,15 +233,26 @@ export function ChannelMenu(props: { channel_id: string }) {
 					{/* TODO: what permissions should be required to see the info and permissions items? */}
 					{/* TODO: hide edit menu if no children are visible*/}
 					<Item onClick={settings("")}>info</Item>
-					<Item onClick={settings("/permissions")}>permissions</Item>
-					<Show
-						when={
-							hasPermission("InviteCreate") || hasPermission("InviteManage")
-						}
-					>
+					<Show when={hasPermission("RoleManage")}>
+						<Item onClick={settings("/permissions")}>permissions</Item>
+					</Show>
+					<Show when={hasPermission("InviteManage")}>
 						<Item onClick={settings("/invites")}>invites</Item>
 					</Show>
-					<Show when={hasPermission("IntegrationsManage")}>
+					<Show
+						when={
+							hasPermission("RoleManage") &&
+							(channel()?.type === "Forum" || channel()?.type === "Forum2")
+						}
+					>
+						<Item onClick={settings("/tags")}>tags</Item>
+					</Show>
+					<Show
+						when={
+							hasPermission("IntegrationsManage") &&
+							(channel()?.type === "Text" || channel()?.type === "Announcement")
+						}
+					>
 						<Item onClick={settings("/webhooks")}>webhooks</Item>
 					</Show>
 				</Submenu>

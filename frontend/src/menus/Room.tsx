@@ -9,6 +9,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
+import { flags } from "@/lib/flags";
 import { getDate } from "@/utils/general.tsx";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
@@ -97,13 +98,35 @@ export function RoomMenu(props: { room_id: string }) {
 			</Show>
 			<Submenu content={"edit"} onClick={settings("")}>
 				<Item onClick={settings("")}>info</Item>
-				<Item onClick={settings("/invites")}>invites</Item>
-				<Item onClick={settings("/roles")}>roles</Item>
+				<Show when={hasPermission("AnalyticsView")}>
+					<Item onClick={settings("/analytics")}>analytics</Item>
+				</Show>
+				<Show when={hasPermission("EmojiManage")}>
+					<Item onClick={settings("/emoji")}>emoji</Item>
+				</Show>
+				<Separator />
+				<Show when={hasPermission("IntegrationsManage")}>
+					<Item onClick={settings("/bots")}>bots</Item>
+					<Item onClick={settings("/webhooks")}>webhooks</Item>
+				</Show>
+				<Separator />
+				<Show when={hasPermission("InviteManage")}>
+					<Item onClick={settings("/invites")}>invites</Item>
+				</Show>
+				<Show when={hasPermission("RoleManage")}>
+					<Item onClick={settings("/roles")}>roles</Item>
+				</Show>
 				<Item onClick={settings("/members")}>members</Item>
-				<Item onClick={settings("/integrations")}>integrations</Item>
-				<Item onClick={settings("/emoji")}>emoji</Item>
-				<Item onClick={settings("/logs")}>audit log</Item>
-				<Item onClick={settings("/metrics")}>metrics</Item>
+				<Separator />
+				<Show when={hasPermission("RoomManage") && flags.has("automod")}>
+					<Item onClick={settings("/automod")}>automod</Item>
+				</Show>
+				<Show when={hasPermission("MemberBan")}>
+					<Item onClick={settings("/bans")}>bans</Item>
+				</Show>
+				<Show when={hasPermission("AuditLogView")}>
+					<Item onClick={settings("/logs")}>audit log</Item>
+				</Show>
 			</Submenu>
 			<Item onClick={leave} color="danger">
 				leave
