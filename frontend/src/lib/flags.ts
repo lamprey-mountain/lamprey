@@ -113,6 +113,9 @@ const flagsProd: Flag[] = [
 	"markdown_code_components",
 	"media_three",
 	"inbox",
+	"sync_webtransport",
+	"friends",
+	"channel_forum",
 ];
 
 export const flags = new ReactiveSet(
