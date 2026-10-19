@@ -52,6 +52,7 @@ import {
 	PermissionOverwriteMenu,
 	RoomMenu,
 	SettingsMenu,
+	ViewChannelMenu,
 	ViewMenu,
 	TopicMenu,
 	UserMenu,
@@ -436,6 +437,14 @@ export function OverlayProvider(props: ParentProps) {
 			}
 			case "view": {
 				return <ViewMenu view_id={menu.view_id} />;
+			}
+			case "view_channel": {
+				return (
+					<ViewChannelMenu
+						view_id={menu.view_id}
+						channel_id={menu.channel_id}
+					/>
+				);
 			}
 			case "topic": {
 				return <TopicMenu channel_id={menu.channel_id} />;

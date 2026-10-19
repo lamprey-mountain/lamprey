@@ -10,6 +10,7 @@ export * from "./Room.tsx";
 export * from "./Settings.tsx";
 export * from "./User.tsx";
 export * from "./View.tsx";
+export * from "./ViewChannel.tsx";
 export * from "./UserAdmin.tsx";
 export * from "./Voice.tsx";
 export * from "./VoiceInput.tsx";

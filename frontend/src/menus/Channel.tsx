@@ -351,7 +351,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 	);
 }
 
-function ChannelNotificationMenu(props: { channel: Channel }) {
+export function ChannelNotificationMenu(props: { channel: Channel }) {
 	const api2 = useApi();
 	const channels2 = useChannels();
 	const channelConfig = () => props.channel.preferences;

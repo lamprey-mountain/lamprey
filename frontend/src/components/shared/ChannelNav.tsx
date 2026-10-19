@@ -822,6 +822,20 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 												}
 												onDrop={view() ? viewDnd.handleDrop : dnd.handle}
 												onDragEnd={view() ? viewDnd.handleEnd : dnd.handle}
+												onContextMenu={(e) => {
+													if (!view()) return;
+													e.preventDefault();
+													e.stopPropagation();
+													queueMicrotask(() => {
+														setMenu({
+															x: e.clientX,
+															y: e.clientY,
+															type: "view_channel",
+															view_id: props.view_id!,
+															channel_id: channel.id,
+														});
+													});
+												}}
 											>
 												<ItemChannel
 													channel={channel}

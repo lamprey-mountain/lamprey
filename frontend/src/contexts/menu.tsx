@@ -35,6 +35,7 @@ export type Menu = {
 	| { type: "voice_output" }
 	| { type: "folder"; folder_id: string }
 	| { type: "view"; view_id: string }
+	| { type: "view_channel"; view_id: string; channel_id: string }
 	| { type: "topic"; channel_id: string }
 	| { type: "voice"; channel_id: string }
 	| { type: "invite_application"; app: Application }
