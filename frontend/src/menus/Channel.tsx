@@ -515,15 +515,6 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 					<div>{t("notifs.ignore_threads")}</div>
 					<div class="subtext">{t("notifs.ignore_threads_description")}</div>
 				</Item>
-				<Separator />
-				<Item>{t("notifs.bookmark")}</Item>
-				<Submenu content={t("notifs.remind_me")}>
-					<Item>{timeAgo(new Date(Date.now() + fifteen_mins))}</Item>
-					<Item>{timeAgo(new Date(Date.now() + three_hours))}</Item>
-					<Item>{timeAgo(new Date(Date.now() + eight_hours))}</Item>
-					<Item>{timeAgo(new Date(Date.now() + one_day))}</Item>
-					<Item>{timeAgo(new Date(Date.now() + one_week))}</Item>
-				</Submenu>
 			</Submenu>
 			<Show
 				when={isMuted()}

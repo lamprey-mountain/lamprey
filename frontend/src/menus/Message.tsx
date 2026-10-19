@@ -7,7 +7,8 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useModals } from "@/contexts/modal";
 import { useReadTracking } from "@/contexts/read-tracking.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
-import { Item, Menu, Separator } from "./Parts.tsx";
+import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
+import { timeAgo } from "@/atoms/Time.tsx";
 
 // should i have a separate one for bulk messages?
 
@@ -30,6 +31,7 @@ export function MessageMenu(props: MessageMenuProps) {
 	const channelContext = () => ctx.channel_contexts.get(props.channel_id);
 	const [chState, chUpdate] = channelContext() ?? [null, undefined];
 	const [, modalCtl] = useModals();
+	const { t } = ctx;
 
 	const currentUser = useCurrentUser();
 	const self_id = () => currentUser()?.id;
@@ -173,10 +175,25 @@ export function MessageMenu(props: MessageMenuProps) {
 		});
 	};
 
+	const fifteen_mins = 15 * 60 * 1000;
+	const three_hours = 3 * 60 * 60 * 1000;
+	const eight_hours = 8 * 60 * 60 * 1000;
+	const one_day = 24 * 60 * 60 * 1000;
+	const one_week = 7 * one_day;
+
 	return (
 		<Menu>
 			<Item onClick={markUnread}>mark unread</Item>
 			<Item onClick={copyLink}>copy link</Item>
+			<Submenu content={t("notifs.remind_me")}>
+				<Item>{t("notifs.bookmark")}</Item>
+				<Separator />
+				<Item>{timeAgo(new Date(Date.now() + fifteen_mins))}</Item>
+				<Item>{timeAgo(new Date(Date.now() + three_hours))}</Item>
+				<Item>{timeAgo(new Date(Date.now() + eight_hours))}</Item>
+				<Item>{timeAgo(new Date(Date.now() + one_day))}</Item>
+				<Item>{timeAgo(new Date(Date.now() + one_week))}</Item>
+			</Submenu>
 			<Separator />
 			<Show when={canAddReaction()}>
 				<Item onClick={addReaction}>add reaction</Item>
