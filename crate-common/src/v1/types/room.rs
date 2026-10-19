@@ -63,6 +63,7 @@ pub struct Room {
     pub online_count: u64,
 
     /// number of active channels
+    #[deprecated]
     pub channel_count: u64,
 
     /// number of emojis in room
