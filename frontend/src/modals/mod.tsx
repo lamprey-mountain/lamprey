@@ -26,6 +26,7 @@ import { ModalTagEditor } from "./ModalTagEditor.tsx";
 import { ModalThreadCreate } from "./ModalThreadCreate.tsx";
 import { ModalTimeout } from "./ModalTimeout.tsx";
 import { ModalUserSettings } from "./ModalUserSettings.tsx";
+import { ModalViewChannelNickname } from "./ModalViewChannelNickname.tsx";
 
 export const Modal = (
 	props: ParentProps<{
@@ -198,6 +199,12 @@ function isThreadCreate(
 	return modal.type === "thread_create";
 }
 
+function isViewChannelNickname(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "view_channel_nickname" }> {
+	return modal.type === "view_channel_nickname";
+}
+
 function isUserSettings(
 	modal: ModalType,
 ): modal is Extract<ModalType, { type: "user_settings" }> {
@@ -331,6 +338,15 @@ export function getModal(modal: ModalType) {
 			<ModalThreadCreate
 				room_id={modal.room_id}
 				channel_id={modal.channel_id}
+			/>
+		);
+	}
+	if (isViewChannelNickname(modal)) {
+		return (
+			<ModalViewChannelNickname
+				initial={modal.initial}
+				placeholder={modal.placeholder}
+				cont={modal.cont}
 			/>
 		);
 	}

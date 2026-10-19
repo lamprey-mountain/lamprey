@@ -78,14 +78,18 @@ export function ViewChannelMenu(props: ViewChannelMenuProps) {
 	};
 
 	const changeNickname = () => {
-		modalCtl.prompt("nickname", (name) => {
-			const nickname = name?.trim() || null;
-			updateView((view) =>
-				updateViewChannel(view, props.channel_id, (viewChannel) => ({
-					...viewChannel,
-					nickname,
-				})),
-			);
+		modalCtl.open({
+			type: "view_channel_nickname",
+			initial: viewChannel()?.nickname ?? "",
+			placeholder: channel()?.name ?? "",
+			cont: (nickname) => {
+				updateView((view) =>
+					updateViewChannel(view, props.channel_id, (viewChannel) => ({
+						...viewChannel,
+						nickname: nickname.trim() || null,
+					})),
+				);
+			},
 		});
 	};
 

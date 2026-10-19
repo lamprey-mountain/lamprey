@@ -133,6 +133,12 @@ export type Modal =
 			type: "thread_create";
 			room_id: string;
 			channel_id: string;
+	  }
+	| {
+			type: "view_channel_nickname";
+			initial: string;
+			placeholder: string;
+			cont: (nickname: string) => void;
 	  };
 
 export type ModalsController = {
