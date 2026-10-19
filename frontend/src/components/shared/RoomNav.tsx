@@ -276,7 +276,9 @@ export const RoomNav = () => {
 												onDragEnd={dnd.handle}
 												classList={{
 													dragging: dnd.dragging()?.id === folder.id,
-													target: dnd.target()?.folderId === folder.id,
+													target:
+														dnd.target()?.id === folder.id &&
+														dnd.target()?.position === "inside",
 													collapsed: collapsedFolders().has(folder.id),
 													unread: !!getFolderUnread(folder),
 												}}

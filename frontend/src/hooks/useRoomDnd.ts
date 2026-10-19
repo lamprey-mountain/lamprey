@@ -3,12 +3,23 @@ import type { Room } from "sdk";
 import { createMemo, createSignal } from "solid-js";
 import type { RoomNavItem, RoomNavMappedItem } from "@/types/room-nav";
 
-type DndItem = { type: "room" | "folder"; id: string };
+// TODO: verify llm generated code
+// (i'm too lazy to manually implement dnd and this seems to work ¯\_(ツ)_/¯)
+
+type AnyRoomNavItem = RoomNavItem;
+
+type DndItem = { type: RoomNavItem["type"]; id: string };
 
 type DndTarget = {
-	folderId?: string;
-	otherRoomId: string;
-	position: "before" | "after" | "create-folder";
+	id: string;
+	position: "before" | "after" | "inside" | "create-folder";
+};
+
+type ItemLocation = {
+	item: AnyRoomNavItem;
+	container: AnyRoomNavItem[];
+	index: number;
+	parent: (RoomNavItem & { type: "folder" }) | null;
 };
 
 export interface RoomDndProps {
@@ -18,315 +29,288 @@ export interface RoomDndProps {
 	rooms: () => Room[];
 }
 
-// TODO: verify llm generated code
-// (i'm too lazy to manually implement dnd and this seems to work ¯\_(ツ)_/¯)
+const itemId = (item: AnyRoomNavItem) =>
+	item.type === "room" ? item.room_id : item.id;
+
+const findItem = (
+	items: RoomNavItem[],
+	id: string,
+): ItemLocation | null => {
+	for (let i = 0; i < items.length; i++) {
+		const item = items[i];
+		if (itemId(item) === id) {
+			return { item, container: items, index: i, parent: null };
+		}
+
+		if (item.type === "folder") {
+			for (let j = 0; j < item.items.length; j++) {
+				const child = item.items[j];
+				if (itemId(child) === id) {
+					return { item: child, container: item.items, index: j, parent: item };
+				}
+			}
+		}
+	}
+
+	return null;
+};
+
+const removeEmptyFolders = (config: RoomNavItem[]) =>
+	config.filter((item) => item.type !== "folder" || item.items.length > 0);
+
+const simulateDrop = (
+	source: RoomNavItem[],
+	fromId: string,
+	target: DndTarget | null,
+) => {
+	if (!target) return source;
+
+	const config = structuredClone(source);
+	const from = findItem(config, fromId);
+	if (!from || fromId === target.id) return source;
+
+	if (target.id !== "end" && !findItem(config, target.id)) return source;
+
+	from.container.splice(from.index, 1);
+
+	if (target.id === "end") {
+		config.push(from.item);
+		return removeEmptyFolders(config);
+	}
+
+	const to = findItem(config, target.id);
+	// The target was inside the item we just removed.
+	if (!to) return source;
+
+	if (target.position === "create-folder") {
+		if (
+			from.item.type !== "room" ||
+			to.item.type !== "room" ||
+			to.parent !== null
+		) {
+			return source;
+		}
+
+		const folder: RoomNavItem = {
+			type: "folder",
+			id: crypto.randomUUID(),
+			name: "New Folder",
+			items: [to.item, from.item],
+		};
+
+		to.container.splice(to.index, 1, folder);
+		return removeEmptyFolders(config);
+	}
+
+	if (target.position === "inside") {
+		if (from.item.type !== "room" || to.item.type !== "folder") {
+			return source;
+		}
+
+		to.item.items.push(from.item);
+		return removeEmptyFolders(config);
+	}
+
+	const insertAfter = target.position === "after" ? 1 : 0;
+
+	if (to.parent) {
+		if (from.item.type === "room") {
+			to.container.splice(to.index + insertAfter, 0, from.item);
+		} else {
+			// Folders and views cannot go inside folders; anchor them to the
+			// parent folder instead.
+			const parent = findItem(config, to.parent.id);
+			if (!parent) return source;
+			parent.container.splice(parent.index + insertAfter, 0, from.item);
+		}
+	} else {
+		to.container.splice(to.index + insertAfter, 0, from.item);
+	}
+
+	return removeEmptyFolders(config);
+};
 
 export const useRoomDnd = (props: RoomDndProps) => {
 	const [dragging, setDragging] = createSignal<DndItem | null>(null);
 	const [target, setTarget] = createSignal<DndTarget | null>(null);
 
-	const config = createMemo(() => {
-		let config = props.getConfig();
-		if (config.length === 0) {
-			config = props.getDefaultConfig();
-		}
-		return config;
+	const configured = createMemo(() => {
+		const config = props.getConfig();
+		return config.length > 0 ? config : props.getDefaultConfig();
 	});
 
-	const findItem = (id: string, searchConfig: RoomNavItem[]) => {
-		for (let i = 0; i < searchConfig.length; i++) {
-			const item = searchConfig[i];
-			if (item.type === "room" && item.room_id === id) {
-				return { item, index: i, parent: null };
-			}
-			if (item.type === "folder" && item.id === id) {
-				return { item, index: i, parent: null };
-			}
-			if (item.type === "folder") {
-				for (let j = 0; j < item.items.length; j++) {
-					if (item.items[j].room_id === id) {
-						return { item: item.items[j], index: j, parent: item };
-					}
-				}
+	// The rendered list contains rooms that aren't in the saved config yet
+	// (e.g. newly joined rooms). Include them so drops use the same list as the UI.
+	const effectiveConfig = createMemo(() => {
+		const config = configured();
+		const placed = new Set<string>();
+
+		for (const item of config) {
+			if (item.type === "room") {
+				placed.add(item.room_id);
+			} else if (item.type === "folder") {
+				for (const child of item.items) placed.add(child.room_id);
 			}
 		}
 
-		return null;
-	};
+		const unplaced: RoomNavItem[] = props
+			.rooms()
+			.filter((room) => !placed.has(room.id))
+			.map((room) => ({ type: "room", room_id: room.id }));
 
-	const simulateDrop = (
-		c: RoomNavItem[],
-		fromId: string,
-		t: DndTarget | null,
-	) => {
-		if (!t || !fromId) return c;
-
-		const from = findItem(fromId, c);
-		if (!from) return c;
-
-		if (t.position === "create-folder") {
-			const otherRoom = findItem(t.otherRoomId, c);
-			if (!otherRoom || fromId === t.otherRoomId) return c;
-			if (otherRoom.parent) return c; // dont allow folder creation inside folder
-
-			const [movedItem] = from.parent
-				? from.parent.items.splice(from.index, 1)
-				: c.splice(from.index, 1);
-
-			const otherRoomAfter = findItem(t.otherRoomId, c);
-			if (otherRoomAfter) {
-				if (otherRoomAfter.item.type === "room" && movedItem.type === "room") {
-					const folderItem: RoomNavItem = {
-						type: "folder",
-						id: crypto.randomUUID(),
-						name: "New Folder",
-						items: [
-							{ type: "room", room_id: otherRoomAfter.item.room_id },
-							{ type: "room", room_id: movedItem.room_id },
-						],
-					};
-					c.splice(otherRoomAfter.index, 1, folderItem);
-				} else if (
-					otherRoomAfter.item.type === "folder" &&
-					movedItem.type === "room"
-				) {
-					otherRoomAfter.item.items.push(movedItem);
-				} else {
-					c.splice(from.index, 0, movedItem); // rollback
-				}
-			} else {
-				c.push(movedItem); // fallback
-			}
-		} else {
-			const { otherRoomId, folderId, position } = t;
-
-			if (otherRoomId === "end") {
-				const [movedItem] = from.parent
-					? from.parent.items.splice(from.index, 1)
-					: c.splice(from.index, 1);
-				c.push(movedItem);
-			} else {
-				const otherRoomInit = findItem(otherRoomId, c);
-				if (!otherRoomInit) return c;
-
-				if (
-					from.item.type === "folder" &&
-					(folderId ||
-						otherRoomInit.parent ||
-						otherRoomInit.item.type === "folder")
-				) {
-					// Cannot drag folder into folder
-					return c;
-				}
-
-				const [movedItem] = from.parent
-					? from.parent.items.splice(from.index, 1)
-					: c.splice(from.index, 1);
-
-				const otherRoomAfter = findItem(otherRoomId, c);
-				if (otherRoomAfter) {
-					if (folderId && movedItem.type === "room") {
-						const folderObj = findItem(folderId, c);
-						if (folderObj && folderObj.item.type === "folder") {
-							const targetIdx = folderObj.item.items.findIndex(
-								(r) => r.room_id === otherRoomId,
-							);
-							if (targetIdx !== -1) {
-								const insertIndex = targetIdx + (position === "after" ? 1 : 0);
-								folderObj.item.items.splice(insertIndex, 0, movedItem as any);
-							} else {
-								folderObj.item.items.push(movedItem as any);
-							}
-						}
-					} else {
-						const insertIndex =
-							otherRoomAfter.index + (position === "after" ? 1 : 0);
-						if (otherRoomAfter.parent) {
-							otherRoomAfter.parent.items.splice(
-								insertIndex,
-								0,
-								movedItem as any,
-							);
-						} else {
-							c.splice(insertIndex, 0, movedItem);
-						}
-					}
-				} else {
-					c.splice(from.index, 0, movedItem); // rollback
-				}
-			}
-		}
-
-		return c.filter(
-			(item) => !(item.type === "folder" && item.items.length === 0),
-		);
-	};
+		return unplaced.length > 0 ? [...unplaced, ...config] : config;
+	});
 
 	const previewedConfig = createMemo(() => {
-		const c = JSON.parse(JSON.stringify(config())) as RoomNavItem[];
 		const fromId = dragging()?.id;
-		const t = target();
-
-		if (!fromId || !t) return c;
-		return simulateDrop(c, fromId, t);
+		if (!fromId) return effectiveConfig();
+		return simulateDrop(effectiveConfig(), fromId, target());
 	});
 
 	const itemCache = new Map<string, RoomNavMappedItem>();
 
 	const previewedItems = createMemo(() => {
-		const configValue = previewedConfig();
-		const roomsList = props.rooms();
-		const roomMap = new Map(roomsList.map((r) => [r.id, r]));
+		const roomMap = new Map(props.rooms().map((room) => [room.id, room]));
+		const result: RoomNavMappedItem[] = [];
 
-		const mappedConfig: RoomNavMappedItem[] = [];
-		const orderedIds = new Set<string>();
+		const mapRoom = (roomId: string): RoomNavMappedItem | null => {
+			const room = roomMap.get(roomId);
+			if (!room) return null;
 
-		for (const item of configValue) {
-			if (item.type === "room") {
-				const room = roomMap.get(item.room_id);
-				if (room) {
-					let mapped = itemCache.get(room.id);
-					if (!mapped || mapped.type !== "room") {
-						mapped = { type: "room", room };
-						itemCache.set(room.id, mapped);
-					}
-					mappedConfig.push(mapped);
-					orderedIds.add(room.id);
-				}
-			} else if (item.type === "folder") {
-				const folderItems = item.items
-					.map((i) => {
-						const room = roomMap.get(i.room_id);
-						if (room) {
-							orderedIds.add(room.id);
-							return room;
-						}
-						return null;
-					})
-					.filter((r): r is Room => !!r);
+			const key = `room:${room.id}`;
+			const cached = itemCache.get(key);
+			if (cached?.type === "room" && cached.room === room) return cached;
 
-				if (folderItems.length > 0) {
-					// for folder, we can just create a new object, because folders might not be dragged directly, but if they are, they need stability too.
-					let folderMapped = itemCache.get(item.id);
-					if (
-						!folderMapped ||
-						folderMapped.type !== "folder" ||
-						folderMapped.name !== item.name
-					) {
-						folderMapped = {
-							type: "folder",
-							id: item.id,
-							name: item.name,
-							items: folderItems,
-						};
-						itemCache.set(item.id, folderMapped);
-					} else {
-						// update items reference to trigger inner For if needed, but keep folder object stable?
-						// actually, if we keep folder object stable but change its items, Solid's For might not update the inner list unless the folder itself is a signal, which it isn't.
-						// so we MUST return a new folder object if the items change.
-						// Wait, if we return a new folder object, the folder DOM node is recreated.
-						// Let's just create a new folder object if items are different.
-						const oldItems = folderMapped.items;
-						let changed = oldItems.length !== folderItems.length;
-						if (!changed) {
-							for (let k = 0; k < oldItems.length; k++) {
-								if (oldItems[k].id !== folderItems[k].id) {
-									changed = true;
-									break;
-								}
-							}
-						}
-						if (changed) {
-							folderMapped = {
-								type: "folder",
-								id: item.id,
-								name: item.name,
-								items: folderItems,
-							};
-							itemCache.set(item.id, folderMapped);
-						}
-					}
-					mappedConfig.push(folderMapped);
-				}
-			} else if (item.type === "view") {
-				let viewMapped = itemCache.get(`view-${item.name}`);
-				if (!viewMapped) {
-					viewMapped = item;
-					itemCache.set(`view-${item.name}`, viewMapped);
-				}
-				mappedConfig.push(viewMapped);
+			const mapped: RoomNavMappedItem = { type: "room", room };
+			itemCache.set(key, mapped);
+			return mapped;
+		};
+
+		const mapView = (item: Extract<RoomNavItem, { type: "view" }>) => {
+			const key = `view:${item.id}`;
+			const cached = itemCache.get(key);
+			if (
+				cached?.type === "view" &&
+				cached.name === item.name &&
+				cached.categories === item.categories &&
+				cached.uncategorized_channels === item.uncategorized_channels
+			) {
+				return cached;
 			}
+
+			const mapped: RoomNavMappedItem = { ...item };
+			itemCache.set(key, mapped);
+			return mapped;
+		};
+
+		for (const item of previewedConfig()) {
+			if (item.type === "room" || item.type === "view") {
+				const mapped = item.type === "room" ? mapRoom(item.room_id) : mapView(item);
+				if (mapped) result.push(mapped);
+				continue;
+			}
+
+			const items = item.items
+				.map((child) => roomMap.get(child.room_id))
+				.filter((room): room is Room => !!room);
+
+			if (items.length === 0) continue;
+
+			const key = `folder:${item.id}`;
+			const cached = itemCache.get(key);
+			const sameItems =
+				cached?.type === "folder" &&
+				cached.items.length === items.length &&
+				cached.items.every((room, index) => room === items[index]);
+
+			if (cached?.type === "folder" && cached.name === item.name && sameItems) {
+				result.push(cached);
+				continue;
+			}
+
+			const mapped: RoomNavMappedItem = {
+				type: "folder",
+				id: item.id,
+				name: item.name,
+				items,
+			};
+			itemCache.set(key, mapped);
+			result.push(mapped);
 		}
 
-		const unordered = roomsList.filter((r) => !orderedIds.has(r.id));
-		return [
-			...unordered.map((room) => {
-				let mapped = itemCache.get(room.id);
-				if (!mapped || mapped.type !== "room") {
-					mapped = { type: "room", room };
-					itemCache.set(room.id, mapped);
-				}
-				return mapped;
-			}),
-			...mappedConfig,
-		];
+		return result;
 	});
 
 	const intoCreateFolder = debounce(() => {
-		setTarget((t) => {
-			if (!t) return null;
-			return {
-				position: "create-folder",
-				otherRoomId: t.otherRoomId,
-			};
+		setTarget((current) => {
+			if (!current || current.id === "end") return current;
+			return { id: current.id, position: "create-folder" };
 		});
 	}, 500);
 
 	const handleDragStart = (e: DragEvent) => {
 		const el = e.currentTarget as HTMLElement;
 		const id = el.dataset.id;
-		const type = el.dataset.type as "room" | "folder";
-		if (id && type) {
+		const type = el.dataset.type;
+
+		if (id && (type === "room" || type === "folder" || type === "view")) {
 			setDragging({ id, type });
 		}
+
 		e.stopPropagation();
 	};
 
 	const handleDragOver = (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
-		const targetEl = e.currentTarget as HTMLElement;
-		const id = targetEl.dataset.id;
-		const toType = targetEl.dataset.type;
-		const folderId =
-			targetEl.closest("[data-folder-id]")?.getAttribute("data-folder-id") ||
-			undefined;
 
-		if (!id || !dragging() || id === dragging()?.id) {
+		const el = e.currentTarget as HTMLElement;
+		const id = el.dataset.id;
+		const type = el.dataset.type;
+		const dragged = dragging();
+		const folderId = el.closest("[data-folder-id]")?.getAttribute("data-folder-id");
+
+		if (!id || !dragged || id === dragged.id) {
 			intoCreateFolder.clear();
 			return;
 		}
 
-		const rect = targetEl.getBoundingClientRect();
+		if (id === "end") {
+			intoCreateFolder.clear();
+			setTarget({ id, position: "before" });
+			return;
+		}
+
+		const rect = el.getBoundingClientRect();
 		const relY = e.clientY - rect.top;
-		const isAbove = relY < rect.height / 2;
+
+		if (dragged.type === "room" && type === "folder") {
+			const inside = relY > rect.height * 0.25 && relY < rect.height * 0.75;
+			if (inside) {
+				intoCreateFolder.clear();
+				setTarget({ id, position: "inside" });
+				return;
+			}
+		}
 
 		setTarget({
-			folderId,
-			otherRoomId: id,
-			position: isAbove ? "before" : "after",
+			id,
+			position: relY < rect.height / 2 ? "before" : "after",
 		});
-		intoCreateFolder();
+
+		if (dragged.type === "room" && type === "room" && !folderId) {
+			intoCreateFolder();
+		} else {
+			intoCreateFolder.clear();
+		}
 	};
 
 	const handleDragLeave = (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
-		const relatedTarget = e.relatedTarget as HTMLElement;
-		if (
-			!e.currentTarget ||
-			!(e.currentTarget as HTMLElement).contains(relatedTarget)
-		) {
+
+		const el = e.currentTarget as HTMLElement;
+		if (!el.contains(e.relatedTarget as Node | null)) {
 			intoCreateFolder.clear();
 		}
 	};
@@ -334,18 +318,17 @@ export const useRoomDnd = (props: RoomDndProps) => {
 	const handleDrop = (e: DragEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
+
 		const fromId = dragging()?.id;
-		const t = target();
+		const dropTarget = target();
 
 		intoCreateFolder.clear();
 		setDragging(null);
 		setTarget(null);
 
-		if (!t || !fromId) return;
+		if (!fromId || !dropTarget) return;
 
-		const c = JSON.parse(JSON.stringify(config())) as RoomNavItem[];
-		const finalConfig = simulateDrop(c, fromId, t);
-		props.setConfig(finalConfig);
+		props.setConfig(simulateDrop(effectiveConfig(), fromId, dropTarget));
 	};
 
 	const handleDragEnd = () => {
