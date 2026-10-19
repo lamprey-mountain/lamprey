@@ -6,6 +6,7 @@ import type { EditorView } from "prosemirror-view";
 import {
 	type Accessor,
 	createContext,
+	createEffect,
 	createSignal,
 	type ParentProps,
 	type Setter,
@@ -91,6 +92,15 @@ export const DocumentProvider = (props: DocumentProviderProps) => {
 		editor,
 		setEditor,
 	};
+
+	// reset active branch when document changes
+	let lastInitialBranchId = props.initialBranchId;
+	createEffect(() => {
+		const initialBranchId = props.initialBranchId;
+		if (initialBranchId === lastInitialBranchId) return;
+		lastInitialBranchId = initialBranchId;
+		setBranchId(initialBranchId);
+	});
 
 	return (
 		<DocumentContext.Provider value={state}>

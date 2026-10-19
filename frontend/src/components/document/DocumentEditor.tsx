@@ -174,7 +174,8 @@ export const DocumentEditor = (props: DocumentEditorProps) => {
 
 			const listener = (data: [MessageSync, MessageEnvelope]) =>
 				onSync(data[0], data[1]);
-			api.events.on("sync", listener);
+			const unsubscribe = api.events.on("sync", listener);
+			onCleanup(unsubscribe);
 		}
 	});
 
