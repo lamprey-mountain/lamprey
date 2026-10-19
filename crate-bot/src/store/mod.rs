@@ -44,6 +44,23 @@ impl Store {
         Ok(())
     }
 
+    /// atomically increment the integer stored at `key`, returning the new value.
+    ///
+    /// creates the value (set to 1) if it doesn't exist.
+    pub async fn increment<K: Key>(&self, key: K) -> Result<u64> {
+        let key_bytes = key.to_bytes();
+        let row = sqlx::query(
+            "INSERT INTO things (key, data) VALUES (?, jsonb('1'))
+             ON CONFLICT(key) DO UPDATE SET data = jsonb(CAST(json(data) AS INTEGER) + 1)
+             RETURNING json(data) AS data",
+        )
+        .bind(&key_bytes)
+        .fetch_one(&self.pool)
+        .await?;
+        let data: String = row.try_get("data")?;
+        Ok(data.parse()?)
+    }
+
     pub async fn get<K: Key, V: DeserializeOwned>(&self, key: K) -> Result<Option<V>> {
         let key_bytes = key.to_bytes();
         let row = sqlx::query("SELECT json(data) as data FROM things WHERE key = ?")

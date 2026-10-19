@@ -30,10 +30,7 @@ fn conversation_prefix(channel_id: ChannelId) -> ConversationKey {
 
 /// get the next message sequence number
 async fn next_seq(store: &Store) -> Result<u64> {
-    let current: Option<u64> = store.get(NEXT_SEQ_KEY.to_string()).await?;
-    let next = current.unwrap_or(0) + 1;
-    store.put(NEXT_SEQ_KEY.to_string(), &next).await?;
-    Ok(next)
+    store.increment(NEXT_SEQ_KEY.to_string()).await
 }
 
 /// append a message to `channel_id`'s conversation
