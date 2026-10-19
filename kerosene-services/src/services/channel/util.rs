@@ -3,7 +3,9 @@ use common::v1::types::{AuditLogEntryType, Channel, util::Changes};
 pub fn calculate_audit_log_entry_from_create(channel: &Channel) -> AuditLogEntryType {
     let mut changes = Changes::new()
         .add("name", &channel.name)
+        .add("auto_name", &channel.auto_name)
         .add("description", &channel.description)
+        .add("auto_description", &channel.auto_description)
         .add("nsfw", &channel.nsfw)
         .add("user_limit", &channel.user_limit)
         .add("bitrate", &channel.bitrate)
@@ -70,7 +72,13 @@ pub fn calculate_audit_log_entry_from_create(channel: &Channel) -> AuditLogEntry
 pub fn calculate_audit_log_entry_from_update(old: &Channel, new: &Channel) -> AuditLogEntryType {
     let mut changes = Changes::new()
         .change("name", &old.name, &new.name)
+        .change("auto_name", &old.auto_name, &new.auto_name)
         .change("description", &old.description, &new.description)
+        .change(
+            "auto_description",
+            &old.auto_description,
+            &new.auto_description,
+        )
         .change("nsfw", &old.nsfw, &new.nsfw)
         .change("user_limit", &old.user_limit, &new.user_limit)
         .change("bitrate", &old.bitrate, &new.bitrate)
