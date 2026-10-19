@@ -40,6 +40,10 @@ export type ChannelState = {
 	};
 	selectMode: boolean;
 	selectedMessages: Array<string>;
+	/** true while the composer is in keyboard message navigation mode (entered with Tab) */
+	messageNavActive: boolean;
+	/** the message currently selected by keyboard navigation, if any */
+	focusedMessageId?: string;
 	input_focus?: () => void;
 	reply_jump_source?: string;
 	editing_name?: string | null;
@@ -57,6 +61,7 @@ export function createInitialChannelState(): ChannelState {
 		slowmode_expire_at: null,
 		selectMode: false,
 		selectedMessages: [],
+		messageNavActive: false,
 		timelineState: {
 			messages: null,
 			loading: false,
