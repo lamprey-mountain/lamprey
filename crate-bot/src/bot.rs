@@ -654,6 +654,25 @@ impl Bot {
                 }
                 Err(e) => {
                     error!("Error calling LLM: {:?}", e);
+                    flume
+                        .update(FlumeDeltaCreate::default().replace(FlumeReplaceCreate {
+                            target: ComponentId(0),
+                            components: vec![ComponentCreate {
+                                id: Some(ComponentId(0)),
+                                ty: ComponentType::Container {
+                                    components: vec![ComponentCreate {
+                                        id: Some(ComponentId(1)),
+                                        ty: ComponentType::Text {
+                                            content: format!("failed to get a response: {e}"),
+                                        },
+                                        allow: None,
+                                    }],
+                                    color: "#e65260".parse().ok(),
+                                },
+                                allow: None,
+                            }],
+                        }))
+                        .await;
                 }
             }
 
