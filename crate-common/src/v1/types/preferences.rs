@@ -1,8 +1,6 @@
 //! things that the user can configure
 // TODO: strongly type user settings
 
-use std::collections::HashMap;
-
 use lamprey_macros::record;
 
 use crate::v1::types::{
@@ -10,6 +8,7 @@ use crate::v1::types::{
     notifications::preferences::{NotifsChannel, NotifsGlobal, NotifsRoom},
 };
 
+pub mod frontend;
 pub mod room_sidebar;
 
 /// preferences for a user
@@ -23,18 +22,7 @@ pub struct PreferencesGlobal {
     pub privacy: PreferencesGlobalPrivacy,
 
     /// config specific to frontend
-    pub frontend: PreferencesGlobalFrontend,
-}
-
-#[record]
-#[derive(Default)]
-pub struct PreferencesGlobalFrontend {
-    /// room navigation sidebar
-    pub room_sidebar: room_sidebar::Sidebar,
-
-    /// extra implementation defined config
-    #[serde(flatten)]
-    pub extra: HashMap<String, serde_json::Value>,
+    pub frontend: frontend::PreferencesGlobalFrontend,
 }
 
 /// preferences for a user in a room
@@ -48,15 +36,7 @@ pub struct PreferencesRoom {
     pub privacy: PreferencesRoomPrivacy,
 
     /// config specific to frontend
-    pub frontend: PreferencesRoomFrontend,
-}
-
-#[record]
-#[derive(Default)]
-pub struct PreferencesRoomFrontend {
-    /// extra implementation defined config
-    #[serde(flatten)]
-    pub extra: HashMap<String, serde_json::Value>,
+    pub frontend: frontend::PreferencesRoomFrontend,
 }
 
 /// preferences for a user in a channel or thread
@@ -67,15 +47,7 @@ pub struct PreferencesChannel {
     pub notifs: NotifsChannel,
 
     /// config specific to frontend
-    pub frontend: PreferencesChannelFrontend,
-}
-
-#[record]
-#[derive(Default)]
-pub struct PreferencesChannelFrontend {
-    /// extra implementation defined config
-    #[serde(flatten)]
-    pub extra: HashMap<String, serde_json::Value>,
+    pub frontend: frontend::PreferencesChannelFrontend,
 }
 
 /// preferences for a user for another user
@@ -86,15 +58,7 @@ pub struct PreferencesUser {
     pub voice: VoiceConfig,
 
     /// config specific to frontend
-    pub frontend: PreferencesUserFrontend,
-}
-
-#[record]
-#[derive(Default)]
-pub struct PreferencesUserFrontend {
-    /// extra implementation defined config
-    #[serde(flatten)]
-    pub extra: HashMap<String, serde_json::Value>,
+    pub frontend: frontend::PreferencesUserFrontend,
 }
 
 /// voice config the local user can set on someone else
