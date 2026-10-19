@@ -12,7 +12,7 @@ export const Search = (props: {
 	class?: string;
 }) => {
 	return (
-		<div class={props.class} classList={{ search: true }}>
+		<div class={props.class} classList={{ search: true }} data-focus-ring-target>
 			<Icon src={icSearch} alt="" color={null} />
 			<input
 				ref={props.ref}

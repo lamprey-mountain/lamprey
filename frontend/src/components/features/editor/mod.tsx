@@ -34,6 +34,8 @@ export type EditorViewProps = {
 	channelId?: string;
 	submitOnEnter?: boolean;
 	autofocus?: boolean;
+	/** anchor the focus ring to the `.editor` wrapper instead of `.ProseMirror` */
+	focusRingTarget?: boolean;
 };
 
 type ViewInstance = {
@@ -188,6 +190,7 @@ export const createEditor = (opts: EditorOptions) => {
 			return (
 				<div
 					class="editor"
+					data-focus-ring-target={props.focusRingTarget ? "" : undefined}
 					classList={{ disabled: props.disabled ?? false }}
 					ref={editorRef!}
 					role="textbox"

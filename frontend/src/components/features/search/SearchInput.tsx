@@ -645,7 +645,7 @@ export const SearchInput = (props: {
 	});
 
 	return (
-		<div class="search-container">
+		<div class="search-container" data-focus-ring-target>
 			<div class="search-input" ref={setEditorRef}>
 				<editor.View placeholder="search" />
 			</div>

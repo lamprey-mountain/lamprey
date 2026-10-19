@@ -222,7 +222,7 @@ export const RoomNav = () => {
 				}}
 				ref={tip.content}
 			>
-				<div class="tile">
+				<div class="tile" data-focus-ring-target>
 					<a
 						draggable="false"
 						href={`/room/${props.room.id}`}
@@ -256,7 +256,7 @@ export const RoomNav = () => {
 						tabIndex={isFocused("home") ? 0 : -1}
 						ref={homeTip.content}
 					>
-						<div class="tile with-background">
+						<div class="tile with-background" data-focus-ring-target>
 							<a href="/" tabIndex={-1}>
 								<Icon src={icHome} alt="home" />
 							</a>
@@ -325,7 +325,7 @@ export const RoomNav = () => {
 												>
 													<div
 														class="tile with-background"
-														onClick={() => toggleFolder(folder.id)}
+														data-focus-ring-target onClick={() => toggleFolder(folder.id)}
 														onContextMenu={(e) => {
 															e.preventDefault();
 															queueMicrotask(() => {
@@ -384,7 +384,7 @@ export const RoomNav = () => {
 												selected: isSelected(view.id),
 											}}
 										>
-											<div class="tile with-background">
+											<div class="tile with-background" data-focus-ring-target>
 												<a
 													draggable="false"
 													href={`/view/${view.id}`}

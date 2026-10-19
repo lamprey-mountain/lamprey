@@ -142,6 +142,7 @@ export const MessageEditor = (props: { message: MessageT }) => {
 		<div class="message-editor" ref={containerRef}>
 			<editor.View
 				placeholder="edit message..."
+				focusRingTarget
 				onSubmit={(text) => {
 					save(text);
 					return true;
