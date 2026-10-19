@@ -1,5 +1,5 @@
-import type { NotifsRoom, Room } from "sdk";
-import { createSignal, Show } from "solid-js";
+import type { NotifsRoom, PreferencesRoom, Room } from "sdk";
+import { Show } from "solid-js";
 import { useApi, useRooms } from "@/api";
 import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
@@ -139,26 +139,34 @@ export function RoomMenu(props: { room_id: string }) {
 }
 
 function RoomNotificationMenu(props: { room: Room }) {
+	const ctx = useCtx();
 	const api2 = useApi();
 	const rooms2 = useRooms();
 	const roomConfig = () => props.room.preferences;
 
 	const setNotifs = (notifs: Partial<NotifsRoom>) => {
-		const current = roomConfig() ?? {
-			notifs: { mention_everyone: true, mention_roles: true },
-			frontend: {},
-		};
-		const newConfig = {
-			...current,
-			notifs: { ...current.notifs, ...notifs },
+		const current = roomConfig();
+		const newConfig: PreferencesRoom = {
+			notifs: {
+				mention_everyone: true,
+				mention_roles: true,
+				...(current?.notifs ?? {}),
+				...notifs,
+			},
+			frontend: current?.frontend ?? {},
+			privacy: current?.privacy ?? {
+				dms: true,
+				friends: true,
+				rpc: true,
+				exif: true,
+			},
 		};
 		rooms2.cache.set(props.room.id, {
 			...props.room,
-			preferences: newConfig as any,
+			preferences: newConfig,
 		});
-		api2.client.http.PUT("/api/v1/preferences/room/{room_id}", {
-			params: { path: { room_id: props.room.id } },
-			body: newConfig as any,
+		api2.preferences.setRoomPreferences(props.room.id, newConfig).catch((e) => {
+			console.error("Failed to update room preferences", e);
 		});
 	};
 
@@ -187,12 +195,8 @@ function RoomNotificationMenu(props: { room: Room }) {
 
 	const [, modalctl] = useModals();
 
-	const [everyone, setEveryone] = createSignal(
-		((roomConfig() as any)?.mention_everyone ?? true) as boolean,
-	);
-	const [roles, setRoles] = createSignal(
-		((roomConfig() as any)?.mention_roles ?? true) as boolean,
-	);
+	const everyone = () => roomConfig()?.notifs.mention_everyone ?? true;
+	const roles = () => roomConfig()?.notifs.mention_roles ?? true;
 
 	return (
 		<>
@@ -203,20 +207,16 @@ function RoomNotificationMenu(props: { room: Room }) {
 				}
 			>
 				<Item
-					onClick={() =>
-						setNotifs({
-							messages: undefined,
-							threads: undefined,
-						})
-					}
+					onClick={() => setNotifs({ messages: undefined })}
 					classList={{
-						selected:
-							roomConfig()?.notifs.messages === undefined &&
-							roomConfig()?.notifs.threads === undefined,
+						selected: roomConfig()?.notifs.messages === undefined,
 					}}
 				>
 					<div>default</div>
-					<div class="subtext">Uses your default notification setting.</div>
+					<div class="subtext">
+						Uses your default notification setting (
+						{ctx.preferences().notifs.messages.toLowerCase()}).
+					</div>
 				</Item>
 				<Item
 					onClick={() => setNotifs({ messages: "Everything" })}
@@ -257,7 +257,8 @@ function RoomNotificationMenu(props: { room: Room }) {
 				>
 					<div>default</div>
 					<div class="subtext">
-						Uses your default notification setting for threads.
+						Uses your default notification setting for threads (
+						{ctx.preferences().notifs.threads.toLowerCase()}).
 					</div>
 				</Item>
 				<Item
@@ -286,7 +287,6 @@ function RoomNotificationMenu(props: { room: Room }) {
 					id="room-mention-everyone"
 					checked={everyone()}
 					onChange={(checked) => {
-						setEveryone(checked);
 						setNotifs({ mention_everyone: checked });
 					}}
 					seed={`menu-room-${props.room.id}-everyone`}
@@ -308,7 +308,6 @@ function RoomNotificationMenu(props: { room: Room }) {
 					id="room-mention-roles"
 					checked={roles()}
 					onChange={(checked) => {
-						setRoles(checked);
 						setNotifs({ mention_roles: checked });
 					}}
 					seed={`menu-room-${props.room.id}-roles`}

@@ -1,4 +1,8 @@
-import type { Preferences } from "sdk";
+import type {
+	Preferences,
+	PreferencesChannel,
+	PreferencesRoom,
+} from "sdk";
 import { logger } from "@/utils/logger";
 import { BaseService } from "../core/Service";
 
@@ -67,6 +71,32 @@ export class PreferencesService extends BaseService<Preferences> {
 	async setPreferences(preferences: Preferences): Promise<void> {
 		await this.retryWithBackoff(() =>
 			this.client.http.PUT("/api/v1/preferences", { body: preferences }),
+		);
+	}
+
+	/** set room notification/privacy preferences via http */
+	async setRoomPreferences(
+		room_id: string,
+		preferences: PreferencesRoom,
+	): Promise<void> {
+		await this.retryWithBackoff(() =>
+			this.client.http.PUT("/api/v1/preferences/room/{room_id}", {
+				params: { path: { room_id } },
+				body: preferences,
+			} as any),
+		);
+	}
+
+	/** set channel (thread) notification preferences via http */
+	async setChannelPreferences(
+		channel_id: string,
+		preferences: PreferencesChannel,
+	): Promise<void> {
+		await this.retryWithBackoff(() =>
+			this.client.http.PUT("/api/v1/preferences/channel/{channel_id}", {
+				params: { path: { channel_id } },
+				body: preferences,
+			} as any),
 		);
 	}
 

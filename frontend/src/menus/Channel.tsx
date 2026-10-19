@@ -1,5 +1,5 @@
 import { throttle } from "@solid-primitives/scheduled";
-import type { Channel, NotifsChannel } from "sdk";
+import type { Channel, NotifsChannel, PreferencesChannel } from "sdk";
 import {
 	createResource,
 	createSignal,
@@ -8,7 +8,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi, useChannels, useTags, useThreadMembers } from "@/api";
+import { useApi, useChannels, useRooms, useTags, useThreadMembers } from "@/api";
 import { useCtx } from "@/app/context";
 import { Checkbox } from "@/atoms/icons";
 import { Search } from "@/atoms/Search.tsx";
@@ -363,15 +363,25 @@ export function ChannelMenu(props: { channel_id: string }) {
 }
 
 export function ChannelNotificationMenu(props: { channel: Channel }) {
+	const ctx = useCtx();
 	const api2 = useApi();
 	const channels2 = useChannels();
+	const rooms2 = useRooms();
 	const channelConfig = () => props.channel.preferences;
+	const room = rooms2.use(() => props.channel.room_id ?? "");
+
+	// a channel without an override inherits from its room, which in turn
+	// inherits from the user's global preferences.
+	const defaultMessages = () =>
+		room()?.preferences?.notifs.messages ?? ctx.preferences().notifs.messages;
+	const defaultThreads = () =>
+		room()?.preferences?.notifs.threads ?? ctx.preferences().notifs.threads;
 
 	const setNotifs = (notifs: Partial<NotifsChannel>) => {
-		const current = channelConfig() ?? { notifs: {}, frontend: {} };
-		const newConfig = {
-			...current,
-			notifs: { ...current.notifs, ...notifs },
+		const current = channelConfig();
+		const newConfig: PreferencesChannel = {
+			notifs: { ...(current?.notifs ?? {}), ...notifs },
+			frontend: current?.frontend ?? {},
 		};
 		for (const key in newConfig.notifs) {
 			if (
@@ -382,12 +392,13 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 		}
 		channels2.cache.set(props.channel.id, {
 			...props.channel,
-			preferences: newConfig as any,
+			preferences: newConfig,
 		});
-		api2.client.http.PUT("/api/v1/preferences/channel/{thread_id}" as any, {
-			params: { path: { thread_id: (props.channel as any).id } },
-			body: newConfig as any,
-		});
+		api2.preferences
+			.setChannelPreferences(props.channel.id, newConfig)
+			.catch((e) => {
+				console.error("Failed to update channel preferences", e);
+			});
 	};
 
 	const setMute = (duration_ms: number | null) => {
@@ -417,16 +428,15 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 		<>
 			<Submenu content={"notifications"}>
 				<Item
-					onClick={() => setNotifs({ messages: undefined, threads: undefined })}
+					onClick={() => setNotifs({ messages: undefined })}
 					classList={{
-						selected:
-							channelConfig()?.notifs.messages === undefined &&
-							channelConfig()?.notifs.threads === undefined,
+						selected: channelConfig()?.notifs.messages === undefined,
 					}}
 				>
 					<div>default</div>
 					<div class="subtext">
-						Uses the room's default notification setting.
+						Uses the room's default notification setting (
+						{defaultMessages().toLowerCase()}).
 					</div>
 				</Item>
 				<Item
@@ -478,7 +488,8 @@ export function ChannelNotificationMenu(props: { channel: Channel }) {
 				>
 					<div>default</div>
 					<div class="subtext">
-						Uses the room's default notification setting for threads.
+						Uses the room's default notification setting for threads (
+						{defaultThreads().toLowerCase()}).
 					</div>
 				</Item>
 				<Item
