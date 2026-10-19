@@ -2,6 +2,7 @@ import { debounce } from "@solid-primitives/scheduled";
 import { createResource, createSignal, Match, Show, Switch } from "solid-js";
 import type { Invite, InviteTarget } from "ts-sdk";
 import { useApi } from "@/api";
+import { useCtx } from "@/app/context";
 import { CheckboxOptionWithLabel } from "@/atoms/CheckboxOption";
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown";
@@ -11,6 +12,7 @@ import { useNavigate } from "@/contexts/router";
 import { createResizeTransition } from "@/hooks/createResizeTransition";
 import { getThumbFromId } from "@/media/util";
 import { icChevron, icWarning } from "@/utils/icons";
+import type { RoomNavItem, RoomNavView } from "@/types/room-nav";
 import { Modal } from "./mod";
 
 type ModalRoomCreateOrJoinProps = {};
@@ -34,14 +36,16 @@ const matchInviteError = (i: InviteResult): InviteError | false => {
 
 export const ModalRoomCreateOrJoin = (_props: ModalRoomCreateOrJoinProps) => {
 	const api = useApi();
+	const ctx = useCtx();
 	const [, modalCtl] = useModals();
 	const nav = useNavigate();
 
-	const [view, setView] = createSignal<"selection" | "create" | "invite">(
-		"selection",
-	);
+	const [view, setView] = createSignal<
+		"selection" | "create" | "create-view" | "invite"
+	>("selection");
 	const [inviteCode, setInviteCode] = createSignal("");
 	const [roomName, setRoomName] = createSignal("");
+	const [viewName, setViewName] = createSignal("");
 	const [isPublic, setIsPublic] = createSignal(false);
 	const [loading, setLoading] = createSignal(false);
 
@@ -70,6 +74,36 @@ export const ModalRoomCreateOrJoin = (_props: ModalRoomCreateOrJoinProps) => {
 		const room = await api.rooms.create({ name, public: isPublic() });
 		modalCtl.close();
 		nav(`/room/${room.id}`);
+	};
+
+	const handleCreateView = () => {
+		const name = viewName().trim();
+		if (!name) return;
+
+		const view: RoomNavView = {
+			type: "view",
+			id: crypto.randomUUID(),
+			name,
+			uncategorized_channels: [],
+			categories: [],
+		};
+
+		const prefs = ctx.preferences();
+		const roomNav = [
+			...((prefs.frontend.roomNav ?? []) as RoomNavItem[]),
+			view,
+		];
+
+		ctx.setPreferences({
+			...prefs,
+			frontend: {
+				...prefs.frontend,
+				roomNav,
+			},
+		});
+
+		modalCtl.close();
+		nav(`/view/${view.id}`);
 	};
 
 	const handleInvite = async () => {
@@ -128,6 +162,15 @@ export const ModalRoomCreateOrJoin = (_props: ModalRoomCreateOrJoinProps) => {
 							>
 								{/* <Icon src={icAdd} /> */}
 								create a room
+								<div style="flex:1"></div>
+								<Icon class="chevron" src={icChevron} />
+							</button>
+							<button
+								type="button"
+								class="button"
+								onClick={() => setView("create-view")}
+							>
+								create a view
 								<div style="flex:1"></div>
 								<Icon class="chevron" src={icChevron} />
 							</button>
@@ -204,6 +247,52 @@ export const ModalRoomCreateOrJoin = (_props: ModalRoomCreateOrJoinProps) => {
 							onClick={handleCreate}
 						>
 							{loading() ? "Creating Room..." : "Create Room"}
+						</button>
+					</div>
+				</Match>
+
+				<Match when={view() === "create-view"}>
+					<div class="main">
+						<h3 classList={{ unnamed: !viewName().trim() }}>
+							{viewName().trim() || "new view"}
+						</h3>
+
+						<form
+							class="room-form"
+							onSubmit={(e) => {
+								e.preventDefault();
+								handleCreateView();
+							}}
+						>
+							<label>
+								<h3 class="dim">view name</h3>
+								<input
+									class="room-name-input"
+									type="text"
+									value={viewName()}
+									onInput={(e) => setViewName(e.currentTarget.value)}
+									placeholder="my awesome view"
+									required
+									ref={(el) => queueMicrotask(() => el.focus())}
+								/>
+							</label>
+						</form>
+					</div>
+
+					<div class="bottom">
+						<button
+							type="button"
+							class="link"
+							onClick={[setView, "selection"]}
+						>
+							Cancel
+						</button>
+						<button
+							type="button"
+							class="button primary"
+							onClick={handleCreateView}
+						>
+							Create View
 						</button>
 					</div>
 				</Match>
