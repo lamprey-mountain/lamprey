@@ -121,13 +121,11 @@ export function createDropdown<T>(props: {
 
 	const select = (item: T | null) => {
 		setSelected(() => item);
-		if (!props.ignoreMissingLabel) {
-			const opt = props.options().find((i) => i.item === selected());
-			if (opt) {
-				setValue(opt.label);
-			} else {
-				setValue("");
-			}
+		const opt = props.options().find((i) => i.item === item);
+		if (opt) {
+			setValue(opt.label);
+		} else if (!props.ignoreMissingLabel) {
+			setValue("");
 		}
 		setShown(false);
 		props.onSelect?.(item);

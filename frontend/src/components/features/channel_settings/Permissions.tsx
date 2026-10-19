@@ -19,7 +19,7 @@ import { createStore, produce } from "solid-js/store";
 import { useApi, useRoles, useRooms } from "@/api";
 import { Resizable } from "@/atoms/Resizable";
 import { Savebar } from "@/atoms/Savebar";
-import { OverwriteDropdown } from "@/components/shared/OverwriteDropdown";
+import { UserRoleSelect } from "@/atoms/UserRoleSelect";
 import { PermissionSelector } from "@/components/shared/PermissionSelector";
 import { useMenu } from "@/contexts/mod.tsx";
 import { permissions } from "@/lib/permissions";
@@ -329,10 +329,12 @@ export function Permissions(props: VoidProps<{ channel: Channel }>) {
 					<h2>Permissions</h2>
 					<div class="permission-overwrites">
 						<div class="permissions-layout">
-							<OverwriteDropdown
+							<UserRoleSelect
 								room_id={roomId()}
 								excludeIds={overwrites.map((o) => o.id)}
 								onSelect={(id, type) => addOverwrite(id, type)}
+								placeholder="Select a user/role"
+								class="overwrite-dropdown"
 							/>
 							<div>
 								<ul>
