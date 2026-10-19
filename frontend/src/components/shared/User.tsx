@@ -34,6 +34,7 @@ export function UserDisplayName(props: {
 	user?: UserT;
 	onClick?: boolean;
 	class?: string;
+	tabIndex?: number;
 }) {
 	const api = useApi();
 	const { userView, setUserView } = useUserPopout();
@@ -46,7 +47,7 @@ export function UserDisplayName(props: {
 
 	const name = () => room_member()?.override_name ?? user()?.name;
 
-	const handleClick = (e: MouseEvent) => {
+	const handleClick = (e: Event) => {
 		if (!props.onClick) return;
 		e.stopPropagation();
 		e.preventDefault();
@@ -65,11 +66,18 @@ export function UserDisplayName(props: {
 	};
 
 	return (
+		// TODO: do i make this a <button> or role="button"?
 		<span
 			class={`user ${props.class ?? ""}`}
 			classList={{ "menu-user": props.onClick }}
 			data-user-id={props.user_id}
+			tabIndex={props.tabIndex}
 			onClick={handleClick}
+			onKeyDown={(e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					handleClick(e);
+				}
+			}}
 		>
 			{name()}
 		</span>
