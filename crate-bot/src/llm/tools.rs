@@ -132,13 +132,20 @@ macro_rules! define_tool {
                 ) -> String {
                     let _ = &arguments;
                     $(
-                        let $arg: $ty = ::serde_json::from_value(
+                        let $arg: $ty = match ::serde_json::from_value(
                             arguments
                                 .get(stringify!($arg))
                                 .cloned()
                                 .unwrap_or(::serde_json::Value::Null),
-                        )
-                        .expect(concat!("invalid tool argument `", stringify!($arg), "`"));
+                        ) {
+                            Ok(value) => value,
+                            Err(err) => {
+                                return format!(
+                                    "error: invalid argument `{}`: {err}",
+                                    stringify!($arg),
+                                );
+                            }
+                        };
                     )*
                     $body
                 }
