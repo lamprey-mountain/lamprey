@@ -4,7 +4,11 @@ use url::Url;
 use crate::cache::{Cache, CacheConfig};
 use crate::http::Http;
 use crate::syncer::Syncer;
+#[cfg(feature = "cache")]
+use crate::syncer::SyncerEvent;
 use crate::{Client, prelude::*};
+#[cfg(feature = "cache")]
+use futures_util::StreamExt;
 
 pub struct ClientBuilder {
     token: Option<SessionToken>,
@@ -159,6 +163,18 @@ impl ClientBuilder {
                 Some(Cache::builder().config(*settings).build())
             }
         };
+
+        #[cfg(feature = "cache")]
+        if let Some(cache) = cache.clone() {
+            let mut events = syncer.subscribe();
+            tokio::spawn(async move {
+                while let Some(event) = events.next().await {
+                    if let SyncerEvent::Message(message) = &*event {
+                        cache.update(&message.payload);
+                    }
+                }
+            });
+        }
 
         Ok(Client {
             syncer,
