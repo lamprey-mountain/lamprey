@@ -174,13 +174,17 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 		const addChannels = (channels: api["ViewChannel"][] | undefined) => {
 			for (const channel of channels ?? []) {
 				if (channel.room_id) roomIds.add(channel.room_id);
+				// dms aren't part of a room's channel list, so fetch them directly
+				if (!channels2.cache.get(channel.id)) {
+					api2.channels.fetchOrQueue(channel.id).catch(() => {});
+				}
 			}
 		};
 
 		addChannels(currentView.uncategorized_channels);
 		for (const category of currentView.categories ?? []) {
 			if ("channels" in category) addChannels(category.channels);
-			else if (category.room_id) roomIds.add(category.room_id);
+			else addChannels([category]);
 		}
 
 		for (const rid of roomIds) api2.channels.fetchRoomList(rid);
