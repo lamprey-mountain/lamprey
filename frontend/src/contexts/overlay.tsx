@@ -44,6 +44,7 @@ import {
 import { UserProfile } from "@/components/shared/UserProfile.tsx";
 import { UserProfileEdit } from "@/components/shared/UserProfileEdit.tsx";
 import {
+	CalendarEventMenu,
 	ChannelMenu,
 	ChannelNavMenu,
 	ColorPickerOptions,
@@ -494,6 +495,15 @@ export function OverlayProvider(props: ParentProps) {
 						overwrite_id={menu.overwrite_id}
 						overwrite_type={menu.overwrite_type}
 						onDelete={menu.onDelete}
+					/>
+				);
+			}
+			case "calendar_event": {
+				return (
+					<CalendarEventMenu
+						channel_id={menu.channel_id}
+						event={menu.event}
+						anchor={menu.anchor}
 					/>
 				);
 			}

@@ -1,4 +1,4 @@
-import type { Application } from "sdk";
+import type { Application, CalendarEvent } from "sdk";
 import {
 	type Accessor,
 	createContext,
@@ -56,6 +56,12 @@ export type Menu = {
 			onDelete?: () => void;
 	  }
 	| { type: "channel_nav"; room_id?: string; view_id?: string }
+	| {
+			type: "calendar_event";
+			channel_id: string;
+			event: CalendarEvent;
+			anchor?: HTMLElement;
+	  }
 	| {
 			type: "color_picker_options";
 			onColorSpaceChange: (space: "oklch" | "srgb") => void;

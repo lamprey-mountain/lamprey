@@ -11,7 +11,7 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 		const targetEl = e.target as HTMLElement;
 
 		const menuEl = targetEl.closest(
-			".menu-room, .menu-channel, .menu-thread, .menu-message, .menu-user",
+			".menu-room, .menu-channel, .menu-thread, .menu-message, .menu-user, .menu-calendar-event",
 		) as HTMLElement | null;
 		const mediaEl = targetEl.closest(
 			"a:not(.nav), img:not(.avatar), video, audio",
@@ -82,6 +82,18 @@ export function useContextMenu(setMenu: Setter<Menu | null>) {
 				channel_id: thread?.id,
 				room_id: thread?.room_id ?? room?.id ?? undefined,
 				user_id,
+			};
+		} else if (menuEl.classList.contains("menu-calendar-event")) {
+			const event_id = getData("data-event-id");
+			const channel_id = getData("data-channel-id");
+			if (!event_id || !channel_id) return;
+			const event = store.calendar.cache.get(event_id);
+			if (!event) return;
+			menu = {
+				type: "calendar_event",
+				channel_id,
+				event,
+				anchor: menuEl,
 			};
 		}
 

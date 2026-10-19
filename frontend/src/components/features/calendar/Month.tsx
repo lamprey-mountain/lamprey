@@ -182,7 +182,9 @@ export const CalendarMonth = (props: {
 							>
 								{(event) => (
 									<div
-										class="event"
+										class="event menu-calendar-event"
+										data-event-id={event.id}
+										data-channel-id={props.channel.id}
 										ref={(el) => {
 											if (el) {
 												el.addEventListener("click", (e) => {
