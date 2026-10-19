@@ -621,7 +621,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 				<li
 					class="channel-item"
 					data-nav-id="home"
-					tabIndex={isFocused("home") ? 0 : -1}
+					tabIndex={-1}
 					data-dnd-placement={
 						view()
 							? viewDnd.placement(VIEW_UNCATEGORIZED_KEY)
@@ -642,7 +642,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 								router.main ===
 								(props.room_id ? `/room/${props.room_id}` : "/"),
 						}}
-						tabIndex={-1}
+						tabIndex={isFocused("home") ? 0 : -1}
 					>
 						<Icon src={icHome} color={colors.fg500} /> home
 					</a>
@@ -650,17 +650,13 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 
 				<Show when={!props.room_id && !view()}>
 					<Show when={flags.has("inbox")}>
-						<li
-							class="channel-item"
-							data-nav-id="inbox"
-							tabIndex={isFocused("inbox") ? 0 : -1}
-						>
+						<li class="channel-item" data-nav-id="inbox" tabIndex={-1}>
 							<a
 								href="/inbox"
 								class="channel-link"
 								draggable={false}
 								classList={{ active: router.main === "/inbox" }}
-								tabIndex={-1}
+								tabIndex={isFocused("inbox") ? 0 : -1}
 							>
 								<Icon src={icInbox} color={colors.fg500} /> inbox
 							</a>
@@ -668,17 +664,13 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 					</Show>
 
 					<Show when={flags.has("friends")}>
-						<li
-							class="channel-item"
-							data-nav-id="friends"
-							tabIndex={isFocused("friends") ? 0 : -1}
-						>
+						<li class="channel-item" data-nav-id="friends" tabIndex={-1}>
 							<a
 								href="/friends"
 								class="channel-link"
 								draggable={false}
 								classList={{ active: router.main === "/friends" }}
-								tabIndex={-1}
+								tabIndex={isFocused("friends") ? 0 : -1}
 							>
 								<Icon src={icMembers} color={colors.fg500} /> friends
 							</a>
@@ -833,7 +825,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 												}
 												data-channel-id={channel.id}
 												data-nav-id={channel.id}
-												tabIndex={isFocused(channel.id) ? 0 : -1}
+												tabIndex={-1}
 												draggable="true"
 												onDragStart={view() ? viewDnd.handleStart : dnd.handle}
 												onDragOver={
@@ -869,6 +861,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 													view_id={props.view_id}
 													nickname={channel.nickname}
 													icon
+													tabIndex={isFocused(channel.id) ? 0 : -1}
 												/>
 												<Show when={channel.threads?.length}>
 													<ul class="thread-list">
@@ -878,7 +871,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 																	class="channel-item"
 																	data-channel-id={chan.id}
 																	data-nav-id={chan.id}
-																	tabIndex={isFocused(chan.id) ? 0 : -1}
+																	tabIndex={-1}
 																	draggable={true}
 																	onDragStart={dnd.handle}
 																	onDragOver={dnd.handle}
@@ -896,6 +889,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 																		room_id={chan.room_id ?? props.room_id}
 																		view_id={props.view_id}
 																		icon={false}
+																		tabIndex={isFocused(chan.id) ? 0 : -1}
 																	/>
 																</li>
 															)}
@@ -966,6 +960,7 @@ export const ItemChannel = (props: {
 	view_id?: string;
 	nickname?: string | null;
 	icon: boolean;
+	tabIndex?: number;
 }) => {
 	const nav = useNavigate();
 	const [, modalCtl] = useModals();
@@ -1070,6 +1065,8 @@ export const ItemChannel = (props: {
 			fallback={
 				<div
 					class="menu-channel channel-link"
+					data-focus-ring-target
+					tabIndex={props.tabIndex}
 					classList={{ active: props.channel.id === params.channel_id }}
 					data-unread={isUnread(props.channel)}
 					data-muted={isMuted() ? "true" : undefined}
@@ -1077,7 +1074,6 @@ export const ItemChannel = (props: {
 					onClick={handleClick}
 					onMouseEnter={() => setHovered(true)}
 					onMouseLeave={() => setHovered(false)}
-					tabIndex={-1} // TODO: move tab index here?
 				>
 					<Show when={props.icon}>
 						<ChannelIcon
@@ -1145,6 +1141,8 @@ export const ItemChannel = (props: {
 				<a
 					href={href()}
 					class="menu-channel channel-link"
+					data-focus-ring-target
+					tabIndex={props.tabIndex}
 					classList={{ active: props.channel.id === params.channel_id }}
 					data-unread={isUnread(props.channel)}
 					data-muted={isMuted() ? "true" : undefined}
@@ -1152,7 +1150,6 @@ export const ItemChannel = (props: {
 					onClick={handleClick}
 					onMouseEnter={() => setHovered(true)}
 					onMouseLeave={() => setHovered(false)}
-					tabIndex={-1} // TODO: move tab index here?
 				>
 					<Show when={props.icon}>
 						<ChannelIcon

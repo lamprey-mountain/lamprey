@@ -45,8 +45,14 @@ export const useChannelNavKeybinds = (props: KeyboardListProps) => {
 			if (!containerEl) return;
 			const el = containerEl.querySelector(
 				`[data-nav-id="${id}"]`,
-			) as HTMLElement;
-			if (el) el.focus();
+			) as HTMLElement | null;
+			if (!el) return;
+			// focus the channel/thread item itself, not the wrapper <li> (which may
+			// contain nested threads, making the focus ring too tall)
+			const item = el.querySelector(
+				":scope > .channel-link, :scope > .category-header",
+			) as HTMLElement | null;
+			(item ?? el).focus();
 		}, 0);
 	};
 
