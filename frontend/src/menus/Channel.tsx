@@ -8,7 +8,13 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import { useApi, useChannels, useRooms, useTags, useThreadMembers } from "@/api";
+import {
+	useApi,
+	useChannels,
+	useRooms,
+	useTags,
+	useThreadMembers,
+} from "@/api";
 import { useCtx } from "@/app/context";
 import { formatDuration } from "@/atoms/Duration";
 import { Checkbox } from "@/atoms/icons";

@@ -5,10 +5,7 @@ import { useCtx } from "@/app/context";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
-import {
-	getViewChannels,
-	updateRoomNavView,
-} from "@/lib/room-nav";
+import { getViewChannels, updateRoomNavView } from "@/lib/room-nav";
 import type { RoomNavItem, RoomNavView } from "@/types/room-nav";
 import { Item, Menu } from "./Parts.tsx";
 

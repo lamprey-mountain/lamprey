@@ -22,13 +22,13 @@ import icDelete from "@/assets/delete.png";
 import icEdit from "@/assets/edit.png";
 import cancelIc from "@/assets/x.png";
 import { EmojiButton } from "@/atoms/EmojiButton.tsx";
-import { useFocusRing } from "@/contexts/focus-ring";
 import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useFocusRing } from "@/contexts/focus-ring";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal.tsx";
 import { useUploads } from "@/contexts/uploads.tsx";
@@ -202,7 +202,9 @@ export function Input(props: InputProps) {
 
 	const focusOnMessage = () => {
 		const active = document.activeElement;
-		return active instanceof HTMLElement && !!active.closest("[data-message-id]");
+		return (
+			active instanceof HTMLElement && !!active.closest("[data-message-id]")
+		);
 	};
 
 	const isThread = () =>

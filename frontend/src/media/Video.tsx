@@ -10,8 +10,8 @@ import {
 } from "solid-js";
 import { useCtx } from "@/app/context";
 import { Icon } from "@/atoms/Icon";
-import { useMessageTabbable } from "@/contexts/message-focus";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
+import { useMessageTabbable } from "@/contexts/message-focus";
 import {
 	icFullscreen,
 	icFullscreent,

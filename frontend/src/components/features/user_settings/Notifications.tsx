@@ -159,9 +159,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 			<CheckboxOption
 				id={`user-${_props.user?.id ?? "@self"}-desktop-notifs`}
 				checked={isFrontendConfigEnabled("desktop_notifs")}
-				onChange={(checked) =>
-					setFrontendConfig("desktop_notifs", checked)
-				}
+				onChange={(checked) => setFrontendConfig("desktop_notifs", checked)}
 				seed={`user-${_props.user?.id ?? "@self"}-desktop-notifs`}
 			>
 				<Checkbox
@@ -176,9 +174,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 			<CheckboxOption
 				id={`user-${_props.user?.id ?? "@self"}-push-notifs`}
 				checked={isFrontendConfigEnabled("push_notifs")}
-				onChange={(checked) =>
-					setFrontendConfig("push_notifs", checked)
-				}
+				onChange={(checked) => setFrontendConfig("push_notifs", checked)}
 				seed={`user-${_props.user?.id ?? "@self"}-push-notifs`}
 			>
 				<Checkbox
@@ -193,9 +189,7 @@ export function Notifications(_props: VoidProps<{ user: User }>) {
 			<CheckboxOption
 				id={`user-${_props.user?.id ?? "@self"}-tts-notifs`}
 				checked={isFrontendConfigEnabled("tts_notifs")}
-				onChange={(checked) =>
-					setFrontendConfig("tts_notifs", checked)
-				}
+				onChange={(checked) => setFrontendConfig("tts_notifs", checked)}
 				seed={`user-${_props.user?.id ?? "@self"}-tts-notifs`}
 			>
 				<Checkbox

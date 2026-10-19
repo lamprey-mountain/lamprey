@@ -9,10 +9,7 @@ import { MemberList } from "@/components/shared/MemberList";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
-import {
-	useCanViewChannel,
-	usePermissions,
-} from "@/hooks/usePermissions";
+import { useCanViewChannel, usePermissions } from "@/hooks/usePermissions";
 import type { RoomT } from "@/types";
 import { ChannelIcon } from "./User.tsx";
 
@@ -34,10 +31,7 @@ export const RoomHome = (props: { room: RoomT }) => {
 	const canViewChannel = useCanViewChannel(room_id);
 	const threadsResource = createMemo(() =>
 		[...channels2.cache.values()].filter(
-			(c) =>
-				c.room_id === room_id() &&
-				!c.deleted_at &&
-				canViewChannel(c),
+			(c) => c.room_id === room_id() && !c.deleted_at && canViewChannel(c),
 		),
 	);
 

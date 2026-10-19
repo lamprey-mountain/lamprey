@@ -225,9 +225,7 @@ export const MemberList = (props: MemberListProps) => {
 	const isLoading = () => !list();
 
 	const focusRow = (index: number) => {
-		const row = parentRef.querySelector<HTMLElement>(
-			`[data-index="${index}"]`,
-		);
+		const row = parentRef.querySelector<HTMLElement>(`[data-index="${index}"]`);
 		const button = row?.querySelector<HTMLElement>("button");
 		if (button) {
 			button.focus();

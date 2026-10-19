@@ -1,15 +1,9 @@
 import { MultiProvider } from "@solid-primitives/context";
 import type { MemoryHistory, RouteSectionProps } from "@solidjs/router";
 import { MemoryRouter, Route } from "@solidjs/router";
-import {
-	type Component,
-	createEffect,
-	type ParentProps,
-	Show,
-} from "solid-js";
+import { type Component, createEffect, type ParentProps, Show } from "solid-js";
 import { RootStoreContext } from "@/api";
 import { chatctx, useCtx } from "@/app/context";
-import { FocusRingProvider } from "@/contexts/focus-ring";
 import { CalendarPopupProvider } from "@/components/features/calendar/Calendar";
 import { VoiceProvider } from "@/components/features/voice/context";
 import { VoiceStreams } from "@/components/features/voice/VoiceStreams";
@@ -17,6 +11,7 @@ import { RouteMedia } from "@/components/shared/MediaPage";
 import { RouteVerifyEmail } from "@/components/shared/VerifyEmail";
 import { CurrentUserProvider } from "@/contexts/currentUser.tsx";
 import { DisplayProvider } from "@/contexts/display.tsx";
+import { FocusRingProvider } from "@/contexts/focus-ring";
 import {
 	AutocompleteProvider,
 	FormattingToolbarProvider,
@@ -238,61 +233,61 @@ export const AppShell: Component<ParentProps> = (props) => {
 	return (
 		<FocusRingProvider>
 			<>
-			<div
-				id="root"
-				class="root precedence-hack"
-				classList={{
-					"underline-links": ctx.preferences().frontend.underline_links,
-					"reduce-motion": ctx.preferences().frontend.reduced_motion,
-				}}
-				data-message-style={
-					ctx.preferences().frontend.message_style === "compact"
-						? "compact"
-						: "cozy"
-				}
-				inert={modals.length > 0}
-			>
-				<Show when={cursorStats()}>
-					{(stats) => (
-						<div
-							class="cursor-tooltip"
-							style={{
-								position: "fixed",
-								top: `${stats().y + 16}px`,
-								left: `${stats().x + 16}px`,
-								"z-index": 10000,
-								background: "oklch(var(--color-bg2) / 0.9)",
-								color: "oklch(var(--color-fg1))",
-								border: "1px solid oklch(var(--color-sep-300))",
-								padding: "4px 8px",
-								"border-radius": "4px",
-								"pointer-events": "none",
-								"font-size": "12px",
-								"white-space": "nowrap",
-								"backdrop-filter": "blur(4px)",
-							}}
-						>
-							{stats().label}
-						</div>
-					)}
-				</Show>
-				{props.children}
-				<OverlayProvider />
-				<VoiceStreams />
-			</div>
-			<div
-				id="overlay"
-				class="root"
-				classList={{
-					"underline-links": ctx.preferences().frontend.underline_links,
-					"reduce-motion": ctx.preferences().frontend.reduced_motion,
-				}}
-				data-message-style={
-					ctx.preferences().frontend.message_style === "compact"
-						? "compact"
-						: "cozy"
-				}
-			></div>
+				<div
+					id="root"
+					class="root precedence-hack"
+					classList={{
+						"underline-links": ctx.preferences().frontend.underline_links,
+						"reduce-motion": ctx.preferences().frontend.reduced_motion,
+					}}
+					data-message-style={
+						ctx.preferences().frontend.message_style === "compact"
+							? "compact"
+							: "cozy"
+					}
+					inert={modals.length > 0}
+				>
+					<Show when={cursorStats()}>
+						{(stats) => (
+							<div
+								class="cursor-tooltip"
+								style={{
+									position: "fixed",
+									top: `${stats().y + 16}px`,
+									left: `${stats().x + 16}px`,
+									"z-index": 10000,
+									background: "oklch(var(--color-bg2) / 0.9)",
+									color: "oklch(var(--color-fg1))",
+									border: "1px solid oklch(var(--color-sep-300))",
+									padding: "4px 8px",
+									"border-radius": "4px",
+									"pointer-events": "none",
+									"font-size": "12px",
+									"white-space": "nowrap",
+									"backdrop-filter": "blur(4px)",
+								}}
+							>
+								{stats().label}
+							</div>
+						)}
+					</Show>
+					{props.children}
+					<OverlayProvider />
+					<VoiceStreams />
+				</div>
+				<div
+					id="overlay"
+					class="root"
+					classList={{
+						"underline-links": ctx.preferences().frontend.underline_links,
+						"reduce-motion": ctx.preferences().frontend.reduced_motion,
+					}}
+					data-message-style={
+						ctx.preferences().frontend.message_style === "compact"
+							? "compact"
+							: "cozy"
+					}
+				></div>
 			</>
 		</FocusRingProvider>
 	);

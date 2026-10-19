@@ -165,7 +165,11 @@ export const RoomNav = () => {
 			const lastChannel = lastChannelId
 				? channels2.cache.get(lastChannelId)
 				: undefined;
-			if (lastChannel && !lastChannel.deleted_at && lastChannel.room_id === id) {
+			if (
+				lastChannel &&
+				!lastChannel.deleted_at &&
+				lastChannel.room_id === id
+			) {
 				nav(`/channel/${lastChannelId}`);
 				return;
 			}
@@ -325,7 +329,8 @@ export const RoomNav = () => {
 												>
 													<div
 														class="tile with-background"
-														data-focus-ring-target onClick={() => toggleFolder(folder.id)}
+														data-focus-ring-target
+														onClick={() => toggleFolder(folder.id)}
 														onContextMenu={(e) => {
 															e.preventDefault();
 															queueMicrotask(() => {
@@ -391,9 +396,7 @@ export const RoomNav = () => {
 													class="nav"
 													tabIndex={-1}
 												>
-													<div class="avatar">
-														{view.name.substring(0, 2)}
-													</div>
+													<div class="avatar">{view.name.substring(0, 2)}</div>
 												</a>
 											</div>
 										</li>

@@ -49,12 +49,7 @@ export function ViewMenu(props: ViewMenuProps) {
 		for (const viewChannel of getViewChannels(view)) {
 			const channel = channels2.cache.get(viewChannel.id);
 			if (!channel?.last_message_id) continue;
-			await readTracking.ack(
-				channel.id,
-				channel.last_message_id,
-				true,
-				false,
-			);
+			await readTracking.ack(channel.id, channel.last_message_id, true, false);
 		}
 	};
 

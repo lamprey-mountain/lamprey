@@ -444,9 +444,7 @@ export const RouteChannel = (
 							<>
 								<Switch>
 									<Match
-										when={
-											ch().type === "Voice" || ch().type === "Broadcast"
-										}
+										when={ch().type === "Voice" || ch().type === "Broadcast"}
 									>
 										<Voice channel={ch()} />
 									</Match>

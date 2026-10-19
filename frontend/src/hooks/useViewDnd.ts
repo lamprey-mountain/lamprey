@@ -1,10 +1,7 @@
 import type { api } from "sdk";
 import { createSignal } from "solid-js";
 import type { DndPlacement } from "@/hooks/useChannelDnd";
-import {
-	VIEW_UNCATEGORIZED_KEY,
-	viewCategoryIndex,
-} from "@/lib/room-nav";
+import { VIEW_UNCATEGORIZED_KEY, viewCategoryIndex } from "@/lib/room-nav";
 import type { RoomNavView } from "@/types/room-nav";
 
 type ViewChannel = api["ViewChannel"];

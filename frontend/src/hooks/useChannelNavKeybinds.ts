@@ -85,9 +85,7 @@ export const useChannelNavKeybinds = (props: KeyboardListProps) => {
 	const moveChannel = (direction: 1 | -1, unreadOnly: boolean) => {
 		const channels = props
 			.items()
-			.filter(
-				(i) => (i.type === "channel" || i.type === "thread") && !i.info,
-			);
+			.filter((i) => (i.type === "channel" || i.type === "thread") && !i.info);
 		if (!channels.length) return;
 
 		const currentId = props.selectedId() ?? focusedId();

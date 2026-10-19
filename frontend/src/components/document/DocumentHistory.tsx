@@ -220,10 +220,7 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 					<div>No history available</div>
 				</Show>
 			</div>
-			<div
-				class="document-revert"
-				classList={{ show: !!isRevertShown() }}
-			>
+			<div class="document-revert" classList={{ show: !!isRevertShown() }}>
 				<div class="inner">
 					<div class="warning">Viewing revision</div>
 					<button

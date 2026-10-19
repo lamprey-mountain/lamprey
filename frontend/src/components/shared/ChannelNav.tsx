@@ -8,7 +8,6 @@ import {
 	Index,
 	Show,
 } from "solid-js";
-import { useCtx } from "@/app/context";
 import {
 	useApi,
 	useChannels,
@@ -17,6 +16,7 @@ import {
 	useRooms,
 	useUsers,
 } from "@/api";
+import { useCtx } from "@/app/context";
 import icChevron from "@/assets/chevron.png";
 import icHome from "@/assets/home.png";
 import icInbox from "@/assets/inbox.png";
@@ -28,26 +28,20 @@ import { useCurrentUser } from "@/contexts/currentUser";
 import { useDisplay, useMenu } from "@/contexts/mod";
 import { useModals } from "@/contexts/modal";
 import { useNavigate, useRouter } from "@/contexts/router";
-import {
-	UNCATEGORIZED_CHANNEL_ID,
-	useChannelDnd,
-} from "@/hooks/useChannelDnd";
-import { useViewDnd } from "@/hooks/useViewDnd";
+import { UNCATEGORIZED_CHANNEL_ID, useChannelDnd } from "@/hooks/useChannelDnd";
 import {
 	type NavItem,
 	useChannelNavKeybinds,
 } from "@/hooks/useChannelNavKeybinds";
-import {
-	useCanViewChannel,
-	usePermissions,
-} from "@/hooks/usePermissions";
+import { useCanViewChannel, usePermissions } from "@/hooks/usePermissions";
+import { useViewDnd } from "@/hooks/useViewDnd";
 import { colors } from "@/lib/colors";
 import { flags } from "@/lib/flags";
 import {
 	getLastViewedChannel,
 	setLastViewedChannel,
-	VIEW_UNCATEGORIZED_KEY,
 	updateRoomNavView,
+	VIEW_UNCATEGORIZED_KEY,
 	viewCategoryKey,
 } from "@/lib/room-nav";
 import type { RoomNavItem, RoomNavView } from "@/types/room-nav";
@@ -205,9 +199,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 
 	const canViewChannel = useCanViewChannel(() => props.room_id);
 
-	const viewChannel = (
-		channel: api["ViewChannel"],
-	): NavChannel | null => {
+	const viewChannel = (channel: api["ViewChannel"]): NavChannel | null => {
 		const cached = channels2.cache.get(channel.id);
 		if (!cached || cached.deleted_at || !canViewChannel(cached)) return null;
 
@@ -227,8 +219,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 
 		result.push({ category: null, channels: uncategorized });
 
-		for (const [index, category] of
-			currentView.categories?.entries() ?? []) {
+		for (const [index, category] of currentView.categories?.entries() ?? []) {
 			if ("channels" in category) {
 				result.push({
 					category: {
@@ -368,37 +359,39 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 				categoryMap.set(parentId, children);
 			}
 		}
-		return [...categoryMap.entries()]
-			.map(([cid, cs]) => {
-				const channel = cid ? (channels2.cache.get(cid) ?? null) : null;
-				return {
-					category: channel
-						? { id: channel.id, name: channel.name, channel }
-						: null,
-					channels: cs,
-				};
-			})
-			// only show categories that contain visible channels
-			.filter(({ category, channels }) => !category || channels.length > 0)
-			.sort((a, b) => {
-				const aPosition = a.category?.channel?.position;
-				const bPosition = b.category?.channel?.position;
-				if (!a.category) return -1;
-				if (!b.category) return 1;
+		return (
+			[...categoryMap.entries()]
+				.map(([cid, cs]) => {
+					const channel = cid ? (channels2.cache.get(cid) ?? null) : null;
+					return {
+						category: channel
+							? { id: channel.id, name: channel.name, channel }
+							: null,
+						channels: cs,
+					};
+				})
+				// only show categories that contain visible channels
+				.filter(({ category, channels }) => !category || channels.length > 0)
+				.sort((a, b) => {
+					const aPosition = a.category?.channel?.position;
+					const bPosition = b.category?.channel?.position;
+					if (!a.category) return -1;
+					if (!b.category) return 1;
 
-				if (aPosition == null && bPosition == null) {
-					return a.category.id < b.category.id ? 1 : -1;
-				}
-				if (aPosition == null) return 1;
-				if (bPosition == null) return -1;
+					if (aPosition == null && bPosition == null) {
+						return a.category.id < b.category.id ? 1 : -1;
+					}
+					if (aPosition == null) return 1;
+					if (bPosition == null) return -1;
 
-				const p = aPosition - bPosition;
-				if (p === 0) {
-					return a.category.id < b.category.id ? 1 : -1;
-				}
+					const p = aPosition - bPosition;
+					if (p === 0) {
+						return a.category.id < b.category.id ? 1 : -1;
+					}
 
-				return p;
-			});
+					return p;
+				})
+		);
 	});
 
 	let buttonRef: HTMLButtonElement;
@@ -836,7 +829,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 																	category?.id ?? null,
 																	channel.id,
 																)
-															: dnd.handle
+														: dnd.handle
 												}
 												onDrop={view() ? viewDnd.handleDrop : dnd.handle}
 												onDragEnd={view() ? viewDnd.handleEnd : dnd.handle}

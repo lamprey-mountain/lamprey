@@ -6,11 +6,11 @@ import { createStore } from "solid-js/store";
 import { useApi, useChannels } from "@/api";
 import { ChannelPicker } from "@/atoms/ChannelPicker";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
-import { UserRoleSelect } from "@/atoms/UserRoleSelect";
 import { DurationInput, type DurationPreset } from "@/atoms/DurationInput.tsx";
 import { Checkbox } from "@/atoms/icons";
 import { Savebar } from "@/atoms/Savebar";
 import { Slider } from "@/atoms/Slider";
+import { UserRoleSelect } from "@/atoms/UserRoleSelect";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { ChannelIconGdm } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
@@ -459,8 +459,8 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					<label style="display:flex;flex-direction:column">
 						<h3 class="label">Broadcaster</h3>
 						<p class="description dim">
-							The user that this broadcast channel belongs to. Connecting clients
-							will automatically focus this user's stream if one exists.
+							The user that this broadcast channel belongs to. Connecting
+							clients will automatically focus this user's stream if one exists.
 						</p>
 						<UserRoleSelect
 							room_id={props.channel.room_id ?? ""}
@@ -473,8 +473,8 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 					<label style="display:block;margin-top:12px">
 						<h3 class="label">Schedule</h3>
 						<p class="description dim">
-							Use this channel as this broadcast channel's schedule. Calendar events should
-							correspond to broadcast times.
+							Use this channel as this broadcast channel's schedule. Calendar
+							events should correspond to broadcast times.
 						</p>
 						<ChannelPicker
 							selected={

@@ -495,73 +495,73 @@ export const MessageView = (props: MessageProps) => {
 	return (
 		<MessageTabbableContext.Provider value={tabbable}>
 			<Switch
-			fallback={
-				<article
-					ref={messageArticleRef}
-					class="message menu-message"
-					data-message-id={props.message.id}
-					classList={{ "toolbar-visible": toolbarVisible() }}
-					onClick={handleClick}
-					onMouseDown={(e) => {
-						onMouseDown(e);
-						handleAltClick(e);
-					}}
-					onMouseEnter={() => setHovered(true)}
-					onMouseLeave={() => setHovered(false)}
-				>
-					<div class="content">
-						unknown message: {props.message.latest_version.type}
-					</div>
-					{/* TODO: re-add message toolbar? */}
-				</article>
-			}
-		>
-			<Match when={props.message.latest_version.type === "MemberAdd"}>
-				<SystemMessageMemberAdd {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "MemberRemove"}>
-				<SystemMessageMemberRemove {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "MemberJoin"}>
-				<SystemMessageMemberJoin {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "MessagePinned"}>
-				<SystemMessagePinned {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "ChannelRename"}>
-				<SystemMessageChannelRename {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "Call"}>
-				<SystemMessageCall {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "ChannelPingback"}>
-				<SystemMessageChannelPingback {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "ChannelIcon"}>
-				<SystemMessageChannelIcon {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "ThreadCreated"}>
-				<SystemMessageThreadCreated {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "AutomodExecution"}>
-				<SystemMessageAutomodExecution {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "ChannelMoved"}>
-				<SystemMessageChannelMoved {...systemProps} />
-			</Match>
-			<Match when={props.message.latest_version.type === "Nudge"}>
-				<SystemMessageNudge {...systemProps} />
-			</Match>
-			<Match when={isMarkdown(props.message.latest_version.type)}>
-				<DefaultMessage
-					{...systemProps}
-					user={user()}
-					hovered={hovered()}
-					isEditing={isEditing()}
-					channels2={channels}
-					ctx={ctx}
-				/>
-			</Match>
+				fallback={
+					<article
+						ref={messageArticleRef}
+						class="message menu-message"
+						data-message-id={props.message.id}
+						classList={{ "toolbar-visible": toolbarVisible() }}
+						onClick={handleClick}
+						onMouseDown={(e) => {
+							onMouseDown(e);
+							handleAltClick(e);
+						}}
+						onMouseEnter={() => setHovered(true)}
+						onMouseLeave={() => setHovered(false)}
+					>
+						<div class="content">
+							unknown message: {props.message.latest_version.type}
+						</div>
+						{/* TODO: re-add message toolbar? */}
+					</article>
+				}
+			>
+				<Match when={props.message.latest_version.type === "MemberAdd"}>
+					<SystemMessageMemberAdd {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "MemberRemove"}>
+					<SystemMessageMemberRemove {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "MemberJoin"}>
+					<SystemMessageMemberJoin {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "MessagePinned"}>
+					<SystemMessagePinned {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "ChannelRename"}>
+					<SystemMessageChannelRename {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "Call"}>
+					<SystemMessageCall {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "ChannelPingback"}>
+					<SystemMessageChannelPingback {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "ChannelIcon"}>
+					<SystemMessageChannelIcon {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "ThreadCreated"}>
+					<SystemMessageThreadCreated {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "AutomodExecution"}>
+					<SystemMessageAutomodExecution {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "ChannelMoved"}>
+					<SystemMessageChannelMoved {...systemProps} />
+				</Match>
+				<Match when={props.message.latest_version.type === "Nudge"}>
+					<SystemMessageNudge {...systemProps} />
+				</Match>
+				<Match when={isMarkdown(props.message.latest_version.type)}>
+					<DefaultMessage
+						{...systemProps}
+						user={user()}
+						hovered={hovered()}
+						isEditing={isEditing()}
+						channels2={channels}
+						ctx={ctx}
+					/>
+				</Match>
 			</Switch>
 		</MessageTabbableContext.Provider>
 	);

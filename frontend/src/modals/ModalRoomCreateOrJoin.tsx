@@ -11,8 +11,8 @@ import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
 import { createResizeTransition } from "@/hooks/createResizeTransition";
 import { getThumbFromId } from "@/media/util";
-import { icChevron, icWarning } from "@/utils/icons";
 import type { RoomNavItem, RoomNavView } from "@/types/room-nav";
+import { icChevron, icWarning } from "@/utils/icons";
 import { Modal } from "./mod";
 
 type ModalRoomCreateOrJoinProps = {};
@@ -280,11 +280,7 @@ export const ModalRoomCreateOrJoin = (_props: ModalRoomCreateOrJoinProps) => {
 					</div>
 
 					<div class="bottom">
-						<button
-							type="button"
-							class="link"
-							onClick={[setView, "selection"]}
-						>
+						<button type="button" class="link" onClick={[setView, "selection"]}>
 							Cancel
 						</button>
 						<button

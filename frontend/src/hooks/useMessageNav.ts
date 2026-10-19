@@ -253,7 +253,11 @@ export const useMessageNav = (channel_id: () => string) => {
 
 		// if the user explicitly selected text, don't intercept it
 		const selection = window.getSelection();
-		if (selection && !selection.isCollapsed && selection.toString().length > 0) {
+		if (
+			selection &&
+			!selection.isCollapsed &&
+			selection.toString().length > 0
+		) {
 			return false;
 		}
 

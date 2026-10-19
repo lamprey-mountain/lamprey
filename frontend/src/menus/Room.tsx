@@ -2,8 +2,8 @@ import type { NotifsRoom, PreferencesRoom, Room } from "sdk";
 import { Show } from "solid-js";
 import { useApi, useRooms } from "@/api";
 import { useCtx } from "@/app/context";
-import { formatDuration } from "@/atoms/Duration";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
+import { formatDuration } from "@/atoms/Duration";
 import { Checkbox } from "@/atoms/icons";
 import { timeAgo } from "@/atoms/Time.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
@@ -356,9 +356,7 @@ function RoomNotificationMenu(props: { room: Room }) {
 					<Show when={roomConfig()?.notifs.mute?.expires_at}>
 						<div class="subtext">
 							{t("notifs.unmutes", {
-								time: timeAgo(
-									getDate(roomConfig()?.notifs.mute?.expires_at!),
-								),
+								time: timeAgo(getDate(roomConfig()?.notifs.mute?.expires_at!)),
 							})}
 						</div>
 					</Show>

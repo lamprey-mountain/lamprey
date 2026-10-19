@@ -24,10 +24,6 @@ import type { ChannelT } from "@/types";
 import type { TocHeading } from "@/types/chat";
 import { getDate } from "@/utils/general";
 import {
-	buildTextAndSegments,
-	toDocPos,
-} from "../features/editor/markdown-highlight-plugin";
-import {
 	icBranch,
 	icBranchDefault,
 	icBranchFork,
@@ -48,6 +44,10 @@ import {
 	icTableOfContents,
 	icThread,
 } from "@/utils/icons";
+import {
+	buildTextAndSegments,
+	toDocPos,
+} from "../features/editor/markdown-highlight-plugin";
 import { useDocument } from "./context";
 import { exportAsHtml, exportAsMarkdown, generateFilename } from "./export";
 

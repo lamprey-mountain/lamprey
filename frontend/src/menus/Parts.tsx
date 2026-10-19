@@ -208,10 +208,7 @@ export function Item(
 			>
 				<div class="inner" classList={{ "has-check": hasSelection() }}>
 					<Show when={hasSelection()}>
-						<Show
-							when={isSelected()}
-							fallback={<div class="menu-check" />}
-						>
+						<Show when={isSelected()} fallback={<div class="menu-check" />}>
 							<CheckmarkIcon seed="menu-selected" class="menu-check" />
 						</Show>
 					</Show>

@@ -1,8 +1,4 @@
-import type {
-	Preferences,
-	PreferencesChannel,
-	PreferencesRoom,
-} from "sdk";
+import type { Preferences, PreferencesChannel, PreferencesRoom } from "sdk";
 import { logger } from "@/utils/logger";
 import { BaseService } from "../core/Service";
 

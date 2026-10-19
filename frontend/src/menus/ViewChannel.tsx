@@ -94,9 +94,7 @@ export function ViewChannelMenu(props: ViewChannelMenuProps) {
 	};
 
 	const removeFromFavorites = () => {
-		updateView((view) =>
-			updateViewChannel(view, props.channel_id, () => null),
-		);
+		updateView((view) => updateViewChannel(view, props.channel_id, () => null));
 	};
 
 	const logToConsole = () => console.log(channel());

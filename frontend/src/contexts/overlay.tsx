@@ -54,10 +54,10 @@ import {
 	PermissionOverwriteMenu,
 	RoomMenu,
 	SettingsMenu,
-	ViewChannelMenu,
-	ViewMenu,
 	TopicMenu,
 	UserMenu,
+	ViewChannelMenu,
+	ViewMenu,
 	VoiceInputMenu,
 	VoiceMenu,
 	VoiceOutputMenu,
@@ -498,9 +498,7 @@ export function OverlayProvider(props: ParentProps) {
 				);
 			}
 			case "channel_nav": {
-				return (
-					<ChannelNavMenu room_id={menu.room_id} view_id={menu.view_id} />
-				);
+				return <ChannelNavMenu room_id={menu.room_id} view_id={menu.view_id} />;
 			}
 			case "invite_application": {
 				return <InviteApplicationMenu app={menu.app} />;

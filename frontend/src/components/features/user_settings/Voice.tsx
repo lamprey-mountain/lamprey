@@ -16,9 +16,7 @@ import { createStaticShaderCanvas } from "@/atoms/Static";
 import { createVAD } from "../voice/vad";
 
 type VoiceInputMode = Preferences["frontend"]["voice_input_mode"];
-type BooleanSetting =
-	| "voice_echo_cancellation"
-	| "voice_noise_suppression";
+type BooleanSetting = "voice_echo_cancellation" | "voice_noise_suppression";
 
 // NOTE: maybe move this to another file?
 const useMediaDevices = () => {
@@ -350,9 +348,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 							type="range"
 							min="0"
 							max="100"
-							value={
-								ctx.preferences().frontend.voice_activity_threshold ?? 30
-							}
+							value={ctx.preferences().frontend.voice_activity_threshold ?? 30}
 							onChange={(e) => {
 								const c = ctx.preferences();
 								ctx.setPreferences({
@@ -376,9 +372,7 @@ export function Voice(_props: VoidProps<{ user: User }>) {
 							min="0"
 							max="5000"
 							step="100"
-							value={
-								ctx.preferences().frontend.voice_activity_timeout ?? 1000
-							}
+							value={ctx.preferences().frontend.voice_activity_timeout ?? 1000}
 							onChange={(e) => {
 								const c = ctx.preferences();
 								ctx.setPreferences({

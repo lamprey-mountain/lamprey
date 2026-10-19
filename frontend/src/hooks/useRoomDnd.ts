@@ -32,10 +32,7 @@ export interface RoomDndProps {
 const itemId = (item: AnyRoomNavItem) =>
 	item.type === "room" ? item.room_id : item.id;
 
-const findItem = (
-	items: RoomNavItem[],
-	id: string,
-): ItemLocation | null => {
+const findItem = (items: RoomNavItem[], id: string): ItemLocation | null => {
 	for (let i = 0; i < items.length; i++) {
 		const item = items[i];
 		if (itemId(item) === id) {
@@ -205,7 +202,8 @@ export const useRoomDnd = (props: RoomDndProps) => {
 
 		for (const item of previewedConfig()) {
 			if (item.type === "room" || item.type === "view") {
-				const mapped = item.type === "room" ? mapRoom(item.room_id) : mapView(item);
+				const mapped =
+					item.type === "room" ? mapRoom(item.room_id) : mapView(item);
 				if (mapped) result.push(mapped);
 				continue;
 			}
@@ -268,7 +266,9 @@ export const useRoomDnd = (props: RoomDndProps) => {
 		const id = el.dataset.id;
 		const type = el.dataset.type;
 		const dragged = dragging();
-		const folderId = el.closest("[data-folder-id]")?.getAttribute("data-folder-id");
+		const folderId = el
+			.closest("[data-folder-id]")
+			?.getAttribute("data-folder-id");
 
 		if (!id || !dragged || id === dragged.id) {
 			intoCreateFolder.clear();

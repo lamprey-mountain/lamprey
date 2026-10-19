@@ -72,7 +72,9 @@ export const FocusRingProvider = (props: ParentProps) => {
 	});
 
 	return (
-		<FocusRingContext.Provider value={{ reference, setOverride: setOverrideEl }}>
+		<FocusRingContext.Provider
+			value={{ reference, setOverride: setOverrideEl }}
+		>
 			{props.children}
 			<FocusRing reference={reference} />
 		</FocusRingContext.Provider>

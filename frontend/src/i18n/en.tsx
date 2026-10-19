@@ -111,14 +111,14 @@ export default {
 		default: "default",
 		default_messages_room:
 			"Uses the room's default notification setting ({{value}}).",
-		default_messages_user: "Uses your default notification setting ({{value}}).",
+		default_messages_user:
+			"Uses your default notification setting ({{value}}).",
 		everything: "everything",
 		everything_channel:
 			"You will be notified of all new messages in this channel.",
 		everything_room: "You will be notified for all messages.",
 		watching: "watching",
-		watching_channel:
-			"Messages in this channel will show up in your inbox.",
+		watching_channel: "Messages in this channel will show up in your inbox.",
 		watching_room: "Messages in this room will show up in your inbox.",
 		mentions: "mentions",
 		mentions_description: "You will only be notified on @mention",
@@ -129,15 +129,12 @@ export default {
 		default_threads_user:
 			"Uses your default notification setting for threads ({{value}}).",
 		new_threads: "new threads",
-		new_threads_channel:
-			"You will be notified when a new thread is created.",
+		new_threads_channel: "You will be notified when a new thread is created.",
 		new_threads_room: "You will be notified for new threads.",
 		threads_to_inbox: "threads to inbox",
-		threads_to_inbox_description:
-			"New threads will show up in your inbox.",
+		threads_to_inbox_description: "New threads will show up in your inbox.",
 		ignore_threads: "ignore threads",
-		ignore_threads_description:
-			"You won't be notified for new threads.",
+		ignore_threads_description: "You won't be notified for new threads.",
 		mention_everyone: "Enable @everyone and @here",
 		mention_everyone_description:
 			"You will receive notifications when @everyone or @here is mentioned.",

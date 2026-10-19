@@ -53,9 +53,7 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user.id}-preview-attachments-descriptions`}
-					checked={
-						ctx.preferences().frontend.preview_attachments_descriptions
-					}
+					checked={ctx.preferences().frontend.preview_attachments_descriptions}
 					onChange={() => toggle("preview_attachments_descriptions")()}
 					seed={`user-${props.user.id}-preview-attachments-descriptions`}
 				>
@@ -148,16 +146,12 @@ export function Chat(props: VoidProps<{ user: User }>) {
 				</CheckboxOption>
 				<CheckboxOption
 					id={`user-${props.user.id}-threads-sidebar-document`}
-					checked={
-						ctx.preferences().frontend.threads_sidebar_document
-					}
+					checked={ctx.preferences().frontend.threads_sidebar_document}
 					onChange={toggle("threads_sidebar_document")}
 					seed={`user-${props.user.id}-threads-sidebar-document`}
 				>
 					<Checkbox
-						checked={
-							ctx.preferences().frontend.threads_sidebar_document
-						}
+						checked={ctx.preferences().frontend.threads_sidebar_document}
 						seed={`user-${props.user.id}-threads-sidebar-document`}
 					/>
 					<span>{t("user_settings.threads_sidebar_document")}</span>

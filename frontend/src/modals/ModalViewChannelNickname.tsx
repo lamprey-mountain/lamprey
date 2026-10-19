@@ -34,7 +34,9 @@ export const ModalViewChannelNickname = (props: {
 					placeholder={props.placeholder}
 					onInput={(e) => setValue(e.currentTarget.value)}
 				/>
-				<p style="margin-top:12px;color:oklch(var(--color-fg5))">This name will only be visible to you.</p>
+				<p style="margin-top:12px;color:oklch(var(--color-fg5))">
+					This name will only be visible to you.
+				</p>
 				<div class="bottom">
 					<input type="submit" class="button primary" value="done!" />
 					<button type="button" class="button" onClick={modalCtl.close}>
