@@ -500,6 +500,17 @@ const TimelineHeader = (props: { channel: ChannelT }) => {
 
 	const isDm = () => props.channel.type === "Dm";
 
+	// TODO: see ChatHeader
+	const isAutoName = () =>
+		props.channel.name === "thread" && !!props.channel.auto_name;
+
+	const name = () => {
+		if (props.channel.name === "thread" && props.channel.auto_name) {
+			return props.channel.auto_name;
+		}
+		return props.channel.name;
+	};
+
 	const other = createMemo(() => {
 		if (!isDm()) return null;
 		const other = props.channel.recipients?.find((a) => a.id !== me()?.id);
@@ -531,9 +542,9 @@ const TimelineHeader = (props: { channel: ChannelT }) => {
 						</p>
 					</Match>
 					<Match when={true}>
-						<h1>{props.channel.name}</h1>
+						<h1 classList={{ "name-automatic": isAutoName() }}>{name()}</h1>
 						<p>
-							This is the start of {props.channel.name}.{" "}
+							This is the start of {name()}.{" "}
 							<Show when={props.channel.description}>
 								{(desc) => <Markdown content={desc()} />}
 							</Show>

@@ -3983,6 +3983,11 @@ button.round {
 	width: 24px;
 }
 
+.name-automatic {
+	color: $fg-600;
+	font-style: italic;
+}
+
 .chat-header {
 	display: flex;
 	justify-content: space-between;

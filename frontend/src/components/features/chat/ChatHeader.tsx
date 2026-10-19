@@ -1,5 +1,5 @@
 import type { Channel } from "sdk";
-import { createSignal, Match, Show, Switch } from "solid-js";
+import { createMemo, createSignal, Match, Show, Switch } from "solid-js";
 import { useChannels, useMessages } from "@/api";
 import { useCtx } from "@/app/context";
 import icCall from "@/assets/call.png";
@@ -158,7 +158,11 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 		}
 	};
 
-	const name = () => {
+	// TODO: make name an Option; optional for threads(?) and None for dms
+	const isAutoName = () =>
+		props.channel.name === "thread" && !!props.channel.auto_name;
+
+	const name = createMemo(() => {
 		if (props.channel.type === "Dm") {
 			const user_id = currentUser()?.id;
 			return (
@@ -166,8 +170,12 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 			);
 		}
 
+		if (props.channel.name === "thread" && props.channel.auto_name) {
+			return props.channel.auto_name;
+		}
+
 		return props.channel.name;
-	};
+	});
 
 	const hasPins = () =>
 		props.channel.type === "Text" ||
@@ -231,7 +239,12 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 						/>
 					</Match>
 					<Match when={true}>
-						<h3 class="name-text">{name()}</h3>
+						<h3
+							class="name-text"
+							classList={{ "name-automatic": isAutoName() }}
+						>
+							{name()}
+						</h3>
 					</Match>
 				</Switch>
 			</div>
