@@ -181,13 +181,12 @@ impl Calculator<'_> {
         let mention_user = mu.users_from_direct.contains(&user_id);
         let mention_everyone = mu.users_from_everyone.contains(&user_id);
         let mention_role = mu.users_from_role.contains(&user_id);
+        let recipient = mu.users_from_recipient.contains(&user_id);
         let reply = self
             .context
             .replied_message
             .as_ref()
             .map_or(false, |m| m.author_id == user_id);
-
-        // TODO: handle users_from_recipient?
 
         let reply_action = if reply {
             prefs.resolve_replies().clone().into()
@@ -195,7 +194,9 @@ impl Calculator<'_> {
             Actions::skip()
         };
 
-        let mentioned = if let Some(room_prefs) = &prefs.room {
+        let mentioned = if recipient {
+            true
+        } else if let Some(room_prefs) = &prefs.room {
             let mention_role_allowed = mention_role && room_prefs.mention_roles;
             let mention_everyone_allowed = mention_everyone && room_prefs.mention_everyone;
             mention_user || mention_role_allowed || mention_everyone_allowed

@@ -142,8 +142,13 @@ impl ServiceNotifications {
 
         let calc = self.calculator_for_message(context);
 
-        let targets: Vec<UserId> = mentioned_users
-            .all()
+        let mut targets = mentioned_users.all();
+        // NOTE: should this be part of mentioned_users?
+        if let Some(replied_message) = &replied_message {
+            targets.insert(replied_message.author_id);
+        }
+
+        let targets: Vec<UserId> = targets
             .into_iter()
             .filter(|&id| id != message.author_id) // TODO: move this logic into calculator
             .collect();

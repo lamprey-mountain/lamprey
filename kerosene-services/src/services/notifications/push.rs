@@ -96,11 +96,13 @@ impl ServiceNotifications {
     async fn push_inner(state: Globals, sub: PushData, payload: Bytes) -> Result<()> {
         let vapid_keys = state.services().notifications.get_vapid_keys().await?;
 
-        let p256dh_encoded = B64.encode(&sub.key_p256dh);
-        let auth_encoded = B64.encode(&sub.key_auth);
-        let p256dh = p256dh_encoded.as_bytes();
-        let auth = auth_encoded.as_bytes();
-        let ciphertext = ece::encrypt(p256dh, auth, &payload)
+        let p256dh = B64
+            .decode(&sub.key_p256dh)
+            .map_err(|e| Error::Internal(format!("invalid p256dh key: {}", e)))?;
+        let auth = B64
+            .decode(&sub.key_auth)
+            .map_err(|e| Error::Internal(format!("invalid auth key: {}", e)))?;
+        let ciphertext = ece::encrypt(&p256dh, &auth, &payload)
             .map_err(|e| Error::Internal(format!("encryption failed: {}", e)))?;
         let host = state
             .config()
@@ -192,10 +194,10 @@ impl ServiceNotifications {
             let mut pushed_ids = Vec::new();
             for (user_id, notif) in notifs {
                 let id = notif.id;
-                if let Err(e) = srv.notifications.push(user_id, notif.into()).await {
-                    error!("failed to push notification {id}: {e}");
+                match srv.notifications.push(user_id, notif.into()).await {
+                    Ok(()) => pushed_ids.push(id),
+                    Err(e) => error!("failed to push notification {id}: {e}"),
                 }
-                pushed_ids.push(id);
             }
 
             if let Err(e) = data.notification_set_pushed(&pushed_ids).await {
