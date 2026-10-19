@@ -69,12 +69,18 @@ const simulateDrop = (
 	const from = findItem(config, fromId);
 	if (!from || fromId === target.id) return source;
 
-	if (target.id !== "end" && !findItem(config, target.id)) return source;
+	if (target.id !== "end" && target.id !== "home" && !findItem(config, target.id))
+		return source;
 
 	from.container.splice(from.index, 1);
 
 	if (target.id === "end") {
 		config.push(from.item);
+		return removeEmptyFolders(config);
+	}
+
+	if (target.id === "home") {
+		config.unshift(from.item);
 		return removeEmptyFolders(config);
 	}
 
@@ -275,7 +281,7 @@ export const useRoomDnd = (props: RoomDndProps) => {
 			return;
 		}
 
-		if (id === "end") {
+		if (id === "end" || id === "home") {
 			intoCreateFolder.clear();
 			setTarget({ id, position: "before" });
 			return;

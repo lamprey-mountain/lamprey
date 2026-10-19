@@ -225,7 +225,12 @@ export const RoomNav = () => {
 						class="item room-item"
 						classList={{ selected: isSelected("home") }}
 						data-nav-id="home"
+						data-id="home"
+						data-type="root"
 						tabIndex={isFocused("home") ? 0 : -1}
+						onDragOver={dnd.handle}
+						onDrop={dnd.handle}
+						onDragEnd={dnd.handle}
 						ref={homeTip.content}
 					>
 						<div class="tile with-background">
