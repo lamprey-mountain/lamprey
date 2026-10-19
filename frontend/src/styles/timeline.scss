@@ -225,6 +225,15 @@
 	}
 }
 
+.focus-ring {
+	pointer-events: none;
+	// keep below the message toolbar (z-index 1000)
+	z-index: 999;
+	box-sizing: border-box;
+	border: solid 2px oklch(var(--color-link-500));
+	border-radius: 4px;
+}
+
 .timeline-item {
 	/* overflow-anchor: none; */ // useless?
 

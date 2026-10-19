@@ -1,9 +1,15 @@
 import { MultiProvider } from "@solid-primitives/context";
 import type { MemoryHistory, RouteSectionProps } from "@solidjs/router";
 import { MemoryRouter, Route } from "@solidjs/router";
-import { type Component, createEffect, type ParentProps, Show } from "solid-js";
+import {
+	type Component,
+	createEffect,
+	type ParentProps,
+	Show,
+} from "solid-js";
 import { RootStoreContext } from "@/api";
 import { chatctx, useCtx } from "@/app/context";
+import { FocusRingProvider } from "@/contexts/focus-ring";
 import { CalendarPopupProvider } from "@/components/features/calendar/Calendar";
 import { VoiceProvider } from "@/components/features/voice/context";
 import { VoiceStreams } from "@/components/features/voice/VoiceStreams";
@@ -230,7 +236,8 @@ export const AppShell: Component<ParentProps> = (props) => {
 
 	// HACK: set class/data-message-style for both root and overlay (for modals)
 	return (
-		<>
+		<FocusRingProvider>
+			<>
 			<div
 				id="root"
 				class="root precedence-hack"
@@ -286,7 +293,8 @@ export const AppShell: Component<ParentProps> = (props) => {
 						: "cozy"
 				}
 			></div>
-		</>
+			</>
+		</FocusRingProvider>
 	);
 };
 
