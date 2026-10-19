@@ -2,9 +2,11 @@ import fuzzysort from "fuzzysort";
 import type { Room } from "sdk";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { useApi } from "@/api";
+import { useCtx } from "@/app/context";
 import { Icon } from "@/atoms/Icon";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { RoomIcon } from "@/components/shared/User";
+import { useMenu } from "@/contexts/mod";
 import {
 	type EmojiData,
 	emojiResource,
@@ -129,6 +131,8 @@ type EmojiPickerProps = {
 
 export const EmojiPicker = (props: EmojiPickerProps) => {
 	const api = useApi();
+	const ctx = useCtx();
+	const { setMenu } = useMenu();
 	const [search, setSearch] = createSignal("");
 	const [hover, setHover] = createSignal<UnifiedEmoji>();
 
@@ -169,10 +173,48 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 		},
 	);
 
+	const favoritesGroup = createMemo<EmojiGroup | null>(() => {
+		const keys = ctx.preferences().frontend.favorite_emoji ?? [];
+		if (keys.length === 0) return null;
+
+		const emojis: UnifiedEmoji[] = [];
+		for (const key of keys) {
+			if (key.startsWith("c:")) {
+				const emoji = api.emoji.cache.get(key.slice(2));
+				if (!emoji) continue;
+				const owner = emoji.owner;
+				emojis.push({
+					type: "custom",
+					label: emoji.name,
+					id: emoji.id,
+					media_id: emoji.media_id,
+					animated: emoji.animated,
+					room_id: owner?.owner === "Room" ? owner.room_id : undefined,
+				});
+			} else if (key.startsWith("t:")) {
+				const unicode = key.slice(2);
+				const hexcode = getEmojiHex(unicode);
+				const data = emojiResource().get(hexcode.toUpperCase());
+				emojis.push({
+					type: "standard",
+					label: data?.label ?? unicode,
+					unicode,
+					hexcode,
+				});
+			}
+		}
+
+		if (emojis.length === 0) return null;
+		return { id: "favorites", name: "Favorites", emojis };
+	});
+
 	const allGroups = createMemo(() => {
 		const standard = standardGroups();
 		const custom = customGroupsResource() || [];
-		return [...custom, ...standard];
+		const favorites = favoritesGroup();
+		return favorites
+			? [favorites, ...custom, ...standard]
+			: [...custom, ...standard];
 	});
 
 	// TODO: convert this to createMemo
@@ -268,7 +310,17 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 							class="button"
 							onClick={() => scrollToCategory(cat.id)}
 						>
-							<Show when={cat.room} fallback={<Icon src={cat.icon!} />}>
+							<Show
+								when={cat.room}
+								fallback={
+									<Show
+										when={cat.icon}
+										fallback={<span class="favorite-cat">★</span>}
+									>
+										<Icon src={cat.icon!} />
+									</Show>
+								}
+							>
 								<RoomIcon room={cat.room!} />
 							</Show>
 						</button>
@@ -295,6 +347,29 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 														`<:${emoji.label}:${emoji.id}>`,
 														e.shiftKey,
 													);
+												}
+											}}
+											onContextMenu={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												if (emoji.type === "standard") {
+													setMenu({
+														x: e.clientX,
+														y: e.clientY,
+														type: "emoji",
+														key: `t:${emoji.unicode}`,
+														content: emoji.unicode,
+													});
+												} else {
+													setMenu({
+														x: e.clientX,
+														y: e.clientY,
+														type: "emoji",
+														key: `c:${emoji.id}`,
+														id: emoji.id,
+														name: emoji.label,
+														animated: emoji.animated,
+													});
 												}
 											}}
 											data-emoji-hex={emoji.hexcode}
