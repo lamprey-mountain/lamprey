@@ -55,6 +55,7 @@ struct Completion<'a> {
     llm: &'a Llm,
     ctx: Context,
     messages: Vec<ChatMessage>,
+    tools: Vec<ToolDef>,
     inner: Option<BoxStream<'static, CompletionChunk>>,
     calls: Vec<ToolCall>,
     text: String,
@@ -119,11 +120,31 @@ impl Llm {
         ctx: Context,
         messages: &[ChatMessage],
     ) -> reqwest::Result<impl Stream<Item = CompletionChunk> + '_> {
-        let inner = self.complete_step(messages).await?;
+        let tools = self.tools.iter().map(|tool| tool.definition()).collect();
+        self.complete_with(ctx, messages, tools).await
+    }
+
+    /// like [`Llm::complete`], but without offering any tools to the model
+    pub async fn complete_without_tools(
+        &self,
+        ctx: Context,
+        messages: &[ChatMessage],
+    ) -> reqwest::Result<impl Stream<Item = CompletionChunk> + '_> {
+        self.complete_with(ctx, messages, Vec::new()).await
+    }
+
+    async fn complete_with(
+        &self,
+        ctx: Context,
+        messages: &[ChatMessage],
+        tools: Vec<ToolDef>,
+    ) -> reqwest::Result<impl Stream<Item = CompletionChunk> + '_> {
+        let inner = self.complete_step(messages, &tools).await?;
         let state = Completion {
             llm: self,
             ctx,
             messages: messages.to_vec(),
+            tools,
             inner: Some(Box::pin(inner)),
             calls: Vec::new(),
             text: String::new(),
@@ -152,7 +173,7 @@ impl Llm {
         });
         title_messages.extend_from_slice(messages);
 
-        let stream = self.complete(ctx, &title_messages).await.ok()?;
+        let stream = self.complete_without_tools(ctx, &title_messages).await.ok()?;
         futures::pin_mut!(stream);
 
         let mut title = String::new();
@@ -175,13 +196,14 @@ impl Llm {
     async fn complete_step(
         &self,
         messages: &[ChatMessage],
+        tools: &[ToolDef],
     ) -> reqwest::Result<impl Stream<Item = CompletionChunk> + use<>> {
         let request = CompletionRequest {
             model: self.config.model.clone(),
             messages: messages.to_vec(),
             stream: true,
-            tools: self.tools.iter().map(|tool| tool.definition()).collect(),
-            tool_choice: Some("auto"),
+            tools: tools.to_vec(),
+            tool_choice: (!tools.is_empty()).then_some("auto"),
         };
 
         let response = self
@@ -279,7 +301,7 @@ impl Completion<'_> {
         }
 
         // send tool results to the model
-        match self.llm.complete_step(&self.messages).await {
+        match self.llm.complete_step(&self.messages, &self.tools).await {
             Ok(next) => {
                 self.inner = Some(Box::pin(next));
                 Some(())
