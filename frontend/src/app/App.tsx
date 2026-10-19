@@ -91,6 +91,19 @@ const App: Component = () => {
 						path="/room-template/:template_id"
 						component={RouteRoomTemplate}
 					/>
+					<Route path="/view/:view_id" component={RouteHome} />
+					<Route
+						path="/view/:view_id/channel/:channel_id"
+						component={RouteChannel}
+					/>
+					<Route
+						path="/view/:view_id/channel/:channel_id/message/:message_id"
+						component={RouteChannel}
+					/>
+					<Route
+						path="/view/:view_id/channel/:channel_id/script/:script_id"
+						component={RouteChannel}
+					/>
 					<Route path="/channel/:channel_id" component={RouteChannel} />
 					<Route
 						path="/channel/:channel_id/message/:message_id"

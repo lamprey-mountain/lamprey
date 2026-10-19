@@ -1,5 +1,5 @@
 import { useParams } from "@solidjs/router";
-import type { Channel, ChannelType } from "sdk";
+import type { api, Channel, ChannelType } from "sdk";
 import {
 	createEffect,
 	createMemo,
@@ -8,6 +8,7 @@ import {
 	Index,
 	Show,
 } from "solid-js";
+import { useCtx } from "@/app/context";
 import {
 	useApi,
 	useChannels,
@@ -28,6 +29,7 @@ import { useDisplay, useMenu } from "@/contexts/mod";
 import { useModals } from "@/contexts/modal";
 import { useNavigate, useRouter } from "@/contexts/router";
 import { useChannelDnd } from "@/hooks/useChannelDnd";
+import { useViewDnd } from "@/hooks/useViewDnd";
 import {
 	type NavItem,
 	useChannelNavKeybinds,
@@ -39,11 +41,27 @@ import {
 	calculatePermissions,
 	type PermissionContext,
 } from "@/lib/permissions/calculator";
+import {
+	VIEW_UNCATEGORIZED_KEY,
+	updateRoomNavView,
+	viewCategoryKey,
+} from "@/lib/room-nav";
+import type { RoomNavItem, RoomNavView } from "@/types/room-nav";
 import { getDate } from "@/utils/general";
 import { useVoice } from "../features/voice/context";
 import { Avatar, ChannelIcon } from "./User";
 
 type ChannelWithThreads = Channel & { threads?: Channel[] };
+type NavChannel = ChannelWithThreads & { nickname?: string | null };
+type NavCategoryInfo = {
+	id: string;
+	name: string;
+	channel: Channel | null;
+};
+type NavCategory = {
+	category: NavCategoryInfo | null;
+	channels: NavChannel[];
+};
 
 const CHANNEL_TYPES_HAS_UNREAD = new Set<ChannelType>([
 	"Text",
@@ -66,7 +84,8 @@ function setLastViewedChannel(roomId: string, channelId: string): void {
 	localStorage.setItem(key, channelId);
 }
 
-export const ChannelNav = (props: { room_id: string }) => {
+export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
+	const ctx = useCtx();
 	const api2 = useApi();
 	const dms2 = useDms();
 	const rooms2 = useRooms();
@@ -82,8 +101,45 @@ export const ChannelNav = (props: { room_id: string }) => {
 	const user = useCurrentUser();
 	const currentUserId = () => user()?.id;
 
+	const view = createMemo<RoomNavView | null>(() => {
+		const viewId = props.view_id;
+		if (!viewId) return null;
+
+		const config = ctx.preferences().frontend.roomNav as
+			| RoomNavItem[]
+			| undefined;
+		if (!config) return null;
+
+		return (
+			config.find(
+				(item): item is RoomNavView =>
+					item.type === "view" && item.id === viewId,
+			) ?? null
+		);
+	});
+
+	const updateView = (update: (view: RoomNavView) => RoomNavView) => {
+		const viewId = props.view_id;
+		if (!viewId) return;
+
+		const prefs = ctx.preferences();
+		const config = (prefs.frontend.roomNav ?? []) as RoomNavItem[];
+		const roomNav = updateRoomNavView(config, viewId, update);
+		if (!roomNav) return;
+
+		ctx.setPreferences({
+			...prefs,
+			frontend: {
+				...prefs.frontend,
+				roomNav,
+			},
+		});
+	};
+
+	const viewDnd = useViewDnd({ view, updateView });
+
 	createEffect(() => {
-		if (!props.room_id) return;
+		if (!props.room_id || props.view_id) return;
 
 		if (!flags.has("auto_redirect_last_channel")) return;
 
@@ -106,6 +162,27 @@ export const ChannelNav = (props: { room_id: string }) => {
 		api2.channels.fetchRoomList(rid);
 	});
 
+	// views may reference channels from several rooms
+	createEffect(() => {
+		const currentView = view();
+		if (!currentView) return;
+
+		const roomIds = new Set<string>();
+		const addChannels = (channels: api["ViewChannel"][] | undefined) => {
+			for (const channel of channels ?? []) {
+				if (channel.room_id) roomIds.add(channel.room_id);
+			}
+		};
+
+		addChannels(currentView.uncategorized_channels);
+		for (const category of currentView.categories ?? []) {
+			if ("channels" in category) addChannels(category.channels);
+			else if (category.room_id) roomIds.add(category.room_id);
+		}
+
+		for (const rid of roomIds) api2.channels.fetchRoomList(rid);
+	});
+
 	// track collapsed categories
 	// TODO: persist in user preferences
 	const [collapsedCategories, setCollapsedCategories] = createSignal<
@@ -122,15 +199,15 @@ export const ChannelNav = (props: { room_id: string }) => {
 	const roomMembers2 = useRoomMembers();
 
 	const canViewChannel = (channel: Channel): boolean => {
-		if (!props.room_id || !currentUserId()) {
+		const rid = channel.room_id ?? props.room_id;
+		if (!rid || !currentUserId()) {
 			return true;
 		}
 
-		const rid = props.room_id;
 		const uid = currentUserId();
 
 		// Optimization: Owners can always view all channels.
-		if (uid && room()?.owner_id === uid) return true;
+		if (uid && rooms2.cache.get(rid)?.owner_id === uid) return true;
 
 		const permissionContext: PermissionContext = {
 			api: api2,
@@ -145,9 +222,70 @@ export const ChannelNav = (props: { room_id: string }) => {
 		return permissions.has("ChannelView");
 	};
 
-	const categories = createMemo<
-		Array<{ category: Channel | null; channels: Array<ChannelWithThreads> }>
-	>(() => {
+	const viewChannel = (
+		channel: api["ViewChannel"],
+	): NavChannel | null => {
+		const cached = channels2.cache.get(channel.id);
+		if (!cached || cached.deleted_at || !canViewChannel(cached)) return null;
+
+		return {
+			...cached,
+			name: channel.nickname ?? cached.name,
+			nickname: channel.nickname,
+			threads: [],
+		};
+	};
+
+	const viewCategories = (currentView: RoomNavView): NavCategory[] => {
+		const result: NavCategory[] = [];
+		const uncategorized = (currentView.uncategorized_channels ?? [])
+			.map(viewChannel)
+			.filter((channel): channel is NavChannel => !!channel);
+
+		if (uncategorized.length > 0) {
+			result.push({ category: null, channels: uncategorized });
+		}
+
+		for (const [index, category] of
+			currentView.categories?.entries() ?? []) {
+			if ("channels" in category) {
+				result.push({
+					category: {
+						id: viewCategoryKey(currentView.id, index),
+						name: category.name,
+						channel: null,
+					},
+					channels: category.channels
+						.map(viewChannel)
+						.filter((channel): channel is NavChannel => !!channel),
+				});
+				continue;
+			}
+
+			const channel = viewChannel(category);
+			if (!channel) continue;
+
+			if (channel.type === "Category") {
+				result.push({
+					category: {
+						id: channel.id,
+						name: channel.name,
+						channel,
+					},
+					channels: [],
+				});
+			} else {
+				result.push({ category: null, channels: [channel] });
+			}
+		}
+
+		return result;
+	};
+
+	const categories = createMemo<NavCategory[]>(() => {
+		const currentView = view();
+		if (currentView) return viewCategories(currentView);
+
 		const allChannelsMap = new Map<string, ChannelWithThreads>();
 
 		for (const c of channels2.listByRoom(props.room_id || null)) {
@@ -247,21 +385,28 @@ export const ChannelNav = (props: { room_id: string }) => {
 			}
 		}
 		return [...categoryMap.entries()]
-			.map(([cid, cs]) => ({
-				category: cid ? (channels2.cache.get(cid) ?? null) : null,
-				channels: cs,
-			}))
+			.map(([cid, cs]) => {
+				const channel = cid ? (channels2.cache.get(cid) ?? null) : null;
+				return {
+					category: channel
+						? { id: channel.id, name: channel.name, channel }
+						: null,
+					channels: cs,
+				};
+			})
 			.sort((a, b) => {
+				const aPosition = a.category?.channel?.position;
+				const bPosition = b.category?.channel?.position;
 				if (!a.category) return -1;
 				if (!b.category) return 1;
 
-				if (a.category.position == null && b.category.position == null) {
+				if (aPosition == null && bPosition == null) {
 					return a.category.id < b.category.id ? 1 : -1;
 				}
-				if (a.category.position == null) return 1;
-				if (b.category.position == null) return -1;
+				if (aPosition == null) return 1;
+				if (bPosition == null) return -1;
 
-				const p = a.category.position - b.category.position;
+				const p = aPosition - bPosition;
 				if (p === 0) {
 					return a.category.id < b.category.id ? 1 : -1;
 				}
@@ -378,11 +523,14 @@ export const ChannelNav = (props: { room_id: string }) => {
 		return selected === id;
 	};
 
-	const isVisible = (chan: ChannelWithThreads) => {
+	const isVisible = (
+		chan: ChannelWithThreads,
+		categoryId: string | null = chan.parent_id ?? null,
+	) => {
 		const isFocused =
 			chan.id === params.channel_id ||
 			chan.threads?.some((t) => t.id === params.channel_id);
-		const isCollapsed = collapsedCategories().has(chan.parent_id ?? "");
+		const isCollapsed = collapsedCategories().has(categoryId ?? "");
 		return !isCollapsed || isFocused;
 	};
 
@@ -394,13 +542,15 @@ export const ChannelNav = (props: { room_id: string }) => {
 			onContextMenu={(e) => {
 				e.preventDefault();
 				const room_id = props.room_id;
-				if (!room_id) return;
+				const view_id = props.view_id;
+				if (!room_id && !view_id) return;
 				queueMicrotask(() => {
 					setMenu({
 						x: e.clientX,
 						y: e.clientY,
 						type: "channel_nav",
 						room_id,
+						view_id,
 					});
 				});
 			}}
@@ -424,7 +574,8 @@ export const ChannelNav = (props: { room_id: string }) => {
 				>
 					<div>
 						{/* <Icon src={icChevron} alt="" /> */}
-						{props.room_id ? (room()?.name ?? "loading...") : "home"}
+						{view()?.name ??
+							(props.room_id ? (room()?.name ?? "loading...") : "home")}
 					</div>
 				</button>
 			</Show>
@@ -450,7 +601,7 @@ export const ChannelNav = (props: { room_id: string }) => {
 					</a>
 				</li>
 
-				<Show when={!props.room_id}>
+				<Show when={!props.room_id && !view()}>
 					<Show when={flags.has("inbox")}>
 						<li
 							class="channel-item"
@@ -500,15 +651,29 @@ export const ChannelNav = (props: { room_id: string }) => {
 										classList={{
 											collapsed: collapsedCategories().has(cat().id),
 										}}
-										data-dnd-placement={dnd.placement(cat().id)}
-										data-channel-id={cat().id}
+										data-dnd-placement={
+											view()
+												? cat().channel
+													? undefined
+													: viewDnd.placement(cat().id)
+												: cat().channel
+													? dnd.placement(cat().id)
+													: undefined
+										}
+										data-channel-id={cat().channel ? cat().id : undefined}
 										data-nav-id={cat().id}
 										tabIndex={isFocused(cat().id) ? 0 : -1}
-										draggable="true"
-										onDragStart={dnd.handle}
-										onDragOver={dnd.handle}
-										onDrop={dnd.handle}
-										onDragEnd={dnd.handle}
+										draggable={!!cat().channel && !view()}
+										onDragStart={view() ? undefined : dnd.handle}
+										onDragOver={
+											view()
+												? cat().channel
+													? undefined
+													: (e: DragEvent) => viewDnd.overCategory(e, cat().id)
+												: dnd.handle
+										}
+										onDrop={view() ? viewDnd.handleDrop : dnd.handle}
+										onDragEnd={view() ? viewDnd.handleEnd : dnd.handle}
 										onClick={() => {
 											setCollapsedCategories((prev) => {
 												const newSet = new Set(prev);
@@ -521,6 +686,8 @@ export const ChannelNav = (props: { room_id: string }) => {
 											});
 										}}
 										onContextMenu={(e) => {
+											const channel = cat().channel;
+											if (!channel) return;
 											e.preventDefault();
 											e.stopPropagation();
 											queueMicrotask(() => {
@@ -528,7 +695,7 @@ export const ChannelNav = (props: { room_id: string }) => {
 													x: e.clientX,
 													y: e.clientY,
 													type: "channel",
-													channel_id: cat().id,
+													channel_id: channel.id,
 												});
 											});
 										}}
@@ -545,19 +712,38 @@ export const ChannelNav = (props: { room_id: string }) => {
 									</div>
 								)}
 							</Show>
-							<ul class="category-channels">
+							<ul
+								class="category-channels"
+								data-dnd-placement={
+									view() && !category?.channel
+										? viewDnd.placement(
+												category ? category.id : VIEW_UNCATEGORIZED_KEY,
+											)
+										: undefined
+								}
+								onDragOver={
+									view()
+										? category?.channel
+											? undefined
+											: category
+												? (e: DragEvent) => viewDnd.overCategory(e, category.id)
+												: viewDnd.overUncategorized
+										: dnd.handle
+								}
+								onDrop={view() ? viewDnd.handleDrop : dnd.handle}
+							>
 								<For
 									each={channels}
 									fallback={
 										<Show
-											when={!props.room_id}
+											when={!props.room_id && !view()}
 											fallback={
 												<div
 													class="empty-text"
 													style="margin-left: 16px"
-													data-channel-id={category?.id}
-													onDragOver={dnd.handle}
-													onDrop={dnd.handle}
+													data-channel-id={category?.channel?.id}
+													onDragOver={view() ? undefined : dnd.handle}
+													onDrop={view() ? undefined : dnd.handle}
 												>
 													(no channels)
 												</div>
@@ -589,25 +775,40 @@ export const ChannelNav = (props: { room_id: string }) => {
 									}
 								>
 									{(channel) => (
-										<Show when={isVisible(channel)}>
+										<Show when={isVisible(channel, category?.id ?? null)}>
 											<li
 												class="channel-item"
 												classList={{
 													dm: channel.type === "Dm" || channel.type === "Gdm",
 												}}
-												data-dnd-placement={dnd.placement(channel.id)}
+												data-dnd-placement={
+													view()
+														? viewDnd.placement(channel.id)
+														: dnd.placement(channel.id)
+												}
 												data-channel-id={channel.id}
 												data-nav-id={channel.id}
 												tabIndex={isFocused(channel.id) ? 0 : -1}
 												draggable="true"
-												onDragStart={dnd.handle}
-												onDragOver={dnd.handle}
-												onDrop={dnd.handle}
-												onDragEnd={dnd.handle}
+												onDragStart={view() ? viewDnd.handleStart : dnd.handle}
+												onDragOver={
+													view()
+														? (e: DragEvent) =>
+																viewDnd.overChannel(
+																	e,
+																	category?.id ?? null,
+																	channel.id,
+																)
+															: dnd.handle
+												}
+												onDrop={view() ? viewDnd.handleDrop : dnd.handle}
+												onDragEnd={view() ? viewDnd.handleEnd : dnd.handle}
 											>
 												<ItemChannel
 													channel={channel}
-													room_id={props.room_id}
+													room_id={channel.room_id ?? props.room_id}
+													view_id={props.view_id}
+													nickname={channel.nickname}
 													icon
 												/>
 												<Show when={channel.threads?.length}>
@@ -633,7 +834,8 @@ export const ChannelNav = (props: { room_id: string }) => {
 																>
 																	<ItemChannel
 																		channel={chan}
-																		room_id={props.room_id}
+																		room_id={chan.room_id ?? props.room_id}
+																		view_id={props.view_id}
 																		icon={false}
 																	/>
 																</li>
@@ -702,6 +904,8 @@ export const ChannelNav = (props: { room_id: string }) => {
 export const ItemChannel = (props: {
 	channel: Channel;
 	room_id: string;
+	view_id?: string;
+	nickname?: string | null;
 	icon: boolean;
 }) => {
 	const nav = useNavigate();
@@ -713,8 +917,9 @@ export const ItemChannel = (props: {
 	const { isMobile } = useDisplay();
 
 	const handleClick = (_e: MouseEvent) => {
-		if (props.room_id) {
-			setLastViewedChannel(props.room_id, props.channel.id);
+		const roomId = props.channel.room_id ?? props.room_id;
+		if (roomId) {
+			setLastViewedChannel(roomId, props.channel.id);
 		}
 
 		if (isMobile()) {
@@ -747,6 +952,8 @@ export const ItemChannel = (props: {
 	});
 
 	const name = () => {
+		if (props.nickname) return props.nickname;
+
 		if (props.channel.type === "Dm") {
 			return otherUser()?.name ?? "dm";
 		}
@@ -778,6 +985,9 @@ export const ItemChannel = (props: {
 	const href = () => {
 		if (props.channel.type === "Info") {
 			return props.channel.url ?? null;
+		}
+		if (props.view_id) {
+			return `/view/${props.view_id}/channel/${props.channel.id}`;
 		}
 		return `/channel/${props.channel.id}`;
 	};

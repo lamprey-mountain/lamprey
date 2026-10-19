@@ -1,4 +1,4 @@
-import type { RouteSectionProps } from "@solidjs/router";
+import { type RouteSectionProps, useParams } from "@solidjs/router";
 import type { Channel } from "sdk";
 import type { JSX, ParentProps } from "solid-js";
 import { createEffect, createMemo, Match, on, Show, Switch } from "solid-js";
@@ -57,6 +57,7 @@ export { RouteUser } from "@/components/shared/UserPage";
 
 export const AppLayoutMain = (props: ParentProps<RouteSectionProps>) => {
 	const roomId = useCurrentRoomId();
+	const params = useParams();
 
 	return (
 		<>
@@ -71,7 +72,7 @@ export const AppLayoutMain = (props: ParentProps<RouteSectionProps>) => {
 			>
 				<div class="nav-tray">
 					<RoomNav />
-					<ChannelNav room_id={roomId() ?? ""} />
+					<ChannelNav room_id={roomId() ?? ""} view_id={params.view_id} />
 					<UserTray />
 				</div>
 			</Resizable>

@@ -147,6 +147,8 @@
 	.category-channels {
 		display: flex;
 		flex-direction: column;
+
+		@include drop-target-styles;
 	}
 
 	.channel-item {

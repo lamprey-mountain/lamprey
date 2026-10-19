@@ -1,3 +1,4 @@
+import { useParams } from "@solidjs/router";
 import type { Room } from "sdk";
 import {
 	createMemo,
@@ -135,22 +136,24 @@ export const RoomNav = () => {
 		return items;
 	});
 
+	const params = useParams();
 	const currentRoomId = useCurrentRoomId();
+	const selectedNavId = () => params.view_id ?? (currentRoomId() || "home");
 
 	const keybinds = useRoomNavKeybinds({
 		items: navItems,
-		selectedId: () => currentRoomId() || "home",
+		selectedId: selectedNavId,
 		onToggleFolder: toggleFolder,
 	});
 
 	const isFocused = (id: string) => {
 		const focused = keybinds.focusedId();
 		if (focused !== null) return focused === id;
-		const selected = currentRoomId() || "home";
+		const selected = selectedNavId();
 		return selected === id;
 	};
 
-	const isSelected = createSelector(() => currentRoomId() || "home");
+	const isSelected = createSelector(selectedNavId);
 
 	const RoomItem = (props: { room: Room; folderId?: string }) => {
 		const mentionCount = () => getRoomMentionCount(props.room.id);
@@ -323,19 +326,48 @@ export const RoomNav = () => {
 										);
 									}}
 								</Match>
-								<Match when={item.type === "view"}>
-									{(view: { name: string }) => (
+								<Match when={item.type === "view" && item} keyed>
+									{(view) => (
 										<li
 											class="item menu-room"
-											data-id={`view-${view.name}`}
+											draggable="true"
+											data-id={view.id}
 											data-type="view"
-											data-nav-id={`view-${view.name}`}
-											tabIndex={isFocused(`view-${view.name}`) ? 0 : -1}
-											// isSelected
+											data-nav-id={view.id}
+											tabIndex={isFocused(view.id) ? 0 : -1}
+											onDragStart={dnd.handle}
+											onDragOver={dnd.handle}
+											onDragLeave={dnd.handle}
+											onDrop={dnd.handle}
+											onDragEnd={dnd.handle}
+											onContextMenu={(e) => {
+												e.preventDefault();
+												queueMicrotask(() => {
+													setMenu({
+														x: e.clientX,
+														y: e.clientY,
+														type: "view",
+														view_id: view.id,
+													});
+												});
+											}}
+											classList={{
+												dragging: dnd.dragging()?.id === view.id,
+												selected: isSelected(view.id),
+											}}
 										>
-											<a href="#" class="nav" tabIndex={-1}>
-												<div class="avatar">{view.name?.substring?.(0, 2)}</div>
-											</a>
+											<div class="tile with-background">
+												<a
+													draggable="false"
+													href={`/view/${view.id}`}
+													class="nav"
+													tabIndex={-1}
+												>
+													<div class="avatar">
+														{view.name.substring(0, 2)}
+													</div>
+												</a>
+											</div>
 										</li>
 									)}
 								</Match>
