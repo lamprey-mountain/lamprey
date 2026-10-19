@@ -34,6 +34,7 @@ export type Menu = {
 	| { type: "voice_input" }
 	| { type: "voice_output" }
 	| { type: "folder"; folder_id: string }
+	| { type: "view"; view_id: string }
 	| { type: "topic"; channel_id: string }
 	| { type: "voice"; channel_id: string }
 	| { type: "invite_application"; app: Application }
@@ -44,7 +45,7 @@ export type Menu = {
 			overwrite_type: "Role" | "User" | "Everyone";
 			onDelete?: () => void;
 	  }
-	| { type: "channel_nav"; room_id: string }
+	| { type: "channel_nav"; room_id?: string; view_id?: string }
 	| {
 			type: "color_picker_options";
 			onColorSpaceChange: (space: "oklch" | "srgb") => void;
