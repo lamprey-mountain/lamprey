@@ -7,9 +7,11 @@ import {
 	createUniqueId,
 	type JSX,
 	type ParentProps,
+	Show,
 	useContext,
 } from "solid-js";
 import { chatctx, useCtx } from "@/app/context";
+import { CheckmarkIcon } from "@/atoms/icons";
 import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal";
 
@@ -160,6 +162,10 @@ export function Item(
 	const ctx = useContext(chatctx)!;
 	const { preview, setPreview } = useMenu();
 
+	const hasSelection = () =>
+		props.classList !== undefined && "selected" in props.classList;
+	const isSelected = () => props.classList?.selected === true;
+
 	let timeout: ReturnType<typeof setTimeout>;
 	function handleMouseEnter() {
 		if (!preview()) {
@@ -200,7 +206,17 @@ export function Item(
 					[`color-${props.color}`]: !!props.color,
 				}}
 			>
-				<div class="inner">{props.children}</div>
+				<div class="inner" classList={{ "has-check": hasSelection() }}>
+					<Show when={hasSelection()}>
+						<Show
+							when={isSelected()}
+							fallback={<div class="menu-check" />}
+						>
+							<CheckmarkIcon seed="menu-selected" class="menu-check" />
+						</Show>
+					</Show>
+					<div class="menu-item-content">{props.children}</div>
+				</div>
 			</button>
 		</li>
 	);

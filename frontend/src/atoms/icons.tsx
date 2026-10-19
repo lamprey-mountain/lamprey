@@ -69,6 +69,28 @@ export const Checkmark = (props: {
 	);
 };
 
+/**
+ * A checkmark rendered as a mask so it can be tinted via its `color` prop
+ * (defaults to the link color).
+ */
+export const CheckmarkIcon = (props: {
+	seed: string;
+	class?: string;
+	color?: string;
+	style?: JSX.CSSProperties;
+}) => {
+	return (
+		<div
+			class={`icon2 ${props.class ?? ""}`}
+			style={{
+				"mask-image": `url(${getCheckIcon(props.seed)})`,
+				"--icon-color": props.color ?? "oklch(var(--color-link-500))",
+				...props.style,
+			}}
+		/>
+	);
+};
+
 export const XMark = (props: {
 	seed: string;
 	class?: string;

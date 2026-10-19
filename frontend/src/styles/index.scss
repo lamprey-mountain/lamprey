@@ -773,6 +773,23 @@
 			border-radius: 2px;
 		}
 
+		& > .inner.has-check {
+			display: flex;
+			align-items: flex-start;
+			gap: 6px;
+		}
+
+		&.selected > .inner {
+			color: oklch(var(--color-link-500));
+		}
+
+		& .menu-check {
+			width: 1em;
+			height: 1em;
+			flex-shrink: 0;
+			margin-top: 1px;
+		}
+
 		&:hover > .inner,
 		&:focus > .inner {
 			color: $fg-100;
