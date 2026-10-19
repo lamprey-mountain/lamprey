@@ -73,7 +73,7 @@ export const Inbox = () => {
 		<div class="inbox">
 			<MessageToolbarProvider>
 				<header>
-					<h2>inbox</h2>
+					<b>inbox</b>
 					<div class="spacer" />
 					<div class="filters">
 						<CheckboxOption
