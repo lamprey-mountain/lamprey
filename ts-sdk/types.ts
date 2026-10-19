@@ -62,7 +62,15 @@ export type UserWithRelationship =
 		/** @description relationship with current user (with client-side extensions) */
 		relationship: Relationship;
 	};
-export type Preferences = components["schemas"]["PreferencesGlobal"];
+export type Preferences = Omit<
+	components["schemas"]["PreferencesGlobal"],
+	"frontend"
+> & {
+	frontend: components["schemas"]["PreferencesGlobalFrontend"] & {
+		/** @description custom and unicode emoji reaction key params marked as favorites */
+		favorite_emoji?: string[];
+	};
+};
 export type PreferencesGlobal = components["schemas"]["PreferencesGlobal"];
 export type PreferencesUser = components["schemas"]["PreferencesUser"];
 export type PreferencesRoom = components["schemas"]["PreferencesRoom"];

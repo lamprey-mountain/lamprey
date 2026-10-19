@@ -46,6 +46,7 @@ import {
 	ChannelMenu,
 	ChannelNavMenu,
 	ColorPickerOptions,
+	EmojiMenu,
 	FolderMenu,
 	InviteApplicationMenu,
 	MessageMenu,
@@ -443,6 +444,17 @@ export function OverlayProvider(props: ParentProps) {
 					<ViewChannelMenu
 						view_id={menu.view_id}
 						channel_id={menu.channel_id}
+					/>
+				);
+			}
+			case "emoji": {
+				return (
+					<EmojiMenu
+						key={menu.key}
+						id={menu.id}
+						name={menu.name}
+						content={menu.content}
+						animated={menu.animated}
 					/>
 				);
 			}

@@ -36,6 +36,15 @@ export type Menu = {
 	| { type: "folder"; folder_id: string }
 	| { type: "view"; view_id: string }
 	| { type: "view_channel"; view_id: string; channel_id: string }
+	| {
+			type: "emoji";
+			/** reaction key param, e.g. `c:{id}` for custom or `t:{unicode}` for unicode */
+			key: string;
+			id?: string;
+			name?: string;
+			content?: string;
+			animated?: boolean;
+	  }
 	| { type: "topic"; channel_id: string }
 	| { type: "voice"; channel_id: string }
 	| { type: "invite_application"; app: Application }

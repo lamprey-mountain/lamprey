@@ -4,6 +4,8 @@ import { emojiDimensions as dims, emojiResource } from "@/lib/emoji";
 
 export type UnicodeEmojiProps = {
 	hex: string;
+	class?: string;
+	onContextMenu?: (e: MouseEvent) => void;
 };
 
 export const UnicodeEmoji = (props: VoidProps<UnicodeEmojiProps>) => {
@@ -21,7 +23,8 @@ export const UnicodeEmoji = (props: VoidProps<UnicodeEmojiProps>) => {
 				const { cols, rows } = dims();
 				return (
 					<div
-						class="emoji emoji-sprite"
+						class={`emoji emoji-sprite menu-emoji ${props.class ?? ""}`}
+						onContextMenu={props.onContextMenu}
 						style={{
 							"background-image": `url(${sheetPngUrl})`,
 							"background-size": `${cols * 100}% ${rows * 100}%`,

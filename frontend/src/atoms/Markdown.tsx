@@ -15,7 +15,7 @@ import { Dynamic } from "solid-js/web";
 import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
-import { useUserPopout } from "@/contexts/mod";
+import { useMenu, useUserPopout } from "@/contexts/mod";
 import { useNavigate } from "@/contexts/router";
 import { getEmojiHex } from "@/lib/emoji";
 import { flags } from "@/lib/flags";
@@ -128,6 +128,7 @@ function EveryoneMention() {
 
 function CustomEmoji(props: { id: string; name: string; animated?: boolean }) {
 	const ctx = useCtx();
+	const { setMenu } = useMenu();
 	return (
 		<img
 			class="emoji custom-emoji menu-emoji"
@@ -147,6 +148,19 @@ function CustomEmoji(props: { id: string; name: string; animated?: boolean }) {
 						emoji_animated: props.animated ?? false,
 					},
 					placement: "right-start",
+				});
+			}}
+			onContextMenu={(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				setMenu({
+					x: e.clientX,
+					y: e.clientY,
+					type: "emoji",
+					key: `c:${props.id}`,
+					id: props.id,
+					name: props.name,
+					animated: props.animated,
 				});
 			}}
 		/>
@@ -475,6 +489,7 @@ const matchMention = <T extends MentionData["type"]>(
 };
 
 function RenderInline(props: { inline: SerializedInline }) {
+	const { setMenu } = useMenu();
 	return (
 		<Switch>
 			<Match when={props.inline.type === "Strong" && props.inline}>
@@ -552,7 +567,22 @@ function RenderInline(props: { inline: SerializedInline }) {
 				)}
 			</Match>
 			<Match when={props.inline.type === "UnicodeEmoji" && props.inline}>
-				{(i) => <UnicodeEmoji hex={getEmojiHex(i().content)} />}
+				{(i) => (
+					<UnicodeEmoji
+						hex={getEmojiHex(i().content)}
+						onContextMenu={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							setMenu({
+								x: e.clientX,
+								y: e.clientY,
+								type: "emoji",
+								key: `t:${i().content}`,
+								content: i().content,
+							});
+						}}
+					/>
+				)}
 			</Match>
 		</Switch>
 	);
