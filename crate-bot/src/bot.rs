@@ -458,8 +458,9 @@ impl Bot {
         let (content, attachments) = match &message.latest_version.message_type {
             MessageType::DefaultMarkdown(m) | MessageType::ThreadInitial(m) => {
                 (m.content.as_deref(), m.attachments.as_slice())
-            } // TODO: handle forwards
-              // _ => (None, &[][..]),
+            }
+            // TODO: handle forwards
+            _ => (None, &[][..]),
         };
 
         let Some(prompt) = content else {
