@@ -29,6 +29,7 @@ import { useCtx } from "@/app/context";
 import { Autocomplete } from "@/atoms/Autocomplete.tsx";
 import { EmojiPicker } from "@/atoms/EmojiPicker.tsx";
 import { DocumentComments } from "@/components/document/DocumentComments.tsx";
+import { DocumentTocPopout } from "@/components/document/DocumentTocPopout.tsx";
 import {
 	PopupEventEditor,
 	useCalendarPopup,
@@ -276,6 +277,16 @@ export function OverlayProvider(props: ParentProps) {
 			placement: "bottom-end",
 		});
 
+	const [documentTocViewRef, setDocumentTocViewRef] =
+		createSignal<HTMLElement>();
+	const [documentTocViewFloating, setDocumentTocViewFloating] =
+		createStore<FloatingPosition>({
+			x: 0,
+			y: 0,
+			strategy: "absolute",
+			placement: "bottom-end",
+		});
+
 	createEffect(() => {
 		const reference = ctx.activityLogView()?.ref;
 		const floating = activityLogViewRef();
@@ -301,6 +312,21 @@ export function OverlayProvider(props: ParentProps) {
 				placement: "bottom-end",
 			}).then(({ x, y, strategy, placement }) => {
 				setDocumentCommentsViewFloating({ x, y, strategy, placement });
+			});
+		});
+		onCleanup(cleanup);
+	});
+
+	createEffect(() => {
+		const reference = ctx.documentTocView()?.ref;
+		const floating = documentTocViewRef();
+		if (!reference || !floating) return;
+		const cleanup = autoUpdate(reference, floating, () => {
+			computePosition(reference, floating, {
+				middleware: [shift({ mainAxis: true, crossAxis: true, padding: 8 })],
+				placement: "bottom-end",
+			}).then(({ x, y, strategy, placement }) => {
+				setDocumentTocViewFloating({ x, y, strategy, placement });
 			});
 		});
 		onCleanup(cleanup);
@@ -605,6 +631,27 @@ export function OverlayProvider(props: ParentProps) {
 					>
 						<Show when={ctx.documentCommentsView()?.channel_id}>
 							{(cid) => <DocumentComments channel_id={cid()} />}
+						</Show>
+					</div>
+				</Show>
+				<Show when={ctx.documentTocView()}>
+					<div
+						ref={setDocumentTocViewRef}
+						style={{
+							position: documentTocViewFloating.strategy,
+							top: "0px",
+							left: "0px",
+							translate: `${documentTocViewFloating.x}px ${documentTocViewFloating.y}px`,
+							"z-index": 100,
+						}}
+					>
+						<Show when={ctx.documentTocView()}>
+							{(view) => (
+								<DocumentTocPopout
+									headings={view().headings}
+									onSelect={view().onSelect}
+								/>
+							)}
 						</Show>
 					</div>
 				</Show>

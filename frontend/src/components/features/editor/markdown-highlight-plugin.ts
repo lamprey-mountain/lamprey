@@ -89,10 +89,10 @@ function getAttrs(kind: DecorationKind): DecorationAttrs {
 	}
 }
 
-type Segment = { docPos: number; textPos: number; length: number };
+export type Segment = { docPos: number; textPos: number; length: number };
 
 /** get serialized text from the editor, along with a list of offsets */
-function buildTextAndSegments(state: EditorState) {
+export function buildTextAndSegments(state: EditorState) {
 	let text = "";
 	const segments: Segment[] = [];
 	state.doc.descendants((node, pos) => {
@@ -116,7 +116,7 @@ function buildTextAndSegments(state: EditorState) {
 }
 
 /** find the mapped document position for an offset */
-function toDocPos(offset: number, segments: Segment[]): number {
+export function toDocPos(offset: number, segments: Segment[]): number {
 	// binary search: find segment containing offset
 	let lo = 0,
 		hi = segments.length - 1;

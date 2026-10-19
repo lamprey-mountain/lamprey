@@ -13,11 +13,13 @@ export type {
 	CursorStats,
 	Data,
 	DocumentCommentsViewData,
+	DocumentTocViewData,
 	Events,
 	MediaCtx,
 	Popout,
 	Slice,
 	ThreadsViewData,
+	TocHeading,
 } from "@/types/chat";
 
 // Runtime context creation

@@ -80,6 +80,8 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 	const [error, setError] = createSignal<string | null>(null);
 	const doc = useDocument();
 
+	const isRevertShown = () => doc.selectedSeq();
+
 	const loadHistory = async () => {
 		setLoading(true);
 		setError(null);
@@ -217,6 +219,34 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 				<Show when={!loading() && !error() && !history()}>
 					<div>No history available</div>
 				</Show>
+			</div>
+			<div
+				class="document-revert"
+				classList={{ show: !!isRevertShown() }}
+			>
+				<div class="inner">
+					<div class="warning">Viewing revision</div>
+					<button
+						type="button"
+						class="button reset"
+						onClick={() => {
+							setCh("history_view", false);
+							doc.setSelectedSeq(null);
+							doc.setHoverSeq(null);
+						}}
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						class="button save"
+						onClick={() => {
+							/* TODO: port from old code */
+						}}
+					>
+						Restore
+					</button>
+				</div>
 			</div>
 		</div>
 	);

@@ -66,6 +66,18 @@ export type DocumentCommentsViewData = {
 	ref: HTMLElement;
 };
 
+export type TocHeading = {
+	level: number;
+	text: string;
+	span: { start: number; end: number };
+};
+
+export type DocumentTocViewData = {
+	headings: Accessor<TocHeading[]>;
+	onSelect: (heading: TocHeading) => void;
+	ref: HTMLElement;
+};
+
 export type ActivityLogViewData = {
 	channel_id: string;
 	ref: HTMLElement;
@@ -92,6 +104,8 @@ export type ChatCtx = {
 	setThreadsView: Setter<ThreadsViewData | null>;
 	documentCommentsView: Accessor<DocumentCommentsViewData | null>;
 	setDocumentCommentsView: Setter<DocumentCommentsViewData | null>;
+	documentTocView: Accessor<DocumentTocViewData | null>;
+	setDocumentTocView: Setter<DocumentTocViewData | null>;
 	activityLogView: Accessor<ActivityLogViewData | null>;
 	setActivityLogView: Setter<ActivityLogViewData | null>;
 	headerThreadsButtonRef: Accessor<HTMLElement | null>;

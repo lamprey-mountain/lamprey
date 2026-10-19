@@ -40,7 +40,6 @@ export type DocumentCommands = {
 };
 
 // TODO: restore scroll position per document
-// TODO: persist tocOpen in user preferences
 // TODO: consider using a solidjs store for this state
 export type DocumentState = {
 	// mode: DocumentMode;
@@ -53,8 +52,6 @@ export type DocumentState = {
 	setHoverSeq: Setter<ChangesetSelection | null>;
 	headings: Accessor<HeaderItem[]>;
 	setHeadings: Setter<HeaderItem[]>;
-	tocOpen: Accessor<boolean>;
-	setTocOpen: Setter<boolean>;
 	editor: Accessor<EditorView | null>;
 	setEditor: Setter<EditorView | null>;
 
@@ -77,7 +74,6 @@ export const DocumentProvider = (props: DocumentProviderProps) => {
 		null,
 	);
 	const [hoverSeq, setHoverSeq] = createSignal<ChangesetSelection | null>(null);
-	const [tocOpen, setTocOpen] = createSignal(true);
 	const [editor, setEditor] = createSignal<EditorView | null>(null);
 
 	const state: DocumentState = {
@@ -92,8 +88,6 @@ export const DocumentProvider = (props: DocumentProviderProps) => {
 		events: controller.events,
 		headings,
 		setHeadings,
-		tocOpen,
-		setTocOpen,
 		editor,
 		setEditor,
 	};

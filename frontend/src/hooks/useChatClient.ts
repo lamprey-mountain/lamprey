@@ -24,6 +24,7 @@ import type {
 	ChatCtx,
 	Data,
 	DocumentCommentsViewData,
+	DocumentTocViewData,
 	MediaCtx,
 	Popout,
 	ThreadsViewData,
@@ -137,6 +138,8 @@ export function useChatClient(config: Config) {
 	);
 	const [documentCommentsView, setDocumentCommentsView] =
 		createSignal<DocumentCommentsViewData | null>(null);
+	const [documentTocView, setDocumentTocView] =
+		createSignal<DocumentTocViewData | null>(null);
 	const [activityLogView, setActivityLogView] =
 		createSignal<ActivityLogViewData | null>(null);
 	const [headerThreadsButtonRef, setHeaderThreadsButtonRef] =
@@ -164,6 +167,8 @@ export function useChatClient(config: Config) {
 		setThreadsView,
 		documentCommentsView,
 		setDocumentCommentsView,
+		documentTocView,
+		setDocumentTocView,
 		activityLogView,
 		setActivityLogView,
 		headerThreadsButtonRef,

@@ -2,7 +2,6 @@ import { createMemo, Match, onCleanup, Switch } from "solid-js";
 import { useApi } from "@/api";
 import type { ChannelT } from "@/types";
 import { useDocument } from "./context";
-import { DocumentAside } from "./DocumentAside";
 import { DocumentDiffView } from "./DocumentDiffView";
 import { DocumentEditor } from "./DocumentEditor";
 import { DocumentHeader } from "./DocumentHeader";
@@ -64,7 +63,6 @@ export const Document = (props: DocumentProps) => {
 		<>
 			<DocumentHeader channel={props.channel} />
 			<div class="document-wrapper">
-				<DocumentAside />
 				<main class="document-main">
 					<Switch>
 						<Match when={activeChangeset()}>

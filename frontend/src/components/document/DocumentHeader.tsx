@@ -21,7 +21,12 @@ import { createTooltip } from "@/atoms/Tooltip";
 import { useChannel, useModals } from "@/contexts/mod";
 import { flags } from "@/lib/flags";
 import type { ChannelT } from "@/types";
+import type { TocHeading } from "@/types/chat";
 import { getDate } from "@/utils/general";
+import {
+	buildTextAndSegments,
+	toDocPos,
+} from "../features/editor/markdown-highlight-plugin";
 import {
 	icBranch,
 	icBranchDefault,
@@ -261,6 +266,21 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 	const membersTooltip = createTooltip({
 		tip: () => (showMembers() ? "Hide members" : "Show members"),
 	});
+
+	const scrollToHeading = (heading: TocHeading) => {
+		const view = doc.editor();
+		if (!view) return;
+
+		const { segments } = buildTextAndSegments(view.state);
+		const pos = toDocPos(heading.span.start, segments);
+		const { node } = view.domAtPos(pos);
+		const el =
+			node instanceof Element ? node : (node.parentElement as Element | null);
+
+		// FIXME: header nodes are part of the one big <p></p> and not separate elements
+		el?.scrollIntoView({ behavior: "smooth", block: "start" });
+		ctx.setDocumentTocView(null);
+	};
 
 	return (
 		<header class="document-header chat-header">
@@ -664,7 +684,21 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 			<menu class="menu right">
 				<button
 					type="button"
-					onClick={() => doc.setTocOpen(!doc.tocOpen())}
+					onClick={(e) => {
+						if (!ctx.documentTocView()) {
+							const ref = e.currentTarget;
+							setTimeout(() => {
+								ctx.setDocumentTocView({
+									headings: doc.headings,
+									onSelect: scrollToHeading,
+									ref,
+								});
+							});
+						} else {
+							ctx.setDocumentTocView(null);
+						}
+					}}
+					classList={{ active: ctx.documentTocView() !== null }}
 					ref={tocTooltip.content}
 				>
 					<Icon src={icTableOfContents} />
@@ -693,7 +727,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 					onClick={() => {
 						setCh(
 							"thread_chat_sidebar_thread_id",
-							isChatOpen() ? undefined : props.channel.id,
+							isChatOpen() ? undefined : doc.branchId(),
 						);
 					}}
 					ref={threadTooltip.content}

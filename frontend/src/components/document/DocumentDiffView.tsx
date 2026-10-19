@@ -106,7 +106,11 @@ export const DocumentDiffView = (props: DocumentDiffViewProps) => {
 			},
 		});
 
-		onCleanup(() => view.destroy());
+		doc.setEditor(view);
+		onCleanup(() => {
+			view.destroy();
+			doc.setEditor(null);
+		});
 
 		// reactively update placeholder
 		createEffect(() => {

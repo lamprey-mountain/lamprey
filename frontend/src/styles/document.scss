@@ -207,89 +207,41 @@
 	}
 }
 
-.document-aside {
-	/* float: left; */
-	/* overflow-y: auto; */
-	min-width: 200px;
-	max-width: 300px;
-	/* position: sticky; */
-	/* top: 0; */
+.document-toc-popout {
+	height: auto;
+	min-height: 160px;
+	max-height: 360px;
 
-	.document-revert {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-		padding: 8px 12px;
-		background: oklch(var(--color-warn) / 0.05);
-		border: solid $warn-500 1px;
-		margin: 8px;
-		border-radius: 4px;
+	& > .content > .header {
+		padding: 8px;
 
 		& > h3 {
-			color: $fg-200;
-			font-size: 0.9rem;
-		}
-
-		& > .actions {
-			display: flex;
-			gap: 8px;
-			margin-left: auto;
-
-			& > .button {
-				display: flex;
-				align-items: center;
-
-				& > .chevron {
-					margin-left: 4px;
-					background: $fg-600;
-				}
-
-				&.link {
-					color: $fg-400;
-
-					// keep border even though its transparent so everything is aligned
-					border: solid transparent 1px;
-
-					&:hover {
-						color: $fg-200;
-						background: none;
-					}
-				}
-			}
+			margin: 0;
 		}
 	}
 
-	.document-toc {
-		background: $bg-150;
-		border: solid $sep-300 1px;
-		border-radius: 4px;
-		padding: 8px 12px;
-		margin: 8px;
-		box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
+	.document-toc-list {
+		display: flex;
+		flex-direction: column;
+	}
 
-		& > .label {
-			margin: 0 0 8px 0;
-			font-weight: bold;
+	.heading {
+		@include truncate;
+		cursor: pointer;
+		color: $link-500;
+		font-size: 0.85rem;
+		padding: 2px 4px;
+		border-radius: 2px;
+		margin-left: calc((var(--level) - 1) * 12px);
+
+		.untitled {
+			color: oklch(from $link-500 calc(l - .2) calc(c - .05) h);
 		}
 
-		.heading {
-			@include truncate;
-			cursor: pointer;
-			color: $link-500;
-			font-size: 0.85rem;
-			padding: 2px 4px;
-			border-radius: 2px;
-			margin-left: calc((var(--level) - 1) * 12px);
-
-			.untitled {
-				color: oklch(from $link-500 calc(l - .2) calc(c - .05) h);
-			}
-
-			&:hover {
-				background: $bg-200;
-				text-decoration: underline;
-				text-decoration-color: oklch(from $link-500 calc(l - .2) c h);
-			}
+		&:hover {
+			background: $bg-200;
+			text-decoration: underline;
+			text-decoration-color: oklch(from $link-500 calc(l - .2) c h);
 		}
 	}
 }
@@ -374,7 +326,58 @@
 .document-history {
 	width: 100%;
 	background: $bg-150;
-	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+
+	.document-history-content {
+		flex: 1;
+		overflow-y: auto;
+	}
+
+	.document-revert {
+		padding-bottom: 8px;
+		background-image: linear-gradient(to top, $bg-200 25%, transparent);
+		opacity: 0;
+		pointer-events: none;
+		translate: 0 12px;
+		transition:
+			opacity 200ms cubic-bezier(0.14, 0.98, 0.43, 1.55),
+			translate 200ms cubic-bezier(0.14, 0.98, 0.43, 1.55);
+
+		&.show {
+			opacity: 1;
+			pointer-events: auto;
+			translate: 0 0;
+		}
+
+		& > .inner {
+			display: flex;
+			background: $bg-100;
+			border: solid $sep-300 1px;
+			border-radius: 4px;
+			padding: 8px;
+			margin: 8px;
+			align-items: center;
+			gap: 8px;
+
+			& .warning {
+				flex: 1;
+			}
+
+			& .button {
+				padding: 4px 8px;
+				border-radius: 4px;
+
+				&.save {
+					background: oklch(from $warn-500 calc(l - .1) c h);
+					color: $bg-100;
+					width: 80px;
+					text-align: center;
+				}
+			}
+		}
+	}
 
 	header {
 		background: $bg-100;
