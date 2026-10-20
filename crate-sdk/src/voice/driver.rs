@@ -230,6 +230,7 @@ impl Driver {
                     let sdp = str0m::change::SdpAnswer::from_sdp_string(&sdp.0)?;
                     if let Some(pending) = self.pending.take() {
                         self.rtc.sdp_api().accept_answer(pending, sdp)?;
+                        self.activate_negotiated_outbound();
                         self.negotiate_if_needed();
                     } else {
                         error!("got answer without a pending offer, ignoring");
@@ -439,6 +440,18 @@ impl Driver {
             }
         }
         Ok(())
+    }
+
+    /// mark negotiated outbound media as active
+    fn activate_negotiated_outbound(&mut self) {
+        let mids: Vec<Mid> = self.outbound.keys().copied().collect();
+        for mid in mids {
+            if self.rtc.media(mid.into()).is_some() {
+                if let Some(entry) = self.outbound.get_mut(&mid) {
+                    entry.active = true;
+                }
+            }
+        }
     }
 
     /// send an sdp offer if we have tracks that haven't been negotiated yet

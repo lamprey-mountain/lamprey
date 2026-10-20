@@ -191,7 +191,7 @@ impl Shared {
         if let Some(stun_addr) = stun_addr {
             let c = StunClient::new(stun_addr);
             let addr = c.query_external_address_async(&self.sock).await?;
-            let candidate = Candidate::host(addr, "udp")?;
+            let candidate = Candidate::server_reflexive(addr, self.sock.local_addr()?, "udp")?;
             let _ = self.tx.send(RtcCommand::Candidate(candidate)).await;
         } else {
             // TODO: maybe warn!() via tracing?
