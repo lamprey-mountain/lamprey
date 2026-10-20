@@ -10,6 +10,7 @@ use tokio::{
     net::UdpSocket,
     sync::{mpsc, watch},
 };
+use tracing::warn;
 
 use crate::{
     Client,
@@ -86,6 +87,12 @@ impl<'a> VoiceBuilder<'a> {
             conn_state: watch::channel(ConnectionState::Pending).0,
         });
 
+        // find public ipv4 addr via stun
+        // TODO: ipv6 support
+        if let Err(e) = state.clone().stun_v4().await {
+            warn!("stun query failed: {e}");
+        }
+
         let rtc = Rtc::builder().build(Instant::now());
         let cache = self.client.cache().expect("cache is required for voice");
         let worker = Driver::new(
@@ -97,11 +104,6 @@ impl<'a> VoiceBuilder<'a> {
             channel_id,
         );
         tokio::spawn(worker.spawn());
-
-        // find public ipv4 addr via stun
-        tokio::spawn(state.clone().stun_v4());
-
-        // TODO: ipv6 support
 
         self.client.syncer().send(MessageClient::VoiceConnect {
             voice_state: vs,
