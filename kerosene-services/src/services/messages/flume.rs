@@ -19,7 +19,7 @@ use common::v1::types::message::flume::{FlumeCreate, FlumeState, MessageFlume};
 use common::v1::types::message::{MessageDefaultMarkdown, MessageType};
 use common::v1::types::sync::MessageSync;
 use common::v1::types::util::Time;
-use common::v1::types::{ChannelId, MediaId, Mentions, Message, MessageId};
+use common::v1::types::{ChannelId, MediaId, Mentions, Message, MessageId, UserId};
 
 use http::StatusCode;
 use time::PrimitiveDateTime;
@@ -34,6 +34,7 @@ pub const FLUME_AUTOCOMMIT: Duration = Duration::from_secs(30);
 
 pub struct Flume {
     pub channel_id: ChannelId,
+    pub author_id: UserId,
     pub content: FlumeContent,
     expire_handle: JoinHandle<Result<()>>,
 }
@@ -166,6 +167,7 @@ impl ServiceMessages {
             message_id,
             Flume {
                 channel_id,
+                author_id: user_id,
                 content: flume_content,
                 expire_handle,
             },
@@ -193,9 +195,8 @@ impl ServiceMessages {
         let mut flume_ref = self.flume_lookup(channel_id, message_id).await?;
 
         // check author: only author can update flume
-        let message = self.get(channel_id, message_id, None).await?;
         let user_id = auth.ensure_user()?.id;
-        if message.author_id != user_id {
+        if flume_ref.author_id != user_id {
             return Err(ApiError::from_code(ErrorCode::OnlyMessageAuthorCanManageFlume).into());
         }
 
@@ -294,9 +295,8 @@ impl ServiceMessages {
         let mut flume_ref = self.flume_lookup(channel_id, message_id).await?;
 
         // check author
-        let message = self.get(channel_id, message_id, None).await?;
         let user_id = auth.ensure_user()?.id;
-        if message.author_id != user_id {
+        if flume_ref.author_id != user_id {
             return Err(ApiError::from_code(ErrorCode::OnlyMessageAuthorCanManageFlume).into());
         }
 
@@ -407,16 +407,16 @@ impl ServiceMessages {
         channel_id: ChannelId,
         message_id: MessageId,
     ) -> Result<RefMut<'_, MessageId, Flume>> {
+        if let Some(flume) = self.flumes.get_mut(&message_id) {
+            return Ok(flume);
+        }
+
         let message = self.get(channel_id, message_id, None).await?;
-
         if message.flume.is_none() {
-            return Err(ApiError::from_code(ErrorCode::MessageDoesntHaveFlume).into());
-        };
-
-        self.flumes
-            .get_mut(&message_id)
-            .ok_or_else(|| ApiError::from_code(ErrorCode::FlumeCommitted))
-            .map_err(Error::from)
+            Err(ApiError::from_code(ErrorCode::MessageDoesntHaveFlume).into())
+        } else {
+            Err(ApiError::from_code(ErrorCode::FlumeCommitted).into())
+        }
     }
 
     fn spawn_autocommit_timer(
