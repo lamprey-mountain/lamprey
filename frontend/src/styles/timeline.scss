@@ -333,6 +333,7 @@
 }
 
 .message {
+	position: relative;
 	display: grid;
 	grid-template-columns: 52px auto;
 	grid-template-rows: auto auto auto auto;
@@ -667,6 +668,40 @@
 
 	&.separate > .aside > .time {
 		visibility: visible;
+	}
+
+	&:has(> .aside > .compact-avatar) {
+		grid-template-columns: 80px auto;
+
+		& > .aside {
+			display: grid;
+			grid-template-columns: 1fr auto;
+			grid-template-rows: auto 1fr;
+			align-items: center;
+			column-gap: 6px;
+		}
+
+		& > .aside > .time {
+			justify-self: center;
+		}
+
+		& > .aside > .thread-spine {
+			grid-column: 1 / -1;
+			grid-row: 2;
+		}
+	}
+
+	& > .aside > .compact-avatar {
+		line-height: 0;
+		margin-right: 4px;
+		margin-top: -2px;
+
+		& > .avatar {
+			height: 1em;
+			width: 1em;
+			margin: 0;
+			border-radius: 4px;
+		}
 	}
 }
 

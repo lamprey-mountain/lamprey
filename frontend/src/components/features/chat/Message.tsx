@@ -650,6 +650,16 @@ function DefaultMessage(
 			<aside class="aside">
 				<Avatar user={props.user} animate={props.hovered} />
 				<Time date={props.date} animGroup="message-ts" format="time" />
+				<Show
+					when={
+						props.ctx.preferences().frontend.message_style === "compact" &&
+						props.ctx.preferences().frontend.show_compact_avatars
+					}
+				>
+					<div class="compact-avatar">
+						<Avatar user={props.user} animate={props.hovered} pad={0} />
+					</div>
+				</Show>
 				<Show when={thread()}>
 					<div class="thread-spine"></div>
 				</Show>

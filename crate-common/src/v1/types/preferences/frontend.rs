@@ -129,6 +129,9 @@ pub struct PreferencesGlobalFrontend {
     /// how messages are displayed
     pub message_style: MessageStyle,
 
+    /// show avatars in the compact message style
+    pub show_compact_avatars: bool,
+
     /// spacing between message groups, in pixels
     pub message_spacing: f64,
 
@@ -313,6 +316,7 @@ impl Default for PreferencesGlobalFrontend {
             underline_links: false,
             show_send_button: false,
             message_style: MessageStyle::Cozy,
+            show_compact_avatars: false,
             message_spacing: 8.0,
             chat_font_scale: 100.0,
             app_scale: 100.0,

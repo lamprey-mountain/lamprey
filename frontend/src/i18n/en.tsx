@@ -22,6 +22,7 @@ export default {
 		underline_links: "Always underline links",
 		show_send_button: "Show send message button",
 		message_style: "Message style",
+		show_compact_avatars: "Show avatars in compact mode",
 		message_group_spacing: "Message group spacing",
 		chat_font_scale: "Chat font scale",
 		application_scale: "Application scale",

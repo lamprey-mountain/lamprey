@@ -19,7 +19,8 @@ type BooleanSetting =
 	| "reduced_motion"
 	| "reduced_motion_sync"
 	| "autoplay_emoji"
-	| "autoplay_gifs";
+	| "autoplay_gifs"
+	| "show_compact_avatars";
 
 export function Appearance(props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
@@ -171,6 +172,20 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 						]}
 					/>
 				</div>
+				<Show when={ctx.preferences().frontend.message_style === "compact"}>
+					<CheckboxOption
+						id={`user-${props.user?.id ?? "@self"}-show-compact-avatars`}
+						checked={ctx.preferences().frontend.show_compact_avatars}
+						onChange={() => toggle("show_compact_avatars")()}
+						seed={`user-${props.user?.id ?? "@self"}-show-compact-avatars`}
+					>
+						<Checkbox
+							checked={ctx.preferences().frontend.show_compact_avatars}
+							seed={`user-${props.user?.id ?? "@self"}-show-compact-avatars`}
+						/>
+						<span>{t("user_settings.show_compact_avatars")}</span>
+					</CheckboxOption>
+				</Show>
 				<div class="option apart">
 					<div>
 						<div>{t("user_settings.message_group_spacing")}</div>
