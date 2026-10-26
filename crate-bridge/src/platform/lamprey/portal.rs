@@ -598,7 +598,7 @@ impl LampreyPortal {
                 // make sure that only one thread can be created at a time
                 let _guard = self.handle.bridge.channel_lock.lock().await;
 
-                let (create, discord_chan) = match chan {
+                let (create, discord_chan, source_message_id) = match chan {
                     bridge::ChannelData::Lamprey { .. } => return Ok(()),
                     bridge::ChannelData::Discord {
                         channel: discord_chan,
@@ -628,11 +628,39 @@ impl LampreyPortal {
                             // TODO: copy invitable, auto_archive_duration
                             ..Default::default()
                         };
-                        (create, discord_chan)
+
+                        // threads created from a message use the source message id as
+                        // the thread channel id, so look up the bridged message to
+                        // create the lamprey thread from it
+                        let source_message_id = if matches!(
+                            discord_chan.kind,
+                            discord::ChannelType::PublicThread | discord::ChannelType::NewsThread
+                        ) {
+                            self.handle
+                                .bridge
+                                .db
+                                .message_get_by_discord_id(
+                                    self.portal_id,
+                                    discord::MessageId::new(discord_chan.id.get()),
+                                )
+                                .await?
+                                .and_then(|msg| msg.lamprey_message_id)
+                        } else {
+                            None
+                        };
+
+                        (create, discord_chan, source_message_id)
                     }
                 };
 
-                let channel = self.http.thread_create(self.channel_id, &create).await?;
+                let channel = match source_message_id {
+                    Some(message_id) => {
+                        self.http
+                            .thread_create_from_message(self.channel_id, message_id, &create)
+                            .await?
+                    }
+                    None => self.http.thread_create(self.channel_id, &create).await?,
+                };
 
                 let portal_id = bridge::PortalId::new();
                 let portal = bridge::Portal {

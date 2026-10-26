@@ -483,7 +483,7 @@ impl DiscordPortal {
                 // make sure that only one thread can be created at a time
                 let _guard = self.handle.bridge.channel_lock.lock().await;
 
-                let (create, lamprey_chan) = match chan {
+                let (create, lamprey_chan, source_message_id) = match chan {
                     bridge_old::ChannelData::Discord { .. } => return Ok(()),
                     bridge_old::ChannelData::Lamprey { channel } => {
                         if self
@@ -497,6 +497,24 @@ impl DiscordPortal {
                             return Ok(());
                         }
 
+                        // threads created from a message use the source message id as
+                        // the thread channel id, so look up the bridged message to
+                        // attach the discord thread to it
+                        let source_message_id = if channel.ty == lamprey::ChannelType::ThreadPublic
+                        {
+                            self.handle
+                                .bridge
+                                .db
+                                .message_get_by_lamprey_id(
+                                    self.portal_id,
+                                    lamprey::MessageId::from(channel.id.into_inner()),
+                                )
+                                .await?
+                                .and_then(|msg| msg.discord_message_id)
+                        } else {
+                            None
+                        };
+
                         let create = serenity::all::CreateThread::new(&channel.name).kind(
                             match channel.ty {
                                 lamprey::ChannelType::ThreadPublic => ChannelType::PublicThread,
@@ -505,16 +523,29 @@ impl DiscordPortal {
                                 _ => return Ok(()),
                             },
                         );
-                        (create, channel)
+                        (create, channel, source_message_id)
                     }
                 };
 
                 let discord_cfg = self.portal.discord.as_ref().unwrap();
 
-                let thread = self
-                    .http
-                    .create_thread(discord_cfg.channel_id, &create, None)
-                    .await?;
+                let thread = match source_message_id {
+                    Some(message_id) => {
+                        self.http
+                            .create_thread_from_message(
+                                discord_cfg.channel_id,
+                                message_id,
+                                &create,
+                                None,
+                            )
+                            .await?
+                    }
+                    None => {
+                        self.http
+                            .create_thread(discord_cfg.channel_id, &create, None)
+                            .await?
+                    }
+                };
 
                 let portal_id = bridge_old::PortalId::new();
                 let portal = bridge_old::Portal {
