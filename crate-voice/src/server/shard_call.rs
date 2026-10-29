@@ -87,7 +87,10 @@ impl ShardCall {
     pub fn remove_peer(&mut self, peer_slot: PeerSlot) {
         if let Some(peer) = self.peers.remove(peer_slot) {
             info!(user_id = %peer.user_id(), channel_id = %self.channel_id, "remove peer");
-            self.users.remove(&peer.user_id());
+            let user_id = peer.user_id();
+            if self.users.get(&user_id) == Some(&peer_slot) {
+                self.users.remove(&user_id);
+            }
             self.paused.remove(&peer_slot);
 
             // find tracks published by this peer
