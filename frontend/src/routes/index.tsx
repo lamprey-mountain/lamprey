@@ -25,6 +25,7 @@ import {
 	Forum2ThreadPage,
 } from "@/components/features/forum/Forum2";
 import { Scripts } from "@/components/features/scripts/Scripts";
+import { useVoice } from "@/components/features/voice/context.tsx";
 import { Voice } from "@/components/features/voice/Voice.tsx";
 import { Category } from "@/components/shared/Category";
 import { ChannelNav } from "@/components/shared/ChannelNav";
@@ -262,6 +263,7 @@ const DocumentSidebar = (props: { thread_id: string }) => {
 const ChannelSidebar = (props: { channel: Channel }) => {
 	const ctx = useCtx();
 	const [ch] = useChannel()!;
+	const [voice] = useVoice();
 	const { states } = useSearch();
 	const search = () => states[props.channel.id];
 	const showMembers = () =>
@@ -270,8 +272,13 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 		flags.has("channel_member_list") &&
 		ctx.preferences().frontend.showMembers !== false;
 	const showPinned = () => ch.pinned_view ?? false;
+	const inDmVoice = () =>
+		(props.channel.type === "Dm" || props.channel.type === "Gdm") &&
+		voice.joinedChannelId === props.channel.id;
 	const showVoiceChat = () =>
-		(props.channel.type === "Voice" || props.channel.type === "Broadcast") &&
+		(props.channel.type === "Voice" ||
+			props.channel.type === "Broadcast" ||
+			inDmVoice()) &&
 		ch.voice_chat_sidebar_open;
 	const showHistory = () =>
 		props.channel.type === "Document" && ch.history_view;
@@ -358,6 +365,7 @@ export const RouteChannel = (
 	const api = useApi();
 	const channel = api.channels.use(() => p.params.channel_id);
 	const room = api.rooms.use(() => channel()?.room_id!);
+	const [voice] = useVoice();
 
 	const getOrCreateChannelContext = () => {
 		const channelId = p.params.channel_id;
@@ -448,11 +456,22 @@ export const RouteChannel = (
 									>
 										<Voice channel={ch()} />
 									</Match>
+									<Match when={ch().type === "Dm" || ch().type === "Gdm"}>
+										<Show
+											when={voice.joinedChannelId === ch().id}
+											fallback={
+												<>
+													<ChatHeader channel={ch()} />
+													<ChatMain channel={ch()} />
+												</>
+											}
+										>
+											<Voice channel={ch()} />
+										</Show>
+									</Match>
 									<Match
 										when={
 											ch().type === "Text" ||
-											ch().type === "Dm" ||
-											ch().type === "Gdm" ||
 											ch().type === "Announcement" ||
 											ch().type === "ThreadPublic" ||
 											ch().type === "ThreadPrivate"
