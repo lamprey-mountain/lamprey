@@ -48,7 +48,9 @@ export function useChatClient(config: Config) {
 	const useDeflate =
 		flags.has("sync_deflate") && "CompressionStream" in globalThis;
 	const useWebtransport =
-		flags.has("sync_webtransport") && "WebTransport" in globalThis;
+		flags.has("sync_webtransport") &&
+		"WebTransport" in globalThis &&
+		!config.myIspSucks;
 	const recvLog = logger.for("sync").create("debug", colors.blue);
 	const sendLog = logger.for("sync").create("debug", colors.teal);
 	const syncLog = logger.for("cs");

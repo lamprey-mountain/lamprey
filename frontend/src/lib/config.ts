@@ -5,6 +5,8 @@ import { createContext, useContext } from "solid-js";
 export type Config = {
 	api_url: string;
 	cdn_url: string;
+	/** forces websocket instead of webtransport */
+	myIspSucks?: boolean;
 };
 
 const configCtx = createContext<Config | undefined>();
