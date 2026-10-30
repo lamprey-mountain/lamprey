@@ -199,19 +199,37 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 			try {
 				const screen = await devices.acquireScreenshare();
 				const trVideo = vc.acquireTransceiver("screen", "video");
-				if (trVideo.currentDirection !== "stopped") {
-					await trVideo.sender.replaceTrack(screen.trackVideo);
+				const trAudio = screen.trackAudio
+					? vc.acquireTransceiver("screen", "audio")
+					: null;
+
+				const videoActive = trVideo.currentDirection !== "stopped";
+				const audioActive =
+					trAudio !== null && trAudio.currentDirection !== "stopped";
+
+				await Promise.all([
+					videoActive
+						? trVideo.sender.replaceTrack(screen.trackVideo)
+						: Promise.resolve(),
+					audioActive && screen.trackAudio && trAudio
+						? trAudio.sender.replaceTrack(screen.trackAudio)
+						: Promise.resolve(),
+				]);
+
+				if (videoActive) {
 					trVideo.direction = "sendonly";
 				} else {
 					voiceLog.warn("screenshare video transceiver is stopped", trVideo);
 				}
 
-				if (screen.trackAudio) {
-					const trAudio = vc.acquireTransceiver("screen", "audio");
-					if (trAudio.currentDirection !== "stopped") {
-						await trAudio.sender.replaceTrack(screen.trackAudio);
-						trAudio.direction = "sendonly";
-					}
+				if (trAudio && audioActive) {
+					trAudio.direction = "sendonly";
+				} else if (trAudio) {
+					voiceLog.warn("screenshare audio transceiver is stopped", trAudio);
+				}
+
+				if (!screen.trackAudio) {
+					voiceLog.warn("screenshare has no audio track");
 				}
 
 				screen.trackVideo.addEventListener("ended", () => {

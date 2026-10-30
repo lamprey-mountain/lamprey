@@ -71,7 +71,6 @@ export class DeviceManager {
 			video: true,
 			audio: true,
 		});
-		console.log("AAAAA", stream);
 
 		// TODO: get metadata about the display stream
 		// trackVideo.getSettings().displaySurface
@@ -80,8 +79,8 @@ export class DeviceManager {
 		voiceLog.debug("got screenshare stream", stream);
 		const trackVideo = stream.getVideoTracks()[0];
 		if (!trackVideo) throw new Error("no video track in screenshare stream");
-		console.log("AAA", trackVideo.label);
 		const trackAudio = stream.getAudioTracks()[0] ?? null;
+		voiceLog.debug("screenshare audio track", trackAudio);
 		const l = { trackVideo, trackAudio, stream };
 		this.localScreenshare = l;
 		trackVideo.addEventListener("ended", () => {
