@@ -90,8 +90,14 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 
 	createEffect(
 		on(
-			() => [store.muted, store.deafened, store.camera] as const,
-			([mute, deaf, video]) => {
+			() =>
+				[
+					store.muted,
+					store.deafened,
+					store.camera,
+					store.screensharing,
+				] as const,
+			([mute, deaf, video, screenshare]) => {
 				if (vc.connectionState() === "disconnected") return;
 				const vs = api.voiceState;
 				if (!vs) return;
@@ -104,7 +110,7 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 							channel_id: vs.channel_id,
 							self_deaf: deaf,
 							self_mute: mute,
-							self_video: video,
+							self_video: video || screenshare,
 						},
 					},
 				});
