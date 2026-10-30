@@ -64,6 +64,14 @@ impl DiscordRealm {
                             let create_channel =
                                 CreateChannel::new(channel.name.clone()).kind(match channel.ty {
                                     lamprey::ChannelType::Text => ChannelType::Text,
+                                    lamprey::ChannelType::ThreadPublic
+                                    | lamprey::ChannelType::ThreadPrivate => {
+                                        warn!(
+                                            channel_id = %channel.id,
+                                            "cannot bridge lamprey thread: parent channel id translation is not implemented"
+                                        );
+                                        continue;
+                                    }
                                     _ => continue,
                                 });
 

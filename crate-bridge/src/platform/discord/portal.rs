@@ -8,7 +8,9 @@ use serenity::all::{
 use tokio::sync::broadcast;
 use tracing::{Instrument, debug, error, warn};
 
-use crate::bridge_old::{MessageData, Portal, PortalEvent, PortalHandle, PortalId};
+use crate::bridge_old::{
+    MessageData, Portal, PortalEvent, PortalEventEnvelope, PortalHandle, PortalId, ThreadId,
+};
 use crate::prelude::*;
 use crate::types::Platform;
 use crate::util::mentions::MessageTransformer;
@@ -54,7 +56,7 @@ impl DiscordPortal {
             .await?;
 
         loop {
-            let event = match events.recv().await {
+            let envelope = match events.recv().await {
                 Ok(e) => e,
                 Err(broadcast::error::RecvError::Lagged(n)) => {
                     warn!(portal_id=%self.portal_id, n, "portal event receiver lagged, skipping");
@@ -63,8 +65,11 @@ impl DiscordPortal {
                 Err(broadcast::error::RecvError::Closed) => break,
             };
 
-            if let Err(err) = self.handle_event(&http_client, &event).await {
-                error!("error while handling event {event:?}: {err}");
+            if let Err(err) = self
+                .handle_event(&http_client, &envelope.event, envelope.thread)
+                .await
+            {
+                error!("error while handling event {:?}: {err}", envelope.event);
             }
         }
 
@@ -111,7 +116,11 @@ impl DiscordPortal {
                     message: Box::new(message),
                 });
 
-                if self.handle.events.send(Arc::new(event)).is_err() {
+                let envelope = PortalEventEnvelope {
+                    event,
+                    thread: None,
+                };
+                if self.handle.events.send(Arc::new(envelope)).is_err() {
                     error!(%message_id, "portal event queue is full, dropping message");
                 }
 
@@ -120,7 +129,36 @@ impl DiscordPortal {
         }
     }
 
-    async fn handle_event(&self, http_client: &reqwest::Client, event: &PortalEvent) -> Result<()> {
+    // Message-based thread channel ids equal their starter message id; private
+    // threads (created via `thread_create`) have their own portal instead.
+    async fn resolve_thread(&self, thread: Option<ThreadId>) -> Result<Option<discord::ChannelId>> {
+        let Some(ThreadId::Lamprey(channel_id)) = thread else {
+            return Ok(None);
+        };
+
+        let message_id = lamprey::MessageId::from(channel_id.into_inner());
+        let discord_thread_id = self
+            .handle
+            .bridge
+            .db
+            .message_get_by_lamprey_id(self.portal_id, message_id)
+            .await?
+            .and_then(|msg| msg.discord_message_id)
+            .map(|id| discord::ChannelId::new(id.get()));
+
+        if discord_thread_id.is_none() {
+            debug!(%channel_id, "no bridged message for thread, falling back to parent channel");
+        }
+
+        Ok(discord_thread_id)
+    }
+
+    async fn handle_event(
+        &self,
+        http_client: &reqwest::Client,
+        event: &PortalEvent,
+        thread: Option<ThreadId>,
+    ) -> Result<()> {
         match event {
             PortalEvent::Typing(_) => {
                 // discord doesn't have any good way of bridging typing notifications
@@ -154,6 +192,8 @@ impl DiscordPortal {
 
                 // PERF: don't fetch webhook every time, cache it (Webhook::from_url)
                 let discord_cfg = self.portal.discord.as_ref().unwrap();
+                let thread_id = self.resolve_thread(thread).await?;
+                let channel_id = thread_id.unwrap_or(discord_cfg.channel_id);
                 let webhook_url = &discord_cfg.webhook_url;
                 let webhook =
                     serenity::all::Webhook::from_url(&self.http, webhook_url.as_str()).await?;
@@ -199,10 +239,8 @@ impl DiscordPortal {
                         .await?
                     {
                         if let Some(discord_msg_id) = bridge_msg.discord_message_id {
-                            let discord_msg = self
-                                .http
-                                .get_message(discord_cfg.channel_id, discord_msg_id)
-                                .await?;
+                            let discord_msg =
+                                self.http.get_message(channel_id, discord_msg_id).await?;
                             let reply_content = format_discord_reply_content(&discord_msg);
 
                             let author_display = if discord_msg.webhook_id.is_some() {
@@ -214,7 +252,7 @@ impl DiscordPortal {
                             let description = format!(
                                 "**[replying to](https://canary.discord.com/channels/{}/{}/{})** {} \n{}",
                                 discord_cfg.guild_id,
-                                discord_cfg.channel_id,
+                                channel_id,
                                 discord_msg_id,
                                 author_display,
                                 reply_content,
@@ -281,7 +319,9 @@ impl DiscordPortal {
                     builder = builder.avatar_url(avatar_url);
                 }
 
-                if discord_cfg.parent_id.is_some() {
+                if let Some(thread_id) = thread_id {
+                    builder = builder.in_thread(thread_id);
+                } else if discord_cfg.parent_id.is_some() {
                     builder = builder.in_thread(discord_cfg.channel_id);
                 }
 
@@ -331,6 +371,7 @@ impl DiscordPortal {
 
                 // PERF: don't fetch webhook every time, cache it (Webhook::from_url)
                 let discord_cfg = self.portal.discord.as_ref().unwrap();
+                let thread_id = self.resolve_thread(thread).await?;
                 let webhook_url = &discord_cfg.webhook_url;
                 let webhook =
                     serenity::all::Webhook::from_url(&self.http, webhook_url.as_str()).await?;
@@ -402,7 +443,9 @@ impl DiscordPortal {
                     .content(content)
                     .attachments(attachments)
                     .allowed_mentions(CreateAllowedMentions::new());
-                if discord_cfg.parent_id.is_some() {
+                if let Some(thread_id) = thread_id {
+                    edit_builder = edit_builder.in_thread(thread_id);
+                } else if discord_cfg.parent_id.is_some() {
                     edit_builder = edit_builder.in_thread(discord_cfg.channel_id);
                 }
                 let edited = webhook
@@ -436,9 +479,13 @@ impl DiscordPortal {
                         if let (Some(lamprey_msg_id), Some(discord_message_id)) =
                             (msg.lamprey_message_id, msg.discord_message_id)
                         {
+                            let channel_id = self
+                                .resolve_thread(thread)
+                                .await?
+                                .unwrap_or(discord_cfg.channel_id);
                             let _ = self
                                 .http
-                                .delete_message(discord_cfg.channel_id, discord_message_id, None)
+                                .delete_message(channel_id, discord_message_id, None)
                                 .await;
                             let _ = self
                                 .handle

@@ -20,7 +20,7 @@ use tracing::{Instrument, debug, error, warn};
 
 use crate::bridge_old as bridge;
 use crate::{
-    bridge_old::{Portal, PortalEvent, PortalHandle},
+    bridge_old::{Portal, PortalEvent, PortalEventEnvelope, PortalHandle, ThreadId},
     platform::lamprey::client::{ImportUrl, LampreyClient},
     prelude::*,
     types::Platform,
@@ -72,7 +72,7 @@ impl LampreyPortal {
             .await?;
 
         loop {
-            let event = match events.recv().await {
+            let envelope = match events.recv().await {
                 Ok(e) => e,
                 Err(broadcast::error::RecvError::Lagged(n)) => {
                     warn!(portal_id=%self.portal_id, n, "portal event receiver lagged, skipping");
@@ -81,10 +81,13 @@ impl LampreyPortal {
                 Err(broadcast::error::RecvError::Closed) => break,
             };
 
-            debug!("lamprey portal recv event: {event:?}");
+            debug!("lamprey portal recv event: {:?}", envelope.event);
 
-            if let Err(err) = self.handle_event(&ly, &event).await {
-                error!("error while handling event {event:?}: {err}");
+            if let Err(err) = self
+                .handle_event(&ly, &envelope.event, envelope.thread)
+                .await
+            {
+                error!("error while handling event {:?}: {err}", envelope.event);
             }
         }
 
@@ -126,7 +129,11 @@ impl LampreyPortal {
                     }),
                 });
 
-                if self.handle.events.send(Arc::new(event)).is_err() {
+                let envelope = PortalEventEnvelope {
+                    event,
+                    thread: None,
+                };
+                if self.handle.events.send(Arc::new(envelope)).is_err() {
                     error!(%message_id, "portal event queue is full, dropping message");
                 }
 
@@ -135,12 +142,46 @@ impl LampreyPortal {
         }
     }
 
-    async fn handle_event(&self, ly: &LampreyClient, event: &PortalEvent) -> Result<()> {
+    // Message-based thread channel ids equal their starter message id; private
+    // threads (created via `thread_create`) have their own portal instead.
+    async fn resolve_thread_channel(&self, thread: Option<ThreadId>) -> Result<Option<ChannelId>> {
+        let Some(ThreadId::Discord(thread_id)) = thread else {
+            return Ok(None);
+        };
+
+        let message_id = discord::MessageId::new(thread_id.get());
+        let lamprey_thread_id = self
+            .handle
+            .bridge
+            .db
+            .message_get_by_discord_id(self.portal_id, message_id)
+            .await?
+            .and_then(|msg| msg.lamprey_message_id)
+            .map(|id| ChannelId::from(id.into_inner()));
+
+        if lamprey_thread_id.is_none() {
+            debug!(%thread_id, "no bridged message for thread, falling back to parent channel");
+        }
+
+        Ok(lamprey_thread_id)
+    }
+
+    async fn handle_event(
+        &self,
+        ly: &LampreyClient,
+        event: &PortalEvent,
+        thread: Option<ThreadId>,
+    ) -> Result<()> {
+        let channel_id = self
+            .resolve_thread_channel(thread)
+            .await?
+            .unwrap_or(self.channel_id);
+
         match event {
             PortalEvent::Typing(user) => {
                 ly.http
                     .for_puppet(user.lamprey_id)?
-                    .channel_typing(self.channel_id)
+                    .channel_typing(channel_id)
                     .await?;
             }
             PortalEvent::MessageCreate(data) => {
@@ -341,7 +382,7 @@ impl LampreyPortal {
                     .http
                     .for_puppet(puppet.id)?
                     .message_create_with_options(MessageCreateOptions {
-                        channel_id: self.portal.lamprey.as_ref().unwrap().channel_id,
+                        channel_id,
                         body: create,
                         nonce: None,
                         timestamp: Some(
@@ -449,7 +490,7 @@ impl LampreyPortal {
                 let edited = ly
                     .http
                     .for_puppet(puppet.id)?
-                    .message_edit(self.channel_id, lamprey_message_id, &patch)
+                    .message_edit(channel_id, lamprey_message_id, &patch)
                     .await?;
 
                 let mut new_attachments = Vec::new();
@@ -481,10 +522,7 @@ impl LampreyPortal {
                     {
                         // TODO: propagate (or at least log) errors
                         // if http.message_delete fails it should still delete from the db(?)
-                        let _ = ly
-                            .http
-                            .message_delete(self.channel_id, lamprey_message_id)
-                            .await;
+                        let _ = ly.http.message_delete(channel_id, lamprey_message_id).await;
                         let _ = self
                             .handle
                             .bridge
@@ -512,7 +550,7 @@ impl LampreyPortal {
                         ly.http
                             .for_puppet(user.lamprey_id)?
                             .reaction_create(
-                                self.channel_id,
+                                channel_id,
                                 lamprey_message_id,
                                 key.to_string(),
                                 user.lamprey_id.into(),
@@ -538,7 +576,7 @@ impl LampreyPortal {
                         ly.http
                             .for_puppet(user.lamprey_id)?
                             .reaction_delete(
-                                self.channel_id,
+                                channel_id,
                                 lamprey_message_id,
                                 key.to_string(),
                                 user.lamprey_id.into(),
@@ -563,11 +601,7 @@ impl LampreyPortal {
                         };
 
                         ly.http
-                            .reaction_delete_key(
-                                self.channel_id,
-                                lamprey_message_id,
-                                key.to_string(),
-                            )
+                            .reaction_delete_key(channel_id, lamprey_message_id, key.to_string())
                             .await?;
                     }
                 }
@@ -576,7 +610,7 @@ impl LampreyPortal {
                 if let Some(msg) = self.handle.bridge.db.message_get(*message_id).await? {
                     if let Some(lamprey_message_id) = msg.lamprey_message_id {
                         ly.http
-                            .reaction_delete_all(self.channel_id, lamprey_message_id)
+                            .reaction_delete_all(channel_id, lamprey_message_id)
                             .await?;
                     }
                 }

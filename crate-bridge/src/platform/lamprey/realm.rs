@@ -69,11 +69,25 @@ impl LampreyRealm {
                                     // TODO: voice bridging
                                     // TODO: thread/forum bridging
                                     // discord::ChannelType::Voice => ChannelType::Voice,
-                                    // discord::ChannelType::NewsThread => todo!(),
-                                    // discord::ChannelType::PublicThread => todo!(),
-                                    // discord::ChannelType::PrivateThread => todo!(),
                                     // discord::ChannelType::Stage => todo!(),
                                     // discord::ChannelType::Forum => todo!(),
+
+                                    // TODO: handle this
+                                    discord::ChannelType::NewsThread
+                                    | discord::ChannelType::PublicThread => {
+                                        warn!(
+                                            channel_id = %chan.id,
+                                            "cannot bridge discord public/news thread: parent channel id translation is not implemented"
+                                        );
+                                        continue;
+                                    }
+                                    discord::ChannelType::PrivateThread => {
+                                        warn!(
+                                            channel_id = %chan.id,
+                                            "cannot bridge discord private thread: parent channel id translation is not implemented"
+                                        );
+                                        continue;
+                                    }
 
                                     // not supported
                                     _ => continue,

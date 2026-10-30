@@ -43,6 +43,7 @@ pub enum DiscordEvent {
     ThreadDelete(ChannelId),
     ThreadListSync(ThreadListSyncEvent),
     ThreadMembersUpdate(ThreadMembersUpdateEvent),
+    GuildCreate(Guild),
 }
 
 #[async_trait]
@@ -61,6 +62,7 @@ impl EventHandler for Handler {
 
     async fn guild_create(&self, _ctx: Context, guild: Guild, _is_new: Option<bool>) {
         info!("discord guild create: {}", guild.name);
+        let _ = self.tx.send(DiscordEvent::GuildCreate(guild)).await;
     }
 
     async fn message(&self, _ctx: Context, message: Message) {

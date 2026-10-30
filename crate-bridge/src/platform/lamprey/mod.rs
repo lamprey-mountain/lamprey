@@ -11,8 +11,8 @@ use tracing::{debug, info, trace, warn};
 
 use crate::actor::bridge::BridgeCommand;
 use crate::bridge_old::{
-    BridgeEvent, BridgeHandle, Platform, PlatformHandle, Portal, PortalEvent, PortalHandle,
-    PortalId, Realm, RealmEvent, RealmHandle, RealmId,
+    BridgeEvent, BridgeHandle, Platform, PlatformHandle, Portal, PortalEvent, PortalEventEnvelope,
+    PortalHandle, PortalId, Realm, RealmEvent, RealmHandle, RealmId, ThreadId,
 };
 use crate::config::LampreyConfig;
 use crate::platform::lamprey::portal::LampreyPortal;
@@ -231,7 +231,7 @@ impl Lamprey {
                         .send(Arc::new(RealmEvent::ChannelCreate(channel_data)));
                 }
                 MessageSync::ChannelUpdate { channel } => {
-                    if self.portal_lookup.contains_key(&channel.id) {
+                    if self.lookup_portal(&channel.id).is_some() {
                         let channel_data = ChannelData::Lamprey {
                             channel: channel.clone(),
                         };
@@ -455,11 +455,11 @@ impl Lamprey {
                     message_id,
                     room_id: _,
                 } => {
-                    if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                    if let Some((portal_id, _)) = self.lookup_portal(channel_id) {
                         if let Ok(Some(msg)) = self
                             .bridge
                             .db
-                            .message_get_by_lamprey_id(*portal_id, *message_id)
+                            .message_get_by_lamprey_id(portal_id, *message_id)
                             .await
                         {
                             self.route_portal_event(channel_id, PortalEvent::MessageDelete(msg.id));
@@ -473,11 +473,11 @@ impl Lamprey {
                     user_id,
                     key,
                 } => {
-                    if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                    if let Some((portal_id, _)) = self.lookup_portal(channel_id) {
                         let Some(msg) = self
                             .bridge
                             .db
-                            .message_get_by_lamprey_id(*portal_id, *message_id)
+                            .message_get_by_lamprey_id(portal_id, *message_id)
                             .await?
                         else {
                             return Ok(());
@@ -509,11 +509,11 @@ impl Lamprey {
                     user_id,
                     key,
                 } => {
-                    if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                    if let Some((portal_id, _)) = self.lookup_portal(channel_id) {
                         let Some(msg) = self
                             .bridge
                             .db
-                            .message_get_by_lamprey_id(*portal_id, *message_id)
+                            .message_get_by_lamprey_id(portal_id, *message_id)
                             .await?
                         else {
                             return Ok(());
@@ -544,11 +544,11 @@ impl Lamprey {
                     message_id,
                     key,
                 } => {
-                    if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                    if let Some((portal_id, _)) = self.lookup_portal(channel_id) {
                         let Some(msg) = self
                             .bridge
                             .db
-                            .message_get_by_lamprey_id(*portal_id, *message_id)
+                            .message_get_by_lamprey_id(portal_id, *message_id)
                             .await?
                         else {
                             return Ok(());
@@ -568,11 +568,11 @@ impl Lamprey {
                     channel_id,
                     message_id,
                 } => {
-                    if let Some(portal_id) = self.portal_lookup.get(&channel_id) {
+                    if let Some((portal_id, _)) = self.lookup_portal(channel_id) {
                         let Some(msg) = self
                             .bridge
                             .db
-                            .message_get_by_lamprey_id(*portal_id, *message_id)
+                            .message_get_by_lamprey_id(portal_id, *message_id)
                             .await?
                         else {
                             return Ok(());
@@ -591,11 +591,54 @@ impl Lamprey {
         Ok(())
     }
 
-    fn route_portal_event(&self, channel_id: &ChannelId, event: PortalEvent) {
+    /// Resolve the portal that should handle an event.
+    ///
+    /// Threads without a portal return the parent channel's portal and the
+    /// thread id.
+    fn lookup_portal(&self, channel_id: &ChannelId) -> Option<(PortalId, Option<ThreadId>)> {
         if let Some(portal_id) = self.portal_lookup.get(channel_id) {
-            if let Some(handle) = self.portal_handles.get(portal_id) {
-                let _ = handle.events.send(Arc::new(event));
-            }
+            return Some((*portal_id, None));
+        }
+
+        let parent_id = self
+            .client
+            .cache()
+            .and_then(|cache| cache.channel(*channel_id))
+            .and_then(|channel| channel.inner.load().parent_id);
+
+        let Some(parent_id) = parent_id else {
+            debug!(%channel_id, "no portal found for channel");
+            return None;
+        };
+
+        let Some(portal_id) = self.portal_lookup.get(&parent_id) else {
+            debug!(%channel_id, %parent_id, "no portal found for thread or its parent");
+            return None;
+        };
+
+        debug!(%channel_id, %parent_id, "routing thread event through parent portal");
+        Some((*portal_id, Some(ThreadId::Lamprey(*channel_id))))
+    }
+
+    fn send_portal_event(&self, portal_id: PortalId, event: PortalEvent, thread: Option<ThreadId>) {
+        let Some(handle) = self.portal_handles.get(&portal_id) else {
+            debug!(%portal_id, "no portal handle, dropping event");
+            return;
+        };
+
+        if handle
+            .events
+            .send(Arc::new(PortalEventEnvelope { event, thread }))
+            .is_err()
+        {
+            debug!(%portal_id, "no portal event receivers, dropping event");
+        }
+    }
+
+    fn route_portal_event(&self, channel_id: &ChannelId, event: PortalEvent) {
+        match self.lookup_portal(channel_id) {
+            Some((portal_id, thread)) => self.send_portal_event(portal_id, event, thread),
+            None => debug!(%channel_id, ?event, "dropping event without a portal"),
         }
     }
 
@@ -613,9 +656,7 @@ impl Lamprey {
                 self.init_portal(portal, handle);
             }
             BridgeEvent::PortalEvent(id, event) => {
-                if let Some(handle) = self.portal_handles.get(id) {
-                    let _ = handle.events.send(Arc::new(event.clone()));
-                }
+                self.send_portal_event(*id, event.clone(), None);
             }
             BridgeEvent::PortalLinkRequest { lamprey_channel_id } => {
                 let channel_id = *lamprey_channel_id;

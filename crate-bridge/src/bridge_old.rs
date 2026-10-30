@@ -78,6 +78,18 @@ pub struct PortalCreate {
     pub channel: PortalChannel,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThreadId {
+    Discord(discord::ChannelId),
+    Lamprey(lamprey::ChannelId),
+}
+
+#[derive(Debug, Clone)]
+pub struct PortalEventEnvelope {
+    pub event: PortalEvent,
+    pub thread: Option<ThreadId>,
+}
+
 /// an event that's broadcast to a portal
 #[derive(Debug, Clone)]
 pub enum PortalEvent {
@@ -126,7 +138,7 @@ pub struct BridgeHandle {
 #[derive(Debug, Clone)]
 pub struct PortalHandle {
     pub id: PortalId,
-    pub events: broadcast::Sender<Arc<PortalEvent>>,
+    pub events: broadcast::Sender<Arc<PortalEventEnvelope>>,
     pub bridge: BridgeHandle,
 }
 
