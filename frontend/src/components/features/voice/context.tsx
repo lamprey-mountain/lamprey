@@ -8,6 +8,8 @@ import {
 } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi } from "@/api";
+import { useCtx } from "@/app/context";
+import { createInitialChannelState } from "@/contexts/channel";
 import { logger } from "@/utils/logger";
 import { DeviceManager } from "./DeviceManager";
 import { VoiceClient, type VoiceConnectionState } from "./VoiceClient";
@@ -55,6 +57,7 @@ const voiceLog = logger.for("voice");
 
 export const VoiceProvider = (props: ParentProps<{}>) => {
 	const api = useApi();
+	const ctx = useCtx();
 	const vc = new VoiceClient(api);
 	const devices = new DeviceManager();
 	const vad = createVAD();
@@ -122,6 +125,14 @@ export const VoiceProvider = (props: ParentProps<{}>) => {
 		async selectChannel(channelId: string) {
 			vc.connect(channelId);
 			update("joinedChannelId", channelId);
+
+			// automatically open the voice chat sidebar for the channel we joined
+			let channel = ctx.channel_contexts.get(channelId);
+			if (!channel) {
+				channel = createStore(createInitialChannelState());
+				ctx.channel_contexts.set(channelId, channel);
+			}
+			channel[1]("voice_chat_sidebar_open", true);
 		},
 
 		disconnect() {
