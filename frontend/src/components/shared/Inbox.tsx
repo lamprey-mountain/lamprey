@@ -13,12 +13,32 @@ import { icCheck, icQuestion } from "@/utils/icons";
 import { MessageToolbarProvider } from "../features/chat/message-toolbar-context";
 import { ChannelIcon, RoomIcon } from "./User";
 
+export type InboxMessageTarget = {
+	channel_id: string;
+	message_id: string;
+};
+
+const getMessageTarget = (
+	notification: Notification,
+): InboxMessageTarget | undefined => {
+	if (notification.type !== "Message" && notification.type !== "Reaction") {
+		return undefined;
+	}
+
+	return {
+		channel_id: notification.channel_id,
+		message_id: notification.message_id,
+	};
+};
+
 // TODO: skeletons for inbox items
 // TODO: render other notification items besides messages
 // TODO: refactor styles
 // TODO: better caching, update inbox as sync messages are received, don't refetch when marking messages as read/unread
 
-export const Inbox = () => {
+export const Inbox = (props: {
+	onOpen?: (target: InboxMessageTarget) => void;
+}) => {
 	const api = useApi();
 	const [params, setParams] = createSignal({
 		include_read: false,
@@ -44,7 +64,7 @@ export const Inbox = () => {
 		return notifIds
 			.map((id) => {
 				const notif = items.find((it) => it.id === id);
-				return notif ? notif.message_id : null;
+				return notif ? getMessageTarget(notif)?.message_id : null;
 			})
 			.filter((id): id is string => !!id);
 	};
@@ -148,6 +168,7 @@ export const Inbox = () => {
 									onSelect={toggleSelection}
 									refetch={inboxResult.refetch}
 									include_read={params().include_read}
+									onOpen={props.onOpen}
 								/>
 							)}
 						</For>
@@ -165,22 +186,24 @@ const NotificationItem = (props: {
 	onSelect: (id: string, selected: boolean) => void;
 	refetch: () => void;
 	include_read: boolean;
+	onOpen?: (target: InboxMessageTarget) => void;
 }) => {
 	const api = useApi();
 
 	const ty = () => props.notification.type;
+	const target = () => getMessageTarget(props.notification);
 
 	const channel = () => {
-		const channelId = props.notification.channel_id;
+		const channelId = target()?.channel_id;
 		if (!channelId) return undefined;
 		return api.channels.get(channelId);
 	};
 
-	const message = createMemo(() =>
-		props.allData?.messages.find(
-			(m: Message) => m.id === props.notification.message_id,
-		),
-	);
+	const message = createMemo(() => {
+		const messageId = target()?.message_id;
+		if (!messageId) return undefined;
+		return props.allData?.messages.find((m: Message) => m.id === messageId);
+	});
 
 	const room = () => {
 		const t = channel();
@@ -196,6 +219,20 @@ const NotificationItem = (props: {
 	const handleMarkUnread = async () => {
 		await api.inbox.markUnread([props.notification.id]);
 		props.refetch();
+	};
+
+	const handleOpen = (e: MouseEvent) => {
+		const t = target();
+		if (!t || !props.onOpen) return;
+
+		e.preventDefault();
+		props.onOpen(t);
+	};
+
+	const href = () => {
+		const t = target();
+		if (!t) return undefined;
+		return `/channel/${t.channel_id}/message/${t.message_id}`;
 	};
 
 	return (
@@ -266,10 +303,7 @@ const NotificationItem = (props: {
 				</menu>
 			</header>
 			<div class="notification-content">
-				<A
-					class="body-link"
-					href={`/channel/${channel()?.id}/message/${message()?.id}`}
-				>
+				<A class="body-link" href={href() ?? "#"} onClick={handleOpen}>
 					<Show when={message()}>
 						{(msg) => <MessageView message={msg()} separate={true} />}
 					</Show>

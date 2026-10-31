@@ -17,6 +17,7 @@ export type Menu = {
 } & (
 	| { type: "room"; room_id: string }
 	| { type: "channel"; channel_id: string }
+	| { type: "channel_notifications"; channel_id: string }
 	| {
 			type: "message";
 			channel_id: string;

@@ -47,6 +47,7 @@ import {
 	CalendarEventMenu,
 	ChannelMenu,
 	ChannelNavMenu,
+	ChannelNotificationMenu,
 	ColorPickerOptions,
 	EmojiMenu,
 	FolderMenu,
@@ -63,6 +64,7 @@ import {
 	VoiceMenu,
 	VoiceOutputMenu,
 } from "@/menus/mod.ts";
+import { Menu as MenuRoot } from "@/menus/Parts.tsx";
 import { getModal } from "@/modals/mod.tsx";
 import { FormattingToolbar } from "./FormattingToolbar.tsx";
 import type { Menu } from "./menu.tsx";
@@ -425,6 +427,18 @@ export function OverlayProvider(props: ParentProps) {
 			}
 			case "channel": {
 				return <ChannelMenu channel_id={menu.channel_id} />;
+			}
+			case "channel_notifications": {
+				const channel = channels.use(() => menu.channel_id);
+				return (
+					<Show when={channel()}>
+						{(c) => (
+							<MenuRoot>
+								<ChannelNotificationMenu channel={c()} inline />
+							</MenuRoot>
+						)}
+					</Show>
+				);
 			}
 			case "voice": {
 				const channel = channels.use(() => menu.channel_id);

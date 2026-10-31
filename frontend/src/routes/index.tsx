@@ -1,10 +1,19 @@
 import { type RouteSectionProps, useParams } from "@solidjs/router";
 import type { Channel } from "sdk";
 import type { JSX, ParentProps } from "solid-js";
-import { createEffect, createMemo, Match, on, Show, Switch } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createSignal,
+	Match,
+	on,
+	Show,
+	Switch,
+} from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi, useChannels } from "@/api";
 import { useCtx } from "@/app/context";
+import icInbox from "@/assets/inbox.png";
 import icX from "@/assets/x-1.png";
 import { Icon } from "@/atoms/Icon";
 import { Resizable } from "@/atoms/Resizable.tsx";
@@ -31,13 +40,14 @@ import { Category } from "@/components/shared/Category";
 import { ChannelNav } from "@/components/shared/ChannelNav";
 import { Friends } from "@/components/shared/Friends";
 import { Home } from "@/components/shared/Home";
-import { Inbox } from "@/components/shared/Inbox";
+import { Inbox, type InboxMessageTarget } from "@/components/shared/Inbox";
 import { RoomHome, RoomMembers } from "@/components/shared/Room";
 import { RoomHeader } from "@/components/shared/RoomHeader";
 import { RoomNav } from "@/components/shared/RoomNav";
 import { RoomTemplatePage } from "@/components/shared/RoomTemplatePage";
 import { SearchPage } from "@/components/shared/SearchPage";
 import { Title } from "@/components/shared/Title";
+import { ChannelIcon } from "@/components/shared/User";
 import { UserTray } from "@/components/shared/UserTray";
 import {
 	ChannelContext,
@@ -45,12 +55,14 @@ import {
 	useChannel,
 } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useMenu } from "@/contexts/menu";
 import { createInitialRoomState, RoomContext } from "@/contexts/room.tsx";
 import { useSearch } from "@/contexts/search";
 import { useCurrentRoomId } from "@/hooks/useCurrentRoomId";
 import { flags } from "@/lib/flags";
 import { MediaSidebar } from "@/media/Sidebar";
 import type { RoomT } from "@/types";
+import { icMore } from "@/utils/icons";
 
 export { RouteInvite } from "@/components/shared/Invite";
 export { RouteAuthorize } from "@/components/shared/Oauth";
@@ -203,6 +215,149 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 									</Match>
 									<Match when={true}>
 										<ChatMain channel={t()} />
+									</Match>
+								</Switch>
+							</ChannelContext.Provider>
+						)}
+					</Show>
+				)}
+			</Show>
+		</div>
+	);
+};
+
+const NotificationSidebar = (props: {
+	target: InboxMessageTarget;
+	onClose: () => void;
+}) => {
+	const channels2 = useChannels();
+	const channel = channels2.use(() => props.target.channel_id);
+	const currentUser = useCurrentUser();
+	const ctx = useCtx();
+	const { menu, setMenu } = useMenu();
+
+	const channelName = (ch: Channel) => {
+		if (ch.type === "Dm") {
+			const userId = currentUser()?.id;
+			return ch.recipients?.find((i) => i.id !== userId)?.name ?? "dm";
+		}
+
+		if (ch.name === "thread" && ch.auto_name) {
+			return ch.auto_name;
+		}
+
+		return ch.name;
+	};
+
+	const openMenu = (
+		e: MouseEvent,
+		type: "channel" | "channel_notifications",
+		channelId: string,
+	) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		const current = menu();
+		if (current?.type === type && current.channel_id === channelId) {
+			setMenu(null);
+			return;
+		}
+
+		const target = e.currentTarget;
+		if (!(target instanceof HTMLElement)) return;
+
+		const rect = target.getBoundingClientRect();
+		queueMicrotask(() => {
+			setMenu({
+				x: rect.left,
+				y: rect.bottom,
+				type,
+				channel_id: channelId,
+			});
+		});
+	};
+
+	const getOrCreateChannelContext = () => {
+		const channelId = props.target.channel_id;
+		if (!channelId) return null;
+
+		if (!ctx.channel_contexts.has(channelId)) {
+			const store = createStore(createInitialChannelState());
+			ctx.channel_contexts.set(channelId, store);
+		}
+
+		return ctx.channel_contexts.get(channelId)!;
+	};
+
+	const channelCtx = createMemo(() => getOrCreateChannelContext());
+
+	createEffect(
+		on(
+			() => [props.target.channel_id, props.target.message_id] as const,
+			([, message_id]) => {
+				const c = channelCtx();
+				if (!c) return;
+
+				const [state, setState] = c;
+				if (state.focusedMessageId === message_id) {
+					state.timelineState.controller.jumpToMessage(message_id, false, true);
+				} else {
+					setState("focusedMessageId", message_id);
+				}
+			},
+		),
+	);
+
+	return (
+		<div class="thread-chat-sidebar notification-sidebar">
+			<Show when={channel()}>
+				{(ch) => (
+					<Show when={channelCtx()}>
+						{(cc) => (
+							<ChannelContext.Provider value={cc()}>
+								<header class="chat-header">
+									<div class="channel-icon">
+										<ChannelIcon channel={ch()} />
+									</div>
+									<div class="name">
+										<h3 class="name-text">{channelName(ch())}</h3>
+									</div>
+									<div class="spacer" />
+									<menu class="menu">
+										<button
+											type="button"
+											class="button icon-button"
+											data-tooltip="Notification settings"
+											onClick={(e) =>
+												openMenu(e, "channel_notifications", ch().id)
+											}
+										>
+											<Icon src={icInbox} color={null} />
+										</button>
+										<button
+											type="button"
+											class="button icon-button"
+											data-tooltip="More"
+											onClick={(e) => openMenu(e, "channel", ch().id)}
+										>
+											<Icon src={icMore} color={null} />
+										</button>
+										<button
+											type="button"
+											class="button icon-button"
+											data-tooltip="Close"
+											onClick={props.onClose}
+										>
+											<Icon src={icX} color={null} />
+										</button>
+									</menu>
+								</header>
+								<Switch>
+									<Match when={ch().type === "ThreadForum2"}>
+										<Forum2Thread channel={ch()} />
+									</Match>
+									<Match when={true}>
+										<ChatMain channel={ch()} />
 									</Match>
 								</Switch>
 							</ChannelContext.Provider>
@@ -541,10 +696,29 @@ export const RouteHome = (
 };
 
 export function RouteInbox(_p: RouteSectionProps): JSX.Element {
+	const [openTarget, setOpenTarget] = createSignal<InboxMessageTarget | null>(
+		null,
+	);
+
 	return (
 		<>
 			<Title title="inbox" />
-			<Inbox />
+			<Inbox onOpen={(target) => setOpenTarget(target)} />
+			<Show when={openTarget()}>
+				{(target) => (
+					<Resizable
+						storageKey="inbox-notification-width"
+						initialWidth={500}
+						minWidth={320}
+						maxWidth={800}
+					>
+						<NotificationSidebar
+							target={target()}
+							onClose={() => setOpenTarget(null)}
+						/>
+					</Resizable>
+				)}
+			</Show>
 		</>
 	);
 }
