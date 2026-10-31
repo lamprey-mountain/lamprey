@@ -71,6 +71,25 @@
 				margin-right: 8px;
 			}
 
+			& > .meta {
+				display: flex;
+				flex-direction: column;
+				min-width: 0;
+				line-height: 1.15;
+				gap: 0;
+
+				& > .title {
+					display: flex;
+					align-items: center;
+					min-width: 0;
+				}
+
+				& > .time {
+					color: $fg-600;
+					font-size: 0.8rem;
+				}
+			}
+
 			.spacer {
 				flex: 1;
 			}

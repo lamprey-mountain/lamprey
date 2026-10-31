@@ -248,13 +248,26 @@ const NotificationItem = (props: {
 						{(chan) => <ChannelIcon channel={chan()} />}
 					</Match>
 				</Switch>
-				<Show when={room()}>
-					<A href={`/room/${room()?.id}`}>{room()?.name}</A>
-					&nbsp;&gt;&nbsp;
-				</Show>
-				<A href={`/channel/${channel()?.id}`}>{channel()?.name ?? "..."}</A>
-				&nbsp;&bull;&nbsp;
-				<Time date={getDate(props.notification.added_at)} />
+				<div class="meta">
+					<div class="title">
+						<Show when={room()}>
+							<A href={`/room/${room()?.id}`}>{room()?.name}</A>
+							&nbsp;&gt;&nbsp;
+						</Show>
+						<A href={`/channel/${channel()?.id}`}>{channel()?.name ?? "..."}</A>
+						<Show when={href()}>
+							{(href) => (
+								<>
+									&nbsp;&gt;&nbsp;
+									<A href={href()}>jump</A>
+								</>
+							)}
+						</Show>
+					</div>
+					<div class="time">
+						<Time date={getDate(props.notification.added_at)} />
+					</div>
+				</div>
 				<div class="spacer"></div>
 				<menu>
 					<Show
