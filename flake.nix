@@ -321,9 +321,26 @@
             jq --arg ver "${workspace-version}" '.version = $ver' jsr.json > $out/jsr.json
           '';
         });
+
+        orrey-openapi = pkgs.stdenvNoCC.mkDerivation rec {
+          pname = "@lamprey/openapi";
+          version = workspace-version;
+
+          src = ./orrey-openapi;
+
+          nativeBuildInputs = [ pkgs.jq ];
+
+          installPhase = ''
+            mkdir -p $out
+            cp mod.ts schema.d.ts readme.md $out/
+
+            jq --arg ver "${workspace-version}" '.version = $ver' package.json > $out/package.json
+            jq --arg ver "${workspace-version}" '.version = $ver' jsr.json > $out/jsr.json
+          '';
+        };
       in {
         packages = rec {
-          inherit backend bridge voice frontend scanner-malware scanner-nsfw wasm-markdown emoji emoji-spritesheets agent-sandbox spawn-sandbox;
+          inherit backend bridge voice frontend scanner-malware scanner-nsfw wasm-markdown emoji emoji-spritesheets orrey-openapi agent-sandbox spawn-sandbox;
 
           cargo-deps = cargoArtifacts;
 

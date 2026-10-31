@@ -1,0 +1,5 @@
+{
+	"name": "@lamprey/openapi",
+	"exports": "./mod.ts",
+	"license": "MIT"
+}
