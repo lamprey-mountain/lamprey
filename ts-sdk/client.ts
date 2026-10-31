@@ -73,6 +73,16 @@ type Resume = {
 	seq: number;
 };
 
+type WebtransportFeature = {
+	certificate_hashes?: Array<{ value: string }>;
+	sync_url: string;
+};
+
+function getWebtransportFeature(info: ServerInfo) {
+	return (info.features as { webtransport?: WebtransportFeature } | undefined)
+		?.webtransport;
+}
+
 export function createClient(opts: ClientOptions): Client {
 	let inner: Client | null = null;
 	const state = createObservable<ClientState>("stopped");
@@ -97,8 +107,10 @@ export function createClient(opts: ClientOptions): Client {
 
 	let isConnecting = false;
 	let shouldStop = false;
+	const candidates = new Set<Client>();
 
-	function setupInner(client: Client, token?: string) {
+	function setupInner(client: Client, token?: string, alreadyStarted = false) {
+		candidates.delete(client);
 		inner = client;
 
 		for (const [listener, _] of syncListeners) {
@@ -108,13 +120,37 @@ export function createClient(opts: ClientOptions): Client {
 		// TODO: unsubscribe on cleanup
 		client.state.subscribe((s) => state.set(s));
 
-		client.start(token);
+		if (!alreadyStarted) client.start(token);
 
 		for (const data of queue) {
 			client.send(data);
 		}
 		queue.length = 0;
 	}
+
+	function waitForConnected(client: Client): Promise<void> {
+		return new Promise((resolve) => {
+			const unsub = client.state.subscribe((s) => {
+				if (s === "connected" || s === "ready") {
+					unsub();
+					resolve();
+				}
+			});
+		});
+	}
+
+	const delay = (ms: number) =>
+		new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+	// How long to let WebTransport connect after the websocket opens before
+	// committing to the websocket. The websocket Hello is held back for this
+	// long, but is released early if WebTransport is unavailable or fails.
+	const WEBTRANSPORT_GRACE_MS = 50;
+
+	type ConnectionWinner = {
+		kind: "websocket" | "webtransport";
+		client: Client;
+	};
 
 	function requireWebtransport(): WebtransportClient {
 		if (!inner?.isWebtransport) {
@@ -131,29 +167,82 @@ export function createClient(opts: ClientOptions): Client {
 
 		try {
 			if (!opts.preferWebtransport || !("WebTransport" in globalThis)) {
-				setupInner(createWebsocketClient(opts), token);
+				const ws = createWebsocketClient(opts);
+				candidates.add(ws);
+				setupInner(ws, token);
 				return;
 			}
 
-			const info: ServerInfo = await http
-				.GET("/api/v1/server/@self")
-				.then(({ data }) => data!);
+			let releaseWsHello!: () => void;
+			const wsHelloGate = new Promise<void>((resolve) => {
+				releaseWsHello = resolve;
+			});
 
-			if (shouldStop) return;
+			const ws = createWebsocketClient(opts, wsHelloGate);
+			candidates.add(ws);
+			ws.start(token);
 
-			const cert = info?.features?.webtransport?.certificate_hashes?.[0]?.value;
-			if (cert) {
-				setupInner(createWebtransportClient(opts), token);
-			} else {
-				setupInner(createWebsocketClient(opts), token);
+			let raceSettled = false;
+			const wtCandidate: { current: WebtransportClient | null } = {
+				current: null,
+			};
+
+			const wsWinner = waitForConnected(ws).then(
+				async (): Promise<ConnectionWinner> => {
+					await delay(WEBTRANSPORT_GRACE_MS);
+					return { kind: "websocket", client: ws };
+				},
+			);
+
+			const wtWinner = (async (): Promise<ConnectionWinner> => {
+				try {
+					const info: ServerInfo = await http
+						.GET("/api/v1/server/@self")
+						.then(({ data }) => data!);
+
+					if (shouldStop) throw new Error("client stopped");
+					if (raceSettled) return { kind: "websocket", client: ws };
+
+					const cert =
+						getWebtransportFeature(info)?.certificate_hashes?.[0]?.value;
+					if (!cert) return { kind: "websocket", client: ws };
+
+					const candidate = createWebtransportClient(opts);
+					wtCandidate.current = candidate;
+					candidates.add(candidate);
+					candidate.start(token);
+					await waitForConnected(candidate);
+					return { kind: "webtransport", client: candidate };
+				} catch (err) {
+					if (shouldStop) throw err;
+					console.error("Failed to connect WebTransport, using websocket", err);
+					return { kind: "websocket", client: ws };
+				}
+			})();
+
+			const winner = await Promise.race([wsWinner, wtWinner]);
+			raceSettled = true;
+			if (shouldStop) {
+				winner.client.stop();
+				return;
 			}
+
+			if (winner.kind === "webtransport") {
+				ws.stop();
+				candidates.delete(ws);
+			} else if (wtCandidate.current) {
+				wtCandidate.current.stop();
+				candidates.delete(wtCandidate.current);
+			}
+
+			releaseWsHello();
+			setupInner(winner.client, token, true);
 		} catch (err) {
 			if (shouldStop) return;
-			console.error(
-				"Failed to fetch server info, falling back to websocket",
-				err,
-			);
-			setupInner(createWebsocketClient(opts), token);
+			console.error("Failed to select a transport, using websocket", err);
+			const ws = createWebsocketClient(opts);
+			candidates.add(ws);
+			setupInner(ws, token);
 		} finally {
 			isConnecting = false;
 		}
@@ -173,6 +262,8 @@ export function createClient(opts: ClientOptions): Client {
 		},
 		stop: () => {
 			shouldStop = true;
+			for (const candidate of candidates) candidate.stop();
+			candidates.clear();
 			if (inner) {
 				inner.stop();
 			} else {
@@ -182,6 +273,8 @@ export function createClient(opts: ClientOptions): Client {
 		stopAggressive: () => {
 			shouldStop = true;
 			opts.token = undefined;
+			for (const candidate of candidates) candidate.stopAggressive();
+			candidates.clear();
 			if (inner) {
 				inner.stopAggressive();
 			} else {
@@ -218,7 +311,10 @@ export function createClient(opts: ClientOptions): Client {
 	};
 }
 
-export function createWebsocketClient(opts: ClientOptions): Client {
+export function createWebsocketClient(
+	opts: ClientOptions,
+	helloGate?: Promise<void>,
+): Client {
 	let ws: WebSocket;
 	let resume: null | Resume = null;
 	const state = createObservable<ClientState>("stopped");
@@ -349,8 +445,14 @@ export function createWebsocketClient(opts: ClientOptions): Client {
 		});
 
 		ws.addEventListener("open", (_e) => {
+			if (state.get() === "stopped") return;
 			setState("connected");
-			send({ type: "Hello", token: opts.token, ...resume }, true);
+			const sendHello = () => {
+				if (state.get() !== "connected") return;
+				send({ type: "Hello", token: opts.token, ...resume }, true);
+			};
+			if (helloGate) helloGate.then(sendHello, sendHello);
+			else sendHello();
 		});
 
 		ws.addEventListener("error", (e) => {
@@ -546,10 +648,14 @@ export function createWebtransportClient(
 				.GET("/api/v1/server/@self")
 				.then(({ data }) => data!);
 
-			const cert = info.features.webtransport?.certificate_hashes[0].value;
-			if (!cert) throw new Error("WebTransport is not supported by server");
+			if (state.get() !== "connecting") return;
 
-			const url = new URL(info.features.webtransport.sync_url);
+			const feature = getWebtransportFeature(info);
+			const cert = feature?.certificate_hashes?.[0]?.value;
+			if (!feature || !cert)
+				throw new Error("WebTransport is not supported by server");
+
+			const url = new URL(feature.sync_url);
 			url.searchParams.set("version", "1");
 			url.searchParams.set("format", format);
 			if (opts.compress) {
@@ -582,11 +688,21 @@ export function createWebtransportClient(
 			});
 
 			await transport.ready;
+			if (state.get() !== "connecting") {
+				transport.close();
+				return;
+			}
 			state.set("connected");
 			// TODO(later): make client emit an event for when protocol is selected
 
 			bidiStream = await transport.createBidirectionalStream();
 			writer = bidiStream.writable.getWriter();
+
+			if (state.get() === "stopped") {
+				writer.releaseLock();
+				writer = null;
+				return;
+			}
 
 			// FIXME: handle compression for webtransport stream
 
