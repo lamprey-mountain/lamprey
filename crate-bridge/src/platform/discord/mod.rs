@@ -207,6 +207,14 @@ impl Discord {
                     }
                 }
 
+                // sometimes we receive thread create system messages before the
+                // actual thread create event
+                if message.kind == MessageType::ThreadCreated {
+                    if let Some(thread) = message.thread.clone() {
+                        self.route_thread_create(thread);
+                    }
+                }
+
                 self.route_portal_event(
                     message.channel_id,
                     PortalEvent::MessageCreate(MessageData::Discord {
@@ -799,6 +807,10 @@ impl Discord {
             return;
         };
         self.thread_parents.insert(thread.id, parent_id);
+
+        if self.portal_lookup.contains_key(&thread.id) {
+            return;
+        }
 
         if self.portal_lookup.contains_key(&parent_id) {
             self.route_portal_event(
