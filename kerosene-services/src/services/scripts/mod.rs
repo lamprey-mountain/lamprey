@@ -88,34 +88,57 @@ impl ServiceScripts {
     /// create a script
     // TODO: process script (and script version) in background
     pub async fn create_script(&self, script: Redex) -> Result<()> {
-        let inputs = self.process(script.clone(), None).await?;
+        let version_id = script.latest_version.version_id;
+        let format = script.latest_version.format.clone();
+        let location = script.latest_version.location.clone();
+
+        // persist the script and version first, since the extraction eval references both
+        let mut txn = self.globals.begin().await?;
+        txn.script_create(&script).await?;
+        txn.script_version_create(
+            version_id,
+            script.id,
+            script.channel_id,
+            script.creator_id,
+            format.clone(),
+            location.clone(),
+            script.latest_version.metadata.clone(),
+            None,
+        )
+        .await?;
+        txn.commit().await?;
+
+        let inputs = match self.process(script.clone(), None).await {
+            Ok(inputs) => inputs,
+            Err(err) => {
+                if let Ok(mut txn) = self.globals.begin().await {
+                    let _ = txn.script_delete(script.id).await;
+                    let _ = txn.commit().await;
+                }
+                return Err(err);
+            }
+        };
         let extracted_metadata = inputs.metadata;
+        let inputs_json = serde_json::to_value(&inputs.inputs).ok();
+
         let mut txn = self.globals.begin().await?;
 
-        // persist the script to the database
-        txn.script_create(&script).await?;
-
-        // store the extracted inputs as cached_inputs on the version
-        let inputs_json = serde_json::to_value(&inputs.inputs).ok();
-        let version_id = txn
-            .script_version_create(
-                script.id,
-                script.channel_id,
-                script.creator_id,
-                script.latest_version.format.clone(),
-                script.latest_version.location.clone(),
-                extracted_metadata.clone(),
-                inputs_json,
-            )
-            .await?;
+        // store the extracted metadata and inputs on the version
+        txn.script_version_update(
+            script.id,
+            version_id,
+            format.clone(),
+            location.clone(),
+            extracted_metadata.clone(),
+            inputs_json,
+        )
+        .await?;
 
         // update status to Valid
         txn.script_version_update_status(script.id, version_id, RedexVersionStatus::Valid)
             .await?;
 
         // update the script's latest_version metadata with extracted data
-        let format = script.latest_version.format.clone();
-        let location = script.latest_version.location.clone();
         txn.script_update(script.id, format, location, extracted_metadata)
             .await?;
 
@@ -137,27 +160,49 @@ impl ServiceScripts {
 
     /// create a script version
     pub async fn create_script_version(&self, script: Redex, ver: RedexVersion) -> Result<()> {
+        let version_id = ver.version_id;
         let ver_format = ver.format.clone();
         let ver_location = ver.location.clone();
-        let inputs = self.process(script.clone(), Some(ver)).await?;
 
-        // TODO: immediately insert script version, update it after processing finishes
+        // persist the version first, since the extraction eval references it
+        let mut txn = self.globals.begin().await?;
+        txn.script_version_create(
+            version_id,
+            script.id,
+            script.channel_id,
+            script.creator_id,
+            ver_format.clone(),
+            ver_location.clone(),
+            ver.metadata.clone(),
+            None,
+        )
+        .await?;
+        txn.commit().await?;
+
+        let inputs = match self.process(script.clone(), Some(ver)).await {
+            Ok(inputs) => inputs,
+            Err(err) => {
+                if let Ok(mut txn) = self.globals.begin().await {
+                    let _ = txn.script_version_delete(script.id, version_id).await;
+                    let _ = txn.commit().await;
+                }
+                return Err(err);
+            }
+        };
+        let inputs_json = serde_json::to_value(&inputs.inputs).ok();
+
         let mut txn = self.globals.begin().await?;
 
-        // store the extracted inputs as cached_inputs on the new version
-        let inputs_json = serde_json::to_value(&inputs.inputs).ok();
-        // FIXME: use ver.version_id instead of creating a new version id
-        let version_id = txn
-            .script_version_create(
-                script.id,
-                script.channel_id,
-                script.creator_id,
-                ver_format,
-                ver_location,
-                inputs.metadata,
-                inputs_json,
-            )
-            .await?;
+        // store the extracted metadata and inputs on the new version
+        txn.script_version_update(
+            script.id,
+            version_id,
+            ver_format,
+            ver_location,
+            inputs.metadata,
+            inputs_json,
+        )
+        .await?;
 
         // update status to Valid
         txn.script_version_update_status(script.id, version_id, RedexVersionStatus::Valid)
@@ -254,7 +299,15 @@ impl ServiceScripts {
     /// - does basic validation
     /// - extracts script inputs and metadata
     /// - optionally process a specific version of a script
-    async fn process(&self, redex: Redex, _ver: Option<RedexVersion>) -> Result<ScriptExtracted> {
+    async fn process(
+        &self,
+        mut redex: Redex,
+        ver: Option<RedexVersion>,
+    ) -> Result<ScriptExtracted> {
+        if let Some(ver) = ver {
+            redex.latest_version = ver;
+        }
+
         let handle = self.spawn_inner(redex, None, EvalInput::Extraction).await?;
         let extracted = handle.done().await?;
         Ok(extracted)

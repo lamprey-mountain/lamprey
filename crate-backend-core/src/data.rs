@@ -1030,6 +1030,7 @@ pub trait DataScript {
     async fn script_delete(&mut self, script_id: RedexId) -> Result<()>;
     async fn script_version_create(
         &mut self,
+        version_id: RedexVerId,
         script_id: RedexId,
         channel_id: ChannelId,
         creator_id: UserId,
@@ -1037,7 +1038,16 @@ pub trait DataScript {
         location: RedexLocation,
         metadata: RedexMetadata,
         cached_inputs: Option<serde_json::Value>,
-    ) -> Result<RedexVerId>;
+    ) -> Result<()>;
+    async fn script_version_update(
+        &mut self,
+        script_id: RedexId,
+        version_id: RedexVerId,
+        format: RedexFormat,
+        location: RedexLocation,
+        metadata: RedexMetadata,
+        cached_inputs: Option<serde_json::Value>,
+    ) -> Result<()>;
     async fn script_version_update_status(
         &mut self,
         script_id: RedexId,

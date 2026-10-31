@@ -242,6 +242,7 @@ impl DataScript for Postgres {
 
     async fn script_version_create(
         &mut self,
+        version_id: RedexVerId,
         script_id: RedexId,
         channel_id: ChannelId,
         creator_id: UserId,
@@ -249,8 +250,7 @@ impl DataScript for Postgres {
         location: RedexLocation,
         metadata: RedexMetadata,
         cached_inputs: Option<serde_json::Value>,
-    ) -> Result<RedexVerId> {
-        let version_id = RedexVerId::new();
+    ) -> Result<()> {
         let mut conn = self.acquire().await?;
 
         let data = serde_json::json!({
@@ -274,7 +274,37 @@ impl DataScript for Postgres {
         .execute(conn.ext())
         .await?;
 
-        Ok(version_id)
+        Ok(())
+    }
+
+    async fn script_version_update(
+        &mut self,
+        script_id: RedexId,
+        version_id: RedexVerId,
+        format: RedexFormat,
+        location: RedexLocation,
+        metadata: RedexMetadata,
+        cached_inputs: Option<serde_json::Value>,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
+
+        let data = serde_json::json!({
+            "format": format,
+            "location": location,
+            "metadata": metadata,
+        });
+
+        query!(
+            "UPDATE redex_version SET data = $3, cached_inputs = $4 WHERE version_id = $1 AND script_id = $2",
+            *version_id,
+            *script_id,
+            data,
+            cached_inputs
+        )
+        .execute(conn.ext())
+        .await?;
+
+        Ok(())
     }
 
     async fn script_version_update_status(
