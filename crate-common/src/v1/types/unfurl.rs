@@ -32,6 +32,7 @@ pub mod log {
 
         /// child spans
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        #[schema(no_recursion)]
         pub children: Vec<Entry>,
 
         #[serde(flatten)]

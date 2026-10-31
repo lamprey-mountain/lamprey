@@ -214,6 +214,20 @@ components(schemas(
     common::v1::types::calendar::CalendarOverwrite,
     common::v1::types::calendar::CalendarOverwrite,
     common::v1::types::calendar::CalendarPatch,
+    // oauth types
+    common::v1::types::oauth::Jwk,
+    common::v1::types::oauth::OauthAuthMethod,
+    common::v1::types::oauth::OauthCodeChallengeMethod,
+    common::v1::types::oauth::OauthGrantType,
+    common::v1::types::oauth::OauthResponseType,
+    // pack types
+    common::v1::types::pack::PackSnapshotEmoji,
+    // server voice types
+    common::v1::types::server::ServerVoiceHealthSfu,
+    // document types
+    common::v1::types::document::WikiGraphDocument,
+    // unfurl types
+    common::v1::types::unfurl::log::Entry,
 
 )),
 modifiers(&BadgeModifier, &NestedTags),
