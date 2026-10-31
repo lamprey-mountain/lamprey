@@ -179,13 +179,19 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 
             fn operation() -> ::utoipa::openapi::path::Operation {
                 let meta = #ep_type::metadata();
-                let mut op = ::utoipa::openapi::path::OperationBuilder::new()
-                    .summary(Some(meta.summary))
-                    .description(meta.description);
-                for tag in meta.tags_full {
-                    op = op.tag(*tag);
+                let path_item = #ep_type::path_item();
+                let method: ::utoipa::openapi::HttpMethod = meta.method.into();
+                match method {
+                    ::utoipa::openapi::HttpMethod::Get => path_item.get,
+                    ::utoipa::openapi::HttpMethod::Put => path_item.put,
+                    ::utoipa::openapi::HttpMethod::Post => path_item.post,
+                    ::utoipa::openapi::HttpMethod::Delete => path_item.delete,
+                    ::utoipa::openapi::HttpMethod::Options => path_item.options,
+                    ::utoipa::openapi::HttpMethod::Head => path_item.head,
+                    ::utoipa::openapi::HttpMethod::Patch => path_item.patch,
+                    ::utoipa::openapi::HttpMethod::Trace => path_item.trace,
                 }
-                op.build()
+                .expect("endpoint path item missing operation")
             }
         }
     })
