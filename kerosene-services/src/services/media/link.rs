@@ -122,7 +122,7 @@ impl From<MediaLinkerError> for ServerError {
             MediaLinkerError::Conflict(_) => {
                 ApiError::from_code(ErrorCode::MediaAlreadyUsed).into()
             }
-            MediaLinkerError::Internal(e) => ServerError::Internal(e.into()),
+            MediaLinkerError::Internal(e) => ServerError::internal(*e),
         }
     }
 }

@@ -72,7 +72,7 @@ impl MultipartCollector {
             .next_field()
             .await
             // NOTE: probably not an http error?
-            .map_err(|e| ExtractorRejection::ServerError(ServerError::Internal(Box::new(e))))?
+            .map_err(|e| ExtractorRejection::ServerError(ServerError::internal(e)))?
         {
             if let Err(err) = me.handle(field).await {
                 errors.push(err);
@@ -104,7 +104,7 @@ impl MultipartCollector {
 
         let body = serde_json::to_value(payload).expect("always serializable?");
         let body = serde_json::from_value(body)
-            .map_err(|err| ExtractorRejection::ServerError(ServerError::Internal(Box::new(err))))?;
+            .map_err(|err| ExtractorRejection::ServerError(ServerError::internal(err)))?;
 
         Ok((body, self.media))
     }
@@ -125,7 +125,7 @@ impl MultipartCollector {
         let bytes = field
             .bytes()
             .await
-            .map_err(|e| ExtractorRejection::ServerError(ServerError::Internal(Box::new(e))))?;
+            .map_err(|e| ExtractorRejection::ServerError(ServerError::internal(e)))?;
         match name {
             MultipartFieldName::PayloadJson => {
                 self.add_payload(parse_json(&bytes)?)?;

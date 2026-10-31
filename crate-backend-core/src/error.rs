@@ -362,7 +362,7 @@ impl<T> LegacyErrorExt<T> for Result<T> {
     fn cast_internal(self) -> CoreResult<T, ServerError> {
         self.map_err(|err| match err {
             Error::ApiError(err) => ServerError::Api(Box::new(err)),
-            err => ServerError::Internal(Box::new(err)),
+            err => ServerError::internal(err),
         })
     }
 }

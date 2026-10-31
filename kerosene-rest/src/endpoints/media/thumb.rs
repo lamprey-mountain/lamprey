@@ -86,18 +86,18 @@ async fn get(req: Req<routes::thumb_get::Endpoint>) -> Result<routes::thumb_get:
                 .blobs()
                 .reader(&thumb_path)
                 .await
-                .map_err(|err| ServerError::Internal(Box::new(err)))?;
+                .map_err(|err| ServerError::internal(err))?;
 
             let stream = if let Some(range) = meta.range {
                 reader
                     .into_bytes_stream(range)
                     .await
-                    .map_err(|err| ServerError::Internal(Box::new(err)))?
+                    .map_err(|err| ServerError::internal(err))?
             } else {
                 reader
                     .into_bytes_stream(..)
                     .await
-                    .map_err(|err| ServerError::Internal(Box::new(err)))?
+                    .map_err(|err| ServerError::internal(err))?
             };
 
             Body::from_stream(stream)

@@ -29,17 +29,17 @@ async fn get(req: Req<routes::media_get::Endpoint>) -> Result<routes::media_get:
             .blobs()
             .reader(&paths.file(media.id))
             .await
-            .map_err(|err| ServerError::Internal(Box::new(err)))?;
+            .map_err(|err| ServerError::internal(err))?;
         let stream = if let Some(range) = meta.range {
             reader
                 .into_bytes_stream(range)
                 .await
-                .map_err(|err| ServerError::Internal(Box::new(err)))?
+                .map_err(|err| ServerError::internal(err))?
         } else {
             reader
                 .into_bytes_stream(..)
                 .await
-                .map_err(|err| ServerError::Internal(Box::new(err)))?
+                .map_err(|err| ServerError::internal(err))?
         };
         Body::from_stream(stream)
     };
@@ -77,17 +77,17 @@ async fn get_filename(
             .blobs()
             .reader(&paths.file(media.id))
             .await
-            .map_err(|err| ServerError::Internal(Box::new(err)))?;
+            .map_err(|err| ServerError::internal(err))?;
         let stream = if let Some(range) = meta.range {
             reader
                 .into_bytes_stream(range)
                 .await
-                .map_err(|err| ServerError::Internal(Box::new(err)))?
+                .map_err(|err| ServerError::internal(err))?
         } else {
             reader
                 .into_bytes_stream(..)
                 .await
-                .map_err(|err| ServerError::Internal(Box::new(err)))?
+                .map_err(|err| ServerError::internal(err))?
         };
         Body::from_stream(stream)
     };

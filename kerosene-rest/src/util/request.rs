@@ -84,7 +84,7 @@ where
                 if err.source().is_some_and(|s| s.is::<LengthLimitError>()) {
                     ExtractorRejection::ExtractorError(ExtractorError::BodyTooLarge)
                 } else {
-                    ExtractorRejection::ServerError(ServerError::Internal(Box::new(err)))
+                    ExtractorRejection::ServerError(ServerError::internal(err))
                 }
             })?;
 
@@ -124,7 +124,7 @@ where
                     })?;
                 let boundary = multer::parse_boundary(ct).map_err(|e| {
                     // TODO: custom error for bad multipart boundary
-                    ExtractorRejection::ServerError(ServerError::Internal(Box::new(e)))
+                    ExtractorRejection::ServerError(ServerError::internal(e))
                 })?;
                 let stream = stream::once(async move { Ok::<Bytes, std::io::Error>(body) });
                 let multipart = multer::Multipart::new(stream, boundary);
@@ -148,7 +148,7 @@ where
                             .import_from_multipart(import, file)
                             .await
                             .map_err(|e| {
-                                ExtractorRejection::ServerError(ServerError::Internal(Box::new(e)))
+                                ExtractorRejection::ServerError(ServerError::internal(e))
                             })?;
                         media.insert(MediaReference::Attachment { media_index: num }, item);
                     }
