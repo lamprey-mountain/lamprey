@@ -60,6 +60,7 @@ import { useMenu } from "@/contexts/menu";
 import { createInitialRoomState, RoomContext } from "@/contexts/room.tsx";
 import { useSearch } from "@/contexts/search";
 import { useCurrentRoomId } from "@/hooks/useCurrentRoomId";
+import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import { MediaSidebar } from "@/media/Sidebar";
 import type { RoomT } from "@/types";
@@ -201,15 +202,13 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 	};
 
 	return (
-		<div class="thread-chat-sidebar">
+		<div class="thread-chat-sidebar notification-sidebar">
 			<Show when={thread()}>
 				{(t) => (
 					<Show when={channelCtx()}>
 						{(cc) => (
 							<ChannelContext.Provider value={cc()}>
-								<button type="button" class="close" onClick={onClose}>
-									<Icon src={icX} />
-								</button>
+								<SidebarChatHeader channel={t()} onClose={onClose} />
 								<Switch>
 									<Match when={t().type === "ThreadForum2"}>
 										<Forum2Thread channel={t()} />
@@ -227,17 +226,30 @@ const ThreadChatSidebar = (props: { thread_id: string }) => {
 	);
 };
 
-const NotificationSidebar = (props: {
-	target: InboxMessageTarget;
+const SidebarChatHeader = (props: {
+	channel: Channel;
 	onClose: () => void;
 }) => {
 	const channels2 = useChannels();
-	const channel = channels2.use(() => props.target.channel_id);
 	const currentUser = useCurrentUser();
-	const ctx = useCtx();
 	const { menu, setMenu } = useMenu();
+	const [editingName, setEditingName] = createSignal<string>();
+	const [isSaving, setIsSaving] = createSignal(false);
+	let inputRef!: HTMLInputElement;
 
-	const channelName = (ch: Channel) => {
+	const { has: hasPermission } = usePermissions(
+		() => currentUser()?.id,
+		() => props.channel.room_id ?? undefined,
+		() => props.channel.id,
+	);
+
+	const isThread = () =>
+		props.channel.type === "ThreadPublic" ||
+		props.channel.type === "ThreadPrivate" ||
+		props.channel.type === "ThreadForum2";
+
+	const channelName = () => {
+		const ch = props.channel;
 		if (ch.type === "Dm") {
 			const userId = currentUser()?.id;
 			return ch.recipients?.find((i) => i.id !== userId)?.name ?? "dm";
@@ -248,6 +260,45 @@ const NotificationSidebar = (props: {
 		}
 
 		return ch.name;
+	};
+
+	const canEditChannelName = () => {
+		if (props.channel.type === "Dm") return false;
+		if (!isThread()) return hasPermission("ChannelManage");
+		return hasPermission("ThreadManage");
+	};
+
+	const startEditingName = () => {
+		if (!canEditChannelName() || editingName() !== undefined) return;
+		setEditingName(channelName());
+		setTimeout(() => inputRef.focus());
+	};
+
+	const saveName = async () => {
+		const newName = editingName()?.trim();
+		if (newName && newName !== channelName()) {
+			setIsSaving(true);
+			try {
+				await channels2.update(props.channel.id, { name: newName });
+			} finally {
+				queueMicrotask(() => {
+					setIsSaving(false);
+					setEditingName(undefined);
+				});
+			}
+		} else {
+			setEditingName(undefined);
+		}
+	};
+
+	const handleNameKeyDown = (e: KeyboardEvent) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			e.stopPropagation();
+			saveName();
+		} else if (e.key === "Escape") {
+			setEditingName(undefined);
+		}
 	};
 
 	const openMenu = (
@@ -277,6 +328,88 @@ const NotificationSidebar = (props: {
 			});
 		});
 	};
+
+	return (
+		<header class="chat-header">
+			<div class="channel-icon">
+				<ChannelIcon channel={props.channel} />
+			</div>
+			<div
+				class="name"
+				classList={{
+					editable: canEditChannelName(),
+					editing: editingName() !== undefined,
+				}}
+				tabindex="0"
+				onClick={startEditingName}
+				onKeyDown={(e) => {
+					if (e.key === "Enter") {
+						e.preventDefault();
+						startEditingName();
+					}
+				}}
+			>
+				<Switch>
+					<Match when={isSaving()}>
+						<h3 class="name-text local">{editingName()}</h3>
+					</Match>
+					<Match when={editingName() !== undefined}>
+						<input
+							ref={inputRef}
+							placeholder="awesome-thread"
+							class="name-input"
+							type="text"
+							value={editingName()}
+							onInput={(e) => setEditingName(e.currentTarget.value)}
+							onBlur={saveName}
+							onKeyDown={handleNameKeyDown}
+						/>
+					</Match>
+					<Match when={true}>
+						<h3 class="name-text">{channelName()}</h3>
+					</Match>
+				</Switch>
+			</div>
+			<div class="spacer" />
+			<menu class="menu">
+				<button
+					type="button"
+					class="button icon-button"
+					data-tooltip="Notification settings"
+					onClick={(e) =>
+						openMenu(e, "channel_notifications", props.channel.id)
+					}
+				>
+					<Icon src={icInbox} color={null} />
+				</button>
+				<button
+					type="button"
+					class="button icon-button"
+					data-tooltip="More"
+					onClick={(e) => openMenu(e, "channel", props.channel.id)}
+				>
+					<Icon src={icMore} color={null} />
+				</button>
+				<button
+					type="button"
+					class="button icon-button"
+					data-tooltip="Close"
+					onClick={props.onClose}
+				>
+					<Icon src={icX} color={null} />
+				</button>
+			</menu>
+		</header>
+	);
+};
+
+const NotificationSidebar = (props: {
+	target: InboxMessageTarget;
+	onClose: () => void;
+}) => {
+	const channels2 = useChannels();
+	const channel = channels2.use(() => props.target.channel_id);
+	const ctx = useCtx();
 
 	const getOrCreateChannelContext = () => {
 		const channelId = props.target.channel_id;
@@ -318,43 +451,7 @@ const NotificationSidebar = (props: {
 					<Show when={channelCtx()}>
 						{(cc) => (
 							<ChannelContext.Provider value={cc()}>
-								<header class="chat-header">
-									<div class="channel-icon">
-										<ChannelIcon channel={ch()} />
-									</div>
-									<div class="name">
-										<h3 class="name-text">{channelName(ch())}</h3>
-									</div>
-									<div class="spacer" />
-									<menu class="menu">
-										<button
-											type="button"
-											class="button icon-button"
-											data-tooltip="Notification settings"
-											onClick={(e) =>
-												openMenu(e, "channel_notifications", ch().id)
-											}
-										>
-											<Icon src={icInbox} color={null} />
-										</button>
-										<button
-											type="button"
-											class="button icon-button"
-											data-tooltip="More"
-											onClick={(e) => openMenu(e, "channel", ch().id)}
-										>
-											<Icon src={icMore} color={null} />
-										</button>
-										<button
-											type="button"
-											class="button icon-button"
-											data-tooltip="Close"
-											onClick={props.onClose}
-										>
-											<Icon src={icX} color={null} />
-										</button>
-									</menu>
-								</header>
+								<SidebarChatHeader channel={ch()} onClose={props.onClose} />
 								<Switch>
 									<Match when={ch().type === "ThreadForum2"}>
 										<Forum2Thread channel={ch()} />
@@ -463,6 +560,7 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 					initialWidth={400}
 					minWidth={300}
 					maxWidth={600}
+					classList={{ "thread-chat-sidebar-shell": true }}
 				>
 					<ThreadChatSidebar thread_id={ch.thread_chat_sidebar_thread_id!} />
 				</Resizable>

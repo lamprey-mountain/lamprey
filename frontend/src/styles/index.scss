@@ -71,6 +71,13 @@
 	height: 100vh;
 	background-color: $bg-200;
 	color: $fg-200;
+
+	&:has(.thread-chat-sidebar-shell) {
+		grid-template-areas:
+			"nav-tray header sidebar"
+			"nav-tray main   sidebar"
+			"footer   footer footer";
+	}
 }
 
 .nav-tray {
@@ -230,11 +237,34 @@
 
 		& > .chat-header {
 			flex: none;
-			min-height: 48px;
+			height: 48px;
 			padding: 8px;
 			background: $bg-200;
 			border-bottom: solid $sep-300 1px;
 			@include truncate;
+
+			& > .channel-icon {
+				display: grid;
+				place-items: center;
+				flex: none;
+			}
+
+			& > .name {
+				display: flex;
+				align-items: center;
+				height: 32px;
+				padding: 0 4px;
+				min-width: 0;
+				line-height: 1;
+
+				& > .name-text {
+					line-height: 1;
+					translate: 0 -2px;
+					overflow: hidden;
+					text-overflow: ellipsis;
+					white-space: nowrap;
+				}
+			}
 		}
 
 		& > .chat {
