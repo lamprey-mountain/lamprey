@@ -7,6 +7,7 @@ import {
 	createSignal,
 	Match,
 	on,
+	onCleanup,
 	Show,
 	Switch,
 } from "solid-js";
@@ -293,17 +294,19 @@ const NotificationSidebar = (props: {
 
 	createEffect(
 		on(
-			() => [props.target.channel_id, props.target.message_id] as const,
-			([, message_id]) => {
+			() => [channel()?.id, props.target.message_id] as const,
+			([channelId, message_id]) => {
+				if (!channelId) return;
+
 				const c = channelCtx();
 				if (!c) return;
 
-				const [state, setState] = c;
-				if (state.focusedMessageId === message_id) {
+				const [state] = c;
+				const frame = requestAnimationFrame(() => {
 					state.timelineState.controller.jumpToMessage(message_id, false, true);
-				} else {
-					setState("focusedMessageId", message_id);
-				}
+				});
+
+				onCleanup(() => cancelAnimationFrame(frame));
 			},
 		),
 	);
