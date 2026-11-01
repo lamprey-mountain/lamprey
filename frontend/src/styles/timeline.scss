@@ -215,11 +215,7 @@
 			}
 
 			& > li > .spacer-mini {
-				min-height: 80px;
-
-				/* &.has-typing .spacer.mini { */
-				/* min-height: 4.5rem; */
-				/* } */
+				min-height: 0;
 			}
 		}
 	}

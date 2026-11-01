@@ -1,6 +1,6 @@
 import type { EditorState } from "prosemirror-state";
 import type { Media } from "sdk";
-import { createContext, useContext } from "solid-js";
+import { createContext, createSignal, useContext } from "solid-js";
 import type { SetStoreFunction, Store } from "solid-js/store";
 import {
 	createTimelineController,
@@ -52,6 +52,7 @@ export type ChannelState = {
 
 export function createInitialChannelState(): ChannelState {
 	const controller = createTimelineController();
+	const [composerHeight, setComposerHeight] = createSignal(0);
 	return {
 		attachments: [],
 		pinned_view: false,
@@ -72,6 +73,8 @@ export function createInitialChannelState(): ChannelState {
 			anchor: { type: "backwards", limit: 50 },
 			readMarkerId: null,
 			autoReadSuppressed: false,
+			composerHeight,
+			setComposerHeight,
 			events: controller.events,
 			commands: controller.commands,
 		},

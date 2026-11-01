@@ -2,7 +2,12 @@ import {
 	createGlobalEmitter,
 	type GlobalEmitter,
 } from "@solid-primitives/event-bus";
-import { createContext, type ParentProps, useContext } from "solid-js";
+import {
+	type Accessor,
+	createContext,
+	type ParentProps,
+	useContext,
+} from "solid-js";
 import { unwrap } from "solid-js/store";
 import type {
 	MessageListAnchor,
@@ -64,6 +69,9 @@ export type TimelineState = {
 	readMarkerId: string | null;
 	/** don't auto-ack when the viewport reaches the bottom */
 	autoReadSuppressed: boolean;
+	/** height of the message composer overlaying the bottom of the timeline */
+	composerHeight: Accessor<number>;
+	setComposerHeight: (height: number) => void;
 
 	controller: TimelineController;
 	events: GlobalEmitter<TimelineEvents>;

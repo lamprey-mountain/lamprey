@@ -64,6 +64,21 @@ export function Input(props: InputProps) {
 	const [scrollIndex, setScrollIndex] = createSignal(0);
 	const [composerFocused, setComposerFocused] = createSignal(false);
 	let textEl: HTMLDivElement | undefined;
+	let inputEl: HTMLDivElement | undefined;
+
+	onMount(() => {
+		if (!inputEl) return;
+
+		const ro = new ResizeObserver((entries) => {
+			const entry = entries[0];
+			if (!entry) return;
+			timeline.setComposerHeight(
+				entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height,
+			);
+		});
+		ro.observe(inputEl);
+		onCleanup(() => ro.disconnect());
+	});
 
 	// special handling for composer keyboard nav (press tab to activate nav)
 	createEffect(() => {
@@ -445,6 +460,7 @@ export function Input(props: InputProps) {
 
 	return (
 		<div
+			ref={(el) => (inputEl = el)}
 			class="message-input"
 			onFocusIn={() => setComposerFocused(true)}
 			onFocusOut={() => setComposerFocused(false)}

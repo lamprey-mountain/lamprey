@@ -53,6 +53,24 @@ export const Timeline = (props: ChatProps) => {
 	const hl = virt.highlighter;
 	const queue = virt.queue;
 
+	let lastComposerHeight = 0;
+	createEffect(() => {
+		const height = timeline.composerHeight();
+		const el = scrollEl();
+		if (!el) return;
+
+		const delta = height - lastComposerHeight;
+		lastComposerHeight = height;
+		if (delta <= 0) return;
+
+		// scrollHeight already includes the new padding, so subtract it to
+		// recover the distance from the bottom before the composer grew
+		const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+		if (distanceFromBottom - delta <= STICKY_THRESHOLD) {
+			el.scrollTop = el.scrollHeight;
+		}
+	});
+
 	// any real interaction lets user ack again
 	const clearAutoReadSuppression = () => {
 		timeline.autoReadSuppressed = false;
@@ -292,6 +310,7 @@ export const Timeline = (props: ChatProps) => {
 			role="log"
 			tabindex={-1}
 			ref={setScrollEl}
+			style={{ "padding-bottom": `${timeline.composerHeight()}px` }}
 			onScrollEnd={handleScrollEnd}
 			onScroll={handleScroll}
 			onWheel={clearAutoReadSuppression}
