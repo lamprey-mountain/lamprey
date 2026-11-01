@@ -18,17 +18,17 @@ const FocusRingContext = createContext<FocusRingContextT>();
 export const FocusRingProvider = (props: ParentProps) => {
 	const [focusedEl, setFocusedEl] = createSignal<HTMLElement | null>(null);
 	const [overrideEl, setOverrideEl] = createSignal<HTMLElement | null>(null);
-	const [keyboardFocus, setKeyboardFocus] = createSignal(false);
 
 	const reference = () => overrideEl() ?? focusedEl();
 
-	const updateFocusedEl = () => {
+	const updateFocusedEl = (target?: EventTarget | null) => {
 		queueMicrotask(() => {
-			const active = document.activeElement;
+			const active = target ?? document.activeElement;
 			if (
-				keyboardFocus() &&
 				active instanceof HTMLElement &&
 				active !== document.body &&
+				active.matches(":focus-visible") &&
+				!active.isContentEditable &&
 				!active.closest(".message-input")
 			) {
 				// HACK: janky way to override the focus ring's reference element
@@ -43,32 +43,17 @@ export const FocusRingProvider = (props: ParentProps) => {
 		});
 	};
 
-	const onKeyDown = (e: KeyboardEvent) => {
-		if (
-			e.key === "Shift" ||
-			e.key === "Control" ||
-			e.key === "Alt" ||
-			e.key === "Meta"
-		) {
-			return;
-		}
-		setKeyboardFocus(true);
-		updateFocusedEl();
-	};
-	const onPointerDown = () => {
-		setKeyboardFocus(false);
-		setFocusedEl(null);
-	};
+	const onFocusIn = (e: FocusEvent) => updateFocusedEl(e.target);
+	const onFocusOut = () => updateFocusedEl();
+	const onPointerDown = () => setFocusedEl(null);
 
-	document.addEventListener("keydown", onKeyDown);
 	document.addEventListener("pointerdown", onPointerDown);
-	document.addEventListener("focusin", updateFocusedEl);
-	document.addEventListener("focusout", updateFocusedEl);
+	document.addEventListener("focusin", onFocusIn);
+	document.addEventListener("focusout", onFocusOut);
 	onCleanup(() => {
-		document.removeEventListener("keydown", onKeyDown);
 		document.removeEventListener("pointerdown", onPointerDown);
-		document.removeEventListener("focusin", updateFocusedEl);
-		document.removeEventListener("focusout", updateFocusedEl);
+		document.removeEventListener("focusin", onFocusIn);
+		document.removeEventListener("focusout", onFocusOut);
 	});
 
 	return (
