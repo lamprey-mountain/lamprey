@@ -2,8 +2,8 @@ use async_trait::async_trait;
 use common::v1::types::ack::AckBulkItem;
 use common::v1::types::federation::Hostname;
 use common::v1::types::redex::{
-    Eval, EvalLogEntry, EvalStatus, Redex, RedexFormat, RedexLocation, RedexMetadata, RedexVersion,
-    RedexVersionStatus,
+    Eval, EvalInputSummary, EvalLogEntry, EvalStatus, Redex, RedexFormat, RedexLocation,
+    RedexMetadata, RedexVersion, RedexVersionStatus,
 };
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogFilter, AutomodRuleId, CalendarEventId,
@@ -1094,5 +1094,10 @@ pub trait DataScript {
         pagination: PaginationQuery<EvalId>,
     ) -> Result<PaginationResponse<Eval>>;
     async fn script_run_update_status(&mut self, run_id: EvalId, status: EvalStatus) -> Result<()>;
+    async fn script_run_update_input(
+        &mut self,
+        run_id: EvalId,
+        input: &EvalInputSummary,
+    ) -> Result<()>;
     async fn script_run_stop(&mut self, run_id: EvalId) -> Result<()>;
 }

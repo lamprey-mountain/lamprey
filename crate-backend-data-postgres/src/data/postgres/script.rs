@@ -624,6 +624,23 @@ impl DataScript for Postgres {
         Ok(())
     }
 
+    async fn script_run_update_input(
+        &mut self,
+        run_id: EvalId,
+        input: &EvalInputSummary,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        let input_json = serde_json::to_value(input).unwrap_or(serde_json::Value::Null);
+
+        sqlx::query("UPDATE redex_eval SET input = $2 WHERE id = $1")
+            .bind(*run_id)
+            .bind(input_json)
+            .execute(conn.ext())
+            .await?;
+
+        Ok(())
+    }
+
     async fn script_run_stop(&mut self, run_id: EvalId) -> Result<()> {
         self.script_run_update_status(run_id, EvalStatus::Stopped)
             .await

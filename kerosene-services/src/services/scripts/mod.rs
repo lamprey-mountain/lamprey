@@ -1,5 +1,5 @@
 use common::v1::types::redex::{
-    Eval, EvalInput, EvalStatus, Redex, RedexFormat, RedexLocation, RedexVersion,
+    Eval, EvalInput, EvalInputSummary, EvalStatus, Redex, RedexFormat, RedexLocation, RedexVersion,
     RedexVersionStatus,
 };
 use common::v1::types::util::Time;
@@ -378,6 +378,8 @@ impl ServiceScripts {
 
         // handle execution events, propagate them to api sync events
         tokio::spawn(async move {
+            let mut current_input = event_handle.eval().input.clone();
+
             while let Ok(event) = event_handle.poll().await {
                 match &*event {
                     ExecutionEvent::Log(entry) => {
@@ -428,7 +430,7 @@ impl ServiceScripts {
                                         created_at: run_info.created_at,
                                         stopped_at,
                                         status: status.clone(),
-                                        input: run_info.input.clone(),
+                                        input: current_input.clone(),
                                     },
                                 },
                             )
@@ -439,7 +441,26 @@ impl ServiceScripts {
                         }
                     }
                     ExecutionEvent::Extracted(_) => {}
-                    ExecutionEvent::HttpResponse(_) => {}
+                    ExecutionEvent::HttpResponse(response) => {
+                        if let EvalInputSummary::Http { request } = &mut current_input {
+                            request.response_status = response.status().as_u16();
+                            request.response_headers = response
+                                .headers()
+                                .iter()
+                                .filter_map(|(name, value)| {
+                                    Some((
+                                        name.as_str().to_owned(),
+                                        value.to_str().ok()?.to_owned(),
+                                    ))
+                                })
+                                .collect();
+
+                            if let Ok(mut data) = globals.begin().await {
+                                let _ = data.script_run_update_input(eval_id, &current_input).await;
+                                let _ = data.commit().await;
+                            }
+                        }
+                    }
                 }
             }
 
