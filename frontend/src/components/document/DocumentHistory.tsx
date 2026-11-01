@@ -1,10 +1,12 @@
 import type { Channel, HistoryPagination } from "sdk";
 import { createEffect, createSignal, For, on, Show } from "solid-js";
 import { useApi } from "@/api";
+import { Icon } from "@/atoms/Icon";
 import { Time } from "@/atoms/Time.tsx";
 import { Avatar } from "@/avatar/UserAvatar.tsx";
 import { useChannel } from "@/contexts/channel.tsx";
 import { getDate } from "@/utils/general";
+import { icX } from "@/utils/icons";
 import { useDocument } from "./context";
 
 type DocumentHistoryProps = {
@@ -128,8 +130,13 @@ export const DocumentHistory = (props: DocumentHistoryProps) => {
 		<div class="document-history">
 			<header class="document-history-header">
 				<h3>History</h3>
-				<button type="button" class="button" onClick={close}>
-					Close
+				<button
+					type="button"
+					class="button icon-button"
+					data-tooltip="Close"
+					onClick={close}
+				>
+					<Icon src={icX} />
 				</button>
 			</header>
 			<div class="document-history-content">

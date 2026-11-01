@@ -566,7 +566,11 @@ const ChannelSidebar = (props: { channel: Channel }) => {
 				</Resizable>
 			</Match>
 			<Match when={showHistory()}>
-				<Resizable storageKey="document-history-width" initialWidth={320}>
+				<Resizable
+					storageKey="document-history-width"
+					initialWidth={320}
+					classList={{ "thread-chat-sidebar-shell": true }}
+				>
 					<DocumentHistory channel={props.channel} />
 				</Resizable>
 			</Match>
