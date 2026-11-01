@@ -44,6 +44,13 @@ export abstract class BaseService<T> {
 	}
 
 	/**
+	 * Maps a fetch id to the key used in the cache and IndexedDB.
+	 */
+	protected getCacheKey(id: string): string {
+		return id;
+	}
+
+	/**
 	 * Retry a failed HTTP request with exponential backoff and jitter.
 	 * Automatically extracts data from the response and throws on error.
 	 * Respects the Retry-After header for 429 responses.
@@ -136,12 +143,13 @@ export abstract class BaseService<T> {
 	 * Updates the cache with the result.
 	 */
 	async fetchOrQueue(id: string): Promise<T> {
-		const cached = this.cache.get(id);
+		const cacheKey = this.getCacheKey(id);
+		const cached = this.cache.get(cacheKey);
 		if (cached !== undefined) {
 			return cached;
 		}
 
-		const inflightPromise = this.inflight.get(id);
+		const inflightPromise = this.inflight.get(cacheKey);
 		if (inflightPromise !== undefined) {
 			return inflightPromise;
 		}
@@ -152,10 +160,10 @@ export abstract class BaseService<T> {
 				return data;
 			})
 			.finally(() => {
-				this.inflight.delete(id);
+				this.inflight.delete(cacheKey);
 			});
 
-		this.inflight.set(id, promise);
+		this.inflight.set(cacheKey, promise);
 		return promise;
 	}
 
@@ -169,14 +177,15 @@ export abstract class BaseService<T> {
 		const [resource, { mutate }] = createResource(id, async (itemId) => {
 			if (!itemId) return undefined;
 
-			const cached = this.cache.get(itemId);
+			const cacheKey = this.getCacheKey(itemId);
+			const cached = this.cache.get(cacheKey);
 			if (cached) return cached;
 
 			if (this.db && this.cacheName) {
 				try {
 					const cached = await this.db.get(
 						this.cacheName,
-						this.getDbKey(itemId),
+						this.getDbKey(cacheKey),
 					);
 					if (cached) {
 						this.upsert(cached);
@@ -195,7 +204,7 @@ export abstract class BaseService<T> {
 			const itemId = id();
 			if (!itemId) return;
 
-			const item = this.cache.get(itemId);
+			const item = this.cache.get(this.getCacheKey(itemId));
 			if (item !== undefined && resource() !== item) {
 				mutate(() => item);
 			}
@@ -205,7 +214,7 @@ export abstract class BaseService<T> {
 	}
 
 	get(id: string): T | undefined {
-		return this.cache.get(id);
+		return this.cache.get(this.getCacheKey(id));
 	}
 
 	/**

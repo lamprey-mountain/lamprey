@@ -21,6 +21,11 @@ export class RedexEvalsService extends BaseService<Eval> {
 		return item.id;
 	}
 
+	protected override getCacheKey(id: string): string {
+		const parts = id.split(":");
+		return parts[2] ?? id;
+	}
+
 	async fetch(id: string): Promise<Eval> {
 		// id is expected to be "channel_id:redex_id:eval_id"
 		const [channel_id, redex_id, eval_id] = id.split(":");

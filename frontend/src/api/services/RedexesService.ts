@@ -19,6 +19,10 @@ export class RedexesService extends BaseService<Redex> {
 		return item.id;
 	}
 
+	protected override getCacheKey(id: string): string {
+		return id.split(":")[1] ?? id;
+	}
+
 	upsertVersion(version: RedexVersion) {
 		this.versions.set(version.version_id, version);
 	}
