@@ -65,6 +65,9 @@ pub struct ServerFeatures {
 
     /// webtransport configuration for this server, if supported
     pub webtransport: Option<ServerWebtransport>,
+
+    /// redex configuration for this server, if supported
+    pub redex: Option<ServerRedex>,
     // TODO: add automod, calendar, documents, federation(?), search
 }
 
@@ -182,6 +185,12 @@ pub struct ServerVoiceHealthSfu {
 pub struct ServerWebtransport {
     pub certificate_hashes: Vec<ServerWebtransportCert>,
     pub sync_url: Url,
+}
+
+#[record]
+pub struct ServerRedex {
+    /// the domain suffix used for redex http handlers, if configured
+    pub suffix: Option<String>,
 }
 
 #[record]

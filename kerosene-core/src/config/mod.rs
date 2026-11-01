@@ -427,6 +427,19 @@ fn default_webtransport_port() -> u16 {
     4433
 }
 
+impl ConfigScripts {
+    /// the suffix that redex http handlers are publicly served under
+    ///
+    /// returns `None` if redexes are disabled
+    pub fn public_suffix(&self) -> Option<&str> {
+        if self.enabled {
+            self.suffix.as_deref()
+        } else {
+            None
+        }
+    }
+}
+
 impl Default for ConfigScripts {
     fn default() -> Self {
         Self {

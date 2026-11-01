@@ -7,8 +7,8 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::server::{
     ServerAuth, ServerAuthOauth, ServerFeatures, ServerInfo, ServerMedia, ServerModeration,
-    ServerRegistration, ServerVersion, ServerVoice, ServerVoiceHealth, ServerVoiceHealthSfu,
-    ServerWebPush,
+    ServerRedex, ServerRegistration, ServerVersion, ServerVoice, ServerVoiceHealth,
+    ServerVoiceHealthSfu, ServerWebPush,
 };
 use common::v1::types::{Permission, SERVER_ROOM_ID};
 use lamprey_macros::handler;
@@ -92,6 +92,9 @@ async fn server_info(
                     certificate_hashes: vec![cert],
                     sync_url,
                 })
+            }),
+            redex: s.config.scripts.enabled.then(|| ServerRedex {
+                suffix: s.config.scripts.public_suffix().map(|s| s.to_owned()),
             }),
         },
         version: ServerVersion {
