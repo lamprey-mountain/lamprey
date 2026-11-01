@@ -312,6 +312,19 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 	const tocTooltip = createTooltip({ tip: () => "Toggle table of contents" });
 	const commentsTooltip = createTooltip({ tip: () => "View comments" });
 	const isChatOpen = () => ch.thread_chat_sidebar_thread_id === doc.branchId();
+
+	// keep the branch chat in sync when switching branches
+	let lastBranchId = doc.branchId();
+	createEffect(() => {
+		const branchId = doc.branchId();
+		if (branchId === lastBranchId) return;
+		const previousBranchId = lastBranchId;
+		lastBranchId = branchId;
+		if (ch.thread_chat_sidebar_thread_id === previousBranchId) {
+			setCh("thread_chat_sidebar_thread_id", branchId);
+		}
+	});
+
 	const threadTooltip = createTooltip({
 		tip: () => (isChatOpen() ? "Hide chat" : "Show chat"),
 	});
