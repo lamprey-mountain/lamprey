@@ -168,6 +168,7 @@ export const CodeEditor = (props: {
 					{
 						channel_id: channelId,
 						branch_id: branchId,
+						redex_id: branchId,
 						state_vector: stateVector,
 					},
 				],
