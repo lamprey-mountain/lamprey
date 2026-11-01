@@ -15,6 +15,7 @@ use common::v2::types::media::MediaReference;
 use http::StatusCode;
 use kerosene_core::error::{ApiError, ErrorCode};
 use lamprey_macros::handler;
+use nanoid::nanoid;
 use tracing::warn;
 use utoipa_axum::router::OpenApiRouter;
 
@@ -86,12 +87,15 @@ async fn redex_create(
 
     let redex_id = RedexId::new();
     let version_id = RedexVerId::new();
+    let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyz0123456789".chars().collect();
+    let shortname = nanoid!(12, &alphabet);
     let created_at = Time::now_utc();
 
     let format = req.redex.format.clone();
 
     let script = Redex {
         id: redex_id,
+        shortname,
         channel_id: req.channel_id,
         creator_id: auth.user.id,
         created_at,

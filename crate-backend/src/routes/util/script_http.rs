@@ -30,16 +30,17 @@ pub async fn script_http(
     let Some(prefix) = host.hostname().strip_suffix(suffix) else {
         return Ok(next.run(req).await);
     };
-
-    let Ok(script_id) = RedexId::from_str(prefix) else {
-        return Ok(next.run(req).await);
-    };
+    let prefix = prefix.strip_suffix('.').unwrap_or(prefix);
 
     let mut data = globals.begin_read().await?;
-    let script = data
-        .script_get(script_id)
-        .await?
-        .ok_or(Error::BadStatic("script not found"))?;
+    let script = if let Ok(script_id) = RedexId::from_str(prefix) {
+        data.script_get(script_id).await?
+    } else {
+        data.script_get_by_shortname(prefix).await?
+    }
+    .ok_or(Error::BadStatic("script not found"))?;
+
+    let script_id = script.id;
 
     let (parts, body) = req.into_parts();
     let body_bytes = to_bytes(body, 1024 * 1024 * 16)

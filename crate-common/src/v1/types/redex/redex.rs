@@ -12,6 +12,8 @@ use crate::v2::types::media::{Media, MediaReference};
 #[record]
 pub struct Redex {
     pub id: RedexId,
+    /// the lowercase identifier used for this redex's http subdomain
+    pub shortname: String,
     pub channel_id: ChannelId,
     pub creator_id: UserId,
     pub created_at: Time,

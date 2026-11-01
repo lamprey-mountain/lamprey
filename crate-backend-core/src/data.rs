@@ -1066,6 +1066,7 @@ pub trait DataScript {
         version_id: RedexVerId,
     ) -> Result<Option<RedexVersion>>;
     async fn script_get(&mut self, script_id: RedexId) -> Result<Option<Redex>>;
+    async fn script_get_by_shortname(&mut self, shortname: &str) -> Result<Option<Redex>>;
     async fn script_list_by_channel(
         &mut self,
         channel_id: ChannelId,

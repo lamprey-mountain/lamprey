@@ -36,6 +36,7 @@ pub struct DbScriptVersion {
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct DbScriptWithLatestVersion {
     pub id: Uuid,
+    pub shortname: String,
     pub channel_id: Uuid,
     pub creator_id: Uuid,
     pub created_at: PrimitiveDateTime,
@@ -113,6 +114,7 @@ impl From<DbScriptWithLatestVersion> for Redex {
 
         Redex {
             id: row.id.into(),
+            shortname: row.shortname,
             channel_id: row.channel_id.into(),
             creator_id: row.creator_id.into(),
             created_at: row.created_at.into(),
@@ -191,10 +193,11 @@ impl DataScript for Postgres {
 
         query!(
             r#"
-            INSERT INTO redex (id, channel_id, creator_id, created_at, deleted_at, data)
-            VALUES ($1, $2, $3, CURRENT_TIMESTAMP, NULL, $4)
+            INSERT INTO redex (id, shortname, channel_id, creator_id, created_at, deleted_at, data)
+            VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, NULL, $5)
             "#,
             *script.id,
+            script.shortname,
             *script.channel_id,
             *script.creator_id,
             data
@@ -374,6 +377,19 @@ impl DataScript for Postgres {
         let row = query_file_as!(DbScriptWithLatestVersion, "sql/redex_get.sql", *script_id)
             .fetch_optional(conn.ext())
             .await?;
+
+        Ok(row.map(Redex::from))
+    }
+
+    async fn script_get_by_shortname(&mut self, shortname: &str) -> Result<Option<Redex>> {
+        let mut conn = self.acquire().await?;
+        let row = query_file_as!(
+            DbScriptWithLatestVersion,
+            "sql/redex_get_by_shortname.sql",
+            shortname
+        )
+        .fetch_optional(conn.ext())
+        .await?;
 
         Ok(row.map(Redex::from))
     }

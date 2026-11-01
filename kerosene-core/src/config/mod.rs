@@ -298,7 +298,7 @@ pub struct ConfigScripts {
 
     /// the domain suffix for http handlers
     ///
-    /// setting to `example.com` will cause `random-uuid-here.example.com` domains to be handed to http scripts
+    /// setting to `example.com` will cause `random-id-here.example.com` domains to be handed to http scripts
     pub suffix: Option<String>,
 
     /// default limits for scripts
