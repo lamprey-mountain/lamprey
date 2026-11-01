@@ -117,7 +117,7 @@ export const ScriptInputs = (props: {
 
 	const httpUrl = createMemo(() => {
 		const info = serverInfo();
-		const suffix = info?.features.redex?.suffix;
+		const suffix = info?.features.redex?.suffix?.replace(/^\.+/, "");
 		const shortname = script()?.shortname;
 		if (!info || !suffix || !shortname) return;
 
