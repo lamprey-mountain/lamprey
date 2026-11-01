@@ -1,59 +1,201 @@
+import type { Parser as MarkdownParser, MentionData } from "@lamprey/markdown";
 import { diffWords } from "diff";
 import { DOMParser, type Node as PMNode } from "prosemirror-model";
 import type { LampreyComponent, Serdoc } from "ts-sdk";
 import type { DiffMark } from "../features/editor/diff-plugin";
 import { schema } from "../features/editor/schema";
 
-export function serdocToDoc(serdoc: Serdoc) {
+export type MentionNameResolver = (
+	mention: MentionData,
+) => string | null | undefined;
+
+type Span = { start: number; end: number };
+type ParsedMention = MentionData & { text: string; span: Span };
+type ParsedEmoji = (
+	| { kind: "Custom"; id: string; name: string; animated: boolean }
+	| { kind: "Unicode" }
+) & { text: string; span: Span };
+
+export function serdocToDoc(
+	serdoc: Serdoc,
+	parser: MarkdownParser,
+	resolveMentionName?: MentionNameResolver,
+): PMNode {
 	const htmlParts: string[] = [];
-	for (const c of serdoc.components) {
-		if (c.type === "Text") {
-			htmlParts.push(c.content);
-		}
+	for (const component of serdoc.components) {
+		collectComponentHTML(component, htmlParts, parser, resolveMentionName);
 	}
-	if (htmlParts.length === 0) {
-		htmlParts.push("<br />");
-	}
-	// FIXME: potential xss vector
-	// will be fixed when i switch to serdocToDoc2
+	if (htmlParts.length === 0) htmlParts.push("<p><br></p>");
+
 	const div = document.createElement("div");
 	div.innerHTML = htmlParts.join("");
 	return DOMParser.fromSchema(schema).parse(div);
 }
 
-// TODO: alternative fn that doesn't require DOMParser?
-// backend sends serdoc text content as xml instead of markdown currently, will switch when that's fixed
-export function serdocToDoc2(serdoc: Serdoc): PMNode {
-	const nodes = serdoc.components.flatMap(componentToNodes);
-	return schema.node("doc", null, nodes);
-}
-
-function componentToNodes(comp: LampreyComponent): PMNode[] {
-	switch (comp.type) {
+function collectComponentHTML(
+	component: LampreyComponent,
+	htmlParts: string[],
+	parser: MarkdownParser,
+	resolveMentionName?: MentionNameResolver,
+) {
+	switch (component.type) {
 		case "Text":
-			return [
-				schema.node("paragraph", null, [schema.text(comp.content || "")]),
-			];
+			htmlParts.push(
+				textComponentToHTML(component.content, parser, resolveMentionName),
+			);
+			break;
 		case "Container":
 		case "Section":
-			return comp.components.flatMap(componentToNodes);
+			for (const child of component.components) {
+				collectComponentHTML(child, htmlParts, parser, resolveMentionName);
+			}
+			break;
 		case "Details":
-			return [
-				...comp.summary.flatMap(componentToNodes),
-				...comp.details.flatMap(componentToNodes),
-			];
-		default:
-			return [];
+			for (const child of component.summary) {
+				collectComponentHTML(child, htmlParts, parser, resolveMentionName);
+			}
+			for (const child of component.details) {
+				collectComponentHTML(child, htmlParts, parser, resolveMentionName);
+			}
+			break;
 	}
 }
 
-export function computeDiffMarks(
-	oldSerdoc: Serdoc,
-	newSerdoc: Serdoc,
-): DiffMark[] {
-	const oldDoc = serdocToDoc(oldSerdoc);
-	const newDoc = serdocToDoc(newSerdoc);
+function textComponentToHTML(
+	content: string,
+	parser: MarkdownParser,
+	resolveMentionName?: MentionNameResolver,
+): string {
+	const parsed = parser.parse(content);
+	const replacements: { start: number; end: number; html: string }[] = [];
 
+	// the upstream d.ts does not match the wasm runtime shape
+	for (const raw of parsed.mentions() as unknown[]) {
+		const mention = normalizeMention(raw);
+		if (!mention) continue;
+		replacements.push({
+			...mention.span,
+			html: mentionToHTML(mention, resolveMentionName),
+		});
+	}
+	for (const raw of parsed.emoji() as unknown[]) {
+		const emoji = normalizeEmoji(raw);
+		if (!emoji) continue;
+		replacements.push({ ...emoji.span, html: emojiToHTML(emoji) });
+	}
+
+	replacements.sort((a, b) => a.start - b.start || a.end - b.end);
+
+	let html = "";
+	let pos = 0;
+	for (const replacement of replacements) {
+		if (replacement.start < pos) continue;
+		html += escapeHTML(content.slice(pos, replacement.start));
+		html += replacement.html;
+		pos = replacement.end;
+	}
+	html += escapeHTML(content.slice(pos));
+
+	return `<p>${html}</p>`;
+}
+
+function getField<T>(value: unknown, key: string): T | undefined {
+	if (value instanceof Map) return value.get(key) as T | undefined;
+	if (typeof value !== "object" || value === null) return undefined;
+	return (value as Record<string, T>)[key];
+}
+
+function normalizeSpan(value: unknown): Span | null {
+	const start = getField<number>(value, "start");
+	const end = getField<number>(value, "end");
+	if (typeof start !== "number" || typeof end !== "number") return null;
+	return { start, end };
+}
+
+function normalizeMention(value: unknown): ParsedMention | null {
+	const text = getField<string>(value, "text");
+	const span = normalizeSpan(getField<unknown>(value, "span"));
+	const type = getField<string>(value, "type");
+	if (typeof text !== "string" || !span) return null;
+
+	if (type === "Everyone") return { type, text, span };
+	if (type !== "User" && type !== "Role" && type !== "Channel") return null;
+
+	const id = getField<string>(value, "id");
+	if (typeof id !== "string") return null;
+	return { type, id, text, span };
+}
+
+function normalizeEmoji(value: unknown): ParsedEmoji | null {
+	const text = getField<string>(value, "text");
+	const span = normalizeSpan(getField<unknown>(value, "span"));
+	const kind = getField<string>(value, "kind");
+	if (typeof text !== "string" || !span) return null;
+	if (kind !== "Custom") return { kind: "Unicode", text, span };
+
+	const id = getField<string>(value, "id");
+	const name = getField<string>(value, "name");
+	const animated = getField<boolean>(value, "animated");
+	if (typeof id !== "string" || typeof name !== "string") return null;
+
+	return { kind: "Custom", id, name, animated: !!animated, text, span };
+}
+
+function mentionToHTML(
+	mention: ParsedMention,
+	resolveMentionName?: MentionNameResolver,
+): string {
+	const name = resolveMentionName?.(mention);
+	const nameAttr =
+		name == null || name === "" ? "" : ` data-name="${escapeHTMLAttr(name)}"`;
+	const text = escapeHTML(mention.text);
+
+	switch (mention.type) {
+		case "User":
+			return `<span data-user-id="${escapeHTMLAttr(
+				mention.id,
+			)}"${nameAttr} class="mention">${text}</span>`;
+		case "Role":
+			return `<span data-role-id="${escapeHTMLAttr(
+				mention.id,
+			)}"${nameAttr} class="mention">${text}</span>`;
+		case "Channel":
+			return `<span data-channel-id="${escapeHTMLAttr(
+				mention.id,
+			)}"${nameAttr} class="mention">${text}</span>`;
+		case "Everyone":
+			return `<span data-mention="everyone" class="mention mention-everyone">${text}</span>`;
+	}
+
+	return "";
+}
+
+function emojiToHTML(emoji: ParsedEmoji): string {
+	if (emoji.kind === "Custom") {
+		return `<span data-emoji-id="${escapeHTMLAttr(
+			emoji.id,
+		)}" data-emoji-name="${escapeHTMLAttr(emoji.name)}" data-emoji-animated="${
+			emoji.animated ? "true" : "false"
+		}" class="mention">${escapeHTML(emoji.text)}</span>`;
+	}
+
+	return `<span data-emoji-unicode="${escapeHTMLAttr(
+		emoji.text,
+	)}" class="emoji-unicode">${escapeHTML(emoji.text)}</span>`;
+}
+
+function escapeHTML(value: string): string {
+	return value
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;");
+}
+
+function escapeHTMLAttr(value: string): string {
+	return escapeHTML(value).replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+export function computeDiffMarks(oldDoc: PMNode, newDoc: PMNode): DiffMark[] {
 	const oldData = getDocTextAndMap(oldDoc);
 	const newData = getDocTextAndMap(newDoc);
 
@@ -120,6 +262,3 @@ function mapTextPosToPMPos(
 	if (textPos >= posMap.length) return maxPos;
 	return posMap[textPos] ?? maxPos;
 }
-
-// NOTE: maybe see frontend/src/components/features/editor/markdown-highlight-plugin.ts
-// buildTextAndSegments() and toDocPos() may be relevant and/or useful here

@@ -1,6 +1,6 @@
 // TODO: deduplicate this code with DocumentEditor
 
-import type { Parser as MarkdownParser } from "@lamprey/markdown";
+import type { MentionData } from "@lamprey/markdown";
 import { DOMParser } from "prosemirror-model";
 import { EditorState } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
@@ -23,9 +23,6 @@ import { computeDiffMarks, serdocToDoc } from "./diff";
 import type { ChangesetSelection } from "./types";
 
 const domParser = DOMParser.fromSchema(schema);
-
-let md: MarkdownParser;
-markdownParser.then((p) => (md = p));
 
 export type DocumentDiffViewProps = {
 	channelId: string;
@@ -61,20 +58,44 @@ export const DocumentDiffView = (props: DocumentDiffViewProps) => {
 		},
 	);
 
-	const diffMarks = createMemo(() => {
+	const [parser] = createResource(() => markdownParser);
+
+	const resolveMentionName = (mention: MentionData) => {
+		switch (mention.type) {
+			case "User": {
+				const user = api.users.cache.get(mention.id);
+				return user?.relationship?.petname || user?.name;
+			}
+			case "Role":
+				return api.roles.cache.get(mention.id)?.name;
+			case "Channel":
+				return api.channels.cache.get(mention.id)?.name;
+			case "Everyone":
+				return null;
+		}
+	};
+
+	const revisionDocs = createMemo(() => {
+		const markdown = parser();
 		const ns = newSerdoc();
 		const os = oldSerdoc();
-		if (!ns) return [];
-		if (!os) return [];
-		// PERF: computeDiffMarks + the later createEffect cause serdoc to be converted
-		// into a prosemirror document twice. maybe i should createMemo serdocToDoc for old
-		// and new serdoc?
-		const marks = computeDiffMarks(os, ns);
-		return marks;
+		if (!markdown || !ns || !os) return null;
+
+		const oldDoc = serdocToDoc(os, markdown, resolveMentionName);
+		const newDoc = serdocToDoc(ns, markdown, resolveMentionName);
+
+		return {
+			oldDoc,
+			newDoc,
+			marks: computeDiffMarks(oldDoc, newDoc),
+		};
 	});
 
+	const diffMarks = createMemo(() => revisionDocs()?.marks ?? []);
+
 	const createState = () => {
-		const doc = domParser.parse(document.createElement("div"));
+		const doc =
+			revisionDocs()?.newDoc ?? domParser.parse(document.createElement("div"));
 
 		return EditorState.create({
 			doc,
@@ -98,9 +119,10 @@ export const DocumentDiffView = (props: DocumentDiffViewProps) => {
 				const newState = view.state.apply(tr);
 				view.updateState(newState);
 
-				if (md) {
+				const markdown = parser();
+				if (markdown) {
 					// PERF: reuse parsed
-					const parsed = md.parse(newState.doc.textContent);
+					const parsed = markdown.parse(newState.doc.textContent);
 					doc.setHeadings(parsed.headers());
 				}
 			},
@@ -118,23 +140,14 @@ export const DocumentDiffView = (props: DocumentDiffViewProps) => {
 			view.dispatch(tr);
 		});
 
-		// reactively update diff marks
+		// reactively update doc and diff marks together
 		createEffect(() => {
-			const tr = view.state.tr.setMeta(diffPluginKey, { marks: diffMarks() });
-			view.dispatch(tr);
-		});
+			const docs = revisionDocs();
+			if (!docs) return;
 
-		// reactively update doc
-		createEffect(() => {
-			const ns = newSerdoc();
-			if (!ns) return;
-
-			const doc = serdocToDoc(ns);
-			const tr = view.state.tr.replaceWith(
-				0,
-				view.state.doc.content.size,
-				doc.content,
-			);
+			const tr = view.state.tr
+				.replaceWith(0, view.state.doc.content.size, docs.newDoc.content)
+				.setMeta(diffPluginKey, { marks: docs.marks });
 			view.dispatch(tr);
 		});
 	};
