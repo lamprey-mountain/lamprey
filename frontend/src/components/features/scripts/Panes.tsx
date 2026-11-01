@@ -19,7 +19,7 @@ import { Time } from "@/atoms/Time";
 import { usePanes } from "@/components/panes/context";
 import { HTTP_STATUS_TEXT } from "@/lib/http";
 import { getDate } from "@/utils/general";
-import { icQuestion } from "@/utils/icons";
+import { icExternal1, icQuestion } from "@/utils/icons";
 import { type ScriptPane, useScript } from "./context";
 import { LazyCodeEditor } from "./LazyEditor";
 
@@ -213,7 +213,14 @@ export const ScriptInputs = (props: {
 												target="_blank"
 												rel="noreferrer"
 											>
-												<div>{input.label}</div>
+												<div class="label">
+													<span>{input.label}</span>
+													<Icon
+														class="external-icon"
+														src={icExternal1}
+														color="currentColor"
+													/>
+												</div>
 												<div class="dim">{url()}</div>
 											</a>
 										)}
