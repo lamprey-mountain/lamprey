@@ -2,23 +2,29 @@ import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
 import { TextSelection } from "prosemirror-state";
 import { useFloating } from "solid-floating-ui";
 import {
+	createEffect,
 	createMemo,
 	createSignal,
 	For,
 	type JSX,
+	Match,
 	onCleanup,
 	onMount,
 	Show,
+	Switch,
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { DocumentBranch } from "ts-sdk";
-import { useApi, useDocumentBranches, useUsers } from "@/api";
+import { useApi, useChannels, useDocumentBranches, useUsers } from "@/api";
 import { useCtx } from "@/app/context";
 import { Icon } from "@/atoms/Icon";
 import { Search } from "@/atoms/Search";
 import { Time, timeAgo } from "@/atoms/Time";
 import { createTooltip } from "@/atoms/Tooltip";
+import { ChannelIcon } from "@/components/shared/User";
+import { useCurrentUser } from "@/contexts/currentUser";
 import { useChannel, useModals } from "@/contexts/mod";
+import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import type { ChannelT } from "@/types";
 import type { TocHeading } from "@/types/chat";
@@ -60,6 +66,52 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 	const doc = useDocument();
 	const [, modalCtl] = useModals();
 	const [ch, setCh] = useChannel()!;
+
+	const channels = useChannels();
+	const currentUser = useCurrentUser();
+	const { has: hasPermission } = usePermissions(
+		() => currentUser()?.id,
+		() => props.channel.room_id ?? undefined,
+		() => props.channel.id,
+	);
+	const [editingName, setEditingName] = createSignal<string>();
+	const [isSavingName, setIsSavingName] = createSignal(false);
+	let nameInputRef!: HTMLInputElement;
+
+	const canEditName = () => hasPermission("ChannelManage");
+
+	const startEditingName = () => {
+		if (!canEditName() || editingName() !== undefined) return;
+		setEditingName(props.channel.name);
+		setTimeout(() => nameInputRef.focus());
+	};
+
+	const saveName = async () => {
+		const newName = editingName()?.trim();
+		if (newName && newName !== props.channel.name) {
+			setIsSavingName(true);
+			try {
+				await channels.update(props.channel.id, { name: newName });
+			} finally {
+				queueMicrotask(() => {
+					setIsSavingName(false);
+					setEditingName(undefined);
+				});
+			}
+		} else {
+			setEditingName(undefined);
+		}
+	};
+
+	const handleNameKeyDown = (e: KeyboardEvent) => {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			e.stopPropagation();
+			saveName();
+		} else if (e.key === "Escape") {
+			setEditingName(undefined);
+		}
+	};
 
 	const branches = useDocumentBranches();
 	const users = useUsers();
@@ -284,6 +336,45 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 
 	return (
 		<header class="document-header chat-header">
+			<div class="channel-icon">
+				<ChannelIcon channel={props.channel} />
+			</div>
+			<div
+				class="name"
+				classList={{
+					editable: canEditName(),
+					editing: editingName() !== undefined,
+				}}
+				tabindex="0"
+				onClick={startEditingName}
+				onKeyDown={(e) => {
+					if (e.key === "Enter") {
+						e.preventDefault();
+						startEditingName();
+					}
+				}}
+			>
+				<Switch>
+					<Match when={isSavingName()}>
+						<h3 class="name-text local">{editingName()}</h3>
+					</Match>
+					<Match when={editingName() !== undefined}>
+						<input
+							ref={nameInputRef}
+							placeholder="awesome-document"
+							class="name-input"
+							type="text"
+							value={editingName()}
+							onInput={(e) => setEditingName(e.currentTarget.value)}
+							onBlur={saveName}
+							onKeyDown={handleNameKeyDown}
+						/>
+					</Match>
+					<Match when={true}>
+						<h3 class="name-text">{props.channel.name}</h3>
+					</Match>
+				</Switch>
+			</div>
 			<div class="menu-group">
 				<MenubarItem
 					button={

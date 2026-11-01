@@ -120,6 +120,11 @@
 	box-shadow: 2px 2px 4px oklch(var(--color-bg1) / 0.5);
 	border-bottom: solid $sep-300 1px;
 
+	& > .name {
+		max-width: 240px;
+		margin-right: 8px;
+	}
+
 	& .menu-group {
 		display: flex;
 		border: solid $sep-500 1px;
