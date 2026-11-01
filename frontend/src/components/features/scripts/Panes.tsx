@@ -11,7 +11,7 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import type { EvalInputSummary } from "ts-sdk";
+import type { EvalInputSummary, ServerInfo } from "ts-sdk";
 import { useApi } from "@/api";
 import { Duration } from "@/atoms/Duration";
 import { Icon } from "@/atoms/Icon";
@@ -110,6 +110,21 @@ export const ScriptInputs = (props: {
 
 	const script = api.scripts.use(() => `${s.channel_id}:${scriptId()}`);
 
+	const [serverInfo] = createResource(async () => {
+		const { data } = await api.client.http.GET("/api/v1/server/@self");
+		return (data ?? null) as ServerInfo | null;
+	});
+
+	const httpUrl = createMemo(() => {
+		const info = serverInfo();
+		const suffix = info?.features.redex?.suffix;
+		const shortname = script()?.shortname;
+		if (!info || !suffix || !shortname) return;
+
+		const { protocol } = new URL(info.api_url);
+		return `${protocol}//${shortname}.${suffix}`;
+	});
+
 	createEffect(() => {
 		api.scriptRuns.list(s.channel_id, scriptId());
 	});
@@ -181,7 +196,30 @@ export const ScriptInputs = (props: {
 										</div>
 									</button>
 								</Show>
-								<Show when={input.type !== "Manual"}>
+								<Show when={input.type === "Http"}>
+									<Show
+										when={httpUrl()}
+										fallback={
+											<div class="inner">
+												<div>{input.label}</div>
+												<div class="dim">{input.id}</div>
+											</div>
+										}
+									>
+										{(url) => (
+											<a
+												class="inner"
+												href={url()}
+												target="_blank"
+												rel="noreferrer"
+											>
+												<div>{input.label}</div>
+												<div class="dim">{url()}</div>
+											</a>
+										)}
+									</Show>
+								</Show>
+								<Show when={input.type === "Event"}>
 									<div class="inner">
 										<div>{input.label}</div>
 										<div class="dim">{input.id}</div>

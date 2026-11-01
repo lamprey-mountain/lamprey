@@ -12,8 +12,12 @@ use crate::v2::types::media::{Media, MediaReference};
 #[record]
 pub struct Redex {
     pub id: RedexId,
-    /// the lowercase identifier used for this redex's http subdomain
+
+    /// a short lowercase identifier
+    ///
+    /// used for this redex's http subdomain
     pub shortname: String,
+
     pub channel_id: ChannelId,
     pub creator_id: UserId,
     pub created_at: Time,
@@ -53,17 +57,7 @@ pub enum RedexHandlerType {
     Manual,
 
     /// an http server
-    Http {
-        // TODO(future): bring your own domain name
-
-        // NOTE: should i have this instead of base_url?
-        // /// the hostname this redex can be reached at
-        // hostname: String,
-        /// the url this redex can be reached at
-        // NOTE: this is a String so i can use serde(default) for backwards compat
-        #[serde(default)]
-        base_url: String,
-    },
+    Http,
 
     /// an api event (MessageSync)
     Event,

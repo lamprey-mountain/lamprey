@@ -13602,6 +13602,8 @@ export interface components {
 			handlers: components["schemas"]["RedexHandler"][];
 			id: components["schemas"]["Id"];
 			latest_version: components["schemas"]["RedexVersion"];
+			/** @description the lowercase identifier used for this redex's http subdomain */
+			shortname: string;
 			/** @description the capabilities that were granted to this redex */
 			permissions: components["schemas"]["RedexPermission"][];
 			status: components["schemas"]["RedexStatus"];
@@ -14268,9 +14270,14 @@ export interface components {
 			experiments?: null | components["schemas"]["Experiments"];
 			media?: null | components["schemas"]["Media"];
 			oauth?: null | components["schemas"]["Oauth"];
+			redex?: null | components["schemas"]["ServerRedex"];
 			registration?: null | components["schemas"]["Registration"];
 			url_embed?: null | components["schemas"]["UrlEmbed"];
 			voice?: null | components["schemas"]["Voice"];
+		};
+		ServerRedex: {
+			/** @description the domain suffix used for redex http handlers, if configured */
+			suffix?: string | null;
 		};
 		ServerInfo: {
 			/** Format: uri */
