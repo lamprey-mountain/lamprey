@@ -1,3 +1,4 @@
+import { debounce } from "@solid-primitives/scheduled";
 import {
 	createEffect,
 	createMemo,
@@ -20,7 +21,14 @@ import { usePanes } from "@/components/panes/context";
 import { UserDisplayName } from "@/components/shared/User";
 import { HTTP_STATUS_TEXT } from "@/lib/http";
 import { getDate } from "@/utils/general";
-import { icExternal1, icQuestion, icRestore1 } from "@/utils/icons";
+import {
+	icCheck,
+	icCopy,
+	icExternal1,
+	icQuestion,
+	icReload,
+	icRestore1,
+} from "@/utils/icons";
 import { type ScriptPane, useScript } from "./context";
 import { LazyCodeEditor } from "./LazyEditor";
 
@@ -53,6 +61,34 @@ const httpStatusClass = (status: number) => {
 	if (status >= 300) return "redirect";
 	if (status >= 200) return "success";
 	return "unknown";
+};
+
+const useHttpUrl = (shortname: () => string | undefined) => {
+	const api = useApi();
+
+	const [serverInfo] = createResource(() => {
+		if (!serverInfoPromise) {
+			serverInfoPromise = api.client.http
+				.GET("/api/v1/server/@self")
+				.then(({ data }) => (data ?? null) as ServerInfo | null)
+				.catch((error) => {
+					serverInfoPromise = undefined;
+					throw error;
+				});
+		}
+
+		return serverInfoPromise;
+	});
+
+	return createMemo(() => {
+		const info = serverInfo();
+		const suffix = info?.features.redex?.suffix?.replace(/^\.+/, "");
+		const name = shortname();
+		if (!info || !suffix || !name) return;
+
+		const { protocol } = new URL(info.api_url);
+		return `${protocol}//${name}.${suffix}`;
+	});
 };
 
 const ManualEvalTrigger = (props: { label: string; user_id: string }) => {
@@ -160,29 +196,7 @@ export const ScriptInputs = (props: {
 
 	const script = api.scripts.use(() => `${s.channel_id}:${scriptId()}`);
 
-	const [serverInfo] = createResource(() => {
-		if (!serverInfoPromise) {
-			serverInfoPromise = api.client.http
-				.GET("/api/v1/server/@self")
-				.then(({ data }) => (data ?? null) as ServerInfo | null)
-				.catch((error) => {
-					serverInfoPromise = undefined;
-					throw error;
-				});
-		}
-
-		return serverInfoPromise;
-	});
-
-	const httpUrl = createMemo(() => {
-		const info = serverInfo();
-		const suffix = info?.features.redex?.suffix?.replace(/^\.+/, "");
-		const shortname = script()?.shortname;
-		if (!info || !suffix || !shortname) return;
-
-		const { protocol } = new URL(info.api_url);
-		return `${protocol}//${shortname}.${suffix}`;
-	});
+	const httpUrl = useHttpUrl(() => script()?.shortname);
 
 	createEffect(() => {
 		api.scriptRuns.ensureListed(s.channel_id, scriptId());
@@ -445,10 +459,196 @@ export const ScriptInputs = (props: {
 	);
 };
 
-export const ScriptPreview = () => {
-	// needs backend support
-	// would render http page for http endpoint, for example
-	return "todo";
+export const ScriptPreview = (props: {
+	pane: Extract<ScriptPane, { type: "leaf" }>;
+	setHeaderExtra: (el: JSX.Element) => void;
+}) => {
+	const s = useScript();
+	const api = useApi();
+	const scriptId = () => props.pane.data.script_id;
+
+	const script = api.scripts.use(() => `${s.channel_id}:${scriptId()}`);
+	const baseUrl = useHttpUrl(() => script()?.shortname);
+	const httpUrl = createMemo(() => {
+		const hasHttpHandler = script()?.handlers.some(
+			(handler) => handler.type === "Http",
+		);
+		return hasHttpHandler ? baseUrl() : undefined;
+	});
+	const [previewUrl, setPreviewUrl] = createSignal<string>();
+	const [draftUrl, setDraftUrl] = createSignal("");
+	const [isLoading, setIsLoading] = createSignal(false);
+	const [reloadKey, setReloadKey] = createSignal(1);
+	const [copied, setCopied] = createSignal(false);
+	const clearCopied = debounce(() => setCopied(false), 2000);
+	let reloadIcon!: HTMLSpanElement;
+	let loadingTimeout: ReturnType<typeof setTimeout> | undefined;
+	let lastUrl: string | undefined;
+
+	const stopLoading = () => {
+		clearTimeout(loadingTimeout);
+		setIsLoading(false);
+	};
+
+	const startLoading = () => {
+		clearTimeout(loadingTimeout);
+		setIsLoading(true);
+		loadingTimeout = setTimeout(stopLoading, 5000);
+	};
+
+	createEffect(() => {
+		const url = httpUrl();
+		if (url === lastUrl) return;
+		lastUrl = url;
+		if (url) startLoading();
+		else stopLoading();
+		setPreviewUrl(url);
+		setDraftUrl(url ?? "");
+	});
+
+	const commitUrl = () => {
+		const url = draftUrl().trim();
+		if (url === (previewUrl() ?? "")) return;
+		if (url) startLoading();
+		else stopLoading();
+		setPreviewUrl(url || undefined);
+	};
+
+	const reloadTooltip = createTooltip({ tip: () => "Reload preview" });
+	const copyTooltip = createTooltip({
+		tip: () =>
+			copied() ? (
+				<div class="copyable2-tip copied">
+					<Icon src={icCheck} /> URL copied!
+				</div>
+			) : (
+				"Copy URL"
+			),
+	});
+	const openTooltip = createTooltip({ tip: () => "Open in new tab" });
+
+	const copyUrl = () => {
+		const url = previewUrl();
+		if (!url) return;
+		navigator.clipboard.writeText(url);
+		setCopied(true);
+		clearCopied();
+	};
+
+	const reload = () => {
+		startLoading();
+		reloadIcon.getAnimations().forEach((animation) => animation.cancel());
+		reloadIcon.animate(
+			[{ transform: "rotate(0deg)" }, { transform: "rotate(-360deg)" }],
+			{ duration: 400, easing: "cubic-bezier(.23,.47,.39,1.1)" },
+		);
+		setReloadKey((key) => key + 1);
+	};
+
+	const openInNewTab = () => {
+		const url = previewUrl();
+		if (!url) return;
+		window.open(url, "_blank", "noopener,noreferrer");
+	};
+
+	createEffect(() => {
+		props.setHeaderExtra(
+			<div class="preview-controls">
+				<div class="preview-url-wrapper" aria-busy={isLoading()}>
+					<input
+						class="preview-url-input"
+						type="url"
+						value={draftUrl()}
+						placeholder="Enter URL"
+						aria-label="Preview URL"
+						onInput={(e) => setDraftUrl(e.currentTarget.value)}
+						onFocus={(e) => e.currentTarget.select()}
+						onBlur={commitUrl}
+						onKeyDown={(e) => {
+							if (e.key === "Enter") {
+								e.preventDefault();
+								commitUrl();
+								e.currentTarget.blur();
+							} else if (e.key === "Escape") {
+								setDraftUrl(previewUrl() ?? "");
+								e.currentTarget.blur();
+							}
+						}}
+					/>
+					<Show when={isLoading() && previewUrl()}>
+						<div class="preview-url-spinner" aria-hidden="true" />
+					</Show>
+				</div>
+				<menu class="preview-actions">
+					<button
+						type="button"
+						class="preview-icon-button"
+						ref={reloadTooltip.content}
+						onClick={reload}
+						disabled={!previewUrl()}
+						aria-label="Reload preview"
+					>
+						<span class="preview-action-icon" ref={(el) => (reloadIcon = el)}>
+							<Icon src={icReload} />
+						</span>
+					</button>
+					<button
+						type="button"
+						class="preview-icon-button"
+						classList={{ success: copied() }}
+						ref={copyTooltip.content}
+						onClick={copyUrl}
+						disabled={!previewUrl()}
+						aria-label="Copy URL"
+					>
+						<Icon src={copied() ? icCheck : icCopy} />
+					</button>
+					<button
+						type="button"
+						class="preview-icon-button"
+						ref={openTooltip.content}
+						onClick={openInNewTab}
+						disabled={!previewUrl()}
+						aria-label="Open in new tab"
+					>
+						<Icon src={icExternal1} />
+					</button>
+				</menu>
+			</div>,
+		);
+	});
+
+	onCleanup(() => {
+		clearTimeout(loadingTimeout);
+		props.setHeaderExtra(null);
+	});
+
+	return (
+		<div class="script-preview">
+			<Show
+				when={previewUrl()}
+				fallback={
+					<div class="preview-error">error: redex has no http handler</div>
+				}
+			>
+				{(url) => (
+					<Show when={reloadKey()} keyed>
+						<iframe
+							src={url()}
+							title="Script preview"
+							sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+							onLoad={stopLoading}
+							onError={stopLoading}
+							ref={(el) => {
+								el.addEventListener("load", stopLoading);
+								el.addEventListener("error", stopLoading);
+							}}
+						/>
+					</Show>
+				)}
+			</Show>
+		</div>
+	);
 };
 
 // TODO: use table instead of flex

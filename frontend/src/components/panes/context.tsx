@@ -336,8 +336,7 @@ export function createPanes<P extends { type: string }>(props: PanesProps<P>) {
 												});
 											}}
 										/>
-										{headerExtra()}
-										<div style="flex:1"></div>
+										<div class="pane-header-extra">{headerExtra()}</div>
 										<button
 											type="button"
 											class="close"

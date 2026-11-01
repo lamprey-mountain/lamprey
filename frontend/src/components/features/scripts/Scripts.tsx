@@ -51,7 +51,12 @@ export const Scripts = (props: { channel: Channel }) => {
 				<ScriptCode pane={props.pane} setHeaderExtra={props.setHeaderExtra} />
 			),
 			script_inputs: (props) => <ScriptInputs pane={props.pane} />,
-			script_preview: () => <ScriptPreview />,
+			script_preview: (props) => (
+				<ScriptPreview
+					pane={props.pane}
+					setHeaderExtra={props.setHeaderExtra}
+				/>
+			),
 			run_logs: (props) => <RunLogs pane={props.pane} />,
 		},
 	});
