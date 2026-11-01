@@ -54,7 +54,7 @@ export const Home = () => {
 				</Show>
 			</Show>
 
-			<a target="_self" href="/api/docs">
+			<a target="_self" href="/api/v1/openapi">
 				api docs
 			</a>
 

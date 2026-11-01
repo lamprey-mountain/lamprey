@@ -118,6 +118,12 @@ pub async fn well_known(State(s): State<Globals>) -> Result<impl IntoResponse> {
     }))
 }
 
+fn routes_v2(_s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
+    OpenApiRouter::new()
+}
+
 pub fn routes(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
-    OpenApiRouter::new().nest("/v1", routes_v1(s))
+    OpenApiRouter::new()
+        .nest("/v1", routes_v1(Arc::clone(&s)))
+        .nest("/v2", routes_v2(s))
 }

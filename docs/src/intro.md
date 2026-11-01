@@ -1,7 +1,7 @@
 # intro
 
 - [rustdoc types](https://chat-files.celery.eu.org/rustdoc/types/index.html)
-- [api reference](https://chat.celery.eu.org/api/docs)
+- [api reference](https://chat.celery.eu.org/api/v1/openapi)
 
 ## documentation
 

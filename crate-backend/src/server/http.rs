@@ -2,7 +2,7 @@ use axum::{
     Json, Router,
     extract::DefaultBodyLimit,
     middleware,
-    response::{Html, IntoResponse},
+    response::{Html, IntoResponse, Redirect},
     routing::get,
 };
 use common::v1::types::error::{ApiError, ErrorCode};
@@ -41,11 +41,30 @@ pub fn create_router_api(globals: Globals) -> Router {
         .merge(kerosene_routes)
         .split_for_parts();
 
-    let router = router
-        .route("/api/docs.json", get(|| async { Json(api) }))
+    let latest_version = API_VERSIONS.last().copied().unwrap_or("v1");
+
+    let router = with_versioned_api_docs(router, api)
+        .route(
+            "/api/docs.json",
+            get(|| async { Redirect::permanent("/api/v1/openapi.json") }),
+        )
         .route(
             "/api/docs",
-            get(|| async { Html(include_str!("../scalar.html")) }),
+            get(|| async { Redirect::permanent("/api/v1/openapi") }),
+        )
+        .route(
+            "/api/latest/openapi.json",
+            get(move || async move {
+                let path = format!("/api/{latest_version}/openapi.json");
+                Redirect::permanent(&path)
+            }),
+        )
+        .route(
+            "/api/latest/openapi",
+            get(move || async move {
+                let path = format!("/api/{latest_version}/openapi");
+                Redirect::permanent(&path)
+            }),
         );
 
     let has_ui = state.config.ui.path.is_some() || cfg!(feature = "embed-frontend");
@@ -84,6 +103,29 @@ pub fn create_router_api(globals: Globals) -> Router {
             routes::util::audit_log_middleware,
         ))
     // .layer(SetRequestIdLayer)
+}
+
+const API_VERSIONS: &[&str] = &["v1", "v2"];
+
+fn with_versioned_api_docs(router: Router, api: utoipa::openapi::OpenApi) -> Router {
+    API_VERSIONS.iter().fold(router, |router, version| {
+        let prefix = format!("/api/{version}");
+        let mut version_api = api.clone();
+        version_api
+            .paths
+            .paths
+            .retain(|path, _| path == &prefix || path.starts_with(&format!("{prefix}/")));
+
+        router
+            .route(
+                &format!("{prefix}/openapi.json"),
+                get(move || async move { Json(version_api) }),
+            )
+            .route(
+                &format!("{prefix}/openapi"),
+                get(|| async { Html(include_str!("../scalar.html")) }),
+            )
+    })
 }
 
 /// create an axum router for metrics
