@@ -58,6 +58,7 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 
 	const [localRoles, setLocalRoles] = createStore<Role[]>([]);
 	const [isOrderDirty, setIsOrderDirty] = createSignal(false);
+	const [savingOrder, setSavingOrder] = createSignal(false);
 
 	// Get roles for this room from cache
 	const roomRoles = createMemo(() => {
@@ -105,19 +106,30 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 		});
 	};
 
-	const saveOrder = () => {
-		api2.client.http.PATCH("/api/v1/room/{room_id}/role", {
-			params: { path: { room_id: props.room.id } },
-			body: {
-				roles: localRoles
-					.map((role, index) => ({ role, index }))
-					.filter(({ role }) => role.id !== role.room_id)
-					.map(({ role, index }) => ({
+	const saveOrder = async () => {
+		setSavingOrder(true);
+		try {
+			const reordered = localRoles
+				.map((role, index) => ({
+					role,
+					position: localRoles.length - index,
+				}))
+				.filter(({ role }) => role.id !== role.room_id);
+			await api2.client.http.PATCH("/api/v1/room/{room_id}/role", {
+				params: { path: { room_id: props.room.id } },
+				body: {
+					roles: reordered.map(({ role, position }) => ({
 						role_id: role.id,
-						position: localRoles.length - index,
+						position,
 					})),
-			},
-		});
+				},
+			});
+			roles2.upsertBulk(
+				reordered.map(({ role, position }) => ({ ...role, position })),
+			);
+		} finally {
+			setSavingOrder(false);
+		}
 	};
 
 	const cancelOrder = () => {
@@ -152,6 +164,7 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 					onCancel={cancelOrder}
 					onSave={saveOrder}
 					show={isOrderDirty()}
+					saving={savingOrder()}
 				/>
 			</div>
 			<Show when={roles2.cache.has(edit.role.id!)}>
@@ -387,6 +400,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<"role" | "members">("role");
 	const [memberSearch, setMemberSearch] = createSignal("");
+	const [savingRole, setSavingRole] = createSignal(false);
 
 	// Get members with this role from cache
 	const members = createMemo(() => {
@@ -424,23 +438,18 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	};
 
 	const deleteRole = (role_id: string) => () => {
-		modalCtl.confirm("are you sure?", (confirmed) => {
+		modalCtl.confirm("are you sure?", async (confirmed) => {
 			if (!confirmed) return;
-			api2.client.http.DELETE("/api/v1/room/{room_id}/role/{role_id}", {
-				params: { path: { room_id: props.room.id, role_id } },
-			});
+			await roles2.deleteRole(props.room.id, role_id);
 		});
 	};
 
-	const saveRole = () => {
-		if (
-			!isDirty(props.edit.role as Role, roles2.cache.get(props.edit.role.id!)!)
-		)
-			return;
+	const saveRole = async () => {
 		const r = props.edit.role as Role;
-		api2.client.http.PATCH("/api/v1/room/{room_id}/role/{role_id}", {
-			params: { path: { room_id: props.room.id, role_id: r.id } },
-			body: {
+		if (!isDirty(r, roles2.cache.get(props.edit.role.id!)!)) return;
+		setSavingRole(true);
+		try {
+			await roles2.update(props.room.id, r.id, {
 				name: r.name,
 				description: r.description,
 				allow: r.allow,
@@ -448,8 +457,10 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				is_mentionable: r.is_mentionable,
 				is_self_applicable: r.is_self_applicable,
 				hoist: r.hoist,
-			},
-		});
+			});
+		} finally {
+			setSavingRole(false);
+		}
 	};
 
 	return (
@@ -603,6 +614,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					props.edit.role as Role,
 					roles2.cache.get(props.edit.role.id!)!,
 				)}
+				saving={savingRole()}
 				onCancel={() => {
 					props.edit.setRole({ id: null } as unknown as Role);
 				}}

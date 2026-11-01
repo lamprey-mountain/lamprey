@@ -123,7 +123,12 @@ export function ApplicationsInner() {
 							}}
 						</For>
 					</ul>
-					<Savebar show={am.dirty} onCancel={am.reset} onSave={am.save} />
+					<Savebar
+						show={am.dirty}
+						saving={am.saving}
+						onCancel={am.reset}
+						onSave={am.save}
+					/>
 				</div>
 				<Show
 					when={

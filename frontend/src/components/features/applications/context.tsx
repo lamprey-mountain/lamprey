@@ -2,6 +2,7 @@ import type { Application, ApplicationCreate, ApplicationUpdate } from "sdk";
 import {
 	createContext,
 	createEffect,
+	createSignal,
 	type ParentProps,
 	useContext,
 } from "solid-js";
@@ -28,6 +29,9 @@ export type ApplicationsState = {
 
 	/** whether any changes have been made to these applications */
 	readonly dirty: boolean;
+
+	/** whether the current changes are being saved */
+	readonly saving: boolean;
 };
 
 const ApplicationsContext = createContext<ApplicationsState>();
@@ -35,6 +39,7 @@ const ApplicationsContext = createContext<ApplicationsState>();
 export const ApplicationsProvider = (props: ParentProps) => {
 	const api = useApi();
 	const [apps, update] = createStore<ApplicationDraft[]>([]);
+	const [saving, setSaving] = createSignal(false);
 
 	const refetch = async () => {
 		const { data } = await api.client.http.GET("/api/v1/app", {
@@ -48,31 +53,36 @@ export const ApplicationsProvider = (props: ParentProps) => {
 	};
 
 	const save = async () => {
-		const proms = [];
-		for (const a of apps) {
-			if (a.state === "create") {
-				proms.push(
-					api.client.http.POST("/api/v1/app", {
-						body: a.create,
-					}),
-				);
-			} else if (a.state === "update") {
-				proms.push(
-					api.client.http.PATCH("/api/v1/app/{app_id}", {
-						params: { path: { app_id: a.data.id } },
-						body: a.update,
-					}),
-				);
-			} else if (a.state === "delete") {
-				proms.push(
-					api.client.http.DELETE("/api/v1/app/{app_id}", {
-						params: { path: { app_id: a.data.id } },
-					}),
-				);
+		setSaving(true);
+		try {
+			const proms = [];
+			for (const a of apps) {
+				if (a.state === "create") {
+					proms.push(
+						api.client.http.POST("/api/v1/app", {
+							body: a.create,
+						}),
+					);
+				} else if (a.state === "update") {
+					proms.push(
+						api.client.http.PATCH("/api/v1/app/{app_id}", {
+							params: { path: { app_id: a.data.id } },
+							body: a.update,
+						}),
+					);
+				} else if (a.state === "delete") {
+					proms.push(
+						api.client.http.DELETE("/api/v1/app/{app_id}", {
+							params: { path: { app_id: a.data.id } },
+						}),
+					);
+				}
 			}
+			await Promise.allSettled(proms);
+			await refetch();
+		} finally {
+			setSaving(false);
 		}
-		await Promise.allSettled(proms);
-		await refetch();
 	};
 
 	const create = () => {
@@ -149,6 +159,10 @@ export const ApplicationsProvider = (props: ParentProps) => {
 
 		get dirty() {
 			return dirty();
+		},
+
+		get saving() {
+			return saving();
 		},
 	};
 

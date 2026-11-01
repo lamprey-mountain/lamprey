@@ -26,6 +26,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	const api2 = useApi();
 	const [roomIcon, setRoomIcon] = createSignal(props.room.icon);
 	const [editingBanner, setEditingBanner] = createSignal(props.room.banner);
+	const [saving, setSaving] = createSignal(false);
 
 	const setAvatarFile = async (f: File) => {
 		await createUpload({
@@ -33,10 +34,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 			file: f,
 			onComplete(media) {
 				setRoomIcon(media.id);
-				api2.client.http.PATCH("/api/v1/room/{room_id}", {
-					params: { path: { room_id: props.room.id } },
-					body: { icon: media.id },
-				});
+				api2.rooms.update(props.room.id, { icon: media.id });
 			},
 			onFail(_error) {},
 			onPause() {},
@@ -47,10 +45,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 
 	const removeAvatar = async () => {
 		setRoomIcon(null);
-		await api2.client.http.PATCH("/api/v1/room/{room_id}", {
-			params: { path: { room_id: props.room.id } },
-			body: { icon: null },
-		});
+		await api2.rooms.update(props.room.id, { icon: null });
 	};
 
 	const openAvatarPicker = () => {
@@ -125,7 +120,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 
 	const isDirty = () =>
 		editingName() !== props.room.name ||
-		getDescriptionFromState() !== props.room.description ||
+		getDescriptionFromState() !== (props.room.description ?? "") ||
 		editingBanner() !== props.room.banner ||
 		editingPublic() !== props.room.public ||
 		(editingAfkChannel()?.id ?? null) !== (props.room.afk_channel_id ?? null) ||
@@ -139,31 +134,22 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 		return state.doc.textContent;
 	};
 
-	const save = () => {
-		const description = getDescriptionFromState();
-		const body: {
-			name: string;
-			public: boolean;
-			description?: string;
-			banner?: string | null;
-			afk_channel_id?: string | null;
-			welcome_channel_id?: string | null;
-			afk_channel_timeout?: number;
-		} = {
-			name: editingName(),
-			public: editingPublic(),
-			banner: editingBanner(),
-			afk_channel_id: editingAfkChannel()?.id ?? null,
-			welcome_channel_id: editingWelcomeChannel()?.id ?? null,
-			afk_channel_timeout: editingAfkTimeout() * 1000,
-		};
-		if (description.trim() !== "") {
-			body.description = description;
+	const save = async () => {
+		setSaving(true);
+		try {
+			const description = getDescriptionFromState();
+			await api2.rooms.update(props.room.id, {
+				name: editingName(),
+				public: editingPublic(),
+				description: description.trim() !== "" ? description : null,
+				banner: editingBanner(),
+				afk_channel_id: editingAfkChannel()?.id ?? null,
+				welcome_channel_id: editingWelcomeChannel()?.id ?? null,
+				afk_channel_timeout: editingAfkTimeout() * 1000,
+			});
+		} finally {
+			setSaving(false);
 		}
-		api2.client.http.PATCH("/api/v1/room/{room_id}", {
-			params: { path: { room_id: props.room.id } },
-			body,
-		});
 	};
 
 	const roomChannels = () =>
@@ -183,6 +169,9 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	const reset = () => {
 		setEditingName(props.room.name);
 		setEditingDescription(props.room.description);
+		const state = editor.createState();
+		editor.setState(state);
+		setEditorState(state);
 		setEditingBanner(props.room.banner);
 		setEditingPublic(props.room.public);
 		setEditingAfkChannel(
@@ -344,7 +333,12 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 					/>
 				</div>
 			</div>
-			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
+			<Savebar
+				show={isDirty()}
+				saving={saving()}
+				onCancel={reset}
+				onSave={save}
+			/>
 		</div>
 	);
 }

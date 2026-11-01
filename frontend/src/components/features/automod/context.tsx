@@ -2,6 +2,7 @@ import {
 	createContext,
 	createEffect,
 	createResource,
+	createSignal,
 	type ParentProps,
 	useContext,
 } from "solid-js";
@@ -38,6 +39,9 @@ export type AutomodState = {
 
 	/** whether any changes have been made to these automod rules */
 	readonly dirty: boolean;
+
+	/** whether the current changes are being saved */
+	readonly saving: boolean;
 };
 
 const AutomodContext = createContext<AutomodState>();
@@ -47,6 +51,7 @@ export type AutomodProviderProps = ParentProps<{ room_id: string }>;
 export const AutomodProvider = (props: AutomodProviderProps) => {
 	const api = useApi();
 	const [rules, update] = createStore<AutomodRuleDraft[]>([]);
+	const [saving, setSaving] = createSignal(false);
 
 	// TODO: maybe use this instead?
 	// const [source] = createResource(() => props.room_id, async () => {
@@ -71,30 +76,35 @@ export const AutomodProvider = (props: AutomodProviderProps) => {
 	};
 
 	const save = async () => {
-		for (const r of rules) {
-			if (r.state === "create") {
-				await api.client.http.POST("/api/v1/room/{room_id}/automod/rule", {
-					params: { path: { room_id: props.room_id } },
-					body: r.create,
-				});
-			} else if (r.state === "update") {
-				await api.client.http.PATCH(
-					"/api/v1/room/{room_id}/automod/rule/{rule_id}",
-					{
-						params: { path: { room_id: props.room_id, rule_id: r.rule.id } },
-						body: r.update,
-					},
-				);
-			} else if (r.state === "delete") {
-				await api.client.http.DELETE(
-					"/api/v1/room/{room_id}/automod/rule/{rule_id}",
-					{
-						params: { path: { room_id: props.room_id, rule_id: r.rule.id } },
-					},
-				);
+		setSaving(true);
+		try {
+			for (const r of rules) {
+				if (r.state === "create") {
+					await api.client.http.POST("/api/v1/room/{room_id}/automod/rule", {
+						params: { path: { room_id: props.room_id } },
+						body: r.create,
+					});
+				} else if (r.state === "update") {
+					await api.client.http.PATCH(
+						"/api/v1/room/{room_id}/automod/rule/{rule_id}",
+						{
+							params: { path: { room_id: props.room_id, rule_id: r.rule.id } },
+							body: r.update,
+						},
+					);
+				} else if (r.state === "delete") {
+					await api.client.http.DELETE(
+						"/api/v1/room/{room_id}/automod/rule/{rule_id}",
+						{
+							params: { path: { room_id: props.room_id, rule_id: r.rule.id } },
+						},
+					);
+				}
 			}
+			await refetch();
+		} finally {
+			setSaving(false);
 		}
-		await refetch();
 	};
 
 	const create = () => {
@@ -254,6 +264,10 @@ export const AutomodProvider = (props: AutomodProviderProps) => {
 
 		get dirty() {
 			return rules.some((r) => r.state !== "clean");
+		},
+
+		get saving() {
+			return saving();
 		},
 	};
 

@@ -24,6 +24,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 	);
 	const [editingAvatar, setEditingAvatar] = createSignal(props.user.avatar);
 	const [editingBanner, setEditingBanner] = createSignal(props.user.banner);
+	const [saving, setSaving] = createSignal(false);
 
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
@@ -46,15 +47,27 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		editingBanner() !== props.user.banner;
 
 	const save = async () => {
-		await ctx.client.http.PATCH("/api/v1/user/{user_id}", {
-			params: { path: { user_id: "@self" } },
-			body: {
+		setSaving(true);
+		try {
+			await ctx.client.http.PATCH("/api/v1/user/{user_id}", {
+				params: { path: { user_id: "@self" } },
+				body: {
+					name: editingName(),
+					description: editingDescription() || null,
+					avatar: editingAvatar(),
+					banner: editingBanner(),
+				},
+			});
+			api2.users.upsert({
+				...props.user,
 				name: editingName(),
-				description: editingDescription(),
+				description: editingDescription() || null,
 				avatar: editingAvatar(),
 				banner: editingBanner(),
-			},
-		});
+			});
+		} finally {
+			setSaving(false);
+		}
 	};
 
 	const reset = () => {
@@ -228,7 +241,12 @@ export function Profile(props: VoidProps<{ user: User }>) {
 			<div>
 				user id: <Copyable>{props.user.id}</Copyable>
 			</div>
-			<Savebar show={isDirty()} onCancel={reset} onSave={save} />
+			<Savebar
+				show={isDirty()}
+				saving={saving()}
+				onCancel={reset}
+				onSave={save}
+			/>
 		</div>
 	);
 }

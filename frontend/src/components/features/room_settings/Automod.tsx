@@ -57,7 +57,12 @@ export function AutomodInner(props: VoidProps<{ room: Room }>) {
 				<button class="automod-rule create" onClick={am.create}>
 					+ create rule
 				</button>
-				<Savebar onSave={am.save} onCancel={am.reset} show={am.dirty} />
+				<Savebar
+					onSave={am.save}
+					onCancel={am.reset}
+					show={am.dirty}
+					saving={am.saving}
+				/>
 			</div>
 			<Show when={showTest()}>
 				<Resizable
