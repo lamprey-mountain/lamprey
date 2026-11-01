@@ -41,6 +41,7 @@ export interface TimelineVirtualizerOptions {
 export interface TimelineVirtualizer {
 	queue: Queue<TimelineTask>;
 	highlighter: HighlighterState;
+	accessLoading: Accessor<boolean>;
 	accessTotalSize: Accessor<number>;
 	accessVisibleRows: Accessor<VirtualItem[]>;
 	measurements: Map<string, number>;
@@ -99,9 +100,11 @@ export const createTimelineVirtualizer = (
 	const timeline = useTimeline();
 	const highlighter = createTimelineHighlighter();
 
+	const [loading, setLoading] = createSignal(true);
 	const [totalSize, setTotalSize] = createSignal(0);
 	const [visibleRows, setVisibleRows] = createStore([] as VirtualItem[]);
 
+	let hasLoaded = false;
 	const measurements = new Map<string, number>();
 
 	const getSize = (item: TimelineItemT2) => {
@@ -248,6 +251,11 @@ export const createTimelineVirtualizer = (
 				setTotalSize(cachedLayout.totalSize);
 				setVisibleRows(reconcile(cachedRange, { key: "key", merge: true }));
 
+				if (!hasLoaded) {
+					hasLoaded = true;
+					setLoading(false);
+				}
+
 				// wait for solidjs to update dom
 				await new Promise<void>((r) => queueMicrotask(r));
 
@@ -352,6 +360,7 @@ export const createTimelineVirtualizer = (
 	return {
 		queue,
 		highlighter,
+		accessLoading: loading,
 		accessTotalSize: totalSize,
 		accessVisibleRows: () => visibleRows,
 		measurements,

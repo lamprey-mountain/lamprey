@@ -318,45 +318,57 @@ export const Timeline = (props: ChatProps) => {
 			onPointerDown={clearAutoReadSuppression}
 			onKeyDown={clearAutoReadSuppression}
 		>
-			<div
-				class="timeline-items"
-				style={{
-					height: `${virt.accessTotalSize()}px`,
-				}}
+			<Show
+				when={!virt.accessLoading()}
+				fallback={
+					<div class="timeline-skeletons">
+						<MessageSkeletons />
+					</div>
+				}
 			>
-				<Key each={virt.accessVisibleRows()} by={(row) => row.item.key}>
-					{(row) => {
-						const handleRef = (ref: HTMLDivElement) => {
-							ro.observe(ref);
-							onCleanup(() => ro.unobserve(ref));
-
-							createEffect(() => {
-								const item = row().item;
-								if (item.type === "message" && item.message.id === hl.pending) {
-									highlight(ref.children[0]);
-									hl.reset();
-								}
-							});
-						};
-
-						return (
-							<div
-								class="timeline-item"
-								data-index={row().index}
-								data-key={row().item.key}
-								data-size={row().size}
-								style={{
-									transform: `translateY(${row().offset}px)`,
-								}}
-								ref={handleRef}
-							>
-								<TimelineItem2 channel={props.channel} item={row().item} />
-							</div>
-						);
+				<div
+					class="timeline-items"
+					style={{
+						height: `${virt.accessTotalSize()}px`,
 					}}
-				</Key>
-				<MessageToolbarMount />
-			</div>
+				>
+					<Key each={virt.accessVisibleRows()} by={(row) => row.item.key}>
+						{(row) => {
+							const handleRef = (ref: HTMLDivElement) => {
+								ro.observe(ref);
+								onCleanup(() => ro.unobserve(ref));
+
+								createEffect(() => {
+									const item = row().item;
+									if (
+										item.type === "message" &&
+										item.message.id === hl.pending
+									) {
+										highlight(ref.children[0]);
+										hl.reset();
+									}
+								});
+							};
+
+							return (
+								<div
+									class="timeline-item"
+									data-index={row().index}
+									data-key={row().item.key}
+									data-size={row().size}
+									style={{
+										transform: `translateY(${row().offset}px)`,
+									}}
+									ref={handleRef}
+								>
+									<TimelineItem2 channel={props.channel} item={row().item} />
+								</div>
+							);
+						}}
+					</Key>
+					<MessageToolbarMount />
+				</div>
+			</Show>
 		</div>
 	);
 };

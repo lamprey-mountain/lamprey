@@ -4225,13 +4225,13 @@ button.round {
 	/* pointer-events: none; */
 
 	.ghost {
-		background: linear-gradient(90deg,
-			$bg-400 0%,
-			oklch(var(--color-bg4) / 0.75) 50%,
-			oklch(var(--color-bg4) / 0.85) 100%,
-			);
-		// PERF: use a solid color instead of gradient?
-		/* background-color: $bg-400; */
+		// NOTE: maybe if i want to be fancy, i can use a gradient?
+		// background: linear-gradient(90deg,
+		// 	$bg-400 0%,
+		// 	oklch(var(--color-bg4) / 0.75) 50%,
+		// 	oklch(var(--color-bg4) / 0.85) 100%,
+		// 	);
+		background-color: $bg-400;
 		background-size: 200% 100%;
 		// PERF: this animation seems to cause a lot of lag
 		/* animation: skeleton-loading 1s infinite linear; */
