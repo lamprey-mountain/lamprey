@@ -7,6 +7,13 @@ import type {
 } from "sdk";
 import { BaseService } from "../core/Service";
 
+const terminalStatuses = new Set<Eval["status"]>([
+	"Exited",
+	"Borked",
+	"Crashed",
+	"Stopped",
+]);
+
 export class RedexEvalsService extends BaseService<Eval> {
 	protected cacheName = "script_run";
 
@@ -67,7 +74,14 @@ export class RedexEvalsService extends BaseService<Eval> {
 				},
 			),
 		);
-		this.upsert(data);
+
+		// the run may finish before the trigger request resolves, so don't
+		// overwrite a newer status with the creation-time snapshot
+		const existing = this.cache.get(data.id);
+		if (!existing || !terminalStatuses.has(existing.status)) {
+			this.upsert(data);
+		}
+
 		return data;
 	}
 
