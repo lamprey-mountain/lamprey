@@ -72,8 +72,8 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (event) => {
 	const url = new URL(event.request.url);
 
-	// 1. use cached spa html for all navigation
-	if (event.request.mode === "navigate") {
+	// 1. use cached spa html for all navigation except api
+	if (event.request.mode === "navigate" && !url.pathname.startsWith("/api/")) {
 		event.respondWith(
 			caches.match("/index.html").then((hit) => hit ?? fetch(event.request)),
 		);
