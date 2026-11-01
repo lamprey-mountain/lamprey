@@ -16,6 +16,8 @@ const terminalStatuses = new Set<Eval["status"]>([
 
 export class RedexEvalsService extends BaseService<Eval> {
 	protected cacheName = "script_run";
+	private _listed = new Set<string>();
+	private _listPromises = new Map<string, Promise<void>>();
 
 	getKey(item: Eval): string {
 		return item.id;
@@ -65,6 +67,24 @@ export class RedexEvalsService extends BaseService<Eval> {
 		return data;
 	}
 
+	async ensureListed(channel_id: string, redex_id: RedexId): Promise<void> {
+		const key = `${channel_id}:${redex_id}`;
+		if (this._listed.has(key)) return;
+
+		const pending = this._listPromises.get(key);
+		if (pending) return pending;
+
+		const promise = this.list(channel_id, redex_id)
+			.then(() => {
+				this._listed.add(key);
+			})
+			.finally(() => {
+				this._listPromises.delete(key);
+			});
+		this._listPromises.set(key, promise);
+		return promise;
+	}
+
 	async trigger(
 		channel_id: string,
 		redex_id: RedexId,
@@ -88,6 +108,12 @@ export class RedexEvalsService extends BaseService<Eval> {
 		}
 
 		return data;
+	}
+
+	override clear() {
+		super.clear();
+		this._listed.clear();
+		this._listPromises.clear();
 	}
 
 	async stop(
