@@ -336,7 +336,7 @@
 			}
 
 			&[data-status="Exited"] {
-				color: $color-green;
+				color: $fg-400;
 			}
 
 			&[data-status="Crashed"] {
@@ -442,12 +442,15 @@
 			}
 
 			.level {
+				width: 6em;
 				font-size: 0.7rem;
 				padding: 1px 4px;
 				border-radius: 3px;
 				font-weight: bold;
+				text-align: right;
 				text-transform: uppercase;
 				flex-shrink: 0;
+				box-sizing: border-box;
 
 				&[data-level="Trace"] {
 					color: $fg-500;
@@ -464,6 +467,12 @@
 					background-color: oklch(calc(var(--color-blue) * 0.15) / 0.3);
 				}
 
+				&[data-level="REQUEST"],
+				&[data-level="RESPONSE"] {
+					color: $fg-400;
+					background-color: $bg-300;
+				}
+
 				&[data-level="Warning"] {
 					color: $color-orange;
 					background-color: oklch(calc(var(--color-orange) * 0.15) / 0.3);
@@ -477,18 +486,14 @@
 
 			.content {
 				color: $fg-200;
-				white-space: pre;
-				overflow: hidden;
-				text-overflow: ellipsis;
 				flex-shrink: 0;
+				@include truncate;
 			}
 
 			.attrs-summary {
 				color: $fg-500;
-				overflow: hidden;
-				white-space: nowrap;
-				text-overflow: ellipsis;
 				flex-shrink: 1;
+				@include truncate;
 			}
 
 			.attrs {

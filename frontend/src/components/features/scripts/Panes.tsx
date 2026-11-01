@@ -11,7 +11,12 @@ import {
 	Show,
 	Switch,
 } from "solid-js";
-import type { EvalInputSummary, ServerInfo } from "ts-sdk";
+import type { EvalInputSummary, EvalLogEntry, ServerInfo } from "ts-sdk";
+
+type DisplayLogEntry = Omit<EvalLogEntry, "level"> & {
+	level: EvalLogEntry["level"] | "REQUEST" | "RESPONSE";
+};
+
 import { useApi } from "@/api";
 import { Duration } from "@/atoms/Duration";
 import { Icon } from "@/atoms/Icon";
@@ -417,12 +422,86 @@ export const RunLogs = (props: {
 	const [expandedEntry, setExpandedEntry] = createSignal<number | null>(null);
 	const isLevelFilterSelected = createSelector(levelFilter);
 
+	const fakeHttpLogs = createMemo(() => {
+		const run = runInfo();
+		if (!run || run.input.type !== "Http") return;
+
+		const r = run.input.request;
+		const requestHeaders = Object.fromEntries(
+			Object.entries(r.request_headers).map(([key, value]) => [
+				key.toLowerCase(),
+				value,
+			]),
+		);
+		const responseHeaders = Object.fromEntries(
+			Object.entries(r.response_headers).map(([key, value]) => [
+				key.toLowerCase(),
+				value,
+			]),
+		);
+
+		let url: URL | undefined;
+		try {
+			url = new URL(r.request_url);
+		} catch {
+			url = undefined;
+		}
+
+		const authority =
+			url?.host || requestHeaders.host || requestHeaders[":authority"];
+		const scheme =
+			url?.protocol.replace(":", "") || requestHeaders["x-forwarded-proto"];
+		const path = url ? `${url.pathname}${url.search}` : r.request_url;
+
+		const requestAttrs: Record<string, unknown> = {
+			":method": r.request_method,
+			...(scheme ? { ":scheme": scheme } : {}),
+			...(authority ? { ":authority": authority } : {}),
+			":path": path,
+			...requestHeaders,
+		};
+		const requestEntry: DisplayLogEntry = {
+			id: -1,
+			created_at: run.created_at,
+			level: "REQUEST",
+			source: { type: "Runtime" },
+			content: `${r.request_method} ${path}`,
+			attributes: requestAttrs,
+		};
+
+		if (r.response_status <= 0) {
+			return { request: requestEntry, response: undefined };
+		}
+
+		const responseAttrs: Record<string, unknown> = {
+			":status": String(r.response_status),
+			...responseHeaders,
+		};
+		const statusText = HTTP_STATUS_TEXT[r.response_status];
+		const responseEntry: DisplayLogEntry = {
+			id: -2,
+			created_at: run.stopped_at ?? run.created_at,
+			level: "RESPONSE",
+			source: { type: "Runtime" },
+			content: `${r.response_status}${statusText ? ` ${statusText}` : ""}`,
+			attributes: responseAttrs,
+		};
+
+		return { request: requestEntry, response: responseEntry };
+	});
+
 	const filteredLogs = () => {
 		const filter = levelFilter();
-		if (filter === "all") return api.scriptLogs.getLogsForRun(runId());
-		return api.scriptLogs
-			.getLogsForRun(runId())
-			.filter((e) => e.level === filter);
+		const logs = api.scriptLogs.getLogsForRun(runId());
+		const filtered =
+			filter === "all" ? logs : logs.filter((e) => e.level === filter);
+		const fake = fakeHttpLogs();
+		if (!fake) return filtered;
+		return [
+			fake.request,
+			...filtered,
+			...(fake.response ? [fake.response] : []),
+		];
 	};
 
 	const hasAttrs = (entry: { attributes?: Record<string, unknown> }) =>
