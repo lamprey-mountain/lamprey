@@ -23,6 +23,14 @@ import { icExternal1, icQuestion } from "@/utils/icons";
 import { type ScriptPane, useScript } from "./context";
 import { LazyCodeEditor } from "./LazyEditor";
 
+const httpStatusClass = (status: number) => {
+	if (status >= 500) return "error";
+	if (status >= 400) return "warning";
+	if (status >= 300) return "redirect";
+	if (status >= 200) return "success";
+	return "unknown";
+};
+
 export const ScriptCode = (props: {
 	// FIXME: correct pane type
 	// pane: Extract<ScriptPaneT, { type: "leaf", data: { type: "script_code" } }>;
@@ -138,6 +146,13 @@ export const ScriptInputs = (props: {
 			)
 			.slice(0, 32),
 	);
+	const runIds = createMemo(() => runs().map((run) => run.id));
+	const [activeRunId, setActiveRunId] = createSignal<string | null>(null);
+	const tabbableRunId = () => {
+		const ids = runIds();
+		const active = activeRunId();
+		return active && ids.includes(active) ? active : ids[0];
+	};
 
 	const trigger = async (inputId: string) => {
 		await api.scriptRuns.trigger(s.channel_id, scriptId(), {
@@ -174,6 +189,31 @@ export const ScriptInputs = (props: {
 				"vertical",
 			);
 		}
+	};
+
+	const handleRunKeyDown = (
+		e: KeyboardEvent & { currentTarget: HTMLTableRowElement },
+		runId: string,
+	) => {
+		if (e.key === "Enter" || e.key === " ") {
+			e.preventDefault();
+			openLogs(runId);
+			return;
+		}
+
+		if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+
+		const rows = Array.from(
+			e.currentTarget
+				.closest("table")
+				?.querySelectorAll<HTMLTableRowElement>("tbody tr") ?? [],
+		);
+		const current = rows.indexOf(e.currentTarget);
+		const next = rows[current + (e.key === "ArrowDown" ? 1 : -1)];
+		if (!next) return;
+
+		e.preventDefault();
+		next.focus();
 	};
 
 	return (
@@ -239,72 +279,108 @@ export const ScriptInputs = (props: {
 			</section>
 			<section>
 				<h3>Recent Evals</h3>
-				<ul class="eval-list">
-					<For each={runs()}>
-						{(run) => {
-							function matchesInput<T extends EvalInputSummary["type"]>(
-								ty: T,
-							): (EvalInputSummary & { type: T }) | false {
-								if (run.input.type === ty) {
-									return run.input as EvalInputSummary & { type: T };
-								} else {
-									return false;
-								}
-							}
+				<table class="eval-list">
+					<tbody>
+						<For each={runIds()}>
+							{(runId) => {
+								const run = () => api.scriptRuns.cache.get(runId);
+								const httpRequest = () => {
+									const current = run();
+									if (current?.input.type === "Http")
+										return current.input.request;
+								};
 
-							return (
-								<li>
-									<div class="eval-item" onClick={[openLogs, run.id]}>
-										<div class="eval-info">
-											<span class="status" data-status={run.status}>
-												{run.status}
-											</span>
-											<Time date={getDate(run.created_at)} />
-										</div>
-										<div style="display:flex">
+								function matchesInput<T extends EvalInputSummary["type"]>(
+									ty: T,
+								): (EvalInputSummary & { type: T }) | false {
+									const current = run();
+									if (current?.input.type === ty) {
+										return current.input as EvalInputSummary & { type: T };
+									} else {
+										return false;
+									}
+								}
+
+								return (
+									<tr
+										class="eval-item"
+										tabIndex={tabbableRunId() === runId ? 0 : -1}
+										onFocus={() => setActiveRunId(runId)}
+										onClick={() => openLogs(runId)}
+										onKeyDown={(e) => handleRunKeyDown(e, runId)}
+									>
+										<td class="status-cell">
+											<span class="status-dot" data-status={run()?.status} />
+										</td>
+										<td class="input-cell">
 											<Switch>
 												<Match when={matchesInput("Extraction")}>
 													Extraction
 												</Match>
 												<Match when={matchesInput("Http")}>
-													{(input) => {
-														const r = input().request;
-
-														return (
-															<>
-																http
-																{r.request_method}
-																{r.request_url}
-																{" -> "}
-																{r.response_status}
-																{HTTP_STATUS_TEXT[r.response_status]}
-															</>
-														);
-													}}
-												</Match>
-												<Match when={matchesInput("Manual")}>
 													{(input) => (
 														<>
-															{input().id}
-															{input().user_id}
+															<span class="http-method">
+																{input().request.request_method}
+															</span>{" "}
+															<span class="http-url">
+																{input().request.request_url}
+															</span>
 														</>
 													)}
 												</Match>
+												<Match when={matchesInput("Manual")}>
+													{(input) => `${input().id} ${input().user_id}`}
+												</Match>
 												<Match when={matchesInput("Event")}>
-													{(input) => <>event {input().event.type}</>}
+													{(input) => `event ${input().event.type}`}
 												</Match>
 											</Switch>
-											<div style="flex:1"></div>
-											<button class="view-logs" type="button">
-												View Logs
-											</button>
-										</div>
-									</div>
-								</li>
-							);
-						}}
-					</For>
-				</ul>
+										</td>
+										<td class="response-cell">
+											<Show when={httpRequest()}>
+												{(request) => (
+													<Show when={request().response_status > 0}>
+														<span
+															class="http-status"
+															data-code={httpStatusClass(
+																request().response_status,
+															)}
+														>
+															<span class="http-status-code">
+																{request().response_status}
+															</span>
+															<Show
+																when={
+																	HTTP_STATUS_TEXT[request().response_status]
+																}
+																keyed
+															>
+																{(status) => (
+																	<span class="http-status-reason">
+																		{" "}
+																		{status}
+																	</span>
+																)}
+															</Show>
+														</span>
+													</Show>
+												)}
+											</Show>
+										</td>
+										<td class="time-cell">
+											<Show when={run()}>
+												{(current) => (
+													<Time date={getDate(current().created_at)} />
+												)}
+											</Show>
+										</td>
+									</tr>
+								);
+							}}
+						</For>
+					</tbody>
+				</table>
 			</section>
 		</div>
 	);
