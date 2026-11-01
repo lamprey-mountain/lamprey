@@ -49,7 +49,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 	const save = async () => {
 		setSaving(true);
 		try {
-			await ctx.client.http.PATCH("/api/v1/user/{user_id}", {
+			const { error } = await ctx.client.http.PATCH("/api/v1/user/{user_id}", {
 				params: { path: { user_id: "@self" } },
 				body: {
 					name: editingName(),
@@ -58,6 +58,10 @@ export function Profile(props: VoidProps<{ user: User }>) {
 					banner: editingBanner(),
 				},
 			});
+			if (error) {
+				console.error("failed to save profile", error);
+				return;
+			}
 			api2.users.upsert({
 				...props.user,
 				name: editingName(),

@@ -6,7 +6,7 @@ import {
 	type ParentProps,
 	useContext,
 } from "solid-js";
-import { createStore, type SetStoreFunction } from "solid-js/store";
+import { createStore, type SetStoreFunction, unwrap } from "solid-js/store";
 import { uuidv7 } from "uuidv7";
 import { useApi } from "@/api";
 import { deepEqual } from "@/utils/deepEqual";
@@ -55,31 +55,75 @@ export const ApplicationsProvider = (props: ParentProps) => {
 	const save = async () => {
 		setSaving(true);
 		try {
-			const proms = [];
+			const operations: {
+				draft: ApplicationDraft;
+				promise: Promise<{ error?: unknown }>;
+			}[] = [];
 			for (const a of apps) {
 				if (a.state === "create") {
-					proms.push(
-						api.client.http.POST("/api/v1/app", {
+					operations.push({
+						draft: unwrap(a),
+						promise: api.client.http.POST("/api/v1/app", {
 							body: a.create,
 						}),
-					);
+					});
 				} else if (a.state === "update") {
-					proms.push(
-						api.client.http.PATCH("/api/v1/app/{app_id}", {
+					operations.push({
+						draft: unwrap(a),
+						promise: api.client.http.PATCH("/api/v1/app/{app_id}", {
 							params: { path: { app_id: a.data.id } },
 							body: a.update,
 						}),
-					);
+					});
 				} else if (a.state === "delete") {
-					proms.push(
-						api.client.http.DELETE("/api/v1/app/{app_id}", {
+					operations.push({
+						draft: unwrap(a),
+						promise: api.client.http.DELETE("/api/v1/app/{app_id}", {
 							params: { path: { app_id: a.data.id } },
 						}),
-					);
+					});
 				}
 			}
-			await Promise.allSettled(proms);
+
+			const results = await Promise.allSettled(
+				operations.map((operation) => operation.promise),
+			);
+			const failed = results.flatMap((result, i) => {
+				const operation = operations[i];
+				if (result.status === "rejected") {
+					console.error(
+						"failed to save application",
+						operation.draft,
+						result.reason,
+					);
+					return [operation.draft];
+				}
+				if (result.value.error) {
+					console.error(
+						"failed to save application",
+						operation.draft,
+						result.value.error,
+					);
+					return [operation.draft];
+				}
+				return [];
+			});
+
 			await refetch();
+			if (failed.length > 0) {
+				const failedIds = new Set(
+					failed.map((draft) =>
+						draft.state === "create" ? draft.nonce : draft.data.id,
+					),
+				);
+				update((prev) => [
+					...prev.filter((draft) => {
+						const id = draft.state === "create" ? draft.nonce : draft.data.id;
+						return !failedIds.has(id);
+					}),
+					...failed,
+				]);
+			}
 		} finally {
 			setSaving(false);
 		}

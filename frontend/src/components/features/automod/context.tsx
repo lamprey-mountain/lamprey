@@ -6,7 +6,7 @@ import {
 	type ParentProps,
 	useContext,
 } from "solid-js";
-import { createStore, type SetStoreFunction } from "solid-js/store";
+import { createStore, type SetStoreFunction, unwrap } from "solid-js/store";
 import type { AutomodRule, AutomodRuleCreate, AutomodRuleUpdate } from "ts-sdk";
 import { uuidv7 } from "uuidv7";
 import { useApi } from "@/api";
@@ -78,30 +78,56 @@ export const AutomodProvider = (props: AutomodProviderProps) => {
 	const save = async () => {
 		setSaving(true);
 		try {
-			for (const r of rules) {
+			let failed: AutomodRuleDraft[] | undefined;
+			for (let i = 0; i < rules.length; i++) {
+				const r = rules[i];
+				let error: unknown;
 				if (r.state === "create") {
-					await api.client.http.POST("/api/v1/room/{room_id}/automod/rule", {
-						params: { path: { room_id: props.room_id } },
-						body: r.create,
-					});
+					({ error } = await api.client.http.POST(
+						"/api/v1/room/{room_id}/automod/rule",
+						{
+							params: { path: { room_id: props.room_id } },
+							body: r.create,
+						},
+					));
 				} else if (r.state === "update") {
-					await api.client.http.PATCH(
+					({ error } = await api.client.http.PATCH(
 						"/api/v1/room/{room_id}/automod/rule/{rule_id}",
 						{
 							params: { path: { room_id: props.room_id, rule_id: r.rule.id } },
 							body: r.update,
 						},
-					);
+					));
 				} else if (r.state === "delete") {
-					await api.client.http.DELETE(
+					({ error } = await api.client.http.DELETE(
 						"/api/v1/room/{room_id}/automod/rule/{rule_id}",
 						{
 							params: { path: { room_id: props.room_id, rule_id: r.rule.id } },
 						},
-					);
+					));
+				}
+				if (error) {
+					console.error("failed to save automod rule", error);
+					failed = rules.slice(i).map((rule) => unwrap(rule));
+					break;
 				}
 			}
+
 			await refetch();
+			if (failed) {
+				const failedIds = new Set(
+					failed.map((draft) =>
+						draft.state === "create" ? draft.nonce : draft.rule.id,
+					),
+				);
+				update((prev) => [
+					...prev.filter((draft) => {
+						const id = draft.state === "create" ? draft.nonce : draft.rule.id;
+						return !failedIds.has(id);
+					}),
+					...failed,
+				]);
+			}
 		} finally {
 			setSaving(false);
 		}

@@ -115,15 +115,22 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 					position: localRoles.length - index,
 				}))
 				.filter(({ role }) => role.id !== role.room_id);
-			await api2.client.http.PATCH("/api/v1/room/{room_id}/role", {
-				params: { path: { room_id: props.room.id } },
-				body: {
-					roles: reordered.map(({ role, position }) => ({
-						role_id: role.id,
-						position,
-					})),
+			const { error } = await api2.client.http.PATCH(
+				"/api/v1/room/{room_id}/role",
+				{
+					params: { path: { room_id: props.room.id } },
+					body: {
+						roles: reordered.map(({ role, position }) => ({
+							role_id: role.id,
+							position,
+						})),
+					},
 				},
-			});
+			);
+			if (error) {
+				console.error("failed to save role order", error);
+				return;
+			}
 			roles2.upsertBulk(
 				reordered.map(({ role, position }) => ({ ...role, position })),
 			);
