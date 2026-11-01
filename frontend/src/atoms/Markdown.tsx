@@ -19,11 +19,10 @@ import { useMenu, useUserPopout } from "@/contexts/mod";
 import { useNavigate } from "@/contexts/router";
 import { getEmojiHex } from "@/lib/emoji";
 import { flags } from "@/lib/flags";
-import { loaded, Parser } from "@/lib/markdown";
+import { parseMarkdown, parserResource } from "@/lib/markdown";
 import type {
 	MentionData,
 	SerializedBlock,
-	SerializedDocument,
 	SerializedInline,
 } from "@/lib/markdown/ast";
 import { getEmojiUrl } from "@/media/util";
@@ -606,18 +605,10 @@ export const Markdown = (props: ParentProps<MarkdownProps>) => {
 	const api = useApi();
 	const channel = api.channels.use(() => props.channel_id);
 
-	const [parser, setParser] = createSignal<Parser>();
-	createEffect(() => {
-		loaded.then(() => {
-			setParser(new Parser());
-		});
-	});
-
 	const ast = createMemo(() => {
-		const p = parser();
-		if (!p) return null;
-		const parsed = p.parse(props.content);
-		return parsed.ast() as SerializedDocument;
+		const p = parserResource();
+		if (!p || !props.content) return null;
+		return parseMarkdown(p, props.content);
 	});
 
 	// TODO: use Suspense here?

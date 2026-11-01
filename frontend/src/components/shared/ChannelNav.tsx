@@ -1,3 +1,4 @@
+import { Key } from "@solid-primitives/keyed";
 import { useParams } from "@solidjs/router";
 import type { api, Channel, ChannelType } from "sdk";
 import {
@@ -287,7 +288,6 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 					(c.type === "Document" &&
 						c.parent_id &&
 						channels2.cache.get(c.parent_id)?.type === "Wiki")) &&
-				(!c.archived_at || c.id === params.channel_id) &&
 				canViewChannel(c),
 		);
 		const channels = allChannels.filter(
@@ -475,6 +475,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 				if (channel.threads?.length) {
 					for (const thread of channel.threads) {
 						if (collapsed && thread.id !== params.channel_id) continue;
+						if (thread.archived_at && thread.id !== params.channel_id) continue;
 						items.push({
 							id: thread.id,
 							type: "thread",
@@ -549,6 +550,18 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 		const isFocused =
 			chan.id === params.channel_id ||
 			chan.threads?.some((t) => t.id === params.channel_id);
+
+		// archived threads stay hidden unless currently open
+		const isArchivedThread =
+			(chan.type === "ThreadPublic" ||
+				chan.type === "ThreadPrivate" ||
+				chan.type === "ThreadForum2" ||
+				(chan.type === "Document" &&
+					!!chan.parent_id &&
+					channels2.cache.get(chan.parent_id)?.type === "Wiki")) &&
+			!!chan.archived_at;
+		if (isArchivedThread && !isFocused) return false;
+
 		const isCollapsed = collapsedCategories().has(categoryId ?? "");
 		return !isCollapsed || isFocused;
 	};
@@ -673,274 +686,308 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 					<hr class="separator" />
 				</Show>
 
-				<For each={categories()}>
-					{({ category, channels }) => (
-						<>
-							<Show when={category}>
-								{(cat) => (
-									<div
-										class="category-header"
-										classList={{
-											collapsed: collapsedCategories().has(cat().id),
-										}}
-										data-dnd-placement={
-											view()
-												? cat().channel
-													? undefined
-													: viewDnd.placement(cat().id)
-												: cat().channel
-													? dnd.placement(cat().id)
-													: undefined
-										}
-										data-channel-id={cat().channel ? cat().id : undefined}
-										data-nav-id={cat().id}
-										tabIndex={isFocused(cat().id) ? 0 : -1}
-										draggable={!!cat().channel && !view()}
-										onDragStart={view() ? undefined : dnd.handle}
-										onDragOver={
-											view()
-												? cat().channel
-													? undefined
-													: (e: DragEvent) => viewDnd.overCategory(e, cat().id)
-												: dnd.handle
-										}
-										onDrop={view() ? viewDnd.handleDrop : dnd.handle}
-										onDragEnd={view() ? viewDnd.handleEnd : dnd.handle}
-										onClick={() => {
-											setCollapsedCategories((prev) => {
-												const newSet = new Set(prev);
-												if (newSet.has(cat().id)) {
-													newSet.delete(cat().id);
-												} else {
-													newSet.add(cat().id);
-												}
-												return newSet;
-											});
-										}}
-										onContextMenu={(e) => {
-											const channel = cat().channel;
-											if (!channel) return;
-											e.preventDefault();
-											e.stopPropagation();
-											queueMicrotask(() => {
-												setMenu({
-													x: e.clientX,
-													y: e.clientY,
-													type: "channel",
-													channel_id: channel.id,
-												});
-											});
-										}}
-									>
-										<span
-											class="category-toggle"
+				<Key
+					each={categories()}
+					by={(c) => c.category?.id ?? UNCATEGORIZED_CHANNEL_ID}
+				>
+					{(categoryRow) => {
+						const category = () => categoryRow().category;
+						const channels = () => categoryRow().channels;
+
+						return (
+							<>
+								<Show when={category()}>
+									{(cat) => (
+										<div
+											class="category-header"
 											classList={{
 												collapsed: collapsedCategories().has(cat().id),
 											}}
-										>
-											<Icon src={icChevron} />
-										</span>
-										<span class="category-name">{cat().name}</span>
-									</div>
-								)}
-							</Show>
-							<ul
-								class="category-channels"
-								data-channel-id={
-									category?.channel?.id ??
-									(view() || !props.room_id
-										? undefined
-										: UNCATEGORIZED_CHANNEL_ID)
-								}
-								data-dnd-placement={
-									view()
-										? category?.channel
-											? undefined
-											: viewDnd.placement(
-													category ? category.id : VIEW_UNCATEGORIZED_KEY,
-												)
-										: category
-											? undefined
-											: dnd.placement(UNCATEGORIZED_CHANNEL_ID)
-								}
-								onDragOver={
-									view()
-										? category?.channel
-											? undefined
-											: category
-												? (e: DragEvent) => viewDnd.overCategory(e, category.id)
-												: viewDnd.overUncategorized
-										: dnd.handle
-								}
-								onDrop={view() ? viewDnd.handleDrop : dnd.handle}
-							>
-								<For
-									each={channels}
-									fallback={
-										<Show when={!props.room_id && !view()}>
-											<Index each={Array(10).fill(0)}>
-												{(_, index) => (
-													<li
-														class="channel-item skeleton"
-														style={{
-															"pointer-events": "none",
-															opacity: 1 - index / 10,
-														}}
-													>
-														<div class="channel-link">
-															<div
-																class="ghost avatar"
-																style="border-radius: 4px"
-															/>
-															<div
-																class="ghost"
-																style="width: 128px; height: 1em;"
-															/>
-														</div>
-													</li>
-												)}
-											</Index>
-										</Show>
-									}
-								>
-									{(channel) => (
-										<Show when={isVisible(channel, category?.id ?? null)}>
-											<li
-												class="channel-item"
-												classList={{
-													dm: channel.type === "Dm" || channel.type === "Gdm",
-													view: !!view(),
-												}}
-												data-dnd-placement={
-													view()
-														? viewDnd.placement(channel.id)
-														: dnd.placement(channel.id)
-												}
-												data-channel-id={channel.id}
-												data-nav-id={channel.id}
-												tabIndex={-1}
-												draggable="true"
-												onDragStart={view() ? viewDnd.handleStart : dnd.handle}
-												onDragOver={
-													view()
-														? (e: DragEvent) =>
-																viewDnd.overChannel(
-																	e,
-																	category?.id ?? null,
-																	channel.id,
-																)
-														: dnd.handle
-												}
-												onDrop={view() ? viewDnd.handleDrop : dnd.handle}
-												onDragEnd={view() ? viewDnd.handleEnd : dnd.handle}
-												onContextMenu={(e) => {
-													if (!view()) return;
-													e.preventDefault();
-													e.stopPropagation();
-													queueMicrotask(() => {
-														setMenu({
-															x: e.clientX,
-															y: e.clientY,
-															type: "view_channel",
-															view_id: props.view_id!,
-															channel_id: channel.id,
-														});
+											data-dnd-placement={
+												view()
+													? cat().channel
+														? undefined
+														: viewDnd.placement(cat().id)
+													: cat().channel
+														? dnd.placement(cat().id)
+														: undefined
+											}
+											data-channel-id={cat().channel ? cat().id : undefined}
+											data-nav-id={cat().id}
+											tabIndex={isFocused(cat().id) ? 0 : -1}
+											draggable={!!cat().channel && !view()}
+											onDragStart={view() ? undefined : dnd.handle}
+											onDragOver={
+												view()
+													? cat().channel
+														? undefined
+														: (e: DragEvent) =>
+																viewDnd.overCategory(e, cat().id)
+													: dnd.handle
+											}
+											onDrop={view() ? viewDnd.handleDrop : dnd.handle}
+											onDragEnd={view() ? viewDnd.handleEnd : dnd.handle}
+											onClick={() => {
+												setCollapsedCategories((prev) => {
+													const newSet = new Set(prev);
+													if (newSet.has(cat().id)) {
+														newSet.delete(cat().id);
+													} else {
+														newSet.add(cat().id);
+													}
+													return newSet;
+												});
+											}}
+											onContextMenu={(e) => {
+												const channel = cat().channel;
+												if (!channel) return;
+												e.preventDefault();
+												e.stopPropagation();
+												queueMicrotask(() => {
+													setMenu({
+														x: e.clientX,
+														y: e.clientY,
+														type: "channel",
+														channel_id: channel.id,
 													});
+												});
+											}}
+										>
+											<span
+												class="category-toggle"
+												classList={{
+													collapsed: collapsedCategories().has(cat().id),
 												}}
 											>
-												<ItemChannel
-													channel={channel}
-													room_id={channel.room_id ?? props.room_id}
-													view_id={props.view_id}
-													nickname={channel.nickname}
-													icon
-													tabIndex={isFocused(channel.id) ? 0 : -1}
-												/>
-												<Show when={channel.threads?.length}>
-													<ul class="thread-list">
-														<For each={channel.threads}>
-															{(chan: Channel) => (
-																<li
-																	class="channel-item"
-																	data-channel-id={chan.id}
-																	data-nav-id={chan.id}
-																	tabIndex={-1}
-																	draggable={true}
-																	onDragStart={dnd.handle}
-																	onDragOver={dnd.handle}
-																	onDrop={dnd.handle}
-																	onDragEnd={dnd.handle}
-																	classList={{
-																		unread:
-																			CHANNEL_TYPES_HAS_UNREAD.has(chan.type) &&
-																			chan.last_read_id !==
-																				chan.last_message_id,
-																	}}
-																>
-																	<ItemChannel
-																		channel={chan}
-																		room_id={chan.room_id ?? props.room_id}
-																		view_id={props.view_id}
-																		icon={false}
-																		tabIndex={isFocused(chan.id) ? 0 : -1}
-																	/>
-																</li>
-															)}
-														</For>
-													</ul>
-												</Show>
-												<For
-													each={[...api2.voiceStates.values()]
-														.filter((i) => i.channel_id === channel.id)
-														.sort(
-															(a, b) =>
-																getDate(a.joined_at).valueOf() -
-																getDate(b.joined_at).valueOf(),
-														)}
-												>
-													{(s) => {
-														const user = () => users2.cache.get(s.user_id);
-														const room_member = () => {
-															const roomId = props.room_id;
-															return roomId
-																? roomMembers2.cache.get(
-																		`${roomId}:${s.user_id}`,
-																	)
-																: null;
-														};
-														const name = () =>
-															room_member()?.override_name ||
-															user()?.name ||
-															"unknown user";
-														return (
-															<div
-																class="voice-participant menu-user"
-																classList={{
-																	speaking:
-																		((voice.vc.speaking?.users.get(s.user_id)
-																			?.flags ?? 0) &
-																			1) ===
-																		1,
-																}}
-																data-user-id={s.user_id}
-																draggable={true}
-																onDragStart={dnd.handle}
-																onDragEnd={dnd.handle}
-															>
-																<Avatar user={user()} />
-																{name()}
-															</div>
-														);
-													}}
-												</For>
-											</li>
-										</Show>
+												<Icon src={icChevron} />
+											</span>
+											<span class="category-name">{cat().name}</span>
+										</div>
 									)}
-								</For>
-							</ul>
-						</>
-					)}
-				</For>
+								</Show>
+								<ul
+									class="category-channels"
+									data-channel-id={
+										category()?.channel?.id ??
+										(view() || !props.room_id
+											? undefined
+											: UNCATEGORIZED_CHANNEL_ID)
+									}
+									data-dnd-placement={
+										view()
+											? category()?.channel
+												? undefined
+												: viewDnd.placement(
+														category()
+															? category()!.id
+															: VIEW_UNCATEGORIZED_KEY,
+													)
+											: category()
+												? undefined
+												: dnd.placement(UNCATEGORIZED_CHANNEL_ID)
+									}
+									onDragOver={
+										view()
+											? category()?.channel
+												? undefined
+												: category()
+													? (e: DragEvent) =>
+															viewDnd.overCategory(e, category()!.id)
+													: viewDnd.overUncategorized
+											: dnd.handle
+									}
+									onDrop={view() ? viewDnd.handleDrop : dnd.handle}
+								>
+									<Key
+										each={channels()}
+										by={(c) => c.id}
+										fallback={
+											<Show when={!props.room_id && !view()}>
+												<Index each={Array(10).fill(0)}>
+													{(_, index) => (
+														<li
+															class="channel-item skeleton"
+															style={{
+																"pointer-events": "none",
+																opacity: 1 - index / 10,
+															}}
+														>
+															<div class="channel-link">
+																<div
+																	class="ghost avatar"
+																	style="border-radius: 4px"
+																/>
+																<div
+																	class="ghost"
+																	style="width: 128px; height: 1em;"
+																/>
+															</div>
+														</li>
+													)}
+												</Index>
+											</Show>
+										}
+									>
+										{(channelRow) => {
+											const channel = () => channelRow();
+
+											return (
+												<Show
+													when={isVisible(channel(), category()?.id ?? null)}
+												>
+													<li
+														class="channel-item"
+														classList={{
+															dm:
+																channel().type === "Dm" ||
+																channel().type === "Gdm",
+															view: !!view(),
+														}}
+														data-dnd-placement={
+															view()
+																? viewDnd.placement(channel().id)
+																: dnd.placement(channel().id)
+														}
+														data-channel-id={channel().id}
+														data-nav-id={channel().id}
+														tabIndex={-1}
+														draggable="true"
+														onDragStart={
+															view() ? viewDnd.handleStart : dnd.handle
+														}
+														onDragOver={
+															view()
+																? (e: DragEvent) =>
+																		viewDnd.overChannel(
+																			e,
+																			category()?.id ?? null,
+																			channel().id,
+																		)
+																: dnd.handle
+														}
+														onDrop={view() ? viewDnd.handleDrop : dnd.handle}
+														onDragEnd={view() ? viewDnd.handleEnd : dnd.handle}
+														onContextMenu={(e) => {
+															if (!view()) return;
+															e.preventDefault();
+															e.stopPropagation();
+															queueMicrotask(() => {
+																setMenu({
+																	x: e.clientX,
+																	y: e.clientY,
+																	type: "view_channel",
+																	view_id: props.view_id!,
+																	channel_id: channel().id,
+																});
+															});
+														}}
+													>
+														<ItemChannel
+															channel={channel()}
+															room_id={channel().room_id ?? props.room_id}
+															view_id={props.view_id}
+															nickname={channel().nickname}
+															icon
+															tabIndex={isFocused(channel().id) ? 0 : -1}
+														/>
+														<Show when={channel().threads?.length}>
+															<ul class="thread-list">
+																<Key each={channel().threads} by={(t) => t.id}>
+																	{(threadRow) => {
+																		const chan = () => threadRow();
+
+																		return (
+																			<li
+																				class="channel-item"
+																				data-channel-id={chan().id}
+																				data-nav-id={chan().id}
+																				tabIndex={-1}
+																				draggable={true}
+																				onDragStart={dnd.handle}
+																				onDragOver={dnd.handle}
+																				onDrop={dnd.handle}
+																				onDragEnd={dnd.handle}
+																				classList={{
+																					unread:
+																						CHANNEL_TYPES_HAS_UNREAD.has(
+																							chan().type,
+																						) &&
+																						chan().last_read_id !==
+																							chan().last_message_id,
+																				}}
+																			>
+																				<ItemChannel
+																					channel={chan()}
+																					room_id={
+																						chan().room_id ?? props.room_id
+																					}
+																					view_id={props.view_id}
+																					icon={false}
+																					tabIndex={
+																						isFocused(chan().id) ? 0 : -1
+																					}
+																				/>
+																			</li>
+																		);
+																	}}
+																</Key>
+															</ul>
+														</Show>
+														<For
+															each={[...api2.voiceStates.values()]
+																.filter((i) => i.channel_id === channel().id)
+																.sort(
+																	(a, b) =>
+																		getDate(a.joined_at).valueOf() -
+																		getDate(b.joined_at).valueOf(),
+																)}
+														>
+															{(s) => {
+																const user = () => users2.cache.get(s.user_id);
+																const room_member = () => {
+																	const roomId = props.room_id;
+																	return roomId
+																		? roomMembers2.cache.get(
+																				`${roomId}:${s.user_id}`,
+																			)
+																		: null;
+																};
+																const name = () =>
+																	room_member()?.override_name ||
+																	user()?.name ||
+																	"unknown user";
+																return (
+																	<div
+																		class="voice-participant menu-user"
+																		classList={{
+																			speaking:
+																				((voice.vc.speaking?.users.get(
+																					s.user_id,
+																				)?.flags ?? 0) &
+																					1) ===
+																				1,
+																		}}
+																		data-user-id={s.user_id}
+																		draggable={true}
+																		onDragStart={dnd.handle}
+																		onDragEnd={dnd.handle}
+																	>
+																		<Avatar user={user()} />
+																		{name()}
+																	</div>
+																);
+															}}
+														</For>
+													</li>
+												</Show>
+											);
+										}}
+									</Key>
+								</ul>
+							</>
+						);
+					}}
+				</Key>
 			</ul>
 			<div style="margin: 8px" />
 		</nav>
