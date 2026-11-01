@@ -2,7 +2,6 @@ import {
 	createEffect,
 	createMemo,
 	createResource,
-	createSelector,
 	createSignal,
 	For,
 	type JSX,
@@ -12,21 +11,41 @@ import {
 	Switch,
 } from "solid-js";
 import type { EvalInputSummary, EvalLogEntry, ServerInfo } from "ts-sdk";
+import { useApi } from "@/api";
+import { Duration } from "@/atoms/Duration";
+import { Icon } from "@/atoms/Icon";
+import { Time } from "@/atoms/Time";
+import { createTooltip } from "@/atoms/Tooltip";
+import { usePanes } from "@/components/panes/context";
+import { UserDisplayName } from "@/components/shared/User";
+import { HTTP_STATUS_TEXT } from "@/lib/http";
+import { getDate } from "@/utils/general";
+import { icExternal1, icQuestion, icRestore1 } from "@/utils/icons";
+import { type ScriptPane, useScript } from "./context";
+import { LazyCodeEditor } from "./LazyEditor";
 
 type DisplayLogEntry = Omit<EvalLogEntry, "level"> & {
 	level: EvalLogEntry["level"] | "REQUEST" | "RESPONSE";
 };
 
-import { useApi } from "@/api";
-import { Duration } from "@/atoms/Duration";
-import { Icon } from "@/atoms/Icon";
-import { Time } from "@/atoms/Time";
-import { usePanes } from "@/components/panes/context";
-import { HTTP_STATUS_TEXT } from "@/lib/http";
-import { getDate } from "@/utils/general";
-import { icExternal1, icQuestion } from "@/utils/icons";
-import { type ScriptPane, useScript } from "./context";
-import { LazyCodeEditor } from "./LazyEditor";
+let serverInfoPromise: Promise<ServerInfo | null> | undefined;
+
+type LogLevel = EvalLogEntry["level"];
+
+const logLevels: { id: LogLevel; label: string }[] = [
+	{ id: "Trace", label: "Trace" },
+	{ id: "Debug", label: "Debug" },
+	{ id: "Info", label: "Info" },
+	{ id: "Warning", label: "Warning" },
+	{ id: "Error", label: "Error" },
+];
+
+const defaultLogLevels = new Set<LogLevel>([
+	"Debug",
+	"Info",
+	"Warning",
+	"Error",
+]);
 
 const httpStatusClass = (status: number) => {
 	if (status >= 500) return "error";
@@ -34,6 +53,24 @@ const httpStatusClass = (status: number) => {
 	if (status >= 300) return "redirect";
 	if (status >= 200) return "success";
 	return "unknown";
+};
+
+const ManualEvalTrigger = (props: { label: string; user_id: string }) => {
+	const api = useApi();
+	const user = api.users.use(() => props.user_id);
+
+	return (
+		<>
+			Trigger: <b>{props.label}</b> (
+			<Show when={user()} fallback={props.user_id}>
+				<span class="mention mention-user" data-user-id={props.user_id}>
+					@
+					<UserDisplayName user_id={props.user_id} onClick />
+				</span>
+			</Show>
+			)
+		</>
+	);
 };
 
 export const ScriptCode = (props: {
@@ -123,9 +160,18 @@ export const ScriptInputs = (props: {
 
 	const script = api.scripts.use(() => `${s.channel_id}:${scriptId()}`);
 
-	const [serverInfo] = createResource(async () => {
-		const { data } = await api.client.http.GET("/api/v1/server/@self");
-		return (data ?? null) as ServerInfo | null;
+	const [serverInfo] = createResource(() => {
+		if (!serverInfoPromise) {
+			serverInfoPromise = api.client.http
+				.GET("/api/v1/server/@self")
+				.then(({ data }) => (data ?? null) as ServerInfo | null)
+				.catch((error) => {
+					serverInfoPromise = undefined;
+					throw error;
+				});
+		}
+
+		return serverInfoPromise;
 	});
 
 	const httpUrl = createMemo(() => {
@@ -139,7 +185,7 @@ export const ScriptInputs = (props: {
 	});
 
 	createEffect(() => {
-		api.scriptRuns.list(s.channel_id, scriptId());
+		api.scriptRuns.ensureListed(s.channel_id, scriptId());
 	});
 
 	// show newest evals first
@@ -152,6 +198,9 @@ export const ScriptInputs = (props: {
 			.slice(0, 32),
 	);
 	const runIds = createMemo(() => runs().map((run) => run.id));
+	const manualInputLabel = (inputId: string) =>
+		script()?.handlers.find((handler) => handler.id === inputId)?.label ??
+		inputId;
 	const [activeRunId, setActiveRunId] = createSignal<string | null>(null);
 	const tabbableRunId = () => {
 		const ids = runIds();
@@ -335,7 +384,12 @@ export const ScriptInputs = (props: {
 													)}
 												</Match>
 												<Match when={matchesInput("Manual")}>
-													{(input) => `${input().id} ${input().user_id}`}
+													{(input) => (
+														<ManualEvalTrigger
+															label={manualInputLabel(input().id)}
+															user_id={input().user_id}
+														/>
+													)}
 												</Match>
 												<Match when={matchesInput("Event")}>
 													{(input) => `event ${input().event.type}`}
@@ -411,16 +465,37 @@ export const RunLogs = (props: {
 
 	const [logResource] = createResource(
 		() => [channelId(), scriptId(), runId()] as const,
-		([c, sid, rid]) => api.scriptLogs.list(c, sid, rid),
+		([c, sid, rid]) => api.scriptLogs.ensureListed(c, sid, rid),
 	);
 
 	const runInfo = api.scriptRuns.use(
 		() => `${channelId()}:${scriptId()}:${runId()}`,
 	);
 
-	const [levelFilter, setLevelFilter] = createSignal<string>("all");
+	const [enabledLevels, setEnabledLevels] = createSignal(
+		new Set(defaultLogLevels),
+	);
 	const [expandedEntry, setExpandedEntry] = createSignal<number | null>(null);
-	const isLevelFilterSelected = createSelector(levelFilter);
+
+	const toggleLevel = (level: LogLevel) => {
+		setEnabledLevels((previous) => {
+			const next = new Set(previous);
+			if (next.has(level)) next.delete(level);
+			else next.add(level);
+			return next;
+		});
+	};
+
+	const filtersChanged = () => {
+		const levels = enabledLevels();
+		return (
+			levels.size !== defaultLogLevels.size ||
+			logLevels.some(({ id }) => levels.has(id) !== defaultLogLevels.has(id))
+		);
+	};
+
+	const resetFilters = () => setEnabledLevels(new Set(defaultLogLevels));
+	const resetFiltersTooltip = createTooltip({ tip: () => "Reset log filters" });
 
 	const fakeHttpLogs = createMemo(() => {
 		const run = runInfo();
@@ -491,10 +566,10 @@ export const RunLogs = (props: {
 	});
 
 	const filteredLogs = () => {
-		const filter = levelFilter();
-		const logs = api.scriptLogs.getLogsForRun(runId());
-		const filtered =
-			filter === "all" ? logs : logs.filter((e) => e.level === filter);
+		const levels = enabledLevels();
+		const filtered = api.scriptLogs
+			.getLogsForRun(runId())
+			.filter((entry) => levels.has(entry.level));
 		const fake = fakeHttpLogs();
 		if (!fake) return filtered;
 		return [
@@ -561,25 +636,30 @@ export const RunLogs = (props: {
 				</Show>
 				<menu style="display:flex">
 					<div class="log-filters">
-						<For
-							each={[
-								{ id: "all", label: "All" },
-								{ id: "Info", label: "Info" },
-								{ id: "Warning", label: "Warning" },
-								{ id: "Error", label: "Error" },
-							]}
-						>
-							{(a) => (
+						<For each={logLevels}>
+							{(level) => (
 								<button
 									type="button"
 									class="menu-button"
-									onClick={[setLevelFilter, a.id]}
-									aria-pressed={isLevelFilterSelected(a.id)}
+									data-level={level.id}
+									onClick={() => toggleLevel(level.id)}
+									aria-pressed={enabledLevels().has(level.id)}
 								>
-									<div class="inner">{a.label}</div>
+									<div class="inner">{level.label}</div>
 								</button>
 							)}
 						</For>
+						<Show when={filtersChanged()}>
+							<button
+								type="button"
+								class="menu-button restore-button"
+								ref={resetFiltersTooltip.content}
+								onClick={resetFilters}
+								aria-label="Reset log filters"
+							>
+								<Icon src={icRestore1} />
+							</button>
+						</Show>
 					</div>
 					<button
 						type="button"
