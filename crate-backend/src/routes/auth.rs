@@ -236,7 +236,7 @@ async fn auth_oauth_redirect(
         MessageSync::AuditLogEntryCreate { entry },
     )
     .await?;
-    Ok(Html(include_str!("../oauth.html")))
+    Ok(Html(include_str!("../html/oauth.html")))
 }
 
 /// Auth totp init

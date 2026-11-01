@@ -123,7 +123,7 @@ fn with_versioned_api_docs(router: Router, api: utoipa::openapi::OpenApi) -> Rou
             )
             .route(
                 &format!("{prefix}/openapi"),
-                get(|| async { Html(include_str!("../scalar.html")) }),
+                get(|| async { Html(include_str!("../html/scalar.html")) }),
             )
     })
 }
@@ -152,7 +152,7 @@ pub fn create_router_media(globals: Globals) -> Router {
         .route("/api/docs.json", get(|| async { Json(api) }))
         .route(
             "/api/docs",
-            get(|| async { Html(include_str!("../scalar.html")) }),
+            get(|| async { Html(include_str!("../html/scalar.html")) }),
         );
 
     router
