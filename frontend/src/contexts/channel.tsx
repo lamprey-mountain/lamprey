@@ -71,6 +71,7 @@ export function createInitialChannelState(): ChannelState {
 			items: [{ type: "skeletons", key: "skeletons-top" }],
 			anchor: { type: "backwards", limit: 50 },
 			readMarkerId: null,
+			autoReadSuppressed: false,
 			events: controller.events,
 			commands: controller.commands,
 		},

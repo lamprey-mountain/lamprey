@@ -53,6 +53,11 @@ export const Timeline = (props: ChatProps) => {
 	const hl = virt.highlighter;
 	const queue = virt.queue;
 
+	// any real interaction lets user ack again
+	const clearAutoReadSuppression = () => {
+		timeline.autoReadSuppressed = false;
+	};
+
 	const ro = new ResizeObserver((entries) => {
 		let scrollElResized = false;
 		let delta = 0;
@@ -244,7 +249,11 @@ export const Timeline = (props: ChatProps) => {
 
 		// update anchor to rerender
 		// NOTE: maybe i should have a dedicated RERENDER task (with option to skip message fetch?)
-		queue.push({ type: "SET_ANCHOR", anchor: timeline.anchor });
+		queue.push({
+			type: "SET_ANCHOR",
+			anchor: timeline.anchor,
+			stabilize_message_id: data.stabilize_message_id,
+		});
 	});
 
 	timeline.commands.listen((e) => {
@@ -285,6 +294,10 @@ export const Timeline = (props: ChatProps) => {
 			ref={setScrollEl}
 			onScrollEnd={handleScrollEnd}
 			onScroll={handleScroll}
+			onWheel={clearAutoReadSuppression}
+			onTouchMove={clearAutoReadSuppression}
+			onPointerDown={clearAutoReadSuppression}
+			onKeyDown={clearAutoReadSuppression}
 		>
 			<div
 				class="timeline-items"

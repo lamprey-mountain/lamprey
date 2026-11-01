@@ -413,7 +413,7 @@ export const MessageView = (props: MessageProps) => {
 
 		const prevMessage = messages[currentIndex - 1];
 		const ackId = prevMessage?.id ?? message_id;
-		readTracking.ack(props.message.channel_id, ackId, true, false);
+		readTracking.ack(props.message.channel_id, ackId, true, false, message_id);
 	};
 
 	const handleClick = (e: MouseEvent) => {

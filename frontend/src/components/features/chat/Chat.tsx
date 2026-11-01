@@ -265,6 +265,8 @@ export const TimelineControls = (props: ChatProps) => {
 
 	// ack channel when scrolled to bottom
 	const markReadFn = throttle(() => {
+		if (timeline.autoReadSuppressed) return;
+
 		const message_id = props.channel.last_message_id;
 		const read_id = props.channel.last_read_id;
 		if (message_id && message_id !== read_id) {

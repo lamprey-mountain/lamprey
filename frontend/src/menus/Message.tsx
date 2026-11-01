@@ -64,7 +64,7 @@ export function MessageMenu(props: MessageMenuProps) {
 
 		const prev = tl[index - 1];
 		const ackId = prev?.id ?? tl[index].id;
-		readTracking.ack(props.channel_id, ackId, true, false);
+		readTracking.ack(props.channel_id, ackId, true, false, props.message_id);
 	}
 
 	const togglePin = () => {

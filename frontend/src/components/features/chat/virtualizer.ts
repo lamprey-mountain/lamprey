@@ -22,7 +22,11 @@ export const STICKY_THRESHOLD = 80;
 // TODO: some kind of SCROLL_EXACT task type to scroll to an exact offset?
 // TODO(?): AWAIT_{LAYOUT,PAINT} tasks for sync?
 export type TimelineTask =
-	| { type: "SET_ANCHOR"; anchor: MessageListAnchor }
+	| {
+			type: "SET_ANCHOR";
+			anchor: MessageListAnchor;
+			stabilize_message_id?: string;
+	  }
 	| { type: "RESIZE"; delta: number }
 	| { type: "HIGHLIGHT"; message_id: string }
 	| { type: "SCROLL_TOP"; smooth?: boolean }
@@ -218,19 +222,22 @@ export const createTimelineVirtualizer = (
 				// 	("message_id" in task.anchor &&
 				// 		`message-${task.anchor.message_id}`) ||
 				// 	range()[0]?.item.key;
-				const refKey =
+				const fallbackRefKey =
 					("message_id" in task.anchor &&
 						`message-${task.anchor.message_id}`) ??
 					cachedRange?.find((i) => i.item.type === "message")?.item.key;
+				const refKey = task.stabilize_message_id
+					? `message-${task.stabilize_message_id}`
+					: fallbackRefKey;
 				// FIXME: anchor backwards with no message id should probably use range().lastIndexOf
 				// or maybe i should pick the center item if possible?
 
 				// PERF: use binary search
-				const refOffsetOld = refKey
-					? cachedLayout?.offsets[
-							timeline.items.findIndex((x) => x.key === refKey)
-						]
-					: undefined;
+				const refIdxOld = refKey
+					? timeline.items.findIndex((x) => x.key === refKey)
+					: -1;
+				const refOffsetOld =
+					refIdxOld !== -1 ? cachedLayout.offsets[refIdxOld] : undefined;
 
 				timeline.anchor = task.anchor;
 				timeline.messages = messageRange;
@@ -247,7 +254,7 @@ export const createTimelineVirtualizer = (
 				// wait for layout but before paint
 				// await new Promise((r) => requestAnimationFrame(r));
 
-				if (el && refOffsetOld) {
+				if (el && refOffsetOld !== undefined) {
 					// PERF: use binary search
 					const newIdx = timeline.items.findIndex((x) => x.key === refKey);
 					if (newIdx !== -1) {

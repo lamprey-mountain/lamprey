@@ -103,10 +103,16 @@ export const useMessageNav = (channel_id: () => string) => {
 
 		const c = channel();
 		const message_id = c?.last_message_id;
-		const read_id = c?.last_read_id;
-		if (message_id && message_id !== read_id) {
+		if (!message_id) return;
+
+		if (message_id !== c.last_read_id) {
 			readTracking.ack(channel_id(), message_id, true, false);
+		} else if (ch.timelineState.readMarkerId !== message_id) {
+			// already read on the server, but the local marker is stale
+			ch.timelineState.controller.ackMessage(message_id);
 		}
+
+		ch.timelineState.autoReadSuppressed = false;
 	};
 
 	const exit = () => {
@@ -159,7 +165,7 @@ export const useMessageNav = (channel_id: () => string) => {
 		if (index === -1) return;
 
 		const previous = items[index - 1];
-		readTracking.ack(channel_id(), previous?.id ?? id, true, false);
+		readTracking.ack(channel_id(), previous?.id ?? id, true, false, id);
 	};
 
 	const reply = () => {

@@ -21,7 +21,7 @@ export type TimelineController = {
 		highlight?: boolean,
 	): void;
 	scrollBy(px: number, smooth?: boolean): void;
-	ackMessage(message_id: string): void;
+	ackMessage(message_id: string, stabilize_message_id?: string): void;
 
 	events: GlobalEmitter<TimelineEvents>;
 	commands: GlobalEmitter<TimelineCommands>;
@@ -51,7 +51,7 @@ export type TimelineCommands = {
 	jumpToBottom: { smooth: boolean };
 	jumpToTop: { smooth: boolean };
 	jumpToMessage: { message_id: string; smooth: boolean; highlight: boolean };
-	ackMessage: { message_id: string };
+	ackMessage: { message_id: string; stabilize_message_id?: string };
 };
 
 export type TimelineState = {
@@ -62,6 +62,8 @@ export type TimelineState = {
 	scrollTop: number;
 	items: TimelineItemT2[];
 	readMarkerId: string | null;
+	/** don't auto-ack when the viewport reaches the bottom */
+	autoReadSuppressed: boolean;
 
 	controller: TimelineController;
 	events: GlobalEmitter<TimelineEvents>;
@@ -123,8 +125,8 @@ export const createTimelineController = (): TimelineController => {
 		scrollBy(px: number, smooth = false) {
 			commands.emit("scrollBy", { px, smooth });
 		},
-		ackMessage(message_id: string) {
-			commands.emit("ackMessage", { message_id });
+		ackMessage(message_id: string, stabilize_message_id?: string) {
+			commands.emit("ackMessage", { message_id, stabilize_message_id });
 		},
 
 		events,

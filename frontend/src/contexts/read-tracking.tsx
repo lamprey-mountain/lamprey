@@ -32,6 +32,7 @@ export type ReadTrackingContextT = {
 		message_id: string,
 		also_local: boolean,
 		delay: boolean,
+		stabilize_message_id?: string,
 	) => Promise<void>;
 	// TODO: add bulk ack method
 };
@@ -168,6 +169,7 @@ export function createReadTrackingProvider(
 		message_id: string,
 		also_local: boolean,
 		delay: boolean,
+		stabilize_message_id?: string,
 	) => {
 		if (!getMe()) return;
 
@@ -179,7 +181,7 @@ export function createReadTrackingProvider(
 				channel_id,
 				setTimeout(() => {
 					pendingAcks.delete(channel_id);
-					ack(channel_id, message_id, also_local, false);
+					ack(channel_id, message_id, also_local, false, stabilize_message_id);
 				}, 300),
 			);
 			return;
@@ -194,16 +196,26 @@ export function createReadTrackingProvider(
 		const timelineState = channel_contexts.get(channel_id)?.[0].timelineState;
 		const previous_read_id = timelineState?.readMarkerId;
 
+		if (timelineState) {
+			// marking an older message unread shouldn't be immediately undone by
+			// the scroll-to-bottom auto-ack
+			timelineState.autoReadSuppressed =
+				message_id !== channels2.cache.get(channel_id)?.last_message_id;
+		}
+
 		// optimistically update, rollback on failure
 		if (also_local && timelineState) {
-			timelineState.controller.ackMessage(message_id);
+			timelineState.controller.ackMessage(message_id, stabilize_message_id);
 		}
 
 		try {
 			await channels2.ack(channel_id, message_id, undefined);
 		} catch (e) {
 			if (also_local && timelineState && previous_read_id) {
-				timelineState.controller.ackMessage(previous_read_id);
+				timelineState.controller.ackMessage(
+					previous_read_id,
+					stabilize_message_id,
+				);
 			}
 			throw e;
 		}
