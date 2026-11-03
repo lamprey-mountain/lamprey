@@ -27,7 +27,6 @@
         craneLib = crane.mkLib pkgs;
 
         baseInternalDeps = [ "crate-common" "crate-macros" ];
-        baseInternalDepsCrates = [ "lamprey-common" "lamprey-macros" ];
 
         # this filter could probably be made stricter
         includeFilter = path: type:
@@ -100,22 +99,21 @@
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-C link-arg=-fuse-ld=${pkgs.mold}/bin/mold";
         };
 
-        cargoArtifacts =
-          craneLib.buildDepsOnly (common // { name = "(shared deps)"; });
+        cargoArgsFor = name: features:
+          "--locked -p ${name}" +
+          pkgs.lib.optionalString (features != [ ])
+            (" --features " + pkgs.lib.concatStringsSep "," features);
 
-        # reuse commonly used lamprey crates
-        internalCratesArtifacts = craneLib.cargoBuild (common // {
-          pname = "lamprey-internal-crates";
-          cargoArtifacts = cargoArtifacts;
-          src = filterSrcFor baseInternalDeps;
-          cargoExtraArgs = pkgs.lib.concatMapStringsSep " " (dep: "-p ${dep}") baseInternalDepsCrates;
-        });
+        depsFor = name: features:
+          craneLib.buildDepsOnly (common // {
+            cargoExtraArgs = cargoArgsFor name features;
+          });
 
-        mkCrate = name: dirs:
+        mkCrate = name: dirs: features:
           craneLib.buildPackage (common // {
-            cargoArtifacts = internalCratesArtifacts;
+            cargoArtifacts = depsFor name features;
             pname = name;
-            cargoExtraArgs = "-p ${name}";
+            cargoExtraArgs = cargoArgsFor name features;
             src = filterSrcFor (dirs ++ baseInternalDeps);
             env = {
               VERGEN_GIT_SHA = self.rev or self.dirtyRev;
@@ -124,10 +122,13 @@
             };
           });
 
+        backendFeatures = [ "lamprey-backend/embed-frontend" ];
+        backendDeps = depsFor "lamprey-backend" backendFeatures;
+
         backend = craneLib.buildPackage (common // {
-            cargoArtifacts = internalCratesArtifacts;
+            cargoArtifacts = backendDeps;
             pname = "lamprey-backend";
-            cargoExtraArgs = "-p lamprey-backend --features lamprey-backend/embed-frontend";
+            cargoExtraArgs = cargoArgsFor "lamprey-backend" backendFeatures;
             src = filterSrcFor ([
               "crate-backend"
               "crate-backend-core"
@@ -149,10 +150,10 @@
             };
         });
 
-        bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" "crate-backend-core" "crate-script" "crate-markdown" ];
-        voice = mkCrate "lamprey-voice" [ "crate-voice" "kerosene-core" "crate-backend-core" "crate-script" ];
-        scanner-malware = mkCrate "scanner-malware" [ "scanner-malware" ];
-        scanner-nsfw = mkCrate "scanner-nsfw" [ "scanner-nsfw" ];
+        bridge = mkCrate "lamprey-bridge" [ "crate-bridge" "crate-sdk" "crate-backend-core" "crate-script" "crate-markdown" ] [ ];
+        voice = mkCrate "lamprey-voice" [ "crate-voice" "kerosene-core" "crate-backend-core" "crate-script" ] [ ];
+        scanner-malware = mkCrate "scanner-malware" [ "scanner-malware" ] [ ];
+        scanner-nsfw = mkCrate "scanner-nsfw" [ "scanner-nsfw" ] [ ];
 
         wasm-cargo-artifacts = craneLib.buildDepsOnly (common // {
           pname = "lamprey-markdown-wasm-deps";
@@ -341,8 +342,6 @@
       in {
         packages = rec {
           inherit backend bridge voice frontend scanner-malware scanner-nsfw wasm-markdown emoji emoji-spritesheets orrey-openapi agent-sandbox spawn-sandbox;
-
-          cargo-deps = cargoArtifacts;
 
           backend-oci = pkgs.dockerTools.streamLayeredImage {
             name = "backend";
