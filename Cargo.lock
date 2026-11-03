@@ -3865,7 +3865,6 @@ dependencies = [
  "futures",
  "futures-util",
  "kerosene-core",
- "lamprey-backend-core",
  "lamprey-common",
  "lamprey-macros",
  "rmp-serde",

@@ -31,6 +31,13 @@ use tokio::io::AsyncReadExt;
 
 const HANDSHAKE_TIMEOUT: Duration = Duration::from_secs(15);
 
+fn cast_sync_error(err: kerosene_sync::error::Error) -> Error {
+    match err {
+        kerosene_sync::error::Error::Sync(code) => Error::SyncError(code),
+        err => Error::from(kerosene_core::error::ServerError::from(err)),
+    }
+}
+
 // rename to struct Connection?
 struct StateInner {
     globals: Globals,
@@ -141,7 +148,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
         StreamHeader::Hello => {
             type Proto = hello::Protocol;
             let codec = Codec::<Proto>::new(state.params.clone());
-            let (init, mut framed) = codec.accept(stream).await?;
+            let (init, mut framed) = codec.accept(stream).await.map_err(cast_sync_error)?;
             match init {
                 hello::Initial::Identify(identify) => {
                     // authenticate session
@@ -178,7 +185,8 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                             session: Box::new((*session).clone()),
                             conn: state.id,
                         }))
-                        .await?;
+                        .await
+                        .map_err(cast_sync_error)?;
 
                     // send initial ambient state for the user
                     if let Some(user_id) = session.user_id() {
@@ -207,7 +215,8 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                                     ),
                                     seq: 0,
                                 }))
-                                .await?;
+                                .await
+                                .map_err(cast_sync_error)?;
                         }
                     }
 
@@ -218,7 +227,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                         tokio::select! {
                             _ = tokio::time::sleep_until(timeout.get_instant()) => match timeout {
                                 Timeout::Ping(_) => {
-                                    framed.send(hello::Event::Ping).await?;
+                                    framed.send(hello::Event::Ping).await.map_err(cast_sync_error)?;
                                     timeout = Timeout::for_close();
                                 }
                                 Timeout::Close(_) => {
@@ -232,12 +241,12 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                                         framed.send(hello::Event::Dispatch(hello::Dispatch {
                                             inner: Box::new(msg),
                                             seq: 0, // TODO: populate seq
-                                        })).await?;
+                                        })).await.map_err(cast_sync_error)?;
                                     }
                                 }
                             },
                             command = framed.next() => {
-                                match command.transpose()? {
+                                match command.transpose().map_err(cast_sync_error)? {
                                     Some(hello::Command::Pong) => {
                                         timeout = Timeout::for_ping();
                                     }
@@ -265,7 +274,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
         StreamHeader::Room => {
             let session = state.session().await?;
             let codec = Codec::<room::Protocol>::new(state.params.clone());
-            let (init, mut framed) = codec.accept(stream).await?;
+            let (init, mut framed) = codec.accept(stream).await.map_err(cast_sync_error)?;
 
             let srv = state.globals.services();
             srv.perms
@@ -297,11 +306,15 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                         user_id,
                         until: until.into(),
                     })
-                    .await?;
+                    .await
+                    .map_err(cast_sync_error)?;
             }
 
             // we're tailing live events
-            framed.send(room::Event::Subscribed).await?;
+            framed
+                .send(room::Event::Subscribed)
+                .await
+                .map_err(cast_sync_error)?;
 
             // forward live typing events for channels in this room
             let mut broadcast_stream = state.globals.messaging().subscribe().await?;
@@ -329,7 +342,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                                 user_id,
                                 until,
                             })
-                            .await?;
+                            .await.map_err(cast_sync_error)?;
                     }
                     _ = framed.next() => {
                         // room stream has no commands so this must be None (stream close)
@@ -343,7 +356,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
         StreamHeader::Channel => {
             let session = state.session().await?;
             let codec = Codec::<channel::Protocol>::new(state.params.clone());
-            let (init, mut framed) = codec.accept(stream).await?;
+            let (init, mut framed) = codec.accept(stream).await.map_err(cast_sync_error)?;
 
             let srv = state.globals.services();
             srv.perms
@@ -364,11 +377,15 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                         message_id: *entry.key(),
                         delta,
                     })
-                    .await?;
+                    .await
+                    .map_err(cast_sync_error)?;
             }
 
             // we're tailing live events
-            framed.send(channel::Event::Subscribed).await?;
+            framed
+                .send(channel::Event::Subscribed)
+                .await
+                .map_err(cast_sync_error)?;
 
             // forward live flume deltas for this channel
             let mut broadcast_stream = state.globals.messaging().subscribe().await?;
@@ -395,7 +412,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                                 message_id,
                                 delta,
                             })
-                            .await?;
+                            .await.map_err(cast_sync_error)?;
                     }
                     _ = framed.next() => {
                         // channel stream has no commands so this must be None (stream close)
@@ -410,7 +427,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
             let session = state.session().await?;
             let user_id = session.user_id().ok_or(Error::UnauthSession)?;
             let codec = Codec::<flume::Protocol>::new(state.params.clone());
-            let (init, mut framed) = codec.accept(stream).await?;
+            let (init, mut framed) = codec.accept(stream).await.map_err(cast_sync_error)?;
 
             let srv = state.globals.services();
             srv.perms
@@ -429,7 +446,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
             });
 
             // PERF: maybe inline logic here
-            while let Some(command) = framed.next().await.transpose()? {
+            while let Some(command) = framed.next().await.transpose().map_err(cast_sync_error)? {
                 match command {
                     flume::Command::Ping => {
                         srv.messages
@@ -440,7 +457,10 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                         srv.messages
                             .flume_update(init.channel_id, init.message_id, &auth, delta)
                             .await?;
-                        framed.send(flume::Event::Ack { seq }).await?;
+                        framed
+                            .send(flume::Event::Ack { seq })
+                            .await
+                            .map_err(cast_sync_error)?;
                     }
                     flume::Command::Commit => {
                         let message = srv
@@ -451,7 +471,8 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                             .send(flume::Event::Committed {
                                 message: Box::new(message),
                             })
-                            .await?;
+                            .await
+                            .map_err(cast_sync_error)?;
                         // the flume is committed and can no longer be controlled
                         break;
                     }
@@ -464,7 +485,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
             let session = state.session().await?;
             let user_id = session.user_id().ok_or(Error::UnauthSession)?;
             let codec = Codec::<voice::Protocol>::new(state.params.clone());
-            let (init, mut framed) = codec.accept(stream).await?;
+            let (init, mut framed) = codec.accept(stream).await.map_err(cast_sync_error)?;
 
             let srv = state.globals.services();
             let channel_id = init.0.channel_id;
@@ -500,10 +521,10 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                         if target_user_id != user_id || event_channel_id != channel_id {
                             continue;
                         }
-                        framed.send(voice::Event(payload)).await?;
+                        framed.send(voice::Event(payload)).await.map_err(cast_sync_error)?;
                     }
                     command = framed.next() => {
-                        match command.transpose()? {
+                        match command.transpose().map_err(cast_sync_error)? {
                             Some(voice::Command(command)) => {
                                 if matches!(command, SignallingCommand::Disconnect) {
                                     disconnected = true;
@@ -545,7 +566,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
             let session = state.session().await?;
             let user_id = session.user_id().ok_or(Error::UnauthSession)?;
             let codec = Codec::<document::Protocol>::new(state.params.clone());
-            let (init, mut framed) = codec.accept(stream).await?;
+            let (init, mut framed) = codec.accept(stream).await.map_err(cast_sync_error)?;
 
             let srv = state.globals.services();
 
@@ -606,7 +627,8 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                     user_id,
                     update: DocumentUpdate(update),
                 })
-                .await?;
+                .await
+                .map_err(cast_sync_error)?;
 
             // send presence
             for (presence_user_id, cursor_head, cursor_tail, conn_id) in
@@ -621,10 +643,14 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                         cursor_head,
                         cursor_tail,
                     })
-                    .await?;
+                    .await
+                    .map_err(cast_sync_error)?;
             }
 
-            framed.send(document::Event::Subscribed).await?;
+            framed
+                .send(document::Event::Subscribed)
+                .await
+                .map_err(cast_sync_error)?;
 
             loop {
                 tokio::select! {
@@ -645,7 +671,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                                         user_id: author_id,
                                         update: DocumentUpdate(update),
                                     })
-                                    .await?;
+                                    .await.map_err(cast_sync_error)?;
                             }
                             Ok(DocumentEvent::Presence {
                                 user_id: presence_user_id,
@@ -662,14 +688,14 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                                         cursor_head,
                                         cursor_tail,
                                     })
-                                    .await?;
+                                    .await.map_err(cast_sync_error)?;
                             }
                             Err(broadcast::error::RecvError::Closed) => break,
                             Err(broadcast::error::RecvError::Lagged(_)) => continue, // TODO: send missed updates?
                         }
                     }
                     command = framed.next() => {
-                        match command.transpose()? {
+                        match command.transpose().map_err(cast_sync_error)? {
                             Some(document::Command::Edit { update }) => {
                                 // PERF: cache this!
                                 let mut perms = srv
@@ -720,7 +746,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
         StreamHeader::MemberList => {
             let session = state.session().await?;
             let codec = Codec::<member_list::Protocol>::new(state.params.clone());
-            let (init, mut framed) = codec.accept(stream).await?;
+            let (init, mut framed) = codec.accept(stream).await.map_err(cast_sync_error)?;
 
             let srv = state.globals.services();
             let user_id = session.user_id();
@@ -754,11 +780,11 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                     msg = syncer.poll() => {
                         let msg = msg?;
                         if let Some(event) = member_list_event(msg) {
-                            framed.send(event).await?;
+                            framed.send(event).await.map_err(cast_sync_error)?;
                         }
                     }
                     command = framed.next() => {
-                        match command.transpose()? {
+                        match command.transpose().map_err(cast_sync_error)? {
                             Some(member_list::Command::Ranges { ranges }) => {
                                 syncer
                                     .set_query(target.clone(), &member_list_ranges(&ranges))

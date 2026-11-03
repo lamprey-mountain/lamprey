@@ -52,10 +52,9 @@ where
         let initial_bytes = framed
             .next()
             .await
-            .ok_or_else(|| Error::BadStatic("Stream closed before Initial payload"))?
-            .map_err(|e| Error::Internal(e.to_string()))?;
+            .ok_or_else(|| Error::invalid_data("Stream closed before Initial payload"))??;
         let initial: P::Initial = match self.params.encoding {
-            Encoding::Json => serde_json::from_slice(&initial_bytes)?,
+            Encoding::Json => serde_json::from_slice(&initial_bytes).map_err(Error::JsonDecode)?,
             Encoding::Msgpack => rmp_serde::from_slice(&initial_bytes)?,
         };
 
@@ -78,13 +77,10 @@ where
         // send initial payload
         let mut framed = Framed::new(stream, LengthDelimitedCodec::new());
         let initial_bytes = match self.params.encoding {
-            Encoding::Json => serde_json::to_vec(&initial)?,
+            Encoding::Json => serde_json::to_vec(&initial).map_err(Error::JsonEncode)?,
             Encoding::Msgpack => rmp_serde::to_vec_named(&initial)?,
         };
-        framed
-            .send(Bytes::from(initial_bytes))
-            .await
-            .map_err(|e| Error::Internal(e.to_string()))?;
+        framed.send(Bytes::from(initial_bytes)).await?;
 
         // switch codecs
         let framed = framed.map_codec(|framer| CodecClient {
@@ -117,14 +113,10 @@ where
     type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
-        match self
-            .framer
-            .decode(src)
-            .map_err(|e| Error::Internal(e.to_string()))?
-        {
+        match self.framer.decode(src)? {
             Some(bytes) => {
                 let msg = match self.encoding() {
-                    Encoding::Json => serde_json::from_slice(&bytes)?,
+                    Encoding::Json => serde_json::from_slice(&bytes).map_err(Error::JsonDecode)?,
                     Encoding::Msgpack => rmp_serde::from_slice(&bytes)?,
                 };
                 Ok(Some(msg))
@@ -142,13 +134,11 @@ where
 
     fn encode(&mut self, item: P::Event, dst: &mut BytesMut) -> Result<()> {
         let bytes = match self.encoding() {
-            Encoding::Json => serde_json::to_vec(&item)?,
+            Encoding::Json => serde_json::to_vec(&item).map_err(Error::JsonEncode)?,
             Encoding::Msgpack => rmp_serde::to_vec_named(&item)?,
         };
 
-        self.framer
-            .encode(Bytes::from(bytes), dst)
-            .map_err(|e| Error::Internal(e.to_string()))?;
+        self.framer.encode(Bytes::from(bytes), dst)?;
         Ok(())
     }
 }
@@ -161,13 +151,11 @@ where
 
     fn encode(&mut self, item: P::Command, dst: &mut BytesMut) -> Result<()> {
         let bytes = match self.encoding() {
-            Encoding::Json => serde_json::to_vec(&item)?,
+            Encoding::Json => serde_json::to_vec(&item).map_err(Error::JsonEncode)?,
             Encoding::Msgpack => rmp_serde::to_vec_named(&item)?,
         };
 
-        self.framer
-            .encode(Bytes::from(bytes), dst)
-            .map_err(|e| Error::Internal(e.to_string()))?;
+        self.framer.encode(Bytes::from(bytes), dst)?;
         Ok(())
     }
 }
@@ -180,14 +168,10 @@ where
     type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
-        match self
-            .framer
-            .decode(src)
-            .map_err(|e| Error::Internal(e.to_string()))?
-        {
+        match self.framer.decode(src)? {
             Some(bytes) => {
                 let msg = match self.encoding() {
-                    Encoding::Json => serde_json::from_slice(&bytes)?,
+                    Encoding::Json => serde_json::from_slice(&bytes).map_err(Error::JsonDecode)?,
                     Encoding::Msgpack => rmp_serde::from_slice(&bytes)?,
                 };
                 Ok(Some(msg))

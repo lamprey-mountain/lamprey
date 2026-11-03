@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 
+use lamprey::v1::types::error::SyncErrorCode;
 use lamprey::v1::types::{ConnectionId, MessageEnvelope, MessagePayload, MessageSync};
 use tracing::{debug, trace};
 
@@ -39,7 +40,7 @@ impl ConnectionQueue {
             self.seq_client = seq;
             Ok(())
         } else {
-            Err(Error::BadStatic("invalid seq"))
+            Err(Error::Sync(SyncErrorCode::InvalidSeq))
         }
     }
 

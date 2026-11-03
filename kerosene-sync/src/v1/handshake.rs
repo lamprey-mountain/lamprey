@@ -38,10 +38,10 @@ impl<T: Transport> Handshake<T> {
             }
 
             // TODO: better errors
-            Ok(Some(Ok(_))) => Err(Error::BadStatic("expected Hello message")),
+            Ok(Some(Ok(_))) => Err(Error::invalid_data("expected Hello message")),
             Ok(Some(Err(e))) => Err(e),
-            Ok(None) => Err(Error::BadStatic("transport closed before Hello")),
-            Err(e) => Err(Error::BadStatic("transport timed out ")),
+            Ok(None) => Err(Error::invalid_data("transport closed before Hello")),
+            Err(e) => Err(Error::invalid_data("transport timed out")),
         }
 
         // SyncErrorCode::Timeout;

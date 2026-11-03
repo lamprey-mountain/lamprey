@@ -89,7 +89,7 @@ impl TransportSink for WebtransportSink {
     async fn send(&mut self, envelope: MessageEnvelope) -> Result<()> {
         let bytes = match self.format {
             SyncFormat::Msgpack => rmp_serde::to_vec_named(&envelope)?,
-            SyncFormat::Json => serde_json::to_vec(&envelope)?,
+            SyncFormat::Json => serde_json::to_vec(&envelope).map_err(Error::JsonEncode)?,
         };
 
         // unlike websocket, all messages are sent as binary
@@ -122,21 +122,21 @@ impl TransportSink for WebtransportSink {
         };
 
         let len =
-            u32::try_from(payload.len()).map_err(|_| Error::BadStatic("message too large"))?;
+            u32::try_from(payload.len()).map_err(|_| Error::invalid_data("message too large"))?;
         self.send
             .write_all(&len.to_be_bytes())
             .await
-            .map_err(|e| Error::Internal(format!("webtransport write error: {e}")))?;
+            .map_err(|e| Error::internal_message(format!("webtransport write error: {e}")))?;
         self.send
             .write_all(&payload)
             .await
-            .map_err(|e| Error::Internal(format!("webtransport write error: {e}")))?;
+            .map_err(|e| Error::internal_message(format!("webtransport write error: {e}")))?;
         // PERF: split flush() into its own method so that the connection actor can batch writes
         // or make send() take multiple MessageEnvelopes
         self.send
             .flush()
             .await
-            .map_err(|e| Error::Internal(format!("webtransport write error: {e}")))?;
+            .map_err(|e| Error::internal_message(format!("webtransport write error: {e}")))?;
 
         Ok(())
     }
@@ -145,7 +145,7 @@ impl TransportSink for WebtransportSink {
         self.send
             .finish()
             .await
-            .map_err(|e| Error::Internal(format!("webtransport finish error: {e}")))?;
+            .map_err(|e| Error::internal_message(format!("webtransport finish error: {e}")))?;
         Ok(())
     }
 }
@@ -166,7 +166,7 @@ impl WebtransportReceiver {
 
             // TODO: what should the max length be? (currently 1mb)
             if len > 1 * 1024 * 1024 {
-                return Some((Err(Error::BadStatic("webtransport frame too large")), me));
+                return Some((Err(Error::invalid_data("webtransport frame too large")), me));
             }
 
             // read payload
@@ -212,7 +212,7 @@ impl WebtransportReceiver {
                             consumed = iter.byte_offset();
                         }
                         Err(e) if e.is_eof() => break,
-                        Err(e) => return Some((Err(e.into()), me)),
+                        Err(e) => return Some((Err(Error::JsonDecode(e)), me)),
                     }
                 }
                 // reborrow after iter drop
@@ -228,16 +228,16 @@ impl WebtransportReceiver {
                 let result = match me.format {
                     SyncFormat::Msgpack => rmp_serde::from_slice::<MessageClient>(&payload)
                         .map(TransportEvent::Message)
-                        .map_err(Into::into),
+                        .map_err(Error::MsgpackDecode),
                     SyncFormat::Json => serde_json::from_slice::<MessageClient>(&payload)
                         .map(TransportEvent::Message)
-                        .map_err(Into::into),
+                        .map_err(Error::JsonDecode),
                 };
                 return Some((result, me));
             }
 
             Some((
-                Err(Error::BadStatic(
+                Err(Error::invalid_data(
                     "webtransport: decompressed frame contained no complete messages",
                 )),
                 me,

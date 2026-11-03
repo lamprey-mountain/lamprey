@@ -27,6 +27,13 @@ use crate::{
     services::{connections::subscriptions::ConnectionSubscriptions, permissions::AuthCheckResult},
 };
 
+fn cast_sync_error(err: kerosene_sync::error::Error) -> Error {
+    match err {
+        kerosene_sync::error::Error::Sync(code) => Error::SyncError(code),
+        err => Error::from(ServerError::from(err)),
+    }
+}
+
 // PERF: maybe don't copy globals to every connection?
 // PERF: don't create a mpsc for connection, they can be expensive in terms of memory?
 pub struct Connection {
@@ -221,7 +228,12 @@ impl Connection {
                 let mut recvs = vec![];
                 for (s, stream) in &mut self.streams {
                     if let Some(t) = &mut stream.transport {
-                        recvs.push(t.recv.next().map(move |m| (*s, m)).boxed());
+                        recvs.push(
+                            t.recv
+                                .next()
+                                .map(move |m| (*s, m.map(|r| r.map_err(cast_sync_error))))
+                                .boxed(),
+                        );
                     }
                 }
 
@@ -444,7 +456,7 @@ impl Connection {
                     StreamAttach::Sync => {
                         let stream = self.streams.get_mut(&StreamSubscription::Sync).unwrap();
                         stream.transport = Some(transport);
-                        stream.queue.rewind(seq)?;
+                        stream.queue.rewind(seq).map_err(cast_sync_error)?;
                         self.globals.services().connections.cancel_cleanup(self.id);
                     }
                     StreamAttach::Document {
@@ -656,13 +668,17 @@ impl Connection {
                                 code,
                             },
                         })
-                        .await?;
+                        .await
+                        .map_err(cast_sync_error)?;
 
                     if let Some(code) = code {
                         if code.will_disconnect() {
                             let can_resume = code.can_resume();
                             let payload = MessagePayload::Reconnect { can_resume };
-                            t.send.send(MessageEnvelope { payload }).await?;
+                            t.send
+                                .send(MessageEnvelope { payload })
+                                .await
+                                .map_err(cast_sync_error)?;
                         }
                     }
                 }
@@ -1053,7 +1069,7 @@ impl Connection {
                 let ping = MessageEnvelope {
                     payload: MessagePayload::Ping {},
                 };
-                t.send.send(ping).await?;
+                t.send.send(ping).await.map_err(cast_sync_error)?;
                 t.timeout = Timeout::for_close();
             }
             Timeout::Close(_) => {

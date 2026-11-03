@@ -64,7 +64,7 @@ impl TransportSink for WebsocketSink {
     async fn send(&mut self, envelope: MessageEnvelope) -> Result<()> {
         let bytes = match self.format {
             SyncFormat::Msgpack => rmp_serde::to_vec_named(&envelope)?,
-            SyncFormat::Json => serde_json::to_vec(&envelope)?,
+            SyncFormat::Json => serde_json::to_vec(&envelope).map_err(Error::JsonEncode)?,
         };
 
         let final_msg = if let Some(compressor) = &mut self.compressor {
@@ -96,17 +96,19 @@ impl TransportSink for WebsocketSink {
                 SyncFormat::Msgpack => WsMessage::binary(bytes),
                 SyncFormat::Json => {
                     let s =
-                        String::from_utf8(bytes).map_err(|e| Error::BadRequest(e.to_string()))?;
+                        String::from_utf8(bytes).map_err(|e| Error::invalid_data(e.to_string()))?;
                     WsMessage::text(s)
                 }
             }
         };
 
-        self.sink.send(final_msg).await.map_err(Into::into)
+        self.sink.send(final_msg).await?;
+        Ok(())
     }
 
     async fn close(&mut self) -> Result<()> {
-        self.sink.close().await.map_err(Into::into)
+        self.sink.close().await?;
+        Ok(())
     }
 }
 
@@ -125,7 +127,7 @@ impl WebsocketReceiver {
                     Ok(WsMessage::Text(s)) => {
                         let result = serde_json::from_str(&s)
                             .map(TransportEvent::Message)
-                            .map_err(Into::into);
+                            .map_err(Error::JsonDecode);
                         return Some((result, recv));
                     }
                     Ok(WsMessage::Binary(b)) => b,
@@ -175,7 +177,7 @@ impl WebsocketReceiver {
                                 consumed = iter.byte_offset();
                             }
                             Err(e) if e.is_eof() => break,
-                            Err(e) => return Some((Err(e.into()), recv)),
+                            Err(e) => return Some((Err(Error::JsonDecode(e)), recv)),
                         }
                     }
                     // reborrow after iter drop
@@ -190,11 +192,11 @@ impl WebsocketReceiver {
                 } else if recv.format == SyncFormat::Msgpack {
                     let result = rmp_serde::from_slice::<MessageClient>(&bytes)
                         .map(TransportEvent::Message)
-                        .map_err(Into::into);
+                        .map_err(Error::MsgpackDecode);
                     return Some((result, recv));
                 } else {
                     return Some((
-                        Err(Error::BadStatic(
+                        Err(Error::invalid_data(
                             "unexpected binary message for uncompressed session",
                         )),
                         recv,

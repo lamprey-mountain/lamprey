@@ -345,6 +345,17 @@ impl From<ApiError> for Error {
     }
 }
 
+impl From<ServerError> for Error {
+    fn from(err: ServerError) -> Self {
+        match err {
+            ServerError::Internal(err) => Error::Internal(err.to_string()),
+            ServerError::Api(err) => Error::ApiError(*err),
+            ServerError::Unimplemented => Error::Unimplemented,
+            ServerError::Unavailable => Error::ServiceUnavailable,
+        }
+    }
+}
+
 impl From<SyncErrorCode> for Error {
     fn from(value: SyncErrorCode) -> Self {
         Self::SyncError(value)
