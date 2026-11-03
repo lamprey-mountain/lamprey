@@ -1,33 +1,51 @@
-/// an error that occurred while reading a stream
+/// An error that occurred while opening a journal.
 #[derive(Debug, thiserror::Error)]
-pub enum ReadError {
-    /// the data at the requested start position was truncated
-    #[error("the data at the requested start position was truncated")]
-    Truncated,
+pub enum OpenError {
+    /// this journal doesn't exist
+    #[error("this journal doesn't exist")]
+    Missing,
 
-    /// this stream has been deleted
-    ///
-    /// if this stream has been recreated, reopen the stream to begin reading again.
-    #[error("this stream has been deleted")]
-    Deleted,
+    // NOTE: probably can't exist anymore?
+    // this is possible with name-based journals (s3-style), but probably not with id-based journals
+    /// this journal already exists
+    #[error("this journal already exists")]
+    Exists,
+
+    /// the backend failed
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }
 
-/// an error that occurred while writing to a stream
+/// an error that occurred while reading a journal
+#[derive(Debug, thiserror::Error)]
+pub enum ReadError {
+    /// this journal has been deleted
+    ///
+    /// if this journal has been recreated, reopen it to begin reading again.
+    #[error("this journal has been deleted")]
+    Deleted,
+
+    /// the backend failed
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+}
+
+/// an error that occurred while writing to a journal
 #[derive(Debug, thiserror::Error)]
 pub enum WriteError {
-    /// this stream is frozen
+    /// this journal is frozen
     ///
-    /// can occur while writing, syncing, truncating
-    #[error("this stream is frozen")]
+    /// can occur while writing, syncing
+    #[error("this journal is frozen")]
     Frozen,
 
-    /// this stream has been deleted
+    /// this journal has been deleted
     ///
-    /// even if this stream is deleted and recreated with the exact same
-    /// options, the stream must be reopened to begin writing again.
+    /// even if this journal is deleted and recreated with the exact same
+    /// options, it must be reopened to begin writing again.
     ///
-    /// can occur while writing, syncing, truncating, deleting, freezing
-    #[error("this stream has been deleted")]
+    /// can occur while writing, syncing, deleting, freezing
+    #[error("this journal has been deleted")]
     Deleted,
 
     /// ran out of space
@@ -35,4 +53,8 @@ pub enum WriteError {
     /// can occur while writing
     #[error("ran out of space")]
     Oversized,
+
+    /// the backend failed
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }
