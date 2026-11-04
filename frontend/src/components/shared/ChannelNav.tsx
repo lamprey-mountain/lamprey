@@ -46,6 +46,7 @@ import {
 	viewCategoryKey,
 } from "@/lib/room-nav";
 import type { RoomNavItem, RoomNavView } from "@/types/room-nav";
+import { channelDisplayName } from "@/utils/channel";
 import { getDate } from "@/utils/general";
 import { useVoice } from "../features/voice/context";
 import { Avatar, ChannelIcon } from "./User";
@@ -1056,8 +1057,14 @@ export const ItemChannel = (props: {
 			return otherUser()?.name ?? "dm";
 		}
 
-		return props.channel.name;
+		return channelDisplayName(props.channel);
 	};
+
+	const isAutoName = () =>
+		!props.nickname &&
+		props.channel.type !== "Dm" &&
+		props.channel.name === "thread" &&
+		!!props.channel.auto_name;
 
 	const channelConfig = () => props.channel.preferences;
 
@@ -1124,7 +1131,12 @@ export const ItemChannel = (props: {
 					</Show>
 
 					<div class="channel-details">
-						<span class="channel-name">{name()}</span>
+						<span
+							class="channel-name"
+							classList={{ "name-automatic": isAutoName() }}
+						>
+							{name()}
+						</span>
 						<Show
 							when={
 								otherUser()?.presence.activities.find(
@@ -1200,7 +1212,12 @@ export const ItemChannel = (props: {
 					</Show>
 
 					<div class="channel-details">
-						<span class="channel-name">{name()}</span>
+						<span
+							class="channel-name"
+							classList={{ "name-automatic": isAutoName() }}
+						>
+							{name()}
+						</span>
 						<Show
 							when={
 								otherUser()?.presence.activities.find(

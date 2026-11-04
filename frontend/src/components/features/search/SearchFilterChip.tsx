@@ -10,6 +10,7 @@ import {
 import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { Avatar } from "@/avatar/UserAvatar";
 import type { ThreadT } from "@/types";
+import { channelDisplayName } from "@/utils/channel";
 import { SEARCH_FILTERS, type SearchContext } from "./filters.config";
 
 export const FilterChipUI = (props: {
@@ -111,7 +112,7 @@ export const FilterChip = (props: {
 				return {
 					...ctxResolved,
 					channel,
-					name: channel.name,
+					name: channelDisplayName(channel),
 				};
 			}
 			if (props.type === "mentions" && props.id.startsWith("user-") && user) {
@@ -130,7 +131,7 @@ export const FilterChip = (props: {
 		}
 		const channel = channelResource();
 		if (props.type === "channel" && channel) {
-			return { name: channel.name, channel: channel as ThreadT };
+			return { name: channelDisplayName(channel), channel: channel as ThreadT };
 		}
 		if (props.type === "mentions" && props.id.startsWith("user-") && user) {
 			return { name: user.name, user };

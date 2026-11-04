@@ -2,6 +2,13 @@ import type { Channel, ChannelType, Preferences } from "sdk";
 import type { SetStoreFunction } from "solid-js/store";
 import type { ChannelState } from "@/contexts/channel";
 
+export function channelDisplayName(channel: Channel): string {
+	if (channel.name === "thread" && channel.auto_name) {
+		return channel.auto_name;
+	}
+	return channel.name;
+}
+
 /**
  * Get the channel type category for thread sidebar preferences
  */

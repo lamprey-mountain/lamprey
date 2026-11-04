@@ -13,6 +13,7 @@ import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
 import { usePermissions } from "@/hooks/usePermissions";
+import { channelDisplayName } from "@/utils/channel";
 
 type PermissionCheck = (p: ReturnType<typeof usePermissions>) => boolean;
 
@@ -90,7 +91,7 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 		switch (action) {
 			case "remove":
 				modalCtl.confirm(
-					`Are you sure you want to remove "${props.channel.name}"?`,
+					`Are you sure you want to remove "${channelDisplayName(props.channel)}"?`,
 					(confirmed) => {
 						if (confirmed) {
 							api2.client.http

@@ -4,6 +4,7 @@ import icClose from "@/assets/x.png"; // TODO: random icons
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown";
 import { useModals } from "@/contexts/modal";
+import { channelDisplayName } from "@/utils/channel";
 import { Modal } from "./mod";
 
 interface ModalChannelTopicProps {
@@ -19,7 +20,9 @@ export const ModalChannelTopic = (props: ModalChannelTopicProps) => {
 		<Modal class="unpadded">
 			<div class="modal-channel-topic">
 				<header class="header">
-					<h3 class="channel-name">#{channel()?.name}</h3>
+					<h3 class="channel-name">
+						#{channel() ? channelDisplayName(channel()!) : ""}
+					</h3>
 					<div class="spacer"></div>
 					<button
 						type="button"

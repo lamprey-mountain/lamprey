@@ -11,6 +11,7 @@ import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
 import { autofocus } from "@/lib/autofocus";
 import { getThumbFromId } from "@/media/util";
+import { channelDisplayName } from "@/utils/channel";
 import { Modal } from "./mod";
 
 export const ModalPalette = () => {
@@ -113,7 +114,7 @@ export const ModalPalette = () => {
 			.map((channel) => ({
 				type: "thread" as const,
 				id: channel.id,
-				name: channel.name,
+				name: channelDisplayName(channel),
 				action: () => navigate(`/channel/${channel.id}`),
 				channel: channel,
 			}));
@@ -165,7 +166,7 @@ export const ModalPalette = () => {
 			.map(({ channel }) => ({
 				type: "thread" as const,
 				id: channel.id,
-				name: channel.name,
+				name: channelDisplayName(channel),
 				action: () => navigate(`/channel/${channel.id}`),
 				channel: channel,
 			}));

@@ -8,6 +8,7 @@ import { Icon } from "@/atoms/Icon";
 import { Checkbox } from "@/atoms/icons";
 import { Time } from "@/atoms/Time";
 import { MessageView } from "@/components/features/chat/Message.tsx";
+import { channelDisplayName } from "@/utils/channel";
 import { getDate } from "@/utils/general";
 import { icCheck, icQuestion } from "@/utils/icons";
 import { MessageToolbarProvider } from "../features/chat/message-toolbar-context";
@@ -254,7 +255,9 @@ const NotificationItem = (props: {
 							<A href={`/room/${room()?.id}`}>{room()?.name}</A>
 							&nbsp;&gt;&nbsp;
 						</Show>
-						<A href={`/channel/${channel()?.id}`}>{channel()?.name ?? "..."}</A>
+						<A href={`/channel/${channel()?.id}`}>
+							{channel() ? channelDisplayName(channel()!) : "..."}
+						</A>
 						<Show when={href()}>
 							{(href) => (
 								<>

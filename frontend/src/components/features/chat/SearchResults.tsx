@@ -8,6 +8,7 @@ import {
 	type SearchState,
 	useSearch,
 } from "@/contexts/search";
+import { channelDisplayName } from "@/utils/channel";
 import { MessageView } from "./Message";
 import { MessageToolbarMount } from "./MessageToolbar";
 import { MessageToolbarProvider } from "./message-toolbar-context";
@@ -129,7 +130,7 @@ export const SearchResultItem = (props: {
 		<>
 			<Show when={showHeader() && channel()}>
 				<div style="padding: 4px 12px 0; font-weight: bold; color: var(--text-dim);">
-					#{channel()?.name}
+					#{channel() ? channelDisplayName(channel()!) : ""}
 				</div>
 			</Show>
 			<li onClick={() => props.onResultClick(props.message)}>

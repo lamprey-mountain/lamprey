@@ -64,6 +64,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import { MediaSidebar } from "@/media/Sidebar";
 import type { RoomT } from "@/types";
+import { channelDisplayName } from "@/utils/channel";
 import { icMore } from "@/utils/icons";
 
 export { RouteInvite } from "@/components/shared/Invite";
@@ -255,11 +256,7 @@ const SidebarChatHeader = (props: {
 			return ch.recipients?.find((i) => i.id !== userId)?.name ?? "dm";
 		}
 
-		if (ch.name === "thread" && ch.auto_name) {
-			return ch.auto_name;
-		}
-
-		return ch.name;
+		return channelDisplayName(ch);
 	};
 
 	const canEditChannelName = () => {

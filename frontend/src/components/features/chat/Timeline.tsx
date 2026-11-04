@@ -21,6 +21,7 @@ import { Avatar } from "@/avatar/UserAvatar";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useChannel } from "@/contexts/mod";
 import type { ChannelT } from "@/types";
+import { channelDisplayName } from "@/utils/channel";
 import { logger } from "@/utils/logger";
 import type { ChatProps } from "./Chat";
 import { MessageView } from "./Message";
@@ -556,12 +557,7 @@ const TimelineHeader = (props: { channel: ChannelT }) => {
 	const isAutoName = () =>
 		props.channel.name === "thread" && !!props.channel.auto_name;
 
-	const name = () => {
-		if (props.channel.name === "thread" && props.channel.auto_name) {
-			return props.channel.auto_name;
-		}
-		return props.channel.name;
-	};
+	const name = () => channelDisplayName(props.channel);
 
 	const other = createMemo(() => {
 		if (!isDm()) return null;

@@ -13,7 +13,9 @@ import {
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import { ChannelIcon } from "@/avatar/ChannelIcon.tsx";
+import { ChannelName } from "@/components/shared/ChannelName";
 import { createKeybinds } from "@/lib/keybinds";
+import { channelDisplayName } from "@/utils/channel";
 
 export type ChannelPickerOption = {
 	channel: Channel;
@@ -141,7 +143,7 @@ export function createChannelPicker(props: {
 			.filter((c) => !filter || filter(c))
 			.map((c) => ({
 				channel: c,
-				label: c.name,
+				label: channelDisplayName(c),
 			}));
 		if (!required) {
 			opts.unshift({
@@ -495,7 +497,7 @@ export function MultiChannelPicker(props: {
 			.filter((c) => !filter || filter(c))
 			.map((c) => ({
 				channel: c,
-				label: c.name,
+				label: channelDisplayName(c),
 			}));
 	});
 
@@ -584,7 +586,7 @@ export function MultiChannelPicker(props: {
 								channel={channel}
 								style="width: 16px; height: 16px; flex: none;"
 							/>
-							{channel.name}
+							<ChannelName channel={channel} />
 							<button
 								type="button"
 								class="button"

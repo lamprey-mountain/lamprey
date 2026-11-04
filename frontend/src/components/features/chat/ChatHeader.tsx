@@ -19,6 +19,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
+import { channelDisplayName } from "@/utils/channel";
 import { icActivityLog } from "@/utils/icons";
 import { useVoice } from "../voice/context";
 
@@ -170,11 +171,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 			);
 		}
 
-		if (props.channel.name === "thread" && props.channel.auto_name) {
-			return props.channel.auto_name;
-		}
-
-		return props.channel.name;
+		return channelDisplayName(props.channel);
 	});
 
 	const hasPins = () =>

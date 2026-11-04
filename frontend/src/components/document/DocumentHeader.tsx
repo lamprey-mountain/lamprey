@@ -28,6 +28,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import type { ChannelT } from "@/types";
 import type { TocHeading } from "@/types/chat";
+import { channelDisplayName } from "@/utils/channel";
 import { getDate } from "@/utils/general";
 import {
 	icBranch,
@@ -82,13 +83,13 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 
 	const startEditingName = () => {
 		if (!canEditName() || editingName() !== undefined) return;
-		setEditingName(props.channel.name);
+		setEditingName(channelDisplayName(props.channel));
 		setTimeout(() => nameInputRef.focus());
 	};
 
 	const saveName = async () => {
 		const newName = editingName()?.trim();
-		if (newName && newName !== props.channel.name) {
+		if (newName && newName !== channelDisplayName(props.channel)) {
 			setIsSavingName(true);
 			try {
 				await channels.update(props.channel.id, { name: newName });
@@ -384,7 +385,7 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 						/>
 					</Match>
 					<Match when={true}>
-						<h3 class="name-text">{props.channel.name}</h3>
+						<h3 class="name-text">{channelDisplayName(props.channel)}</h3>
 					</Match>
 				</Switch>
 			</div>
