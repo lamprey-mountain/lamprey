@@ -1,19 +1,13 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.4/schema.json",
 	"vcs": {
-		"enabled": false,
+		"enabled": true,
 		"clientKind": "git",
-		"useIgnoreFile": false
+		"useIgnoreFile": true
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": [
-			"frontend/**",
-			"!frontend/dist",
-			"ts-sdk/**",
-			"emoji/**",
-			"!emoji/generated"
-		]
+		"includes": ["frontend/**", "ts-sdk/**", "emoji/**", "!emoji/generated"]
 	},
 	"formatter": {
 		"enabled": true,
