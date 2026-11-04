@@ -9,6 +9,16 @@ export function channelDisplayName(channel: Channel): string {
 	return channel.name;
 }
 
+export function channelDescription(
+	channel: Channel,
+): string | null | undefined {
+	return channel.auto_description ?? channel.description;
+}
+
+export function isAutoDescription(channel: Channel): boolean {
+	return !!channel.auto_description;
+}
+
 /**
  * Get the channel type category for thread sidebar preferences
  */

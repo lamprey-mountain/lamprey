@@ -19,7 +19,11 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
-import { channelDisplayName } from "@/utils/channel";
+import {
+	channelDescription,
+	channelDisplayName,
+	isAutoDescription,
+} from "@/utils/channel";
 import { icActivityLog } from "@/utils/icons";
 import { useVoice } from "../voice/context";
 
@@ -246,14 +250,14 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 				</Switch>
 			</div>
 
-			<Show when={props.channel.description}>
+			<Show when={channelDescription(props.channel)}>
 				{/*<span class="dim" style="white-space:pre;font-size:1em">*/}
 				<div>{"  -  "}</div>
 				<div
 					class="topic"
 					onClick={() => {
 						// TODO: extract into function
-						if (props.channel.description) {
+						if (channelDescription(props.channel)) {
 							modalctl.open({
 								type: "channel_topic",
 								channel_id: props.channel.id,
@@ -274,8 +278,15 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 					}}
 					ref={topicTooltip.content}
 				>
-					<Show when={props.channel.description}>
-						{(desc) => <Markdown content={desc()} />}
+					<Show when={channelDescription(props.channel)}>
+						{(desc) => (
+							<Markdown
+								content={desc()}
+								classList={{
+									"description-automatic": isAutoDescription(props.channel),
+								}}
+							/>
+						)}
 					</Show>
 				</div>
 			</Show>

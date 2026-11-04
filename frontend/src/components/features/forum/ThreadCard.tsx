@@ -9,6 +9,7 @@ import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { useChannel } from "@/contexts/mod";
 import { useNavigate } from "@/contexts/router";
 import type { ChannelT } from "@/types";
+import { channelDescription, isAutoDescription } from "@/utils/channel";
 import { MessageView } from "../chat/Message";
 import { MessageToolbarProvider } from "../chat/message-toolbar-context";
 import { Reactions } from "../chat/Reactions";
@@ -69,8 +70,16 @@ export const ThreadCard = (props: ThreadCardProps) => {
 				<Show when={props.thread.tags?.length}>
 					<ThreadTags thread={props.thread} />
 				</Show>
-				<Show when={props.thread.description}>
-					{(desc) => <Markdown content={desc()} class="description" />}
+				<Show when={channelDescription(props.thread)}>
+					{(desc) => (
+						<Markdown
+							content={desc()}
+							class="description"
+							classList={{
+								"description-automatic": isAutoDescription(props.thread),
+							}}
+						/>
+					)}
 				</Show>
 			</div>
 			<div class="preview">

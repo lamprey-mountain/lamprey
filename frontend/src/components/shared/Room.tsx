@@ -11,6 +11,7 @@ import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
 import { useCanViewChannel, usePermissions } from "@/hooks/usePermissions";
 import type { RoomT } from "@/types";
+import { channelDescription, isAutoDescription } from "@/utils/channel";
 import { ChannelIcon } from "./User.tsx";
 
 export const RoomMembers = (props: { room: RoomT }) => {
@@ -255,9 +256,16 @@ export const RoomHome = (props: { room: RoomT }) => {
 														)}
 													/>
 												</div>
-												<Show when={thread.description}>
+												<Show when={channelDescription(thread)}>
 													{(desc) => (
-														<Markdown class="description" content={desc()} />
+														<Markdown
+															class="description"
+															content={desc()}
+															classList={{
+																"description-automatic":
+																	isAutoDescription(thread),
+															}}
+														/>
 													)}
 												</Show>
 											</button>

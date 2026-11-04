@@ -4,7 +4,11 @@ import icClose from "@/assets/x.png"; // TODO: random icons
 import { Icon } from "@/atoms/Icon";
 import { Markdown } from "@/atoms/Markdown";
 import { useModals } from "@/contexts/modal";
-import { channelDisplayName } from "@/utils/channel";
+import {
+	channelDescription,
+	channelDisplayName,
+	isAutoDescription,
+} from "@/utils/channel";
 import { Modal } from "./mod";
 
 interface ModalChannelTopicProps {
@@ -34,8 +38,18 @@ export const ModalChannelTopic = (props: ModalChannelTopicProps) => {
 						<Icon src={icClose} color={null} />
 					</button>
 				</header>
-				<Show when={channel()?.description}>
-					{(desc) => <Markdown class="channel-topic" content={desc()} />}
+				<Show when={channel() ? channelDescription(channel()!) : null}>
+					{(desc) => (
+						<Markdown
+							class="channel-topic"
+							content={desc()}
+							classList={{
+								"description-automatic": channel()
+									? isAutoDescription(channel()!)
+									: false,
+							}}
+						/>
+					)}
 				</Show>
 			</div>
 		</Modal>

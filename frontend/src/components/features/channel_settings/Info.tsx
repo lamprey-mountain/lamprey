@@ -15,6 +15,7 @@ import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { ChannelIconGdm } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { channelDescription } from "@/utils/channel";
 
 const slowmodePresets: DurationPreset[] = [
 	{ label: "disabled", seconds: null as any },
@@ -94,7 +95,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		roomId: () => props.channel.room_id ?? "",
 		toolbar,
 		autocomplete,
-		initialContent: () => props.channel.description ?? "",
+		initialContent: () => channelDescription(props.channel) ?? "",
 	});
 
 	const isGdm = () => props.channel.type === "Gdm";
@@ -145,7 +146,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 
 	const isDirty = () =>
 		JSON.stringify(draft) !== JSON.stringify(toDraft(props.channel)) ||
-		description() !== (props.channel.description ?? "");
+		description() !== (channelDescription(props.channel) ?? "");
 
 	const hasThreadSlowmode = () => {
 		return (

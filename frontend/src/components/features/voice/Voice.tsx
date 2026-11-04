@@ -22,6 +22,11 @@ import { useMenu } from "@/contexts/menu.tsx";
 import { getColor } from "@/lib/colors";
 import { flags } from "@/lib/flags";
 import {
+	channelDescription,
+	channelDisplayName,
+	isAutoDescription,
+} from "@/utils/channel";
+import {
 	icCamera,
 	icExit,
 	icHeadphones,
@@ -289,8 +294,8 @@ export const Voice = (p: { channel: Channel }) => {
 			</div>
 			<header class="header">
 				{/* TODO: copy ChatHeader click to edit channel name (among other things) */}
-				<b>{p.channel.name}</b>
-				<Show when={p.channel.description}>
+				<b>{channelDisplayName(p.channel)}</b>
+				<Show when={channelDescription(p.channel)}>
 					{(desc) => (
 						<>
 							<span class="dim" style="white-space:pre;font-size:1em">
@@ -301,6 +306,9 @@ export const Voice = (p: { channel: Channel }) => {
 								channel_id={p.channel.id}
 								inline={true}
 								class="markdown"
+								classList={{
+									"description-automatic": isAutoDescription(p.channel),
+								}}
 							/>
 						</>
 					)}

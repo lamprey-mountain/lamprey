@@ -31,6 +31,11 @@ import { useUploads } from "@/contexts/uploads.tsx";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
 import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
+import {
+	channelDescription,
+	channelDisplayName,
+	isAutoDescription,
+} from "@/utils/channel";
 import { icChevron } from "@/utils/icons";
 import { ThreadCard } from "./ThreadCard";
 import {
@@ -191,9 +196,16 @@ export const Forum = (props: { channel: Channel }) => {
 		>
 			<div style="display:flex">
 				<div style="flex:1">
-					<h2>{props.channel.name}</h2>
-					<Show when={props.channel.description}>
-						{(desc) => <Markdown content={desc()} />}
+					<h2>{channelDisplayName(props.channel)}</h2>
+					<Show when={channelDescription(props.channel)}>
+						{(desc) => (
+							<Markdown
+								content={desc()}
+								classList={{
+									"description-automatic": isAutoDescription(props.channel),
+								}}
+							/>
+						)}
 					</Show>
 				</div>
 				<div style="display:flex;flex-direction:column;gap:4px">

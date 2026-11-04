@@ -7,6 +7,7 @@ import { ChannelIcon } from "@/avatar/ChannelIcon";
 import { useChannel } from "@/contexts/mod";
 import { useNavigate } from "@/contexts/router";
 import type { ChannelT } from "@/types";
+import { channelDescription, isAutoDescription } from "@/utils/channel";
 
 export type DocumentCardProps = {
 	thread: ChannelT;
@@ -58,8 +59,16 @@ export const DocumentCard = (props: DocumentCardProps) => {
 						)}
 					/>
 				</div>
-				<Show when={props.thread.description}>
-					{(desc) => <Markdown content={desc()} class="description" />}
+				<Show when={channelDescription(props.thread)}>
+					{(desc) => (
+						<Markdown
+							content={desc()}
+							class="description"
+							classList={{
+								"description-automatic": isAutoDescription(props.thread),
+							}}
+						/>
+					)}
 				</Show>
 			</div>
 		</article>

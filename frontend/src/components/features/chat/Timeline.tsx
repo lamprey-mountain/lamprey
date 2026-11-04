@@ -21,7 +21,11 @@ import { Avatar } from "@/avatar/UserAvatar";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useChannel } from "@/contexts/mod";
 import type { ChannelT } from "@/types";
-import { channelDisplayName } from "@/utils/channel";
+import {
+	channelDescription,
+	channelDisplayName,
+	isAutoDescription,
+} from "@/utils/channel";
 import { logger } from "@/utils/logger";
 import type { ChatProps } from "./Chat";
 import { MessageView } from "./Message";
@@ -593,8 +597,15 @@ const TimelineHeader = (props: { channel: ChannelT }) => {
 						<h1 classList={{ "name-automatic": isAutoName() }}>{name()}</h1>
 						<p>
 							This is the start of {name()}.{" "}
-							<Show when={props.channel.description}>
-								{(desc) => <Markdown content={desc()} />}
+							<Show when={channelDescription(props.channel)}>
+								{(desc) => (
+									<Markdown
+										content={desc()}
+										classList={{
+											"description-automatic": isAutoDescription(props.channel),
+										}}
+									/>
+								)}
 							</Show>
 						</p>
 					</Match>
