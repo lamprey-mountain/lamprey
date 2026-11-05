@@ -282,6 +282,7 @@ export function getModal(modal: ModalType) {
 			<ModalReactions
 				channel_id={modal.channel_id}
 				message_id={modal.message_id}
+				reaction_key={modal.reaction_key}
 			/>
 		);
 	}

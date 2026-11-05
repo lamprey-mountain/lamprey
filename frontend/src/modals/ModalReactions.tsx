@@ -9,6 +9,7 @@ import {
 	Show,
 } from "solid-js";
 import { useApi, useMessages, useUsers } from "@/api";
+import { areReactionKeysEqual } from "@/api/services/ReactionsService";
 import { ReactionKey } from "@/components/features/chat/Reactions";
 import { Avatar } from "@/components/shared/User";
 import { reactionKeyToParam } from "@/lib/reactions";
@@ -17,6 +18,7 @@ import { Modal } from "./mod";
 interface ModalReactionsProps {
 	channel_id: string;
 	message_id: string;
+	reaction_key?: ReactionKeyT;
 }
 
 export const ModalReactions = (props: ModalReactionsProps) => {
@@ -35,7 +37,14 @@ export const ModalReactions = (props: ModalReactionsProps) => {
 	createEffect(() => {
 		const r = reactions();
 		if (r.length > 0 && selectedReaction() === null) {
-			setSelectedReaction(r[0].key);
+			if (props.reaction_key) {
+				const match = r.find((x) =>
+					areReactionKeysEqual(x.key, props.reaction_key!),
+				);
+				setSelectedReaction(match?.key ?? r[0].key);
+			} else {
+				setSelectedReaction(r[0].key);
+			}
 		}
 	});
 

@@ -1,5 +1,5 @@
 import type { EditorView } from "prosemirror-view";
-import type { Media, Tag } from "sdk";
+import type { Media, ReactionKey, Tag } from "sdk";
 import { createContext, type ParentProps, useContext } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useRouter } from "./router";
@@ -78,6 +78,7 @@ export type Modal =
 			type: "view_reactions";
 			channel_id: string;
 			message_id: string;
+			reaction_key?: ReactionKey;
 	  }
 	| {
 			type: "privacy";
