@@ -16,6 +16,28 @@ export const areReactionKeysEqual = (
 export class ReactionsService extends BaseService<never> {
 	protected cacheName = "reactions";
 
+	private _listCache = new Map<string, Pagination<ReactionUser>>();
+
+	private getListCacheKey(
+		channel_id: string,
+		message_id: string,
+		key: string,
+		query: { limit?: number; after?: string },
+	): string {
+		return [
+			channel_id,
+			message_id,
+			key,
+			query.limit ?? "",
+			query.after ?? "",
+		].join("\0");
+	}
+
+	override clear() {
+		super.clear();
+		this._listCache.clear();
+	}
+
 	getKey(_item: never): string {
 		throw new Error("ReactionsService does not cache items");
 	}
@@ -45,6 +67,21 @@ export class ReactionsService extends BaseService<never> {
 				},
 			),
 		);
+	}
+
+	async listCached(
+		channel_id: string,
+		message_id: string,
+		key: string,
+		query: { limit?: number; after?: string },
+	): Promise<Pagination<ReactionUser>> {
+		const cacheKey = this.getListCacheKey(channel_id, message_id, key, query);
+		const cached = this._listCache.get(cacheKey);
+		if (cached) return cached;
+
+		const data = await this.list(channel_id, message_id, key, query);
+		this._listCache.set(cacheKey, data);
+		return data;
 	}
 
 	async add(
@@ -160,6 +197,8 @@ export class ReactionsService extends BaseService<never> {
 				| "ReactionDeleteAll";
 		},
 	) {
+		this._listCache.clear();
+
 		const me = this.store.users.get("@self")!;
 		let msg = this.store.messages.cache.get(sync.message_id);
 		if (!msg) return;

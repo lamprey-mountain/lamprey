@@ -146,7 +146,6 @@ export function createTooltip(props: CreateTooltipProps) {
 		}
 
 		m.push(flip());
-
 		if (props.arrow ?? true) {
 			m.push(solidArrow({ element: () => arrowEl, padding: 4 }));
 		}

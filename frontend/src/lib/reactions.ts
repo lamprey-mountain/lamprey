@@ -8,3 +8,14 @@ export const reactionKeyToParam = (key: ReactionKey): string => {
 	}
 	return "";
 };
+
+export type CustomEmoji = {
+	name: string;
+	id: string;
+};
+
+export const parseCustomEmoji = (emoji: string): CustomEmoji | null => {
+	const match = emoji.match(/^<:(\w+):([\w-]+)>$/);
+	if (!match) return null;
+	return { name: match[1], id: match[2] };
+};

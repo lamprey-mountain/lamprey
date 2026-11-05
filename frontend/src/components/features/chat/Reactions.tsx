@@ -1,6 +1,8 @@
 import type { Message, ReactionCount, ReactionKey as ReactionKeyT } from "sdk";
 import {
 	createEffect,
+	createMemo,
+	createResource,
 	createSignal,
 	For,
 	Match,
@@ -11,14 +13,15 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
-import { useReactions } from "@/api";
+import { useReactions, useRoomMembers, useUsers } from "@/api";
 import { useCtx } from "@/app/context";
 import icReactionAdd from "@/assets/reaction-add.png";
 import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
-import { getEmojiHex } from "@/lib/emoji";
-import { reactionKeyToParam } from "@/lib/reactions";
+import { useModals } from "@/contexts/modal";
+import { emojiResource, getEmojiHex } from "@/lib/emoji";
+import { parseCustomEmoji, reactionKeyToParam } from "@/lib/reactions";
 import { getEmojiUrl } from "@/media/util";
 
 export type ReactionsProps = {
@@ -31,6 +34,7 @@ export type ReactionsProps = {
 export const Reactions = (props: ReactionsProps) => {
 	const ctx = useCtx();
 	const reactions2 = useReactions();
+	const [, modalCtl] = useModals();
 	const [showPicker, setShowPicker] = createSignal(false);
 	let addEl: HTMLDivElement | undefined;
 
@@ -53,16 +57,30 @@ export const Reactions = (props: ReactionsProps) => {
 					props: {
 						selected: (emoji: string | null, keepOpen: boolean) => {
 							if (emoji) {
-								// Picker returns string (unicode), we need to compare with ReactionKey
-								const existing = props.message.reactions?.find(
-									(r) => r.key.type === "Text" && r.key.content === emoji,
-								);
-								if (!existing || !existing.self) {
-									reactions2.add(
-										props.message.channel_id,
-										props.message.id,
-										`t:${emoji}`,
+								const customEmoji = parseCustomEmoji(emoji);
+								if (customEmoji) {
+									const existing = props.message.reactions?.find(
+										(r) =>
+											r.key.type === "Custom" && r.key.id === customEmoji.id,
 									);
+									if (!existing || !existing.self) {
+										reactions2.add(
+											props.message.channel_id,
+											props.message.id,
+											`c:${customEmoji.id}`,
+										);
+									}
+								} else {
+									const existing = props.message.reactions?.find(
+										(r) => r.key.type === "Text" && r.key.content === emoji,
+									);
+									if (!existing || !existing.self) {
+										reactions2.add(
+											props.message.channel_id,
+											props.message.id,
+											`t:${emoji}`,
+										);
+									}
 								}
 							}
 							if (!keepOpen) setShowPicker(false);
@@ -113,17 +131,83 @@ export const Reactions = (props: ReactionsProps) => {
 		<div class="reactions">
 			<For each={reactions}>
 				{(reaction) => {
+					const [showReactors, setShowReactors] = createSignal(false);
+
+					const [reactors, { refetch: refetchReactors }] = createResource(
+						showReactors,
+						(show) => {
+							if (!show) return undefined;
+							return reactions2.listCached(
+								props.message.channel_id,
+								props.message.id,
+								reactionKeyToParam(reaction.key),
+								{ limit: 3 },
+							);
+						},
+					);
+
+					const emojiName = () => {
+						const k = reaction.key;
+						if (k.type === "Text") {
+							const hex = getEmojiHex(k.content).toUpperCase();
+							return emojiResource().get(hex)?.label ?? "";
+						}
+						if (k.type === "Custom") return k.name;
+						return "";
+					};
+
+					const reactorIds = createMemo(
+						() => reactors()?.items.map((u) => u.user_id) ?? [],
+					);
+
 					const tip = createTooltip({
+						interactive: true,
 						tip() {
-							const k = reaction.key;
-							const t = k.type;
-							if (t === "Text") {
-								return `${k.content}`;
-							} else if (t === "Custom") {
-								return `${k.name}`;
-							} else {
-								console.warn("unhandled reaction key type", reaction.key);
-							}
+							return (
+								<div
+									class="reaction-tooltip"
+									onClick={() => {
+										modalCtl.open({
+											type: "view_reactions",
+											channel_id: props.message.channel_id,
+											message_id: props.message.id,
+											reaction_key: reaction.key,
+										});
+									}}
+								>
+									<div class="reaction-tooltip-emoji">
+										<ReactionKey key={reaction.key} />
+									</div>
+									<div class="reaction-tooltip-content">
+										<Show when={emojiName()}>
+											{(name) => (
+												<span class="emoji-name">
+													<span class="dim">:</span>
+													{name()}
+													<span class="dim">:</span>
+												</span>
+											)}
+										</Show>
+										<Show when={reactors.loading && reactorIds().length === 0}>
+											<span class="reactors dim">...</span>
+										</Show>
+										<Show when={reactorIds().length > 0}>
+											<span class="reactors dim">
+												<ReactorNames
+													user_ids={reactorIds()}
+													room_id={
+														props.message.room_id ??
+														props.message.thread?.room_id
+													}
+												/>
+												<Show when={reaction.count > reactorIds().length}>
+													{` and ${reaction.count - reactorIds().length} others`}
+												</Show>
+											</span>
+										</Show>
+									</div>
+								</div>
+							);
 						},
 					});
 
@@ -143,6 +227,7 @@ export const Reactions = (props: ReactionsProps) => {
 
 					const handleCountChange = (newCount: number, prevCount: number) => {
 						if (newCount === prevCount) return;
+						if (showReactors()) void refetchReactors();
 
 						// 1 = slide up, -1 = slide down
 						const dir = newCount > prevCount ? 1 : -1;
@@ -186,6 +271,10 @@ export const Reactions = (props: ReactionsProps) => {
 							class="reaction"
 							classList={{ self: reaction.self }}
 							onClick={() => handleClick(reaction.key, !!reaction.self)}
+							onMouseEnter={() => {
+								if (showReactors()) void refetchReactors();
+								else setShowReactors(true);
+							}}
 						>
 							<ReactionKey key={reaction.key} />
 							<div class="count">
@@ -217,6 +306,31 @@ export const Reactions = (props: ReactionsProps) => {
 				<Show when={prompt()}>add a reaction</Show>
 			</button>
 		</div>
+	);
+};
+
+const ReactorNames = (
+	props: VoidProps<{ user_ids: string[]; room_id?: string | null }>,
+) => {
+	const users2 = useUsers();
+	const roomMembers2 = useRoomMembers();
+	return (
+		<For each={props.user_ids}>
+			{(id, index) => {
+				const user = users2.use(() => id);
+				const room_member = () =>
+					props.room_id
+						? roomMembers2.cache.get(`${props.room_id}:${id}`)
+						: undefined;
+				const name = () => room_member()?.override_name ?? user()?.name ?? id;
+				return (
+					<>
+						{index() > 0 ? ", " : ""}
+						{name()}
+					</>
+				);
+			}}
+		</For>
 	);
 };
 
