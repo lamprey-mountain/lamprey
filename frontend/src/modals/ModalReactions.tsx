@@ -11,21 +11,13 @@ import {
 import { useApi, useMessages, useUsers } from "@/api";
 import { ReactionKey } from "@/components/features/chat/Reactions";
 import { Avatar } from "@/components/shared/User";
+import { reactionKeyToParam } from "@/lib/reactions";
 import { Modal } from "./mod";
 
 interface ModalReactionsProps {
 	channel_id: string;
 	message_id: string;
 }
-
-const reactionKeyToParam = (key: ReactionKeyT): string => {
-	if (key.type === "Text") {
-		return `t:${key.content}`;
-	} else if (key.type === "Custom") {
-		return `c:${key.id}`;
-	}
-	return "";
-};
 
 export const ModalReactions = (props: ModalReactionsProps) => {
 	const api2 = useApi();

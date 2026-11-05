@@ -18,6 +18,7 @@ import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
 import { getEmojiHex } from "@/lib/emoji";
+import { reactionKeyToParam } from "@/lib/reactions";
 import { getEmojiUrl } from "@/media/util";
 
 export type ReactionsProps = {
@@ -32,15 +33,6 @@ export const Reactions = (props: ReactionsProps) => {
 	const reactions2 = useReactions();
 	const [showPicker, setShowPicker] = createSignal(false);
 	let addEl: HTMLDivElement | undefined;
-
-	const reactionKeyToParam = (key: ReactionKeyT): string => {
-		if (key.type === "Text") {
-			return `t:${key.content}`;
-		} else if (key.type === "Custom") {
-			return `c:${(key as ReactionKeyT & { type: "Custom" }).id}`;
-		}
-		return "";
-	};
 
 	const handleClick = (key: ReactionKeyT, self: boolean) => {
 		const param = reactionKeyToParam(key);
