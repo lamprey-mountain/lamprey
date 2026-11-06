@@ -4928,6 +4928,9 @@ export interface components {
 			/** Format: int64 */
 			message_count: number;
 		};
+		AnalyticsChannelParams: {
+			channel_id?: null | components["schemas"]["Id"];
+		};
 		AnalyticsInvites: {
 			/** @description The bucket for this data point. */
 			bucket: components["schemas"]["Time"];
@@ -5010,6 +5013,65 @@ export interface components {
 			 */
 			message_count: number;
 		};
+		AnalyticsParams: {
+			aggregate: components["schemas"]["Aggregation"];
+			end?: null | components["schemas"]["Time"];
+			/**
+			 * Format: int32
+			 * @description limit between 1..1024, default to 10
+			 */
+			limit?: number | null;
+			start?: null | components["schemas"]["Time"];
+		};
+		AnalyticsUsagesAdd: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description Total number of additions.
+			 */
+			count: number;
+		};
+		AnalyticsUsagesCount: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description Total number of usages.
+			 */
+			count: number;
+		};
+		AnalyticsUsagesRemove: {
+			/** @description The bucket for this data point. */
+			bucket: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description Total number of removals.
+			 */
+			count: number;
+		};
+		/** @description an error that may be returned from the api */
+		ApiError: {
+			/** @description moderator-set message for automod */
+			automod_message?: string | null;
+			/** @description error code */
+			code: components["schemas"]["ErrorCode"];
+			/** @description errors in the request body */
+			fields?: components["schemas"]["ErrorField"][];
+			/** @description human readable error message */
+			message: string;
+			ratelimit?: null | components["schemas"]["Ratelimit"];
+			/** @description required room permissions */
+			required_permissions?: components["schemas"]["Permission"][];
+			/** @description required server permissions */
+			required_permissions_server?: components["schemas"]["Permission"][];
+			/** @description missing oauth scopes that are required */
+			required_scopes?: components["schemas"]["Scope"][];
+			/** @description errors with your script */
+			script?: components["schemas"]["RedexError"][];
+			/** @description unacknowledged warnings */
+			warnings?: components["schemas"]["Warning"][];
+		};
 		Application: {
 			bridge?: null | components["schemas"]["Bridge"];
 			description?: string | null;
@@ -5024,7 +5086,55 @@ export interface components {
 			/** @description if anyone can use this */
 			public: boolean;
 		};
+		ApplicationConnectionProvider: {
+			fields: components["schemas"]["ApplicationConnectionProviderField"][];
+		};
+		ApplicationConnectionProviderField: {
+			description: string;
+			name: string;
+			type: components["schemas"]["ApplicationConnectionProviderFieldType"];
+		};
+		/** @enum {string} */
+		ApplicationConnectionProviderFieldType: "Int";
+		ApplicationCreate: {
+			bridge?: null | components["schemas"]["Bridge"];
+			description?: string | null;
+			name: string;
+			oauth_confidential?: boolean | null;
+			oauth_redirect_uris?: string[];
+			/** @description if anyone can use this */
+			public?: boolean;
+		};
 		ApplicationIdReq: null | components["schemas"]["Id"];
+		ApplicationOauthClient: {
+			/** @description whether this client can keep secrets confidential */
+			confidential: boolean;
+			redirect_uris?: string[];
+			/**
+			 * @description the oauth client secret
+			 *
+			 *     only returned on oauth token rotate endpoint
+			 */
+			secret?: string | null;
+		};
+		ApplicationOauthProvider: {
+			authorization_url: string;
+			/** @description automatically mark users as registered if they create an account or link their account with this provider */
+			autoregister?: boolean;
+			client_id: string;
+			client_secret: string;
+			revocation_url: string;
+			token_url: string;
+		};
+		ApplicationPatch: {
+			bridge?: null | components["schemas"]["Bridge"];
+			description?: string | null;
+			name?: string | null;
+			oauth_confidential?: boolean | null;
+			oauth_redirect_uris?: string[] | null;
+			/** @description if anyone can use this */
+			public?: boolean | null;
+		};
 		AuditLogChange: {
 			key: string;
 			new: unknown;
@@ -5906,10 +6016,105 @@ export interface components {
 					/** @enum {string} */
 					type: "RedexVersionDelete";
 			  };
+		/** @description filter to only return certain audit log entries */
+		AuditLogFilter: {
+			/**
+			 * @description only return audit log entries with these statuses
+			 *
+			 *     defaults to only `Success`
+			 */
+			status?: components["schemas"]["AuditLogEntryStatus"][];
+			/** @description only return audit log entries with these types */
+			type?: string[];
+			/** @description only return audit log entries from these users */
+			user_id?: components["schemas"]["Id"][];
+		};
+		AuditLogPaginationResponse: {
+			/** @description the audit log entries themselves */
+			audit_log_entries: components["schemas"]["AuditLogEntry"][];
+			/** @description pagination cursor */
+			cursor?: string | null;
+			/** @description whether there are more audit log events that can be fetched */
+			has_more: boolean;
+			/**
+			 * @description room members referenced in the audit log entries
+			 *
+			 *     this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions)
+			 */
+			room_members: components["schemas"]["RoomMember"][];
+			/** @description tags referenced in the audit log entries */
+			tags: components["schemas"]["Tag"][];
+			/** @description threads referenced in the audit log entries */
+			threads: components["schemas"]["Channel"][];
+			/**
+			 * @description users referenced in the audit log entries
+			 *
+			 *     this includes actors (ie. users who did actions) and targets (ie. users who were affected by actions)
+			 */
+			users: components["schemas"]["User"][];
+			/** @description webhooks referenced in the audit log entries */
+			webhooks: components["schemas"]["Webhook"][];
+		};
+		AuditLogSearch: {
+			/** @description current page cursor */
+			cursor?: string | null;
+			/** @description the audit log entries */
+			entries: components["schemas"]["AuditLogEntry"][];
+			/** @description whether there are more threads */
+			has_more: boolean;
+			/** @description the ids of the matched audit log entries */
+			results: components["schemas"]["Id"][];
+			/**
+			 * Format: int64
+			 * @description approximate count of total results that match this query
+			 */
+			total: number;
+		};
 		/** @enum {string} */
 		AuditLogSearchOrderField: "Created";
 		AuditLogSearchRequest: components["schemas"]["SearchRequest"] & {
 			sort_field?: components["schemas"]["AuditLogSearchOrderField"];
+		};
+		/** @description Request body for email authentication completion */
+		AuthEmailComplete: {
+			code: string;
+		};
+		/** @description Query parameters for oauth redirect callback */
+		AuthOauthRedirectParams: {
+			code: string;
+			state: string;
+		};
+		/** @description OAuth 2.0 Authorization Server Metadata (RFC 8414) */
+		AuthServerMetadata: {
+			/** Format: uri */
+			authorization_endpoint: string;
+			code_challenge_methods_supported: components["schemas"]["OauthCodeChallengeMethod"][];
+			grant_types_supported: components["schemas"]["OauthGrantType"][];
+			/** Format: uri */
+			issuer: string;
+			/** Format: uri */
+			jwks_uri: string;
+			response_types_supported: components["schemas"]["OauthResponseType"][];
+			scopes_supported: string[];
+			/** Format: uri */
+			token_endpoint: string;
+			token_endpoint_auth_methods_supported: components["schemas"]["OauthAuthMethod"][];
+		};
+		AuthState: {
+			/** @description registered webauthn authenticators */
+			authenticators: components["schemas"]["WebauthnAuthenticator"][];
+			/**
+			 * @description if there is at least one verified and primary email address
+			 *
+			 *     this is used for magic links and password resets
+			 */
+			has_email: boolean;
+			/** @description if a password has been set */
+			has_password: boolean;
+			/** @description if the user has registered a totp provider */
+			has_totp: boolean;
+			/** @description the oauth providers this user has authenticated with */
+			oauth_providers: string[];
 		};
 		AutomodAction:
 			| {
@@ -5967,6 +6172,16 @@ export interface components {
 			/** @description the original text */
 			text: string;
 		};
+		/**
+		 * @description where a piece of media was found
+		 * @enum {string}
+		 */
+		AutomodMediaLocation:
+			| "UserAvatar"
+			| "UserBanner"
+			| "UserBio"
+			| "MessageAttachment"
+			| "Test";
 		/** @description an auto moderation rule for a room */
 		AutomodRule: {
 			/** @description when executed, do ALL of these actions */
@@ -6191,6 +6406,9 @@ export interface components {
 			/** Format: uri */
 			url?: string | null;
 		};
+		CalendarEventList: {
+			events: components["schemas"]["CalendarEvent"][];
+		};
 		CalendarEventListQuery: {
 			dir?: null | components["schemas"]["PaginationDirection"];
 			from?: null | components["schemas"]["Id"];
@@ -6217,6 +6435,35 @@ export interface components {
 			/** Format: uri */
 			url?: string | null;
 		};
+		CalendarExportQuery: {
+			/** @description whether to download the calendar */
+			download?: boolean;
+			/** @description authentication token */
+			token?: string | null;
+		};
+		/**
+		 * @description an instance of a calendar event
+		 *
+		 *     used for recurring events
+		 */
+		CalendarInstance: (null | components["schemas"]["CalendarOverwrite"]) & {
+			/** @description the id of the calendar event this is for */
+			event_id: components["schemas"]["Id"];
+			/** @description the sequence number of this instance */
+			seq: components["schemas"]["CalendarInstanceSeq"];
+			/** @description the status of this instance */
+			status: components["schemas"]["CalendarInstanceStatus"];
+		};
+		/**
+		 * Format: int64
+		 * @description the sequence number of a calendar event instance
+		 */
+		CalendarInstanceSeq: number;
+		/**
+		 * @description the status of a calendar event instance
+		 * @enum {string}
+		 */
+		CalendarInstanceStatus: "Scheduled" | "Active" | "Completed" | "Canceled";
 		/** @description an overwrite to a calendar event instance */
 		CalendarOverwrite: {
 			/** @description whether this event is cancelled */
@@ -6260,6 +6507,9 @@ export interface components {
 			 */
 			tentative: number;
 		};
+		CalendarParticipantInvite: {
+			user_ids?: components["schemas"]["Id"][];
+		};
 		CalendarParticipantPut: {
 			status: components["schemas"]["CalendarRsvpStatus"];
 		};
@@ -6281,6 +6531,22 @@ export interface components {
 			channel_id: components["schemas"]["Id"];
 			room_id?: null | components["schemas"]["Id"];
 		};
+		CallCreate: {
+			/**
+			 * @description call topic
+			 *
+			 *     must have VoiceMute permission in target channel to set
+			 */
+			topic?: string | null;
+		};
+		CallDeleteParams: {
+			/**
+			 * @description if people are still connected to this channel, try to forcibly disconnect them
+			 *
+			 *     requires VoiceDisconnect permission
+			 */
+			force?: boolean;
+		};
 		/** @description info about a currently active voice channel, with ids */
 		CallMetadata: {
 			/**
@@ -6300,7 +6566,26 @@ export interface components {
 			created_at: components["schemas"]["Time"];
 			topic?: string | null;
 		};
+		CallPatch: {
+			/**
+			 * @description the current call topic
+			 *
+			 *     only unsuppressed users can change the call topic
+			 */
+			topic?: string | null;
+		};
+		/**
+		 * @description has been created
+		 * @enum {string}
+		 */
+		Canonical: never;
 		Captcha: Record<string, never>;
+		CaptchaChallenge: {
+			code: string;
+		};
+		CaptchaResponse: {
+			code: string;
+		};
 		/** @description a set of changes made to a document */
 		Changeset: {
 			/** @description every author that contributed to this change group */
@@ -6454,6 +6739,28 @@ export interface components {
 			version_id: components["schemas"]["Id"];
 			wiki?: null | components["schemas"]["Wiki"];
 		};
+		/** @description relevant read state metadata for a channel */
+		ChannelAckMetadata: {
+			last_message_id?: null | components["schemas"]["Id"];
+			last_pin_timestamp?: null | components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description the number of messages in this channel
+			 */
+			message_count: number;
+			/**
+			 * Format: int64
+			 * @description the number of root messages in this channel
+			 *
+			 *     ie. messages that don't reply to any other messages
+			 */
+			root_message_count: number;
+		};
+		/** @description channel metadata for a broadcast channel */
+		ChannelBroadcast: {
+			broadcaster_id?: null | components["schemas"]["Id"];
+			schedule_id?: null | components["schemas"]["Id"];
+		};
 		ChannelCreate: {
 			/** Format: int64 */
 			auto_archive_duration?: number | null;
@@ -6497,6 +6804,40 @@ export interface components {
 			/** Format: int64 */
 			user_limit?: number | null;
 		};
+		/** @description e2ee configuration for a channel */
+		ChannelEncryption: {
+			algorithm: components["schemas"]["ChannelEncryptionAlgorithm"];
+			/** Format: int64 */
+			rotation_period_ms: number;
+			/** Format: int64 */
+			rotation_period_msgs: number;
+		};
+		/**
+		 * @description algorithm/ciphersuite used to encrypt channel messages
+		 * @enum {string}
+		 */
+		ChannelEncryptionAlgorithm: "MlsV1";
+		/** @description Query parameters for channel list removed */
+		ChannelListRemovedQuery: {
+			parent_id?: null | components["schemas"]["Id"];
+		};
+		ChannelMemberSearch: {
+			/** Format: int32 */
+			limit?: number | null;
+			query: string;
+		};
+		ChannelMemberSearchResponse: {
+			/** @description a room member for each returned user */
+			room_members: components["schemas"]["RoomMember"][];
+			/**
+			 * @description a thread member for each returned user
+			 *
+			 *     will only be populated if this is a thread
+			 */
+			thread_members: components["schemas"]["ThreadMember"][];
+			/** @description the resulting users */
+			users: components["schemas"]["User"][];
+		};
 		ChannelPatch: {
 			archived?: boolean | null;
 			/** Format: int64 */
@@ -6535,11 +6876,31 @@ export interface components {
 			user_limit?: number | null;
 			wiki?: null | components["schemas"]["WikiPatch"];
 		};
+		/** @description reorder some channels */
+		ChannelReorder: {
+			/** @description the channels to reorder */
+			channels?: components["schemas"]["ChannelReorderItem"][];
+		};
 		ChannelReorderItem: {
 			id: components["schemas"]["Id"];
 			parent_id?: null | components["schemas"]["Id"];
 			/** Format: int32 */
 			position?: number | null;
+		};
+		ChannelSearch: {
+			/** @description the channels */
+			channels: components["schemas"]["Channel"][];
+			/** @description current page cursor */
+			cursor?: string | null;
+			/** @description whether there are more threads */
+			has_more: boolean;
+			/** @description the ids of the matched channels */
+			results: components["schemas"]["Id"][];
+			/**
+			 * Format: int64
+			 * @description approximate count of total results that match this query
+			 */
+			total: number;
 		};
 		/** @description which field to order channel search results by */
 		ChannelSearchOrderField:
@@ -6576,6 +6937,11 @@ export interface components {
 					field: "Reactions";
 					reaction: components["schemas"]["ReactionKeyField"];
 			  };
+		ChannelSearchRequest: components["schemas"]["SearchRequest"] &
+			components["schemas"]["ChannelSearchOrderField"] & {
+				/** @description whether to include nsfw channels */
+				include_nsfw?: boolean | null;
+			};
 		/** @enum {string} */
 		ChannelType:
 			| "Text"
@@ -6598,6 +6964,20 @@ export interface components {
 			| "DocumentBranch"
 			| "Wiki"
 			| "Scripts";
+		/** @description channel metadata for a voice channel */
+		ChannelVoice: {
+			/**
+			 * Format: int64
+			 * @description bitrate for audio tracks. defaults to 65535 (64Kibps).
+			 */
+			bitrate: number;
+			call?: null | components["schemas"]["CallMetadata"];
+			/**
+			 * Format: int64
+			 * @description maximum number of users who can be in this voice channel
+			 */
+			user_limit?: number | null;
+		};
 		/**
 		 * @description A color string. Supports hex (#rgb, #rrggbb), rgb(), oklch(), or named colors (name-variant:alpha)
 		 * @example red-500
@@ -6605,8 +6985,13 @@ export interface components {
 		 * @example oklch(70% 0.1 120)
 		 */
 		Color: string;
+		Command: {
+			/** @enum {string} */
+			op: "Ranges";
+			ranges: components["schemas"]["MemberListRange"][];
+		};
 		/** @description a single component in a tree */
-		Component: components["schemas"]["ComponentType_Canonical"] & {
+		Component: components["schemas"]["ComponentType_Encrypted"] & {
 			allow?: null | components["schemas"]["Allow"];
 			id: components["schemas"]["ComponentId"];
 		};
@@ -6982,20 +7367,62 @@ export interface components {
 			allow?: null | components["schemas"]["Allow"];
 			id: components["schemas"]["ComponentId"];
 		};
-		Components: components["schemas"]["Component_Canonical"][];
+		Components: components["schemas"]["Component_Encrypted"][];
 		Components_Canonical: components["schemas"]["Component_Canonical"][];
 		Components_Create: components["schemas"]["Component_Create"][];
 		Components_Encrypted: components["schemas"]["Component_Encrypted"][];
-		/** @description an application that is authorized to a user */
-		Connection: {
-			application: components["schemas"]["Application"];
+		/**
+		 * @description how data should be compressed
+		 * @enum {string}
+		 */
+		Compression: "deflate";
+		Config: {
+			compression?: null | components["schemas"]["Compression"];
+			encoding?: components["schemas"]["Encoding"];
+			version: components["schemas"]["Version"];
+		};
+		/** @description a connection between a user an an external platform */
+		Connection: components["schemas"]["ConnectionType"] & {
 			created_at: components["schemas"]["Time"];
-			scopes: components["schemas"]["Scopes"];
+			metadata: components["schemas"]["ConnectionMetadata"];
+			/** @description who can see this connection */
+			visibility: components["schemas"]["ConnectionVisibility"];
 		};
 		/** @description metadata/fields displayed for this connection */
 		ConnectionMetadata: {
 			[key: string]: components["schemas"]["ConnectionValue"];
 		};
+		ConnectionPatch: {
+			visibility: components["schemas"]["ConnectionVisibility"];
+		};
+		/** @description metadata for this connection */
+		ConnectionProperties: {
+			/** @description git commit of the official frontend, ignore for bots */
+			client_commit?: string | null;
+			/** @description a valid user agent string */
+			user_agent: string;
+		};
+		ConnectionType:
+			| {
+					external_id: string;
+					external_url: string;
+					external_username: string;
+					/** @description the oauth provider this user is connected to */
+					provider: string;
+					/** @enum {string} */
+					type: "Oauth";
+			  }
+			| {
+					application: components["schemas"]["Application"];
+					/**
+					 * @description the scopes this application has access to
+					 *
+					 *     only returned for user
+					 */
+					scopes?: components["schemas"]["Scope"][] | null;
+					/** @enum {string} */
+					type: "Application";
+			  };
 		ConnectionValue: {
 			/** Format: int64 */
 			Int: number;
@@ -7023,6 +7450,19 @@ export interface components {
 			user: components["schemas"]["User"];
 			/** @description the permissions the user has in the target channel */
 			user_permissions: components["schemas"]["Permission"][];
+		};
+		ContextQuery: {
+			/** Format: int32 */
+			limit?: number | null;
+			to_end?: null | components["schemas"]["Id"];
+			to_start?: null | components["schemas"]["Id"];
+		};
+		ContextResponse: {
+			has_after: boolean;
+			has_before: boolean;
+			items: components["schemas"]["Message"][];
+			/** Format: int64 */
+			total: number;
 		};
 		/** @description respond to an interaction */
 		Create: components["schemas"]["CreateType"];
@@ -7057,6 +7497,44 @@ export interface components {
 					/** @enum {string} */
 					type: "Unfurl";
 			  };
+		/** @description a set of cross signing keys for a user */
+		CrossSigningBundle: {
+			/** @description master key: root of trust, signs the ssk and usk */
+			master: components["schemas"]["CrossSigningKey"];
+			/** @description self signing key: signs the user's own devices */
+			ssk: components["schemas"]["CrossSigningKey"];
+			/** @description user signing key: signs other user's master keys upon verification */
+			usk: components["schemas"]["CrossSigningKey"];
+		};
+		/**
+		 * @description cross signing key
+		 *
+		 *     used to verify that your devices are trustworthy
+		 */
+		CrossSigningKey: {
+			key: number[];
+			usage: components["schemas"]["CrossSigningUsage"];
+		};
+		CrossSigningQuery: {
+			bundles: {
+				[key: string]: components["schemas"]["CrossSigningBundle"];
+			};
+		};
+		/** @description retrieve cross signing keys */
+		CrossSigningQueryRequest: {
+			users: components["schemas"]["Id"][];
+		};
+		CrossSigningSignature: {
+			signature: number[];
+		};
+		CrossSigningSignatures: {
+			signatures: components["schemas"]["CrossSigningSignature"][];
+		};
+		/**
+		 * @description what this cross signing key can be used for
+		 * @enum {string}
+		 */
+		CrossSigningUsage: "Master" | "SelfSigning" | "UserSigning";
 		/**
 		 * @description how dates are formatted
 		 * @enum {string}
@@ -7074,6 +7552,35 @@ export interface components {
 			| "Friday"
 			| "Saturday"
 			| "Sunday";
+		DefaultForumReaction: {
+			reaction: components["schemas"]["ReactionKeyField"];
+			/**
+			 * Format: double
+			 * @description how to weight this reaction for scoring
+			 */
+			weight?: number;
+		};
+		Dispatch:
+			| {
+					channel_id: components["schemas"]["Id"];
+					dispatch: components["schemas"]["DispatchChannel"];
+					/** @enum {string} */
+					op: "Channel";
+			  }
+			| {
+					bundle: components["schemas"]["CrossSigningBundle"];
+					/** @enum {string} */
+					op: "IdentityReplaced";
+					user_id: components["schemas"]["Id"];
+			  };
+		DispatchChannel: {
+			/** @description the opaque mls ProtocolMessage bytes */
+			data: components["schemas"]["Binary"];
+			/** @enum {string} */
+			op: "Mls";
+			/** @description the session that authored this message */
+			sender_id: components["schemas"]["Id"];
+		};
 		/** @description A dead letter queue entry for search ingestion */
 		DlqEntry: {
 			created_at: components["schemas"]["Time"];
@@ -7166,6 +7673,11 @@ export interface components {
 		DocumentBranchMerge: {
 			target_branch_id?: null | components["schemas"]["Id"];
 		};
+		DocumentBranchMergeResult: {
+			status: components["schemas"]["DocumentBranchMergeResultStatus"];
+		};
+		/** @enum {string} */
+		DocumentBranchMergeResultStatus: "FastForward" | "Merged" | "Conflicted";
 		DocumentBranchPatch: {
 			name?: string | null;
 			/** @description once public, branches cannot be made private again */
@@ -7173,6 +7685,41 @@ export interface components {
 		};
 		/** @enum {string} */
 		DocumentBranchState: "Active" | "Closed" | "Merged";
+		DocumentBranchSync: {
+			sync_from_branch_id?: null | components["schemas"]["Id"];
+		};
+		/** @description a single atomic change to a document */
+		DocumentChange: {
+			/** @description the user who created this change */
+			author: components["schemas"]["Id"];
+			/** @description the document this changeset applies to */
+			document_id: components["schemas"]["Id"];
+			/**
+			 * Format: int32
+			 * @description the sequence number of this change
+			 */
+			seq: number;
+			/**
+			 * Format: int64
+			 * @description number of graphemes added
+			 */
+			stat_added: number;
+			/**
+			 * Format: int64
+			 * @description number of graphemes removed
+			 */
+			stat_removed: number;
+			/** @description the time this change was created */
+			time: components["schemas"]["Time"];
+		};
+		/** @description parameters for updating a crdt */
+		DocumentCrdtApply: {
+			update: components["schemas"]["DocumentUpdate"];
+		};
+		/** @description parameters for getting a crdt */
+		DocumentCrdtDiffParams: {
+			sv?: null | components["schemas"]["DocumentStateVector"];
+		};
 		DocumentMediaAttach: {
 			media_id: components["schemas"]["Id"];
 		};
@@ -7183,6 +7730,8 @@ export interface components {
 			slug?: string | null;
 			template?: boolean | null;
 		};
+		/** @description Base64 encoded position */
+		DocumentPosition: string;
 		/** @description info about when a document was published */
 		DocumentPublished: {
 			/** @description the revision of the document that was published */
@@ -7195,6 +7744,9 @@ export interface components {
 		DocumentPublishedPatch: {
 			revision?: null | components["schemas"]["DocumentRevisionRef"];
 			unlisted?: boolean | null;
+		};
+		DocumentRevert: {
+			target_branch_id?: null | components["schemas"]["Id"];
 		};
 		/**
 		 * @description an exact version of a document at a point in time
@@ -7263,6 +7815,20 @@ export interface components {
 			/** @description user verified they have access to the email address */
 			is_verified: boolean;
 		};
+		EmailInfoPatch: {
+			/**
+			 * @description whether this is the user's primary email address
+			 *
+			 *     - there can only be one primary email address
+			 *     - the primary address has EmailTrust::Full
+			 */
+			is_primary?: boolean | null;
+		};
+		/**
+		 * @description what someone can do with this email address
+		 * @enum {string}
+		 */
+		EmailTrust: "Never" | "Trusted" | "Full";
 		Embed: {
 			author_avatar?: null | components["schemas"]["Media"];
 			author_name?: string | null;
@@ -7306,6 +7872,10 @@ export interface components {
 			 */
 			url?: string | null;
 		};
+		EmbedRequest: {
+			/** Format: uri */
+			url: string;
+		};
 		/**
 		 * @description what kind of embed this is
 		 * @enum {string}
@@ -7321,6 +7891,11 @@ export interface components {
 			name: string;
 			owner?: null | components["schemas"]["EmojiOwner"];
 		};
+		EmojiCustomCreate: {
+			animated: boolean;
+			media_id: components["schemas"]["Id"];
+			name: string;
+		};
 		/**
 		 * @description minimal data for a custom emoji
 		 *
@@ -7330,6 +7905,9 @@ export interface components {
 			animated: boolean;
 			id: components["schemas"]["Id"];
 			name: string;
+		};
+		EmojiCustomPatch: {
+			name?: string | null;
 		};
 		EmojiOwner:
 			| {
@@ -7341,6 +7919,33 @@ export interface components {
 					/** @enum {string} */
 					owner: "User";
 			  };
+		EmojiSearchQuery: {
+			query: string;
+		};
+		/**
+		 * @description how data should be encoded
+		 * @enum {string}
+		 */
+		Encoding: "json" | "msgpack";
+		/**
+		 * @description used for encrypted messages
+		 * @enum {string}
+		 */
+		Encrypted: never;
+		/** @description encrypted data for media */
+		EncryptedMedia: {
+			/** @description the id of the media */
+			id: components["schemas"]["Id"];
+			/** @description media struct for decrypted content */
+			info: components["schemas"]["EncryptedMediaInfo"];
+			/** @description the algorithm used for encryption */
+			params: components["schemas"]["EncryptedMediaParams"];
+		};
+		/**
+		 * @description the algorithm used to encrypt a piece of media
+		 * @enum {string}
+		 */
+		EncryptedMediaAlgorithm: "A256GCM";
 		EncryptedMediaInfo: {
 			alt?: string | null;
 			content_type: components["schemas"]["Mime"];
@@ -7408,8 +8013,52 @@ export interface components {
 					/** @enum {string} */
 					type: "Other";
 			  };
+		/**
+		 * @description an event from the server to a webhook
+		 *
+		 *     the webhook must respond with a 2xx status code within 3 seconds
+		 */
+		Envelope: components["schemas"]["Event"] & {
+			version: components["schemas"]["Version"];
+		};
 		/** @enum {string} */
 		ErrorCode: "Timeout";
+		/** @description a field that has an error */
+		ErrorField: components["schemas"]["ErrorFieldType"] & {
+			/** @description path to this field inside the request object */
+			key: string[];
+			/** @description human readable error message */
+			message: string;
+		};
+		/** @description the type of error in the field */
+		ErrorFieldType:
+			| "Required"
+			| {
+					/** @description the specified number is out of range */
+					Range: {
+						/** Format: int64 */
+						max?: number | null;
+						/** Format: int64 */
+						min?: number | null;
+					};
+			  }
+			| {
+					/** @description the specified string or array length is out of range */
+					Length: {
+						/** Format: int64 */
+						max?: number | null;
+						/** Format: int64 */
+						min?: number | null;
+					};
+			  }
+			| {
+					/** @description the incorrect type was passed */
+					Type: {
+						expected: string;
+						got: string;
+					};
+			  }
+			| "Other";
 		/** @description a redex being run */
 		Eval: {
 			created_at: components["schemas"]["Time"];
@@ -7458,6 +8107,24 @@ export interface components {
 					/** @enum {string} */
 					type: "Event";
 			  };
+		/** @description execution limits */
+		EvalLimits: {
+			/**
+			 * Format: int64
+			 * @description maximum cpu process time usage in milliseconds
+			 */
+			max_cpu_process: number;
+			/**
+			 * Format: int64
+			 * @description maximum cpu wall time usage in milliseconds
+			 */
+			max_cpu_wall: number;
+			/**
+			 * Format: int64
+			 * @description maximum memory usage in bytes
+			 */
+			max_memory: number;
+		};
 		/** @description a log entry from an eval */
 		EvalLogEntry: {
 			/** @description arbitrary metadata associated with this log line */
@@ -7517,6 +8184,36 @@ export interface components {
 			| "Borked"
 			| "Crashed"
 			| "Stopped";
+		Event: {
+			/** @description all groups in this member list */
+			groups: components["schemas"]["MemberListGroup"][];
+			/** @description operations to apply to your local copy of the member list */
+			ops: components["schemas"]["Operation"][];
+			/** @description relevant room members. the server shouldn't send room members the client already has. */
+			room_members?: components["schemas"]["RoomMember"][];
+			/** @description relevant thread members. the server shouldn't send thread members the client already has. */
+			thread_members?: components["schemas"]["ThreadMember"][];
+			/** @description relevant users. the server shouldn't send users the client already has. */
+			users?: components["schemas"]["User"][];
+		};
+		EverythingSearch: {
+			/** @description current page cursor */
+			cursor?: string | null;
+			/** @description whether there are more threads */
+			has_more: boolean;
+			items: components["schemas"]["EverythingSearchItem"][];
+			results: string[];
+			/**
+			 * Format: int64
+			 * @description approximate count of total results that match this query
+			 */
+			total: number;
+		};
+		EverythingSearchItem: {
+			/** Format: uuid */
+			id: string;
+			type: string;
+		};
 		/** @enum {string} */
 		EverythingSearchOrderField: "Id";
 		EverythingSearchRequest: components["schemas"]["SearchRequest"] & {
@@ -7614,6 +8311,26 @@ export interface components {
 			id: string;
 			items: components["schemas"]["Item"][];
 			name: string;
+		};
+		/**
+		 * @description how to display posts in a forum
+		 * @enum {string}
+		 */
+		ForumLayout: "Card" | "Compact" | "Gallery";
+		ForumSort: components["schemas"]["ChannelSearchOrderField"] & {
+			/** @description what order to return posts in */
+			order?: components["schemas"]["Order"];
+			/**
+			 * Format: int64
+			 * @description only include posts younger than this time
+			 *
+			 *     in milliseconds
+			 */
+			time?: number | null;
+		};
+		ForumSorting: {
+			default_sort: components["schemas"]["ForumSort"];
+			reactions: components["schemas"]["DefaultForumReaction"][];
 		};
 		Harvest: components["schemas"]["HarvestStatus"] &
 			components["schemas"]["HarvestType"] & {
@@ -7781,6 +8498,12 @@ export interface components {
 		Ignore: {
 			until?: null | components["schemas"]["Time"];
 		};
+		Initial: {
+			/** @description the ranges to subscribe to */
+			ranges: components["schemas"]["MemberListRange"][];
+			/** @description the list to subscribe to */
+			target: components["schemas"]["MemberListTarget"];
+		};
 		/** @description an application that is authorized to a room */
 		Integration: {
 			application: components["schemas"]["Application"];
@@ -7804,6 +8527,16 @@ export interface components {
 			 */
 			version: number;
 		};
+		/** @description the current status */
+		InteractionStatus:
+			| "Loading"
+			| {
+					/** @description The (inter)action this message represents failed */
+					Failed: {
+						can_retry: boolean;
+						reason: string;
+					};
+			  };
 		InteractionType:
 			| {
 					/** @enum {string} */
@@ -7839,6 +8572,31 @@ export interface components {
 		 * @example a1b2c3
 		 */
 		InviteCode: string;
+		InviteCreate: {
+			/** @description a description for this invite */
+			description?: string | null;
+			expires_at?: null | components["schemas"]["Time"];
+			/**
+			 * Format: int32
+			 * @description the maximum number of times this invite can be used
+			 *     be sure to account for existing `uses` and `max_uses` when patching
+			 */
+			max_uses?: number | null;
+			/** @description which roles to apply when accepting the invite */
+			role_ids?: components["schemas"]["Id"][] | null;
+		};
+		InvitePatch: {
+			/** @description a description for this invite */
+			description?: string | null;
+			expires_at?: null | components["schemas"]["Time"];
+			/**
+			 * Format: int32
+			 * @description the maximum number of times this invite can be used
+			 *     be sure to account for existing `uses` and `max_uses` when patching
+			 */
+			max_uses?: number | null;
+			role_ids?: components["schemas"]["Id"][] | null;
+		};
 		/** @description where this invite leads */
 		InviteTarget:
 			| {
@@ -7969,6 +8727,42 @@ export interface components {
 			x5u?: string | null;
 			y?: string | null;
 		};
+		/** @description JSON Web Key Set (RFC 7517) */
+		Jwks: {
+			keys: components["schemas"]["Jwk"][];
+		};
+		Key: {
+			data: number[];
+			epoch: components["schemas"]["MlsEpoch"];
+		};
+		KeyBundle: {
+			keys: components["schemas"]["Key"][];
+		};
+		/**
+		 * @description the kind of keyframe to request
+		 * @enum {string}
+		 */
+		KeyframeRequestKind: "fir" | "pli";
+		KeyshareRequest: {
+			/** @description the channel id of the messages you want */
+			channel_id: components["schemas"]["Id"];
+			/** @description HPKE public key used to encrypt the response keyring data */
+			hpke_pub_key: number[];
+			/**
+			 * Format: int32
+			 * @description send up to this many epochs of data
+			 */
+			limit: number;
+			/** @description start sending keys from this epoch */
+			start: components["schemas"]["MlsEpoch"];
+		};
+		/** @description historical encryption keys for old messages */
+		KeyshareRespond: {
+			/** @description the channel (mls group) these keys are for */
+			channel_id: components["schemas"]["Id"];
+			/** @description keyring data encrypted with the current */
+			encrypted_keyring_data: number[];
+		};
 		License: string;
 		/** @description indicates that a channel is locked */
 		Locked: {
@@ -8021,6 +8815,12 @@ export interface components {
 			user_id?: null | components["schemas"]["Id"];
 			version_id: components["schemas"]["Id"];
 		};
+		MediaClone: {
+			/** @description Descriptive alt text, not entirely unlike a caption */
+			alt?: string | null;
+			/** @description Set to override the filename */
+			filename?: string | null;
+		};
 		/** @description a request body for `media_create` */
 		MediaCreate: components["schemas"]["MediaCreateSource"] & {
 			/** @description Descriptive alt text, not entirely unlike a caption */
@@ -8057,11 +8857,47 @@ export interface components {
 					 */
 					size?: number | null;
 			  };
+		/** @description response body for `media_create` */
+		MediaCreated: {
+			/** @description The id of the media that has been created */
+			media_id: components["schemas"]["Id"];
+			/**
+			 * Format: uri
+			 * @description A url to upload your media to. Is `None` if you used `MediaCreateSource::Download`.
+			 */
+			upload_url?: string | null;
+		};
+		/** @description request body for `media_upload_direct` */
+		MediaDirectParams: {
+			/** @description Descriptive alt text, not entirely unlike a caption */
+			alt?: string | null;
+			/** @description Whether to process this media asynchronously. */
+			async?: boolean;
+			/** @description The filename for this piece of media */
+			filename?: string | null;
+			/** @description Whether to strip sensitive exif info, like location or camera make and model. */
+			strip_exif?: boolean;
+		};
+		/** @description request body for `media_done` */
+		MediaDoneParams: {
+			/**
+			 * @description Whether to process this media asynchronously.
+			 *
+			 *     If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing.
+			 */
+			async?: boolean;
+		};
 		/**
 		 * @description why a piece of media is errored
 		 * @enum {string}
 		 */
 		MediaErrorReason: "NotFound" | "Corrupted";
+		MediaExpiry: {
+			/** @description whether this media has expired */
+			expired: boolean;
+			/** @description when this media expires at */
+			expires_at: components["schemas"]["Time"];
+		};
 		/**
 		 * @description the kind of media this track is for
 		 * @enum {string}
@@ -8200,12 +9036,50 @@ export interface components {
 					/** @enum {string} */
 					type: "Errored";
 			  };
+		/** @description An update to a piece of media */
+		MediaPatch: {
+			/** @description Descriptive alt text, not entirely unlike a caption */
+			alt?: string | null;
+			/** @description The filename for this piece of media */
+			filename?: string | null;
+			/**
+			 * @description Whether to strip sensitive exif info, like location or camera make and model.
+			 *
+			 *     This can only be changed if the media status is not `Consumed`. Once
+			 *     strip_exif is set to true, cannot be set to false.
+			 */
+			strip_exif?: boolean | null;
+		};
 		MediaQuarantine: {
 			/** @description why this media was quarantined */
 			reason?: string | null;
 			/** @description when this media was quarantined */
 			time: components["schemas"]["Time"];
 		};
+		MediaQuery: {
+			/**
+			 * @description if this media is still being uploaded, downloaded, or processed, block
+			 *     until its complete.
+			 *
+			 *     otherwise, immediately return a 409 status code. (409 is used so that
+			 *     its possible to differentiate between "media doesnt exist" and "media is
+			 *     still being processed")
+			 */
+			wait?: boolean;
+		};
+		/** @description A reference to a piece of media to be used. */
+		MediaRef:
+			| {
+					media_id: components["schemas"]["Id"];
+			  }
+			| {
+					/** Format: uri */
+					source_url: string;
+			  }
+			| {
+					/** Format: int64 */
+					media_index: number;
+			  };
 		/** @description A reference to a piece of media to be used. */
 		MediaReference:
 			| {
@@ -8234,8 +9108,38 @@ export interface components {
 			 */
 			version: number;
 		};
+		/** @description The response from a media scanning service. */
+		MediaScanResponse: {
+			/** @description An optional message providing additional context about the scan result. */
+			message?: string | null;
+			/**
+			 * Format: double
+			 * @description The confidence score of the scan, from 0.0 to 1.0.
+			 */
+			score: number;
+		};
+		MediaSearch: {
+			/** @description current page cursor */
+			cursor?: string | null;
+			/** @description whether there are more threads */
+			has_more: boolean;
+			/** @description the media */
+			media: components["schemas"]["Media"][];
+			/** @description the ids of the matched media */
+			results: components["schemas"]["Id"][];
+			/**
+			 * Format: int64
+			 * @description approximate count of total results that match this query
+			 */
+			total: number;
+			/** @description the media creators/uploaders */
+			users: components["schemas"]["User"][];
+		};
 		/** @enum {string} */
 		MediaSearchOrderField: "Created" | "Name" | "Id";
+		MediaSearchRequest: components["schemas"]["SearchRequest"] & {
+			sort_field?: components["schemas"]["MediaSearchOrderField"];
+		};
 		/**
 		 * @description The status for this media
 		 * @enum {string}
@@ -8308,6 +9212,19 @@ export interface components {
 					position: number;
 					/** @enum {string} */
 					type: "Delete";
+			  };
+		MemberListRange: number[];
+		MemberListTarget:
+			| {
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "room";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					room_id?: null | components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "channel";
 			  };
 		/** @description who/what this message notified on send */
 		Mentions: {
@@ -8392,6 +9309,15 @@ export interface components {
 			/** @description Shortcut for setting filename on the media item */
 			filename?: string | null;
 		} & {
+			/** @enum {string} */
+			type: "Media";
+		};
+		MessageAttachmentEncrypted: components["schemas"]["MessageAttachmentEncryptedType"] & {
+			/** @description if this is a spoiler and should be blurred */
+			spoiler: boolean;
+		};
+		MessageAttachmentEncryptedType: {
+			media: components["schemas"]["EncryptedMedia"];
 			/** @enum {string} */
 			type: "Media";
 		};
@@ -8550,6 +9476,17 @@ export interface components {
 			metadata?: null | components["schemas"]["Metadata"];
 			reply_id?: null | components["schemas"]["Id"];
 		};
+		/** @description a basic message, written using markdown. for use with e2ee. */
+		MessageDefaultMarkdownEncrypted: {
+			attachments: components["schemas"]["MessageAttachmentEncrypted"][];
+			/** @description the components for this message */
+			components?: components["schemas"]["Components_Encrypted"];
+			/** @description the message's content in markdown */
+			content?: string | null;
+			embeds: components["schemas"]["Embed"][];
+			metadata?: null | components["schemas"]["Metadata"];
+			reply_id?: null | components["schemas"]["Id"];
+		};
 		MessageDocumentEdits: {
 			/** @description the last revision included in this summary */
 			revision_end: components["schemas"]["DocumentRevisionId"];
@@ -8566,6 +9503,22 @@ export interface components {
 			/** @description the tag that was created */
 			tag: components["schemas"]["DocumentTag"];
 		};
+		/** @description an encrypted message */
+		MessageEncrypted: {
+			/**
+			 * @description encrypted content of the message
+			 *
+			 *     - decrypts into a MessageDefaultMarkdownEncrypted struct
+			 *     - encrypted with aes-256-gcm
+			 */
+			ciphertext: components["schemas"]["Binary"];
+			epoch: components["schemas"]["MlsEpoch"];
+			/** @description the media this message is attached to, for garbage collection */
+			media_ids?: components["schemas"]["Id"][];
+			/** @description the nonce for the ciphertext */
+			nonce: components["schemas"]["Binary"];
+		};
+		MessageEnvelope: components["schemas"]["MessagePayload"];
 		/** @description flume metadata for a message */
 		MessageFlume: {
 			/** @description current state of the flume */
@@ -8584,9 +9537,33 @@ export interface components {
 			/** @description the user who triggered this interaction */
 			user_id: components["schemas"]["Id"];
 		};
+		MessageList: {
+			messages: components["schemas"]["Message"][];
+			room_members?: components["schemas"]["RoomMember"][];
+			thread_members?: components["schemas"]["ThreadMember"][];
+			users?: components["schemas"]["User"][];
+		};
 		/** @description Information about a member being added or removed from a thread */
 		MessageMember: {
 			target_user_id: components["schemas"]["Id"];
+		};
+		MessageModerate: {
+			/** @description which messages to delete */
+			delete?: components["schemas"]["Id"][];
+			/** @description which messages to remove */
+			remove?: components["schemas"]["Id"][];
+			/** @description which messages to restore */
+			restore?: components["schemas"]["Id"][];
+		};
+		MessageMove: {
+			/** @description which messages to move */
+			message_ids?: components["schemas"]["Id"][];
+			/**
+			 * @description the channel to move the messages to
+			 *
+			 *     must be in same room (for now...)
+			 */
+			target_channel_id: components["schemas"]["Id"];
 		};
 		MessagePatch: {
 			/** @description message attachments */
@@ -8598,15 +9575,108 @@ export interface components {
 			metadata?: null | components["schemas"]["Metadata"];
 			reply_id?: null | components["schemas"]["Id"];
 		};
+		MessagePayload:
+			| {
+					/** @enum {string} */
+					op: "Ping";
+			  }
+			| {
+					/** @description the data for this sync event */
+					data: components["schemas"]["MessageSync"];
+					/** @description the nonce, if this is in response to a request with the `Idempotency-Key` header set */
+					nonce?: string | null;
+					/** @enum {string} */
+					op: "Sync";
+					/**
+					 * Format: int64
+					 * @description the connection sequence number of this event, for resuming
+					 */
+					seq: number;
+			  }
+			| {
+					code?: null | components["schemas"]["SyncErrorCode"];
+					error: string;
+					/** @enum {string} */
+					op: "Error";
+			  }
+			| {
+					application?: null | components["schemas"]["Application"];
+					/** @description connection id */
+					conn: components["schemas"]["Id"];
+					/** @enum {string} */
+					op: "Ready";
+					/**
+					 * Format: int64
+					 * @description sequence id for reconnecting
+					 */
+					seq: number;
+					/** @description current session */
+					session: components["schemas"]["Session"];
+					user?: null | components["schemas"]["User"];
+			  }
+			| {
+					/** @enum {string} */
+					op: "Resumed";
+			  }
+			| {
+					/** @description whether the client can resume */
+					can_resume: boolean;
+					/** @enum {string} */
+					op: "Reconnect";
+			  };
 		/** @description Information about a message being pinned */
 		MessagePin: {
 			pinned_message_id: components["schemas"]["Id"];
+		};
+		MessageSearch: {
+			/** @description current page cursor */
+			cursor?: string | null;
+			/** @description whether there are more threads */
+			has_more: boolean;
+			/** @description all relevant messages (eg. messages that a result replied to) */
+			messages: components["schemas"]["Message"][];
+			/** @description the ids of the matched messages */
+			results: components["schemas"]["Id"][];
+			/** @description room members objects for each author, if they exist */
+			room_members: components["schemas"]["RoomMember"][];
+			/**
+			 * @description relevant thread member objects
+			 *
+			 *     - one for each (message author, thread) tuple
+			 *     - one for each thread the requesting user is a member of
+			 */
+			thread_members: components["schemas"]["ThreadMember"][];
+			/** @description threads the messages are in */
+			threads: components["schemas"]["Channel"][];
+			/**
+			 * Format: int64
+			 * @description approximate count of total results that match this query
+			 */
+			total: number;
+			/** @description the authors of the messages */
+			users: components["schemas"]["User"][];
 		};
 		/**
 		 * @description which field to order message search results by
 		 * @enum {string}
 		 */
 		MessageSearchOrderField: "Created" | "Relevancy";
+		MessageSearchRequest: components["schemas"]["SearchRequest"] & {
+			/** @description whether to include results from nsfw channels */
+			include_nsfw?: boolean | null;
+			/** @description field to sort by */
+			sort_field?: components["schemas"]["MessageSearchOrderField"];
+		};
+		/** @description a snapshot of a message at a point in time, for forwards */
+		MessageSnapshot: components["schemas"]["MessageType"] & {
+			channel_id: components["schemas"]["Id"];
+			created_at: components["schemas"]["Time"];
+			/** @description who this message mentioned */
+			mentions?: components["schemas"]["Mentions"];
+			message_id: components["schemas"]["Id"];
+			room_id?: null | components["schemas"]["Id"];
+			version_id: components["schemas"]["Id"];
+		};
 		/**
 		 * @description how messages are displayed in the chat
 		 * @enum {string}
@@ -9454,6 +10524,59 @@ export interface components {
 		 * @example text/plain
 		 */
 		Mime: string;
+		/** @description an mls commit message, representing group state changes. */
+		MlsCommit: {
+			/** @description the channel (mls group) this takes place in */
+			channel_id: components["schemas"]["Id"];
+			/**
+			 * @description opaque data
+			 *
+			 *     is a commit or proposal for member add, remove, update
+			 */
+			data: number[];
+			/** @description the session that authored this message */
+			sender_id: components["schemas"]["Id"];
+		};
+		MlsCommitCreate: {
+			data: number[];
+		};
+		/**
+		 * Format: int64
+		 * @description a mls epoch number, incremented each time the group membership changes
+		 */
+		MlsEpoch: number;
+		MlsEpochCreate: {
+			data: number[];
+			epoch: components["schemas"]["MlsEpoch"];
+		};
+		/** @description a mls key package, uploaded by sessions for use in welcomes */
+		MlsKeyPackage: {
+			/** @description opaque mls key package data */
+			data: number[];
+			session_id: components["schemas"]["Id"];
+			user_id: components["schemas"]["Id"];
+		};
+		MlsKeyPackageClaim: {
+			users: components["schemas"]["Id"][];
+		};
+		MlsKeyPackageUpload: {
+			packages: components["schemas"]["MlsKeyPackage"][];
+		};
+		MlsMessageCreate: {
+			data: number[];
+		};
+		/** @description a welcome message used to add a new member to an mls group */
+		MlsWelcome: {
+			/** @description the channel (mls group) to join */
+			channel_id: components["schemas"]["Id"];
+			/** @description the opaque welcome message data (MLS Welcome message). */
+			data: number[];
+			/** @description the session that sent this welcome */
+			sender_id: components["schemas"]["Id"];
+		};
+		MlsWelcomeCreate: {
+			data: number[];
+		};
 		/** @description how long to mute notifications for */
 		Mute: {
 			/**
@@ -9475,6 +10598,14 @@ export interface components {
 			/** @description user defined note for this notification */
 			note?: string | null;
 			read_at?: null | components["schemas"]["Time"];
+		};
+		/** @description create a new message reminder notification */
+		NotificationCreate: {
+			added_at?: null | components["schemas"]["Time"];
+			/** @description the channel this message was sent in */
+			channel_id: components["schemas"]["Id"];
+			/** @description the id of the message that was sent */
+			message_id: components["schemas"]["Id"];
 		};
 		/** @description delete some notifications */
 		NotificationFlush: {
@@ -9499,6 +10630,29 @@ export interface components {
 			message_ids?: components["schemas"]["Id"][];
 			/** @description mark everything in these rooms as read */
 			room_ids?: components["schemas"]["Id"][];
+		};
+		/** @description paginate through your notifications */
+		NotificationPagination: {
+			cursor?: string | null;
+			/** @deprecated */
+			has_more: boolean;
+			messages: components["schemas"]["Message"][];
+			notifications: components["schemas"]["Notification"][];
+			room_members: components["schemas"]["RoomMember"][];
+			thread_members: components["schemas"]["ThreadMember"][];
+			threads: components["schemas"]["Channel"][];
+			/** Format: int64 */
+			total: number;
+			users: components["schemas"]["User"][];
+		};
+		/** @description query your inbox */
+		NotificationQuery: {
+			/** @description only include notifications from these channels */
+			channel_id?: components["schemas"]["Id"][];
+			/** @description include messages marked as read too */
+			include_read?: boolean;
+			/** @description only include notifications from these rooms */
+			room_id?: components["schemas"]["Id"][];
 		};
 		NotificationType:
 			| {
@@ -9616,16 +10770,62 @@ export interface components {
 		 * @enum {string}
 		 */
 		NotifsTts: "Always" | "Mentions" | "Nothing";
+		/**
+		 * @description when to send notifications for voice channels
+		 *
+		 *     only affects private rooms
+		 * @enum {string}
+		 */
+		NotifsVoice: "Streams" | "Voice" | "Nothing";
 		/** @description log in with xyz */
 		Oauth: {
 			providers: components["schemas"]["OauthProvider"][];
 		};
 		/** @enum {string} */
 		OauthAuthMethod: "client_secret_post" | "client_secret_basic";
+		/** @description information about an application that can be granted access to your account */
+		OauthAuthorizeInfo: {
+			/** @description the application itself */
+			application: components["schemas"]["Application"];
+			/** @description the user who requested this info */
+			auth_user: components["schemas"]["User"];
+			/** @description whether this application is already authorized */
+			authorized: boolean;
+			/** @description if the application is a bot, this is the bot user */
+			bot_user: components["schemas"]["User"];
+		};
+		OauthAuthorizeParams: {
+			client_id: components["schemas"]["Id"];
+			code_challenge?: string | null;
+			code_challenge_method?: string | null;
+			nonce?: string | null;
+			prompt?: string | null;
+			/** Format: uri */
+			redirect_uri?: string | null;
+			response_type: components["schemas"]["OauthResponseType"];
+			scope: string;
+			state?: string | null;
+		};
+		OauthAuthorizeResponse: {
+			/** Format: uri */
+			redirect_uri: string;
+		};
 		/** @enum {string} */
 		OauthCodeChallengeMethod: "s256" | "plain";
 		/** @enum {string} */
 		OauthGrantType: "authorization_code" | "refresh_token";
+		OauthIntrospectResponse: {
+			active: boolean;
+			client_id: components["schemas"]["Id"];
+			/** Format: int64 */
+			exp?: number | null;
+			scopes: components["schemas"]["Scopes"];
+			/**
+			 * @description this is specified to be "human readable", but in practice it would be
+			 *     simpler and more useful to return the unique id of the user
+			 */
+			username: components["schemas"]["Id"];
+		};
 		OauthProvider: {
 			/** @description api name */
 			id: string;
@@ -9634,12 +10834,152 @@ export interface components {
 		};
 		/** @enum {string} */
 		OauthResponseType: "code";
+		OauthTokenRequest: {
+			/**
+			 * @description client id
+			 *
+			 *     when we're is acting as the authorization server this is an [`ApplicationId`]
+			 */
+			client_id?: string | null;
+			client_secret?: string | null;
+			code?: string | null;
+			code_verifier?: string | null;
+			grant_type: components["schemas"]["OauthGrantType"];
+			/** Format: uri */
+			redirect_uri?: string | null;
+			refresh_token?: string | null;
+		};
+		OauthTokenResponse: {
+			access_token: string;
+			/**
+			 * Format: int64
+			 * @description when tis token expires
+			 *
+			 *     omitted by some providers, eg. GitHub OAuth apps with non-expiring tokens
+			 */
+			expires_in?: number | null;
+			id_token?: string | null;
+			refresh_token?: string | null;
+			scope?: string;
+			token_type: string;
+		};
+		/**
+		 * @description Token revocation request (RFC 7009). Used both for inbound `/oauth/revoke` requests and
+		 *     for outbound revocation against third-party providers.
+		 */
+		OauthTokenRevoke: {
+			token: string;
+			token_type_hint?: string | null;
+		};
+		OidcClaims: {
+			aud: string;
+			/** Format: int64 */
+			exp: number;
+			/** Format: int64 */
+			iat: number;
+			iss: string;
+			nonce?: string | null;
+			sub: string;
+		};
+		/** @description OpenID Connect Discovery 1.0 Provider Metadata */
+		OidcDiscovery: {
+			/** Format: uri */
+			authorization_endpoint: string;
+			claims_supported: string[];
+			code_challenge_methods_supported: components["schemas"]["OauthCodeChallengeMethod"][];
+			grant_types_supported: components["schemas"]["OauthGrantType"][];
+			id_token_signing_alg_values_supported: string[];
+			/** Format: uri */
+			issuer: string;
+			/** Format: uri */
+			jwks_uri: string;
+			response_types_supported: components["schemas"]["OauthResponseType"][];
+			scopes_supported: string[];
+			subject_types_supported: string[];
+			/** Format: uri */
+			token_endpoint: string;
+			token_endpoint_auth_methods_supported: components["schemas"]["OauthAuthMethod"][];
+			/** Format: uri */
+			userinfo_endpoint: string;
+		};
+		Operation:
+			| {
+					/** @description the users in this range */
+					items: components["schemas"]["Id"][];
+					/**
+					 * Format: int64
+					 * @description the start of the range to replace
+					 */
+					position: number;
+					/** @enum {string} */
+					type: "Sync";
+			  }
+			| {
+					/** Format: int64 */
+					position: number;
+					/** @enum {string} */
+					type: "Insert";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					/**
+					 * Format: int64
+					 * @description how many items to delete
+					 */
+					count: number;
+					/**
+					 * Format: int64
+					 * @description the start of the range to delete
+					 */
+					position: number;
+					/** @enum {string} */
+					type: "Delete";
+			  };
 		Option: null | number;
 		/**
 		 * @description what order to return search results in
 		 * @enum {string}
 		 */
 		Order: "asc" | "desc";
+		PackImport: {
+			/** @description the emojis in this pack */
+			emojis: components["schemas"]["PackSnapshotEmoji"][];
+		};
+		/** @description room metadata for pack rooms */
+		PackInfo: {
+			/** @description the license of this pack */
+			license?: string | null;
+		};
+		PackInstallation: {
+			pack_id: components["schemas"]["Id"];
+		};
+		/**
+		 * @description a serialized pack
+		 *
+		 *     can be used to import/export pack data
+		 */
+		PackSnapshot: {
+			/**
+			 * @description the room's description
+			 *
+			 *     ignored during import
+			 */
+			description?: string | null;
+			/** @description the emojis in this pack */
+			emojis: components["schemas"]["PackSnapshotEmoji"][];
+			/**
+			 * @description the room's license
+			 *
+			 *     ignored during import, ui should show a warning if the license doesnt match
+			 */
+			license?: string | null;
+			/**
+			 * @description the room's name
+			 *
+			 *     ignored during import
+			 */
+			name: string;
+		};
 		PackSnapshotEmoji: components["schemas"]["EmojiCustomMinimal"] & {
 			/** @description base64 image data for this emoji */
 			data: components["schemas"]["Binary"];
@@ -9764,6 +11104,9 @@ export interface components {
 					/** @enum {string} */
 					type: "Email";
 			  };
+		PasswordSet: {
+			password: string;
+		};
 		/**
 		 * @description a permission that lets a user do something
 		 * @enum {string}
@@ -9858,6 +11201,11 @@ export interface components {
 			position: number;
 			/** @description when this was pinned */
 			time: components["schemas"]["Time"];
+		};
+		/** @description reorder pinned messages */
+		PinsReorder: {
+			/** @description the messages to reorder */
+			messages?: components["schemas"]["PinsReorderItem"][];
 		};
 		PinsReorderItem: {
 			id: components["schemas"]["Id"];
@@ -10203,6 +11551,28 @@ export interface components {
 			activities: components["schemas"]["Activity"][];
 			status: components["schemas"]["Status"];
 		};
+		/** @description Room member prune */
+		PruneBegin: {
+			/** @description whether to return the number of pruned users in the response */
+			calculate_total?: boolean;
+			/**
+			 * Format: int32
+			 * @description prune users inactive for this many days
+			 */
+			days: number;
+			/** @description whether to actually prune or to */
+			dry_run?: boolean;
+			/** @description include users with these roles */
+			include_roles?: components["schemas"]["Id"][];
+		};
+		/** @description response for PruneBegin */
+		PruneResponse: {
+			/**
+			 * Format: int64
+			 * @description number of pruned users
+			 */
+			pruned: number;
+		};
 		/** @description represents a user on another platform */
 		Puppet: {
 			alias_id?: null | components["schemas"]["Id"];
@@ -10215,6 +11585,16 @@ export interface components {
 			external_url?: string | null;
 			/** @description the user who created this puppet */
 			owner_id: components["schemas"]["Id"];
+		};
+		PuppetCreate: {
+			/** @description if this is a remote bot */
+			bot: boolean;
+			/** @description about/bio */
+			description?: string | null;
+			/** @description display name */
+			name: string;
+			/** @description if this is for the service itself. usually paired with bot: true */
+			system: boolean;
 		};
 		PushCreate: {
 			endpoint: string;
@@ -10230,6 +11610,27 @@ export interface components {
 			/** @description the server's vapid key */
 			server_key: string;
 		};
+		Ratelimit: {
+			/**
+			 * @description if this is a global ratelimit
+			 *
+			 *     if false, this only affects this bucket
+			 */
+			global: boolean;
+			/**
+			 * Format: double
+			 * @description how many seconds to wait until retrying
+			 */
+			retry_after: number;
+		};
+		RatelimitPut: {
+			slowmode_message_expire_at?: null | components["schemas"]["Time"];
+			slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+		};
+		/** @description A reaction with its creation timestamp, returned in sync events. */
+		Reaction: components["schemas"]["ReactionInfo"] & {
+			created_at: components["schemas"]["Time"];
+		};
 		/** @description the total reaction counts for a key */
 		ReactionCount: {
 			/** Format: int64 */
@@ -10239,6 +11640,12 @@ export interface components {
 		};
 		/** @description the total reaction counts for all keys */
 		ReactionCounts: components["schemas"]["ReactionCount"][];
+		/** @description Information identifying a reaction without its timestamp. */
+		ReactionInfo: {
+			key: components["schemas"]["ReactionKey"];
+			message_id: components["schemas"]["Id"];
+			user_id: components["schemas"]["Id"];
+		};
 		/** @description reaction key returned in reaction counts for messages */
 		ReactionKey:
 			| {
@@ -10394,6 +11801,10 @@ export interface components {
 			format: components["schemas"]["RedexFormat"];
 			location: components["schemas"]["RedexLocationUpdate"];
 		};
+		RedexContentUpdateQuery: {
+			/** @description Whether to process this redex asynchronously. */
+			async?: boolean;
+		};
 		/** @description request body for creating a new redex */
 		RedexCreate: {
 			format: components["schemas"]["RedexFormat"];
@@ -10417,6 +11828,48 @@ export interface components {
 			dependency_id: components["schemas"]["Id"];
 			dependent_id: components["schemas"]["Id"];
 		};
+		/** @description an error that occured while running a redex */
+		RedexError: {
+			/** @description where this error occured */
+			location: components["schemas"]["RedexErrorLocation"];
+			/** @description human readable message */
+			message: string;
+			/** @description the id of the run where this error occured */
+			run_id: components["schemas"]["Id"];
+			type: components["schemas"]["RedexErrorType"];
+		};
+		/** @description location metadata for this error */
+		RedexErrorLocation: {
+			/**
+			 * Format: int64
+			 * @description the column that this error occured on
+			 */
+			column: number;
+			/**
+			 * Format: int64
+			 * @description the line that this error occured on
+			 */
+			line: number;
+			/** @description the id of the redex that the error occured in */
+			redex_id: components["schemas"]["Id"];
+			/** @description the stack trace for this error */
+			stack_trace: string;
+			/** @description target (like rust foo::bar::baz) (like otel InstrumentationScope) */
+			target: string;
+		};
+		/**
+		 * @description an error that occured while running a redex
+		 * @enum {string}
+		 */
+		RedexErrorType:
+			| "RuntimeType"
+			| "RuntimeSyntax"
+			| "RuntimeReference"
+			| "RuntimeRange"
+			| "RuntimeInternal"
+			| "RuntimeGeneric"
+			| "ExceededTime"
+			| "ExceededMemory";
 		/**
 		 * @description the format of a redex
 		 * @enum {string}
@@ -10511,6 +11964,10 @@ export interface components {
 		};
 		/** @enum {string} */
 		RedexPermissionGrant: "Allow" | "Deny" | "Prompt";
+		/** @description a redex signature */
+		RedexSignature: {
+			signature: string;
+		};
 		/** @enum {string} */
 		RedexStatus: "Empty" | "Creating" | "Processing" | "Valid" | "Invalid";
 		/** @description information about a redex version */
@@ -10544,6 +12001,9 @@ export interface components {
 			room_ids: components["schemas"]["Id"][];
 		};
 		Relationship: (null | components["schemas"]["Ignore"]) & {
+			relation?: null | components["schemas"]["RelationshipType"];
+		};
+		RelationshipPatch: (null | components["schemas"]["Ignore"]) & {
 			relation?: null | components["schemas"]["RelationshipType"];
 		};
 		/**
@@ -10600,6 +12060,23 @@ export interface components {
 			/** @description the message itself */
 			message: components["schemas"]["Message"];
 		};
+		RepliesQuery: {
+			/**
+			 * Format: int32
+			 * @description how many replies to fetch per branch
+			 */
+			breadth?: number | null;
+			/**
+			 * Format: int32
+			 * @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on.
+			 */
+			context?: number | null;
+			/**
+			 * Format: int32
+			 * @description how deeply to fetch replies
+			 */
+			depth?: number;
+		};
 		/** @description a response to a replies query */
 		RepliesResponse: components["schemas"]["RepliesChildren"];
 		/**
@@ -10629,6 +12106,20 @@ export interface components {
 			| "Other";
 		/** @description an interaction has been responded to */
 		Response: Record<string, never>;
+		RingEligibility: {
+			/**
+			 * @description whether ring endpoints can be used
+			 *
+			 *     true in dms and gdms, false otherwise
+			 */
+			ringable: boolean;
+		};
+		RingStart: {
+			user_ids: components["schemas"]["Id"][];
+		};
+		RingStop: {
+			user_ids: components["schemas"]["Id"][];
+		};
 		Role: {
 			/** @description the permissions to grant for this role */
 			allow: components["schemas"]["Permission"][];
@@ -10676,6 +12167,16 @@ export interface components {
 			name: string;
 			sticky?: boolean;
 		};
+		RoleDeleteQuery: {
+			fallback_role_id?: null | components["schemas"]["Id"];
+		};
+		/** @description apply and remove a role to many members at once */
+		RoleMemberBulkPatch: {
+			/** @description add this role to these users */
+			apply?: components["schemas"]["Id"][];
+			/** @description remove this role from these users */
+			remove?: components["schemas"]["Id"][];
+		};
 		RolePatch: {
 			allow?: components["schemas"]["Permission"][] | null;
 			deny?: components["schemas"]["Permission"][] | null;
@@ -10685,6 +12186,11 @@ export interface components {
 			is_self_applicable?: boolean | null;
 			name?: string | null;
 			sticky?: boolean | null;
+		};
+		/** @description reorder some roles */
+		RoleReorder: {
+			/** @description the roles to reorder */
+			roles?: components["schemas"]["RoleReorderItem"][];
 		};
 		RoleReorderItem: {
 			/** Format: int32 */
@@ -10764,6 +12270,38 @@ export interface components {
 			/** @description the user who is banned */
 			user_id: components["schemas"]["Id"];
 		};
+		/** @description create many bans at once */
+		RoomBanBulkCreate: {
+			expires_at?: null | components["schemas"]["Time"];
+			/** @description who to ban */
+			target_ids?: components["schemas"]["Id"][];
+		};
+		RoomBanCreate: {
+			expires_at?: null | components["schemas"]["Time"];
+		};
+		RoomBanType:
+			| {
+					/** @enum {string} */
+					type: "User";
+					user_id: components["schemas"]["Id"];
+			  }
+			| {
+					hostname: components["schemas"]["Hostname"];
+					/** @enum {string} */
+					type: "Server";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Ip";
+			  };
+		/** @description Data required to create a room */
+		RoomCreate: {
+			banner?: null | components["schemas"]["Id"];
+			description?: string | null;
+			icon?: null | components["schemas"]["Id"];
+			name: string;
+			public?: boolean | null;
+		};
 		/**
 		 * @description features enabled for this room
 		 * @enum {string}
@@ -10790,6 +12328,10 @@ export interface components {
 			room_id: components["schemas"]["Id"];
 			timeout_until?: null | components["schemas"]["Time"];
 			user_id: components["schemas"]["Id"];
+		};
+		/** @description Query parameters for room member delete */
+		RoomMemberDeleteQuery: {
+			soft: boolean;
 		};
 		RoomMemberOrigin:
 			| {
@@ -10824,9 +12366,68 @@ export interface components {
 					/** @enum {string} */
 					type: "PublicJoin";
 			  };
+		RoomMemberPut: {
+			/** @description whether this user is deafened by a moderator */
+			deaf: boolean;
+			/** @description whether this user is muted by a moderator */
+			mute: boolean;
+			override_description?: string | null;
+			override_name?: string | null;
+			/** @description the roles that this member has */
+			roles: components["schemas"]["Id"][];
+			timeout_until?: null | components["schemas"]["Time"];
+		};
+		RoomMemberSearch: {
+			/** Format: int32 */
+			limit?: number | null;
+			query: string;
+		};
+		RoomMemberSearchAdvanced: {
+			create_after?: null | components["schemas"]["Time"];
+			create_before?: null | components["schemas"]["Time"];
+			/** @description return members who are/aren't room deafened */
+			deaf?: boolean | null;
+			/** @description return members who are/aren't server guests */
+			guest?: boolean | null;
+			invite?: null | components["schemas"]["InviteCode"];
+			join_after?: null | components["schemas"]["Time"];
+			join_before?: null | components["schemas"]["Time"];
+			/**
+			 * Format: int32
+			 * @description maximum number of results to return
+			 */
+			limit?: number | null;
+			/** @description return members who are/aren't room muted */
+			mute?: boolean | null;
+			/** @description return members who do/don't have a custom nickname */
+			nickname?: boolean | null;
+			/** @description user name, override_name, or id */
+			query?: string | null;
+			/** @description has all of these roles */
+			roles?: components["schemas"]["Id"][];
+			/** @description return members who are/aren't timed out */
+			timeout?: boolean | null;
+		};
+		/** @enum {string} */
+		RoomMemberSearchOrderField: "Joined" | "UserId";
+		RoomMemberSearchRequest: components["schemas"]["SearchRequest"] & {
+			/** @description field to sort by */
+			sort_field?: components["schemas"]["RoomMemberSearchOrderField"];
+		};
 		RoomMemberSearchResponse: {
 			room_members: components["schemas"]["RoomMember"][];
 			users: components["schemas"]["User"][];
+		};
+		RoomMemberUpdate: {
+			/** @description whether this user is deafened by a moderator */
+			deaf?: boolean | null;
+			/** @description whether this user is muted by a moderator */
+			mute?: boolean | null;
+			override_description?: string | null;
+			override_name?: string | null;
+			/** @description the roles that this member has */
+			roles?: components["schemas"]["Id"][] | null;
+			timeout_until?: null | components["schemas"]["Time"];
 		};
 		/** @description An update to a room */
 		RoomPatch: {
@@ -10844,11 +12445,54 @@ export interface components {
 			public?: boolean | null;
 			welcome_channel_id?: null | components["schemas"]["Id"];
 		};
+		/** @description a minimal preview of a room */
+		RoomPreview: {
+			banner?: null | components["schemas"]["Id"];
+			description?: string | null;
+			icon?: null | components["schemas"]["Id"];
+			id: components["schemas"]["Id"];
+			/**
+			 * Format: int64
+			 * @description number of people in this room
+			 */
+			member_count: number;
+			name: string;
+			/**
+			 * Format: int64
+			 * @description number of people who are online in this room
+			 */
+			online_count: number;
+		};
+		/** @description User-specific room data */
+		RoomPrivate: {
+			notifications: components["schemas"]["NotifsRoom"];
+			/** @description resolved notifications for you */
+			permissions: components["schemas"]["Permission"][];
+		};
+		RoomSearch: {
+			/** @description current page cursor */
+			cursor?: string | null;
+			/** @description whether there are more threads */
+			has_more: boolean;
+			/** @description the ids of the matched rooms */
+			results: components["schemas"]["Id"][];
+			/** @description the rooms */
+			rooms: components["schemas"]["Room"][];
+			/**
+			 * Format: int64
+			 * @description approximate count of total results that match this query
+			 */
+			total: number;
+		};
 		/**
 		 * @description which field to order room search results by
 		 * @enum {string}
 		 */
 		RoomSearchOrderField: "Members" | "Created" | "Name" | "Id";
+		RoomSearchRequest: components["schemas"]["SearchRequest"] & {
+			/** @description field to sort by */
+			sort_field?: components["schemas"]["RoomSearchOrderField"];
+		};
 		RoomSecurity: {
 			/**
 			 * @description mfa must be enabled to access certain endpoints
@@ -10861,6 +12505,10 @@ export interface components {
 			require_mfa: boolean;
 			/** @description sudo mode must be active to access certain endpoints */
 			require_sudo: boolean;
+		};
+		RoomSecurityUpdate: {
+			require_mfa?: boolean | null;
+			require_sudo?: boolean | null;
 		};
 		/** @description A template for creating rooms. */
 		RoomTemplate: {
@@ -10895,6 +12543,20 @@ export interface components {
 		};
 		/** @description a short, unique identifier for a room template. */
 		RoomTemplateCode: string;
+		RoomTemplateCreate: {
+			description: string;
+			name: string;
+			/**
+			 * @description the id of the room to turn into a template
+			 *
+			 *     the caller must have the `RoomEdit` permission in the room
+			 */
+			room_id: components["schemas"]["Id"];
+		};
+		RoomTemplatePatch: {
+			description?: string | null;
+			name?: string | null;
+		};
 		RoomTemplateRole: components["schemas"]["RoleCreate"] & {
 			/**
 			 * Format: uuid
@@ -10915,6 +12577,15 @@ export interface components {
 		};
 		/** @enum {string} */
 		RoomType: "Default" | "Server" | "Emoji";
+		/**
+		 * @description A request to scan a media file.
+		 *
+		 *     Sent to external media scanning services configured via [`ConfigMediaScanner`](crate::config::ConfigMediaScanner).
+		 */
+		ScanRequest: {
+			/** @description The path to the media file to scan. */
+			path: string;
+		};
 		/**
 		 * @description an oauth scope
 		 * @enum {string}
@@ -10950,6 +12621,17 @@ export interface components {
 			 * @description size of the index in bytes
 			 */
 			index_size_bytes: number;
+		};
+		/** @description Search index statistics for a channel */
+		SearchIndexStatsChannel: {
+			channel_id: components["schemas"]["Id"];
+			/** Format: int64 */
+			count_documents: number;
+			/** Format: int64 */
+			count_media: number;
+			/** Format: int64 */
+			count_messages: number;
+			last_indexed_message_id?: null | components["schemas"]["Id"];
 		};
 		/** @description Search index statistics for a room */
 		SearchIndexStatsRoom: {
@@ -11002,6 +12684,17 @@ export interface components {
 		SerdocPut: {
 			components: components["schemas"]["Component"][];
 		};
+		ServerAuth: {
+			oauth_providers: components["schemas"]["ServerAuthOauth"][];
+			supports_totp: boolean;
+			supports_webauthn: boolean;
+		};
+		ServerAuthOauth: {
+			/** @description api name */
+			id: string;
+			/** @description friendly name */
+			name: string;
+		};
 		ServerAutomodList: {
 			description: string;
 			name: string;
@@ -11053,9 +12746,26 @@ export interface components {
 		 * @enum {string}
 		 */
 		ServerKeyAlgorithm: "ed25519";
+		ServerMedia: {
+			/** Format: int64 */
+			max_file_size: number;
+		};
 		ServerMediaScanner: {
 			description: string;
 			name: string;
+		};
+		/** @description public moderation capabilities for a server */
+		ServerModeration: {
+			automod_lists: components["schemas"]["ServerAutomodList"][];
+			media_scanners: components["schemas"]["ServerMediaScanner"][];
+		};
+		ServerRedex: {
+			/** @description the domain suffix used for redex http handlers, if configured */
+			suffix?: string | null;
+		};
+		ServerRegistration: {
+			/** @description whether new people can register at all */
+			enabled: boolean;
 		};
 		ServerVersion: {
 			debug: boolean;
@@ -11065,6 +12775,12 @@ export interface components {
 			rustc_rev: string;
 			rustc_semver: string;
 			target: string;
+		};
+		ServerVoice: Record<string, never>;
+		/** @description voice (calls) service status for admins */
+		ServerVoiceHealth: {
+			/** @description sfu stats */
+			sfus: components["schemas"]["ServerVoiceHealthSfu"][];
 		};
 		/** @description sfu metadata for admins */
 		ServerVoiceHealthSfu: {
@@ -11098,6 +12814,19 @@ export interface components {
 			/** @description an (ephemeral?) unique identifier for this sfu */
 			id: components["schemas"]["Id"];
 		};
+		ServerWebPush: {
+			vapid_public_key: string;
+		};
+		ServerWebtransport: {
+			certificate_hashes: components["schemas"]["ServerWebtransportCert"][];
+			/** Format: uri */
+			sync_url: string;
+		};
+		ServerWebtransportCert: {
+			/** @enum {string} */
+			algorithm: "sha-256";
+			value: components["schemas"]["Binary"];
+		};
 		Session: components["schemas"]["SessionStatus"] & {
 			app_id?: null | components["schemas"]["Id"];
 			authorized_at?: null | components["schemas"]["Time"];
@@ -11109,6 +12838,9 @@ export interface components {
 			/** @description a human readable name for this session */
 			name?: string | null;
 			type: components["schemas"]["SessionType"];
+		};
+		SessionCreate: {
+			name?: string | null;
 		};
 		/** @description webrtc session description */
 		SessionDescription: string;
@@ -11123,6 +12855,12 @@ export interface components {
 			last_seen_at: components["schemas"]["Time"];
 			/** @description the user agent that was used while accessing this session */
 			user_agent?: string | null;
+		};
+		SessionKeyUploadRequest: {
+			keys: number[];
+		};
+		SessionPatch: {
+			name?: string | null;
 		};
 		SessionStatus:
 			| {
@@ -11146,10 +12884,53 @@ export interface components {
 					sudo_expires_at: components["schemas"]["Time"];
 					user_id: components["schemas"]["Id"];
 			  };
+		/** @description minimal session persisted for audit log */
+		SessionSummary: {
+			app_id?: null | components["schemas"]["Id"];
+			authorized_at: components["schemas"]["Time"];
+			deauthorized_at?: null | components["schemas"]["Time"];
+			id: components["schemas"]["Id"];
+			last_seen_at?: null | components["schemas"]["Time"];
+			name?: string | null;
+		};
 		/** @example super_secret_session_token */
 		SessionToken: string;
 		/** @enum {string} */
 		SessionType: "User" | "Access";
+		SessionWithToken: components["schemas"]["Session"] & {
+			token: components["schemas"]["SessionToken"];
+		};
+		Sfu: {
+			external?: null | components["schemas"]["SfuExternal"];
+			id: components["schemas"]["Id"];
+			/** @description human readable name (for debugging) */
+			name: string;
+			/** @description the latest statistics for this sfu */
+			stats: components["schemas"]["SfuStats"];
+		};
+		SfuExternal: {
+			motd?: string | null;
+			/** @description the id of the user who is running this sfu */
+			user_id: components["schemas"]["Id"];
+		};
+		/** @description statistics for a sfu */
+		SfuStats: {
+			/**
+			 * Format: int64
+			 * @description maximum available bandwidth in bits per second
+			 */
+			bandwidth_max: number;
+			/**
+			 * Format: int64
+			 * @description currently used bandwidth in bits per second
+			 */
+			bandwidth_usage: number;
+			/**
+			 * Format: int64
+			 * @description the number of peers connected to this sfu
+			 */
+			peer_count: number;
+		};
 		/** @description room navigation sidebar configuration */
 		Sidebar: components["schemas"]["Toplevel"][];
 		/** @description an event sent from the peer's sync connection to the master */
@@ -11246,6 +13027,53 @@ export interface components {
 		Spoilers: "click" | "hover" | "always";
 		/** @enum {string} */
 		Status: "Offline" | "Away" | "Online" | "Busy" | "Available";
+		/** @description an available stream format */
+		StreamFormat: {
+			/** Format: int64 */
+			bitrate?: number | null;
+			/** Format: int64 */
+			channels?: number | null;
+			codec: string;
+			/** Format: int64 */
+			framerate?: number | null;
+			/** Format: int64 */
+			height?: number | null;
+			/** Format: int64 */
+			id: number;
+			kind: components["schemas"]["StreamKind"];
+			/** Format: int64 */
+			width?: number | null;
+		};
+		/**
+		 * @description stream header byte
+		 *
+		 *     used to identify what type a stream is. sent as a handshake when opening
+		 *     a stream. sent by the side that opens the stream, which is generally the
+		 *     client.
+		 * @enum {string}
+		 */
+		StreamHeader:
+			| "Hello"
+			| "MemberList"
+			| "Channel"
+			| "Room"
+			| "User"
+			| "Redex"
+			| "Invite"
+			| "Voice"
+			| "Document"
+			| "Flume";
+		/** @enum {string} */
+		StreamKind: "Video" | "Audio";
+		StreamQuery: {
+			/** @description segment index */
+			n: number;
+			/**
+			 * Format: int64
+			 * @description stream identifier
+			 */
+			s: number;
+		};
 		/**
 		 * @description an update to the list of subscribed tracks
 		 *
@@ -11264,10 +13092,33 @@ export interface components {
 			/** @description unsubscribe from these tracks */
 			remove: components["schemas"]["TrackId"][];
 		};
+		SuspendRequest: {
+			expires_at?: null | components["schemas"]["Time"];
+		};
 		Suspended: {
 			created_at: components["schemas"]["Time"];
 			expires_at?: null | components["schemas"]["Time"];
 			reason?: string | null;
+		};
+		/**
+		 * @description an error that may be returned from the sync websocket
+		 * @enum {string}
+		 */
+		SyncErrorCode:
+			| "InvalidSeq"
+			| "ConnectionExpired"
+			| "Timeout"
+			| "AuthTimeout"
+			| "Unauthorized"
+			| "Unauthenticated"
+			| "AlreadyAuthenticated"
+			| "AuthFailure"
+			| "InvalidData"
+			| "TooBig";
+		SyncParams: {
+			compression?: null | components["schemas"]["Compression"];
+			format?: components["schemas"]["Encoding"];
+			version: components["schemas"]["Version"];
 		};
 		SyncResume: {
 			conn: components["schemas"]["Id"];
@@ -11337,6 +13188,24 @@ export interface components {
 			restricted?: boolean;
 			spoiler?: boolean;
 		};
+		TagDeleteQuery: {
+			force?: boolean;
+		};
+		TagListQuery: {
+			/**
+			 * @description deny, allow, require tag to be archived
+			 *
+			 *     default: deny
+			 */
+			archived?: boolean | null;
+		};
+		/** @description minimal data needed to render a tag */
+		TagMinimal: {
+			color?: null | components["schemas"]["Color"];
+			id: components["schemas"]["Id"];
+			name: string;
+			spoiler: boolean;
+		};
 		TagPatch: {
 			archived?: boolean | null;
 			color?: null | components["schemas"]["Color"];
@@ -11344,6 +13213,15 @@ export interface components {
 			name?: string | null;
 			restricted?: boolean | null;
 			spoiler?: boolean | null;
+		};
+		TagSearchQuery: {
+			/**
+			 * @description deny, allow, require tag to be archived
+			 *
+			 *     default: deny
+			 */
+			archived?: boolean | null;
+			query: string;
 		};
 		TestPermissionsRequest: {
 			channel_id?: null | components["schemas"]["Id"];
@@ -11364,11 +13242,54 @@ export interface components {
 			| "dark"
 			| "light-highcontrast"
 			| "dark-highcontrast";
+		/**
+		 * @description has been created, only has media ids instead of full media
+		 * @enum {string}
+		 */
+		Thin: never;
+		/** @description additional channel metadata for a thread */
+		ThreadInfo: {
+			first_message?: null | components["schemas"]["Message"];
+			last_message?: null | components["schemas"]["Message"];
+			/** @description a list of thread members */
+			preview_members?: components["schemas"]["ThreadMemberMinimal"][];
+		};
+		/**
+		 * @description Thread list
+		 *
+		 *     Response for listing threads
+		 */
+		ThreadList: {
+			cursor?: string | null;
+			/** @description room members for each thread member in preview_members */
+			room_members: components["schemas"]["RoomMember"][];
+			threads: components["schemas"]["Channel"][];
+			/** Format: int64 */
+			total: number;
+			/** @description users for each thread member in preview_members */
+			users: components["schemas"]["User"][];
+		};
 		ThreadMember: {
 			/** @description When this member joined the thread */
 			joined_at: components["schemas"]["Time"];
 			thread_id: components["schemas"]["Id"];
 			user_id: components["schemas"]["Id"];
+		};
+		ThreadMemberCreate: Record<string, never>;
+		ThreadMemberMinimal: {
+			/** @description When this member joined the thread */
+			joined_at: components["schemas"]["Time"];
+			user_id: components["schemas"]["Id"];
+		};
+		ThreadMemberUpdate: Record<string, never>;
+		ThumbQuery: {
+			/** @description whether to allow animated thumbnails */
+			animate?: boolean;
+			/**
+			 * Format: int32
+			 * @description if None, fetch the original thumbnail (eg. a video may have an embedded thumbnail)
+			 */
+			size?: number | null;
 		};
 		/**
 		 * @description A datetime in rfc3339 format for json.
@@ -11382,6 +13303,16 @@ export interface components {
 		 * @enum {string}
 		 */
 		TimeFormat: "auto" | "12h" | "24h";
+		/** @description a room member's timeout */
+		Timeout: {
+			expires_at?: null | components["schemas"]["Time"];
+			/**
+			 * @description moderator only reason for why this timeout exists
+			 *
+			 *     same as the audit log reason
+			 */
+			reason?: string | null;
+		};
 		/** @description a timezone */
 		Timezone: string;
 		Toplevel:
@@ -11393,22 +13324,52 @@ export interface components {
 					/** @enum {string} */
 					type: "Item";
 			  });
+		/** @description response to a totp init request */
+		TotpInit: {
+			secret: string;
+		};
 		TotpRecoveryCode: {
 			code: string;
 			used_at?: null | components["schemas"]["Time"];
+		};
+		TotpRecoveryCodes: {
+			codes: components["schemas"]["TotpRecoveryCode"][];
+		};
+		/** @description request body for totp_validate or totp_exec */
+		TotpVerificationRequest: {
+			/** @description the totp code or recovery code */
+			code: string;
+		};
+		/** @description an extra file for a piece of media */
+		Track: {
+			id: components["schemas"]["Id"];
+			/** @description a human readable name for a track */
+			label?: string | null;
+			/** @description the language of a track */
+			lang?: string | null;
+			/**
+			 * Format: int64
+			 * @description file size in bytes
+			 */
+			size: number;
+			source: components["schemas"]["TrackSource"];
+			/** @description the type of this track */
+			type: components["schemas"]["TrackType"];
 		};
 		/** @description an announcement for a track along with its metadata */
 		TrackAnnouncement: components["schemas"]["TrackMetadata"] & {
 			id: components["schemas"]["TrackId"];
 		};
-		/**
-		 * @description a mapping from a mid to track metadata
-		 *
-		 *     sent during client offer
-		 */
-		TrackCreate: components["schemas"]["TrackMetadata"] & {
-			mid: components["schemas"]["Mid"];
+		TrackCreate: {
+			label?: string | null;
+			lang?: string | null;
+			type: components["schemas"]["TrackType"];
 		};
+		/**
+		 * @description the encoding of the track
+		 * @enum {string}
+		 */
+		TrackEncoding: "Source" | "Full" | "Reduced" | "Thumbnail";
 		/**
 		 * @description a unique identifier for a media track
 		 *
@@ -11443,6 +13404,28 @@ export interface components {
 			kind: components["schemas"]["MediaKind"];
 			whisper?: null | components["schemas"]["TrackWhisper"];
 		};
+		/** @description where a track came from */
+		TrackSource:
+			| {
+					/** @enum {string} */
+					type: "Embedded";
+			  }
+			| {
+					generator_name: string;
+					generator_version: string;
+					/** @enum {string} */
+					type: "Generated";
+			  };
+		/**
+		 * @description the type of a track
+		 * @enum {string}
+		 */
+		TrackType: "Subtitles" | "Captions";
+		TrackUpdate: {
+			label?: string | null;
+			lang?: string | null;
+			type?: null | components["schemas"]["TrackType"];
+		};
 		/**
 		 * @description track whispering config
 		 *
@@ -11451,10 +13434,54 @@ export interface components {
 		TrackWhisper: {
 			user_ids: components["schemas"]["Id"][];
 		};
+		TransferOwnership: {
+			owner_id: components["schemas"]["Id"];
+		};
+		TrickplayQuery: {
+			/**
+			 * Format: int32
+			 * @description number of thumbnails on the y axis
+			 */
+			height?: number | null;
+			/**
+			 * Format: int32
+			 * @description height for each thumbnail
+			 */
+			thumb_height?: number | null;
+			/**
+			 * Format: int32
+			 * @description width for each thumbnail
+			 */
+			thumb_width?: number | null;
+			/**
+			 * Format: int32
+			 * @description number of thumbnails on the x axis
+			 */
+			width?: number | null;
+		};
 		/** @description unfurl a url */
 		Unfurl: components["schemas"]["Context"] & {
 			/** @description the links to unfurl */
 			urls: string[];
+		};
+		UnfurlerDebugRequest: {
+			/**
+			 * Format: uri
+			 * @description the url to try to unfurl
+			 */
+			url: string;
+		};
+		UnfurlerDebugResponse: {
+			/** @description the generated embeds */
+			embeds: components["schemas"]["Embed"][];
+			/** @description unfurler log */
+			log: components["schemas"]["Entry"][];
+		};
+		UnfurlerRequest: {
+			urls: string[];
+		};
+		UnfurlerResponse: {
+			embeds: components["schemas"]["Embed"][];
 		};
 		UrlEmbed: Record<string, never>;
 		User: {
@@ -11484,22 +13511,82 @@ export interface components {
 			version_id: components["schemas"]["Id"];
 			webhook?: null | components["schemas"]["UserWebhook"];
 		};
+		UserCreate: {
+			description?: string | null;
+			name: string;
+		};
 		UserIdReq: null | Record<string, never>[] | components["schemas"]["Id"];
 		/** @enum {string} */
 		UserListFilter: "guest" | "registered" | "bot" | "puppet";
 		UserListParams: {
 			filter?: null | components["schemas"]["UserListFilter"];
 		};
+		UserPatch: {
+			avatar?: null | components["schemas"]["Id"];
+			banner?: null | components["schemas"]["Id"];
+			description?: string | null;
+			name?: string | null;
+		};
+		UserSearch: {
+			/** @description current page cursor */
+			cursor?: string | null;
+			/** @description whether there are more threads */
+			has_more: boolean;
+			/** @description the ids of the matched users */
+			results: components["schemas"]["Id"][];
+			/**
+			 * Format: int64
+			 * @description approximate count of total results that match this query
+			 */
+			total: number;
+			/** @description the users */
+			users: components["schemas"]["User"][];
+		};
 		/** @enum {string} */
 		UserSearchOrderField: "Name" | "Created" | "Registered" | "Id";
+		UserSearchRequest: components["schemas"]["SearchRequest"] & {
+			sort_field?: components["schemas"]["UserSearchOrderField"];
+		};
 		UserWebhook: {
 			channel_id: components["schemas"]["Id"];
 			creator_id: components["schemas"]["Id"];
 			room_id?: null | components["schemas"]["Id"];
 		};
+		UserWithPrivate: components["schemas"]["User"] & {
+			config: components["schemas"]["PreferencesGlobal"];
+		};
 		UserWithRelationship: components["schemas"]["User"] & {
 			relationship: components["schemas"]["Relationship"];
 		};
+		/** @description user info response for openid connect */
+		Userinfo: {
+			email?: null | components["schemas"]["EmailAddr"];
+			/** @description if the provided email has been verified or not */
+			email_verified: boolean;
+			/**
+			 * Format: uri
+			 * @description oauth issuer
+			 */
+			iss: string;
+			/** @description user's name */
+			name: string;
+			/**
+			 * Format: uri
+			 * @description link to the user's avatar. returns the full size image, not a thumbnail.
+			 */
+			picture?: string | null;
+			/** @description html url to the user's profile page */
+			profile: string;
+			/** @description user's uuid */
+			sub: components["schemas"]["Id"];
+			/**
+			 * Format: int64
+			 * @description calculated from version_id
+			 */
+			updated_at: number;
+		};
+		/** @enum {string} */
+		Version: "V1" | "V2";
 		/** @description a fake/virtual room with a custom channel nav */
 		View: {
 			categories: components["schemas"]["ViewCategory"][];
@@ -11573,6 +13660,44 @@ export interface components {
 			/** @description the user this state belongs to */
 			user_id: components["schemas"]["Id"];
 		};
+		/** @description the voice state with user/room member info */
+		VoiceStateFull: components["schemas"]["VoiceState"] & {
+			member?: null | components["schemas"]["RoomMember"];
+			thread_member?: null | components["schemas"]["ThreadMember"];
+			user: components["schemas"]["User"];
+		};
+		VoiceStateMove: {
+			target_id: components["schemas"]["Id"];
+		};
+		VoiceStateMoveBulk: {
+			/** @description target channel id */
+			channel_id: components["schemas"]["Id"];
+			/** @description set to None to move everyone */
+			user_ids?: components["schemas"]["Id"][] | null;
+		};
+		VoiceStateParams: {
+			/** @description whether to return the full voice state */
+			full?: boolean;
+		};
+		/**
+		 * @description represents an update to a voice state
+		 *
+		 *     sent via rest
+		 */
+		VoiceStatePatch: {
+			channel_id?: null | components["schemas"]["Id"];
+			/** @description same as room member deaf */
+			deaf?: boolean | null;
+			/** @description same as room member mute */
+			mute?: boolean | null;
+			requested_to_speak_at?: null | components["schemas"]["Time"];
+			/**
+			 * @description allow this user to speak in the current channel
+			 *
+			 *     requires VoiceMute permission
+			 */
+			suppress?: boolean | null;
+		};
 		/** @description info about a user's screen share */
 		VoiceStateScreenshare: {
 			/** @description when this user started sharing their screen */
@@ -11590,10 +13715,30 @@ export interface components {
 			self_mute: boolean;
 			self_video: boolean;
 		};
+		/**
+		 * @description warnings that require forcing
+		 *
+		 *     generally, this means you must pass ?force=true in the url. if you like to
+		 *     live life on the edge, you can always pass ?force.
+		 * @enum {string}
+		 */
+		Warning: "RoleNotEmpty" | "TagNotEmpty";
 		WebauthnAuthenticator: {
 			created_at: components["schemas"]["Time"];
 			id: components["schemas"]["Id"];
 			name: string;
+		};
+		WebauthnChallenge: {
+			/** @description public key credentials request as stringified json */
+			challenge: string;
+		};
+		/** @description request body for a webauthn ceremony response */
+		WebauthnCredential: {
+			/** @description public key credentials response as stringified json */
+			credential: string;
+		};
+		WebauthnPatch: {
+			name?: string | null;
 		};
 		Webhook: {
 			avatar?: null | components["schemas"]["Id"];
@@ -11621,16 +13766,36 @@ export interface components {
 			page_index?: null | components["schemas"]["Id"];
 			page_notfound?: null | components["schemas"]["Id"];
 		};
+		WikiGraph: {
+			documents: components["schemas"]["WikiGraphDocument"][];
+			links: [string, string][];
+		};
 		WikiGraphDocument: {
 			id: components["schemas"]["Id"];
 			title: string;
 			/** Format: int64 */
 			weight: number;
 		};
+		WikiGraphQuery: {
+			document_id?: null | components["schemas"]["Id"];
+			/**
+			 * Format: int32
+			 * @description maximum number of documents to return
+			 */
+			limit: number;
+		};
 		WikiPatch: {
 			allow_indexing?: boolean | null;
 			page_index?: null | components["schemas"]["Id"];
 			page_notfound?: null | components["schemas"]["Id"];
+		};
+		WithMembersQuery: {
+			/**
+			 * @description whether to include members in response
+			 *
+			 *     includes `users`, `room_members`, and `thread_members` fields
+			 */
+			with_members?: boolean;
 		};
 	};
 	responses: never;
