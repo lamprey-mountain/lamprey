@@ -261,7 +261,7 @@ pub mod room_ban_create {
     path = "/room/{room_id}/ban",
     tags = ["room_member"],
     scopes = [Full],
-    permissions = [MemberBan],
+    permissions_optional = [MemberBan, AuditLogView],
     response(OK, body = PaginationResponse<RoomBan>, description = "success"),
 )]
 pub mod room_ban_list {
@@ -287,7 +287,7 @@ pub mod room_ban_list {
     path = "/room/{room_id}/ban/{user_id}",
     tags = ["room_member"],
     scopes = [Full],
-    permissions = [MemberBan],
+    permissions_optional = [MemberBan, AuditLogView],
     response(OK, body = RoomBan, description = "success"),
 )]
 pub mod room_ban_get {
@@ -389,7 +389,7 @@ pub mod room_prune_begin {
     path = "/room/{room_id}/ban/search",
     tags = ["room_member"],
     scopes = [Full],
-    permissions = [MemberBan],
+    permissions_optional = [MemberBan, AuditLogView],
     response(OK, body = PaginationResponse<RoomBan>, description = "success"),
 )]
 pub mod room_ban_search {

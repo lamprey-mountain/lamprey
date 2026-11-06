@@ -1023,12 +1023,16 @@ async fn room_ban_get(
     let room = srv.rooms.get(req.room_id, None).await?;
     room.room_type.ensure_members_manageable()?;
     let mut d = s.data();
-    srv.perms
+    // bans are visible to moderators and audit log viewers
+    let mut perms = srv
+        .perms
         .for_room3(Some(auth.user.id), req.room_id)
         .await?
-        .ensure_view()?
-        .needs(Permission::MemberBan)
-        .check()?;
+        .ensure_view()?;
+    if !perms.has_any(&[Permission::MemberBan, Permission::AuditLogView]) {
+        perms.needs(Permission::MemberBan);
+    }
+    perms.check()?;
     let res = d.room_ban_get(req.room_id, target_user_id).await?;
     Ok(Json(res))
 }
@@ -1045,12 +1049,16 @@ async fn room_ban_list(
     let room = srv.rooms.get(req.room_id, None).await?;
     room.room_type.ensure_members_manageable()?;
     let mut d = s.data();
-    srv.perms
+    // bans are visible to moderators and audit log viewers
+    let mut perms = srv
+        .perms
         .for_room3(Some(auth.user.id), req.room_id)
         .await?
-        .ensure_view()?
-        .needs(Permission::MemberBan)
-        .check()?;
+        .ensure_view()?;
+    if !perms.has_any(&[Permission::MemberBan, Permission::AuditLogView]) {
+        perms.needs(Permission::MemberBan);
+    }
+    perms.check()?;
     let res = d.room_ban_list(req.room_id, req.pagination).await?;
     let cursor = res.items.last().map(|i| i.user_id.to_string());
     let res = PaginationResponse {
@@ -1074,12 +1082,16 @@ async fn room_ban_search(
     let room = srv.rooms.get(req.room_id, None).await?;
     room.room_type.ensure_members_manageable()?;
     let mut d = s.data();
-    srv.perms
+    // bans are visible to moderators and audit log viewers
+    let mut perms = srv
+        .perms
         .for_room3(Some(auth.user.id), req.room_id)
         .await?
-        .ensure_view()?
-        .needs(Permission::MemberBan)
-        .check()?;
+        .ensure_view()?;
+    if !perms.has_any(&[Permission::MemberBan, Permission::AuditLogView]) {
+        perms.needs(Permission::MemberBan);
+    }
+    perms.check()?;
     let res = d
         .room_ban_search(req.room_id, req.search.query, req.pagination)
         .await?;
