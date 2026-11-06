@@ -15,16 +15,7 @@ export interface paths {
 		 * Oauth JWKS
 		 * @description Retrieve the JSON Web Key Set.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["oauth_jwks"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -44,16 +35,7 @@ export interface paths {
 		 * Oauth config authorization server
 		 * @description Retrieve the OpenID Connect discovery document for automatic client configuration.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["oauth_autoconfig_auth_server"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -73,16 +55,7 @@ export interface paths {
 		 * Oauth config OpenID Connect
 		 * @description Retrieve the OpenID Connect discovery document.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["oauth_autoconfig_openid"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -101,16 +74,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Admin broadcast */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["admin_broadcast"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -181,16 +145,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Admin register user */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["admin_register_user"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -211,69 +166,6 @@ export interface paths {
 		 * @description Reindex some stuff
 		 */
 		post: operations["admin_search_reindex"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/admin/reindex-channel/{channel_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Admin reindex channel
-		 * @deprecated
-		 * @description Queue a channel to be reindexed for search
-		 */
-		post: operations["admin_reindex_channel"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/admin/reindex-everything": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Admin reindex everything
-		 * @deprecated
-		 * @description Queue all channels to be reindexed for search. This deletes all existing search index data first.
-		 */
-		post: operations["admin_reindex_everything"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/admin/reindex-room/{room_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Admin reindex room
-		 * @deprecated
-		 * @description Queue all channels in a room to be reindexed for search
-		 */
-		post: operations["admin_reindex_room"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -412,16 +304,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Admin whisper */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["admin_whisper"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -436,28 +319,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** App list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["app_list"];
 		put?: never;
 		/** App create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["app_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -472,42 +337,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** App get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["app_get"];
 		put?: never;
 		post?: never;
 		/** App delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["app_delete"];
 		options?: never;
 		head?: never;
 		/** App patch */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["app_patch"];
 		trace?: never;
 	};
 	"/api/v1/app/{app_id}/invite": {
@@ -523,16 +361,7 @@ export interface paths {
 		 * App invite bot
 		 * @description Add a bot to a room
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["app_invite_bot"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -548,16 +377,7 @@ export interface paths {
 		};
 		get?: never;
 		/** Puppet ensure */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["puppet_ensure"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -575,16 +395,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** App rotate oauth secret */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["app_rotate_secret"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -601,221 +412,8 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** App create session */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["app_create_session"];
 		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/captcha": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Auth captcha challenge */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/captcha/init": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth captcha init */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/captcha/submit": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth captcha submit */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/email/{addr}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Auth email exec
-		 * @description Send a magic link email to login
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/email/{addr}/complete": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Auth email complete
-		 * @description Complete email authentication
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/email/{addr}/reset": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Auth email reset
-		 * @description Send a password reset email
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/oauth/{provider}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth oauth init */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		/**
-		 * Auth oauth delete
-		 * @description Remove an oauth provider
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -829,404 +427,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Auth oauth redirect */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["auth_oauth_redirect"];
 		put?: never;
 		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/password": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/** Auth password set */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		/** Auth password exec */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		/**
-		 * Auth password delete
-		 * @description Remove password authentication
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/state": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Auth state
-		 * @description Get the available auth methods for this user
-		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/sudo": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		/** Auth sudo delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/sudo/upgrade": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Auth sudo upgrade (TEMP)
-		 * @description Immediately upgrade a session to sudo mode. For debugging, will be removed later.
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/totp": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Auth totp exec
-		 * @description Execute totp authentication
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		/**
-		 * Auth totp delete
-		 * @description Delete totp configuration
-		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/totp/enable": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth totp enable */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/totp/init": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth totp init */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/totp/recovery": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/**
-		 * Auth totp recovery exec
-		 * @description Use a recovery code
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/totp/recovery-codes": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/**
-		 * Auth totp recovery codes get
-		 * @description View existing recovery codes (does not invalidate them)
-		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		put?: never;
-		/**
-		 * Auth totp recovery codes rotate
-		 * @description Generate new recovery codes (invalidates old ones)
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/webauthn": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		post?: never;
-		/** Auth webauthn delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		options?: never;
-		head?: never;
-		/** Auth webauthn patch */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		trace?: never;
-	};
-	"/api/v1/auth/webauthn/exec": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth webauthn exec */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/auth/webauthn/init": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Auth webauthn init */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1244,16 +447,7 @@ export interface paths {
 		 * Calendar event list user
 		 * @description List all events the current user can see
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["calendar_event_list_user"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1270,28 +464,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Calendar event list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["calendar_event_list"];
 		put?: never;
 		/** Calendar event create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["calendar_event_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1306,42 +482,50 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Calendar event get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["calendar_event_get"];
 		put?: never;
 		post?: never;
 		/** Calendar event delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["calendar_event_delete"];
 		options?: never;
 		head?: never;
 		/** Calendar event update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
+		patch: operations["calendar_event_update"];
+		trace?: never;
+	};
+	"/api/v1/calendar/{channel_id}/event/{event_id}/instance/{seq}/rsvp": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
 		};
+		/** Calendar instance RSVP list */
+		get: operations["calendar_instance_rsvp_list"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/calendar/{channel_id}/event/{event_id}/instance/{seq}/rsvp/{user_id}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		get?: never;
+		/** Calendar instance RSVP put */
+		put: operations["calendar_instance_rsvp_put"];
+		post?: never;
+		/** Calendar instance RSVP delete */
+		delete: operations["calendar_instance_rsvp_delete"];
+		options?: never;
+		head?: never;
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/calendar/{channel_id}/event/{event_id}/overwrite": {
@@ -1352,16 +536,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Calendar overwrite list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["calendar_overwrite_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1378,101 +553,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Calendar overwrite get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		put?: never;
+		get: operations["calendar_overwrite_get"];
+		/**
+		 * Calendar overwrite put
+		 * @description Create or replace an overwrite for a calendar event
+		 */
+		put: operations["calendar_overwrite_update"];
 		post?: never;
 		/** Calendar overwrite delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		options?: never;
-		head?: never;
-		/** Calendar overwrite update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		trace?: never;
-	};
-	"/api/v1/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Calendar overwrite RSVP list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/calendar/{channel_id}/event/{event_id}/overwrite/{seq}/rsvp/{user_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/** Calendar overwrite RSVP put */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		post?: never;
-		/** Calendar overwrite RSVP delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["calendar_overwrite_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1486,16 +575,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Calendar event RSVP list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["calendar_event_rsvp_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1512,39 +592,12 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Calendar event RSVP get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["calendar_event_rsvp_get"];
 		/** Calendar event RSVP put */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["calendar_event_rsvp_put"];
 		post?: never;
 		/** Calendar event RSVP delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["calendar_event_rsvp_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -1563,16 +616,7 @@ export interface paths {
 		 * Channel create dm
 		 * @description Create a dm or group dm thread (outside of a room)
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["channel_create_dm"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1587,32 +631,14 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Channel get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["channel_get"];
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
 		/** Channel update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["channel_update"];
 		trace?: never;
 	};
 	"/api/v1/channel/{channel_id}/ack": {
@@ -1627,16 +653,7 @@ export interface paths {
 		 * Channel ack
 		 * @description Mark a channel as read (or unread).
 		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["channel_ack"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -1652,16 +669,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Thread activity */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["thread_activity"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1681,16 +689,7 @@ export interface paths {
 		 * Message context
 		 * @description More efficient than calling List messages twice
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["message_context"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1713,16 +712,7 @@ export interface paths {
 		 * @description Create a live-updating message in a channel. Flumes allow real-time
 		 *     content updates until committed.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["flume_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1742,16 +732,7 @@ export interface paths {
 		 * @description Commit the flume content, creating a final message version. After commit,
 		 *     no further updates can be applied to this flume.
 		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["flume_commit"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -1777,16 +758,7 @@ export interface paths {
 		 * @description Apply a patch to the flume's components. This can append, replace, update,
 		 *     or delete components. The flume must be in the Live state.
 		 */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["flume_delta"];
 		trace?: never;
 	};
 	"/api/v1/channel/{channel_id}/flume/{message_id}/ping": {
@@ -1803,16 +775,7 @@ export interface paths {
 		 * @description Keep a flume alive by resetting its autocommit timer. If no ping is
 		 *     received within the autocommit window, the flume will be autocommitted.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["flume_ping"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1827,28 +790,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Invite list channel */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["invite_channel_list"];
 		put?: never;
 		/** Invite channel create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["invite_channel_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1866,16 +811,7 @@ export interface paths {
 		 * Channel member search
 		 * @description If this is a thread, search thread members. Otherwise, search all room members who can view this thread.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["channel_member_search"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1895,31 +831,9 @@ export interface paths {
 		 * Messages list
 		 * @description Paginate messages in a thread
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["message_list"];
 		put?: never;
-		/**
-		 * Message create
-		 * @description Send a message to a channel
-		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -1927,16 +841,7 @@ export interface paths {
 		 * Message moderate
 		 * @description Bulk remove, restore, or delete messages
 		 */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["message_moderate"];
 		trace?: never;
 	};
 	"/api/v1/channel/{channel_id}/message.atom": {
@@ -1950,16 +855,7 @@ export interface paths {
 		 * Message list atom/rss
 		 * @description Get an atom or rss feed of messages for this channel
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["message_list_atom"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -1979,16 +875,7 @@ export interface paths {
 		 * Message list deleted
 		 * @description Paginate deleted messages in a thread
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["message_list_deleted"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2007,16 +894,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Message move */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["message_move"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2034,16 +912,7 @@ export interface paths {
 		 * Message list removed
 		 * @description Paginate removed messages in a thread
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["message_list_removed"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2059,46 +928,18 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Message get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get?: never;
 		put?: never;
 		post?: never;
 		/**
 		 * Message delete
 		 * @description Note that this endpoint allows deleting your own messages
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["message_delete"];
 		options?: never;
 		head?: never;
 		/** Message edit */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["message_edit"];
 		trace?: never;
 	};
 	"/api/v1/channel/{channel_id}/message/{message_id}/reaction": {
@@ -2115,16 +956,7 @@ export interface paths {
 		 * Reaction remove all
 		 * @description Remove all reactions from a message.
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["reaction_remove_all"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2141,32 +973,14 @@ export interface paths {
 		 * Reaction list
 		 * @description List message reactions for a specific emoji.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["reaction_list"];
 		put?: never;
 		post?: never;
 		/**
 		 * Reaction remove emoji
 		 * @description Remove all reactions of a specific emoji from a message.
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["reaction_remove_emoji"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2184,31 +998,13 @@ export interface paths {
 		 * Reaction add
 		 * @description Add a reaction to a message.
 		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["reaction_add"];
 		post?: never;
 		/**
 		 * Reaction remove
 		 * @description Remove a user's reaction from a message.
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["reaction_remove"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2224,16 +1020,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Thread create from message */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["thread_create_from_message"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2248,16 +1035,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Message version list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["message_version_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2274,29 +1052,11 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Message version get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["message_version_get"];
 		put?: never;
 		post?: never;
 		/** Message version delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["message_version_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2314,16 +1074,7 @@ export interface paths {
 		 * @description Get incremental sync events for a channel since a given sequence number.
 		 *     Use this to catch up when reconnecting or after being offline.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["channel_mirror"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2343,55 +1094,10 @@ export interface paths {
 		put?: never;
 		/**
 		 * Nudge
-		 * @description Nudge a user. Can only be used in dms or gdms. Can only be called once every 5 minutes per user.
+		 * @description Nudge a user. Can only be used in dms or gdms.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["message_nudge"];
 		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/channel/{channel_id}/permission/{overwrite_id}": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		/** Permission overwrite */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		post?: never;
-		/** Permission delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2405,32 +1111,14 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Message pins list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["message_pins_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
 		/** Message pins reorder */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["message_pins_reorder"];
 		trace?: never;
 	};
 	"/api/v1/channel/{channel_id}/pin/{message_id}": {
@@ -2442,28 +1130,10 @@ export interface paths {
 		};
 		get?: never;
 		/** Message pin */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["message_pin"];
 		post?: never;
 		/** Message unpin */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["message_unpin"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2484,16 +1154,7 @@ export interface paths {
 		 * @description Immediately expires a slowmode ratelimit for all users, allowing all users to send messages again
 		 *     Requires either ChannelManage, ThreadManage, or MemberTimeout
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["channel_ratelimit_delete_all"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2512,32 +1173,14 @@ export interface paths {
 		 * @description Immediately creates a slowmode ratelimit
 		 *     Requires either ChannelManage or ThreadManage, or MemberTimeout
 		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["channel_ratelimit_update"];
 		post?: never;
 		/**
 		 * Ratelimit delete
 		 * @description Immediately expires a slowmode ratelimit, allowing the target user to send a message again
 		 *     Requires either ChannelManage, ThreadManage, or MemberTimeout
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["channel_ratelimit_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2554,31 +1197,13 @@ export interface paths {
 		 * Redex list
 		 * @description List scripts in a channel
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["redex_list"];
 		put?: never;
 		/**
 		 * Redex create
 		 * @description Create a new redex in a channel
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["redex_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2596,32 +1221,14 @@ export interface paths {
 		 * Redex get
 		 * @description Get a redex by ID
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["redex_get"];
 		put?: never;
 		post?: never;
 		/**
 		 * Redex delete
 		 * @description Delete a redex
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["redex_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2639,16 +1246,7 @@ export interface paths {
 		 * Redex content update
 		 * @description Update the content of a redex (creates a new version)
 		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["redex_content_update"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -2667,16 +1265,7 @@ export interface paths {
 		 * Redex dependency graph
 		 * @description Get the dependency graph for a redex
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["redex_depends"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2698,16 +1287,7 @@ export interface paths {
 		 * Redex dependency update
 		 * @description Update redex dependencies, creates a new version
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["redex_depends_update"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2725,16 +1305,7 @@ export interface paths {
 		 * Redex eval list
 		 * @description List evals for a redex
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["redex_eval_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2754,16 +1325,7 @@ export interface paths {
 		 * Redex eval get
 		 * @description Get a specific eval
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["redex_eval_get"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2783,16 +1345,7 @@ export interface paths {
 		 * Redex eval log
 		 * @description Get logs from a redex eval
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["redex_eval_log"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2814,16 +1367,7 @@ export interface paths {
 		 * Redex eval stop
 		 * @description Stop a evalning redex
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["redex_eval_stop"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2843,16 +1387,7 @@ export interface paths {
 		 * Redex trigger
 		 * @description Run a redex with a trigger input
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["redex_trigger"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2870,16 +1405,7 @@ export interface paths {
 		 * Redex version list
 		 * @description Get version history for a redex
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["redex_version_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -2899,32 +1425,14 @@ export interface paths {
 		 * Redex version get
 		 * @description Get a specific redex version
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["redex_version_get"];
 		put?: never;
 		post?: never;
 		/**
 		 * Redex version delete
 		 * @description Delete a specific redex version
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["redex_version_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -2943,16 +1451,7 @@ export interface paths {
 		 * Redex version restore
 		 * @description Restore a deleted redex version
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["redex_version_restore"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -2968,28 +1467,10 @@ export interface paths {
 		};
 		get?: never;
 		/** Channel remove */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["channel_remove"];
 		post?: never;
 		/** Channel restore */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["channel_restore"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -3003,16 +1484,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Message reply roots */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["message_reply_roots"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3029,16 +1501,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Message reply list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["message_reply_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3055,28 +1518,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Tag list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["tag_list"];
 		put?: never;
 		/** Tag create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["tag_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3091,16 +1536,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Tag search */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["tag_search"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3117,42 +1553,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Tag get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["tag_get"];
 		put?: never;
 		post?: never;
 		/** Tag delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["tag_delete"];
 		options?: never;
 		head?: never;
 		/** Tag update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["tag_update"];
 		trace?: never;
 	};
 	"/api/v1/channel/{channel_id}/thread": {
@@ -3163,28 +1572,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Thread list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["thread_list"];
 		put?: never;
 		/** Thread create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["thread_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3202,16 +1593,7 @@ export interface paths {
 		 * Thread list atom/rss (TODO)
 		 * @description Get an atom or rss feed of threads for this channel
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["thread_list_atom"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3228,16 +1610,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Thread list archived */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["thread_list_archived"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3254,16 +1627,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Thread list removed */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["thread_list_removed"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3282,16 +1646,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Channel transfer ownership */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["channel_transfer_ownership"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3311,16 +1666,7 @@ export interface paths {
 		 * Channel typing
 		 * @description Send a typing notification to a thread
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["channel_typing"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3340,16 +1686,7 @@ export interface paths {
 		 * Channel upgrade
 		 * @description Convert a group dm thread into a full room. Only the gdm creator can upgrade the thread.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["channel_upgrade"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3386,6 +1723,26 @@ export interface paths {
 		 * @description in the future, this will become a stable route
 		 */
 		get: operations["debug_info"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
+	"/api/v1/debug/lookup-ip/{ip}": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Look up IP metadata
+		 * @description Get geolocation metadata about an ip address
+		 */
+		get: operations["debug_lookup_ip"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3476,16 +1833,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Document branch list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["document_branch_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3502,32 +1850,14 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Document branch get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["document_branch_get"];
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
 		/** Document branch update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["document_branch_update"];
 		trace?: never;
 	};
 	"/api/v1/document/{channel_id}/branch/{branch_id}/close": {
@@ -3540,16 +1870,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Document branch close */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["document_branch_close"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3568,16 +1889,7 @@ export interface paths {
 		 * Document content put
 		 * @description Replace a document with serialized content. Creates a new revision.
 		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["document_content_put"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -3593,16 +1905,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Document CRDT diff */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["document_crdt_diff"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3612,16 +1915,7 @@ export interface paths {
 		 * Document CRDT apply
 		 * @description Note: Uses base64-encoded update in JSON body since raw binary isn't supported
 		 */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["document_crdt_apply"];
 		trace?: never;
 	};
 	"/api/v1/document/{channel_id}/branch/{branch_id}/history": {
@@ -3635,16 +1929,7 @@ export interface paths {
 		 * Document history
 		 * @description Query edit history for a document
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["document_history"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3663,16 +1948,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Document branch merge */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["document_branch_merge"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3689,16 +1965,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Document branch sync */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["document_branch_sync"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3715,16 +1982,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Document branch fork */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["document_branch_fork"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3748,16 +2006,7 @@ export interface paths {
 		 *
 		 *     In the future, document-media linking will be maintained automatically as the crdt is edited.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["document_media_attach"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3775,16 +2024,7 @@ export interface paths {
 		 * Document content get
 		 * @description Get serialized document content
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["document_content_get"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3801,28 +2041,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Document tag list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["document_tag_list"];
 		put?: never;
 		/** Document tag create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["document_tag_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3837,42 +2059,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Document tag get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["document_tag_get"];
 		put?: never;
 		post?: never;
 		/** Document tag delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["document_tag_delete"];
 		options?: never;
 		head?: never;
 		/** Document tag update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["document_tag_update"];
 		trace?: never;
 	};
 	"/api/v1/emoji/search": {
@@ -3886,16 +2081,7 @@ export interface paths {
 		 * Emoji search
 		 * @description Search for custom emoji.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["emoji_search"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3915,16 +2101,7 @@ export interface paths {
 		 * Emoji lookup
 		 * @description Get info about an emoji.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["emoji_lookup"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -3950,16 +2127,7 @@ export interface paths {
 		 *     - when using an invite, they can act like a standard account in that one specific room/thread
 		 *     - they can be given an invite to a public room to bypass
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["guest_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -3995,33 +2163,15 @@ export interface paths {
 		};
 		/**
 		 * Inbox get
-		 * @description List notifications
+		 * @description Query notifications
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["inbox_get"];
 		put?: never;
 		/**
 		 * Inbox post
 		 * @description Create a reminder for later
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["inbox_post"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4041,16 +2191,7 @@ export interface paths {
 		 * Inbox flush
 		 * @description Deletes read notifications from the inbox
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["inbox_flush"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4067,16 +2208,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Inbox mark read */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["inbox_mark_read"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4093,16 +2225,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Inbox mark unread */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["inbox_mark_unread"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4119,16 +2242,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Interaction create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["interaction_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4148,16 +2262,7 @@ export interface paths {
 		 * Interaction respond
 		 * @description Respond to an interaction
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["interaction_respond"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4177,16 +2282,7 @@ export interface paths {
 		 * Interaction message create
 		 * @description Send another message (aka followup message)
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["interaction_message_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4204,48 +2300,21 @@ export interface paths {
 		 * Interaction message get
 		 * @description Get a message from an interaction
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["interaction_message_get"];
 		put?: never;
 		post?: never;
 		/**
 		 * Interaction message delete
 		 * @description Delete a message from an interaction
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["interaction_message_delete"];
 		options?: never;
 		head?: never;
 		/**
 		 * Interaction message edit
 		 * @description Edit a message from an interaction
 		 */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["interaction_message_edit"];
 		trace?: never;
 	};
 	"/api/v1/internal/harvest/{harvest_id}/{token}/download": {
@@ -4256,16 +2325,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Harvest download */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["harvest_download"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -4299,52 +2359,16 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Invite resolve */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["invite_resolve"];
 		put?: never;
 		/** Invite use */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["invite_use"];
 		/** Invite delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["invite_delete"];
 		options?: never;
 		head?: never;
 		/** Invite update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["invite_update"];
 		trace?: never;
 	};
 	"/api/v1/media": {
@@ -4357,16 +2381,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Media create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["media_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4383,16 +2398,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Media search */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["media_search"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4407,42 +2413,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Media get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["media_get"];
 		put?: never;
 		post?: never;
 		/** Media delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["media_delete"];
 		options?: never;
 		head?: never;
 		/** Media patch */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["media_patch"];
 		trace?: never;
 	};
 	"/api/v1/media/{media_id}/clone": {
@@ -4455,16 +2434,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Media clone */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["media_clone"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4480,16 +2450,7 @@ export interface paths {
 		};
 		get?: never;
 		/** Media done */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["media_done"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -4508,31 +2469,13 @@ export interface paths {
 		 * Oauth info
 		 * @description Fetch information about an OAuth application before authorization.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["oauth_info"];
 		put?: never;
 		/**
 		 * Oauth authorize
 		 * @description Grant an application access to some resources.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["oauth_authorize"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4552,16 +2495,7 @@ export interface paths {
 		 * Oauth introspect
 		 * @description Validate an access token and retrieve its associated information and scopes.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["oauth_introspect"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4581,16 +2515,7 @@ export interface paths {
 		 * Oauth revoke
 		 * @description Invalidate an active access or refresh token, terminating the application's access.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["oauth_revoke"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4610,16 +2535,7 @@ export interface paths {
 		 * Oauth token
 		 * @description Exchange an authorization token for an access token.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["oauth_token"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4637,16 +2553,7 @@ export interface paths {
 		 * Oauth userinfo
 		 * @description Retrieve profile information about the user currently authorized by an access token.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["oauth_userinfo"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -4665,16 +2572,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Pack create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["pack_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4689,16 +2587,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Pack export */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["pack_export"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -4720,16 +2609,7 @@ export interface paths {
 		 * Pack import
 		 * @description adds all of the emoji in the pack to this room
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["pack_import"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4749,16 +2629,7 @@ export interface paths {
 		 * Pack upgrade
 		 * @description upgrade a room from `type = Pack` to `type = Default`
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["pack_upgrade"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -4773,27 +2644,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Preferences global get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["preferences_global_get"];
 		/** Preferences global put */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["preferences_global_put"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -4809,27 +2662,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Preferences channel get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["preferences_channel_get"];
 		/** Preferences channel put */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["preferences_channel_put"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -4845,27 +2680,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Preferences room get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["preferences_room_get"];
 		/** Preferences room put */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["preferences_room_put"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -4881,27 +2698,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Preferences user get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["preferences_user_get"];
 		/** Preferences user put */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["preferences_user_put"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -4954,45 +2753,18 @@ export interface paths {
 		 * Push get
 		 * @description Get web push subscription for this session
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["push_get"];
 		put?: never;
 		/**
 		 * Push register
 		 * @description Register web push for this session
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["push_register"];
 		/**
 		 * Push delete
 		 * @description Remove web push for this session
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["push_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -5029,28 +2801,10 @@ export interface paths {
 		 * Room list
 		 * @description Lists all rooms on the server.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_list"];
 		put?: never;
 		/** Room create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["room_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -5064,29 +2818,17 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/** Room template list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		/**
+		 * Room template list
+		 * @description List room templates that the current user has created
+		 */
+		get: operations["room_template_list"];
 		put?: never;
-		/** Room template create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		/**
+		 * Room template create
+		 * @description Create a new room template from an existing room
+		 */
+		post: operations["room_template_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -5101,42 +2843,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room template get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_template_get"];
 		put?: never;
 		post?: never;
 		/** Room template delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["room_template_delete"];
 		options?: never;
 		head?: never;
 		/** Room template edit */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["room_template_edit"];
 		trace?: never;
 	};
 	"/api/v1/room-template/{code}/sync": {
@@ -5149,16 +2864,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Room template sync */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["room_template_sync"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -5175,16 +2881,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Room search */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["room_search"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -5199,42 +2896,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_get"];
 		put?: never;
 		post?: never;
 		/** Room delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["room_delete"];
 		options?: never;
 		head?: never;
 		/** Room edit */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["room_edit"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/ack": {
@@ -5249,16 +2919,7 @@ export interface paths {
 		 * Room ack
 		 * @description Mark all channels in a room as read.
 		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["room_ack"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -5274,16 +2935,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room analytics channels */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_analytics_channels"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5300,16 +2952,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room analytics invites */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_analytics_invites"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5326,16 +2969,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room analytics members count */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_analytics_members_count"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5352,16 +2986,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room analytics members join */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_analytics_members_join"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5378,16 +3003,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room analytics members leave */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_analytics_members_leave"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5407,16 +3023,7 @@ export interface paths {
 		 * Room analytics overview
 		 * @description Aggregate all stats from all channels
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_analytics_overview"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5433,16 +3040,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room audit logs */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_audit_logs"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5459,28 +3057,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Automod rule list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["automod_rule_list"];
 		put?: never;
 		/** Automod rule create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["automod_rule_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -5497,16 +3077,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Automod rule test */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["automod_rule_test"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -5521,42 +3092,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Automod rule get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["automod_rule_get"];
 		put?: never;
 		post?: never;
 		/** Automod rule delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["automod_rule_delete"];
 		options?: never;
 		head?: never;
 		/** Automod rule update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["automod_rule_update"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/ban": {
@@ -5567,16 +3111,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room ban list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_ban_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5595,16 +3130,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Room ban bulk create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["room_ban_bulk_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -5619,16 +3145,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room ban search */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_ban_search"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5645,39 +3162,12 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room ban get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_ban_get"];
 		/** Room ban create */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["room_ban_create"];
 		post?: never;
 		/** Room ban delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["room_ban_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -5691,31 +3181,13 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room channel list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["channel_list"];
 		put?: never;
 		/**
 		 * Channel create room
 		 * @description Create a channel in a room
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["channel_create_room"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -5723,16 +3195,7 @@ export interface paths {
 		 * Room channel reorder
 		 * @description Reorder the channels in a room. Requires the `ChannelManage` permission.
 		 */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["channel_reorder"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/channel/removed": {
@@ -5746,16 +3209,7 @@ export interface paths {
 		 * Room channel list removed
 		 * @description List removed channels in a room. Requires the `ChannelManage` permission.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["channel_list_removed"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5775,31 +3229,13 @@ export interface paths {
 		 * Emoji list
 		 * @description List custom emoji in a room.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["emoji_list"];
 		put?: never;
 		/**
 		 * Emoji create
 		 * @description Create a custom emoji.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["emoji_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -5817,48 +3253,21 @@ export interface paths {
 		 * Emoji get
 		 * @description Get a custom emoji.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["emoji_get"];
 		put?: never;
 		post?: never;
 		/**
 		 * Emoji delete
 		 * @description Delete a custom emoji.
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["emoji_delete"];
 		options?: never;
 		head?: never;
 		/**
 		 * Emoji update
 		 * @description Edit a custom emoji.
 		 */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["emoji_update"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/feature/{feature}": {
@@ -5870,28 +3279,10 @@ export interface paths {
 		};
 		get?: never;
 		/** Room feature enable */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["room_feature_enable"];
 		post?: never;
 		/** Room feature disable */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["room_feature_disable"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -5908,16 +3299,7 @@ export interface paths {
 		 * Room integration list
 		 * @description list bots in a room
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_integration_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5934,28 +3316,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Invite list room */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["invite_room_list"];
 		put?: never;
 		/** Invite create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["invite_room_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -5970,16 +3334,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room member list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_member_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -5996,16 +3351,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room member search */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_member_search"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -6024,16 +3370,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Room member search advanced */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["room_member_search_advanced"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6048,52 +3385,16 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Room member get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["room_member_get"];
 		/** Room member add */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["room_member_add"];
 		post?: never;
 		/** Room member delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["room_member_delete"];
 		options?: never;
 		head?: never;
 		/** Room member update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["room_member_update"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/pack": {
@@ -6104,16 +3405,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Pack room list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["pack_room_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -6130,29 +3422,11 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Pack room install */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["pack_room_install"];
 		put?: never;
 		post?: never;
 		/** Pack room uninstall */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["pack_room_uninstall"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -6168,16 +3442,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Room prune begin */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["room_prune_begin"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6194,27 +3459,9 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Room quarantine */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["room_quarantine"];
 		/** Room unquarantine */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["room_unquarantine"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -6233,16 +3480,7 @@ export interface paths {
 		 * Report create room
 		 * @description Create and send a report to the room admins/moderators
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["report_create_room"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6257,42 +3495,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Role list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["role_list"];
 		put?: never;
 		/** Role create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["role_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
 		/** Role reorder */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["role_reorder"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/role/{role_id}": {
@@ -6303,42 +3514,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Role get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["role_get"];
 		put?: never;
 		post?: never;
 		/** Role delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["role_delete"];
 		options?: never;
 		head?: never;
 		/** Role update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["role_update"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/role/{role_id}/member": {
@@ -6349,32 +3533,14 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Role member list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["role_member_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
 		options?: never;
 		head?: never;
 		/** Role member bulk patch */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["role_member_bulk_patch"];
 		trace?: never;
 	};
 	"/api/v1/room/{room_id}/role/{role_id}/member/{user_id}": {
@@ -6386,28 +3552,10 @@ export interface paths {
 		};
 		get?: never;
 		/** Role member add */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["role_member_add"];
 		post?: never;
 		/** Role member remove */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["role_member_remove"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -6422,16 +3570,7 @@ export interface paths {
 		};
 		get?: never;
 		/** Room security set */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["room_security_set"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -6450,16 +3589,7 @@ export interface paths {
 		 * Thread list room
 		 * @description List all active threads in a room
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["thread_list_room"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -6478,16 +3608,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Room transfer ownership */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["room_transfer_ownership"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6504,16 +3625,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Room undelete */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["room_undelete"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6547,16 +3659,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Search channels */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["search_channels"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6573,16 +3676,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Search messages */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["search_messages"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6599,16 +3693,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Search rooms */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["search_rooms"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6623,16 +3708,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Server information */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["server_info"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -6649,16 +3725,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Server moderation */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["server_moderation"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -6675,16 +3742,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Server voice */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["server_voice"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -6701,28 +3759,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Invite server list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["invite_server_list"];
 		put?: never;
 		/** Invite server create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["invite_server_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6742,16 +3782,7 @@ export interface paths {
 		 * Report create server
 		 * @description Create and send a report to the server operators
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["report_create_server"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6773,16 +3804,7 @@ export interface paths {
 		 *
 		 *     Servers should send attempt to reconnect on startup, since remote servers may stop sending events to unreachable servers.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["server_connect"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6800,16 +3822,7 @@ export interface paths {
 		 * Server keys get
 		 * @description Get the signing keys of a server
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["server_keys_get"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -6831,16 +3844,7 @@ export interface paths {
 		 * Server ping
 		 * @description Check if a server is alive.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["server_ping"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6860,16 +3864,7 @@ export interface paths {
 		 * Server sync handle
 		 * @description Handle MessageSync events. Used to proxy events to connected clients.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["server_sync_handle"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6884,28 +3879,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Session list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["session_list"];
 		put?: never;
 		/** Session create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["session_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -6923,16 +3900,7 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/** Session delete all */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["session_delete_all"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -6946,42 +3914,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Session get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["session_get"];
 		put?: never;
 		post?: never;
 		/** Session delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["session_delete"];
 		options?: never;
 		head?: never;
 		/** Session update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["session_update"];
 		trace?: never;
 	};
 	"/api/v1/thread/{thread_id}/member": {
@@ -6992,16 +3933,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Thread member list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["thread_member_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7018,73 +3950,12 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Thread member get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["thread_member_get"];
 		/** Thread member add */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["thread_member_add"];
 		post?: never;
 		/** Thread member delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/unfurler/debug": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Unfurler debug */
-		post: operations["unfurler_debug"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
-	"/api/v1/unfurler/unfurl": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		get?: never;
-		put?: never;
-		/** Unfurl multiple urls */
-		post: operations["unfurler_unfurl"];
-		delete?: never;
+		delete: operations["thread_member_delete"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -7101,16 +3972,7 @@ export interface paths {
 		 * User list
 		 * @description Admin only. List all users on this server.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["user_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7127,27 +3989,9 @@ export interface paths {
 			cookie?: never;
 		};
 		/** User connection metadata get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["user_connection_metadata_get"];
 		/** User connection metadata put */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["user_connection_metadata_put"];
 		post?: never;
 		delete?: never;
 		options?: never;
@@ -7166,16 +4010,7 @@ export interface paths {
 		 * Block list
 		 * @description List blocked users.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["block_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7196,31 +4031,13 @@ export interface paths {
 		 * Block add
 		 * @description Block a user.
 		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["block_add"];
 		post?: never;
 		/**
 		 * Block remove
 		 * @description Unblock a user.
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["block_remove"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -7237,32 +4054,14 @@ export interface paths {
 		 * Dm get
 		 * @description Get a direct message room.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["dm_get"];
 		put?: never;
 		/**
 		 * Dm initialize
 		 * @description Get or create a direct message thread.
 		 *     use channel_create_dm
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["dm_init"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -7280,16 +4079,7 @@ export interface paths {
 		 * Friend list
 		 * @description List (mutual) friends.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["friend_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7309,16 +4099,7 @@ export interface paths {
 		 * Friend list pending
 		 * @description List pending friend requests (both incoming and outgoing).
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["friend_list_pending"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7339,31 +4120,13 @@ export interface paths {
 		 * Friend add
 		 * @description Send or accept a friend request.
 		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["friend_add"];
 		post?: never;
 		/**
 		 * Friend remove
 		 * @description Remove a friend.
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["friend_remove"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -7377,28 +4140,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Harvest get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["harvest_get"];
 		put?: never;
 		/** Harvest create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["harvest_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -7416,16 +4161,7 @@ export interface paths {
 		 * Ignore list
 		 * @description List ignored users.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["ignore_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7446,31 +4182,13 @@ export interface paths {
 		 * Ignore add
 		 * @description Ignore a user's messages.
 		 */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["ignore_add"];
 		post?: never;
 		/**
 		 * Ignore remove
 		 * @description Stop ignoring a user.
 		 */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["ignore_remove"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -7486,16 +4204,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** User search */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["user_search"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -7509,46 +4218,14 @@ export interface paths {
 			path?: never;
 			cookie?: never;
 		};
-		/**
-		 * User get
-		 * @description Get another user, including your relationship
-		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get?: never;
 		put?: never;
 		post?: never;
 		/** User delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["user_delete"];
 		options?: never;
 		head?: never;
-		/** User update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch?: never;
 		trace?: never;
 	};
 	"/api/v1/user/{user_id}/audit-logs": {
@@ -7559,16 +4236,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** User audit logs */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["user_audit_logs"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7585,16 +4253,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** User connection list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["user_connection_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7614,29 +4273,11 @@ export interface paths {
 		put?: never;
 		post?: never;
 		/** User connection delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["user_connection_delete"];
 		options?: never;
 		head?: never;
 		/** User connection update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["user_connection_update"];
 		trace?: never;
 	};
 	"/api/v1/user/{user_id}/dm": {
@@ -7650,16 +4291,7 @@ export interface paths {
 		 * Dm list
 		 * @description List direct message channels.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["dm_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7676,16 +4308,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Email list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["email_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7703,41 +4326,14 @@ export interface paths {
 		};
 		get?: never;
 		/** Email add */
-		put: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		put: operations["email_add"];
 		post?: never;
 		/** Email delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["email_delete"];
 		options?: never;
 		head?: never;
 		/** Email update */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["email_update"];
 		trace?: never;
 	};
 	"/api/v1/user/{user_id}/email/{addr}/resend-verification": {
@@ -7750,16 +4346,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Email verification resend */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["email_verification_resend"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -7776,16 +4363,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Email verify */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["email_verification_finish"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -7800,28 +4378,10 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Invite user list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["invite_user_list"];
 		put?: never;
 		/** Invite user create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["invite_user_create"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -7836,16 +4396,7 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Pack user list */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["pack_user_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7862,29 +4413,11 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Pack user install */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["pack_user_install"];
 		put?: never;
 		post?: never;
 		/** Pack user uninstall */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["pack_user_uninstall"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -7903,16 +4436,7 @@ export interface paths {
 		 * User presence set
 		 * @description for puppets
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["user_presence_set"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -7930,16 +4454,7 @@ export interface paths {
 		 * User rooms list
 		 * @description List rooms a user is in. If you are not the user, lists mutual rooms.
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["user_room_list"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -7958,27 +4473,9 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** User suspend */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["user_suspend"];
 		/** User unsuspend */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["user_unsuspend"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -7997,16 +4494,7 @@ export interface paths {
 		 * User undelete
 		 * @description Allows undeleting a user provided they haven't been garbage collected yet
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["user_undelete"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -8021,52 +4509,16 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Voice call get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["voice_call_get"];
 		put?: never;
 		/** Voice call create */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["voice_call_create"];
 		/** Voice call delete */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["voice_call_delete"];
 		options?: never;
 		head?: never;
 		/** Voice call patch */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["voice_call_patch"];
 		trace?: never;
 	};
 	"/api/v1/voice/{channel_id}/member": {
@@ -8080,29 +4532,11 @@ export interface paths {
 		 * Voice state list
 		 * @description list all voice states in this channel
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["voice_state_list"];
 		put?: never;
 		post?: never;
 		/** Voice state disconnect all */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["voice_state_disconnect_all"];
 		options?: never;
 		head?: never;
 		patch?: never;
@@ -8116,42 +4550,15 @@ export interface paths {
 			cookie?: never;
 		};
 		/** Voice state get */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["voice_state_get"];
 		put?: never;
 		post?: never;
 		/** Voice state disconnect */
-		delete: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		delete: operations["voice_state_disconnect"];
 		options?: never;
 		head?: never;
 		/** Voice state patch */
-		patch: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		patch: operations["voice_state_patch"];
 		trace?: never;
 	};
 	"/api/v1/voice/{channel_id}/member/{user_id}/move": {
@@ -8164,16 +4571,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Voice state move */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["voice_state_move"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -8190,16 +4588,7 @@ export interface paths {
 		get?: never;
 		put?: never;
 		/** Voice state move bulk */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["voice_state_move_bulk"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -8219,16 +4608,7 @@ export interface paths {
 		 * Voice ring start
 		 * @description Notifies people in a dm/gdm that there's a call. There must be an active call.
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["voice_ring_start"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -8246,16 +4626,7 @@ export interface paths {
 		 * Voice ring eligibility
 		 * @description check if this channel can be rung
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["voice_ring_eligibility"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -8277,16 +4648,7 @@ export interface paths {
 		 * Voice ring stop
 		 * @description stop ringing channel participants
 		 */
-		post: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		post: operations["voice_ring_stop"];
 		delete?: never;
 		options?: never;
 		head?: never;
@@ -8402,6 +4764,26 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
+	"/api/v1/wiki/{channel_id}/graph": {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		/**
+		 * Wiki graph (WIP)
+		 * @description Query links between documents in this wiki
+		 */
+		get: operations["wiki_graph"];
+		put?: never;
+		post?: never;
+		delete?: never;
+		options?: never;
+		head?: never;
+		patch?: never;
+		trace?: never;
+	};
 	"/api/v1/wiki/{channel_id}/history": {
 		parameters: {
 			query?: never;
@@ -8413,16 +4795,7 @@ export interface paths {
 		 * Wiki history
 		 * @description Query edit history for all documents in this wiki
 		 */
-		get: {
-			parameters: {
-				query?: never;
-				header?: never;
-				path?: never;
-				cookie?: never;
-			};
-			requestBody?: never;
-			responses: never;
-		};
+		get: operations["wiki_history"];
 		put?: never;
 		post?: never;
 		delete?: never;
@@ -9546,11 +5919,8 @@ export interface components {
 					type: "Block";
 			  }
 			| {
-					/**
-					 * Format: int64
-					 * @description in milliseconds
-					 */
-					duration: number;
+					/** @description in milliseconds */
+					duration: string;
 					/** @enum {string} */
 					type: "Timeout";
 			  }
@@ -9566,9 +5936,11 @@ export interface components {
 			  };
 		/** @description a fragment of text that matched */
 		AutomodMatchFragment: components["schemas"]["AutomodMatchKind"] & {
+			/** @description the byte offset of the end this fragment */
 			end: number;
 			/** @description the substring in the sanitized input text that matched */
 			sanitized_text: string;
+			/** @description the byte offset of the start of this fragment */
 			start: number;
 			/** @description the substring in the input text that matched */
 			text: string;
@@ -9707,6 +6079,8 @@ export interface components {
 			| "EmbedAuthorName"
 			| "EmbedAuthorUrl"
 			| "EmbedUrl"
+			| "MediaFilename"
+			| "MediaAlt"
 			| "Test";
 		AutomodTrigger:
 			| {
@@ -9758,6 +6132,11 @@ export interface components {
 			/** @description the url where this platform can be reached */
 			platform_url?: string | null;
 		};
+		/** @description a button was pressed */
+		Button: components["schemas"]["Context"] & {
+			/** @description application defined id associated with this button */
+			custom_id: string;
+		};
 		/** @enum {string} */
 		ButtonStyle: "Primary" | "Secondary" | "Danger";
 		/** @description channel metadata for a calendar */
@@ -9766,24 +6145,45 @@ export interface components {
 			/** @description the default timezone events in this calendar should be created in */
 			default_timezone: components["schemas"]["Timezone"];
 		};
+		/** @description a calendar event */
 		CalendarEvent: {
+			/**
+			 * @description whether this event lasts all day
+			 *
+			 *     if true, use dates rather than datetimes for `starts_at`/`ends_at`.
+			 */
+			all_day?: boolean;
+			/** @description the id of the calendar channel that this event was created in */
 			channel_id: components["schemas"]["Id"];
 			creator_id?: null | components["schemas"]["Id"];
+			/** @description description for this event. supports markdown. */
 			description?: string | null;
 			ends_at?: null | components["schemas"]["Time"];
+			/** @description unique identifier for this calendar event */
 			id: components["schemas"]["Id"];
+			/** @description location where this event will take place */
 			location?: string | null;
+			media_id?: null | components["schemas"]["Id"];
+			participant_counts: components["schemas"]["CalendarParticipantCounts"];
 			recurrence?: null | components["schemas"]["Recurrence"];
+			room_id?: null | components["schemas"]["Id"];
+			/** @description when this event starts */
 			starts_at: components["schemas"]["Time"];
 			timezone?: null | components["schemas"]["Timezone"];
+			/** @description name for this event */
 			title: string;
-			/** Format: uri */
+			/**
+			 * Format: uri
+			 * @description a url for this event
+			 */
 			url?: string | null;
 		};
 		CalendarEventCreate: {
+			all_day?: boolean;
 			description?: string | null;
 			ends_at?: null | components["schemas"]["Time"];
 			location?: string | null;
+			media_id?: null | components["schemas"]["Id"];
 			recurrence?: null | components["schemas"]["Recurrence"];
 			starts_at: components["schemas"]["Time"];
 			timezone?: null | components["schemas"]["Timezone"];
@@ -9795,76 +6195,93 @@ export interface components {
 			dir?: null | components["schemas"]["PaginationDirection"];
 			from?: null | components["schemas"]["Id"];
 			from_time?: null | components["schemas"]["Time"];
-			/** Format: int32 */
+			/**
+			 * Format: int32
+			 * @description return at most this many calendar events
+			 */
 			limit?: number | null;
 			to?: null | components["schemas"]["Id"];
 			to_time?: null | components["schemas"]["Time"];
 		};
-		CalendarEventParticipant: {
-			member?: null | components["schemas"]["RoomMember"];
-			status: components["schemas"]["CalendarRsvpStatus"];
-			user?: null | components["schemas"]["User"];
-			user_id: components["schemas"]["Id"];
-		};
-		CalendarEventParticipantPut: {
-			status: components["schemas"]["CalendarRsvpStatus"];
-		};
-		CalendarEventParticipantQuery: {
-			/** @description whether to include user and member */
-			include_member?: boolean;
-		};
-		CalendarEventPatch: {
+		CalendarEventUpdate: {
+			all_day?: boolean | null;
+			channel_id?: null | components["schemas"]["Id"];
 			description?: string | null;
 			ends_at?: null | components["schemas"]["Time"];
 			location?: string | null;
+			media_id?: null | components["schemas"]["Id"];
+			recurrence?: null | components["schemas"]["Recurrence"];
 			starts_at?: null | components["schemas"]["Time"];
+			timezone?: null | components["schemas"]["Timezone"];
 			title?: string | null;
 			/** Format: uri */
 			url?: string | null;
 		};
 		/** @description an overwrite to a calendar event instance */
 		CalendarOverwrite: {
-			/** @description if this event is cancelled */
-			cancelled: boolean;
+			/** @description whether this event is cancelled */
+			cancelled?: boolean;
 			ends_at?: null | components["schemas"]["Time"];
-			event_id: components["schemas"]["Id"];
-			/** @description shown before the description */
+			/** @description extra description to show for this event instance */
 			extra_description?: string | null;
+			/** @description overwrite the location for this event instance */
 			location?: string | null;
-			/**
-			 * Format: int64
-			 * @description the sequence number of this instance
-			 */
-			seq: number;
 			starts_at?: null | components["schemas"]["Time"];
+			/** @description set the title for this event instance */
 			title?: string | null;
 			/** Format: uri */
 			url?: string | null;
 		};
-		CalendarOverwritePut: {
-			/** @description if this event is cancelled */
-			cancelled?: boolean | null;
-			ends_at?: null | components["schemas"]["Time"];
-			/** @description shown before the description */
-			extra_description?: string | null;
-			location?: string | null;
-			starts_at?: null | components["schemas"]["Time"];
-			title?: string | null;
-			/** Format: uri */
-			url?: string | null;
+		CalendarParticipant: {
+			member?: null | components["schemas"]["RoomMember"];
+			status: components["schemas"]["CalendarRsvpStatus"];
+			user?: null | components["schemas"]["User"];
+			user_id: components["schemas"]["Id"];
+		};
+		CalendarParticipantCounts: {
+			/**
+			 * Format: int64
+			 * @description the number of users who have accepted
+			 */
+			accepted: number;
+			/**
+			 * Format: int64
+			 * @description the number of users who have declined
+			 */
+			declined: number;
+			/**
+			 * Format: int64
+			 * @description the number of users who have been invited
+			 */
+			invited: number;
+			/**
+			 * Format: int64
+			 * @description the number of users who are tentative
+			 */
+			tentative: number;
+		};
+		CalendarParticipantPut: {
+			status: components["schemas"]["CalendarRsvpStatus"];
+		};
+		CalendarParticipantQuery: {
+			/** @description whether to include user and member */
+			include_member?: boolean;
 		};
 		CalendarPatch: {
 			color?: null | components["schemas"]["Color"];
 			default_timezone?: null | components["schemas"]["Timezone"];
 		};
-		/** @enum {string} */
-		CalendarRsvpStatus: "interested" | "uninterested";
-		/** @description a currently active voice session, with ids */
+		/**
+		 * @description the status of a participant
+		 * @enum {string}
+		 */
+		CalendarRsvpStatus: "invited" | "accepted" | "tentative" | "declined";
+		/** @description info about a currently active voice channel, with extra ids */
 		Call: components["schemas"]["CallMetadata"] & {
 			channel_id: components["schemas"]["Id"];
 			room_id?: null | components["schemas"]["Id"];
 		};
-		/** @description a currently active voice session */
+		/** @description info about a currently active voice channel, with ids */
 		CallMetadata: {
 			/**
 			 * Format: int64
@@ -9923,9 +6340,9 @@ export interface components {
 			 */
 			auto_archive_duration?: number | null;
 			/** @description automatically generated description */
-			auto_description?: null | string;
+			auto_description?: string | null;
 			/** @description automatically generated name */
-			auto_name?: null | string;
+			auto_name?: string | null;
 			/**
 			 * Format: int64
 			 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
@@ -9961,7 +6378,7 @@ export interface components {
 			 * @description monotonic sync sequence number, incremented on every action.
 			 *     used for incremental channel sync.
 			 */
-			latest_seq?: components["schemas"]["ChannelSeq"];
+			latest_seq?: components["schemas"]["Seq"];
 			locked?: null | components["schemas"]["Locked"];
 			/**
 			 * Format: int64
@@ -10041,12 +6458,17 @@ export interface components {
 			/** Format: int64 */
 			auto_archive_duration?: number | null;
 			/** @description automatically generated description */
-			auto_description?: null | string;
+			auto_description?: string | null;
 			/** @description automatically generated name */
-			auto_name?: null | string;
+			auto_name?: string | null;
 			/** Format: int64 */
 			bitrate?: number | null;
-			/** Format: int64 */
+			/**
+			 * Format: int64
+			 * @description default auto archive duration in seconds to copy to threads created in this channel
+			 *
+			 *     if unset, defaults to [`DEFAULT_AUTO_ARCHIVE_DURATION`]. set to `null` to disable.
+			 */
 			default_auto_archive_duration?: number | null;
 			/** Format: int64 */
 			default_slowmode_message?: number | null;
@@ -10080,9 +6502,9 @@ export interface components {
 			/** Format: int64 */
 			auto_archive_duration?: number | null;
 			/** @description automatically generated description */
-			auto_description?: null | string;
+			auto_description?: string | null;
 			/** @description automatically generated name */
-			auto_name?: null | string;
+			auto_name?: string | null;
 			/** Format: int64 */
 			bitrate?: number | null;
 			calendar?: null | components["schemas"]["CalendarPatch"];
@@ -10154,13 +6576,6 @@ export interface components {
 					field: "Reactions";
 					reaction: components["schemas"]["ReactionKeyField"];
 			  };
-		/**
-		 * Format: int64
-		 * @description A monotonic sync token, incremented on every action in a channel.
-		 *
-		 *     Used for incremental sync to determine what events the client is missing.
-		 */
-		ChannelSeq: number;
 		/** @enum {string} */
 		ChannelType:
 			| "Text"
@@ -10590,6 +7005,63 @@ export interface components {
 		 * @enum {string}
 		 */
 		ConnectionVisibility: "Public" | "Shared" | "Friends" | "Private";
+		/** @description context for an interaction which occured in a channel */
+		Context: {
+			/** @description the permissions the application has in the target channel */
+			application_permissions: components["schemas"]["Permission"][];
+			/** @description the channel this interaction was created in */
+			channel: components["schemas"]["Channel"];
+			/**
+			 * @description the message this interaction was created for
+			 *
+			 *     eg. the message a button is on or the message that contains the link to unfurl
+			 */
+			message: components["schemas"]["Message"];
+			room?: null | components["schemas"]["Room"];
+			room_member?: null | components["schemas"]["RoomMember"];
+			/** @description the user who initiated this interaction */
+			user: components["schemas"]["User"];
+			/** @description the permissions the user has in the target channel */
+			user_permissions: components["schemas"]["Permission"][];
+		};
+		/** @description respond to an interaction */
+		Create: components["schemas"]["CreateType"];
+		CreateType:
+			| {
+					/** @enum {string} */
+					type: "Pong";
+			  }
+			| {
+					message: components["schemas"]["MessageCreate"];
+					/** @enum {string} */
+					type: "Reply";
+			  }
+			| {
+					/** @enum {string} */
+					type: "ReplyDefer";
+			  }
+			| {
+					patch: components["schemas"]["MessagePatch"];
+					/** @enum {string} */
+					type: "MessageUpdate";
+			  }
+			| {
+					/** @enum {string} */
+					type: "Defer";
+			  }
+			| {
+					/** @description generated these embeds */
+					embeds: components["schemas"]["Embed"][];
+					/** @description also generate the default url preview */
+					include_default: boolean;
+					/** @enum {string} */
+					type: "Unfurl";
+			  };
+		/**
+		 * @description how dates are formatted
+		 * @enum {string}
+		 */
+		DateFormat: "auto" | "standard" | "american" | "iso";
 		/**
 		 * @description a day of the week
 		 * @enum {string}
@@ -10602,18 +7074,6 @@ export interface components {
 			| "Friday"
 			| "Saturday"
 			| "Sunday";
-		/** @description Debug unfurler request */
-		DebugRequest: {
-			/** Format: uri */
-			url: string;
-		};
-		/** @description Debug unfurler response */
-		DebugResponse: {
-			/** @description the generated embeds */
-			embeds: components["schemas"]["Embed"][];
-			/** @description unfurler log */
-			log: components["schemas"]["LogEntry"][];
-		};
 		/** @description A dead letter queue entry for search ingestion */
 		DlqEntry: {
 			created_at: components["schemas"]["Time"];
@@ -10846,7 +7306,10 @@ export interface components {
 			 */
 			url?: string | null;
 		};
-		/** @enum {string} */
+		/**
+		 * @description what kind of embed this is
+		 * @enum {string}
+		 */
 		EmbedType: "Media" | "Link" | "Custom";
 		/** @description a custom emoji */
 		EmojiCustom: {
@@ -10857,6 +7320,16 @@ export interface components {
 			media_id: components["schemas"]["Id"];
 			name: string;
 			owner?: null | components["schemas"]["EmojiOwner"];
+		};
+		/**
+		 * @description minimal data for a custom emoji
+		 *
+		 *     only contains what is needed to render an emoji
+		 */
+		EmojiCustomMinimal: {
+			animated: boolean;
+			id: components["schemas"]["Id"];
+			name: string;
 		};
 		EmojiOwner:
 			| {
@@ -10889,26 +7362,54 @@ export interface components {
 			/** @description the key used for encryption (32 bytes) */
 			key: components["schemas"]["Binary"];
 		};
-		/**
-		 * @description Error codes for non-fatal errors.
-		 * @enum {string}
-		 */
-		ErrorCode:
-			| "InvalidHtml"
-			| "MissingMetadata"
-			| "MediaUrlInvalid"
-			| "ParseError"
-			| "Timeout"
-			| "ResourceTooLarge";
-		/** @description Non-fatal error during embed generation. */
-		ErrorEntry: {
-			/** @description The error code */
-			code: components["schemas"]["ErrorCode"];
-			/** @description Additional context (e.g., field name, URL) */
-			context?: string | null;
-			/** @description Human-readable error message */
-			message: string;
+		/** @description an unfurler log/span entry */
+		Entry: components["schemas"]["EntryKind"] & {
+			/** @description child spans */
+			children?: components["schemas"]["Entry"][];
+			/**
+			 * Format: int64
+			 * @description when this entry ended
+			 *
+			 *     timestamp in milliseconds since the unfurl started
+			 */
+			ended: number;
+			/**
+			 * Format: int64
+			 * @description unique identifier for this entry
+			 */
+			id: number;
+			/** @description the log level */
+			level: components["schemas"]["EvalLogLevel"];
+			/**
+			 * Format: int64
+			 * @description when this entry started
+			 *
+			 *     timestamp in milliseconds since the unfurl started
+			 */
+			started: number;
 		};
+		/** @description structured data for an unfurler log entry */
+		EntryKind:
+			| {
+					body_preview?: string | null;
+					headers: [string, string][];
+					/** Format: int32 */
+					status: number;
+					/** @enum {string} */
+					type: "Http";
+					/** Format: uri */
+					url: string;
+			  }
+			| {
+					/** @description arbitrary metadata associated with this log line */
+					attributes?: components["schemas"]["Metadata"];
+					/** @description a human readable message */
+					message: string;
+					/** @enum {string} */
+					type: "Other";
+			  };
+		/** @enum {string} */
+		ErrorCode: "Timeout";
 		/** @description a redex being run */
 		Eval: {
 			created_at: components["schemas"]["Time"];
@@ -11023,54 +7524,12 @@ export interface components {
 		};
 		Experiments: Record<string, never>;
 		/**
-		 * @description Failure codes for fatal failures.
-		 * @enum {string}
-		 */
-		FailedCode:
-			| "ConnectionTimeout"
-			| "ConnectionFailed"
-			| "DnsLookupFailed"
-			| "InvalidStatusCode"
-			| "UnsupportedProtocol"
-			| "NoPluginMatch"
-			| "Forbidden"
-			| "Cancelled"
-			| "Other";
-		/** @description Fatal failure that prevented embed generation. */
-		FailedEntry: {
-			/** @description The failure code */
-			code: components["schemas"]["FailedCode"];
-			/** @description Human-readable failure message */
-			message: string;
-		};
-		/**
 		 * Format: int64
 		 * @description monotonic counter that increments every time sync fails/disconnects
 		 *
 		 *     intended to invalidate cache
 		 */
 		FederationEpoch: number;
-		/** @description HTTP fetch log entry. */
-		FetchEntry: {
-			/** @description First ~4KB of the response body */
-			http_body: string;
-			/** @description HTTP headers received */
-			http_headers: {
-				[key: string]: string;
-			};
-			/**
-			 * Format: int32
-			 * @description HTTP status code received
-			 */
-			http_status: number;
-			/** @description Whether this is the initial fetch or a redirect */
-			reason: components["schemas"]["FetchReason"];
-		};
-		/**
-		 * @description Reason for an HTTP fetch.
-		 * @enum {string}
-		 */
-		FetchReason: "Initial" | "Redirect";
 		/** @description append components to an existing component */
 		FlumeAppendCanonical: {
 			/** @description components to append */
@@ -11335,7 +7794,8 @@ export interface components {
 			/**
 			 * @description unique token for responding to this interaction
 			 *
-			 *     this exists so you don't need to give your token to an http server for http based interactions. only is set for bots.
+			 *     this exists so you don't need to give your token to an http server for
+			 *     http based interactions. only is set for bots.
 			 */
 			token?: string | null;
 			/**
@@ -11344,93 +7804,19 @@ export interface components {
 			 */
 			version: number;
 		};
-		/** @description create a new interaction */
-		InteractionCreate: components["schemas"]["InteractionCreateType"] & {
-			application_id: components["schemas"]["Id"];
-		};
-		InteractionCreateType: {
-			channel_id: components["schemas"]["Id"];
-			custom_id: string;
-			message_id: components["schemas"]["Id"];
-			/** @enum {string} */
-			type: "Button";
-		};
-		/** @enum {string} */
-		InteractionErrorCode: "Timeout";
-		/** @description an interaction has been responded to */
-		InteractionResponse: Record<string, never>;
-		/** @description respond to an interaction */
-		InteractionResponseCreate: components["schemas"]["InteractionResponseCreateType"];
-		InteractionResponseCreateType:
-			| {
-					/** @enum {string} */
-					type: "Pong";
-			  }
-			| {
-					message: components["schemas"]["MessageCreate"];
-					/** @enum {string} */
-					type: "Reply";
-			  }
-			| {
-					/** @enum {string} */
-					type: "ReplyDefer";
-			  }
-			| {
-					patch: components["schemas"]["MessagePatch"];
-					/** @enum {string} */
-					type: "MessageUpdate";
-			  }
-			| {
-					/** @enum {string} */
-					type: "Defer";
-			  }
-			| {
-					/** @description generated these embeds */
-					embeds: components["schemas"]["Embed"][];
-					/** @description also generate the default url preview */
-					include_default: boolean;
-					/** @enum {string} */
-					type: "Unfurl";
-			  };
 		InteractionType:
 			| {
 					/** @enum {string} */
 					type: "Ping";
 			  }
-			| {
-					/** @description the permissions the application has in the target channel */
-					application_permissions: components["schemas"]["Permission"][];
-					/** @description the channel this interaction was created in */
-					channel: components["schemas"]["Channel"];
-					/** @description application defined id associated with this button */
-					custom_id: string;
-					/** @description the message this button was attached to */
-					message: components["schemas"]["Message"];
-					room?: null | components["schemas"]["Room"];
-					room_member?: null | components["schemas"]["RoomMember"];
+			| (components["schemas"]["Button"] & {
 					/** @enum {string} */
 					type: "Button";
-					/** @description the user who initiated this interaction */
-					user: components["schemas"]["User"];
-					/** @description the permissions the user has in the target channel */
-					user_permissions: components["schemas"]["Permission"][];
-			  }
-			| {
-					/** @description the permissions the application has in the target channel */
-					application_permissions: components["schemas"]["Permission"][];
-					/** @description the channel this interaction was created in */
-					channel: components["schemas"]["Channel"];
-					/** @description the message this link is contained in */
-					message: components["schemas"]["Message"];
-					room?: null | components["schemas"]["Room"];
-					room_member?: null | components["schemas"]["RoomMember"];
+			  })
+			| (components["schemas"]["Unfurl"] & {
 					/** @enum {string} */
 					type: "Unfurl";
-					/** @description the user who send the message */
-					user: components["schemas"]["User"];
-					/** @description the permissions the user has in the target channel */
-					user_permissions: components["schemas"]["Permission"][];
-			  };
+			  });
 		Invite: {
 			/** @description the invite code for this invite */
 			code: components["schemas"]["InviteCode"];
@@ -11513,6 +7899,40 @@ export interface components {
 			 */
 			uses: number;
 		};
+		/** @description the approximate location of an ip address */
+		IpLocation: {
+			/**
+			 * Format: int32
+			 * @description estimate of location accuracy in kilometers
+			 */
+			accuracy_radius?: number | null;
+			/**
+			 * Format: double
+			 * @description approximate latitude of this ip address
+			 */
+			latitude: number;
+			/**
+			 * Format: double
+			 * @description approximate longitude of this ip address
+			 */
+			longitude: number;
+		};
+		/** @description metadata about an ip address */
+		IpMetadata: {
+			/** @description the ip address */
+			addr: string;
+			/** @description city name in english */
+			city_name?: string | null;
+			/** @description two-character iso code, eg. "US", "DE" */
+			country_code?: string | null;
+			/** @description country name in english */
+			country_name?: string | null;
+			/** @description whether this ip is in the european union */
+			is_in_european_union: boolean;
+			location?: null | components["schemas"]["IpLocation"];
+			/** @description iana time zone identifier, eg. "America/New_York" */
+			time_zone?: string | null;
+		};
 		Item:
 			| {
 					room_id: components["schemas"]["Id"];
@@ -11523,6 +7943,32 @@ export interface components {
 					/** @enum {string} */
 					type: "View";
 			  });
+		/** @description JSON Web Key (RFC 7517 §4, RFC 7518 §6 for algorithm-specific params) */
+		Jwk: {
+			/** @description Algorithm, e.g. "RS256", "ES256" */
+			alg?: string | null;
+			crv?: string | null;
+			e?: string | null;
+			/** @description Key operations, e.g. ["verify"] */
+			key_ops?: string[] | null;
+			/** @description Key ID */
+			kid?: string | null;
+			/** @description Key type, e.g. "RSA", "EC", "OKP" */
+			kty: string;
+			n?: string | null;
+			/** @description Intended use: "sig" or "enc" */
+			use?: string | null;
+			x?: string | null;
+			/** @description X.509 certificate chain */
+			x5c?: string[] | null;
+			/** @description X.509 certificate SHA-1 thumbprint */
+			x5t?: string | null;
+			/** @description X.509 certificate SHA-256 thumbprint */
+			"x5t#S256"?: string | null;
+			/** @description X.509 URL */
+			x5u?: string | null;
+			y?: string | null;
+		};
 		License: string;
 		/** @description indicates that a channel is locked */
 		Locked: {
@@ -11530,24 +7976,6 @@ export interface components {
 			allow_roles?: components["schemas"]["Id"][];
 			until?: null | components["schemas"]["Time"];
 		};
-		/** @description A log entry from the unfurler. */
-		LogEntry:
-			| {
-					/** @description HTTP fetch event (initial request or redirect) */
-					Fetch: components["schemas"]["FetchEntry"];
-			  }
-			| {
-					/** @description Plugin selection event */
-					SelectPlugin: components["schemas"]["SelectPluginEntry"];
-			  }
-			| {
-					/** @description Non-fatal error during embed generation (e.g., invalid HTML) */
-					Error: components["schemas"]["ErrorEntry"];
-			  }
-			| {
-					/** @description Fatal failure that prevented embed generation */
-					Failed: components["schemas"]["FailedEntry"];
-			  };
 		/** @description A piece of media. */
 		Media: {
 			/** @description Descriptive alt text. */
@@ -11629,7 +8057,10 @@ export interface components {
 					 */
 					size?: number | null;
 			  };
-		/** @enum {string} */
+		/**
+		 * @description why a piece of media is errored
+		 * @enum {string}
+		 */
 		MediaErrorReason: "NotFound" | "Corrupted";
 		/**
 		 * @description the kind of media this track is for
@@ -11677,19 +8108,20 @@ export interface components {
 					type: "RoomIcon";
 			  }
 			| {
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "RoomBanner";
+			  }
+			| {
 					id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "Embed";
 			  }
 			| {
+					emoji_id: components["schemas"]["Id"];
 					room_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "CustomEmoji";
-			  }
-			| {
-					room_id: components["schemas"]["Id"];
-					/** @enum {string} */
-					type: "RoomBanner";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
@@ -11814,13 +8246,25 @@ export interface components {
 			| "Uploaded"
 			| "Consumed"
 			| "Errored";
-		/** @description information about a group of members */
+		/** @description metadata about a group in the member list */
 		MemberListGroup: {
-			/** Format: int64 */
+			/**
+			 * Format: int64
+			 * @description the number of users in this group
+			 */
 			count: number;
 			id: components["schemas"]["MemberListGroupId"];
 		};
-		/** @description a unique identifier for a member group */
+		/**
+		 * @description identifier for a group in the member list
+		 *
+		 *     ## ordering
+		 *
+		 *     - connected
+		 *     - role (by position)
+		 *     - online
+		 *     - offline
+		 */
 		MemberListGroupId:
 			| "Connected"
 			| "Online"
@@ -12071,7 +8515,17 @@ export interface components {
 			| (components["schemas"]["SyncSubscription"] & {
 					/** @enum {string} */
 					type: "Subscribe";
-			  });
+			  })
+			| {
+					room_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "RoomSubscribe";
+			  }
+			| {
+					channel_id: components["schemas"]["Id"];
+					/** @enum {string} */
+					type: "ChannelSubscribe";
+			  };
 		MessageCreate: {
 			/** @description message attachments */
 			attachments?: components["schemas"]["MessageAttachmentCreate"][];
@@ -12153,6 +8607,11 @@ export interface components {
 		 * @enum {string}
 		 */
 		MessageSearchOrderField: "Created" | "Relevancy";
+		/**
+		 * @description how messages are displayed in the chat
+		 * @enum {string}
+		 */
+		MessageStyle: "cozy" | "compact";
 		MessageSync:
 			| {
 					/** @description all non-thread channels the user can see */
@@ -12551,13 +9010,13 @@ export interface components {
 			  }
 			| {
 					channel_id?: null | components["schemas"]["Id"];
+					/** @description where to route this list sync to */
+					connection_id: components["schemas"]["Id"];
 					groups: components["schemas"]["MemberListGroup"][];
 					ops: components["schemas"]["MemberListOp"][];
 					room_id?: null | components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "MemberListSync";
-					/** @description which user this list sync is for */
-					user_id: components["schemas"]["Id"];
 			  }
 			| {
 					notification: components["schemas"]["Notification"];
@@ -12622,7 +9081,7 @@ export interface components {
 			| {
 					channel_id: components["schemas"]["Id"];
 					event_id: components["schemas"]["Id"];
-					participant: components["schemas"]["CalendarEventParticipant"];
+					participant: components["schemas"]["CalendarParticipant"];
 					/** @enum {string} */
 					type: "CalendarRsvpCreate";
 			  }
@@ -12636,11 +9095,11 @@ export interface components {
 			| {
 					channel_id: components["schemas"]["Id"];
 					event_id: components["schemas"]["Id"];
-					participant: components["schemas"]["CalendarEventParticipant"];
+					participant: components["schemas"]["CalendarParticipant"];
 					/** Format: int64 */
 					seq: number;
 					/** @enum {string} */
-					type: "CalendarOverwriteRsvpCreate";
+					type: "CalendarInstanceRsvpCreate";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
@@ -12648,7 +9107,7 @@ export interface components {
 					/** Format: int64 */
 					seq: number;
 					/** @enum {string} */
-					type: "CalendarOverwriteRsvpDelete";
+					type: "CalendarInstanceRsvpDelete";
 					user_id: components["schemas"]["Id"];
 			  }
 			| {
@@ -12867,7 +9326,7 @@ export interface components {
 					user_id: components["schemas"]["Id"];
 			  }
 			| {
-					error_code: components["schemas"]["InteractionErrorCode"];
+					error_code: components["schemas"]["ErrorCode"];
 					interaction_id: components["schemas"]["Id"];
 					nonce?: string | null;
 					/** @enum {string} */
@@ -13004,7 +9463,11 @@ export interface components {
 			duration?: number | null;
 			expires_at?: null | components["schemas"]["Time"];
 		};
-		/** @description a notification; a unit of stuff that may show up in your inbox or be pushed to you */
+		/**
+		 * @description a notification
+		 *
+		 *     a unit of stuff that may show up in your inbox or be pushed to you
+		 */
 		Notification: components["schemas"]["NotificationType"] & {
 			/** @description when this was added to the inbox */
 			added_at: components["schemas"]["Time"];
@@ -13126,10 +9589,18 @@ export interface components {
 		NotifsReplies: "Notify" | "Watching" | "Nothing";
 		/** @description notification config for a room */
 		NotifsRoom: {
-			/** @description whether to receive @everyone and @here mentions */
-			mention_everyone: boolean;
-			/** @description whether to receive all @role mentions */
-			mention_roles: boolean;
+			/**
+			 * @description whether to receive @everyone and @here mentions
+			 *
+			 *     defaults to true
+			 */
+			mention_everyone?: boolean;
+			/**
+			 * @description whether to receive all @role mentions
+			 *
+			 *     defaults to true
+			 */
+			mention_roles?: boolean;
 			messages?: null | components["schemas"]["NotifsMessages"];
 			mute?: null | components["schemas"]["Mute"];
 			replies?: null | components["schemas"]["NotifsReplies"];
@@ -13149,18 +9620,30 @@ export interface components {
 		Oauth: {
 			providers: components["schemas"]["OauthProvider"][];
 		};
+		/** @enum {string} */
+		OauthAuthMethod: "client_secret_post" | "client_secret_basic";
+		/** @enum {string} */
+		OauthCodeChallengeMethod: "s256" | "plain";
+		/** @enum {string} */
+		OauthGrantType: "authorization_code" | "refresh_token";
 		OauthProvider: {
 			/** @description api name */
 			id: string;
 			/** @description friendly name */
 			name: string;
 		};
+		/** @enum {string} */
+		OauthResponseType: "code";
 		Option: null | number;
 		/**
 		 * @description what order to return search results in
 		 * @enum {string}
 		 */
 		Order: "asc" | "desc";
+		PackSnapshotEmoji: components["schemas"]["EmojiCustomMinimal"] & {
+			/** @description base64 image data for this emoji */
+			data: components["schemas"]["Binary"];
+		};
 		/**
 		 * @description the direction to paginate
 		 * @enum {string}
@@ -13381,14 +9864,27 @@ export interface components {
 			/** Format: int32 */
 			position?: number | null;
 		};
-		/** @description preferences for a user in a thread */
+		/** @description preferences for a user in a channel or thread */
 		PreferencesChannel: {
 			/** @description config specific to frontend */
-			frontend: {
-				[key: string]: unknown;
-			};
+			frontend: components["schemas"]["PreferencesChannelFrontend"];
 			/** @description thread notification config */
 			notifs: components["schemas"]["NotifsChannel"];
+		};
+		/** @description config specific to the frontend for a channel */
+		PreferencesChannelFrontend: {
+			/**
+			 * @description display voice streams in a grid
+			 * @default false
+			 */
+			grid_view: boolean;
+			/**
+			 * @description show members who are not sharing video
+			 * @default true
+			 */
+			show_people_without_video: boolean;
+		} & {
+			[key: string]: unknown;
 		};
 		/** @description preferences for a user */
 		PreferencesGlobal: {
@@ -13411,14 +9907,197 @@ export interface components {
 			allow_mutual_friend: boolean;
 			/**
 			 * @description allow everyone who shares a room with you send you a friend request
+			 *
 			 *     requires the room to have allow_dms set
 			 */
 			allow_mutual_room: boolean;
 			pause_until?: null | components["schemas"]["Time"];
 		};
+		/** @description config specific to the frontend */
 		PreferencesGlobalFrontend: {
-			/** @description room navigation sidebar */
+			/**
+			 * Format: double
+			 * @description overall application scale, as a percentage
+			 * @default 100
+			 */
+			app_scale: number;
+			/**
+			 * @description automatically play animated emoji
+			 * @default true
+			 */
+			autoplay_emoji: boolean;
+			/**
+			 * @description automatically play gifs
+			 * @default true
+			 */
+			autoplay_gifs: boolean;
+			/**
+			 * Format: int32
+			 * @description the day of the week the calendar starts on (0 = sunday)
+			 * @default 0
+			 */
+			calendar_day_starts_at: number;
+			/**
+			 * Format: double
+			 * @description chat font scale, as a percentage
+			 * @default 100
+			 */
+			chat_font_scale: number;
+			/** @default auto */
+			date_format: components["schemas"]["DateFormat"];
+			/**
+			 * @description show desktop notifications
+			 * @default false
+			 */
+			desktop_notifs: boolean;
+			/**
+			 * @description custom and unicode emoji reaction keys marked as favorites
+			 * @default []
+			 */
+			favorite_emoji: string[];
+			/**
+			 * @description the input device id, or the system default if unset
+			 * @default null
+			 */
+			input_device: string | null;
+			/**
+			 * @description show link previews
+			 * @default true
+			 */
+			link_previews: boolean;
+			/**
+			 * Format: double
+			 * @description spacing between message groups, in pixels
+			 * @default 8
+			 */
+			message_spacing: number;
+			/** @default cozy */
+			message_style: components["schemas"]["MessageStyle"];
+			/**
+			 * Format: double
+			 * @description microphone volume, as a percentage
+			 * @default 50
+			 */
+			mic_volume: number;
+			/**
+			 * @description the output device id, or the system default if unset
+			 * @default null
+			 */
+			output_device: string | null;
+			/**
+			 * @description preview attachments inline
+			 * @default true
+			 */
+			preview_attachments: boolean;
+			/**
+			 * @description show attachment descriptions
+			 * @default false
+			 */
+			preview_attachments_descriptions: boolean;
+			/**
+			 * @description subscribe to web push notifications
+			 * @default false
+			 */
+			push_notifs: boolean;
+			/**
+			 * @description reduce motion in the ui
+			 * @default false
+			 */
+			reduced_motion: boolean;
+			/**
+			 * @description sync reduced motion with the system setting
+			 * @default true
+			 */
+			reduced_motion_sync: boolean;
+			/** @default [] */
 			room_sidebar: components["schemas"]["Sidebar"];
+			/**
+			 * Format: double
+			 * @description color saturation, as a percentage
+			 * @default 100
+			 */
+			saturation: number;
+			/**
+			 * @description show avatars in the compact message style
+			 * @default false
+			 */
+			show_compact_avatars: boolean;
+			/**
+			 * @description show an explicit send button in the message composer
+			 * @default false
+			 */
+			show_send_button: boolean;
+			/**
+			 * Format: double
+			 * @description speaker volume, as a percentage
+			 * @default 75
+			 */
+			speaker_volume: number;
+			/** @default click */
+			spoilers: components["schemas"]["Spoilers"];
+			/** @default auto */
+			theme: components["schemas"]["Theme"];
+			/**
+			 * @description open document threads in the sidebar
+			 * @default true
+			 */
+			threads_sidebar_document: boolean;
+			/**
+			 * @description open forum threads in the sidebar
+			 * @default true
+			 */
+			threads_sidebar_forum: boolean;
+			/**
+			 * @description open text threads in the sidebar
+			 * @default true
+			 */
+			threads_sidebar_text: boolean;
+			/** @default auto */
+			time_format: components["schemas"]["TimeFormat"];
+			/**
+			 * @description read notifications aloud with text to speech
+			 * @default false
+			 */
+			tts_notifs: boolean;
+			/**
+			 * @description show typing indicators
+			 * @default true
+			 */
+			typing_indicators: boolean;
+			/**
+			 * @description underline links in messages
+			 * @default false
+			 */
+			underline_links: boolean;
+			/**
+			 * @description the video device id, or the system default if unset
+			 * @default null
+			 */
+			video_device: string | null;
+			/**
+			 * Format: double
+			 * @description voice activity detection threshold, as a percentage
+			 * @default 30
+			 */
+			voice_activity_threshold: number;
+			/**
+			 * Format: double
+			 * @description how long of silence before voice activity deactivates, in milliseconds
+			 * @default 1000
+			 */
+			voice_activity_timeout: number;
+			/**
+			 * @description enable echo cancellation
+			 * @default false
+			 */
+			voice_echo_cancellation: boolean;
+			/** @default vad */
+			voice_input_mode: components["schemas"]["VoiceInputMode"];
+			/**
+			 * @description enable noise suppression
+			 * @default false
+			 */
+			voice_noise_suppression: boolean;
 		} & {
 			[key: string]: unknown;
 		};
@@ -13447,13 +10126,14 @@ export interface components {
 		/** @description preferences for a user in a room */
 		PreferencesRoom: {
 			/** @description config specific to frontend */
-			frontend: {
-				[key: string]: unknown;
-			};
+			frontend: components["schemas"]["PreferencesRoomFrontend"];
 			/** @description room notification config */
 			notifs: components["schemas"]["NotifsRoom"];
 			/** @description room privacy settings */
 			privacy: components["schemas"]["PreferencesRoomPrivacy"];
+		};
+		PreferencesRoomFrontend: {
+			[key: string]: unknown;
 		};
 		/** @description user privacy settings for a room */
 		PreferencesRoomPrivacy: {
@@ -13477,11 +10157,46 @@ export interface components {
 		/** @description preferences for a user for another user */
 		PreferencesUser: {
 			/** @description config specific to frontend */
-			frontend: {
-				[key: string]: unknown;
-			};
+			frontend: components["schemas"]["PreferencesUserFrontend"];
 			/** @description config in voice threads */
 			voice: components["schemas"]["VoiceConfig"];
+		};
+		/** @description config specific to the frontend for another user */
+		PreferencesUserFrontend: {
+			/**
+			 * @description a private note about the user, only visible to the local user
+			 * @default null
+			 */
+			note: string | null;
+			/**
+			 * @description whether the user's streams are locally muted
+			 * @default false
+			 */
+			stream_mute: boolean;
+			/**
+			 * Format: double
+			 * @description local volume for the user's streams, defaults to 1 (100%)
+			 * @default 1
+			 */
+			stream_volume: number;
+			/**
+			 * @description whether the user is locally muted
+			 * @default false
+			 */
+			user_mute: boolean;
+			/**
+			 * @description whether the user's video is locally hidden
+			 * @default false
+			 */
+			user_video: boolean;
+			/**
+			 * Format: double
+			 * @description local volume for the user, defaults to 1 (100%)
+			 * @default 1
+			 */
+			user_volume: number;
+		} & {
+			[key: string]: unknown;
 		};
 		/** @description the current presence of the user */
 		Presence: {
@@ -13560,9 +10275,17 @@ export interface components {
 			user_id: components["schemas"]["Id"];
 		};
 		Recurrence: {
-			/** @description only repeat on these days of the month */
+			/**
+			 * @description only repeat on these days of the month
+			 *
+			 *     only usable with [`RecurrenceFrequency::Monthly`] or [`RecurrenceFrequency::Yearly`]
+			 */
 			by_month_day?: number[];
-			/** @description only repeat on these days of the week */
+			/**
+			 * @description only repeat on these days of the week
+			 *
+			 *     only usable with [`RecurrenceFrequency::Weekly`] or [`RecurrenceFrequency::Monthly`]
+			 */
 			by_weekday?: components["schemas"]["DayOfWeek"][];
 			/** @description how often to recur */
 			frequency: components["schemas"]["RecurrenceFrequency"];
@@ -13570,13 +10293,13 @@ export interface components {
 			 * Format: int32
 			 * @description repeat every n (days/weeks/months/years)
 			 */
-			interval: number;
+			interval?: number;
 			/** @description when to end */
-			range: components["schemas"]["RecurrenceRange"];
+			limit?: components["schemas"]["RecurrenceLimit"];
 		};
 		/** @enum {string} */
 		RecurrenceFrequency: "Daily" | "Weekly" | "Monthly" | "Yearly";
-		RecurrenceRange:
+		RecurrenceLimit:
 			| {
 					/** @enum {string} */
 					type: "Infinite";
@@ -13602,10 +10325,14 @@ export interface components {
 			handlers: components["schemas"]["RedexHandler"][];
 			id: components["schemas"]["Id"];
 			latest_version: components["schemas"]["RedexVersion"];
-			/** @description the lowercase identifier used for this redex's http subdomain */
-			shortname: string;
 			/** @description the capabilities that were granted to this redex */
 			permissions: components["schemas"]["RedexPermission"][];
+			/**
+			 * @description a short lowercase identifier
+			 *
+			 *     used for this redex's http subdomain
+			 */
+			shortname: string;
 			status: components["schemas"]["RedexStatus"];
 		};
 		/** @description a reference to a redex author */
@@ -13900,6 +10627,8 @@ export interface components {
 			| "BanEvasion"
 			| "Underage"
 			| "Other";
+		/** @description an interaction has been responded to */
+		Response: Record<string, never>;
 		Role: {
 			/** @description the permissions to grant for this role */
 			allow: components["schemas"]["Permission"][];
@@ -13911,12 +10640,24 @@ export interface components {
 			id: components["schemas"]["Id"];
 			is_mentionable: boolean;
 			is_self_applicable: boolean;
-			/** Format: int64 */
+			/**
+			 * Format: int64
+			 * @description the number of members with this role
+			 */
 			member_count: number;
 			name: string;
 			/**
-			 * Format: int64
-			 * @description tiebroken by id
+			 * Format: int32
+			 * @description the position of this role
+			 *
+			 *     - the everyone/default role has a position of 0
+			 *     - during updates, this is tiebroken by role id (newer roles have a higher position)
+			 *
+			 *     ## rank
+			 *
+			 *     - a room member's rank is `max(role.position)` across all roles they have
+			 *     - you must have a strictly higher rank than another room member in order to kick, ban, or timeout them.
+			 *     - you can only apply or reorder roles with a lower position than your rank
 			 */
 			position: number;
 			room_id: components["schemas"]["Id"];
@@ -13946,7 +10687,7 @@ export interface components {
 			sticky?: boolean | null;
 		};
 		RoleReorderItem: {
-			/** Format: int64 */
+			/** Format: int32 */
 			position: number;
 			role_id: components["schemas"]["Id"];
 		};
@@ -13968,6 +10709,7 @@ export interface components {
 			banner?: null | components["schemas"]["Id"];
 			/**
 			 * Format: int64
+			 * @deprecated
 			 * @description number of active channels
 			 */
 			channel_count: number;
@@ -14028,6 +10770,7 @@ export interface components {
 		 */
 		RoomFeature: "Scripts" | "Automod" | "Documents" | "Vanity" | "Llm";
 		RoomFeatures: components["schemas"]["RoomFeature"][];
+		/** @description a member in a room */
 		RoomMember: {
 			/** @description whether this user is deafened by a moderator */
 			deaf: boolean;
@@ -14123,17 +10866,22 @@ export interface components {
 		RoomTemplate: {
 			/** @description unique identifier for this template */
 			code: components["schemas"]["RoomTemplateCode"];
+			/** @description when this template was created */
 			created_at: components["schemas"]["Time"];
-			/** @description user who created this template */
+			/** @description the user who created this template */
 			creator: components["schemas"]["User"];
 			description: string;
-			/** @description if the source room and the template have diverged */
+			/**
+			 * @description if the source room and the template have diverged
+			 *
+			 *     only returned for the creator if they have `RoomEdit`
+			 */
 			dirty?: boolean | null;
 			/** @description name for this template */
 			name: string;
 			snapshot: components["schemas"]["RoomTemplateSnapshot"];
 			source_room_id?: null | components["schemas"]["Id"];
-			/** @description updated whenever template is edited or synced */
+			/** @description when this template was last edited or synced */
 			updated_at: components["schemas"]["Time"];
 		};
 		RoomTemplateChannel: components["schemas"]["ChannelCreate"] & {
@@ -14142,17 +10890,18 @@ export interface components {
 			 * @description temporary placeholder id, for use in parent_id
 			 */
 			id: string;
+			/** Format: int32 */
+			position: number;
 		};
 		/** @description a short, unique identifier for a room template. */
 		RoomTemplateCode: string;
 		RoomTemplateRole: components["schemas"]["RoleCreate"] & {
-			default: boolean;
 			/**
 			 * Format: uuid
-			 * @description temporary placeholder id, for use in permission overwrites
+			 * @description placeholder id, for use in permission overwrites
 			 */
 			id: string;
-			/** Format: int64 */
+			/** Format: int32 */
 			position: number;
 		};
 		/** @description a snapshot of a room */
@@ -14233,24 +10982,18 @@ export interface components {
 			/** @description sort order (ascending/descending) */
 			sort_order?: components["schemas"]["Order"];
 		};
-		/** @description Plugin selection log entry. */
-		SelectPluginEntry: {
-			/** @description The name of the selected plugin */
-			plugin_name: string;
-			/** @description Whether the plugin was selected via URL or response */
-			reason: components["schemas"]["SelectPluginReason"];
-		};
-		/**
-		 * @description Reason for plugin selection.
-		 * @enum {string}
-		 */
-		SelectPluginReason: "Url" | "Response";
 		/**
 		 * @description a semantic version string
 		 *
 		 *     matches the format `major.minor.version-extra`. major, minor, and version are numbers, and `-extra` is optional and arbitrary alphanumeric.
 		 */
 		Semver: string;
+		/**
+		 * Seq
+		 * Format: int64
+		 * @description A monotonic sync token, incremented on every action in a context.
+		 */
+		Seq: number;
 		/** @description serialized document */
 		Serdoc: {
 			components: components["schemas"]["Component"][];
@@ -14270,14 +11013,9 @@ export interface components {
 			experiments?: null | components["schemas"]["Experiments"];
 			media?: null | components["schemas"]["Media"];
 			oauth?: null | components["schemas"]["Oauth"];
-			redex?: null | components["schemas"]["ServerRedex"];
 			registration?: null | components["schemas"]["Registration"];
 			url_embed?: null | components["schemas"]["UrlEmbed"];
 			voice?: null | components["schemas"]["Voice"];
-		};
-		ServerRedex: {
-			/** @description the domain suffix used for redex http handlers, if configured */
-			suffix?: string | null;
 		};
 		ServerInfo: {
 			/** Format: uri */
@@ -14328,6 +11066,38 @@ export interface components {
 			rustc_semver: string;
 			target: string;
 		};
+		/** @description sfu metadata for admins */
+		ServerVoiceHealthSfu: {
+			/**
+			 * Format: int64
+			 * @description total available bandwidth in bits per second
+			 */
+			bandwidth_max: number;
+			/**
+			 * Format: int64
+			 * @description bandwidth that is being used in bits per second
+			 */
+			bandwidth_usage: number;
+			/** @description when this sfu connected to the server */
+			connected_at: components["schemas"]["Time"];
+			/**
+			 * Format: int64
+			 * @description number of total rtc connections
+			 */
+			count_peer: number;
+			/**
+			 * Format: int64
+			 * @description number of tracks this sfu is selectively forwarding
+			 */
+			count_tracks: number;
+			/**
+			 * Format: int64
+			 * @description number of users who are connected
+			 */
+			count_users: number;
+			/** @description an (ephemeral?) unique identifier for this sfu */
+			id: components["schemas"]["Id"];
+		};
 		Session: components["schemas"]["SessionStatus"] & {
 			app_id?: null | components["schemas"]["Id"];
 			authorized_at?: null | components["schemas"]["Time"];
@@ -14360,6 +11130,7 @@ export interface components {
 					status: "Unauthorized";
 			  }
 			| {
+					expires_at: components["schemas"]["Time"];
 					/** @enum {string} */
 					status: "Bound";
 					user_id: components["schemas"]["Id"];
@@ -14468,6 +11239,11 @@ export interface components {
 					/** @enum {string} */
 					type: "Error";
 			  };
+		/**
+		 * @description how spoilers are revealed
+		 * @enum {string}
+		 */
+		Spoilers: "click" | "hover" | "always";
 		/** @enum {string} */
 		Status: "Offline" | "Away" | "Online" | "Busy" | "Available";
 		/**
@@ -14512,7 +11288,6 @@ export interface components {
 		};
 		SyncSubscribeScript: {
 			channel_id: components["schemas"]["Id"];
-			script_id: components["schemas"]["Id"];
 		};
 		/**
 		 * @description update what the client is subscribed to
@@ -14578,6 +11353,17 @@ export interface components {
 		TestPermissionsResponse: {
 			permissions: components["schemas"]["Permission"][];
 		};
+		/**
+		 * @description the color theme to use
+		 * @enum {string}
+		 */
+		Theme:
+			| "auto"
+			| "auto-highcontrast"
+			| "light"
+			| "dark"
+			| "light-highcontrast"
+			| "dark-highcontrast";
 		ThreadMember: {
 			/** @description When this member joined the thread */
 			joined_at: components["schemas"]["Time"];
@@ -14585,10 +11371,17 @@ export interface components {
 			user_id: components["schemas"]["Id"];
 		};
 		/**
-		 * Format: date-time
-		 * @description A date, time, and timezone. Serialized to rfc3339.
+		 * @description A datetime in rfc3339 format for json.
+		 *
+		 *     Is a i128 unix timestamp in nanoseconds for binary formats.
+		 * @example 2025-07-20T18:04:54.309625Z
 		 */
 		Time: string;
+		/**
+		 * @description how times are formatted
+		 * @enum {string}
+		 */
+		TimeFormat: "auto" | "12h" | "24h";
 		/** @description a timezone */
 		Timezone: string;
 		Toplevel:
@@ -14605,7 +11398,7 @@ export interface components {
 			used_at?: null | components["schemas"]["Time"];
 		};
 		/** @description an announcement for a track along with its metadata */
-		TrackAnnouncement: components["schemas"]["TrackMetadata2"] & {
+		TrackAnnouncement: components["schemas"]["TrackMetadata"] & {
 			id: components["schemas"]["TrackId"];
 		};
 		/**
@@ -14613,7 +11406,7 @@ export interface components {
 		 *
 		 *     sent during client offer
 		 */
-		TrackCreate: components["schemas"]["TrackMetadata2"] & {
+		TrackCreate: components["schemas"]["TrackMetadata"] & {
 			mid: components["schemas"]["Mid"];
 		};
 		/**
@@ -14639,7 +11432,7 @@ export interface components {
 			mid: components["schemas"]["Mid"];
 		};
 		/** @description the metadata for a track */
-		TrackMetadata2: {
+		TrackMetadata: {
 			/**
 			 * @description key to group tracks together into streams
 			 *
@@ -14658,14 +11451,10 @@ export interface components {
 		TrackWhisper: {
 			user_ids: components["schemas"]["Id"][];
 		};
-		/** @description Batch unfurl request */
-		UnfurlRequest: {
-			/** @description limits to 4 urls max */
+		/** @description unfurl a url */
+		Unfurl: components["schemas"]["Context"] & {
+			/** @description the links to unfurl */
 			urls: string[];
-		};
-		/** @description Batch unfurl response */
-		UnfurlResponse: {
-			embeds: components["schemas"]["Embed"][];
 		};
 		UrlEmbed: Record<string, never>;
 		User: {
@@ -14744,6 +11533,11 @@ export interface components {
 		/** @enum {string} */
 		VoiceErrorCode: "UnknownMid";
 		/**
+		 * @description how voice input is activated
+		 * @enum {string}
+		 */
+		VoiceInputMode: "vad" | "ptt" | "open";
+		/**
 		 * @description represents a user that is connected to a voice channel
 		 *
 		 *     older docs call this a "voice connection"
@@ -14798,8 +11592,7 @@ export interface components {
 		};
 		WebauthnAuthenticator: {
 			created_at: components["schemas"]["Time"];
-			/** Format: uuid */
-			id: string;
+			id: components["schemas"]["Id"];
 			name: string;
 		};
 		Webhook: {
@@ -14828,6 +11621,12 @@ export interface components {
 			page_index?: null | components["schemas"]["Id"];
 			page_notfound?: null | components["schemas"]["Id"];
 		};
+		WikiGraphDocument: {
+			id: components["schemas"]["Id"];
+			title: string;
+			/** Format: int64 */
+			weight: number;
+		};
 		WikiPatch: {
 			allow_indexing?: boolean | null;
 			page_index?: null | components["schemas"]["Id"];
@@ -14842,6 +11641,125 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+	oauth_jwks: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						keys: components["schemas"]["Jwk"][];
+					};
+				};
+			};
+		};
+	};
+	oauth_autoconfig_auth_server: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** Format: uri */
+						authorization_endpoint: string;
+						code_challenge_methods_supported: components["schemas"]["OauthCodeChallengeMethod"][];
+						grant_types_supported: components["schemas"]["OauthGrantType"][];
+						/** Format: uri */
+						issuer: string;
+						/** Format: uri */
+						jwks_uri: string;
+						response_types_supported: components["schemas"]["OauthResponseType"][];
+						scopes_supported: string[];
+						/** Format: uri */
+						token_endpoint: string;
+						token_endpoint_auth_methods_supported: components["schemas"]["OauthAuthMethod"][];
+					};
+				};
+			};
+		};
+	};
+	oauth_autoconfig_openid: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** Format: uri */
+						authorization_endpoint: string;
+						claims_supported: string[];
+						code_challenge_methods_supported: components["schemas"]["OauthCodeChallengeMethod"][];
+						grant_types_supported: components["schemas"]["OauthGrantType"][];
+						id_token_signing_alg_values_supported: string[];
+						/** Format: uri */
+						issuer: string;
+						/** Format: uri */
+						jwks_uri: string;
+						response_types_supported: components["schemas"]["OauthResponseType"][];
+						scopes_supported: string[];
+						subject_types_supported: string[];
+						/** Format: uri */
+						token_endpoint: string;
+						token_endpoint_auth_methods_supported: components["schemas"]["OauthAuthMethod"][];
+						/** Format: uri */
+						userinfo_endpoint: string;
+					};
+				};
+			};
+		};
+	};
+	admin_broadcast: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					message: components["schemas"]["MessageCreate"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	admin_channel_search_index_stats: {
 		parameters: {
 			query?: never;
@@ -14920,6 +11838,30 @@ export interface operations {
 			};
 		};
 	};
+	admin_register_user: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					user_id: components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description User registered */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	admin_search_reindex: {
 		parameters: {
 			query?: never;
@@ -14934,66 +11876,6 @@ export interface operations {
 		};
 		responses: {
 			/** @description Reindexing queued */
-			202: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	admin_reindex_channel: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Channel id to reindex */
-				channel_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Channel reindexing queued */
-			202: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	admin_reindex_everything: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Full reindexing queued */
-			202: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	admin_reindex_room: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				/** @description Room id to reindex */
-				room_id: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description Room reindexing queued */
 			202: {
 				headers: {
 					[name: string]: unknown;
@@ -15140,6 +12022,4658 @@ export interface operations {
 			};
 		};
 	};
+	admin_whisper: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					message: components["schemas"]["MessageCreate"];
+					user_id: components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	app_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Application"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	app_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					bridge?: null | components["schemas"]["Bridge"];
+					description?: string | null;
+					name: string;
+					oauth_confidential?: boolean | null;
+					oauth_redirect_uris?: string[];
+					/** @description if anyone can use this */
+					public?: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						bridge?: null | components["schemas"]["Bridge"];
+						description?: string | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						/** @description oauth whether this client can keep secrets confidential */
+						oauth_confidential: boolean;
+						oauth_redirect_uris?: string[];
+						/** @description only returned on oauth token rotate endpoint */
+						oauth_secret?: string | null;
+						owner_id: components["schemas"]["Id"];
+						/** @description if anyone can use this */
+						public: boolean;
+					};
+				};
+			};
+		};
+	};
+	app_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						bridge?: null | components["schemas"]["Bridge"];
+						description?: string | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						/** @description oauth whether this client can keep secrets confidential */
+						oauth_confidential: boolean;
+						oauth_redirect_uris?: string[];
+						/** @description only returned on oauth token rotate endpoint */
+						oauth_secret?: string | null;
+						owner_id: components["schemas"]["Id"];
+						/** @description if anyone can use this */
+						public: boolean;
+					};
+				};
+			};
+		};
+	};
+	app_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	app_patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					bridge?: null | components["schemas"]["Bridge"];
+					description?: string | null;
+					name?: string | null;
+					oauth_confidential?: boolean | null;
+					oauth_redirect_uris?: string[] | null;
+					/** @description if anyone can use this */
+					public?: boolean | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						bridge?: null | components["schemas"]["Bridge"];
+						description?: string | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						/** @description oauth whether this client can keep secrets confidential */
+						oauth_confidential: boolean;
+						oauth_redirect_uris?: string[];
+						/** @description only returned on oauth token rotate endpoint */
+						oauth_secret?: string | null;
+						owner_id: components["schemas"]["Id"];
+						/** @description if anyone can use this */
+						public: boolean;
+					};
+				};
+			};
+		};
+	};
+	app_invite_bot: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": string;
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	puppet_ensure: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: null | components["schemas"]["Id"];
+				puppet_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description if this is a remote bot */
+					bot: boolean;
+					/** @description about/bio */
+					description?: string | null;
+					/** @description display name */
+					name: string;
+					/** @description if this is for the service itself. usually paired with bot: true */
+					system: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						avatar?: null | components["schemas"]["Id"];
+						banner?: null | components["schemas"]["Id"];
+						/** @description whether this user is a bot */
+						bot: boolean;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						emails?: components["schemas"]["EmailInfo"][] | null;
+						/**
+						 * @description whether this user is considered to have mutifactor authentication enabled on their account
+						 *
+						 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+						 */
+						has_mfa?: boolean | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						preferences?: null | components["schemas"]["PreferencesUser"];
+						presence: components["schemas"]["Presence"];
+						puppet?: null | components["schemas"]["Puppet"];
+						registered_at?: null | components["schemas"]["Time"];
+						remote?: null | components["schemas"]["Remote_Id"];
+						suspended?: null | components["schemas"]["Suspended"];
+						/** @description whether this user is an official system user */
+						system: boolean;
+						version_id: components["schemas"]["Id"];
+						webhook?: null | components["schemas"]["UserWebhook"];
+					};
+				};
+			};
+			/** @description created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						avatar?: null | components["schemas"]["Id"];
+						banner?: null | components["schemas"]["Id"];
+						/** @description whether this user is a bot */
+						bot: boolean;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						emails?: components["schemas"]["EmailInfo"][] | null;
+						/**
+						 * @description whether this user is considered to have mutifactor authentication enabled on their account
+						 *
+						 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+						 */
+						has_mfa?: boolean | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						preferences?: null | components["schemas"]["PreferencesUser"];
+						presence: components["schemas"]["Presence"];
+						puppet?: null | components["schemas"]["Puppet"];
+						registered_at?: null | components["schemas"]["Time"];
+						remote?: null | components["schemas"]["Remote_Id"];
+						suspended?: null | components["schemas"]["Suspended"];
+						/** @description whether this user is an official system user */
+						system: boolean;
+						version_id: components["schemas"]["Id"];
+						webhook?: null | components["schemas"]["UserWebhook"];
+					};
+				};
+			};
+		};
+	};
+	app_rotate_secret: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						bridge?: null | components["schemas"]["Bridge"];
+						description?: string | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						/** @description oauth whether this client can keep secrets confidential */
+						oauth_confidential: boolean;
+						oauth_redirect_uris?: string[];
+						/** @description only returned on oauth token rotate endpoint */
+						oauth_secret?: string | null;
+						owner_id: components["schemas"]["Id"];
+						/** @description if anyone can use this */
+						public: boolean;
+					};
+				};
+			};
+		};
+	};
+	app_create_session: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					name?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Session"] & {
+						token: components["schemas"]["SessionToken"];
+					};
+				};
+			};
+		};
+	};
+	auth_oauth_redirect: {
+		parameters: {
+			query: {
+				state: string;
+				code: string;
+			};
+			header?: never;
+			path: {
+				provider: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success; responds with html + javascript */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_event_list_user: {
+		parameters: {
+			query?: {
+				/** @description return at most this many calendar events */
+				limit?: number | null;
+				from?: null | components["schemas"]["Id"];
+				to?: null | components["schemas"]["Id"];
+				dir?: null | components["schemas"]["PaginationDirection"];
+				/** @description only return calendar events that start after this time */
+				from_time?: null | components["schemas"]["Time"];
+				/** @description only return calendar events that end before this time */
+				to_time?: null | components["schemas"]["Time"];
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						events: components["schemas"]["CalendarEvent"][];
+					};
+				};
+			};
+		};
+	};
+	calendar_event_list: {
+		parameters: {
+			query?: {
+				/** @description return at most this many calendar events */
+				limit?: number | null;
+				from?: null | components["schemas"]["Id"];
+				to?: null | components["schemas"]["Id"];
+				dir?: null | components["schemas"]["PaginationDirection"];
+				/** @description only return calendar events that start after this time */
+				from_time?: null | components["schemas"]["Time"];
+				/** @description only return calendar events that end before this time */
+				to_time?: null | components["schemas"]["Time"];
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						events: components["schemas"]["CalendarEvent"][];
+					};
+				};
+			};
+		};
+	};
+	calendar_event_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					all_day?: boolean;
+					description?: string | null;
+					ends_at?: null | components["schemas"]["Time"];
+					location?: string | null;
+					media_id?: null | components["schemas"]["Id"];
+					recurrence?: null | components["schemas"]["Recurrence"];
+					starts_at: components["schemas"]["Time"];
+					timezone?: null | components["schemas"]["Timezone"];
+					title: string;
+					/** Format: uri */
+					url?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Create calendar event success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description whether this event lasts all day
+						 *
+						 *     if true, use dates rather than datetimes for `starts_at`/`ends_at`.
+						 */
+						all_day?: boolean;
+						/** @description the id of the calendar channel that this event was created in */
+						channel_id: components["schemas"]["Id"];
+						creator_id?: null | components["schemas"]["Id"];
+						/** @description description for this event. supports markdown. */
+						description?: string | null;
+						ends_at?: null | components["schemas"]["Time"];
+						/** @description unique identifier for this calendar event */
+						id: components["schemas"]["Id"];
+						/** @description location where this event will take place */
+						location?: string | null;
+						media_id?: null | components["schemas"]["Id"];
+						participant_counts: components["schemas"]["CalendarParticipantCounts"];
+						recurrence?: null | components["schemas"]["Recurrence"];
+						room_id?: null | components["schemas"]["Id"];
+						/** @description when this event starts */
+						starts_at: components["schemas"]["Time"];
+						timezone?: null | components["schemas"]["Timezone"];
+						/** @description name for this event */
+						title: string;
+						/**
+						 * Format: uri
+						 * @description a url for this event
+						 */
+						url?: string | null;
+					};
+				};
+			};
+		};
+	};
+	calendar_event_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description whether this event lasts all day
+						 *
+						 *     if true, use dates rather than datetimes for `starts_at`/`ends_at`.
+						 */
+						all_day?: boolean;
+						/** @description the id of the calendar channel that this event was created in */
+						channel_id: components["schemas"]["Id"];
+						creator_id?: null | components["schemas"]["Id"];
+						/** @description description for this event. supports markdown. */
+						description?: string | null;
+						ends_at?: null | components["schemas"]["Time"];
+						/** @description unique identifier for this calendar event */
+						id: components["schemas"]["Id"];
+						/** @description location where this event will take place */
+						location?: string | null;
+						media_id?: null | components["schemas"]["Id"];
+						participant_counts: components["schemas"]["CalendarParticipantCounts"];
+						recurrence?: null | components["schemas"]["Recurrence"];
+						room_id?: null | components["schemas"]["Id"];
+						/** @description when this event starts */
+						starts_at: components["schemas"]["Time"];
+						timezone?: null | components["schemas"]["Timezone"];
+						/** @description name for this event */
+						title: string;
+						/**
+						 * Format: uri
+						 * @description a url for this event
+						 */
+						url?: string | null;
+					};
+				};
+			};
+		};
+	};
+	calendar_event_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete calendar event success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_event_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					all_day?: boolean | null;
+					channel_id?: null | components["schemas"]["Id"];
+					description?: string | null;
+					ends_at?: null | components["schemas"]["Time"];
+					location?: string | null;
+					media_id?: null | components["schemas"]["Id"];
+					recurrence?: null | components["schemas"]["Recurrence"];
+					starts_at?: null | components["schemas"]["Time"];
+					timezone?: null | components["schemas"]["Timezone"];
+					title?: string | null;
+					/** Format: uri */
+					url?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Update calendar event success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description whether this event lasts all day
+						 *
+						 *     if true, use dates rather than datetimes for `starts_at`/`ends_at`.
+						 */
+						all_day?: boolean;
+						/** @description the id of the calendar channel that this event was created in */
+						channel_id: components["schemas"]["Id"];
+						creator_id?: null | components["schemas"]["Id"];
+						/** @description description for this event. supports markdown. */
+						description?: string | null;
+						ends_at?: null | components["schemas"]["Time"];
+						/** @description unique identifier for this calendar event */
+						id: components["schemas"]["Id"];
+						/** @description location where this event will take place */
+						location?: string | null;
+						media_id?: null | components["schemas"]["Id"];
+						participant_counts: components["schemas"]["CalendarParticipantCounts"];
+						recurrence?: null | components["schemas"]["Recurrence"];
+						room_id?: null | components["schemas"]["Id"];
+						/** @description when this event starts */
+						starts_at: components["schemas"]["Time"];
+						timezone?: null | components["schemas"]["Timezone"];
+						/** @description name for this event */
+						title: string;
+						/**
+						 * Format: uri
+						 * @description a url for this event
+						 */
+						url?: string | null;
+					};
+				};
+			};
+		};
+	};
+	calendar_instance_rsvp_list: {
+		parameters: {
+			query?: {
+				/** @description whether to include user and member */
+				include_member?: boolean;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+				seq: number;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						member?: null | components["schemas"]["RoomMember"];
+						status: components["schemas"]["CalendarRsvpStatus"];
+						user?: null | components["schemas"]["User"];
+						user_id: components["schemas"]["Id"];
+					}[];
+				};
+			};
+		};
+	};
+	calendar_instance_rsvp_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+				seq: number;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					status: components["schemas"]["CalendarRsvpStatus"];
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_instance_rsvp_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+				seq: number;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete calendar instance RSVP success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_overwrite_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List calendar overwrites success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this event is cancelled */
+						cancelled?: boolean;
+						ends_at?: null | components["schemas"]["Time"];
+						/** @description extra description to show for this event instance */
+						extra_description?: string | null;
+						/** @description overwrite the location for this event instance */
+						location?: string | null;
+						starts_at?: null | components["schemas"]["Time"];
+						/** @description set the title for this event instance */
+						title?: string | null;
+						/** Format: uri */
+						url?: string | null;
+					}[];
+				};
+			};
+		};
+	};
+	calendar_overwrite_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+				seq: number;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get calendar overwrite success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this event is cancelled */
+						cancelled?: boolean;
+						ends_at?: null | components["schemas"]["Time"];
+						/** @description extra description to show for this event instance */
+						extra_description?: string | null;
+						/** @description overwrite the location for this event instance */
+						location?: string | null;
+						starts_at?: null | components["schemas"]["Time"];
+						/** @description set the title for this event instance */
+						title?: string | null;
+						/** Format: uri */
+						url?: string | null;
+					};
+				};
+			};
+		};
+	};
+	calendar_overwrite_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+				seq: number;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description whether this event is cancelled */
+					cancelled?: boolean;
+					ends_at?: null | components["schemas"]["Time"];
+					/** @description extra description to show for this event instance */
+					extra_description?: string | null;
+					/** @description overwrite the location for this event instance */
+					location?: string | null;
+					starts_at?: null | components["schemas"]["Time"];
+					/** @description set the title for this event instance */
+					title?: string | null;
+					/** Format: uri */
+					url?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Put calendar overwrite success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this event is cancelled */
+						cancelled?: boolean;
+						ends_at?: null | components["schemas"]["Time"];
+						/** @description extra description to show for this event instance */
+						extra_description?: string | null;
+						/** @description overwrite the location for this event instance */
+						location?: string | null;
+						starts_at?: null | components["schemas"]["Time"];
+						/** @description set the title for this event instance */
+						title?: string | null;
+						/** Format: uri */
+						url?: string | null;
+					};
+				};
+			};
+		};
+	};
+	calendar_overwrite_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+				seq: number;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete calendar overwrite success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_event_rsvp_list: {
+		parameters: {
+			query?: {
+				/** @description whether to include user and member */
+				include_member?: boolean;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						member?: null | components["schemas"]["RoomMember"];
+						status: components["schemas"]["CalendarRsvpStatus"];
+						user?: null | components["schemas"]["User"];
+						user_id: components["schemas"]["Id"];
+					}[];
+				};
+			};
+		};
+	};
+	calendar_event_rsvp_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						member?: null | components["schemas"]["RoomMember"];
+						status: components["schemas"]["CalendarRsvpStatus"];
+						user?: null | components["schemas"]["User"];
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	calendar_event_rsvp_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					status: components["schemas"]["CalendarRsvpStatus"];
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	calendar_event_rsvp_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				event_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete calendar event RSVP success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_create_dm: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** Format: int64 */
+					auto_archive_duration?: number | null;
+					/** @description automatically generated description */
+					auto_description?: string | null;
+					/** @description automatically generated name */
+					auto_name?: string | null;
+					/** Format: int64 */
+					bitrate?: number | null;
+					/**
+					 * Format: int64
+					 * @description default auto archive duration in seconds to copy to threads created in this channel
+					 *
+					 *     if unset, defaults to [`DEFAULT_AUTO_ARCHIVE_DURATION`]. set to `null` to disable.
+					 */
+					default_auto_archive_duration?: number | null;
+					/** Format: int64 */
+					default_slowmode_message?: number | null;
+					description?: string | null;
+					icon?: null | components["schemas"]["Id"];
+					/** @description whether users without ThreadManage can add other members to this thread */
+					invitable?: boolean;
+					name: string;
+					/** @description not safe for work */
+					nsfw?: boolean;
+					parent_id?: null | components["schemas"]["Id"];
+					permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
+					/** @description the recipient(s) for this dm/gdm */
+					recipients?: components["schemas"]["Id"][] | null;
+					/** Format: int64 */
+					slowmode_message?: number | null;
+					/** Format: int64 */
+					slowmode_thread?: number | null;
+					starter_message?: null | components["schemas"]["MessageCreate"];
+					/** @description tags to apply to this thread (overwrite, not append) */
+					tags?: components["schemas"]["Id"][] | null;
+					/** @description The type of this channel */
+					type?: components["schemas"]["ChannelType"];
+					/** Format: uri */
+					url?: string | null;
+					/** Format: int64 */
+					user_limit?: number | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Dm already exists */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+			/** @description Created channel */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+		};
+	};
+	channel_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get thread success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+		};
+	};
+	channel_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					archived?: boolean | null;
+					/** Format: int64 */
+					auto_archive_duration?: number | null;
+					/** @description automatically generated description */
+					auto_description?: string | null;
+					/** @description automatically generated name */
+					auto_name?: string | null;
+					/** Format: int64 */
+					bitrate?: number | null;
+					calendar?: null | components["schemas"]["CalendarPatch"];
+					/** Format: int64 */
+					default_auto_archive_duration?: number | null;
+					/** Format: int64 */
+					default_slowmode_message?: number | null;
+					description?: string | null;
+					document?: null | components["schemas"]["DocumentPatch"];
+					icon?: null | components["schemas"]["Id"];
+					invitable?: boolean | null;
+					locked?: null | components["schemas"]["Locked"];
+					name?: string | null;
+					/** @description not safe for work */
+					nsfw?: boolean | null;
+					owner_id?: null | components["schemas"]["Id"];
+					parent_id?: null | components["schemas"]["Id"];
+					/** Format: int64 */
+					slowmode_message?: number | null;
+					/** Format: int64 */
+					slowmode_thread?: number | null;
+					/** @description tags to apply to this thread (overwrite, not append) */
+					tags?: components["schemas"]["Id"][] | null;
+					ty?: null | components["schemas"]["ChannelType"];
+					/** Format: uri */
+					url?: string | null;
+					/** Format: int64 */
+					user_limit?: number | null;
+					wiki?: null | components["schemas"]["WikiPatch"];
+				};
+			};
+		};
+		responses: {
+			/** @description edit message success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+			/** @description no change */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+		};
+	};
+	channel_ack: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/**
+					 * Format: int64
+					 * @description The new mention count. Defaults to 0.
+					 */
+					mention_count?: number;
+					message_id?: null | components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["AckType"] & {
+						/** @description whether this is considered unread */
+						unread: boolean;
+					};
+				};
+			};
+		};
+	};
+	thread_activity: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List activity success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						messages: components["schemas"]["Message"][];
+						room_members?: components["schemas"]["RoomMember"][];
+						thread_members?: components["schemas"]["ThreadMember"][];
+						users?: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	message_context: {
+		parameters: {
+			query?: {
+				to_start?: null | components["schemas"]["Id"];
+				to_end?: null | components["schemas"]["Id"];
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List thread messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						has_after: boolean;
+						has_before: boolean;
+						items: components["schemas"]["Message"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	flume_create: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+				"x-timestamp"?: number;
+			};
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description initial components */
+					components: components["schemas"]["Components"];
+					/**
+					 * @description mentions to parse from initial components
+					 *
+					 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification
+					 */
+					mentions?: components["schemas"]["ParseMentions"];
+					metadata?: null | components["schemas"]["Metadata"];
+					reply_id?: null | components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description Flume created successfully */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the id of who sent this message */
+						author_id: components["schemas"]["Id"];
+						channel_id: components["schemas"]["Id"];
+						/** @description when this message was created */
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						/**
+						 * @description whether this message is ephemeral
+						 *
+						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+						 */
+						ephemeral?: boolean;
+						flume?: null | components["schemas"]["MessageFlume"];
+						id: components["schemas"]["Id"];
+						interaction?: null | components["schemas"]["MessageInteraction"];
+						latest_version: components["schemas"]["MessageVersion"];
+						pinned?: null | components["schemas"]["Pinned"];
+						reactions?: components["schemas"]["ReactionCounts"];
+						removed_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						thread?: null | components["schemas"]["Channel"];
+					};
+				};
+			};
+		};
+	};
+	flume_commit: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Flume committed successfully */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the id of who sent this message */
+						author_id: components["schemas"]["Id"];
+						channel_id: components["schemas"]["Id"];
+						/** @description when this message was created */
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						/**
+						 * @description whether this message is ephemeral
+						 *
+						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+						 */
+						ephemeral?: boolean;
+						flume?: null | components["schemas"]["MessageFlume"];
+						id: components["schemas"]["Id"];
+						interaction?: null | components["schemas"]["MessageInteraction"];
+						latest_version: components["schemas"]["MessageVersion"];
+						pinned?: null | components["schemas"]["Pinned"];
+						reactions?: components["schemas"]["ReactionCounts"];
+						removed_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						thread?: null | components["schemas"]["Channel"];
+					};
+				};
+			};
+		};
+	};
+	flume_delta: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description append components to an existing component */
+					append?: components["schemas"]["FlumeAppendCreate"][];
+					/** @description delete some components */
+					delete?: components["schemas"]["ComponentId"][];
+					init?: null | components["schemas"]["Components"];
+					/**
+					 * @description replace a component with one or more components
+					 *
+					 *     - replacing a component with children will delete the children
+					 *     - replacing a component with a single component will always work
+					 *     - replacing a component with multiple components will work if the parent has children (Root, Details, Container, Section)
+					 */
+					replace?: components["schemas"]["FlumeReplaceCreate"][];
+				};
+			};
+		};
+		responses: {
+			/** @description Delta applied successfully */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Delta did not cause any change */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	flume_ping: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Flume pinged successfully */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	invite_channel_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Invite"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	invite_channel_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description a description for this invite */
+					description?: string | null;
+					expires_at?: null | components["schemas"]["Time"];
+					/**
+					 * Format: int32
+					 * @description the maximum number of times this invite can be used
+					 *     be sure to account for existing `uses` and `max_uses` when patching
+					 */
+					max_uses?: number | null;
+					/** @description which roles to apply when accepting the invite */
+					role_ids?: components["schemas"]["Id"][] | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the invite code for this invite */
+						code: components["schemas"]["InviteCode"];
+						/** @description the time when this invite was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this invite */
+						creator: components["schemas"]["User"];
+						/** @description the id of the user who created this invite */
+						creator_id: components["schemas"]["Id"];
+						/** @description a description for this invite */
+						description?: string | null;
+						expires_at?: null | components["schemas"]["Time"];
+						/** @description if this invite's code is custom (instead of random) */
+						is_vanity: boolean;
+						/** @description where this invite leads */
+						target: components["schemas"]["InviteTarget"];
+					};
+				};
+			};
+		};
+	};
+	channel_member_search: {
+		parameters: {
+			query: {
+				query: string;
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description a room member for each returned user */
+						room_members: components["schemas"]["RoomMember"][];
+						/**
+						 * @description a thread member for each returned user
+						 *
+						 *     will only be populated if this is a thread
+						 */
+						thread_members: components["schemas"]["ThreadMember"][];
+						/** @description the resulting users */
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	message_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List thread messages success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						messages: components["schemas"]["Message"][];
+						room_members?: components["schemas"]["RoomMember"][];
+						thread_members?: components["schemas"]["ThreadMember"][];
+						users?: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	message_moderate: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description which messages to delete */
+					delete?: components["schemas"]["Id"][];
+					/** @description which messages to remove */
+					remove?: components["schemas"]["Id"][];
+					/** @description which messages to restore */
+					restore?: components["schemas"]["Id"][];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_list_atom: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_list_deleted: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Message"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	message_move: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description which messages to move */
+					message_ids?: components["schemas"]["Id"][];
+					/**
+					 * @description the channel to move the messages to
+					 *
+					 *     must be in same room (for now...)
+					 */
+					target_channel_id: components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_list_removed: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						messages: components["schemas"]["Message"][];
+						room_members?: components["schemas"]["RoomMember"][];
+						thread_members?: components["schemas"]["ThreadMember"][];
+						users?: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	message_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description delete message success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_edit: {
+		parameters: {
+			query?: never;
+			header?: {
+				"X-Timestamp"?: number;
+			};
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description message attachments */
+					attachments?:
+						| components["schemas"]["MessageAttachmentCreate"][]
+						| null;
+					components?: null | components["schemas"]["Components_Create"];
+					/** @description the new message content in markdown */
+					content?: string | null;
+					embeds?: components["schemas"]["EmbedCreate"][] | null;
+					metadata?: null | components["schemas"]["Metadata"];
+					reply_id?: null | components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description edit message success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the id of who sent this message */
+						author_id: components["schemas"]["Id"];
+						channel_id: components["schemas"]["Id"];
+						/** @description when this message was created */
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						/**
+						 * @description whether this message is ephemeral
+						 *
+						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+						 */
+						ephemeral?: boolean;
+						flume?: null | components["schemas"]["MessageFlume"];
+						id: components["schemas"]["Id"];
+						interaction?: null | components["schemas"]["MessageInteraction"];
+						latest_version: components["schemas"]["MessageVersion"];
+						pinned?: null | components["schemas"]["Pinned"];
+						reactions?: components["schemas"]["ReactionCounts"];
+						removed_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						thread?: null | components["schemas"]["Channel"];
+					};
+				};
+			};
+			/** @description no change */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	reaction_remove_all: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	reaction_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+				reaction_key: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["ReactionListItem"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	reaction_remove_emoji: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+				reaction_key: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	reaction_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+				reaction_key: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description already exists */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description new reaction created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	reaction_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+				reaction_key: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	thread_create_from_message: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** Format: int64 */
+					auto_archive_duration?: number | null;
+					/** @description automatically generated description */
+					auto_description?: string | null;
+					/** @description automatically generated name */
+					auto_name?: string | null;
+					/** Format: int64 */
+					bitrate?: number | null;
+					/**
+					 * Format: int64
+					 * @description default auto archive duration in seconds to copy to threads created in this channel
+					 *
+					 *     if unset, defaults to [`DEFAULT_AUTO_ARCHIVE_DURATION`]. set to `null` to disable.
+					 */
+					default_auto_archive_duration?: number | null;
+					/** Format: int64 */
+					default_slowmode_message?: number | null;
+					description?: string | null;
+					icon?: null | components["schemas"]["Id"];
+					/** @description whether users without ThreadManage can add other members to this thread */
+					invitable?: boolean;
+					name: string;
+					/** @description not safe for work */
+					nsfw?: boolean;
+					parent_id?: null | components["schemas"]["Id"];
+					permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
+					/** @description the recipient(s) for this dm/gdm */
+					recipients?: components["schemas"]["Id"][] | null;
+					/** Format: int64 */
+					slowmode_message?: number | null;
+					/** Format: int64 */
+					slowmode_thread?: number | null;
+					starter_message?: null | components["schemas"]["MessageCreate"];
+					/** @description tags to apply to this thread (overwrite, not append) */
+					tags?: components["schemas"]["Id"][] | null;
+					/** @description The type of this channel */
+					type?: components["schemas"]["ChannelType"];
+					/** Format: uri */
+					url?: string | null;
+					/** Format: int64 */
+					user_limit?: number | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Create thread success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+			/** @description A thread for this message already exists */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_version_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["MessageVersion"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	message_version_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+				version_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the id of who sent this message */
+						author_id: components["schemas"]["Id"];
+						channel_id: components["schemas"]["Id"];
+						/** @description when this message was created */
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						/**
+						 * @description whether this message is ephemeral
+						 *
+						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+						 */
+						ephemeral?: boolean;
+						flume?: null | components["schemas"]["MessageFlume"];
+						id: components["schemas"]["Id"];
+						interaction?: null | components["schemas"]["MessageInteraction"];
+						latest_version: components["schemas"]["MessageVersion"];
+						pinned?: null | components["schemas"]["Pinned"];
+						reactions?: components["schemas"]["ReactionCounts"];
+						removed_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						thread?: null | components["schemas"]["Channel"];
+					};
+				};
+			};
+		};
+	};
+	message_version_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+				version_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description delete message version success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_mirror: {
+		parameters: {
+			query: {
+				/** @description the sequence number to sync from (exclusive). use 0 to get all events. */
+				since: components["schemas"]["Seq"];
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description channel sync success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description sync events to apply to local state */
+						events: components["schemas"]["MessageSync"][];
+						/** @description not all events were returned. call this endpoint again with the new `seq` */
+						partial: boolean;
+						/** @description the new latest sequence number you have */
+						seq: components["schemas"]["Seq"];
+					};
+				};
+			};
+		};
+	};
+	message_nudge: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the id of who sent this message */
+						author_id: components["schemas"]["Id"];
+						channel_id: components["schemas"]["Id"];
+						/** @description when this message was created */
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						/**
+						 * @description whether this message is ephemeral
+						 *
+						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+						 */
+						ephemeral?: boolean;
+						flume?: null | components["schemas"]["MessageFlume"];
+						id: components["schemas"]["Id"];
+						interaction?: null | components["schemas"]["MessageInteraction"];
+						latest_version: components["schemas"]["MessageVersion"];
+						pinned?: null | components["schemas"]["Pinned"];
+						reactions?: components["schemas"]["ReactionCounts"];
+						removed_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						thread?: null | components["schemas"]["Channel"];
+					};
+				};
+			};
+		};
+	};
+	message_pins_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["MessagePin"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	message_pins_reorder: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description the messages to reorder */
+					messages?: components["schemas"]["PinsReorderItem"][];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_pin: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_unpin: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_ratelimit_delete_all: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Rate limit expired */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_ratelimit_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					slowmode_message_expire_at?: null | components["schemas"]["Time"];
+					slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+				};
+			};
+		};
+		responses: {
+			/** @description Rate limit updated */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_ratelimit_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Rate limit expired */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	redex_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List scripts success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Redex"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	redex_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					format: components["schemas"]["RedexFormat"];
+					location: components["schemas"]["RedexLocationUpdate"];
+				};
+			};
+		};
+		responses: {
+			/** @description Create redex success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						channel_id: components["schemas"]["Id"];
+						created_at: components["schemas"]["Time"];
+						creator_id: components["schemas"]["Id"];
+						deleted_at?: null | components["schemas"]["Time"];
+						/** @description detected inputs for this script */
+						handlers: components["schemas"]["RedexHandler"][];
+						id: components["schemas"]["Id"];
+						latest_version: components["schemas"]["RedexVersion"];
+						/** @description the capabilities that were granted to this redex */
+						permissions: components["schemas"]["RedexPermission"][];
+						/**
+						 * @description a short lowercase identifier
+						 *
+						 *     used for this redex's http subdomain
+						 */
+						shortname: string;
+						status: components["schemas"]["RedexStatus"];
+					};
+				};
+			};
+		};
+	};
+	redex_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get redex success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						channel_id: components["schemas"]["Id"];
+						created_at: components["schemas"]["Time"];
+						creator_id: components["schemas"]["Id"];
+						deleted_at?: null | components["schemas"]["Time"];
+						/** @description detected inputs for this script */
+						handlers: components["schemas"]["RedexHandler"][];
+						id: components["schemas"]["Id"];
+						latest_version: components["schemas"]["RedexVersion"];
+						/** @description the capabilities that were granted to this redex */
+						permissions: components["schemas"]["RedexPermission"][];
+						/**
+						 * @description a short lowercase identifier
+						 *
+						 *     used for this redex's http subdomain
+						 */
+						shortname: string;
+						status: components["schemas"]["RedexStatus"];
+					};
+				};
+			};
+		};
+	};
+	redex_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete redex success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	redex_content_update: {
+		parameters: {
+			query?: {
+				/** @description Whether to process this redex asynchronously. */
+				async?: boolean;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					format: components["schemas"]["RedexFormat"];
+					location: components["schemas"]["RedexLocationUpdate"];
+				};
+			};
+		};
+		responses: {
+			/** @description Update redex content success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						format: components["schemas"]["RedexFormat"];
+						location: components["schemas"]["RedexLocation"];
+						metadata: components["schemas"]["RedexMetadata"];
+						status: components["schemas"]["RedexVersionStatus"];
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	redex_depends: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get redex dependencies success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description all dependencies of this redex, including transitive ones */
+						dependencies: components["schemas"]["RedexDependency"][];
+						/** @description what depends on what */
+						links: components["schemas"]["RedexDependencyLink"][];
+					};
+				};
+			};
+		};
+	};
+	redex_depends_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": Record<string, never>;
+			};
+		};
+		responses: {
+			/** @description Update redex dependencies success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						format: components["schemas"]["RedexFormat"];
+						location: components["schemas"]["RedexLocation"];
+						metadata: components["schemas"]["RedexMetadata"];
+						status: components["schemas"]["RedexVersionStatus"];
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	redex_eval_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List redex evals success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Eval"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	redex_eval_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+				eval_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get redex eval success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						created_at: components["schemas"]["Time"];
+						id: components["schemas"]["Id"];
+						input: components["schemas"]["EvalInputSummary"];
+						redex_id: components["schemas"]["Id"];
+						redex_version_id: components["schemas"]["Id"];
+						status: components["schemas"]["EvalStatus"];
+						stopped_at?: null | components["schemas"]["Time"];
+					};
+				};
+			};
+		};
+	};
+	redex_eval_log: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+				eval_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get redex eval logs success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description arbitrary metadata associated with this log line */
+						attributes?: components["schemas"]["Metadata"];
+						/** @description arbitrary content for this log line */
+						content: string;
+						created_at: components["schemas"]["Time"];
+						/** Format: int64 */
+						id: number;
+						level: components["schemas"]["EvalLogLevel"];
+						/** @description where this log line came from */
+						source: components["schemas"]["EvalLogSource"];
+					}[];
+				};
+			};
+		};
+	};
+	redex_eval_stop: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+				eval_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Stop redex eval success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	redex_trigger: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/**
+					 * @description start in the background
+					 *
+					 *     returns 202 accepted instead of blocking until it can return 200 ok
+					 */
+					async: boolean;
+					/**
+					 * @description whether only one instance should be running at a time
+					 *
+					 *     will stop other runs of this script if true
+					 */
+					exclusive: boolean;
+					/** @description the id of the input that triggered this run */
+					trigger_id: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Start redex run success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						created_at: components["schemas"]["Time"];
+						id: components["schemas"]["Id"];
+						input: components["schemas"]["EvalInputSummary"];
+						redex_id: components["schemas"]["Id"];
+						redex_version_id: components["schemas"]["Id"];
+						status: components["schemas"]["EvalStatus"];
+						stopped_at?: null | components["schemas"]["Time"];
+					};
+				};
+			};
+		};
+	};
+	redex_version_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List redex versions success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["RedexVersion"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	redex_version_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+				version_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get redex version success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						format: components["schemas"]["RedexFormat"];
+						location: components["schemas"]["RedexLocation"];
+						metadata: components["schemas"]["RedexMetadata"];
+						status: components["schemas"]["RedexVersionStatus"];
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	redex_version_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+				version_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete redex version success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	redex_version_restore: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				redex_id: string;
+				version_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Restore redex version success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						format: components["schemas"]["RedexFormat"];
+						location: components["schemas"]["RedexLocation"];
+						metadata: components["schemas"]["RedexMetadata"];
+						status: components["schemas"]["RedexVersionStatus"];
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	channel_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_restore: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	message_reply_roots: {
+		parameters: {
+			query?: {
+				/** @description how deeply to fetch replies */
+				depth?: number;
+				/** @description how many replies to fetch per branch */
+				breadth?: number | null;
+				/** @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on. */
+				context?: number | null;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RepliesChildren"];
+				};
+			};
+		};
+	};
+	message_reply_list: {
+		parameters: {
+			query?: {
+				/** @description how deeply to fetch replies */
+				depth?: number;
+				/** @description how many replies to fetch per branch */
+				breadth?: number | null;
+				/** @description which parent message to fetch replies from, where 0 is the message itself, 1 is its parent, and so on. */
+				context?: number | null;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				message_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["RepliesChildren"];
+				};
+			};
+		};
+	};
+	tag_list: {
+		parameters: {
+			query?: {
+				/**
+				 * @description deny, allow, require tag to be archived
+				 *
+				 *     default: deny
+				 */
+				archived?: boolean | null;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List tags success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Tag"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	tag_create: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					color?: null | components["schemas"]["Color"];
+					description?: string | null;
+					name: string;
+					restricted?: boolean;
+					spoiler?: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description Create tag success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * Format: int64
+						 * @description total number of threads with this tag (excluding archived threads)
+						 */
+						active_thread_count: number;
+						/**
+						 * @description whether this tag is archived
+						 *
+						 *     archived tags cant be applied to any new threads and won't appear in the tag picker.
+						 */
+						archived: boolean;
+						channel_id: components["schemas"]["Id"];
+						color?: null | components["schemas"]["Color"];
+						description?: string | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						/** @description only members with ThreadEdit or ThreadManage can apply this tag */
+						restricted: boolean;
+						/** @description if this tag should be considered a spoiler */
+						spoiler: boolean;
+						/**
+						 * Format: int64
+						 * @description total number of threads with this tag (including archived threads)
+						 */
+						total_thread_count: number;
+					};
+				};
+			};
+		};
+	};
+	tag_search: {
+		parameters: {
+			query: {
+				query: string;
+				/**
+				 * @description deny, allow, require tag to be archived
+				 *
+				 *     default: deny
+				 */
+				archived?: boolean | null;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Search tags success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Tag"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	tag_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				tag_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get tag success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * Format: int64
+						 * @description total number of threads with this tag (excluding archived threads)
+						 */
+						active_thread_count: number;
+						/**
+						 * @description whether this tag is archived
+						 *
+						 *     archived tags cant be applied to any new threads and won't appear in the tag picker.
+						 */
+						archived: boolean;
+						channel_id: components["schemas"]["Id"];
+						color?: null | components["schemas"]["Color"];
+						description?: string | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						/** @description only members with ThreadEdit or ThreadManage can apply this tag */
+						restricted: boolean;
+						/** @description if this tag should be considered a spoiler */
+						spoiler: boolean;
+						/**
+						 * Format: int64
+						 * @description total number of threads with this tag (including archived threads)
+						 */
+						total_thread_count: number;
+					};
+				};
+			};
+		};
+	};
+	tag_delete: {
+		parameters: {
+			query?: {
+				force?: boolean;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				tag_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete tag success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	tag_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				tag_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					archived?: boolean | null;
+					color?: null | components["schemas"]["Color"];
+					description?: string | null;
+					name?: string | null;
+					restricted?: boolean | null;
+					spoiler?: boolean | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Update tag success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * Format: int64
+						 * @description total number of threads with this tag (excluding archived threads)
+						 */
+						active_thread_count: number;
+						/**
+						 * @description whether this tag is archived
+						 *
+						 *     archived tags cant be applied to any new threads and won't appear in the tag picker.
+						 */
+						archived: boolean;
+						channel_id: components["schemas"]["Id"];
+						color?: null | components["schemas"]["Color"];
+						description?: string | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						/** @description only members with ThreadEdit or ThreadManage can apply this tag */
+						restricted: boolean;
+						/** @description if this tag should be considered a spoiler */
+						spoiler: boolean;
+						/**
+						 * Format: int64
+						 * @description total number of threads with this tag (including archived threads)
+						 */
+						total_thread_count: number;
+					};
+				};
+			};
+		};
+	};
+	thread_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List channel threads success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						/** @description room members for each thread member in preview_members */
+						room_members: components["schemas"]["RoomMember"][];
+						threads: components["schemas"]["Channel"][];
+						/** Format: int64 */
+						total: number;
+						/** @description users for each thread member in preview_members */
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	thread_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** Format: int64 */
+					auto_archive_duration?: number | null;
+					/** @description automatically generated description */
+					auto_description?: string | null;
+					/** @description automatically generated name */
+					auto_name?: string | null;
+					/** Format: int64 */
+					bitrate?: number | null;
+					/**
+					 * Format: int64
+					 * @description default auto archive duration in seconds to copy to threads created in this channel
+					 *
+					 *     if unset, defaults to [`DEFAULT_AUTO_ARCHIVE_DURATION`]. set to `null` to disable.
+					 */
+					default_auto_archive_duration?: number | null;
+					/** Format: int64 */
+					default_slowmode_message?: number | null;
+					description?: string | null;
+					icon?: null | components["schemas"]["Id"];
+					/** @description whether users without ThreadManage can add other members to this thread */
+					invitable?: boolean;
+					name: string;
+					/** @description not safe for work */
+					nsfw?: boolean;
+					parent_id?: null | components["schemas"]["Id"];
+					permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
+					/** @description the recipient(s) for this dm/gdm */
+					recipients?: components["schemas"]["Id"][] | null;
+					/** Format: int64 */
+					slowmode_message?: number | null;
+					/** Format: int64 */
+					slowmode_thread?: number | null;
+					starter_message?: null | components["schemas"]["MessageCreate"];
+					/** @description tags to apply to this thread (overwrite, not append) */
+					tags?: components["schemas"]["Id"][] | null;
+					/** @description The type of this channel */
+					type?: components["schemas"]["ChannelType"];
+					/** Format: uri */
+					url?: string | null;
+					/** Format: int64 */
+					user_limit?: number | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Create thread success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+		};
+	};
+	thread_list_atom: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	thread_list_archived: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List archived threads success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						/** @description room members for each thread member in preview_members */
+						room_members: components["schemas"]["RoomMember"][];
+						threads: components["schemas"]["Channel"][];
+						/** Format: int64 */
+						total: number;
+						/** @description users for each thread member in preview_members */
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	thread_list_removed: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List removed threads success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						/** @description room members for each thread member in preview_members */
+						room_members: components["schemas"]["RoomMember"][];
+						threads: components["schemas"]["Channel"][];
+						/** Format: int64 */
+						total: number;
+						/** @description users for each thread member in preview_members */
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	channel_transfer_ownership: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": string;
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+		};
+	};
+	channel_typing: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_upgrade: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
 	webhook_list_channel: {
 		parameters: {
 			query?: {
@@ -15212,6 +16746,36 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["ServerInfo"];
 				};
+			};
+		};
+	};
+	debug_lookup_ip: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				/** @description IP address to look up */
+				ip: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["IpMetadata"];
+				};
+			};
+			/** @description no metadata available for this ip address */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -15295,6 +16859,763 @@ export interface operations {
 			};
 		};
 	};
+	document_branch_list: {
+		parameters: {
+			query?: {
+				/**
+				 * @description only include branches with these states
+				 *
+				 *     defaults to only Active
+				 */
+				state?: components["schemas"]["DocumentBranchState"][];
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["DocumentBranch"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	document_branch_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				branch_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description when this branch was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this branch */
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * @description Whether this is the default branch.
+						 *
+						 *     The default branch cannot be deleted and has the same id as the document
+						 */
+						default: boolean;
+						document_id: components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description the name of this branch */
+						name?: string | null;
+						parent_id?: null | components["schemas"]["DocumentRevisionId"];
+						/**
+						 * @description Whether this is a private branch.
+						 *
+						 *     Private branches are only visible to the user who created this branch, similar to draft documents.
+						 */
+						private: boolean;
+						/** @description the current state of this branch */
+						state: components["schemas"]["DocumentBranchState"];
+					};
+				};
+			};
+		};
+	};
+	document_branch_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				branch_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					name?: string | null;
+					/** @description once public, branches cannot be made private again */
+					private?: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description when this branch was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this branch */
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * @description Whether this is the default branch.
+						 *
+						 *     The default branch cannot be deleted and has the same id as the document
+						 */
+						default: boolean;
+						document_id: components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description the name of this branch */
+						name?: string | null;
+						parent_id?: null | components["schemas"]["DocumentRevisionId"];
+						/**
+						 * @description Whether this is a private branch.
+						 *
+						 *     Private branches are only visible to the user who created this branch, similar to draft documents.
+						 */
+						private: boolean;
+						/** @description the current state of this branch */
+						state: components["schemas"]["DocumentBranchState"];
+					};
+				};
+			};
+		};
+	};
+	document_branch_close: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				branch_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description when this branch was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this branch */
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * @description Whether this is the default branch.
+						 *
+						 *     The default branch cannot be deleted and has the same id as the document
+						 */
+						default: boolean;
+						document_id: components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description the name of this branch */
+						name?: string | null;
+						parent_id?: null | components["schemas"]["DocumentRevisionId"];
+						/**
+						 * @description Whether this is a private branch.
+						 *
+						 *     Private branches are only visible to the user who created this branch, similar to draft documents.
+						 */
+						private: boolean;
+						/** @description the current state of this branch */
+						state: components["schemas"]["DocumentBranchState"];
+					};
+				};
+			};
+		};
+	};
+	document_content_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				branch_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					components: components["schemas"]["Component"][];
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_crdt_diff: {
+		parameters: {
+			query?: {
+				sv?: null | components["schemas"]["DocumentStateVector"];
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				branch_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_crdt_apply: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				branch_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/octet-stream": string;
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_history: {
+		parameters: {
+			query?: {
+				/** @description split group whenever author changes */
+				by_author?: boolean | null;
+				/** @description split group whenever a tag is created */
+				by_tag?: boolean | null;
+				/** @description every n seconds */
+				by_time?: number | null;
+				/** @description every n changes */
+				by_changes?: number | null;
+				/** @description continue listing history from here */
+				cursor?: string | null;
+				/** @description the maximum number of items to return. */
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+				branch_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the resulting changesets, ordered oldest to newest */
+						changesets: components["schemas"]["Changeset"][];
+						/** @description document tags that are part of the range */
+						document_tags: components["schemas"]["DocumentTag"][];
+						/** @description a room member object for every referenced user_id */
+						room_members: components["schemas"]["RoomMember"][];
+						/** @description a thread member object for every referenced user_id */
+						thread_members: components["schemas"]["ThreadMember"][];
+						/** @description a user object for every referenced user_id */
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	document_branch_merge: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				branch_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					target_branch_id?: null | components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_branch_sync: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				branch_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					sync_from_branch_id?: null | components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_branch_fork: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				parent_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					name?: string | null;
+					private?: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description when this branch was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this branch */
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * @description Whether this is the default branch.
+						 *
+						 *     The default branch cannot be deleted and has the same id as the document
+						 */
+						default: boolean;
+						document_id: components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description the name of this branch */
+						name?: string | null;
+						parent_id?: null | components["schemas"]["DocumentRevisionId"];
+						/**
+						 * @description Whether this is a private branch.
+						 *
+						 *     Private branches are only visible to the user who created this branch, similar to draft documents.
+						 */
+						private: boolean;
+						/** @description the current state of this branch */
+						state: components["schemas"]["DocumentBranchState"];
+					};
+				};
+			};
+		};
+	};
+	document_media_attach: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					media_id: components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description successfully linked */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_content_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				revision_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						components: components["schemas"]["Component"][];
+					};
+				};
+			};
+		};
+	};
+	document_tag_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						branch_id: components["schemas"]["Id"];
+						/** @description when this tag was created */
+						created_at: components["schemas"]["Time"];
+						creator_id?: null | components["schemas"]["Id"];
+						/** @description optional more detailed description */
+						description?: string | null;
+						/** @description the unique identifier for this tag */
+						id: components["schemas"]["Id"];
+						/** Format: int64 */
+						revision_seq: number;
+						/** @description one line description */
+						summary: string;
+						/** @description when this tag was last updated */
+						updated_at: components["schemas"]["Time"];
+					}[];
+				};
+			};
+		};
+	};
+	document_tag_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description optional more detailed description */
+					description?: string | null;
+					revision: components["schemas"]["DocumentRevisionRef"];
+					/** @description one line description */
+					summary: string;
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_tag_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				tag_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						branch_id: components["schemas"]["Id"];
+						/** @description when this tag was created */
+						created_at: components["schemas"]["Time"];
+						creator_id?: null | components["schemas"]["Id"];
+						/** @description optional more detailed description */
+						description?: string | null;
+						/** @description the unique identifier for this tag */
+						id: components["schemas"]["Id"];
+						/** Format: int64 */
+						revision_seq: number;
+						/** @description one line description */
+						summary: string;
+						/** @description when this tag was last updated */
+						updated_at: components["schemas"]["Time"];
+					};
+				};
+			};
+		};
+	};
+	document_tag_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				tag_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	document_tag_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				tag_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description optional more detailed description */
+					description?: string | null;
+					/** @description one line description */
+					summary?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						branch_id: components["schemas"]["Id"];
+						/** @description when this tag was created */
+						created_at: components["schemas"]["Time"];
+						creator_id?: null | components["schemas"]["Id"];
+						/** @description optional more detailed description */
+						description?: string | null;
+						/** @description the unique identifier for this tag */
+						id: components["schemas"]["Id"];
+						/** Format: int64 */
+						revision_seq: number;
+						/** @description one line description */
+						summary: string;
+						/** @description when this tag was last updated */
+						updated_at: components["schemas"]["Time"];
+					};
+				};
+			};
+		};
+	};
+	emoji_search: {
+		parameters: {
+			query: {
+				query: string;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["EmojiCustom"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	emoji_lookup: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				emoji_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this emoji is animated */
+						animated: boolean;
+						creator_id?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						media_id: components["schemas"]["Id"];
+						name: string;
+						owner?: null | components["schemas"]["EmojiOwner"];
+					};
+				};
+			};
+		};
+	};
+	guest_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					description?: string | null;
+					name: string;
+				};
+			};
+		};
+		responses: {
+			/** @description guest account created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						avatar?: null | components["schemas"]["Id"];
+						banner?: null | components["schemas"]["Id"];
+						/** @description whether this user is a bot */
+						bot: boolean;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						emails?: components["schemas"]["EmailInfo"][] | null;
+						/**
+						 * @description whether this user is considered to have mutifactor authentication enabled on their account
+						 *
+						 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+						 */
+						has_mfa?: boolean | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						preferences?: null | components["schemas"]["PreferencesUser"];
+						presence: components["schemas"]["Presence"];
+						puppet?: null | components["schemas"]["Puppet"];
+						registered_at?: null | components["schemas"]["Time"];
+						remote?: null | components["schemas"]["Remote_Id"];
+						suspended?: null | components["schemas"]["Suspended"];
+						/** @description whether this user is an official system user */
+						system: boolean;
+						version_id: components["schemas"]["Id"];
+						webhook?: null | components["schemas"]["UserWebhook"];
+					};
+				};
+			};
+		};
+	};
 	debug_health: {
 		parameters: {
 			query?: never;
@@ -15305,6 +17626,483 @@ export interface operations {
 		requestBody?: never;
 		responses: {
 			/** @description server is healthy */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	inbox_get: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+				/** @description only include notifications from these rooms */
+				room_id?: components["schemas"]["Id"][];
+				/** @description only include notifications from these channels */
+				channel_id?: components["schemas"]["Id"][];
+				/** @description include messages marked as read too */
+				include_read?: boolean;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						/** @deprecated */
+						has_more: boolean;
+						messages: components["schemas"]["Message"][];
+						notifications: components["schemas"]["Notification"][];
+						room_members: components["schemas"]["RoomMember"][];
+						thread_members: components["schemas"]["ThreadMember"][];
+						threads: components["schemas"]["Channel"][];
+						/** Format: int64 */
+						total: number;
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	inbox_post: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					added_at?: null | components["schemas"]["Time"];
+					/** @description the channel this message was sent in */
+					channel_id: components["schemas"]["Id"];
+					/** @description the id of the message that was sent */
+					message_id: components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["NotificationType"] & {
+						/** @description when this was added to the inbox */
+						added_at: components["schemas"]["Time"];
+						id: components["schemas"]["Id"];
+						/** @description user defined note for this notification */
+						note?: string | null;
+						read_at?: null | components["schemas"]["Time"];
+					};
+				};
+			};
+		};
+	};
+	inbox_flush: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					after?: null | components["schemas"]["Id"];
+					before?: null | components["schemas"]["Id"];
+					/** @description restrict to just these channels */
+					channel_ids?: components["schemas"]["Id"][] | null;
+					/** @description also include unread notifications */
+					include_unread?: boolean;
+					/** @description restrict to just these messages */
+					message_ids?: components["schemas"]["Id"][] | null;
+					/** @description restrict to just these rooms */
+					room_ids?: components["schemas"]["Id"][] | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	inbox_mark_read: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description mark everything in these threads as read */
+					channel_ids?: components["schemas"]["Id"][];
+					/** @description mark everything as read */
+					everything?: boolean;
+					/** @description mark these messages as read */
+					message_ids?: components["schemas"]["Id"][];
+					/** @description mark everything in these rooms as read */
+					room_ids?: components["schemas"]["Id"][];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	inbox_mark_unread: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description mark everything in these threads as read */
+					channel_ids?: components["schemas"]["Id"][];
+					/** @description mark everything as read */
+					everything?: boolean;
+					/** @description mark these messages as read */
+					message_ids?: components["schemas"]["Id"][];
+					/** @description mark everything in these rooms as read */
+					room_ids?: components["schemas"]["Id"][];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	interaction_create: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CreateType"] & {
+					application_id: components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description Interaction created successfully */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["InteractionType"] & {
+						application_id: components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/**
+						 * @description unique token for responding to this interaction
+						 *
+						 *     this exists so you don't need to give your token to an http server for
+						 *     http based interactions. only is set for bots.
+						 */
+						token?: string | null;
+						/**
+						 * Format: int32
+						 * @description always 1 currently
+						 */
+						version: number;
+					};
+				};
+			};
+		};
+	};
+	interaction_respond: {
+		parameters: {
+			query: {
+				/** @description whether to immediately return with 202 accepted or wait to return an `InteractionResponse` */
+				wait: boolean;
+			};
+			header?: never;
+			path: {
+				interaction_id: string;
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["CreateType"];
+			};
+		};
+		responses: {
+			/** @description Interaction response accepted */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": Record<string, never>;
+				};
+			};
+			/** @description Interaction response accepted */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	interaction_message_create: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path: {
+				interaction_id: string;
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description message attachments */
+					attachments?: components["schemas"]["MessageAttachmentCreate"][];
+					components?: null | components["schemas"]["Components_Create"];
+					/** @description the message's content in markdown */
+					content?: string | null;
+					embeds?: components["schemas"]["EmbedCreate"][];
+					/** @description whether to make this message ephemeral */
+					ephemeral?: boolean;
+					mentions?: components["schemas"]["ParseMentions"];
+					metadata?: null | components["schemas"]["Metadata"];
+					reply_id?: null | components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description Interaction message created successfully */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the id of who sent this message */
+						author_id: components["schemas"]["Id"];
+						channel_id: components["schemas"]["Id"];
+						/** @description when this message was created */
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						/**
+						 * @description whether this message is ephemeral
+						 *
+						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+						 */
+						ephemeral?: boolean;
+						flume?: null | components["schemas"]["MessageFlume"];
+						id: components["schemas"]["Id"];
+						interaction?: null | components["schemas"]["MessageInteraction"];
+						latest_version: components["schemas"]["MessageVersion"];
+						pinned?: null | components["schemas"]["Pinned"];
+						reactions?: components["schemas"]["ReactionCounts"];
+						removed_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						thread?: null | components["schemas"]["Channel"];
+					};
+				};
+			};
+		};
+	};
+	interaction_message_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				interaction_id: string;
+				token: string;
+				message_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get interaction message success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the id of who sent this message */
+						author_id: components["schemas"]["Id"];
+						channel_id: components["schemas"]["Id"];
+						/** @description when this message was created */
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						/**
+						 * @description whether this message is ephemeral
+						 *
+						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+						 */
+						ephemeral?: boolean;
+						flume?: null | components["schemas"]["MessageFlume"];
+						id: components["schemas"]["Id"];
+						interaction?: null | components["schemas"]["MessageInteraction"];
+						latest_version: components["schemas"]["MessageVersion"];
+						pinned?: null | components["schemas"]["Pinned"];
+						reactions?: components["schemas"]["ReactionCounts"];
+						removed_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						thread?: null | components["schemas"]["Channel"];
+					};
+				};
+			};
+		};
+	};
+	interaction_message_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				interaction_id: string;
+				token: string;
+				message_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete interaction message success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	interaction_message_edit: {
+		parameters: {
+			query?: never;
+			header?: {
+				"X-Timestamp"?: number;
+			};
+			path: {
+				interaction_id: string;
+				token: string;
+				message_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description message attachments */
+					attachments?:
+						| components["schemas"]["MessageAttachmentCreate"][]
+						| null;
+					components?: null | components["schemas"]["Components_Create"];
+					/** @description the new message content in markdown */
+					content?: string | null;
+					embeds?: components["schemas"]["EmbedCreate"][] | null;
+					metadata?: null | components["schemas"]["Metadata"];
+					reply_id?: null | components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description Edit interaction message success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the id of who sent this message */
+						author_id: components["schemas"]["Id"];
+						channel_id: components["schemas"]["Id"];
+						/** @description when this message was created */
+						created_at: components["schemas"]["Time"];
+						deleted_at?: null | components["schemas"]["Time"];
+						/**
+						 * @description whether this message is ephemeral
+						 *
+						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
+						 */
+						ephemeral?: boolean;
+						flume?: null | components["schemas"]["MessageFlume"];
+						id: components["schemas"]["Id"];
+						interaction?: null | components["schemas"]["MessageInteraction"];
+						latest_version: components["schemas"]["MessageVersion"];
+						pinned?: null | components["schemas"]["Pinned"];
+						reactions?: components["schemas"]["ReactionCounts"];
+						removed_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						thread?: null | components["schemas"]["Channel"];
+					};
+				};
+			};
+			/** @description no change */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	harvest_download: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				harvest_id: string;
+				token: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
 			200: {
 				headers: {
 					[name: string]: unknown;
@@ -15328,6 +18126,1271 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	invite_resolve: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				invite_code:
+					| Record<string, never>[]
+					| components["schemas"]["InviteCode"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success with metadata */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Invite"] & {
+						/**
+						 * Format: int32
+						 * @description the maximum number of times this invite can be used
+						 */
+						max_uses?: number | null;
+						/**
+						 * Format: int64
+						 * @description the number of time this invite has been used
+						 */
+						uses: number;
+					};
+				};
+			};
+		};
+	};
+	invite_use: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				invite_code:
+					| Record<string, never>[]
+					| components["schemas"]["InviteCode"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	invite_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				invite_code: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	invite_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				invite_code: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description a description for this invite */
+					description?: string | null;
+					expires_at?: null | components["schemas"]["Time"];
+					/**
+					 * Format: int32
+					 * @description the maximum number of times this invite can be used
+					 *     be sure to account for existing `uses` and `max_uses` when patching
+					 */
+					max_uses?: number | null;
+					role_ids?: components["schemas"]["Id"][] | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the invite code for this invite */
+						code: components["schemas"]["InviteCode"];
+						/** @description the time when this invite was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this invite */
+						creator: components["schemas"]["User"];
+						/** @description the id of the user who created this invite */
+						creator_id: components["schemas"]["Id"];
+						/** @description a description for this invite */
+						description?: string | null;
+						expires_at?: null | components["schemas"]["Time"];
+						/** @description if this invite's code is custom (instead of random) */
+						is_vanity: boolean;
+						/** @description where this invite leads */
+						target: components["schemas"]["InviteTarget"];
+					};
+				};
+			};
+		};
+	};
+	media_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["MediaCreateSource"] & {
+					/** @description Descriptive alt text, not entirely unlike a caption */
+					alt?: string | null;
+					/**
+					 * @description Whether to strip sensitive exif info, like location or camera make and model.
+					 *
+					 *     Once strip_exif is set to true, cannot be set to false.
+					 */
+					strip_exif?: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description Media create success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The id of the media that has been created */
+						media_id: components["schemas"]["Id"];
+						/**
+						 * Format: uri
+						 * @description A url to upload your media to. Is `None` if you used `MediaCreateSource::Download`.
+						 */
+						upload_url?: string | null;
+					};
+				};
+			};
+		};
+	};
+	media_search: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SearchRequest"] & {
+					sort_field?: components["schemas"]["MediaSearchOrderField"];
+				};
+			};
+		};
+		responses: {
+			/** @description Media search success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description current page cursor */
+						cursor?: string | null;
+						/** @description whether there are more threads */
+						has_more: boolean;
+						/** @description the media */
+						media: components["schemas"]["Media"][];
+						/** @description the ids of the matched media */
+						results: components["schemas"]["Id"][];
+						/**
+						 * Format: int64
+						 * @description approximate count of total results that match this query
+						 */
+						total: number;
+						/** @description the media creators/uploaders */
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	media_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				media_id: Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Media get success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Descriptive alt text. */
+						alt?: string | null;
+						channel_id?: null | components["schemas"]["Id"];
+						/** @description The mime type of this piece of media. */
+						content_type: components["schemas"]["Mime"];
+						deleted_at?: null | components["schemas"]["Time"];
+						filename: string;
+						/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
+						has_gifv: boolean;
+						/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
+						has_thumbnail: boolean;
+						/** @description the hashes of this file */
+						hashes?: components["schemas"]["Hashes"];
+						id: components["schemas"]["Id"];
+						/** @description what this piece of media is linked to (admin only) */
+						links?: components["schemas"]["MediaLinkType"][];
+						/** @description Additional filetype-specific metadata for the file */
+						metadata: components["schemas"]["MediaMetadata"];
+						quarantine?: null | components["schemas"]["MediaQuarantine"];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** @description The results of automated scans. */
+						scans?: components["schemas"]["MediaScan"][];
+						/**
+						 * Format: int64
+						 * @description The underlying blob's length in bytes.
+						 */
+						size: number;
+						/**
+						 * Format: uri
+						 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+						 */
+						source_url?: string | null;
+						status: components["schemas"]["MediaStatus"];
+						/**
+						 * @description Whether sensitive exif info has been stripped from this media.
+						 *
+						 *     Once set to `true`, this cannot be unset.
+						 */
+						strip_exif?: boolean;
+						user_id?: null | components["schemas"]["Id"];
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	media_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				media_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Media delete success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description Media linked to another resource */
+			409: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	media_patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				media_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description Descriptive alt text, not entirely unlike a caption */
+					alt?: string | null;
+					/** @description The filename for this piece of media */
+					filename?: string | null;
+					/**
+					 * @description Whether to strip sensitive exif info, like location or camera make and model.
+					 *
+					 *     This can only be changed if the media status is not `Consumed`. Once
+					 *     strip_exif is set to true, cannot be set to false.
+					 */
+					strip_exif?: boolean | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Media patch success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Descriptive alt text. */
+						alt?: string | null;
+						channel_id?: null | components["schemas"]["Id"];
+						/** @description The mime type of this piece of media. */
+						content_type: components["schemas"]["Mime"];
+						deleted_at?: null | components["schemas"]["Time"];
+						filename: string;
+						/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
+						has_gifv: boolean;
+						/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
+						has_thumbnail: boolean;
+						/** @description the hashes of this file */
+						hashes?: components["schemas"]["Hashes"];
+						id: components["schemas"]["Id"];
+						/** @description what this piece of media is linked to (admin only) */
+						links?: components["schemas"]["MediaLinkType"][];
+						/** @description Additional filetype-specific metadata for the file */
+						metadata: components["schemas"]["MediaMetadata"];
+						quarantine?: null | components["schemas"]["MediaQuarantine"];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** @description The results of automated scans. */
+						scans?: components["schemas"]["MediaScan"][];
+						/**
+						 * Format: int64
+						 * @description The underlying blob's length in bytes.
+						 */
+						size: number;
+						/**
+						 * Format: uri
+						 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+						 */
+						source_url?: string | null;
+						status: components["schemas"]["MediaStatus"];
+						/**
+						 * @description Whether sensitive exif info has been stripped from this media.
+						 *
+						 *     Once set to `true`, this cannot be unset.
+						 */
+						strip_exif?: boolean;
+						user_id?: null | components["schemas"]["Id"];
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	media_clone: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				media_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description Descriptive alt text, not entirely unlike a caption */
+					alt?: string | null;
+					/** @description Set to override the filename */
+					filename?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Media clone success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Descriptive alt text. */
+						alt?: string | null;
+						channel_id?: null | components["schemas"]["Id"];
+						/** @description The mime type of this piece of media. */
+						content_type: components["schemas"]["Mime"];
+						deleted_at?: null | components["schemas"]["Time"];
+						filename: string;
+						/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
+						has_gifv: boolean;
+						/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
+						has_thumbnail: boolean;
+						/** @description the hashes of this file */
+						hashes?: components["schemas"]["Hashes"];
+						id: components["schemas"]["Id"];
+						/** @description what this piece of media is linked to (admin only) */
+						links?: components["schemas"]["MediaLinkType"][];
+						/** @description Additional filetype-specific metadata for the file */
+						metadata: components["schemas"]["MediaMetadata"];
+						quarantine?: null | components["schemas"]["MediaQuarantine"];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** @description The results of automated scans. */
+						scans?: components["schemas"]["MediaScan"][];
+						/**
+						 * Format: int64
+						 * @description The underlying blob's length in bytes.
+						 */
+						size: number;
+						/**
+						 * Format: uri
+						 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+						 */
+						source_url?: string | null;
+						status: components["schemas"]["MediaStatus"];
+						/**
+						 * @description Whether sensitive exif info has been stripped from this media.
+						 *
+						 *     Once set to `true`, this cannot be unset.
+						 */
+						strip_exif?: boolean;
+						user_id?: null | components["schemas"]["Id"];
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	media_done: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				media_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/**
+					 * @description Whether to process this media asynchronously.
+					 *
+					 *     If this is true, return 202 Accepted immediately and send a `MediaProcessed` event when your media is done processing.
+					 */
+					async?: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description Media processing finished */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description Descriptive alt text. */
+						alt?: string | null;
+						channel_id?: null | components["schemas"]["Id"];
+						/** @description The mime type of this piece of media. */
+						content_type: components["schemas"]["Mime"];
+						deleted_at?: null | components["schemas"]["Time"];
+						filename: string;
+						/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
+						has_gifv: boolean;
+						/** @description Whether this media can be fetched through the `/thumb/{media_id}` cdn route. */
+						has_thumbnail: boolean;
+						/** @description the hashes of this file */
+						hashes?: components["schemas"]["Hashes"];
+						id: components["schemas"]["Id"];
+						/** @description what this piece of media is linked to (admin only) */
+						links?: components["schemas"]["MediaLinkType"][];
+						/** @description Additional filetype-specific metadata for the file */
+						metadata: components["schemas"]["MediaMetadata"];
+						quarantine?: null | components["schemas"]["MediaQuarantine"];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** @description The results of automated scans. */
+						scans?: components["schemas"]["MediaScan"][];
+						/**
+						 * Format: int64
+						 * @description The underlying blob's length in bytes.
+						 */
+						size: number;
+						/**
+						 * Format: uri
+						 * @description Where this piece of media was downloaded from, if it was downloaded instead of uploaded.
+						 */
+						source_url?: string | null;
+						status: components["schemas"]["MediaStatus"];
+						/**
+						 * @description Whether sensitive exif info has been stripped from this media.
+						 *
+						 *     Once set to `true`, this cannot be unset.
+						 */
+						strip_exif?: boolean;
+						user_id?: null | components["schemas"]["Id"];
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+			/** @description Media processing in background */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	oauth_info: {
+		parameters: {
+			query: {
+				response_type: components["schemas"]["OauthResponseType"];
+				client_id: components["schemas"]["Id"];
+				scope: string;
+				state?: string | null;
+				redirect_uri?: string | null;
+				prompt?: string | null;
+				code_challenge?: string | null;
+				code_challenge_method?: string | null;
+				nonce?: string | null;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the application itself */
+						application: components["schemas"]["Application"];
+						/** @description the user who requested this info */
+						auth_user: components["schemas"]["User"];
+						/** @description whether this application is already authorized */
+						authorized: boolean;
+						/** @description if the application is a bot, this is the bot user */
+						bot_user: components["schemas"]["User"];
+					};
+				};
+			};
+		};
+	};
+	oauth_authorize: {
+		parameters: {
+			query: {
+				response_type: components["schemas"]["OauthResponseType"];
+				client_id: components["schemas"]["Id"];
+				scope: string;
+				state?: string | null;
+				redirect_uri?: string | null;
+				prompt?: string | null;
+				code_challenge?: string | null;
+				code_challenge_method?: string | null;
+				nonce?: string | null;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** Format: uri */
+						redirect_uri: string;
+					};
+				};
+			};
+		};
+	};
+	oauth_introspect: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/x-www-form-urlencoded": {
+					token: string;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						active: boolean;
+						client_id: components["schemas"]["Id"];
+						/** Format: int64 */
+						exp?: number | null;
+						scopes: components["schemas"]["Scopes"];
+						/**
+						 * @description this is specified to be "human readable", but in practice it would be
+						 *     simpler and more useful to return the unique id of the user
+						 */
+						username: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	oauth_revoke: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/x-www-form-urlencoded": {
+					token: string;
+					token_type_hint?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	oauth_token: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/x-www-form-urlencoded": {
+					/**
+					 * @description client id
+					 *
+					 *     when we're is acting as the authorization server this is an [`ApplicationId`]
+					 */
+					client_id?: string | null;
+					client_secret?: string | null;
+					code?: string | null;
+					code_verifier?: string | null;
+					grant_type: components["schemas"]["OauthGrantType"];
+					/** Format: uri */
+					redirect_uri?: string | null;
+					refresh_token?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						access_token: string;
+						/**
+						 * Format: int64
+						 * @description when tis token expires
+						 *
+						 *     omitted by some providers, eg. GitHub OAuth apps with non-expiring tokens
+						 */
+						expires_in?: number | null;
+						id_token?: string | null;
+						refresh_token?: string | null;
+						scope?: string;
+						token_type: string;
+					};
+				};
+			};
+		};
+	};
+	oauth_userinfo: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						email?: null | components["schemas"]["EmailAddr"];
+						/** @description if the provided email has been verified or not */
+						email_verified: boolean;
+						/**
+						 * Format: uri
+						 * @description oauth issuer
+						 */
+						iss: string;
+						/** @description user's name */
+						name: string;
+						/**
+						 * Format: uri
+						 * @description link to the user's avatar. returns the full size image, not a thumbnail.
+						 */
+						picture?: string | null;
+						/** @description html url to the user's profile page */
+						profile: string;
+						/** @description user's uuid */
+						sub: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description calculated from version_id
+						 */
+						updated_at: number;
+					};
+				};
+			};
+		};
+	};
+	pack_create: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					banner?: null | components["schemas"]["Id"];
+					description?: string | null;
+					icon?: null | components["schemas"]["Id"];
+					name: string;
+					public?: boolean | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	pack_export: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				pack_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description the room's description
+						 *
+						 *     ignored during import
+						 */
+						description?: string | null;
+						/** @description the emojis in this pack */
+						emojis: components["schemas"]["PackSnapshotEmoji"][];
+						/**
+						 * @description the room's license
+						 *
+						 *     ignored during import, ui should show a warning if the license doesnt match
+						 */
+						license?: string | null;
+						/**
+						 * @description the room's name
+						 *
+						 *     ignored during import
+						 */
+						name: string;
+					};
+				};
+			};
+		};
+	};
+	pack_import: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				pack_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description the emojis in this pack */
+					emojis: components["schemas"]["PackSnapshotEmoji"][];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	pack_upgrade: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description upgraded */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	preferences_global_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description config specific to frontend */
+						frontend: components["schemas"]["PreferencesGlobalFrontend"];
+						/** @description global notification config */
+						notifs: components["schemas"]["NotifsGlobal"];
+						/** @description global privacy settings */
+						privacy: components["schemas"]["PreferencesGlobalPrivacy"];
+					};
+				};
+			};
+		};
+	};
+	preferences_global_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description config specific to frontend */
+					frontend: components["schemas"]["PreferencesGlobalFrontend"];
+					/** @description global notification config */
+					notifs: components["schemas"]["NotifsGlobal"];
+					/** @description global privacy settings */
+					privacy: components["schemas"]["PreferencesGlobalPrivacy"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description config specific to frontend */
+						frontend: components["schemas"]["PreferencesGlobalFrontend"];
+						/** @description global notification config */
+						notifs: components["schemas"]["NotifsGlobal"];
+						/** @description global privacy settings */
+						privacy: components["schemas"]["PreferencesGlobalPrivacy"];
+					};
+				};
+			};
+		};
+	};
+	preferences_channel_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description config specific to frontend */
+						frontend: components["schemas"]["PreferencesChannelFrontend"];
+						/** @description thread notification config */
+						notifs: components["schemas"]["NotifsChannel"];
+					};
+				};
+			};
+		};
+	};
+	preferences_channel_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description config specific to frontend */
+					frontend: components["schemas"]["PreferencesChannelFrontend"];
+					/** @description thread notification config */
+					notifs: components["schemas"]["NotifsChannel"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description config specific to frontend */
+						frontend: components["schemas"]["PreferencesChannelFrontend"];
+						/** @description thread notification config */
+						notifs: components["schemas"]["NotifsChannel"];
+					};
+				};
+			};
+		};
+	};
+	preferences_room_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description config specific to frontend */
+						frontend: components["schemas"]["PreferencesRoomFrontend"];
+						/** @description room notification config */
+						notifs: components["schemas"]["NotifsRoom"];
+						/** @description room privacy settings */
+						privacy: components["schemas"]["PreferencesRoomPrivacy"];
+					};
+				};
+			};
+		};
+	};
+	preferences_room_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description config specific to frontend */
+					frontend: components["schemas"]["PreferencesRoomFrontend"];
+					/** @description room notification config */
+					notifs: components["schemas"]["NotifsRoom"];
+					/** @description room privacy settings */
+					privacy: components["schemas"]["PreferencesRoomPrivacy"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description config specific to frontend */
+						frontend: components["schemas"]["PreferencesRoomFrontend"];
+						/** @description room notification config */
+						notifs: components["schemas"]["NotifsRoom"];
+						/** @description room privacy settings */
+						privacy: components["schemas"]["PreferencesRoomPrivacy"];
+					};
+				};
+			};
+		};
+	};
+	preferences_user_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description config specific to frontend */
+						frontend: components["schemas"]["PreferencesUserFrontend"];
+						/** @description config in voice threads */
+						voice: components["schemas"]["VoiceConfig"];
+					};
+				};
+			};
+		};
+	};
+	preferences_user_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description config specific to frontend */
+					frontend: components["schemas"]["PreferencesUserFrontend"];
+					/** @description config in voice threads */
+					voice: components["schemas"]["VoiceConfig"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description config specific to frontend */
+						frontend: components["schemas"]["PreferencesUserFrontend"];
+						/** @description config in voice threads */
+						voice: components["schemas"]["VoiceConfig"];
+					};
+				};
 			};
 		};
 	};
@@ -15371,6 +19434,81 @@ export interface operations {
 			};
 		};
 	};
+	push_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the endpoint that web push payloads are sent to */
+						endpoint: string;
+						/** @description the server's vapid key */
+						server_key: string;
+					};
+				};
+			};
+		};
+	};
+	push_register: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					endpoint: string;
+					keys: components["schemas"]["PushCreateKeys"];
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the endpoint that web push payloads are sent to */
+						endpoint: string;
+						/** @description the server's vapid key */
+						server_key: string;
+					};
+				};
+			};
+		};
+	};
+	push_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
 	debug_ready: {
 		parameters: {
 			query?: never;
@@ -15382,6 +19520,3326 @@ export interface operations {
 		responses: {
 			/** @description server is ready */
 			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Paginate room success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Room"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	room_create: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					banner?: null | components["schemas"]["Id"];
+					description?: string | null;
+					icon?: null | components["schemas"]["Id"];
+					name: string;
+					public?: boolean | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	room_template_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Paginate templates */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["RoomTemplate"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	room_template_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					description: string;
+					name: string;
+					/**
+					 * @description the id of the room to turn into a template
+					 *
+					 *     the caller must have the `RoomEdit` permission in the room
+					 */
+					room_id: components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description Template created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description unique identifier for this template */
+						code: components["schemas"]["RoomTemplateCode"];
+						/** @description when this template was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this template */
+						creator: components["schemas"]["User"];
+						description: string;
+						/**
+						 * @description if the source room and the template have diverged
+						 *
+						 *     only returned for the creator if they have `RoomEdit`
+						 */
+						dirty?: boolean | null;
+						/** @description name for this template */
+						name: string;
+						snapshot: components["schemas"]["RoomTemplateSnapshot"];
+						source_room_id?: null | components["schemas"]["Id"];
+						/** @description when this template was last edited or synced */
+						updated_at: components["schemas"]["Time"];
+					};
+				};
+			};
+		};
+	};
+	room_template_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				code: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get template success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description unique identifier for this template */
+						code: components["schemas"]["RoomTemplateCode"];
+						/** @description when this template was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this template */
+						creator: components["schemas"]["User"];
+						description: string;
+						/**
+						 * @description if the source room and the template have diverged
+						 *
+						 *     only returned for the creator if they have `RoomEdit`
+						 */
+						dirty?: boolean | null;
+						/** @description name for this template */
+						name: string;
+						snapshot: components["schemas"]["RoomTemplateSnapshot"];
+						source_room_id?: null | components["schemas"]["Id"];
+						/** @description when this template was last edited or synced */
+						updated_at: components["schemas"]["Time"];
+					};
+				};
+			};
+		};
+	};
+	room_template_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				code: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete template success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_template_edit: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				code: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					description?: string | null;
+					name?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Edit template success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description unique identifier for this template */
+						code: components["schemas"]["RoomTemplateCode"];
+						/** @description when this template was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this template */
+						creator: components["schemas"]["User"];
+						description: string;
+						/**
+						 * @description if the source room and the template have diverged
+						 *
+						 *     only returned for the creator if they have `RoomEdit`
+						 */
+						dirty?: boolean | null;
+						/** @description name for this template */
+						name: string;
+						snapshot: components["schemas"]["RoomTemplateSnapshot"];
+						source_room_id?: null | components["schemas"]["Id"];
+						/** @description when this template was last edited or synced */
+						updated_at: components["schemas"]["Time"];
+					};
+				};
+			};
+		};
+	};
+	room_template_sync: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				code: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Sync template success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description unique identifier for this template */
+						code: components["schemas"]["RoomTemplateCode"];
+						/** @description when this template was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this template */
+						creator: components["schemas"]["User"];
+						description: string;
+						/**
+						 * @description if the source room and the template have diverged
+						 *
+						 *     only returned for the creator if they have `RoomEdit`
+						 */
+						dirty?: boolean | null;
+						/** @description name for this template */
+						name: string;
+						snapshot: components["schemas"]["RoomTemplateSnapshot"];
+						source_room_id?: null | components["schemas"]["Id"];
+						/** @description when this template was last edited or synced */
+						updated_at: components["schemas"]["Time"];
+					};
+				};
+			};
+		};
+	};
+	room_search: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SearchRequest"] & {
+					/** @description field to sort by */
+					sort_field?: components["schemas"]["RoomSearchOrderField"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_get: {
+		parameters: {
+			query?: never;
+			header?: {
+				"if-none-match"?: string;
+			};
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get room success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+			/** @description Not modified */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_edit: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					afk_channel_id?: null | components["schemas"]["Id"];
+					/**
+					 * Format: int64
+					 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+					 */
+					afk_channel_timeout?: number | null;
+					banner?: null | components["schemas"]["Id"];
+					description?: string | null;
+					icon?: null | components["schemas"]["Id"];
+					invites_paused_until?: null | components["schemas"]["Time"];
+					name?: string | null;
+					public?: boolean | null;
+					welcome_channel_id?: null | components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description edit success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+			/** @description no change */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_ack: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_analytics_channels: {
+		parameters: {
+			query: {
+				start?: null | components["schemas"]["Time"];
+				end?: null | components["schemas"]["Time"];
+				aggregate: components["schemas"]["Aggregation"];
+				/** @description limit between 1..1024, default to 10 */
+				limit?: number | null;
+				/** @description return only analytics for this channel, otherwise return data points for everything */
+				channel_id?: null | components["schemas"]["Id"];
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The bucket for this data point. */
+						bucket: components["schemas"]["Time"];
+						channel_id: components["schemas"]["Id"];
+						/** Format: int64 */
+						media_count: number;
+						/** Format: int64 */
+						media_size: number;
+						/** Format: int64 */
+						message_count: number;
+					}[];
+				};
+			};
+		};
+	};
+	room_analytics_invites: {
+		parameters: {
+			query: {
+				start?: null | components["schemas"]["Time"];
+				end?: null | components["schemas"]["Time"];
+				aggregate: components["schemas"]["Aggregation"];
+				/** @description limit between 1..1024, default to 10 */
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The bucket for this data point. */
+						bucket: components["schemas"]["Time"];
+						/** @description where this member came from */
+						origin: components["schemas"]["AnalyticsInvitesOrigin"];
+						/**
+						 * Format: int64
+						 * @description number of times this invite was used
+						 */
+						uses: number;
+					};
+				};
+			};
+		};
+	};
+	room_analytics_members_count: {
+		parameters: {
+			query: {
+				start?: null | components["schemas"]["Time"];
+				end?: null | components["schemas"]["Time"];
+				aggregate: components["schemas"]["Aggregation"];
+				/** @description limit between 1..1024, default to 10 */
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The bucket for this data point. */
+						bucket: components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description Total number of members in this room.
+						 */
+						count: number;
+					}[];
+				};
+			};
+		};
+	};
+	room_analytics_members_join: {
+		parameters: {
+			query: {
+				start?: null | components["schemas"]["Time"];
+				end?: null | components["schemas"]["Time"];
+				aggregate: components["schemas"]["Aggregation"];
+				/** @description limit between 1..1024, default to 10 */
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The bucket for this data point. */
+						bucket: components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description Total number of members who joined this room.
+						 */
+						count: number;
+					}[];
+				};
+			};
+		};
+	};
+	room_analytics_members_leave: {
+		parameters: {
+			query: {
+				start?: null | components["schemas"]["Time"];
+				end?: null | components["schemas"]["Time"];
+				aggregate: components["schemas"]["Aggregation"];
+				/** @description limit between 1..1024, default to 10 */
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The bucket for this data point. */
+						bucket: components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description Total number of members who left this room.
+						 */
+						count: number;
+					}[];
+				};
+			};
+		};
+	};
+	room_analytics_overview: {
+		parameters: {
+			query: {
+				start?: null | components["schemas"]["Time"];
+				end?: null | components["schemas"]["Time"];
+				aggregate: components["schemas"]["Aggregation"];
+				/** @description limit between 1..1024, default to 10 */
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The bucket for this data point. */
+						bucket: components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of files sent
+						 */
+						media_count: number;
+						/**
+						 * Format: int64
+						 * @description number of files sent
+						 */
+						media_size: number;
+						/**
+						 * Format: int64
+						 * @description number of messages sent
+						 */
+						message_count: number;
+					}[];
+				};
+			};
+		};
+	};
+	room_audit_logs: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+				/** @description only return audit log entries from these users */
+				user_id?: components["schemas"]["Id"][];
+				/** @description only return audit log entries with these types */
+				type?: string[];
+				/**
+				 * @description only return audit log entries with these statuses
+				 *
+				 *     defaults to only `Success`
+				 */
+				status?: components["schemas"]["AuditLogEntryStatus"][];
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description fetch audit logs success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the audit log entries themselves */
+						audit_log_entries: components["schemas"]["AuditLogEntry"][];
+						/** @description pagination cursor */
+						cursor?: string | null;
+						/** @description whether there are more audit log events that can be fetched */
+						has_more: boolean;
+						/**
+						 * @description room members referenced in the audit log entries
+						 *
+						 *     this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions)
+						 */
+						room_members: components["schemas"]["RoomMember"][];
+						/** @description tags referenced in the audit log entries */
+						tags: components["schemas"]["Tag"][];
+						/** @description threads referenced in the audit log entries */
+						threads: components["schemas"]["Channel"][];
+						/**
+						 * @description users referenced in the audit log entries
+						 *
+						 *     this includes actors (ie. users who did actions) and targets (ie. users who were affected by actions)
+						 */
+						users: components["schemas"]["User"][];
+						/** @description webhooks referenced in the audit log entries */
+						webhooks: components["schemas"]["Webhook"][];
+					};
+				};
+			};
+		};
+	};
+	automod_rule_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List automod rules success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description when executed, do ALL of these actions */
+						actions: components["schemas"]["AutomodAction"][];
+						/** @description whether any actions occur when this rule is triggered */
+						enabled: boolean;
+						/** @description what channels should be exempt from this rule. */
+						except_channels: components["schemas"]["Id"][];
+						/** @description if nsfw channels should be exempt from this rule. */
+						except_nsfw: boolean;
+						/** @description what roles should be exempt from this rule. users with RoomManage are always exempt. */
+						except_roles: components["schemas"]["Id"][];
+						id: components["schemas"]["Id"];
+						/** @description whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out) */
+						include_everyone: boolean;
+						/** @description a human readable label for this rule */
+						name: string;
+						room_id: components["schemas"]["Id"];
+						target: components["schemas"]["AutomodTarget"];
+						trigger: components["schemas"]["AutomodTrigger"];
+					}[];
+				};
+			};
+		};
+	};
+	automod_rule_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					actions: components["schemas"]["AutomodAction"][];
+					enabled?: boolean;
+					except_channels?: components["schemas"]["Id"][];
+					except_nsfw?: boolean;
+					except_roles?: components["schemas"]["Id"][];
+					include_everyone?: boolean;
+					name: string;
+					target: components["schemas"]["AutomodTarget"];
+					trigger: components["schemas"]["AutomodTrigger"];
+				};
+			};
+		};
+		responses: {
+			/** @description Create automod rule success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description when executed, do ALL of these actions */
+						actions: components["schemas"]["AutomodAction"][];
+						/** @description whether any actions occur when this rule is triggered */
+						enabled: boolean;
+						/** @description what channels should be exempt from this rule. */
+						except_channels: components["schemas"]["Id"][];
+						/** @description if nsfw channels should be exempt from this rule. */
+						except_nsfw: boolean;
+						/** @description what roles should be exempt from this rule. users with RoomManage are always exempt. */
+						except_roles: components["schemas"]["Id"][];
+						id: components["schemas"]["Id"];
+						/** @description whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out) */
+						include_everyone: boolean;
+						/** @description a human readable label for this rule */
+						name: string;
+						room_id: components["schemas"]["Id"];
+						target: components["schemas"]["AutomodTarget"];
+						trigger: components["schemas"]["AutomodTrigger"];
+					};
+				};
+			};
+		};
+	};
+	automod_rule_test: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description the target to test this as */
+					target: components["schemas"]["AutomodTarget"];
+					/** @description the text to attempt to scan */
+					text: string;
+				};
+			};
+		};
+		responses: {
+			/** @description Test automod rule success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description deduplicated list of all of the actions that would be taken
+						 *
+						 *     eg. if one rule times a user out for 60 seconds and another times out for 120 seconds, there would be one action that times out for 120 seconds
+						 */
+						actions: components["schemas"]["AutomodAction"][];
+						matches?: null | components["schemas"]["AutomodMatches"];
+						/** @description the rules that matched the text */
+						rules: components["schemas"]["AutomodRule"][];
+					};
+				};
+			};
+		};
+	};
+	automod_rule_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				rule_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get automod rule success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description when executed, do ALL of these actions */
+						actions: components["schemas"]["AutomodAction"][];
+						/** @description whether any actions occur when this rule is triggered */
+						enabled: boolean;
+						/** @description what channels should be exempt from this rule. */
+						except_channels: components["schemas"]["Id"][];
+						/** @description if nsfw channels should be exempt from this rule. */
+						except_nsfw: boolean;
+						/** @description what roles should be exempt from this rule. users with RoomManage are always exempt. */
+						except_roles: components["schemas"]["Id"][];
+						id: components["schemas"]["Id"];
+						/** @description whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out) */
+						include_everyone: boolean;
+						/** @description a human readable label for this rule */
+						name: string;
+						room_id: components["schemas"]["Id"];
+						target: components["schemas"]["AutomodTarget"];
+						trigger: components["schemas"]["AutomodTrigger"];
+					};
+				};
+			};
+		};
+	};
+	automod_rule_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				rule_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Delete automod rule success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	automod_rule_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				rule_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					actions?: components["schemas"]["AutomodAction"][] | null;
+					enabled?: boolean | null;
+					except_channels?: components["schemas"]["Id"][] | null;
+					except_nsfw?: boolean | null;
+					except_roles?: components["schemas"]["Id"][] | null;
+					include_everyone?: boolean | null;
+					name?: string | null;
+					target?: null | components["schemas"]["AutomodTarget"];
+					trigger?: null | components["schemas"]["AutomodTrigger"];
+				};
+			};
+		};
+		responses: {
+			/** @description Update automod rule success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description when executed, do ALL of these actions */
+						actions: components["schemas"]["AutomodAction"][];
+						/** @description whether any actions occur when this rule is triggered */
+						enabled: boolean;
+						/** @description what channels should be exempt from this rule. */
+						except_channels: components["schemas"]["Id"][];
+						/** @description if nsfw channels should be exempt from this rule. */
+						except_nsfw: boolean;
+						/** @description what roles should be exempt from this rule. users with RoomManage are always exempt. */
+						except_roles: components["schemas"]["Id"][];
+						id: components["schemas"]["Id"];
+						/** @description whether this rule should affect everyone. actions aren't necessarily executed (eg. admins wont be timed out) */
+						include_everyone: boolean;
+						/** @description a human readable label for this rule */
+						name: string;
+						room_id: components["schemas"]["Id"];
+						target: components["schemas"]["AutomodTarget"];
+						trigger: components["schemas"]["AutomodTrigger"];
+					};
+				};
+			};
+		};
+	};
+	room_ban_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["RoomBan"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	room_ban_bulk_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					expires_at?: null | components["schemas"]["Time"];
+					/** @description who to ban */
+					target_ids?: components["schemas"]["Id"][];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_ban_search: {
+		parameters: {
+			query: {
+				query: string;
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["RoomBan"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	room_ban_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description when the ban was created */
+						created_at: components["schemas"]["Time"];
+						expires_at?: null | components["schemas"]["Time"];
+						/** @description the supplied reason why this user should be banned */
+						reason?: string | null;
+						/** @description the user who is banned */
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	room_ban_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					expires_at?: null | components["schemas"]["Time"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_ban_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List room channels success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Channel"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	channel_create_room: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** Format: int64 */
+					auto_archive_duration?: number | null;
+					/** @description automatically generated description */
+					auto_description?: string | null;
+					/** @description automatically generated name */
+					auto_name?: string | null;
+					/** Format: int64 */
+					bitrate?: number | null;
+					/**
+					 * Format: int64
+					 * @description default auto archive duration in seconds to copy to threads created in this channel
+					 *
+					 *     if unset, defaults to [`DEFAULT_AUTO_ARCHIVE_DURATION`]. set to `null` to disable.
+					 */
+					default_auto_archive_duration?: number | null;
+					/** Format: int64 */
+					default_slowmode_message?: number | null;
+					description?: string | null;
+					icon?: null | components["schemas"]["Id"];
+					/** @description whether users without ThreadManage can add other members to this thread */
+					invitable?: boolean;
+					name: string;
+					/** @description not safe for work */
+					nsfw?: boolean;
+					parent_id?: null | components["schemas"]["Id"];
+					permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
+					/** @description the recipient(s) for this dm/gdm */
+					recipients?: components["schemas"]["Id"][] | null;
+					/** Format: int64 */
+					slowmode_message?: number | null;
+					/** Format: int64 */
+					slowmode_thread?: number | null;
+					starter_message?: null | components["schemas"]["MessageCreate"];
+					/** @description tags to apply to this thread (overwrite, not append) */
+					tags?: components["schemas"]["Id"][] | null;
+					/** @description The type of this channel */
+					type?: components["schemas"]["ChannelType"];
+					/** Format: uri */
+					url?: string | null;
+					/** Format: int64 */
+					user_limit?: number | null;
+				};
+			};
+		};
+		responses: {
+			/** @description Create thread success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+		};
+	};
+	channel_reorder: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description the channels to reorder */
+					channels?: components["schemas"]["ChannelReorderItem"][];
+				};
+			};
+		};
+		responses: {
+			/** @description Reorder channels success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	channel_list_removed: {
+		parameters: {
+			query?: {
+				parent_id?: null | components["schemas"]["Id"];
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List removed room channels success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Channel"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	emoji_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["EmojiCustom"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	emoji_create: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					animated: boolean;
+					media_id: components["schemas"]["Id"];
+					name: string;
+				};
+			};
+		};
+		responses: {
+			/** @description new emoji created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this emoji is animated */
+						animated: boolean;
+						creator_id?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						media_id: components["schemas"]["Id"];
+						name: string;
+						owner?: null | components["schemas"]["EmojiOwner"];
+					};
+				};
+			};
+		};
+	};
+	emoji_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				emoji_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this emoji is animated */
+						animated: boolean;
+						creator_id?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						media_id: components["schemas"]["Id"];
+						name: string;
+						owner?: null | components["schemas"]["EmojiOwner"];
+					};
+				};
+			};
+		};
+	};
+	emoji_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				emoji_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	emoji_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				emoji_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					name?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this emoji is animated */
+						animated: boolean;
+						creator_id?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						media_id: components["schemas"]["Id"];
+						name: string;
+						owner?: null | components["schemas"]["EmojiOwner"];
+					};
+				};
+			};
+		};
+	};
+	room_feature_enable: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				feature: "Scripts" | "Automod" | "Documents" | "Vanity" | "Llm";
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	room_feature_disable: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				feature: "Scripts" | "Automod" | "Documents" | "Vanity" | "Llm";
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	room_integration_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Integration"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	invite_room_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Invite"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	invite_room_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description a description for this invite */
+					description?: string | null;
+					expires_at?: null | components["schemas"]["Time"];
+					/**
+					 * Format: int32
+					 * @description the maximum number of times this invite can be used
+					 *     be sure to account for existing `uses` and `max_uses` when patching
+					 */
+					max_uses?: number | null;
+					/** @description which roles to apply when accepting the invite */
+					role_ids?: components["schemas"]["Id"][] | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the invite code for this invite */
+						code: components["schemas"]["InviteCode"];
+						/** @description the time when this invite was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this invite */
+						creator: components["schemas"]["User"];
+						/** @description the id of the user who created this invite */
+						creator_id: components["schemas"]["Id"];
+						/** @description a description for this invite */
+						description?: string | null;
+						expires_at?: null | components["schemas"]["Time"];
+						/** @description if this invite's code is custom (instead of random) */
+						is_vanity: boolean;
+						/** @description where this invite leads */
+						target: components["schemas"]["InviteTarget"];
+					};
+				};
+			};
+		};
+	};
+	room_member_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["RoomMember"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	room_member_search: {
+		parameters: {
+			query: {
+				query: string;
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						room_members: components["schemas"]["RoomMember"][];
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	room_member_search_advanced: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					create_after?: null | components["schemas"]["Time"];
+					create_before?: null | components["schemas"]["Time"];
+					/** @description return members who are/aren't room deafened */
+					deaf?: boolean | null;
+					/** @description return members who are/aren't server guests */
+					guest?: boolean | null;
+					invite?: null | components["schemas"]["InviteCode"];
+					join_after?: null | components["schemas"]["Time"];
+					join_before?: null | components["schemas"]["Time"];
+					/**
+					 * Format: int32
+					 * @description maximum number of results to return
+					 */
+					limit?: number | null;
+					/** @description return members who are/aren't room muted */
+					mute?: boolean | null;
+					/** @description return members who do/don't have a custom nickname */
+					nickname?: boolean | null;
+					/** @description user name, override_name, or id */
+					query?: string | null;
+					/** @description has all of these roles */
+					roles?: components["schemas"]["Id"][];
+					/** @description return members who are/aren't timed out */
+					timeout?: boolean | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						room_members: components["schemas"]["RoomMember"][];
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	room_member_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this user is deafened by a moderator */
+						deaf: boolean;
+						/** @description When this member joined the room */
+						joined_at: components["schemas"]["Time"];
+						/** @description whether this user is muted by a moderator */
+						mute: boolean;
+						origin?: null | components["schemas"]["RoomMemberOrigin"];
+						/** @description like nickname, but for your description/bio/about */
+						override_description?: string | null;
+						/** @description aka nickname */
+						override_name?: string | null;
+						/** @description whether this user is quarantined by automod */
+						quarantined: boolean;
+						/** @description the roles that this member has */
+						roles: components["schemas"]["Id"][];
+						room_id: components["schemas"]["Id"];
+						timeout_until?: null | components["schemas"]["Time"];
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	room_member_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description whether this user is deafened by a moderator */
+					deaf: boolean;
+					/** @description whether this user is muted by a moderator */
+					mute: boolean;
+					override_description?: string | null;
+					override_name?: string | null;
+					/** @description the roles that this member has */
+					roles: components["schemas"]["Id"][];
+					timeout_until?: null | components["schemas"]["Time"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this user is deafened by a moderator */
+						deaf: boolean;
+						/** @description When this member joined the room */
+						joined_at: components["schemas"]["Time"];
+						/** @description whether this user is muted by a moderator */
+						mute: boolean;
+						origin?: null | components["schemas"]["RoomMemberOrigin"];
+						/** @description like nickname, but for your description/bio/about */
+						override_description?: string | null;
+						/** @description aka nickname */
+						override_name?: string | null;
+						/** @description whether this user is quarantined by automod */
+						quarantined: boolean;
+						/** @description the roles that this member has */
+						roles: components["schemas"]["Id"][];
+						room_id: components["schemas"]["Id"];
+						timeout_until?: null | components["schemas"]["Time"];
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+			/** @description not modified */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_member_delete: {
+		parameters: {
+			query: {
+				soft: boolean;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_member_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description whether this user is deafened by a moderator */
+					deaf?: boolean | null;
+					/** @description whether this user is muted by a moderator */
+					mute?: boolean | null;
+					override_description?: string | null;
+					override_name?: string | null;
+					/** @description the roles that this member has */
+					roles?: components["schemas"]["Id"][] | null;
+					timeout_until?: null | components["schemas"]["Time"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this user is deafened by a moderator */
+						deaf: boolean;
+						/** @description When this member joined the room */
+						joined_at: components["schemas"]["Time"];
+						/** @description whether this user is muted by a moderator */
+						mute: boolean;
+						origin?: null | components["schemas"]["RoomMemberOrigin"];
+						/** @description like nickname, but for your description/bio/about */
+						override_description?: string | null;
+						/** @description aka nickname */
+						override_name?: string | null;
+						/** @description whether this user is quarantined by automod */
+						quarantined: boolean;
+						/** @description the roles that this member has */
+						roles: components["schemas"]["Id"][];
+						room_id: components["schemas"]["Id"];
+						timeout_until?: null | components["schemas"]["Time"];
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+			/** @description not modified */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	pack_room_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Room"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	pack_room_install: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				pack_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						pack_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	pack_room_uninstall: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				pack_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_prune_begin: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description whether to return the number of pruned users in the response */
+					calculate_total?: boolean;
+					/**
+					 * Format: int32
+					 * @description prune users inactive for this many days
+					 */
+					days: number;
+					/** @description whether to actually prune or to */
+					dry_run?: boolean;
+					/** @description include users with these roles */
+					include_roles?: components["schemas"]["Id"][];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * Format: int64
+						 * @description number of pruned users
+						 */
+						pruned: number;
+					};
+				};
+			};
+		};
+	};
+	room_quarantine: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	room_unquarantine: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	report_create_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description user supplied note */
+					note?: string | null;
+					/** @description built in reason */
+					reason: components["schemas"]["ReportReason"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description where the report is being sent to */
+						destination: components["schemas"]["ReportDestination"];
+						id: components["schemas"]["Id"];
+						/** @description user supplied note */
+						note?: string | null;
+						/** @description built in reason */
+						reason: components["schemas"]["ReportReason"];
+						/** @description user id of who reported this */
+						reporter_id: components["schemas"]["Id"];
+						/** @description the associated thread id of this report. every report has a thread created for it. */
+						thread_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	role_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Role"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	role_create: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					allow?: components["schemas"]["Permission"][];
+					deny?: components["schemas"]["Permission"][];
+					description?: string | null;
+					hoist?: boolean;
+					/** @description if this role can be mentioned by members */
+					is_mentionable?: boolean;
+					is_self_applicable?: boolean;
+					name: string;
+					sticky?: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the permissions to grant for this role */
+						allow: components["schemas"]["Permission"][];
+						/** @description the permissions to deny for this role */
+						deny?: components["schemas"]["Permission"][];
+						description?: string | null;
+						/** @description whether members with this role should be displayed separately */
+						hoist: boolean;
+						id: components["schemas"]["Id"];
+						is_mentionable: boolean;
+						is_self_applicable: boolean;
+						/**
+						 * Format: int64
+						 * @description the number of members with this role
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int32
+						 * @description the position of this role
+						 *
+						 *     - the everyone/default role has a position of 0
+						 *     - during updates, this is tiebroken by role id (newer roles have a higher position)
+						 *
+						 *     ## rank
+						 *
+						 *     - a room member's rank is `max(role.position)` across all roles they have
+						 *     - you must have a strictly higher rank than another room member in order to kick, ban, or timeout them.
+						 *     - you can only apply or reorder roles with a lower position than your rank
+						 */
+						position: number;
+						room_id: components["schemas"]["Id"];
+						/** @description whether this role should be retained after a user leaves and rejoins the room */
+						sticky: boolean;
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	role_reorder: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description the roles to reorder */
+					roles?: components["schemas"]["RoleReorderItem"][];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				role_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the permissions to grant for this role */
+						allow: components["schemas"]["Permission"][];
+						/** @description the permissions to deny for this role */
+						deny?: components["schemas"]["Permission"][];
+						description?: string | null;
+						/** @description whether members with this role should be displayed separately */
+						hoist: boolean;
+						id: components["schemas"]["Id"];
+						is_mentionable: boolean;
+						is_self_applicable: boolean;
+						/**
+						 * Format: int64
+						 * @description the number of members with this role
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int32
+						 * @description the position of this role
+						 *
+						 *     - the everyone/default role has a position of 0
+						 *     - during updates, this is tiebroken by role id (newer roles have a higher position)
+						 *
+						 *     ## rank
+						 *
+						 *     - a room member's rank is `max(role.position)` across all roles they have
+						 *     - you must have a strictly higher rank than another room member in order to kick, ban, or timeout them.
+						 *     - you can only apply or reorder roles with a lower position than your rank
+						 */
+						position: number;
+						room_id: components["schemas"]["Id"];
+						/** @description whether this role should be retained after a user leaves and rejoins the room */
+						sticky: boolean;
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	role_delete: {
+		parameters: {
+			query?: {
+				fallback_role_id?: null | components["schemas"]["Id"];
+			};
+			header?: never;
+			path: {
+				room_id: string;
+				role_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				role_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					allow?: components["schemas"]["Permission"][] | null;
+					deny?: components["schemas"]["Permission"][] | null;
+					description?: string | null;
+					hoist?: boolean | null;
+					is_mentionable?: boolean | null;
+					is_self_applicable?: boolean | null;
+					name?: string | null;
+					sticky?: boolean | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the permissions to grant for this role */
+						allow: components["schemas"]["Permission"][];
+						/** @description the permissions to deny for this role */
+						deny?: components["schemas"]["Permission"][];
+						description?: string | null;
+						/** @description whether members with this role should be displayed separately */
+						hoist: boolean;
+						id: components["schemas"]["Id"];
+						is_mentionable: boolean;
+						is_self_applicable: boolean;
+						/**
+						 * Format: int64
+						 * @description the number of members with this role
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int32
+						 * @description the position of this role
+						 *
+						 *     - the everyone/default role has a position of 0
+						 *     - during updates, this is tiebroken by role id (newer roles have a higher position)
+						 *
+						 *     ## rank
+						 *
+						 *     - a room member's rank is `max(role.position)` across all roles they have
+						 *     - you must have a strictly higher rank than another room member in order to kick, ban, or timeout them.
+						 *     - you can only apply or reorder roles with a lower position than your rank
+						 */
+						position: number;
+						room_id: components["schemas"]["Id"];
+						/** @description whether this role should be retained after a user leaves and rejoins the room */
+						sticky: boolean;
+						version_id: components["schemas"]["Id"];
+					};
+				};
+			};
+			/** @description success */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_member_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				room_id: string;
+				role_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["RoomMember"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	role_member_bulk_patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				role_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description add this role to these users */
+					apply?: components["schemas"]["Id"][];
+					/** @description remove this role from these users */
+					remove?: components["schemas"]["Id"][];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	role_member_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				role_id: string;
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this user is deafened by a moderator */
+						deaf: boolean;
+						/** @description When this member joined the room */
+						joined_at: components["schemas"]["Time"];
+						/** @description whether this user is muted by a moderator */
+						mute: boolean;
+						origin?: null | components["schemas"]["RoomMemberOrigin"];
+						/** @description like nickname, but for your description/bio/about */
+						override_description?: string | null;
+						/** @description aka nickname */
+						override_name?: string | null;
+						/** @description whether this user is quarantined by automod */
+						quarantined: boolean;
+						/** @description the roles that this member has */
+						roles: components["schemas"]["Id"][];
+						room_id: components["schemas"]["Id"];
+						timeout_until?: null | components["schemas"]["Time"];
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	role_member_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+				role_id: string;
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	room_security_set: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					require_mfa?: boolean | null;
+					require_sudo?: boolean | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	thread_list_room: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List room threads success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						/** @description room members for each thread member in preview_members */
+						room_members: components["schemas"]["RoomMember"][];
+						threads: components["schemas"]["Channel"][];
+						/** Format: int64 */
+						total: number;
+						/** @description users for each thread member in preview_members */
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	room_transfer_ownership: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					owner_id: components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						afk_channel_id?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
+						 */
+						afk_channel_timeout: number;
+						archived_at?: null | components["schemas"]["Time"];
+						banner?: null | components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @deprecated
+						 * @description number of active channels
+						 */
+						channel_count: number;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						/**
+						 * Format: int64
+						 * @description number of emojis in room
+						 */
+						emoji_count: number;
+						/** @description features enabled for this room */
+						features: components["schemas"]["RoomFeatures"];
+						icon?: null | components["schemas"]["Id"];
+						/** @description A unique identifier for this room */
+						id: components["schemas"]["Id"];
+						invites_paused_until?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						name: string;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						preferences?: null | components["schemas"]["PreferencesRoom"];
+						/** @description anyone can view and join */
+						public: boolean;
+						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
+						quarantined: boolean;
+						remote?: null | components["schemas"]["Remote_Id"];
+						/** @description security configuration for this room */
+						security: components["schemas"]["RoomSecurity"];
+						type: components["schemas"]["RoomType"];
+						/**
+						 * Format: uuid
+						 * @description A monotonically increasing id that is updated every time this room is modified.
+						 */
+						version_id: string;
+						welcome_channel_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	room_undelete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				room_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -15417,7 +22875,7 @@ export interface operations {
 			};
 		};
 	};
-	unfurler_debug: {
+	search_channels: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -15426,7 +22884,11 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["DebugRequest"];
+				"application/json": components["schemas"]["SearchRequest"] &
+					components["schemas"]["ChannelSearchOrderField"] & {
+						/** @description whether to include nsfw channels */
+						include_nsfw?: boolean | null;
+					};
 			};
 		};
 		responses: {
@@ -15436,12 +22898,26 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["DebugResponse"];
+					"application/json": {
+						/** @description the channels */
+						channels: components["schemas"]["Channel"][];
+						/** @description current page cursor */
+						cursor?: string | null;
+						/** @description whether there are more threads */
+						has_more: boolean;
+						/** @description the ids of the matched channels */
+						results: components["schemas"]["Id"][];
+						/**
+						 * Format: int64
+						 * @description approximate count of total results that match this query
+						 */
+						total: number;
+					};
 				};
 			};
 		};
 	};
-	unfurler_unfurl: {
+	search_messages: {
 		parameters: {
 			query?: never;
 			header?: never;
@@ -15450,7 +22926,12 @@ export interface operations {
 		};
 		requestBody: {
 			content: {
-				"application/json": components["schemas"]["UnfurlRequest"];
+				"application/json": components["schemas"]["SearchRequest"] & {
+					/** @description whether to include results from nsfw channels */
+					include_nsfw?: boolean | null;
+					/** @description field to sort by */
+					sort_field?: components["schemas"]["MessageSearchOrderField"];
+				};
 			};
 		};
 		responses: {
@@ -15460,8 +22941,2740 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["UnfurlResponse"];
+					"application/json": {
+						/** @description current page cursor */
+						cursor?: string | null;
+						/** @description whether there are more threads */
+						has_more: boolean;
+						/** @description all relevant messages (eg. messages that a result replied to) */
+						messages: components["schemas"]["Message"][];
+						/** @description the ids of the matched messages */
+						results: components["schemas"]["Id"][];
+						/** @description room members objects for each author, if they exist */
+						room_members: components["schemas"]["RoomMember"][];
+						/**
+						 * @description relevant thread member objects
+						 *
+						 *     - one for each (message author, thread) tuple
+						 *     - one for each thread the requesting user is a member of
+						 */
+						thread_members: components["schemas"]["ThreadMember"][];
+						/** @description threads the messages are in */
+						threads: components["schemas"]["Channel"][];
+						/**
+						 * Format: int64
+						 * @description approximate count of total results that match this query
+						 */
+						total: number;
+						/** @description the authors of the messages */
+						users: components["schemas"]["User"][];
+					};
 				};
+			};
+		};
+	};
+	search_rooms: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SearchRequest"] & {
+					/** @description field to sort by */
+					sort_field?: components["schemas"]["RoomSearchOrderField"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Room"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	server_info: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get server info success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * Format: uri
+						 * @description the rest/http api base url
+						 */
+						api_url: string;
+						/**
+						 * Format: uri
+						 * @description the cdn base url
+						 */
+						cdn_url: string;
+						features: components["schemas"]["ServerFeatures"];
+						/**
+						 * Format: uri
+						 * @description the html web ui base url
+						 */
+						html_url: string;
+						/**
+						 * Format: uri
+						 * @description the websocket sync url
+						 */
+						sync_url: string;
+						version: components["schemas"]["ServerVersion"];
+					};
+				};
+			};
+		};
+	};
+	server_moderation: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get server moderation capabilities success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						automod_lists: components["schemas"]["ServerAutomodList"][];
+						media_scanners: components["schemas"]["ServerMediaScanner"][];
+					};
+				};
+			};
+		};
+	};
+	server_voice: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description Get server voice success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description sfu stats */
+						sfus: components["schemas"]["ServerVoiceHealthSfu"][];
+					};
+				};
+			};
+		};
+	};
+	invite_server_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Invite"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	invite_server_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description a description for this invite */
+					description?: string | null;
+					expires_at?: null | components["schemas"]["Time"];
+					/**
+					 * Format: int32
+					 * @description the maximum number of times this invite can be used
+					 *     be sure to account for existing `uses` and `max_uses` when patching
+					 */
+					max_uses?: number | null;
+					/** @description which roles to apply when accepting the invite */
+					role_ids?: components["schemas"]["Id"][] | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the invite code for this invite */
+						code: components["schemas"]["InviteCode"];
+						/** @description the time when this invite was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this invite */
+						creator: components["schemas"]["User"];
+						/** @description the id of the user who created this invite */
+						creator_id: components["schemas"]["Id"];
+						/** @description a description for this invite */
+						description?: string | null;
+						expires_at?: null | components["schemas"]["Time"];
+						/** @description if this invite's code is custom (instead of random) */
+						is_vanity: boolean;
+						/** @description where this invite leads */
+						target: components["schemas"]["InviteTarget"];
+					};
+				};
+			};
+		};
+	};
+	report_create_server: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description user supplied note */
+					note?: string | null;
+					/** @description built in reason */
+					reason: components["schemas"]["ReportReason"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description where the report is being sent to */
+						destination: components["schemas"]["ReportDestination"];
+						id: components["schemas"]["Id"];
+						/** @description user supplied note */
+						note?: string | null;
+						/** @description built in reason */
+						reason: components["schemas"]["ReportReason"];
+						/** @description user id of who reported this */
+						reporter_id: components["schemas"]["Id"];
+						/** @description the associated thread id of this report. every report has a thread created for it. */
+						thread_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	server_connect: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				hostname: null | string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description connected */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": Record<string, never>;
+				};
+			};
+		};
+	};
+	server_keys_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				hostname: null | string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description The hostname these keys belong to */
+						hostname: string;
+						/** @description The list of keys for this hostname */
+						keys: components["schemas"]["ServerKey"][];
+					};
+				};
+			};
+		};
+	};
+	server_ping: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				hostname: null | string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description whether this is in response to a server authenticated request */
+						federated: boolean;
+					};
+				};
+			};
+		};
+	};
+	server_sync_handle: {
+		parameters: {
+			query?: never;
+			header?: {
+				"idempotency-key"?: string;
+			};
+			path: {
+				hostname: null | string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description the events for this sync event */
+					events?: components["schemas"]["MessageSync"][];
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description the current epoch the requesting server is on
+						 *
+						 *     is incremented if the sender is too lagged
+						 */
+						epoch: components["schemas"]["FederationEpoch"];
+					};
+				};
+			};
+		};
+	};
+	session_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description List session success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Session"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	session_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					name?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["Session"] & {
+						token: components["schemas"]["SessionToken"];
+					};
+				};
+			};
+		};
+	};
+	session_delete_all: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	session_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				session_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionStatus"] & {
+						app_id?: null | components["schemas"]["Id"];
+						authorized_at?: null | components["schemas"]["Time"];
+						deauthorized_at?: null | components["schemas"]["Time"];
+						expires_at?: null | components["schemas"]["Time"];
+						id: components["schemas"]["Id"];
+						/** @description session imprint metadata */
+						imprint: components["schemas"]["SessionImprint"];
+						/** @description a human readable name for this session */
+						name?: string | null;
+						type: components["schemas"]["SessionType"];
+					};
+				};
+			};
+		};
+	};
+	session_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				session_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	session_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				session_id: null | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					name?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionStatus"] & {
+						app_id?: null | components["schemas"]["Id"];
+						authorized_at?: null | components["schemas"]["Time"];
+						deauthorized_at?: null | components["schemas"]["Time"];
+						expires_at?: null | components["schemas"]["Time"];
+						id: components["schemas"]["Id"];
+						/** @description session imprint metadata */
+						imprint: components["schemas"]["SessionImprint"];
+						/** @description a human readable name for this session */
+						name?: string | null;
+						type: components["schemas"]["SessionType"];
+					};
+				};
+			};
+			/** @description not modified */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["SessionStatus"] & {
+						app_id?: null | components["schemas"]["Id"];
+						authorized_at?: null | components["schemas"]["Time"];
+						deauthorized_at?: null | components["schemas"]["Time"];
+						expires_at?: null | components["schemas"]["Time"];
+						id: components["schemas"]["Id"];
+						/** @description session imprint metadata */
+						imprint: components["schemas"]["SessionImprint"];
+						/** @description a human readable name for this session */
+						name?: string | null;
+						type: components["schemas"]["SessionType"];
+					};
+				};
+			};
+		};
+	};
+	thread_member_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				thread_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["ThreadMember"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	thread_member_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				thread_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description When this member joined the thread */
+						joined_at: components["schemas"]["Time"];
+						thread_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	thread_member_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				thread_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": Record<string, never>;
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description When this member joined the thread */
+						joined_at: components["schemas"]["Time"];
+						thread_id: components["schemas"]["Id"];
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+			/** @description not modified */
+			304: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	thread_member_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				thread_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	user_list: {
+		parameters: {
+			query: {
+				pagination: components["schemas"]["PaginationQuery_Id"];
+				filter?: null | components["schemas"]["UserListFilter"];
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["User"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	user_connection_metadata_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						[key: string]: components["schemas"]["ConnectionValue"];
+					};
+				};
+			};
+		};
+	};
+	user_connection_metadata_put: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				app_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					[key: string]: components["schemas"]["ConnectionValue"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						[key: string]: components["schemas"]["ConnectionValue"];
+					};
+				};
+			};
+		};
+	};
+	block_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["RelationshipWithUserId"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	block_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	block_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	dm_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+		};
+	};
+	dm_init: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description already exists */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+			/** @description new dm created */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						archived_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description when to automatically archive this thread due to inactivity, in seconds
+						 */
+						auto_archive_duration?: number | null;
+						/** @description automatically generated description */
+						auto_description?: string | null;
+						/** @description automatically generated name */
+						auto_name?: string | null;
+						/**
+						 * Format: int64
+						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
+						 */
+						bitrate?: number | null;
+						calendar?: null | components["schemas"]["Calendar"];
+						creator_id: components["schemas"]["Id"];
+						/**
+						 * Format: int64
+						 * @description the default auto archive duration in seconds to copy to threads created in this channel
+						 */
+						default_auto_archive_duration?: number | null;
+						/**
+						 * Format: int64
+						 * @description default slowmode_message for new threads
+						 *
+						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						default_slowmode_message?: number | null;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						document?: null | components["schemas"]["Document"];
+						icon?: null | components["schemas"]["Id"];
+						id: components["schemas"]["Id"];
+						/** @description whether users without ThreadManage can add other members to this thread */
+						invitable?: boolean;
+						is_unread?: boolean | null;
+						last_message_id?: null | components["schemas"]["Id"];
+						last_pin_timestamp?: null | components["schemas"]["Time"];
+						last_read_id?: null | components["schemas"]["Id"];
+						last_version_id?: null | components["schemas"]["Id"];
+						/**
+						 * @description monotonic sync sequence number, incremented on every action.
+						 *     used for incremental channel sync.
+						 */
+						latest_seq?: components["schemas"]["Seq"];
+						locked?: null | components["schemas"]["Locked"];
+						/**
+						 * Format: int64
+						 * @description number of people in this room
+						 */
+						member_count: number;
+						/** Format: int64 */
+						mention_count?: number | null;
+						/** Format: int64 */
+						message_count?: number | null;
+						name: string;
+						/** @description not safe for work */
+						nsfw?: boolean;
+						/**
+						 * Format: int64
+						 * @description number of people who are online in this room
+						 */
+						online_count: number;
+						owner_id?: null | components["schemas"]["Id"];
+						parent_id?: null | components["schemas"]["Id"];
+						/** @description permission overwrites for this channel */
+						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
+						/**
+						 * Format: int32
+						 * @description the position of this channel in the navbar
+						 *
+						 *     - lower numbers come first (0 is the first channel)
+						 *     - channels with the same position are tiebroken by id
+						 *     - channels without a position come last, ordered by newest first
+						 */
+						position?: number | null;
+						preferences?: null | components["schemas"]["PreferencesChannel"];
+						/** @description for dm and gdm channels, this is who the dm is with */
+						recipients?: components["schemas"]["User"][];
+						remote?: null | components["schemas"]["Remote_Id"];
+						room_id?: null | components["schemas"]["Id"];
+						/** Format: int64 */
+						root_message_count?: number | null;
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new messages
+						 *
+						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
+						 */
+						slowmode_message?: number | null;
+						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description minimum delay in seconds between creating new threads
+						 *
+						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
+						 */
+						slowmode_thread?: number | null;
+						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						/**
+						 * Format: int64
+						 * @description number of tags in this Forum, Forum2, or Ticket channel
+						 */
+						tag_count?: number;
+						/** @description tags that are applied to this thread */
+						tags?: components["schemas"]["Id"][] | null;
+						thread_member?: null | components["schemas"]["ThreadMember"];
+						/** @description type specific data for this channel */
+						type: components["schemas"]["ChannelType"];
+						/** @description url that this info channel should link to */
+						url?: string | null;
+						/**
+						 * Format: int64
+						 * @description maximum number of users who can be in this voice channel
+						 */
+						user_limit?: number | null;
+						/** @description only updates when the channel itself is updated, not the stuff in the channel */
+						version_id: components["schemas"]["Id"];
+						wiki?: null | components["schemas"]["Wiki"];
+					};
+				};
+			};
+		};
+	};
+	friend_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["RelationshipWithUserId"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	friend_list_pending: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["RelationshipWithUserId"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	friend_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	friend_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	harvest_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["HarvestStatus"] &
+						components["schemas"]["HarvestType"] & {
+							id: components["schemas"]["Id"];
+							/** @description when this archive was created */
+							queued_at: components["schemas"]["Time"];
+							/** @description user who requested this harvest to be generated */
+							requester_id: components["schemas"]["Id"];
+						};
+				};
+			};
+			/** @description no harvest found */
+			404: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	harvest_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description include all messages you have sent */
+					include_messages: boolean;
+					/** @description include all reactions you have sent */
+					include_reactions: boolean;
+				};
+			};
+		};
+		responses: {
+			/** @description harvest has been queued */
+			202: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	ignore_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["RelationshipWithUserId"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	ignore_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					until?: null | components["schemas"]["Time"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	ignore_remove: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				target_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	user_search: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path?: never;
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": components["schemas"]["SearchRequest"] & {
+					sort_field?: components["schemas"]["UserSearchOrderField"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description current page cursor */
+						cursor?: string | null;
+						/** @description whether there are more threads */
+						has_more: boolean;
+						/** @description the ids of the matched users */
+						results: components["schemas"]["Id"][];
+						/**
+						 * Format: int64
+						 * @description approximate count of total results that match this query
+						 */
+						total: number;
+						/** @description the users */
+						users: components["schemas"]["User"][];
+					};
+				};
+			};
+		};
+	};
+	user_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	user_audit_logs: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+				/** @description only return audit log entries from these users */
+				user_id?: components["schemas"]["Id"][];
+				/** @description only return audit log entries with these types */
+				type?: string[];
+				/**
+				 * @description only return audit log entries with these statuses
+				 *
+				 *     defaults to only `Success`
+				 */
+				status?: components["schemas"]["AuditLogEntryStatus"][];
+			};
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the audit log entries themselves */
+						audit_log_entries: components["schemas"]["AuditLogEntry"][];
+						/** @description pagination cursor */
+						cursor?: string | null;
+						/** @description whether there are more audit log events that can be fetched */
+						has_more: boolean;
+						/**
+						 * @description room members referenced in the audit log entries
+						 *
+						 *     this includes actors (ie. room members who did actions) and targets (ie. room members who were affected by actions)
+						 */
+						room_members: components["schemas"]["RoomMember"][];
+						/** @description tags referenced in the audit log entries */
+						tags: components["schemas"]["Tag"][];
+						/** @description threads referenced in the audit log entries */
+						threads: components["schemas"]["Channel"][];
+						/**
+						 * @description users referenced in the audit log entries
+						 *
+						 *     this includes actors (ie. users who did actions) and targets (ie. users who were affected by actions)
+						 */
+						users: components["schemas"]["User"][];
+						/** @description webhooks referenced in the audit log entries */
+						webhooks: components["schemas"]["Webhook"][];
+					};
+				};
+			};
+		};
+	};
+	user_connection_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Connection"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	user_connection_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+				app_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	user_connection_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+				app_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					visibility: components["schemas"]["ConnectionVisibility"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						application: components["schemas"]["Application"];
+						created_at: components["schemas"]["Time"];
+						scopes: components["schemas"]["Scopes"];
+					};
+				};
+			};
+		};
+	};
+	dm_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Channel"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	email_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the email address itself */
+						email: components["schemas"]["EmailAddr"];
+						/** @description whether this is the user's primary email address */
+						is_primary: boolean;
+						/** @description user verified they have access to the email address */
+						is_verified: boolean;
+					}[];
+				};
+			};
+		};
+	};
+	email_add: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+				addr: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description already exists */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	email_delete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+				addr: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	email_update: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+				addr: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/**
+					 * @description whether this is the user's primary email address
+					 *
+					 *     - there can only be one primary email address
+					 *     - the primary address has EmailTrust::Full
+					 */
+					is_primary?: boolean | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the email address itself */
+						email: components["schemas"]["EmailAddr"];
+						/** @description whether this is the user's primary email address */
+						is_primary: boolean;
+						/** @description user verified they have access to the email address */
+						is_verified: boolean;
+					};
+				};
+			};
+		};
+	};
+	email_verification_resend: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+				addr: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	email_verification_finish: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+				addr: string;
+				code: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	invite_user_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Invite"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	invite_user_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description a description for this invite */
+					description?: string | null;
+					expires_at?: null | components["schemas"]["Time"];
+					/**
+					 * Format: int32
+					 * @description the maximum number of times this invite can be used
+					 *     be sure to account for existing `uses` and `max_uses` when patching
+					 */
+					max_uses?: number | null;
+					/** @description which roles to apply when accepting the invite */
+					role_ids?: components["schemas"]["Id"][] | null;
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the invite code for this invite */
+						code: components["schemas"]["InviteCode"];
+						/** @description the time when this invite was created */
+						created_at: components["schemas"]["Time"];
+						/** @description the user who created this invite */
+						creator: components["schemas"]["User"];
+						/** @description the id of the user who created this invite */
+						creator_id: components["schemas"]["Id"];
+						/** @description a description for this invite */
+						description?: string | null;
+						expires_at?: null | components["schemas"]["Time"];
+						/** @description if this invite's code is custom (instead of random) */
+						is_vanity: boolean;
+						/** @description where this invite leads */
+						target: components["schemas"]["InviteTarget"];
+					};
+				};
+			};
+		};
+	};
+	pack_user_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				user_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Room"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	pack_user_install: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: string;
+				pack_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						pack_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	pack_user_uninstall: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: string;
+				pack_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	user_presence_set: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					activities: components["schemas"]["Activity"][];
+					status: components["schemas"]["Status"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	user_room_list: {
+		parameters: {
+			query?: {
+				from?: string;
+				to?: string;
+				dir?: "b" | "f";
+				limit?: number;
+			};
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["Room"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	user_suspend: {
+		parameters: {
+			query?: never;
+			header?: {
+				reason?: string;
+			};
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					expires_at?: null | components["schemas"]["Time"];
+				};
+			};
+		};
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						avatar?: null | components["schemas"]["Id"];
+						banner?: null | components["schemas"]["Id"];
+						/** @description whether this user is a bot */
+						bot: boolean;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						emails?: components["schemas"]["EmailInfo"][] | null;
+						/**
+						 * @description whether this user is considered to have mutifactor authentication enabled on their account
+						 *
+						 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+						 */
+						has_mfa?: boolean | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						preferences?: null | components["schemas"]["PreferencesUser"];
+						presence: components["schemas"]["Presence"];
+						puppet?: null | components["schemas"]["Puppet"];
+						registered_at?: null | components["schemas"]["Time"];
+						remote?: null | components["schemas"]["Remote_Id"];
+						suspended?: null | components["schemas"]["Suspended"];
+						/** @description whether this user is an official system user */
+						system: boolean;
+						version_id: components["schemas"]["Id"];
+						webhook?: null | components["schemas"]["UserWebhook"];
+					};
+				};
+			};
+		};
+	};
+	user_unsuspend: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						avatar?: null | components["schemas"]["Id"];
+						banner?: null | components["schemas"]["Id"];
+						/** @description whether this user is a bot */
+						bot: boolean;
+						deleted_at?: null | components["schemas"]["Time"];
+						description?: string | null;
+						emails?: components["schemas"]["EmailInfo"][] | null;
+						/**
+						 * @description whether this user is considered to have mutifactor authentication enabled on their account
+						 *
+						 *     this allows using certain restricted endpoints if a room requires it via `security.require_mfa`
+						 */
+						has_mfa?: boolean | null;
+						id: components["schemas"]["Id"];
+						name: string;
+						preferences?: null | components["schemas"]["PreferencesUser"];
+						presence: components["schemas"]["Presence"];
+						puppet?: null | components["schemas"]["Puppet"];
+						registered_at?: null | components["schemas"]["Time"];
+						remote?: null | components["schemas"]["Remote_Id"];
+						suspended?: null | components["schemas"]["Suspended"];
+						/** @description whether this user is an official system user */
+						system: boolean;
+						version_id: components["schemas"]["Id"];
+						webhook?: null | components["schemas"]["UserWebhook"];
+					};
+				};
+			};
+		};
+	};
+	user_undelete: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description success */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_call_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CallMetadata"] & {
+						channel_id: components["schemas"]["Id"];
+						room_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	voice_call_create: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/**
+					 * @description call topic
+					 *
+					 *     must have VoiceMute permission in target channel to set
+					 */
+					topic?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			201: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CallMetadata"] & {
+						channel_id: components["schemas"]["Id"];
+						room_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	voice_call_delete: {
+		parameters: {
+			query?: {
+				/**
+				 * @description if people are still connected to this channel, try to forcibly disconnect them
+				 *
+				 *     requires VoiceDisconnect permission
+				 */
+				force?: boolean;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_call_patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/**
+					 * @description the current call topic
+					 *
+					 *     only unsuppressed users can change the call topic
+					 */
+					topic?: string | null;
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": components["schemas"]["CallMetadata"] & {
+						channel_id: components["schemas"]["Id"];
+						room_id?: null | components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	voice_state_list: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						cursor?: string | null;
+						has_more: boolean;
+						items: components["schemas"]["VoiceState"][];
+						/** Format: int64 */
+						total: number;
+					};
+				};
+			};
+		};
+	};
+	voice_state_disconnect_all: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_state_get: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the channel this user is connected to */
+						channel_id: components["schemas"]["Id"];
+						connection_id?: null | components["schemas"]["Id"];
+						/** @description whether this user is deafened by a moderator */
+						deaf: boolean;
+						/** @description when this user joined the call */
+						joined_at: components["schemas"]["Time"];
+						/** @description whether this user is muted by a moderator */
+						mute: boolean;
+						requested_to_speak_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						screenshare?: null | components["schemas"]["VoiceStateScreenshare"];
+						/** @description whether this user has deafened themselves */
+						self_deaf: boolean;
+						/** @description whether this user has muted themselves */
+						self_mute: boolean;
+						/** @description whether this user has enabled their camera */
+						self_video: boolean;
+						session_id?: null | components["schemas"]["Id"];
+						/** @description whether this user is suppressed, similar to a transient `mute: true` */
+						suppress: boolean;
+						/** @description the user this state belongs to */
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	voice_state_disconnect: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_state_patch: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					channel_id?: null | components["schemas"]["Id"];
+					/** @description same as room member deaf */
+					deaf?: boolean | null;
+					/** @description same as room member mute */
+					mute?: boolean | null;
+					requested_to_speak_at?: null | components["schemas"]["Time"];
+					/**
+					 * @description allow this user to speak in the current channel
+					 *
+					 *     requires VoiceMute permission
+					 */
+					suppress?: boolean | null;
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the channel this user is connected to */
+						channel_id: components["schemas"]["Id"];
+						connection_id?: null | components["schemas"]["Id"];
+						/** @description whether this user is deafened by a moderator */
+						deaf: boolean;
+						/** @description when this user joined the call */
+						joined_at: components["schemas"]["Time"];
+						/** @description whether this user is muted by a moderator */
+						mute: boolean;
+						requested_to_speak_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						screenshare?: null | components["schemas"]["VoiceStateScreenshare"];
+						/** @description whether this user has deafened themselves */
+						self_deaf: boolean;
+						/** @description whether this user has muted themselves */
+						self_mute: boolean;
+						/** @description whether this user has enabled their camera */
+						self_video: boolean;
+						session_id?: null | components["schemas"]["Id"];
+						/** @description whether this user is suppressed, similar to a transient `mute: true` */
+						suppress: boolean;
+						/** @description the user this state belongs to */
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	voice_state_move: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+				user_id: null | Record<string, never>[] | components["schemas"]["Id"];
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					target_id: components["schemas"]["Id"];
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the channel this user is connected to */
+						channel_id: components["schemas"]["Id"];
+						connection_id?: null | components["schemas"]["Id"];
+						/** @description whether this user is deafened by a moderator */
+						deaf: boolean;
+						/** @description when this user joined the call */
+						joined_at: components["schemas"]["Time"];
+						/** @description whether this user is muted by a moderator */
+						mute: boolean;
+						requested_to_speak_at?: null | components["schemas"]["Time"];
+						room_id?: null | components["schemas"]["Id"];
+						screenshare?: null | components["schemas"]["VoiceStateScreenshare"];
+						/** @description whether this user has deafened themselves */
+						self_deaf: boolean;
+						/** @description whether this user has muted themselves */
+						self_mute: boolean;
+						/** @description whether this user has enabled their camera */
+						self_video: boolean;
+						session_id?: null | components["schemas"]["Id"];
+						/** @description whether this user is suppressed, similar to a transient `mute: true` */
+						suppress: boolean;
+						/** @description the user this state belongs to */
+						user_id: components["schemas"]["Id"];
+					};
+				};
+			};
+		};
+	};
+	voice_state_move_bulk: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					/** @description target channel id */
+					channel_id: components["schemas"]["Id"];
+					/** @description set to None to move everyone */
+					user_ids?: components["schemas"]["Id"][] | null;
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_ring_start: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					user_ids: components["schemas"]["Id"][];
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
+			};
+		};
+	};
+	voice_ring_eligibility: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/**
+						 * @description whether ring endpoints can be used
+						 *
+						 *     true in dms and gdms, false otherwise
+						 */
+						ringable: boolean;
+					};
+				};
+			};
+		};
+	};
+	voice_ring_stop: {
+		parameters: {
+			query?: never;
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody: {
+			content: {
+				"application/json": {
+					user_ids: components["schemas"]["Id"][];
+				};
+			};
+		};
+		responses: {
+			/** @description ok */
+			204: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content?: never;
 			};
 		};
 	};
@@ -15808,6 +26021,82 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content?: never;
+			};
+		};
+	};
+	wiki_graph: {
+		parameters: {
+			query: {
+				/** @description maximum number of documents to return */
+				limit: number;
+				/** @description feature/center on this document */
+				document_id?: null | components["schemas"]["Id"];
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						documents: components["schemas"]["WikiGraphDocument"][];
+						links: [string, string][];
+					};
+				};
+			};
+		};
+	};
+	wiki_history: {
+		parameters: {
+			query?: {
+				/** @description split group whenever author changes */
+				by_author?: boolean | null;
+				/** @description split group whenever a tag is created */
+				by_tag?: boolean | null;
+				/** @description every n seconds */
+				by_time?: number | null;
+				/** @description every n changes */
+				by_changes?: number | null;
+				/** @description continue listing history from here */
+				cursor?: string | null;
+				/** @description the maximum number of items to return. */
+				limit?: number | null;
+			};
+			header?: never;
+			path: {
+				channel_id: string;
+			};
+			cookie?: never;
+		};
+		requestBody?: never;
+		responses: {
+			/** @description ok */
+			200: {
+				headers: {
+					[name: string]: unknown;
+				};
+				content: {
+					"application/json": {
+						/** @description the resulting changesets, ordered oldest to newest */
+						changesets: components["schemas"]["Changeset"][];
+						/** @description document tags that are part of the range */
+						document_tags: components["schemas"]["DocumentTag"][];
+						/** @description a room member object for every referenced user_id */
+						room_members: components["schemas"]["RoomMember"][];
+						/** @description a thread member object for every referenced user_id */
+						thread_members: components["schemas"]["ThreadMember"][];
+						/** @description a user object for every referenced user_id */
+						users: components["schemas"]["User"][];
+					};
+				};
 			};
 		};
 	};

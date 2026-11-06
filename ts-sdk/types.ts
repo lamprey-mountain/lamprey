@@ -1,4 +1,4 @@
-import type { components } from "./schema.d.ts";
+import type { components, operations } from "./schema.d.ts";
 
 export type Room = components["schemas"]["Room"];
 export type RoomType = components["schemas"]["RoomType"];
@@ -104,7 +104,7 @@ export type ChannelCreate = components["schemas"]["ChannelCreate"];
 export type PushCreate = components["schemas"]["PushCreate"];
 export type PushInfo = components["schemas"]["PushInfo"];
 export type AutomodRule = components["schemas"]["AutomodRule"];
-export type AutomodMatch = components["schemas"]["AutomodMatch"];
+export type AutomodMatch = components["schemas"]["AutomodMatches"];
 export type AutomodMatchFragment =
 	components["schemas"]["AutomodMatchFragment"];
 export type AutomodRuleCreate = components["schemas"]["AutomodRuleCreate"];
@@ -132,7 +132,6 @@ export type DocumentTag = components["schemas"]["DocumentTag"];
 export type DocumentTagCreate = components["schemas"]["DocumentTagCreate"];
 export type DocumentTagPatch = components["schemas"]["DocumentTagPatch"];
 export type DocumentRevisionId = components["schemas"]["DocumentRevisionId"];
-export type DocumentVersionId = components["schemas"]["DocumentVersionId"];
 export type RepliesChildren = components["schemas"]["RepliesChildren"];
 export type RepliesMessage = components["schemas"]["RepliesMessage"];
 export type RepliesResponse = components["schemas"]["RepliesResponse"];
@@ -193,20 +192,17 @@ export type ScriptSync =
 
 export type RedexContentUpdate = components["schemas"]["RedexContentUpdate"];
 
-export type RoomAnalyticsChannel =
-	components["schemas"]["RoomAnalyticsChannel"];
-export type RoomAnalyticsInvites =
-	components["schemas"]["RoomAnalyticsInvites"];
+export type RoomAnalyticsChannel = components["schemas"]["AnalyticsChannel"];
+export type RoomAnalyticsInvites = components["schemas"]["AnalyticsInvites"];
 export type RoomAnalyticsInvitesOrigin =
-	components["schemas"]["RoomAnalyticsInvitesOrigin"];
+	components["schemas"]["AnalyticsInvitesOrigin"];
 export type RoomAnalyticsMembersCount =
-	components["schemas"]["RoomAnalyticsMembersCount"];
+	components["schemas"]["AnalyticsMembersCount"];
 export type RoomAnalyticsMembersJoin =
-	components["schemas"]["RoomAnalyticsMembersJoin"];
+	components["schemas"]["AnalyticsMembersJoin"];
 export type RoomAnalyticsMembersLeave =
-	components["schemas"]["RoomAnalyticsMembersLeave"];
-export type RoomAnalyticsOverview =
-	components["schemas"]["RoomAnalyticsOverview"];
+	components["schemas"]["AnalyticsMembersLeave"];
+export type RoomAnalyticsOverview = components["schemas"]["AnalyticsOverview"];
 export type AutomodTrigger = components["schemas"]["AutomodTrigger"];
 export type AutomodAction = components["schemas"]["AutomodAction"];
 export type AutomodTarget = components["schemas"]["AutomodTarget"];
@@ -274,7 +270,7 @@ export type MessageEnvelope =
 
 export type SignallingEvent = components["schemas"]["SignallingEvent"];
 export type SignallingCommand = components["schemas"]["SignallingCommand"];
-export type TrackMetadata = components["schemas"]["TrackMetadata2"];
+export type TrackMetadata = components["schemas"]["TrackMetadata"];
 export type TrackMapping = components["schemas"]["TrackMapping"];
 export type TrackWhisper = components["schemas"]["TrackWhisper"];
 export type TrackAnnouncement = components["schemas"]["TrackAnnouncement"];
@@ -375,11 +371,9 @@ export type PresenceActivity = components["schemas"]["Activity"];
 export type Serdoc = { components: LampreyComponent[] };
 
 export type Interaction = components["schemas"]["Interaction"];
-export type InteractionCreate = components["schemas"]["InteractionCreate"];
-export type InteractionCreateType =
-	components["schemas"]["InteractionCreateType"];
-export type InteractionErrorCode =
-	components["schemas"]["InteractionErrorCode"];
+export type InteractionCreate = components["schemas"]["Interaction"];
+export type InteractionCreateType = components["schemas"]["InteractionType"];
+export type InteractionErrorCode = "Timeout";
 export type InteractionAllow = components["schemas"]["Allow"];
 
 export type ApiError = {
@@ -387,11 +381,9 @@ export type ApiError = {
 	message: string;
 };
 
-export type UnfurlerLogEntry = components["schemas"]["LogEntry"];
-
 export type CalendarEvent = components["schemas"]["CalendarEvent"];
 export type CalendarEventCreate = components["schemas"]["CalendarEventCreate"];
-export type CalendarEventPatch = components["schemas"]["CalendarEventPatch"];
+export type CalendarEventPatch = components["schemas"]["CalendarEventUpdate"];
 
 export type ServerInfo = components["schemas"]["ServerInfo"];
 
