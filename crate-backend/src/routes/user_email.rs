@@ -18,15 +18,13 @@ use crate::error::Result;
 use crate::routes::util::Auth;
 use crate::{Error, ServerState, routes2};
 
-use super::auth::fetch_auth_state;
-
 /// Check if a user can still login after potentially removing an auth method
 /// This prevents users from removing all auth methods which would lock them out
 async fn ensure_can_still_login_after_email_removal(
     s: &ServerState,
     user_id: UserId,
 ) -> Result<()> {
-    let mut auth_state = fetch_auth_state(s, user_id).await?;
+    let mut auth_state = s.services().auth.get_state(user_id).await?;
 
     auth_state.has_email = false;
 

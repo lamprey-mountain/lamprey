@@ -16,9 +16,9 @@ use common::{
     util::routes::Endpoint,
     v1::{
         routes::ExtractableRequest,
-        types::{AuditLogEntryStatus, AuditLogEntryType},
+        types::{AuditLogEntryStatus, AuditLogEntryType, Session},
     },
-    v2::types::{RoomId, media::MediaReference},
+    v2::types::{RoomId, UserId, media::MediaReference},
 };
 use futures::stream;
 use http::Method;
@@ -242,6 +242,22 @@ impl<E: Endpoint> Req<E> {
 
         let slot = self.audit_logger.clone();
         AuditLoggerHandle::new(actor, slot)
+    }
+
+    /// obtain an audit log handle for a different actor than the request's identity
+    ///
+    /// used by endpoints that establish an identity mid-request (e.g. login)
+    pub fn audit_log_as(&self, user_id: UserId, session: &Session) -> AuditLoggerHandle {
+        let actor = Arc::new(ActorInfo {
+            user_id,
+            session_id: session.id,
+            application_id: session.app_id,
+            user_agent: session.imprint.user_agent.clone(),
+            ip_addr: session.imprint.ip_addr.clone(),
+            reason: self.headers.reason.clone(),
+        });
+
+        AuditLoggerHandle::new(actor, self.audit_logger.clone())
     }
 }
 

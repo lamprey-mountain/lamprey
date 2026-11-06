@@ -19,7 +19,6 @@ use serde::Serialize;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::prelude::*;
-use crate::routes::auth::fetch_auth_state;
 use crate::routes::util::auth::Auth4;
 use crate::{ServerState, routes2};
 
@@ -380,7 +379,7 @@ async fn invite_use(
             if user.registered_at.is_some() {
                 return Err(ApiError::from_code(ErrorCode::UserIsNotAGuestAccount).into());
             }
-            let auth_state = fetch_auth_state(&s, user.id).await?;
+            let auth_state = s.services().auth.get_state(user.id).await?;
             if !auth_state.can_login() {
                 // make sure to prevent people from creating accounts they can't log into
                 return Err(ApiError::from_code(ErrorCode::AddAuthMethodFirst).into());

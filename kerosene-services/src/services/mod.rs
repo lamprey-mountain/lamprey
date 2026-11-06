@@ -20,6 +20,7 @@
 // - fn start_background_tasks() body
 // - fn shutdown() body
 
+use auth::ServiceAuth;
 use cache::ServiceCache;
 use channel::ServiceChannels;
 use config::ServiceConfig;
@@ -60,6 +61,7 @@ use crate::{
 pub mod ack;
 pub mod admin;
 pub mod audit_logs;
+pub mod auth;
 pub mod automod;
 pub mod cache;
 pub mod calendar;
@@ -101,6 +103,7 @@ pub struct Services {
     pub ack: ServiceAck,
     pub admin: ServiceAdmin,
     pub audit_logs: ServiceAuditLogs,
+    pub auth: ServiceAuth,
     pub automod: ServiceAutomod,
     pub cache: ServiceCache,
     pub calendar: ServiceCalendar,
@@ -145,6 +148,7 @@ impl Services {
             ack: ServiceAck::new(globals.clone()),
             admin: ServiceAdmin::new(globals.clone()),
             audit_logs: ServiceAuditLogs::new(globals.clone()),
+            auth: ServiceAuth::new(globals.clone()),
             automod: ServiceAutomod::new(globals.clone()),
             cache: ServiceCache::new(globals.clone()),
             calendar: ServiceCalendar::new(globals.clone()),
