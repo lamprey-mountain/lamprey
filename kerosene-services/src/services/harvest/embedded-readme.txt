@@ -18,6 +18,8 @@ layout:
   channels/<channel_id>/reactions.ndjson        reactions on the messages above
 
 notes:
+- user harvests only contain the messages the user has sent, plus the reactions
+  they have sent in channels that are part of the archive
 - media objects embedded in messages are replaced by their id; the full
   object is in media.ndjson
 - only media metadata is included, not the files themselves. fetch them from

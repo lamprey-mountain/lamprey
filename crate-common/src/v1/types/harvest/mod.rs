@@ -120,6 +120,18 @@ pub enum HarvestStatus {
     },
 }
 
+impl HarvestStatus {
+    /// whether this harvest is no longer running
+    pub fn is_finished(&self) -> bool {
+        matches!(
+            self,
+            HarvestStatus::Completed { .. }
+                | HarvestStatus::Failed { .. }
+                | HarvestStatus::Cancelled { .. }
+        )
+    }
+}
+
 /// the reason why harvest generation failed
 #[record]
 #[derive(PartialEq, Eq)]

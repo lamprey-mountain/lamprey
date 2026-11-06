@@ -318,6 +318,14 @@ pub trait DataMessage {
         message_id: MessageId,
         pagination: PaginationQuery<MessageVerId>,
     ) -> Result<PaginationResponse<MessageVersion>>;
+    /// list every version of the given messages, paginated by `version_id`
+    async fn message_version_list_many(
+        &mut self,
+        channel_id: ChannelId,
+        messages: &[MessageId],
+        after: Option<MessageVerId>,
+        limit: u16,
+    ) -> Result<Vec<MessageVersion>>;
     async fn message_replies(
         &mut self,
         channel_id: ChannelId,

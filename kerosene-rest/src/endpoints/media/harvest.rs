@@ -30,18 +30,26 @@ async fn get(req: Req<routes::harvest_get::Endpoint>) -> Result<routes::harvest_
         return Err(unknown.into());
     }
 
-    // the access token is embedded in the download url path
+    // the access token and filename are embedded in the download url path
+    //
+    // expecting `harvest/{harvest_id}/{token}/{filename}`
     let path = url.path().trim_start_matches('/');
-    let expected = path
-        .strip_prefix(&format!("harvest/{}/", harvest.id))
-        .and_then(|p| p.split('/').next())
-        .ok_or_else(|| Error::from(unknown.clone()))?;
-    if expected
-        .as_bytes()
-        .ct_eq(req.inner().token.as_bytes())
-        .unwrap_u8()
-        != 1
-        || !path.ends_with(&format!("/{}", req.inner().filename))
+    let mut segments = path.splitn(4, '/');
+    let (Some("harvest"), Some(id), Some(token), Some(filename)) = (
+        segments.next(),
+        segments.next(),
+        segments.next(),
+        segments.next(),
+    ) else {
+        return Err(unknown.into());
+    };
+
+    if id != harvest.id.to_string()
+        || token.is_empty()
+        || token.as_bytes().ct_eq(req.inner().token.as_bytes()).unwrap_u8() != 1
+        || filename.is_empty()
+        || filename.contains('/')
+        || filename != req.inner().filename
     {
         return Err(unknown.into());
     }

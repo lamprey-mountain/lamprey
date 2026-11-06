@@ -118,14 +118,15 @@ impl ServiceHarvest {
     ) -> Result<Harvest> {
         let mut txn = self.globals.begin().await?;
 
-        let harvest_id = if let Some(existing) = txn.harvest_get_room(room_id).await? {
-            existing.id
-        } else {
-            HarvestId::new()
-        };
+        // keep old harvests around, but only one may be running at a time
+        if let Some(existing) = txn.harvest_get_room(room_id).await? {
+            if !existing.status.is_finished() {
+                return Err(ApiError::from_code(ErrorCode::HarvestInProgress).into());
+            }
+        }
 
         let harvest = Harvest {
-            id: harvest_id,
+            id: HarvestId::new(),
             requester_id,
             queued_at: Time::now_utc(),
             status: HarvestStatus::Queued,
@@ -149,14 +150,15 @@ impl ServiceHarvest {
     ) -> Result<Harvest> {
         let mut txn = self.globals.begin().await?;
 
-        let harvest_id = if let Some(existing) = txn.harvest_get_user(user_id).await? {
-            existing.id
-        } else {
-            HarvestId::new()
-        };
+        // keep old harvests around, but only one may be running at a time
+        if let Some(existing) = txn.harvest_get_user(user_id).await? {
+            if !existing.status.is_finished() {
+                return Err(ApiError::from_code(ErrorCode::HarvestInProgress).into());
+            }
+        }
 
         let harvest = Harvest {
-            id: harvest_id,
+            id: HarvestId::new(),
             requester_id,
             queued_at: Time::now_utc(),
             status: HarvestStatus::Queued,
