@@ -916,6 +916,30 @@ impl DataMessage for Postgres {
         )
     }
 
+    async fn message_version_list_many(
+        &mut self,
+        channel_id: ChannelId,
+        messages: &[MessageId],
+        after: Option<MessageVerId>,
+        limit: u16,
+    ) -> Result<Vec<MessageVersion>> {
+        let mut conn = self.acquire().await?;
+        let messages: Vec<Uuid> = messages.iter().map(|id| id.into_inner()).collect();
+
+        let rows = query_file_as!(
+            DbMessageVersion,
+            "sql/message_version_list_many.sql",
+            *channel_id,
+            &messages,
+            after.map(|id| *id),
+            limit as i32
+        )
+        .fetch_all(conn.ext())
+        .await?;
+
+        Ok(rows.into_iter().map(Into::into).collect())
+    }
+
     async fn message_replies(
         &mut self,
         channel_id: ChannelId,

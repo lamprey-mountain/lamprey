@@ -21,6 +21,10 @@
 //! every `*.ndjson` file contains one json value per line. `media` objects
 //! embedded in messages are replaced by their id, the full object is in
 //! `media.ndjson`.
+//!
+//! user harvests only contain the messages the user has sent (and their
+//! versions), plus, if requested, the reactions the user has sent in channels
+//! that are part of the archive.
 
 use lamprey_macros::record;
 

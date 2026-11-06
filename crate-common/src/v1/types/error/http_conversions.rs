@@ -23,6 +23,7 @@ impl ErrorCode {
             ErrorCode::UnknownInvite => StatusCode::NOT_FOUND,
             ErrorCode::UnknownApplication => StatusCode::NOT_FOUND,
             ErrorCode::UnknownHarvest => StatusCode::NOT_FOUND,
+            ErrorCode::HarvestInProgress => StatusCode::CONFLICT,
             ErrorCode::UnknownAutomodRule => StatusCode::NOT_FOUND,
             ErrorCode::UnknownWebhook => StatusCode::NOT_FOUND,
             ErrorCode::UnknownRoomTemplate => StatusCode::NOT_FOUND,

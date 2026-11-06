@@ -46,6 +46,8 @@ pub struct ReactionSent {
     pub channel_id: ChannelId,
     /// the reaction key
     pub key: String,
+    pub user_id: UserId,
+    pub created_at: Time,
 }
 
 #[async_trait]
@@ -750,6 +752,14 @@ pub trait DataReaction {
         &mut self,
         user_id: UserId,
         after: Option<(MessageId, String)>,
+        limit: u16,
+    ) -> Result<Vec<ReactionSent>>;
+    /// list all reactions on the given messages, paginated by (message_id, key, user_id)
+    async fn reaction_list_many(
+        &mut self,
+        channel_id: ChannelId,
+        messages: &[MessageId],
+        after: Option<(MessageId, String, UserId)>,
         limit: u16,
     ) -> Result<Vec<ReactionSent>>;
 }

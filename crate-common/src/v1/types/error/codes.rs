@@ -165,6 +165,10 @@ pub enum ErrorCode {
     #[error("unknown harvest")]
     UnknownHarvest,
 
+    /// a harvest for this target is already running
+    #[error("a harvest for this target is already running")]
+    HarvestInProgress,
+
     /// unknown automod rule
     #[error("unknown automod rule")]
     UnknownAutomodRule,

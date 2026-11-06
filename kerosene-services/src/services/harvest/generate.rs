@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::str::FromStr;
 
 use async_tempfile::TempFile;
 use common::v1::types::MediaId;
@@ -187,11 +188,16 @@ struct Extract<'a> {
     /// audit log entries of the exported user (user harvests)
     audit: Vec<AuditLogEntry>,
 
+    /// channels that are part of the archive
+    channels: BTreeSet<ChannelId>,
+
+    /// user harvests: the ids of the exported messages, per channel
+    message_ids: BTreeMap<ChannelId, Vec<MessageId>>,
+
     /// user harvests: lines are buffered per channel, because every channel
     /// directory can only be written once
     // PERF: maybe it would be better to write to plain files, then create the zip later?
     buffered_messages: BTreeMap<ChannelId, Vec<u8>>,
-    buffered_versions: BTreeMap<ChannelId, Vec<u8>>,
     buffered_reactions: BTreeMap<ChannelId, Vec<u8>>,
 }
 
@@ -206,8 +212,9 @@ impl<'a> Extract<'a> {
             room: None,
             applications: Vec::new(),
             audit: Vec::new(),
+            channels: BTreeSet::new(),
+            message_ids: BTreeMap::new(),
             buffered_messages: BTreeMap::new(),
-            buffered_versions: BTreeMap::new(),
             buffered_reactions: BTreeMap::new(),
         }
     }
@@ -222,13 +229,9 @@ impl<'a> Extract<'a> {
             )
             .await?;
         }
-        for (channel_id, buf) in std::mem::take(&mut self.buffered_versions) {
-            write_buffer(
-                self.archive,
-                &format!("channels/{channel_id}/versions.ndjson"),
-                buf,
-            )
-            .await?;
+        let message_ids = std::mem::take(&mut self.message_ids);
+        for (channel_id, ids) in message_ids {
+            self.channel_versions(channel_id, &ids).await?;
         }
         for (channel_id, buf) in std::mem::take(&mut self.buffered_reactions) {
             write_buffer(
@@ -387,6 +390,7 @@ impl<'a> Extract<'a> {
 
         for mut channel in channels {
             channel.preferences = channel_prefs.remove(&channel.id);
+            self.channels.insert(channel.id);
             self.channel_file(&channel).await?;
         }
 
@@ -403,6 +407,10 @@ impl<'a> Extract<'a> {
 
                 for message in &res.items {
                     self.users.insert(message.author_id, None);
+                    self.message_ids
+                        .entry(message.channel_id)
+                        .or_default()
+                        .push(message.id);
                     let data = normalize(message, &mut self.media)?;
                     self.buffer_message(message.channel_id, &data)?;
                 }
@@ -411,6 +419,44 @@ impl<'a> Extract<'a> {
                     break;
                 }
                 from = res.items.last().map(|m| m.id);
+            }
+        }
+
+        // reactions this user has sent
+        if create.include_reactions {
+            let mut after = None;
+            loop {
+                let items = {
+                    let mut db = self.globals.begin_read().await?;
+                    db.reaction_list_by_author(user_id, after.clone(), PAGE_SIZE)
+                        .await?
+                };
+
+                for item in &items {
+                    // only channels that are part of this archive
+                    // TODO: return ALL reactions, even if the user lost access to the channel its in
+                    if !self.channels.contains(&item.channel_id) {
+                        continue;
+                    }
+                    self.users.insert(item.user_id, None);
+                    push_line(
+                        self.buffered_reactions
+                            .entry(item.channel_id)
+                            .or_default(),
+                        &ReactionArchive {
+                            message_id: item.message_id,
+                            key: reaction_key(&item.key),
+                            user_id: item.user_id,
+                            created_at: item.created_at,
+                        },
+                    )?;
+                }
+
+                let Some(last) = items.last() else { break };
+                if items.len() < PAGE_SIZE as usize {
+                    break;
+                }
+                after = Some((last.message_id, last.key.clone()));
             }
         }
 
@@ -481,6 +527,22 @@ impl<'a> Extract<'a> {
             self.users.insert(member.user_id, None);
         }
 
+        // only export channels the requester is allowed to see
+        let mut visible = Vec::new();
+        for channel in channels {
+            let perms = self
+                .globals
+                .services()
+                .perms
+                .for_channel3(Some(requester_id), channel.id)
+                .await?;
+            if perms.visible {
+                visible.push(channel);
+            }
+        }
+        let channels = visible;
+        self.channels.extend(channels.iter().map(|c| c.id));
+
         // bans, only if the requester is allowed to see them
         let perms = self
             .globals
@@ -512,6 +574,7 @@ impl<'a> Extract<'a> {
 
         self.room_file(room_id, &room, &roles, &channels, &members, &bans)
             .await?;
+        self.room = Some(room);
 
         // the audit log of this room
         let mut out = self
@@ -546,15 +609,12 @@ impl<'a> Extract<'a> {
         }
         out.finish().await?;
 
-        // FIXME: don't include channels the requester can't see
         for channel in &channels {
             self.channel_file(channel).await?;
 
             if create.include_messages {
-                self.channel_messages(room_id, channel.id, create.include_reactions)
+                self.channel_messages(channel.id, create.include_reactions)
                     .await?;
-            } else if create.include_reactions {
-                self.channel_reactions(room_id, channel.id, &[]).await?;
             }
         }
 
@@ -627,7 +687,6 @@ impl<'a> Extract<'a> {
     /// write messages, versions and reactions of a channel
     async fn channel_messages(
         &mut self,
-        room_id: RoomId,
         channel_id: ChannelId,
         include_reactions: bool,
     ) -> Result<()> {
@@ -661,106 +720,98 @@ impl<'a> Extract<'a> {
         }
         out.finish().await?;
 
-        // every version of the exported messages
-        let mut out = self
-            .archive
-            .ndjson(&format!("channels/{channel_id}/versions.ndjson"))
-            .await?;
-        for message_id in &message_ids {
-            let mut from = None;
-            loop {
-                // PERF: this is horrible
-                let res = page_of(
-                    self.globals,
-                    move |db, q| db.message_version_list(channel_id, *message_id, q),
-                    from,
-                )
-                .await?;
-
-                for version in &res.items {
-                    if let Some(author_id) = version.author_id {
-                        self.users.insert(author_id, None);
-                    }
-                    out.line(&normalize(version, &mut self.media)?).await?;
-                }
-
-                if !res.has_more || res.items.is_empty() {
-                    break;
-                }
-                from = res.items.last().map(|v: &MessageVersion| v.version_id);
-            }
-        }
-        out.finish().await?;
+        self.channel_versions(channel_id, &message_ids).await?;
 
         if include_reactions {
-            self.channel_reactions(room_id, channel_id, &message_ids)
-                .await?;
+            self.channel_reactions(channel_id, &message_ids).await?;
         }
 
         Ok(())
     }
 
-    /// write reactions of a channel
-    async fn channel_reactions(
+    /// write `channels/<channel_id>/versions.ndjson` for the given messages
+    async fn channel_versions(
         &mut self,
-        _room_id: RoomId,
         channel_id: ChannelId,
         message_ids: &[MessageId],
     ) -> Result<()> {
+        if message_ids.is_empty() {
+            return Ok(());
+        }
+
+        let mut out = self
+            .archive
+            .ndjson(&format!("channels/{channel_id}/versions.ndjson"))
+            .await?;
+        let mut after = None;
+        loop {
+            let versions = {
+                let mut db = self.globals.begin_read().await?;
+                db.message_version_list_many(channel_id, message_ids, after, PAGE_SIZE)
+                    .await?
+            };
+
+            for version in &versions {
+                if let Some(author_id) = version.author_id {
+                    self.users.insert(author_id, None);
+                }
+                out.line(&normalize(version, &mut self.media)?).await?;
+            }
+
+            let Some(last) = versions.last() else {
+                break;
+            };
+            if versions.len() < PAGE_SIZE as usize {
+                break;
+            }
+            after = Some(last.version_id);
+        }
+        out.finish().await?;
+
+        Ok(())
+    }
+
+    /// write `channels/<channel_id>/reactions.ndjson` for the given messages
+    async fn channel_reactions(
+        &mut self,
+        channel_id: ChannelId,
+        message_ids: &[MessageId],
+    ) -> Result<()> {
+        if message_ids.is_empty() {
+            return Ok(());
+        }
+
         let mut out = self
             .archive
             .ndjson(&format!("channels/{channel_id}/reactions.ndjson"))
             .await?;
-
-        for message_id in message_ids {
-            let mut db = self.globals.begin_read().await?;
-            let message = match db.message_get(channel_id, *message_id).await {
-                Ok(message) => message,
-                Err(e) => {
-                    warn!("skipping reactions of missing message {message_id}: {e:?}");
-                    continue;
-                }
+        let mut after = None;
+        loop {
+            let reactions = {
+                let mut db = self.globals.begin_read().await?;
+                db.reaction_list_many(channel_id, message_ids, after, PAGE_SIZE)
+                    .await?
             };
-            let keys: Vec<ReactionKeyParam> = message
-                .reactions
-                .0
-                .iter()
-                .map(|c| ReactionKeyParam::from(c.key.clone()))
-                .collect();
-            drop(db);
 
-            for key in keys {
-                let mut from = None;
-                loop {
-                    let reaction_key = key.clone();
-                    let res = page_of(
-                        self.globals,
-                        move |db, q| {
-                            db.reaction_list(channel_id, *message_id, reaction_key.clone(), q)
-                        },
-                        from,
-                    )
-                    .await?;
-
-                    for item in &res.items {
-                        self.users.insert(item.user_id, None);
-                        out.line(&ReactionArchive {
-                            message_id: *message_id,
-                            key: key.clone(),
-                            user_id: item.user_id,
-                            created_at: item.created_at,
-                        })
-                        .await?;
-                    }
-
-                    if !res.has_more || res.items.is_empty() {
-                        break;
-                    }
-                    from = res.items.last().map(|r: &ReactionListItem| r.user_id);
-                }
+            for reaction in &reactions {
+                self.users.insert(reaction.user_id, None);
+                out.line(&ReactionArchive {
+                    message_id: reaction.message_id,
+                    key: reaction_key(&reaction.key),
+                    user_id: reaction.user_id,
+                    created_at: reaction.created_at,
+                })
+                .await?;
             }
-        }
 
+            let Some(last) = reactions.last() else {
+                break;
+            };
+            if reactions.len() < PAGE_SIZE as usize {
+                break;
+            }
+            after = Some((last.message_id, last.key.clone(), last.user_id));
+        }
         out.finish().await?;
 
         Ok(())
@@ -770,6 +821,11 @@ impl<'a> Extract<'a> {
     fn buffer_message(&mut self, channel_id: ChannelId, data: &serde_json::Value) -> Result<()> {
         push_line(self.buffered_messages.entry(channel_id).or_default(), data)
     }
+}
+
+/// parse a reaction key that was stored in the database
+fn reaction_key(key: &str) -> ReactionKeyParam {
+    ReactionKeyParam::from_str(key).unwrap_or_else(|_| ReactionKeyParam::Text(key.to_owned()))
 }
 
 /// write a buffered ndjson file

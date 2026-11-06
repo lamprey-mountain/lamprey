@@ -298,7 +298,7 @@ impl DataReaction for Postgres {
         let mut conn = self.acquire().await?;
         let rows = query!(
             r#"
-            SELECT message_id, channel_id, key
+            SELECT message_id, channel_id, key, user_id, created_at
             FROM reaction
             WHERE user_id = $1
               AND deleted_seq IS NULL
@@ -320,6 +320,51 @@ impl DataReaction for Postgres {
                 message_id: r.message_id.into(),
                 channel_id: r.channel_id.into(),
                 key: r.key,
+                user_id: r.user_id.into(),
+                created_at: r.created_at.into(),
+            })
+            .collect())
+    }
+
+    async fn reaction_list_many(
+        &mut self,
+        channel_id: ChannelId,
+        messages: &[MessageId],
+        after: Option<(MessageId, String, UserId)>,
+        limit: u16,
+    ) -> Result<Vec<ReactionSent>> {
+        let mut conn = self.acquire().await?;
+        let messages: Vec<Uuid> = messages.iter().map(|id| id.into_inner()).collect();
+
+        let rows = query!(
+            r#"
+            SELECT message_id, channel_id, key, user_id, created_at
+            FROM reaction
+            WHERE channel_id = $1
+              AND message_id = ANY($2)
+              AND deleted_seq IS NULL
+              AND ($3::uuid IS NULL OR (message_id, key, user_id) > ($3, $4, $5))
+            ORDER BY message_id, key, user_id
+            LIMIT $6
+            "#,
+            *channel_id,
+            &messages,
+            after.as_ref().map(|(m, _, _)| **m),
+            after.as_ref().map(|(_, k, _)| k.clone()),
+            after.as_ref().map(|(_, _, u)| **u),
+            limit as i32
+        )
+        .fetch_all(conn.ext())
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| ReactionSent {
+                message_id: r.message_id.into(),
+                channel_id: r.channel_id.into(),
+                key: r.key,
+                user_id: r.user_id.into(),
+                created_at: r.created_at.into(),
             })
             .collect())
     }
