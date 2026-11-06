@@ -9,6 +9,7 @@ import {
 	type Resource,
 } from "solid-js";
 import type { ApiDB } from "@/lib/sync/db";
+import { idbDelete, idbGet, idbPut, idbPutMany } from "@/lib/sync/idb-sync";
 import { logger } from "@/utils/logger";
 import type { RootStore } from "./Store";
 
@@ -183,7 +184,8 @@ export abstract class BaseService<T> {
 
 			if (this.db && this.cacheName) {
 				try {
-					const cached = await this.db.get(
+					const cached = await idbGet<T>(
+						this.db,
 						this.cacheName,
 						this.getDbKey(cacheKey),
 					);
@@ -249,7 +251,7 @@ export abstract class BaseService<T> {
 		this.afterUpsert(prepared);
 
 		if (this.db && this.cacheName) {
-			this.db.put(this.cacheName, prepared).catch((e) => {
+			idbPut(this.db, this.cacheName, prepared).catch((e) => {
 				logger.for("idb").warn(`Failed to write to ${this.cacheName}`, {
 					key: this.getKey(prepared),
 					error: e,
@@ -277,23 +279,12 @@ export abstract class BaseService<T> {
 
 		if (db && storeName) {
 			// run in background
-			(async () => {
-				try {
-					const tx = db.transaction(storeName, "readwrite");
-					const store = tx.objectStore(storeName);
-
-					for (const item of preparedItems) {
-						store.put(item);
-					}
-
-					await tx.done;
-				} catch (e) {
-					logger.for("idb").error(`Failed to bulk write to ${storeName}`, {
-						count: preparedItems.length,
-						error: e,
-					});
-				}
-			})();
+			idbPutMany(db, storeName, preparedItems).catch((e) => {
+				logger.for("idb").error(`Failed to bulk write to ${storeName}`, {
+					count: preparedItems.length,
+					error: e,
+				});
+			});
 		}
 	}
 
@@ -301,6 +292,15 @@ export abstract class BaseService<T> {
 		const item = this.cache.get(id);
 		this.cache.delete(id);
 		this.afterDelete(id, item);
+
+		if (this.db && this.cacheName) {
+			idbDelete(this.db, this.cacheName, this.getDbKey(id)).catch((e) => {
+				logger.for("idb").warn(`Failed to delete from ${this.cacheName}`, {
+					key: this.getDbKey(id),
+					error: e,
+				});
+			});
+		}
 	}
 
 	clear() {
