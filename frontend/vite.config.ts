@@ -104,5 +104,7 @@ export default defineConfig({
 	},
 	optimizeDeps: {
 		exclude: ["@lamprey/emoji", "@lamprey/markdown"],
+		// imported from a worker, which the dep scanner doesn't crawl
+		include: ["zxcvbn"],
 	},
 });
