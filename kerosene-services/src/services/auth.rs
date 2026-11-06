@@ -158,6 +158,7 @@ impl ServiceAuth {
         let secret = self.generate_totp_secret();
 
         let mut txn = self.state.begin().await?;
+        txn.auth_totp_recovery_delete_all(user_id).await?;
         txn.auth_totp_set(user_id, Some(secret.clone()), false)
             .await?;
         txn.commit().await?;
