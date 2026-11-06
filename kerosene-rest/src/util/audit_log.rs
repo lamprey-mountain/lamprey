@@ -6,7 +6,9 @@ use axum::{
     middleware::Next,
 };
 use common::{
-    v1::types::{AuditLogEntry, AuditLogEntryStatus, AuditLogEntryType, RoomId, util::Time},
+    v1::types::{
+        AuditLogEntry, AuditLogEntryStatus, AuditLogEntryType, MessageSync, RoomId, util::Time,
+    },
     v2::types::{ApplicationId, AuditLogEntryId, SessionId, UserId},
 };
 use std::sync::Mutex;
@@ -153,6 +155,7 @@ pub async fn middleware(
         let res = async {
             let mut txn = globals.begin().await.cast_internal()?;
             let ended_at = Time::now_utc();
+            let mut entries = Vec::with_capacity(state.pending_entries.len());
 
             for pending in state.pending_entries {
                 let entry = AuditLogEntry {
@@ -170,10 +173,25 @@ pub async fn middleware(
                     application_id: pending.actor.application_id,
                 };
 
-                txn.audit_logs_room_append(entry).await.cast_internal()?;
+                txn.audit_logs_room_append(entry.clone())
+                    .await
+                    .cast_internal()?;
+                entries.push(entry);
             }
 
             txn.commit().await.cast_internal()?;
+
+            // only notify sync clients once the entries are persisted
+            for entry in entries {
+                let res = globals
+                    .messaging()
+                    .broadcast_room(entry.room_id, MessageSync::AuditLogEntryCreate { entry })
+                    .await;
+                if let Err(err) = res {
+                    error!("failed to broadcast audit log entry: {err:?}");
+                }
+            }
+
             ServerResult::Ok(())
         };
 
