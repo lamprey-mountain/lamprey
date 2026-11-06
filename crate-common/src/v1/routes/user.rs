@@ -299,28 +299,6 @@ pub mod harvest_create {
     pub struct Response {}
 }
 
-// TODO: remove
-/// Harvest download
-#[endpoint(
-    get,
-    path = "/internal/harvest/{harvest_id}/{token}/download",
-    tags = ["user"],
-    response(OK, description = "success"),
-)]
-pub mod harvest_download {
-    use crate::v1::types::HarvestId;
-
-    pub struct Request {
-        #[path]
-        pub harvest_id: HarvestId,
-
-        #[path]
-        pub token: String,
-    }
-
-    pub struct Response {}
-}
-
 /// User search
 #[endpoint(
     post,

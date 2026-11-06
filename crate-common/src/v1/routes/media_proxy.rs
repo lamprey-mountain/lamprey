@@ -280,3 +280,40 @@ pub mod track_get {
         pub body: Body,
     }
 }
+
+/// Fetch harvest archive
+///
+/// download a harvest archive
+#[endpoint(
+    get,
+    path = "/harvest/{harvest_id}/{token}/{filename}",
+    tags = ["cdn"],
+    response(OK, description = "success"),
+)]
+pub mod harvest_get {
+    use http::{HeaderMap, StatusCode};
+
+    use crate::{util::body::Body, v1::types::HarvestId};
+
+    pub struct Request {
+        #[path]
+        pub harvest_id: HarvestId,
+
+        #[path]
+        pub token: String,
+
+        #[path]
+        pub filename: String,
+    }
+
+    pub struct Response {
+        #[status]
+        pub status: StatusCode,
+
+        #[headers]
+        pub headers: HeaderMap,
+
+        #[body]
+        pub body: Body,
+    }
+}

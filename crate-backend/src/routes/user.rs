@@ -444,15 +444,6 @@ async fn harvest_create(
     Ok(Error::Unimplemented)
 }
 
-/// Harvest download
-#[handler(routes::harvest_download)]
-async fn harvest_download(
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::harvest_download::Request,
-) -> Result<impl IntoResponse> {
-    Ok(Error::Unimplemented)
-}
-
 /// User search
 #[handler(routes::user_search)]
 async fn user_search(
@@ -486,6 +477,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(user_list))
         .routes(routes2!(harvest_get))
         .routes(routes2!(harvest_create))
-        .routes(routes2!(harvest_download))
         .routes(routes2!(user_search))
 }
