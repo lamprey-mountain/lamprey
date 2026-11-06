@@ -3,6 +3,7 @@ import {
 	deleteDB,
 	type IDBPDatabase,
 	type IDBPTransaction,
+	openDB,
 	type StoreNames,
 } from "idb";
 import type {
@@ -129,7 +130,16 @@ export interface ApiDB extends DBSchema {
 		key: [string, number];
 		indexes: { run_id: string };
 	};
+	sync_meta: {
+		value: SyncMeta;
+		key: string;
+	};
 }
+
+export type SyncMeta = {
+	key: string;
+	value: unknown;
+};
 
 interface IDBMessageRange {
 	/** random uuid for this range */
@@ -205,6 +215,12 @@ export const migrations: Array<Migration> = [
 		},
 	},
 	{
+		description: "store for shared sync worker metadata",
+		migrate(db) {
+			db.createObjectStore("sync_meta", { keyPath: "key" });
+		},
+	},
+	{
 		description: "stores for scripts, runs, and logs",
 		migrate(db) {
 			const script = db.createObjectStore("script", { keyPath: "id" });
@@ -220,6 +236,16 @@ export const migrations: Array<Migration> = [
 		},
 	},
 ];
+
+export function openApiDb() {
+	return openDB<ApiDB>("api", migrations.length, {
+		upgrade(db, oldVersion, _newVersion, txn) {
+			for (let i = oldVersion; i < migrations.length; i++) {
+				migrations[i].migrate(db, txn);
+			}
+		},
+	});
+}
 
 /** Clears all data from all object stores in the database */
 export async function clearApiDatabase(db: IDBPDatabase<ApiDB>) {
