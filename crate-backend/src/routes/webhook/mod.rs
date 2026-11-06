@@ -13,7 +13,7 @@ use common::v1::types::{
     pagination::{PaginationQuery, PaginationResponse},
     sync::MessageSync,
     util::Changes,
-    webhook::{Webhook, WebhookCreate, WebhookUpdate},
+    webhook::{Webhook, WebhookCreate, WebhookInfo, WebhookUpdate},
 };
 use common::{
     v1::types::application::Scope,
@@ -194,7 +194,7 @@ async fn webhook_get(
     ),
     tags = ["webhook"],
     responses(
-        (status = OK, body = Webhook, description = "Get webhook success"),
+        (status = OK, body = WebhookInfo, description = "Get webhook success"),
     )
 )]
 async fn webhook_get_with_token(
@@ -202,7 +202,7 @@ async fn webhook_get_with_token(
     State(s): State<Arc<ServerState>>,
 ) -> Result<impl IntoResponse> {
     let webhook = s.data().webhook_get_with_token(webhook_id, &token).await?;
-    Ok(Json(webhook))
+    Ok(Json(WebhookInfo::from(webhook)))
 }
 
 /// Webhook delete

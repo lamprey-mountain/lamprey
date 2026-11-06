@@ -116,11 +116,11 @@ pub mod webhook_get {
     get,
     path = "/webhook/{webhook_id}/{token}",
     tags = ["webhook"],
-    response(OK, body = Webhook, description = "Get webhook success"),
+    response(OK, body = WebhookInfo, description = "Get webhook success"),
 )]
 pub mod webhook_get_with_token {
     use crate::v1::types::WebhookId;
-    use crate::v1::types::webhook::Webhook;
+    use crate::v1::types::webhook::WebhookInfo;
 
     pub struct Request {
         #[path]
@@ -132,7 +132,7 @@ pub mod webhook_get_with_token {
 
     pub struct Response {
         #[json]
-        pub webhook: Webhook,
+        pub webhook: WebhookInfo,
     }
 }
 
