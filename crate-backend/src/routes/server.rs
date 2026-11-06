@@ -63,7 +63,7 @@ async fn server_info(
             registration: Some(ServerRegistration { enabled: true }),
             auth: Some(ServerAuth {
                 supports_totp: true,
-                supports_webauthn: false,
+                supports_webauthn: true,
                 oauth_providers: s
                     .config
                     .oauth_provider
