@@ -29,6 +29,7 @@ import { ModalTimeout } from "./ModalTimeout.tsx";
 import { ModalTotpSetup } from "./ModalTotpSetup.tsx";
 import { ModalUserSettings } from "./ModalUserSettings.tsx";
 import { ModalViewChannelNickname } from "./ModalViewChannelNickname.tsx";
+import { ModalWebauthnRegister } from "./ModalWebauthnRegister.tsx";
 
 export const Modal = (
 	props: ParentProps<{
@@ -106,6 +107,12 @@ function isTotpSetup(
 	modal: ModalType,
 ): modal is Extract<ModalType, { type: "totp_setup" }> {
 	return modal.type === "totp_setup";
+}
+
+function isWebauthnRegister(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "webauthn_register" }> {
+	return modal.type === "webauthn_register";
 }
 
 function isLogout(
@@ -271,6 +278,9 @@ export function getModal(modal: ModalType) {
 	}
 	if (isTotpSetup(modal)) {
 		return <ModalTotpSetup account_name={modal.account_name} />;
+	}
+	if (isWebauthnRegister(modal)) {
+		return <ModalWebauthnRegister onRegistered={modal.onRegistered} />;
 	}
 	if (isLogout(modal)) {
 		return <ModalLogout />;

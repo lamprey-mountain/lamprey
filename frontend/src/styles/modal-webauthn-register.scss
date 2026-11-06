@@ -1,0 +1,63 @@
+@use "./util.scss" as *;
+
+.modal.webauthn-register {
+	& > .content > .inner {
+		width: min(380px, calc(100vw - 32px));
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+
+		& > h3 {
+			margin: 0;
+			color: $fg-100;
+			font-size: 1.05rem;
+			font-weight: 600;
+		}
+	}
+
+	.hint {
+		color: $fg-500;
+		font-size: 0.85em;
+		line-height: 1.35;
+	}
+
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+
+		& > input {
+			padding: 4px 6px;
+			border-radius: 4px;
+		}
+	}
+
+	.field-label {
+		display: block;
+		margin: 0 2px;
+	}
+
+	.error {
+		color: $error-500;
+		font-size: 0.85em;
+	}
+
+	// overrides the global .modal .bottom hack (negative margins + sticky)
+	> .bottom {
+		display: flex;
+		gap: 8px;
+		justify-content: flex-end;
+		margin: 0;
+		padding: 12px 0 0;
+		border-top: solid $sep-300 1px;
+		background: none;
+		position: static;
+
+		& > .button {
+			min-width: 72px;
+			padding: 4px 12px;
+			border-radius: 3px;
+			text-align: center;
+		}
+	}
+}

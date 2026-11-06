@@ -56,6 +56,10 @@ export type Modal =
 			account_name: string;
 	  }
 	| {
+			type: "webauthn_register";
+			onRegistered?: () => void;
+	  }
+	| {
 			type: "reset_password";
 	  }
 	| {

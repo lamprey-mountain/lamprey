@@ -8,8 +8,11 @@ import {
 	type VoidProps,
 } from "solid-js";
 import { useApi } from "@/api";
+import type { WebauthnAuthenticator } from "@/api/services/AuthService";
+import { Time } from "@/atoms/Time";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
+import { isWebauthnSupported, webauthnErrorMessage } from "@/lib/webauthn";
 
 export function Authentication(props: VoidProps<{ user: User }>) {
 	const [, modalctl] = useModals();
@@ -43,7 +46,14 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 			</Show>
 			<Show when={flags.has("auth_webauthn")}>
 				<h3>webauthn</h3>
-				<div>todo</div>
+				<Show
+					when={isWebauthnSupported()}
+					fallback={
+						<div class="dim">this browser does not support passkeys</div>
+					}
+				>
+					<Webauthn />
+				</Show>
 				<br />
 			</Show>
 			<div class="danger-zone">
@@ -130,16 +140,7 @@ function Totp(props: VoidProps<{ user: User }>) {
 	const api = useApi();
 	const [, modalctl] = useModals();
 
-	// TODO: remove this cast when the openapi schema is regenerated with
-	// the totp routes (mirror the cast in Oauth)
-	const [state, { refetch }] = createResource(async () => {
-		const { data } = await api.client.http.GET(
-			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
-			"/api/v1/auth/state" as any,
-			{},
-		);
-		return data as { has_totp?: boolean } | undefined;
-	});
+	const [state, { refetch }] = createResource(() => api.auth.state());
 
 	return (
 		<div class="totp">
@@ -171,46 +172,31 @@ function Totp(props: VoidProps<{ user: User }>) {
 function TotpManage(props: VoidProps<{ onDisabled: () => void }>) {
 	const api = useApi();
 
-	const [codes, codesCtl] = createResource(async () => {
-		const { data } = await api.client.http.GET(
-			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
-			"/api/v1/auth/totp/recovery-codes" as any,
-			{},
-		);
-		return data as
-			| { codes: { code: string; used_at?: string | null }[] }
-			| undefined;
-	});
+	const [codes, codesCtl] = createResource(() => api.auth.totpRecoveryCodes());
 	const [error, setError] = createSignal<string | null>(null);
 
 	const isSudo = () => api.session()?.status === "Sudo";
 
 	const rotate = async () => {
 		setError(null);
-		const { error: err } = await api.client.http.POST(
-			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
-			"/api/v1/auth/totp/recovery-codes" as any,
-			{},
-		);
-		if (err) {
+		try {
+			await api.auth.totpRotateRecoveryCodes();
+			codesCtl.refetch();
+		} catch (err) {
+			console.error("failed to rotate recovery codes", err);
 			setError("failed to rotate recovery codes");
-			return;
 		}
-		codesCtl.refetch();
 	};
 
 	const disable = async () => {
 		setError(null);
-		const { error: err } = await api.client.http.DELETE(
-			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
-			"/api/v1/auth/totp" as any,
-			{},
-		);
-		if (err) {
+		try {
+			await api.auth.totpDelete();
+			props.onDisabled();
+		} catch (err) {
+			console.error("failed to disable totp", err);
 			setError("failed to disable totp");
-			return;
 		}
-		props.onDisabled();
 	};
 
 	return (
@@ -241,7 +227,7 @@ function TotpManage(props: VoidProps<{ onDisabled: () => void }>) {
 			</Show>
 			<Show when={codes()}>
 				<div class="recovery-codes">
-					<For each={codes()?.codes}>
+					<For each={codes()}>
 						{(rc) => (
 							<div class="recovery-code">
 								<code>{rc.code}</code>
@@ -256,6 +242,103 @@ function TotpManage(props: VoidProps<{ onDisabled: () => void }>) {
 			<Show when={error()}>
 				<div class="error">{error()}</div>
 			</Show>
+		</div>
+	);
+}
+
+function Webauthn() {
+	const api = useApi();
+	const [, modalctl] = useModals();
+
+	const [authenticators, { refetch }] = createResource(() =>
+		api.auth.webauthnAuthenticators(),
+	);
+	const [error, setError] = createSignal<string | null>(null);
+
+	const isSudo = () => api.session()?.status === "Sudo";
+
+	const add = () =>
+		modalctl.open({ type: "webauthn_register", onRegistered: refetch });
+
+	const rename = (authenticator: WebauthnAuthenticator) => {
+		modalctl.prompt("authenticator name?", (name) => {
+			if (!name) return;
+			setError(null);
+			api.auth.webauthnRename(authenticator.id, name).then(refetch, (err) => {
+				console.error("failed to rename passkey", err);
+				setError(webauthnErrorMessage(err));
+			});
+		});
+	};
+
+	const remove = (authenticator: WebauthnAuthenticator) => {
+		modalctl.confirm(`delete "${authenticator.name}"?`, (confirmed) => {
+			if (!confirmed) return;
+			setError(null);
+			api.auth.webauthnDelete(authenticator.id).then(refetch, (err) => {
+				console.error("failed to delete passkey", err);
+				setError(webauthnErrorMessage(err));
+			});
+		});
+	};
+
+	return (
+		<div class="webauthn">
+			<Show when={authenticators.error}>
+				{(err) => <div class="error">{webauthnErrorMessage(err())}</div>}
+			</Show>
+			<Show
+				when={authenticators()}
+				fallback={<div class="dim">loading...</div>}
+			>
+				<Show
+					when={authenticators()?.length}
+					fallback={<div class="dim">no passkeys registered</div>}
+				>
+					<div class="authenticator-list">
+						<For each={authenticators()}>
+							{(authenticator) => (
+								<div class="authenticator">
+									<div style="flex:1">
+										<b>{authenticator.name}</b> — added{" "}
+										<Time date={new Date(authenticator.created_at)} />
+									</div>
+									<menu>
+										<button
+											type="button"
+											class="button"
+											classList={{ disabled: !isSudo() }}
+											data-tooltip={!isSudo() ? "Requires sudo" : undefined}
+											onClick={() => rename(authenticator)}
+										>
+											rename
+										</button>
+										<button
+											type="button"
+											class="button danger"
+											classList={{ disabled: !isSudo() }}
+											data-tooltip={!isSudo() ? "Requires sudo" : undefined}
+											onClick={() => remove(authenticator)}
+										>
+											delete
+										</button>
+									</menu>
+								</div>
+							)}
+						</For>
+					</div>
+				</Show>
+			</Show>
+			<button
+				type="button"
+				class="button primary"
+				classList={{ disabled: !isSudo() }}
+				data-tooltip={!isSudo() ? "Requires sudo" : undefined}
+				onClick={add}
+			>
+				add passkey
+			</button>
+			<Show when={error()}>{(err) => <div class="error">{err()}</div>}</Show>
 		</div>
 	);
 }
@@ -365,10 +448,7 @@ function Oauth() {
 	});
 
 	const [enabledOauthProviders, { refetch: refetchOauthProviders }] =
-		createResource(async () => {
-			const { data } = await api.client.http.GET("/api/v1/auth/state", {});
-			return (data as any)?.oauth_providers ?? [];
-		});
+		createResource(async () => (await api.auth.state()).oauth_providers);
 
 	const connectOauth = async (id: string) => {
 		const url = await api.auth.oauthUrl(id);

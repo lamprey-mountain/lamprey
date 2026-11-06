@@ -8,6 +8,7 @@ import {
 	Show,
 } from "solid-js";
 import { useApi } from "@/api";
+import type { TotpRecoveryCode } from "@/api/services/AuthService";
 import { CheckboxOptionWithLabel } from "@/atoms/CheckboxOption";
 import { OtpInput } from "@/atoms/OtpInput";
 import { useModals } from "@/contexts/modal";
@@ -20,9 +21,7 @@ export const ModalTotpSetup = (props: { account_name: string }) => {
 
 	const [secret, setSecret] = createSignal<string | null>(null);
 	const [code, setCode] = createSignal("");
-	const [codes, setCodes] = createSignal<
-		{ code: string; used_at?: string | null }[]
-	>([]);
+	const [codes, setCodes] = createSignal<TotpRecoveryCode[]>([]);
 	const [done, setDone] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
 	const [busy, setBusy] = createSignal(false);
@@ -32,18 +31,12 @@ export const ModalTotpSetup = (props: { account_name: string }) => {
 
 	onMount(() => {
 		void (async () => {
-			// TODO: remove these casts when the openapi schema is regenerated
-			// with the totp routes (mirror the casts in Oauth)
-			const { data, error: err } = await api.client.http.POST(
-				// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
-				"/api/v1/auth/totp/init" as any,
-				{},
-			);
-			if (err) {
-				setError(`failed to start: ${err.message ?? "unknown error"}`);
-				return;
+			try {
+				setSecret(await api.auth.totpInit());
+			} catch (err) {
+				console.error("failed to start totp setup", err);
+				setError("failed to start: unknown error");
 			}
-			setSecret((data as { secret: string } | undefined)?.secret ?? null);
 		})();
 	});
 
@@ -79,30 +72,26 @@ export const ModalTotpSetup = (props: { account_name: string }) => {
 	const enable = async () => {
 		setError(null);
 		setBusy(true);
-		const { error: err } = await api.client.http.POST(
-			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
-			"/api/v1/auth/totp/enable" as any,
-			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
-			{ body: { code: code() } } as any,
-		);
-		setBusy(false);
-		if (err) {
+
+		try {
+			await api.auth.totpEnable(code());
+		} catch (err) {
+			console.error("failed to enable totp", err);
 			setError("invalid code");
+			setBusy(false);
 			return;
 		}
-		const { data, error: codesErr } = await api.client.http.GET(
-			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
-			"/api/v1/auth/totp/recovery-codes" as any,
-			{},
-		);
-		if (codesErr) {
+
+		try {
+			setCodes(await api.auth.totpRecoveryCodes());
+		} catch (err) {
+			console.error("failed to load recovery codes", err);
 			setError("failed to load recovery codes");
+			setBusy(false);
 			return;
 		}
-		setCodes(
-			(data as { codes: { code: string; used_at?: string | null }[] }).codes ??
-				[],
-		);
+
+		setBusy(false);
 		setSavedCodes(false);
 		setDone(true);
 	};

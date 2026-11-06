@@ -140,6 +140,34 @@
 		justify-content: end;
 	}
 
+	.webauthn {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		align-items: flex-start;
+
+		.authenticator-list {
+			border: solid $sep-300 1px;
+			background: $bg-150;
+			width: 100%;
+
+			& > .authenticator {
+				display: flex;
+				align-items: center;
+				padding: 4px 8px;
+
+				&:hover {
+					background: #0004;
+				}
+
+				& > menu {
+					display: flex;
+					gap: 8px;
+				}
+			}
+		}
+	}
+
 	.oauth {
 		border: solid $sep-300 1px;
 		background: $bg-150;
