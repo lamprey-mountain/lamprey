@@ -24,13 +24,14 @@ export type PasswordStrengthScorer = {
 	 */
 	score(password: string, inputs: string[]): Promise<PasswordStrength | null>;
 
-	/** terminate the worker; pending scores never resolve */
+	/** terminate the worker; pending scores resolve with `null` */
 	dispose(): void;
 };
 
 export function createPasswordStrengthScorer(): PasswordStrengthScorer {
 	let worker: Worker | undefined;
 	let nextRequestId = 0;
+	const pending = new Set<() => void>();
 
 	function getWorker(): Worker {
 		if (worker) return worker;
@@ -56,27 +57,36 @@ export function createPasswordStrengthScorer(): PasswordStrengthScorer {
 			}
 
 			return new Promise((resolve) => {
-				function cleanup() {
+				let settled = false;
+
+				function settle(value: PasswordStrength | null) {
+					if (settled) return;
+					settled = true;
+					pending.delete(cancel);
 					w.removeEventListener("message", onMessage);
 					w.removeEventListener("error", onError);
+					resolve(value);
+				}
+
+				function cancel() {
+					settle(null);
 				}
 
 				function onMessage(e: MessageEvent<PasswordStrengthResponse>) {
 					if (e.data.id !== id) return;
-					cleanup();
-					resolve(e.data.strength);
+					settle(e.data.strength);
 				}
 
 				function onError(e: ErrorEvent) {
 					console.error("password strength worker failed:", e.message);
-					cleanup();
 					if (worker === w) {
 						w.terminate();
 						worker = undefined;
 					}
-					resolve(null);
+					settle(null);
 				}
 
+				pending.add(cancel);
 				w.addEventListener("message", onMessage);
 				w.addEventListener("error", onError);
 				w.postMessage({
@@ -88,6 +98,8 @@ export function createPasswordStrengthScorer(): PasswordStrengthScorer {
 		},
 
 		dispose() {
+			for (const cancel of [...pending]) cancel();
+			pending.clear();
 			worker?.terminate();
 			worker = undefined;
 		},
