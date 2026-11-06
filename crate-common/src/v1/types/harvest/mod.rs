@@ -1,12 +1,30 @@
+//! types related to harvests (data exports)
+//!
+//! the generated archive is a zip file, see [`archive`] for the layout and
+//! the types used inside it.
+//!
+//! ## user
+//!
+//! - the user itself
+//! - all user-specific data
+//! - all room data created by the user
+//! - all applications and users
+//! - all dm channels
+//!
+//! ## room
+//!
+//! - the room itself
+//! - all data in the room
+
+pub mod archive;
+
 use lamprey_macros::record;
+use url::Url;
 
 use crate::{
     util::registry::export_models,
-    v1::types::{HarvestId, RoomId, UserId, misc::Time},
-    v2::types::media::Media,
+    v1::types::{HarvestId, RoomId, UserId, misc::Time, misc::hashes::Hashes},
 };
-
-pub mod inside;
 
 /// how to create a harvest
 ///
@@ -81,7 +99,17 @@ pub enum HarvestStatus {
         started_at: Time,
         completed_at: Time,
         expires_at: Time,
-        media: Media,
+
+        /// url to download the archive
+        ///
+        /// `https://cdn/harvest/{harvest_id}/{token}/harvest-{yyyy-mm-dd}.zip`
+        url: Url,
+
+        /// size of the archive in bytes
+        size: u64,
+
+        /// hashes of the archive
+        hashes: Hashes,
     },
 
     /// the export was cancelled. try again, contact support if this keeps happening?

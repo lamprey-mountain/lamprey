@@ -514,8 +514,7 @@ pub enum MessageSync {
     },
 
     HarvestUpdate {
-        // TODO: make this a box
-        harvest: Harvest,
+        harvest: Box<Harvest>,
     },
 
     RoomMemberCreate {
