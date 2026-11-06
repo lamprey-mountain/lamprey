@@ -8,6 +8,11 @@ type StreamCacheEntry = {
 	id: string;
 };
 
+const noopStream: Stream = {
+	send() {},
+	close() {},
+};
+
 export class StreamManager {
 	private roomStreams: StreamCacheEntry[] = [];
 	private channelStreams: StreamCacheEntry[] = [];
@@ -15,6 +20,8 @@ export class StreamManager {
 	constructor(private client: WebtransportClient) {}
 
 	subscribeRoom(room_id: string, onSync: (sync: any) => void): Stream {
+		if (!this.client.isWebtransport) return noopStream;
+
 		const existing = this.roomStreams.find((s) => s.id === room_id);
 		if (existing) {
 			// Move to end (most recent)
@@ -41,6 +48,8 @@ export class StreamManager {
 	}
 
 	subscribeChannel(channel_id: string, onSync: (sync: any) => void): Stream {
+		if (!this.client.isWebtransport) return noopStream;
+
 		const existing = this.channelStreams.find((s) => s.id === channel_id);
 		if (existing) {
 			// Move to end (most recent)

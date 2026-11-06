@@ -211,9 +211,7 @@ export class RootStore {
 		this.scripts = new RedexesService(this, getDb);
 		this.scriptRuns = new RedexEvalsService(this, getDb);
 		this.scriptLogs = new RedexLogsService(this, getDb);
-		if (this.client.isWebtransport) {
-			this.streams = new StreamManager(this.client as WebtransportClient);
-		}
+		this.streams = new StreamManager(this.client as WebtransportClient);
 
 		this.voiceStates = new ReactiveMap();
 		this.typing = new ReactiveMap();

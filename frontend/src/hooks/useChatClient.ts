@@ -2,14 +2,13 @@ import { createEmitter } from "@solid-primitives/event-bus";
 import * as i18n from "@solid-primitives/i18n";
 import { ReactiveMap } from "@solid-primitives/map";
 import { useLocation } from "@solidjs/router";
-import { type IDBPDatabase, openDB } from "idb";
-import {
-	type ClientOptions,
-	createClient,
-	type MessageEnvelope,
-	type MessageReady,
-	type MessageSync,
-	type Preferences,
+import type { IDBPDatabase } from "idb";
+import type {
+	ClientOptions,
+	MessageEnvelope,
+	MessageReady,
+	MessageSync,
+	Preferences,
 } from "sdk";
 import {
 	createEffect,
@@ -34,7 +33,8 @@ import { registerDefaultSlashCommands } from "@/lib/commands/builtin.ts";
 import { SlashCommands } from "@/lib/commands/registry.ts";
 import type { Config } from "@/lib/config";
 import { flags } from "@/lib/flags";
-import { type ApiDB, migrations } from "@/lib/sync/db";
+import { createSharedClient } from "@/lib/sync/client";
+import { type ApiDB, openApiDb } from "@/lib/sync/db";
 import type { ActivityLogViewData } from "@/types/chat.ts";
 import { colors, logger } from "@/utils/logger";
 import { useMouseTracking } from "./useMouseTracking.ts";
@@ -88,22 +88,13 @@ export function useChatClient(config: Config) {
 		preferWebtransport: useWebtransport,
 	};
 
-	const client = createClient(options);
+	const client = createSharedClient(options);
 
 	const [db, setDb] = createSignal<IDBPDatabase<ApiDB> | undefined>();
 
 	(async () => {
 		try {
-			const database = await openDB<ApiDB>("api", migrations.length, {
-				upgrade(db, oldVersion, _newVersion, txn) {
-					const log = logger.for("idb");
-					for (let i = oldVersion; i < migrations.length; i++) {
-						const m = migrations[i];
-						m.migrate(db, txn);
-						log.info(m.description, undefined, "migrate");
-					}
-				},
-			});
+			const database = await openApiDb();
 			setDb(database);
 			logger.for("idb").debug("IndexedDB opened successfully");
 		} catch (e) {

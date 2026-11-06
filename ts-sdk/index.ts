@@ -23,3 +23,5 @@ export {
 } from "./core/uuid.ts";
 
 import "./client/shared-worker/client.ts";
+
+export { default as createFetch } from "openapi-fetch";
