@@ -82,7 +82,9 @@ impl ServiceAuth {
 
         self.verify_totp_code(&secret, code)?;
 
+        let codes = self.generate_recovery_codes();
         txn.auth_totp_set(user_id, Some(secret), true).await?;
+        txn.auth_totp_recovery_generate(user_id, &codes).await?;
         txn.commit().await?;
 
         Ok(Changes::new().change("has_totp", &false, &true).build())
