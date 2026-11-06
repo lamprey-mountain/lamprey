@@ -393,6 +393,12 @@ async fn room_member_add(
         globals.messaging().broadcast_room(req.room_id, msg).await?;
     }
 
+    if is_public_join && is_new_join {
+        srv.cache
+            .send_room_join(req.room_id, target_user_id, Some(res.clone()))
+            .await?;
+    }
+
     Ok(Json(res))
 }
 

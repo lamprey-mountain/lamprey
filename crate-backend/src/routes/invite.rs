@@ -336,7 +336,10 @@ async fn invite_use(
                 s.broadcast_room(
                     room_id,
                     auth.user.id,
-                    MessageSync::RoomMemberCreate { member, user },
+                    MessageSync::RoomMemberCreate {
+                        member: member.clone(),
+                        user,
+                    },
                 )
                 .await?;
             } else {
@@ -344,10 +347,18 @@ async fn invite_use(
                 s.broadcast_room(
                     room_id,
                     auth.user.id,
-                    MessageSync::RoomMemberUpdate { member, user },
+                    MessageSync::RoomMemberUpdate {
+                        member: member.clone(),
+                        user,
+                    },
                 )
                 .await?;
             }
+
+            // send the joining user the room's channels, roles, threads, etc.
+            srv.cache
+                .send_room_join(room_id, auth.user.id, Some(member))
+                .await?;
         }
         InviteTarget::Gdm { channel } => {
             let mut perms: Permissions2<CheckPermissions> = srv

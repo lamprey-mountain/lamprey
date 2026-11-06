@@ -330,6 +330,118 @@ impl ServiceCache {
             .filter_map(|r| r.transpose())
             .collect::<Result<Vec<_>>>()?;
 
+        self.generate_ambient_for_rooms(user_id, results).await
+    }
+
+    /// generate an ambient message for a user containing the state of a single room
+    ///
+    /// used to send a user information about a room they just joined
+    pub async fn generate_room_ambient_message(
+        &self,
+        user_id: UserId,
+        room_id: RoomId,
+        member: Option<RoomMember>,
+    ) -> Result<MessageSync> {
+        let srv = self.state.services();
+
+        if room_id == SERVER_ROOM_ID {
+            let perms = srv.perms.for_room(user_id, room_id).await?;
+            if !perms.has(Permission::ServerOversee) {
+                return Ok(MessageSync::Ambient {
+                    user_id,
+                    rooms: vec![],
+                    roles: vec![],
+                    channels: vec![],
+                    threads: vec![],
+                    room_members: vec![],
+                    config: self.preferences_get(user_id).await?,
+                });
+            }
+        }
+
+        let room = srv.rooms.get(room_id, Some(user_id)).await?;
+        let snapshot = self.load_room(room_id, true).await?;
+        let member = member.or_else(|| snapshot.get_member(&user_id).map(|m| m.member.clone()));
+
+        self.generate_ambient_for_rooms(user_id, vec![(room, snapshot, member)])
+            .await
+    }
+
+    /// send a user the initial sync state for a room they just joined
+    pub async fn send_room_join(
+        &self,
+        room_id: RoomId,
+        user_id: UserId,
+        member: Option<RoomMember>,
+    ) -> Result<()> {
+        let srv = self.state.services();
+        let messaging = self.state.messaging();
+
+        let ambient = self
+            .generate_room_ambient_message(user_id, room_id, member)
+            .await?;
+        messaging.broadcast_room(room_id, ambient).await?;
+
+        for (channel_id, typing_user_id, until) in srv.channels.typing_list() {
+            let Ok(perms) = srv.perms.for_channel3(Some(user_id), channel_id).await else {
+                continue;
+            };
+            if !perms.visible {
+                continue;
+            }
+            let channel = srv.channels.get(channel_id, None).await?;
+            if channel.room_id != Some(room_id) {
+                continue;
+            }
+            messaging
+                .broadcast_room(
+                    room_id,
+                    MessageSync::ChannelTyping {
+                        room_id: Some(room_id),
+                        channel_id,
+                        user_id: typing_user_id,
+                        until: until.into(),
+                    },
+                )
+                .await?;
+        }
+
+        for voice_state in srv.voice.state_list() {
+            let vs = voice_state.inner();
+            if vs.room_id != Some(room_id) {
+                continue;
+            }
+            let Ok(perms) = srv.perms.for_channel3(Some(user_id), vs.channel_id).await else {
+                continue;
+            };
+            let is_ours = user_id == vs.user_id;
+            if !perms.visible && !is_ours {
+                continue;
+            }
+            let mut vs = vs.clone();
+            if !is_ours {
+                vs.session_id = None;
+            }
+            messaging
+                .broadcast_room(
+                    room_id,
+                    MessageSync::VoiceState {
+                        user_id: vs.user_id,
+                        state: Some(vs),
+                        old_state: None,
+                    },
+                )
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    async fn generate_ambient_for_rooms(
+        &self,
+        user_id: UserId,
+        results: Vec<(Room, Arc<RoomSnapshot>, Option<RoomMember>)>,
+    ) -> Result<MessageSync> {
         let mut rooms = Vec::new();
         let mut room_members = Vec::new();
         let mut all_roles = Vec::new();
