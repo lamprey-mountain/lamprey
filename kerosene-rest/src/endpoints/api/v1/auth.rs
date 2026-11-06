@@ -1,6 +1,6 @@
 use common::v1::types::auth::{CaptchaChallenge, TotpInit, TotpRecoveryCodes};
 use common::v1::types::util::Changes;
-use common::v1::types::{AuditLogEntryType, SessionStatus};
+use common::v1::types::{AuditLogEntryType, Session, SessionStatus, UserId};
 use lamprey_backend_services::compat::types::EmailPurpose;
 
 use crate::prelude::*;
@@ -103,26 +103,57 @@ pub async fn totp_delete(
     Ok(routes::auth_totp_delete::Response { state })
 }
 
+/// get which user a session is bound to, rejecting expired sessions
+fn mfa_user_id(session: &Session) -> Result<UserId> {
+    let user_id = session.user_id().ok_or_else(|| {
+        ApiError::with_message(ErrorCode::MissingAuth, "session requires a user".to_owned())
+    })?;
+
+    if session.status.bound_expired() {
+        return Err(
+            ApiError::with_message(ErrorCode::MissingAuth, "session expired".to_owned()).into(),
+        );
+    }
+
+    Ok(user_id)
+}
+
 #[handler(routes::auth_totp_exec)]
 pub async fn totp_exec(
     req: Req<routes::auth_totp_exec::Endpoint>,
 ) -> Result<routes::auth_totp_exec::Response> {
-    let session_id = req.identity().ensure_session()?.id;
-    let user = req.identity().ensure_user()?;
+    let session = req.identity().ensure_session()?;
+    let session_id = session.id;
+    let user_id = mfa_user_id(session)?;
+    let was_unauthenticated = matches!(
+        session.status,
+        SessionStatus::Unauthorized | SessionStatus::Bound { .. }
+    );
 
     let state = req
         .services()
         .auth
-        .totp_exec(session_id, user.id, &req.inner().verification.code)
+        .totp_exec(session_id, user_id, &req.inner().verification.code)
         .await
         .cast_internal()?;
 
-    req.audit_log()
-        .push(
-            user.id.into_inner().into(),
-            AuditLogEntryType::AuthSudo { session_id },
+    // SessionLogin must be recorded before AuthSudo when this endpoint authenticates the session
+    let al = req.audit_log_as(user_id, session);
+    if was_unauthenticated {
+        al.push(
+            user_id.into_inner().into(),
+            AuditLogEntryType::SessionLogin {
+                user_id,
+                session_id,
+            },
         )
         .success();
+    }
+    al.push(
+        user_id.into_inner().into(),
+        AuditLogEntryType::AuthSudo { session_id },
+    )
+    .success();
 
     Ok(routes::auth_totp_exec::Response { state })
 }
@@ -178,22 +209,38 @@ pub async fn recovery_codes_rotate(
 pub async fn recovery_code_exec(
     req: Req<routes::auth_totp_recovery_exec::Endpoint>,
 ) -> Result<routes::auth_totp_recovery_exec::Response> {
-    let session_id = req.identity().ensure_session()?.id;
-    let user = req.identity().ensure_user()?;
+    let session = req.identity().ensure_session()?;
+    let session_id = session.id;
+    let user_id = mfa_user_id(session)?;
+    let was_unauthenticated = matches!(
+        session.status,
+        SessionStatus::Unauthorized | SessionStatus::Bound { .. }
+    );
 
     let state = req
         .services()
         .auth
-        .recovery_code_exec(session_id, user.id, &req.inner().verification.code)
+        .recovery_code_exec(session_id, user_id, &req.inner().verification.code)
         .await
         .cast_internal()?;
 
-    req.audit_log()
-        .push(
-            user.id.into_inner().into(),
-            AuditLogEntryType::AuthSudo { session_id },
+    // SessionLogin must be recorded before AuthSudo when this endpoint authenticates the session
+    let al = req.audit_log_as(user_id, session);
+    if was_unauthenticated {
+        al.push(
+            user_id.into_inner().into(),
+            AuditLogEntryType::SessionLogin {
+                user_id,
+                session_id,
+            },
         )
         .success();
+    }
+    al.push(
+        user_id.into_inner().into(),
+        AuditLogEntryType::AuthSudo { session_id },
+    )
+    .success();
 
     Ok(routes::auth_totp_recovery_exec::Response { state })
 }
@@ -252,7 +299,7 @@ pub async fn password_exec(
     req: Req<routes::auth_password_exec::Endpoint>,
 ) -> Result<routes::auth_password_exec::Response> {
     let session = req.identity().ensure_session()?;
-    if session.status != SessionStatus::Unauthorized {
+    if session.status != SessionStatus::Unauthorized && !session.status.bound_expired() {
         return Err(ApiError::from_code(ErrorCode::AlreadyAuthenticated).into());
     }
 
@@ -388,26 +435,49 @@ pub async fn email_complete(
     let session = req.identity().ensure_session()?.clone();
     let inner = req.inner();
 
-    let (user_id, purpose) = req
+    let (user_id, purpose, mfa_pending) = req
         .services()
         .auth
         .email_complete(&session, &inner.addr, inner.complete.code.clone())
         .await
         .cast_internal()?;
 
-    let ty = match purpose {
-        EmailPurpose::Authn => AuditLogEntryType::SessionLogin {
-            user_id,
-            session_id: session.id,
-        },
-        EmailPurpose::Reset => AuditLogEntryType::AuthSudo {
-            session_id: session.id,
-        },
-    };
-
-    req.audit_log_as(user_id, &session)
-        .push(user_id.into_inner().into(), ty)
-        .success();
+    let al = req.audit_log_as(user_id, &session);
+    match purpose {
+        EmailPurpose::Authn => {
+            // when a second factor is still pending, the follow-up totp_exec records the login
+            if !mfa_pending {
+                al.push(
+                    user_id.into_inner().into(),
+                    AuditLogEntryType::SessionLogin {
+                        user_id,
+                        session_id: session.id,
+                    },
+                )
+                .success();
+            }
+        }
+        EmailPurpose::Reset => {
+            // a reset only enters sudo mode once the second factor is done
+            if !mfa_pending {
+                al.push(
+                    user_id.into_inner().into(),
+                    AuditLogEntryType::SessionLogin {
+                        user_id,
+                        session_id: session.id,
+                    },
+                )
+                .success();
+                al.push(
+                    user_id.into_inner().into(),
+                    AuditLogEntryType::AuthSudo {
+                        session_id: session.id,
+                    },
+                )
+                .success();
+            }
+        }
+    }
 
     Ok(routes::auth_email_complete::Response {})
 }

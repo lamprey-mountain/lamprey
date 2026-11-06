@@ -85,7 +85,7 @@ pub async fn calculate(headers: &HeadersRequest, globals: &Globals) -> Result<Id
                 txn.commit().await.cast_internal()?;
             }
 
-            let real_user = if let Some(user_id) = session.user_id() {
+            let real_user = if let Some(user_id) = session.authenticated_user_id() {
                 srv.users.get(user_id, None).await.cast_internal()?
             } else {
                 let scopes = if session.ty == SessionType::User {

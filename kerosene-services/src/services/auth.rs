@@ -23,6 +23,17 @@ const TOTP_SECRET_LEN: usize = 20;
 /// how long a session stays in sudo mode
 const SUDO_DURATION: Duration = Duration::minutes(5);
 
+/// how long a session may wait for its second factor before a new login is required
+const MFA_WINDOW: Duration = Duration::minutes(15);
+
+/// session status for a user that still has to complete a second factor
+fn bound_status(user_id: UserId) -> SessionStatus {
+    SessionStatus::Bound {
+        user_id,
+        expires_at: Time::now_utc().saturating_add(MFA_WINDOW).into(),
+    }
+}
+
 pub struct ServiceAuth {
     state: Globals,
 }
@@ -337,19 +348,17 @@ impl ServiceAuth {
 
     /// verify a password and authorize the session
     ///
-    /// returns `true` if the session was authorized, or `false` if a totp code
-    /// is still required
+    /// returns `true` if the session was authorized, or `false` if a second
+    /// factor is still required
     pub async fn password_exec(
         &self,
         user_id: UserId,
         password: &str,
         session_id: SessionId,
     ) -> Result<bool> {
-        let (totp_enabled, password_hash) = {
+        let password_hash = {
             let mut txn = self.state.begin_read().await?;
-            let (_secret, totp_enabled) = txn.auth_totp_get(user_id).await?.unwrap_or_default();
-            let hash = txn.auth_password_get(user_id).await?;
-            (totp_enabled, hash)
+            txn.auth_password_get(user_id).await?
         };
 
         let Some((stored_hash, stored_salt)) = password_hash else {
@@ -360,7 +369,11 @@ impl ServiceAuth {
             return Err(ApiError::from_code(ErrorCode::InvalidPassword).into());
         }
 
-        if totp_enabled {
+        // no txn is open here, so it's safe to open a read txn via get_state
+        let auth_state = self.get_state(user_id).await?;
+        if auth_state.has_mfa() {
+            self.set_session_status(session_id, bound_status(user_id))
+                .await?;
             return Ok(false);
         }
 
@@ -483,13 +496,14 @@ impl ServiceAuth {
 
     /// consume an email auth code and authorize the session
     ///
-    /// returns the user who logged in and what the code was for
+    /// returns the user who logged in, what the code was for, and whether a
+    /// second factor is still pending
     pub async fn email_complete(
         &self,
         session: &Session,
         addr: &str,
         code: String,
-    ) -> Result<(UserId, EmailPurpose)> {
+    ) -> Result<(UserId, EmailPurpose, bool)> {
         let email: EmailAddr = addr
             .to_owned()
             .try_into()
@@ -502,18 +516,34 @@ impl ServiceAuth {
             return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
         }
 
-        if session.status != SessionStatus::Unauthorized {
+        if session.status != SessionStatus::Unauthorized && !session.status.bound_expired() {
             return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
         }
 
         let user_id = txn.user_email_lookup(&email).await?;
+        let (_secret, totp_enabled) = txn.auth_totp_get(user_id).await?.unwrap_or_default();
+        // TODO: include webauthn authenticators once implemented
+        let mfa_pending = totp_enabled;
         let status = match &purpose {
-            EmailPurpose::Authn => SessionStatus::Authorized { user_id },
-            // TODO: there's probably a better way of implementing password resets than directly entering sudo mode
-            EmailPurpose::Reset => SessionStatus::Sudo {
-                user_id,
-                sudo_expires_at: Time::now_utc().saturating_add(SUDO_DURATION).into(),
-            },
+            EmailPurpose::Authn => {
+                if mfa_pending {
+                    bound_status(user_id)
+                } else {
+                    SessionStatus::Authorized { user_id }
+                }
+            }
+            // a password reset is a single factor, it only enters sudo mode once
+            // the second factor is completed
+            EmailPurpose::Reset => {
+                if mfa_pending {
+                    bound_status(user_id)
+                } else {
+                    SessionStatus::Sudo {
+                        user_id,
+                        sudo_expires_at: Time::now_utc().saturating_add(SUDO_DURATION).into(),
+                    }
+                }
+            }
         };
         txn.session_set_status(session.id, status).await?;
         txn.commit().await?;
@@ -528,6 +558,6 @@ impl ServiceAuth {
             })
             .await?;
 
-        Ok((user_id, purpose))
+        Ok((user_id, purpose, mfa_pending))
     }
 }

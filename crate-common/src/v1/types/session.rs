@@ -116,7 +116,10 @@ pub enum SessionStatus {
     Unauthorized,
 
     /// The session exists and belongs to a user, but can't really do anything yet
-    Bound { user_id: UserId },
+    ///
+    /// the second factor must be completed before `expires_at`, otherwise the
+    /// session can't authenticate anymore and a new login is required
+    Bound { user_id: UserId, expires_at: Time },
 
     /// The session exists and can do non-critical actions
     Authorized { user_id: UserId },
@@ -141,21 +144,48 @@ impl fmt::Display for SessionToken {
 }
 
 impl SessionStatus {
+    /// the user this session belongs to
+    ///
+    /// NOTE: a bound session belongs to a user without being authenticated as them;
+    /// use [`Session::authenticated_user_id`] to gate user actions
     pub fn user_id(&self) -> Option<UserId> {
         match self {
             SessionStatus::Unauthorized => None,
-            SessionStatus::Bound { user_id } => Some(*user_id),
+            SessionStatus::Bound { user_id, .. } => Some(*user_id),
             SessionStatus::Authorized { user_id } => Some(*user_id),
             SessionStatus::Sudo { user_id, .. } => Some(*user_id),
         }
     }
 
-    pub fn sudo_expires_at(&self) -> Option<Time> {
+    /// when the current elevated or pending state expires
+    pub fn expires_at(&self) -> Option<Time> {
         match self {
+            SessionStatus::Bound { expires_at, .. } => Some(*expires_at),
             SessionStatus::Sudo {
                 sudo_expires_at, ..
             } => Some(*sudo_expires_at),
             _ => None,
+        }
+    }
+
+    /// whether this session has completed authentication
+    pub fn is_authenticated(&self) -> bool {
+        matches!(
+            self,
+            SessionStatus::Authorized { .. } | SessionStatus::Sudo { .. }
+        )
+    }
+
+    /// whether this session is waiting on a second factor
+    pub fn is_bound(&self) -> bool {
+        matches!(self, SessionStatus::Bound { .. })
+    }
+
+    /// whether the pending second factor window has elapsed
+    pub fn bound_expired(&self) -> bool {
+        match self {
+            SessionStatus::Bound { expires_at, .. } => *expires_at < Time::now_utc(),
+            _ => false,
         }
     }
 }
@@ -171,6 +201,15 @@ impl Session {
 
     pub fn user_id(&self) -> Option<UserId> {
         self.status.user_id()
+    }
+
+    /// the user this session is authenticated as
+    pub fn authenticated_user_id(&self) -> Option<UserId> {
+        if self.status.is_authenticated() {
+            self.status.user_id()
+        } else {
+            None
+        }
     }
 
     pub fn ip_addr(&self) -> Option<&str> {

@@ -153,6 +153,15 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
                 hello::Initial::Identify(identify) => {
                     // authenticate session
                     let session = srv.sessions.get_by_token(identify.token).await?;
+
+                    // a session waiting on its second factor is not authenticated yet
+                    if session.status.is_bound() {
+                        return Err(ApiError::with_message(
+                            ErrorCode::MissingAuth,
+                            "second factor required".to_owned(),
+                        )
+                        .into());
+                    }
                     let _ = state.session.send(Some(session.clone()));
 
                     // set presence

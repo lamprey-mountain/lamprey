@@ -229,7 +229,7 @@ impl Auth4 {
                     .await?;
             }
 
-            let real_user = if let Some(user_id) = session.user_id() {
+            let real_user = if let Some(user_id) = session.authenticated_user_id() {
                 Some(srv.users.get(user_id, None).await?)
             } else {
                 None

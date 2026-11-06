@@ -93,7 +93,8 @@ impl DataSession for Postgres {
     ) -> Result<()> {
         let mut conn = self.acquire().await?;
         let user_id = status.user_id().map(|i| *i);
-        let sudo_expires_at = status.sudo_expires_at().map(PrimitiveDateTime::from);
+        // sudo_expires_at stores the deadline of the current elevated or pending state
+        let sudo_expires_at = status.expires_at().map(PrimitiveDateTime::from);
         let is_authorized = matches!(
             status,
             SessionStatus::Authorized { .. } | SessionStatus::Sudo { .. }

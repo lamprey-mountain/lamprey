@@ -111,6 +111,10 @@ impl ServiceConnections {
         let srv = self.globals.services();
         let session = srv.sessions.get_by_token(hello.token).await?;
 
+        if session.status.is_bound() {
+            return Err(Error::UnauthSession);
+        }
+
         let handle = Connection::create(self.globals.clone(), (*session).clone());
         self.connections.insert(handle.id(), handle.clone());
 

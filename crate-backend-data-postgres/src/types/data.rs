@@ -471,6 +471,11 @@ impl From<DbSession> for Session {
                 DbSessionStatus::Unauthorized => SessionStatus::Unauthorized,
                 DbSessionStatus::Bound => SessionStatus::Bound {
                     user_id: row.user_id.expect("invalid data in db!").into(),
+                    // the pending second factor deadline is stored in sudo_expires_at
+                    expires_at: row
+                        .sudo_expires_at
+                        .map(|t| t.into())
+                        .unwrap_or_else(Time::now_utc),
                 },
                 DbSessionStatus::Authorized => SessionStatus::Authorized {
                     user_id: row.user_id.expect("invalid data in db!").into(),
