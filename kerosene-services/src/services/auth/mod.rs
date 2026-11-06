@@ -1,18 +1,28 @@
 //! authentication primitives: password hashing, TOTP, recovery codes, and email auth
 
+use std::time::{Duration as StdDuration, Instant};
+
 use common::v1::types::AuditLogChange;
 use common::v1::types::UserId;
-use common::v1::types::auth::{AuthState, PasswordExecIdent, TotpRecoveryCode};
+use common::v1::types::auth::{
+    AuthState, PasswordExecIdent, TotpRecoveryCode, WebauthnAuthenticator,
+};
 use common::v1::types::email::EmailAddr;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{MessageSync, Session, SessionId, SessionStatus};
+use dashmap::DashMap;
 use lamprey_backend_data_postgres::types::EmailPurpose;
 use time::Duration;
 use totp_rs::{Algorithm as TotpAlgorithm, Secret as TotpSecret, TOTP as Totp};
 use uuid::Uuid;
+use webauthn_rs::prelude::{Webauthn, WebauthnBuilder};
 
 use crate::prelude::*;
+
+use self::webauthn::PendingWebauthn;
+
+mod webauthn;
 
 /// number of recovery codes generated per rotation
 const RECOVERY_CODE_COUNT: usize = 5;
@@ -36,11 +46,44 @@ fn bound_status(user_id: UserId) -> SessionStatus {
 
 pub struct ServiceAuth {
     state: Globals,
+    webauthn: Option<Webauthn>,
+    webauthn_states: Arc<DashMap<SessionId, (PendingWebauthn, Instant)>>,
 }
 
 impl ServiceAuth {
     pub fn new(state: Globals) -> Self {
-        Self { state }
+        let config = state.config();
+        let webauthn = config
+            .html_url
+            .host_str()
+            .ok_or_else(|| Error::Internal("missing host in html_url".to_owned()))
+            .and_then(|host| {
+                WebauthnBuilder::new(host, &config.html_url)
+                    .and_then(|builder| builder.build())
+                    .map_err(|err| Error::Internal(format!("failed to setup webauthn: {err}")))
+            })
+            .map_err(|err| {
+                tracing::error!("{err}");
+                err
+            })
+            .ok();
+
+        let webauthn_states: Arc<DashMap<SessionId, (PendingWebauthn, Instant)>> =
+            Arc::new(DashMap::new());
+
+        let states = Arc::clone(&webauthn_states);
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(StdDuration::from_secs(60)).await;
+                states.retain(|_, (_, created)| created.elapsed() < StdDuration::from_secs(60 * 5));
+            }
+        });
+
+        Self {
+            state,
+            webauthn,
+            webauthn_states,
+        }
     }
 
     /// generate a new random TOTP secret, base32 encoded without padding
@@ -111,12 +154,23 @@ impl ServiceAuth {
         let oauth_providers = txn.auth_oauth_get_all(user_id).await?;
         let has_email = !txn.user_email_list(user_id).await?.is_empty();
 
+        let authenticators = txn
+            .webauthn_credential_list(user_id)
+            .await?
+            .into_iter()
+            .map(|credential| WebauthnAuthenticator {
+                id: credential.id.into(),
+                name: credential.name,
+                created_at: credential.created_at.into(),
+            })
+            .collect();
+
         Ok(AuthState {
             has_email,
             has_totp: totp_enabled,
             has_password,
             oauth_providers,
-            authenticators: vec![], // TODO: implement webauthn
+            authenticators,
         })
     }
 
@@ -517,14 +571,16 @@ impl ServiceAuth {
             return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
         }
 
-        if session.status != SessionStatus::Unauthorized && !session.status.bound_expired() {
+        if session.status.is_authenticated()
+            || (session.status.is_bound() && !session.status.bound_expired())
+        {
             return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
         }
 
         let user_id = txn.user_email_lookup(&email).await?;
         let (_secret, totp_enabled) = txn.auth_totp_get(user_id).await?.unwrap_or_default();
-        // TODO: include webauthn authenticators once implemented
-        let mfa_pending = totp_enabled;
+        let has_authenticator = !txn.webauthn_credential_list(user_id).await?.is_empty();
+        let mfa_pending = totp_enabled || has_authenticator;
         let status = match &purpose {
             EmailPurpose::Authn => {
                 if mfa_pending {
