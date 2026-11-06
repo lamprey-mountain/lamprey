@@ -289,6 +289,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 					(c.type === "Document" &&
 						c.parent_id &&
 						channels2.cache.get(c.parent_id)?.type === "Wiki")) &&
+				!c.archived_at &&
 				canViewChannel(c),
 		);
 		const channels = allChannels.filter(
