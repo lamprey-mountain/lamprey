@@ -1,4 +1,5 @@
 use crate::{
+    util::registry::export_models,
     v1::types::{ChannelId, EmbedId, MessageId, MessageVerId, RedexId, RedexVerId, RoomId, UserId},
     v2::types::EmojiId,
 };
@@ -122,3 +123,5 @@ impl MediaLinkType {
 //     // pub fn room_id(&self) -> Option<RoomId> {}
 //     // pub fn channel_id(&self) -> Option<ChannelId> {}
 // }
+
+export_models!(MediaLinkType);

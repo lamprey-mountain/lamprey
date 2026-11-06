@@ -2,6 +2,7 @@ use lamprey_macros::record;
 use std::time::Duration;
 use uuid::Uuid;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{
     ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId, Channel, ChannelId,
     ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MessageId, MessageVerId,
@@ -917,3 +918,12 @@ impl AuditLogEntryType {
         )
     }
 }
+
+export_models!(
+    AuditLogEntry,
+    AuditLogChange,
+    AuditLogEntryType,
+    AuditLogFilter,
+    AuditLogEntryStatus,
+    AuditLogPaginationResponse,
+);

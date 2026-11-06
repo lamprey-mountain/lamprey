@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{UserId, WebauthnAuthenticatorId, email::EmailAddr, util::Time};
 
 /// response to a totp init request
@@ -150,3 +151,22 @@ pub struct AuthOauthRedirectParams {
     pub state: String,
     pub code: String,
 }
+
+export_models!(
+    TotpInit,
+    TotpVerificationRequest,
+    TotpRecoveryCodes,
+    TotpRecoveryCode,
+    AuthEmailComplete,
+    PasswordSet,
+    PasswordExec,
+    PasswordExecIdent,
+    CaptchaChallenge,
+    CaptchaResponse,
+    WebauthnChallenge,
+    WebauthnCredential,
+    WebauthnAuthenticator,
+    WebauthnPatch,
+    AuthState,
+    AuthOauthRedirectParams
+);

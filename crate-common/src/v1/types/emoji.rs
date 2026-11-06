@@ -1,6 +1,9 @@
 use lamprey_macros::{Diff, record};
 
-use crate::v1::types::{EmojiId, MediaId, RoomId, UserId};
+use crate::{
+    util::registry::export_models,
+    v1::types::{EmojiId, MediaId, RoomId, UserId},
+};
 
 /// a custom emoji
 #[record]
@@ -106,3 +109,12 @@ impl EmojiCustom {
         }
     }
 }
+
+export_models!(
+    EmojiCustom,
+    EmojiCustomMinimal,
+    EmojiOwner,
+    EmojiCustomCreate,
+    EmojiCustomPatch,
+    EmojiSearchQuery
+);

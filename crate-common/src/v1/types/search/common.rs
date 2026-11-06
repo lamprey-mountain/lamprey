@@ -1,5 +1,7 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
+
 /// what order to return search results in
 #[record]
 #[derive(Default, Copy, PartialEq, Eq)]
@@ -99,3 +101,5 @@ impl Doctype {
         self.as_ref()
     }
 }
+
+export_models!(Order, SearchRequest, Doctype);

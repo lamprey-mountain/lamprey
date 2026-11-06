@@ -1,6 +1,8 @@
 use core::ops::Deref;
 use std::{fmt::Display, str::FromStr};
 
+use crate::util::registry::export_models;
+
 use mediatype::{MediaTypeBuf, MediaTypeError};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -67,3 +69,5 @@ mod schema {
 
     impl ToSchema for Mime {}
 }
+
+export_models!(Mime);

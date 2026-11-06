@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::registry::export_models;
 use crate::v1::types::error::{ApiError, ErrorCode};
 
 /// an oauth scope
@@ -307,3 +308,5 @@ impl From<ScopeBits> for Scopes {
         Scopes(scopes)
     }
 }
+
+export_models!(Scope, Scopes);

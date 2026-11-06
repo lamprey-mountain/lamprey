@@ -1,3 +1,5 @@
+use crate::util::registry::export_models;
+
 pub mod audit_log;
 pub mod channel;
 pub mod common;
@@ -19,3 +21,5 @@ pub use room::*;
 pub use room_member::*;
 pub use stats::*;
 pub use user::*;
+
+export_models!(use audit_log, use channel, use common, use everything, use media, use message, use room, use room_member, use stats, use user);

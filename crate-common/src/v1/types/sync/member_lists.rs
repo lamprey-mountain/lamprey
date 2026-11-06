@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{ChannelId, RoomId, RoomMember, ThreadMember, User, UserId};
 
 #[record]
@@ -57,3 +58,5 @@ pub enum MemberListOp {
 // TODO: reexport more things?
 // reexport for compatibility
 pub use crate::v2::types::sync::stream::member_list::{MemberListGroup, MemberListGroupId};
+
+export_models!(SyncSubscribeMemberList, MemberListOp);

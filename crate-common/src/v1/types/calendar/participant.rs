@@ -94,6 +94,8 @@ impl CalendarRsvpStatus {
 
 export_models!(
     CalendarParticipant,
+    CalendarParticipantCounts,
+    CalendarParticipantInvite,
     CalendarRsvpStatus,
     CalendarParticipantPut,
     CalendarParticipantQuery

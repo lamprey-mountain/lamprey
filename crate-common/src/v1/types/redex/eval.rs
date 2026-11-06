@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use bytes::Bytes;
 use lamprey_macros::record;
 
-use crate::v1::types::{EvalId, MessageSync, RedexId, RedexVerId, UserId, misc::Time};
+use crate::{
+    util::registry::export_models,
+    v1::types::{EvalId, MessageSync, RedexId, RedexVerId, UserId, misc::Time},
+};
 
 /// a redex being run
 #[record]
@@ -210,3 +213,11 @@ impl EvalStatus {
         }
     }
 }
+
+export_models!(
+    Eval,
+    EvalCreateManual,
+    EvalStatus,
+    EvalInputSummary,
+    HttpRequestSummary
+);

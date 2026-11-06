@@ -1,5 +1,7 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
+
 // TODO: add field
 // #[record]
 // pub struct Channel {
@@ -41,3 +43,8 @@ impl Default for ChannelEncryption {
         }
     }
 }
+
+export_models!(
+    ChannelEncryption,
+    ChannelEncryptionAlgorithm,
+);

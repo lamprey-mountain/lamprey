@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{Embed, MessageCreate, MessagePatch, interactions::InteractionType};
+use crate::{
+    util::registry::export_models,
+    v1::types::{Embed, MessageCreate, MessagePatch, interactions::InteractionType},
+};
 
 /// respond to an interaction
 #[record]
@@ -66,3 +69,5 @@ impl CreateType {
         }
     }
 }
+
+export_models!(Create, CreateType, Response);

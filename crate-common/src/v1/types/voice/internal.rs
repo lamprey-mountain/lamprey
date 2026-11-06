@@ -10,10 +10,13 @@ use lamprey_macros::record;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::v1::types::{
-    ConnectionId, SessionId, UserId,
-    misc::Time,
-    voice::{VoiceState, VoiceStateUpdate},
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        ConnectionId, SessionId, UserId,
+        misc::Time,
+        voice::{VoiceState, VoiceStateUpdate},
+    },
 };
 
 /// smaller voice state for sfus
@@ -168,3 +171,5 @@ impl SfuVoiceState {
         }
     }
 }
+
+export_models!(VoiceConfig);

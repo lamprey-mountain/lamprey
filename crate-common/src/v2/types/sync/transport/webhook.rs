@@ -2,6 +2,7 @@
 
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v2::types::sync::{
     dispatch::Dispatch,
     transport::{Compression, Encoding, Version},
@@ -50,3 +51,5 @@ pub enum Event {
         // seq: u64,
     },
 }
+
+export_models!(Config, Envelope, Event);

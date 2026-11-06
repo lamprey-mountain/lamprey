@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{ApplicationId, ChannelId, MessageId};
+use crate::{
+    util::registry::export_models,
+    v1::types::{ApplicationId, ChannelId, MessageId},
+};
 
 /// create a new interaction
 #[record]
@@ -32,3 +35,5 @@ impl CreateType {
         }
     }
 }
+
+export_models!(Create, CreateType, Button);

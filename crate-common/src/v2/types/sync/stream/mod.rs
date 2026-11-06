@@ -2,6 +2,8 @@
 
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
+
 /// A protocol that can be used with a stream
 ///
 /// Syncing takes place over multiple streams. Each stream can have a different
@@ -103,3 +105,5 @@ impl TryFrom<u8> for StreamHeader {
         }
     }
 }
+
+export_models!(StreamHeader, use member_list);

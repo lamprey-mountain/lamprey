@@ -3,6 +3,8 @@
 
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
+
 /// execution limits
 #[record]
 #[derive(PartialEq, Eq)]
@@ -29,3 +31,5 @@ impl EvalLimits {
         }
     }
 }
+
+export_models!(EvalLimits);

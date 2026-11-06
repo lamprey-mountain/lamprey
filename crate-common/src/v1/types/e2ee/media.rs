@@ -2,6 +2,7 @@ use lamprey_macros::record;
 use url::Url;
 
 use crate::{
+    util::registry::export_models,
     v1::types::{
         MediaId, Mime,
         misc::{binary::Binary, hashes::Hashes},
@@ -74,3 +75,10 @@ impl PartialEq for EncryptedMedia {
 }
 
 impl Eq for EncryptedMedia {}
+
+export_models!(
+    EncryptedMedia,
+    EncryptedMediaParams,
+    EncryptedMediaInfo,
+    EncryptedMediaAlgorithm,
+);

@@ -17,6 +17,8 @@ use super::{
     util::Time,
 };
 
+use crate::util::registry::export_models;
+
 /// a short, unique identifier for a room template.
 #[derive(Debug, Hash, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -133,3 +135,13 @@ pub struct RoomTemplateRole {
 
     pub position: u16,
 }
+
+export_models!(
+    RoomTemplate,
+    RoomTemplateCode,
+    RoomTemplateCreate,
+    RoomTemplatePatch,
+    RoomTemplateSnapshot,
+    RoomTemplateChannel,
+    RoomTemplateRole,
+);

@@ -4,11 +4,14 @@ use url::Url;
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
 
-use crate::v1::types::{
-    CalendarEventId, ChannelId, MediaId, PaginationDirection, RoomId, UserId,
-    calendar::{CalendarParticipantCounts, Recurrence, RecurrenceLimit, Timezone},
-    error::{ApiError, ErrorCode, ErrorField, ErrorFieldType},
-    misc::Time,
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        CalendarEventId, ChannelId, MediaId, PaginationDirection, RoomId, UserId,
+        calendar::{CalendarParticipantCounts, Recurrence, RecurrenceLimit, Timezone},
+        error::{ApiError, ErrorCode, ErrorField, ErrorFieldType},
+        misc::Time,
+    },
 };
 
 /// a calendar event
@@ -394,3 +397,12 @@ impl CalendarEventCreate {
         self
     }
 }
+
+export_models!(
+    CalendarEvent,
+    CalendarEventCreate,
+    CalendarEventUpdate,
+    CalendarEventListQuery,
+    CalendarExportQuery,
+    CalendarEventList
+);

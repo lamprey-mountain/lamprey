@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{ChannelId, TagId, misc::Color};
+use crate::{
+    util::registry::export_models,
+    v1::types::{ChannelId, TagId, misc::Color},
+};
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::{default_false_opt, some_option};
@@ -134,3 +137,13 @@ pub struct TagListQuery {
     #[serde(default = "default_false_opt")]
     pub archived: Option<bool>,
 }
+
+export_models!(
+    Tag,
+    TagMinimal,
+    TagCreate,
+    TagPatch,
+    TagDeleteQuery,
+    TagSearchQuery,
+    TagListQuery,
+);

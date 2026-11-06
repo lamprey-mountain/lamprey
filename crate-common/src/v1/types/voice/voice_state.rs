@@ -5,9 +5,12 @@ use lamprey_macros::record;
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
 
-use crate::v1::types::{
-    ChannelId, ConnectionId, MediaId, RoomId, RoomMember, SessionId, ThreadMember, User, UserId,
-    misc::Time,
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        ChannelId, ConnectionId, MediaId, RoomId, RoomMember, SessionId, ThreadMember, User,
+        UserId, misc::Time,
+    },
 };
 
 /// represents a user that is connected to a voice channel
@@ -219,3 +222,15 @@ impl VoiceState {
         }
     }
 }
+
+export_models!(
+    VoiceState,
+    VoiceStateFull,
+    VoiceStatePatch,
+    VoiceStateScreenshare,
+    VoiceStateUpdate,
+    VoiceStateScreenshareUpdate,
+    VoiceStateParams,
+    VoiceStateMove,
+    VoiceStateMoveBulk
+);

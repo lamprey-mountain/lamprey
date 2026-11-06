@@ -2,6 +2,8 @@
 
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
+
 pub mod webhook;
 pub mod websocket;
 pub mod webtransport;
@@ -75,3 +77,5 @@ impl<'de> serde::Deserialize<'de> for Version {
         }
     }
 }
+
+export_models!(Version, Compression, Encoding, use webhook);

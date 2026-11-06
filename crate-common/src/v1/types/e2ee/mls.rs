@@ -10,6 +10,8 @@ use utoipa::ToSchema;
 
 use crate::v1::types::{ChannelId, SessionId, UserId};
 
+use crate::util::registry::export_models;
+
 /// a mls epoch number, incremented each time the group membership changes
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -94,3 +96,16 @@ pub struct MlsEpochCreate {
     pub data: Vec<u8>,
     pub epoch: MlsEpoch,
 }
+
+export_models!(
+    MlsEpoch,
+    MlsKeyPackage,
+    MlsKeyPackageUpload,
+    MlsKeyPackageClaim,
+    MlsWelcome,
+    MlsWelcomeCreate,
+    MlsCommit,
+    MlsCommitCreate,
+    MlsMessageCreate,
+    MlsEpochCreate,
+);

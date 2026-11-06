@@ -6,7 +6,10 @@ use lamprey_macros::record;
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
-use crate::v1::types::{ChannelId, RoomId, misc::Time};
+use crate::{
+    util::registry::export_models,
+    v1::types::{ChannelId, RoomId, misc::Time},
+};
 
 /// info about a currently active voice channel, with ids
 #[record]
@@ -78,3 +81,5 @@ impl Call {
         }
     }
 }
+
+export_models!(CallMetadata, Call, CallCreate, CallPatch, CallDeleteParams);

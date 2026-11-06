@@ -18,9 +18,12 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{
-    application::{Application, Scope},
-    misc::Time,
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        application::{Application, Scope},
+        misc::Time,
+    },
 };
 
 /// who can view this connection
@@ -119,3 +122,12 @@ pub enum ConnectionValue {
     Int(i64),
     // TODO: string, bool, time
 }
+
+export_models!(
+    ConnectionVisibility,
+    Connection,
+    ConnectionPatch,
+    ConnectionType,
+    ConnectionMetadata,
+    ConnectionValue,
+);

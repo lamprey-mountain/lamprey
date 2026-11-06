@@ -1,3 +1,5 @@
+use crate::util::registry::export_models;
+
 pub mod create;
 pub mod error;
 pub mod inner;
@@ -10,3 +12,5 @@ pub use response::{
     Create as InteractionResponseCreate, CreateType as InteractionResponseCreateType,
     Response as InteractionResponse,
 };
+
+export_models!(use create, use error, use inner, use response);

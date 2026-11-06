@@ -8,9 +8,12 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{
-    UserId,
-    voice::{MediaKind, Mid},
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        UserId,
+        voice::{MediaKind, Mid},
+    },
 };
 
 /// a unique identifier for a media track
@@ -201,3 +204,15 @@ pub enum TrackEncoding {
 //         }
 //     }
 // }
+
+export_models!(
+    TrackId,
+    TrackMetadata,
+    TrackWhisper,
+    TrackCreate,
+    TrackMapping,
+    TrackAnnouncement,
+    SubscriptionUpdate,
+    TrackKey,
+    TrackEncoding
+);

@@ -2,7 +2,7 @@
 
 use lamprey_macros::record;
 
-use crate::v1::types::UserId;
+use crate::{util::registry::export_models, v1::types::UserId};
 
 #[record]
 pub struct RingEligibility {
@@ -21,3 +21,5 @@ pub struct RingStart {
 pub struct RingStop {
     pub user_ids: Vec<UserId>,
 }
+
+export_models!(RingEligibility, RingStart, RingStop);

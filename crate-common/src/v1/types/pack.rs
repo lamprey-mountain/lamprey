@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{RoomId, emoji::EmojiCustomMinimal, misc::binary::Binary};
 
 #[record]
@@ -62,3 +63,11 @@ pub struct PackSnapshotEmoji {
     // NOTE: 33554432 = 32Mib, unsure if this is correct?
     pub data: Binary<33554432>,
 }
+
+export_models!(
+    PackInstallation,
+    PackInfo,
+    PackSnapshot,
+    PackImport,
+    PackSnapshotEmoji
+);

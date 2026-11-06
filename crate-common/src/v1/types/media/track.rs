@@ -5,7 +5,7 @@ use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::text::Language;
+use crate::{util::registry::export_models, v1::types::text::Language};
 
 use super::Mime;
 
@@ -227,3 +227,17 @@ impl MediaTrackInfo {
         }
     }
 }
+
+export_models!(
+    MediaTrack,
+    File,
+    Video,
+    Audio,
+    Image,
+    TimedText,
+    Text,
+    Mixed,
+    Location,
+    MediaTrackInfo,
+    TrackSource
+);

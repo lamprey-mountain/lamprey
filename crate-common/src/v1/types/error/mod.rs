@@ -3,6 +3,7 @@
 use lamprey_macros::record;
 use thiserror::Error;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{Permission, application::Scope, redex::error::RedexError};
 
 mod codes;
@@ -267,3 +268,13 @@ impl SyncErrorCode {
         !matches!(self, Self::InvalidSeq | Self::ConnectionExpired)
     }
 }
+
+export_models!(
+    ApiError,
+    Warning,
+    SyncErrorCode,
+    ErrorField,
+    ErrorFieldType,
+    Ratelimit,
+    use codes,
+);

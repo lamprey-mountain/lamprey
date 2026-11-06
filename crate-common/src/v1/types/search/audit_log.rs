@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{AuditLogEntry, AuditLogEntryId, search::common::SearchRequest};
+use crate::{
+    util::registry::export_models,
+    v1::types::{AuditLogEntry, AuditLogEntryId, search::common::SearchRequest},
+};
 
 #[record]
 pub struct AuditLogSearchRequest {
@@ -36,3 +39,9 @@ pub struct AuditLogSearch {
     /// current page cursor
     pub cursor: Option<String>,
 }
+
+export_models!(
+    AuditLogSearchRequest,
+    AuditLogSearchOrderField,
+    AuditLogSearch
+);

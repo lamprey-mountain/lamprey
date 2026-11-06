@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{RedexId, metadata::Metadata, misc::Time};
+use crate::{
+    util::registry::export_models,
+    v1::types::{RedexId, metadata::Metadata, misc::Time},
+};
 
 /// a log entry from an eval
 #[record]
@@ -109,3 +112,5 @@ pub enum EvalLogLevel {
 // pub struct RunMetricsQuery {
 //     // TODO: copy room analytics probaby
 // }
+
+export_models!(EvalLogEntry, EvalLogSource, EvalLogLevel);

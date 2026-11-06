@@ -4,6 +4,8 @@ use url::Url;
 
 use crate::v1::types::misc::Time;
 
+use crate::util::registry::export_models;
+
 use crate::v1::types::redex::metadata::RedexMetadata;
 use crate::v1::types::{ChannelId, MediaId, RedexId, RedexVerId, UserId};
 use crate::v2::types::media::{Media, MediaReference};
@@ -312,3 +314,26 @@ impl RedexLocation {
 // 	| "public" // all runs can read this
 // 	| "secret" // access must be requested
 // 	| "opaque"; // access must be requested, code cannot read data
+
+export_models!(
+    Redex,
+    RedexHandler,
+    RedexHandlerType,
+    RedexCapability,
+    RedexPermission,
+    RedexPermissionGrant,
+    RedexStatus,
+    RedexVersionStatus,
+    RedexVersion,
+    RedexFormat,
+    RedexLocation,
+    RedexLocationUpdate,
+    RedexSignature,
+    RedexCreate,
+    RedexContentUpdate,
+    RedexContentUpdateQuery,
+    RedexDependency,
+    RedexDependencyLink,
+    RedexDependencyGraph,
+    RedexDependenciesUpdate
+);

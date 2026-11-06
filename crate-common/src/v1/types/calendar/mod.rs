@@ -41,4 +41,12 @@ pub struct CalendarPatch {
 #[derive(PartialEq, Eq)]
 pub struct Timezone(pub String);
 
-export_models!(Calendar, CalendarPatch, Timezone, use participant);
+export_models!(
+    Calendar,
+    CalendarPatch,
+    Timezone,
+    use participant,
+    use event,
+    use instance,
+    use recurrence
+);

@@ -6,9 +6,12 @@ use url::Url;
 #[cfg(feature = "serde")]
 use crate::v1::types::util::some_option;
 
-use crate::v1::{
-    routes::{PathParam, PathParamError},
-    types::{CalendarEventId, misc::Time},
+use crate::{
+    util::registry::export_models,
+    v1::{
+        routes::{PathParam, PathParamError},
+        types::{CalendarEventId, misc::Time},
+    },
 };
 
 /// the sequence number of a calendar event instance
@@ -143,3 +146,10 @@ impl fmt::Display for CalendarInstanceSeq {
 fn is_false(b: &bool) -> bool {
     !b
 }
+
+export_models!(
+    CalendarInstanceSeq,
+    CalendarInstanceStatus,
+    CalendarInstance,
+    CalendarOverwrite
+);

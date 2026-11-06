@@ -54,6 +54,7 @@ impl Routes {
         // collect all types/models/openapi schemas
         let mut registry = UtoipaRegistry::default();
         common::v1::types::register(&mut registry);
+        common::v2::types::register(&mut registry);
 
         let openapi = OpenApiBuilder::new()
             .info(info)

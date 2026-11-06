@@ -1,7 +1,12 @@
 use lamprey_macros::record;
 
-use crate::v1::types::util::{Diff, Time};
-use crate::v1::types::{ChannelId, RoomMember, User, UserId};
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        ChannelId, RoomMember, User, UserId,
+        util::{Diff, Time},
+    },
+};
 
 #[record]
 pub struct ThreadMember {
@@ -64,3 +69,12 @@ pub struct ChannelMemberSearchResponse {
     /// will only be populated if this is a thread
     pub thread_members: Vec<ThreadMember>,
 }
+
+export_models!(
+    ThreadMember,
+    ThreadMemberMinimal,
+    ThreadMemberCreate,
+    ThreadMemberUpdate,
+    ChannelMemberSearch,
+    ChannelMemberSearchResponse,
+);

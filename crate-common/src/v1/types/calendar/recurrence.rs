@@ -6,9 +6,12 @@ use time::format_description::BorrowedFormatItem;
 #[cfg(feature = "serde")]
 use crate::v1::types::util::deserialize_sorted;
 
-use crate::v1::types::{
-    error::{ErrorField, ErrorFieldType},
-    misc::Time,
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        error::{ErrorField, ErrorFieldType},
+        misc::Time,
+    },
 };
 
 // TODO: add by_year_day
@@ -243,3 +246,5 @@ impl Recurrence {
         Ok(parts.join(";"))
     }
 }
+
+export_models!(Recurrence, RecurrenceLimit, RecurrenceFrequency, DayOfWeek);

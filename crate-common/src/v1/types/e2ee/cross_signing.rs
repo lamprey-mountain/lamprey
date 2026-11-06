@@ -4,6 +4,8 @@ use lamprey_macros::record;
 
 use crate::v1::types::UserId;
 
+use crate::util::registry::export_models;
+
 /// retrieve cross signing keys
 #[record]
 pub struct CrossSigningQueryRequest {
@@ -122,3 +124,13 @@ pub struct CrossSigningBundle {
 // TODO: backup cross signing private keys. some methods:
 // - have sessions gossip the keys to each other
 // - encrypt and backup on the server
+
+export_models!(
+    CrossSigningQueryRequest,
+    CrossSigningQuery,
+    CrossSigningKey,
+    CrossSigningSignatures,
+    CrossSigningSignature,
+    CrossSigningUsage,
+    CrossSigningBundle,
+);

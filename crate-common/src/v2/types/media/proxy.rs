@@ -2,6 +2,8 @@
 
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
+
 #[record(params)]
 #[derive(PartialEq, Eq)]
 pub struct MediaQuery {
@@ -82,3 +84,12 @@ pub enum StreamKind {
     Video,
     Audio,
 }
+
+export_models!(
+    MediaQuery,
+    ThumbQuery,
+    TrickplayQuery,
+    StreamQuery,
+    StreamFormat,
+    StreamKind
+);

@@ -1,4 +1,7 @@
-use crate::v1::types::{MediaId, UserId, util::Time};
+use crate::{
+    util::registry::export_models,
+    v1::types::{MediaId, UserId, util::Time},
+};
 use lamprey_macros::record;
 
 mod mime;
@@ -45,3 +48,5 @@ impl From<MediaV0WithAdmin> for MediaV0 {
         val.inner
     }
 }
+
+export_models!(MediaV0, MediaV0WithAdmin, use mime, use track);

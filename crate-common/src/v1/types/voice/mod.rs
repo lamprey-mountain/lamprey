@@ -6,6 +6,8 @@
 
 // TODO: add more doc comments
 
+use crate::util::registry::export_models;
+
 pub mod call;
 pub mod channel;
 pub mod datachannel;
@@ -38,3 +40,5 @@ pub use voice_state::{
 
 #[doc(inline)]
 pub use voice_state::{VoiceState, VoiceStatePatch, VoiceStateUpdate};
+
+export_models!(use call, use channel, use error, use internal, use messages, use ring, use rtc, use sfu, use track, use voice_state);

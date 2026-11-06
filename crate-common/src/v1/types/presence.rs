@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::util::Time;
 
 /// the current presence of the user
@@ -103,3 +104,5 @@ mod _v {
         }
     }
 }
+
+export_models!(Presence, Status, Activity);

@@ -1,6 +1,8 @@
 use lamprey_macros::record;
 use thiserror::Error;
 
+use crate::util::registry::export_models;
+
 #[record]
 #[derive(Error)]
 pub enum ErrorCode {
@@ -8,3 +10,5 @@ pub enum ErrorCode {
     #[error("application did not respond in time")]
     Timeout,
 }
+
+export_models!(ErrorCode);

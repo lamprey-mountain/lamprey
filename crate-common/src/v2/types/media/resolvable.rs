@@ -1,5 +1,6 @@
 // TODO: make linking general purpose, merge into crate::v2::types::links
 
+use crate::util::registry::export_models;
 use crate::v1::types::MediaId;
 
 pub use super::MediaReference as MediaRefType;
@@ -85,3 +86,5 @@ mod u {
 
     impl ToSchema for MediaRef {}
 }
+
+export_models!(MediaRef);

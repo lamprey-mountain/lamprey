@@ -1,7 +1,10 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{
-    Message, MessageId, RoomMember, ThreadMember, User, search::common::SearchRequest,
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        Message, MessageId, RoomMember, ThreadMember, User, search::common::SearchRequest,
+    },
 };
 
 #[record]
@@ -61,3 +64,5 @@ pub struct MessageSearch {
     /// current page cursor
     pub cursor: Option<String>,
 }
+
+export_models!(MessageSearchRequest, MessageSearchOrderField, MessageSearch);

@@ -2,7 +2,10 @@
 
 use lamprey_macros::record;
 
-use crate::v1::types::{SfuId, UserId};
+use crate::{
+    util::registry::export_models,
+    v1::types::{SfuId, UserId},
+};
 
 // TODO: use this
 #[record]
@@ -44,3 +47,5 @@ pub struct SfuStats {
     /// maximum available bandwidth in bits per second
     pub bandwidth_max: u64,
 }
+
+export_models!(Sfu, SfuExternal, SfuStats);

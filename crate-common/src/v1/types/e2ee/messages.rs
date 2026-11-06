@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{
     ChannelId, SessionId, UserId, e2ee::cross_signing::CrossSigningBundle, misc::binary::Binary,
 };
@@ -136,3 +137,8 @@ mod old {
         },
     }
 }
+
+export_models!(
+    Dispatch,
+    DispatchChannel,
+);

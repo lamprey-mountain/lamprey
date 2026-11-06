@@ -2,7 +2,10 @@
 
 use lamprey_macros::record;
 
-use crate::v1::types::{ChannelId, UserId, voice::CallMetadata};
+use crate::{
+    util::registry::export_models,
+    v1::types::{ChannelId, UserId, voice::CallMetadata},
+};
 
 /// channel metadata for a voice channel
 #[record]
@@ -44,3 +47,5 @@ pub struct ChannelBroadcast {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub schedule_id: Option<ChannelId>,
 }
+
+export_models!(ChannelVoice, ChannelBroadcast);

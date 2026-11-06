@@ -1,7 +1,8 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{
-    Channel, ChannelId, reaction::ReactionKeyField, search::common::SearchRequest,
+use crate::{
+    util::registry::export_models,
+    v1::types::{Channel, ChannelId, reaction::ReactionKeyField, search::common::SearchRequest},
 };
 
 #[record]
@@ -65,3 +66,5 @@ pub struct ChannelSearch {
     /// current page cursor
     pub cursor: Option<String>,
 }
+
+export_models!(ChannelSearchRequest, ChannelSearchOrderField, ChannelSearch);

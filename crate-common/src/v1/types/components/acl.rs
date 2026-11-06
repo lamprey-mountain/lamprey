@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{
     Permission, RoleId, RoomMember, User, UserId,
     components::{Component, ComponentState, Components},
@@ -165,3 +166,5 @@ impl<'a> AllowCheck<'a> {
         ))
     }
 }
+
+export_models!(Allow);

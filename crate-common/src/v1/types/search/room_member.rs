@@ -1,4 +1,4 @@
-use crate::v1::types::search::common::SearchRequest;
+use crate::{util::registry::export_models, v1::types::search::common::SearchRequest};
 use lamprey_macros::record;
 
 #[record]
@@ -21,3 +21,5 @@ pub enum RoomMemberSearchOrderField {
     /// sort by user id
     UserId,
 }
+
+export_models!(RoomMemberSearchRequest, RoomMemberSearchOrderField);

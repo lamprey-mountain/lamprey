@@ -569,4 +569,36 @@ impl MessageDefaultMarkdown {
     }
 }
 
-export_models!(Message, MessageVersion, MessageAttachment, MessageAttachmentType, MessageDefaultMarkdown, use create, use edit, use message_type);
+export_models!(
+    Message,
+    MessageVersion,
+    MessageAttachment,
+    MessageAttachmentType,
+    MessageDefaultMarkdown,
+    Pinned,
+    PinsReorder,
+    PinsReorderItem,
+    MessageEncrypted,
+    MessageDefaultMarkdownEncrypted,
+    MessageAttachmentEncrypted,
+    MessageAttachmentEncryptedType,
+    MessageSnapshot,
+    MessageInteraction,
+    InteractionStatus,
+    MessageMove,
+    MessageModerate,
+    RepliesQuery,
+    RepliesResponse,
+    RepliesMessage,
+    RepliesChildren,
+    ContextQuery,
+    RatelimitPut,
+    ContextResponse,
+    MessageList,
+    WithMembersQuery,
+    use create,
+    use edit,
+    use message_type,
+    use flume,
+    use mentions,
+);

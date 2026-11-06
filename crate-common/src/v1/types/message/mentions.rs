@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{ChannelId, ChannelType, EmojiId, RoleId, RoomId, UserId};
 
 // TODO: make most fields Option<T>, only populate them when returning via api
@@ -140,3 +141,12 @@ impl ParseMentions {
         }
     }
 }
+
+export_models!(
+    Mentions,
+    MentionsUser,
+    MentionsRole,
+    MentionsChannel,
+    MentionsEmoji,
+    ParseMentions
+);

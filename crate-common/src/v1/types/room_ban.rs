@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{UserId, federation::Hostname, misc::Time};
+use crate::{
+    util::registry::export_models,
+    v1::types::{UserId, federation::Hostname, misc::Time},
+};
 
 // TODO: rename types from RoomBan, RoomBanFoo to just Ban, BanFoo
 
@@ -60,3 +63,5 @@ pub struct RoomBanBulkCreate {
     /// when the ban expires
     pub expires_at: Option<Time>,
 }
+
+export_models!(RoomBan, RoomBanType, RoomBanCreate, RoomBanBulkCreate);

@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::components::{
     ComponentCanonical, ComponentCreate, ComponentId, ComponentsCanonical, ComponentsCreate,
 };
@@ -179,3 +180,15 @@ impl FlumeDeltaCreate {
         self
     }
 }
+
+export_models!(
+    FlumeCreate,
+    FlumeDeltaCanonical,
+    FlumeDeltaCreate,
+    FlumeAppendCanonical,
+    FlumeReplaceCanonical,
+    FlumeAppendCreate,
+    FlumeReplaceCreate,
+    FlumeState,
+    MessageFlume
+);

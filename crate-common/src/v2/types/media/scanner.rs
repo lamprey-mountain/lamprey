@@ -5,6 +5,8 @@
 
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
+
 /// A request to scan a media file.
 ///
 /// Sent to external media scanning services configured via [`ConfigMediaScanner`](crate::config::ConfigMediaScanner).
@@ -23,3 +25,5 @@ pub struct MediaScanResponse {
     /// An optional message providing additional context about the scan result.
     pub message: Option<String>,
 }
+
+export_models!(ScanRequest, MediaScanResponse);

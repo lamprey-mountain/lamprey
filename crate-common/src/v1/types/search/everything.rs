@@ -1,7 +1,7 @@
 use lamprey_macros::record;
 use uuid::Uuid;
 
-use crate::v1::types::search::common::SearchRequest;
+use crate::{util::registry::export_models, v1::types::search::common::SearchRequest};
 
 #[record]
 pub struct EverythingSearchRequest {
@@ -42,3 +42,10 @@ pub struct EverythingSearchItem {
     #[serde(rename = "type")]
     pub doctype: String,
 }
+
+export_models!(
+    EverythingSearchRequest,
+    EverythingSearchOrderField,
+    EverythingSearch,
+    EverythingSearchItem
+);

@@ -1,4 +1,5 @@
 use crate::{
+    util::registry::export_models,
     v1::types::{EmbedId, misc::Color, util::truncate::truncate_with_ellipsis},
     v2::types::media::{Media, MediaReference},
 };
@@ -233,3 +234,5 @@ mod tests {
         assert_eq!(embed.author_url, Some(url));
     }
 }
+
+export_models!(Embed, EmbedType, EmbedCreate, EmbedRequest);

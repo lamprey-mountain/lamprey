@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{ChannelId, InviteCode, UserId, misc::Time};
+use crate::{
+    util::registry::export_models,
+    v1::types::{ChannelId, InviteCode, UserId, misc::Time},
+};
 
 #[record]
 #[derive(Copy, PartialEq, Eq)]
@@ -152,3 +155,19 @@ pub enum AnalyticsInvitesOrigin {
     /// unknown or anonymized origin
     Other,
 }
+
+export_models!(
+    Aggregation,
+    AnalyticsParams,
+    AnalyticsOverview,
+    AnalyticsMembersCount,
+    AnalyticsMembersJoin,
+    AnalyticsMembersLeave,
+    AnalyticsUsagesCount,
+    AnalyticsUsagesAdd,
+    AnalyticsUsagesRemove,
+    AnalyticsChannelParams,
+    AnalyticsChannel,
+    AnalyticsInvites,
+    AnalyticsInvitesOrigin,
+);

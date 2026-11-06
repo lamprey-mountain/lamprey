@@ -1,9 +1,12 @@
 use lamprey_macros::record;
 use url::Url;
 
-use crate::v1::types::{
-    ApplicationId, Channel, ChannelId, InteractionId, Message, MessageId, Permission, Room,
-    RoomMember, User, UserId,
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        ApplicationId, Channel, ChannelId, InteractionId, Message, MessageId, Permission, Room,
+        RoomMember, User, UserId,
+    },
 };
 
 /// an user interacted with your application
@@ -123,3 +126,5 @@ impl InteractionType {
         }
     }
 }
+
+export_models!(Interaction, InteractionType, Context, Button, Unfurl);

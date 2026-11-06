@@ -1,4 +1,6 @@
 use crate::v1::types::{ChannelId, e2ee::MlsEpoch};
+
+use crate::util::registry::export_models;
 use lamprey_macros::record;
 
 // see https://spec.matrix.org/v1.19/client-server-api/#construction-and-sharing-of-the-key-bundle
@@ -54,3 +56,11 @@ pub struct SessionKeyUploadRequest {
 pub struct KeyringData {
     // TODO: think of what goes here
 }
+
+export_models!(
+    KeyBundle,
+    Key,
+    KeyshareRequest,
+    KeyshareRespond,
+    SessionKeyUploadRequest,
+);

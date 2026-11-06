@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{UserId, util::Diff};
+use crate::{
+    util::registry::export_models,
+    v1::types::{UserId, util::Diff},
+};
 
 #[cfg(feature = "serde")]
 use crate::v1::types::util::{deserialize_sorted, deserialize_sorted_option, some_option};
@@ -263,3 +266,13 @@ impl RoleCreate {
         self
     }
 }
+
+export_models!(
+    Role,
+    RoleCreate,
+    RolePatch,
+    RoleDeleteQuery,
+    RoleMemberBulkPatch,
+    RoleReorder,
+    RoleReorderItem,
+);

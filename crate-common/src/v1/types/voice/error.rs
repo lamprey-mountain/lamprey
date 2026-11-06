@@ -3,6 +3,8 @@
 use lamprey_macros::record;
 use thiserror::Error;
 
+use crate::util::registry::export_models;
+
 #[record]
 #[derive(Error)]
 pub enum VoiceErrorCode {
@@ -12,3 +14,5 @@ pub enum VoiceErrorCode {
     #[error("unknown mid")]
     UnknownMid,
 }
+
+export_models!(VoiceErrorCode);

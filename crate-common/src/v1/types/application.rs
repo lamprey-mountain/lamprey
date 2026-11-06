@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{RoomMember, User, util::Time};
+use crate::{
+    util::registry::export_models,
+    v1::types::{RoomMember, User, util::Time},
+};
 
 use super::{ApplicationId, UserId, util::Diff};
 
@@ -221,3 +224,17 @@ impl Application {
         }
     }
 }
+
+export_models!(
+    Application,
+    ApplicationConnectionProvider,
+    ApplicationConnectionProviderField,
+    ApplicationConnectionProviderFieldType,
+    ApplicationOauthProvider,
+    ApplicationOauthClient,
+    ApplicationCreate,
+    ApplicationPatch,
+    Connection,
+    Integration,
+    Bridge,
+);

@@ -1,6 +1,7 @@
 use lamprey_macros::record;
 use url::Url;
 
+use crate::util::registry::export_models;
 use crate::v1::types::MediaId;
 use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::federation::Remote;
@@ -324,3 +325,23 @@ impl Relationship {
                 .is_some_and(|ignore| ignore.until.is_none_or(|until| until < Time::now_utc()))
     }
 }
+
+export_models!(
+    User,
+    UserWebhook,
+    Suspended,
+    Puppet,
+    UserWithPrivate,
+    UserCreate,
+    PuppetCreate,
+    UserPatch,
+    Relationship,
+    RelationshipWithUserId,
+    UserWithRelationship,
+    RelationshipPatch,
+    Ignore,
+    RelationshipType,
+    UserListFilter,
+    UserListParams,
+    SuspendRequest,
+);

@@ -7,6 +7,8 @@ use lamprey_macros::record;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::registry::export_models;
+
 /// webrtc session description
 #[record]
 #[derive(PartialEq, Eq)]
@@ -106,3 +108,11 @@ pub enum KeyframeRequestKind {
     /// lost some data, need a keyframe to recover
     Pli,
 }
+
+export_models!(
+    SessionDescription,
+    IceCandidate,
+    Mid,
+    MediaKind,
+    KeyframeRequestKind
+);

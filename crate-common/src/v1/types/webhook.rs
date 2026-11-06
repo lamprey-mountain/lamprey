@@ -1,5 +1,6 @@
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{ChannelId, MediaId, RoomId, UserId, WebhookId};
 
 #[cfg(feature = "serde")]
@@ -38,3 +39,5 @@ pub struct WebhookUpdate {
     #[serde(default)]
     pub rotate_token: bool,
 }
+
+export_models!(Webhook, WebhookCreate, WebhookUpdate);

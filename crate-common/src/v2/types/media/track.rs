@@ -2,6 +2,7 @@
 
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v2::types::MediaTrackId;
 
 // TODO: add tracks field to media
@@ -102,3 +103,5 @@ pub enum TrackType {
 //     // captions must be encoded in webvtt
 //     // subtitles must be encoded in webvtt
 // }
+
+export_models!(TrackCreate, TrackUpdate, Track, TrackSource, TrackType);

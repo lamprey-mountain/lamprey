@@ -7,6 +7,8 @@ use crate::v1::types::{
     util::{Diff, Time},
 };
 
+use crate::util::registry::export_models;
+
 #[cfg(feature = "serde")]
 use crate::v1::types::util::{deserialize_sorted, deserialize_sorted_option, some_option};
 
@@ -299,3 +301,17 @@ impl RoomMember {
 
 // TEMP: compat
 pub use crate::v1::types::room_ban::*;
+
+export_models!(
+    RoomMember,
+    RoomMemberPut,
+    RoomMemberUpdate,
+    RoomMemberOrigin,
+    RoomMemberSearch,
+    RoomMemberSearchAdvanced,
+    RoomMemberSearchResponse,
+    RoomMemberDeleteQuery,
+    Timeout,
+    PruneBegin,
+    PruneResponse,
+);

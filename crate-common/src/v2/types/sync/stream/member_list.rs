@@ -2,6 +2,7 @@
 
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::{
     v1::types::{RoomMember, ThreadMember, User},
     v2::types::{ChannelId, RoleId, RoomId, UserId, sync::stream::StreamProtocol},
@@ -158,3 +159,14 @@ impl StreamProtocol for Protocol {
     type Command = Command;
     type Event = Event;
 }
+
+export_models!(
+    Initial,
+    MemberListTarget,
+    MemberListRange,
+    Command,
+    Event,
+    Operation,
+    MemberListGroup,
+    MemberListGroupId,
+);

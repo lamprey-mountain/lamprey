@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{Channel, Message, RoomMember, ThreadMemberMinimal, User};
+use crate::{
+    util::registry::export_models,
+    v1::types::{Channel, Message, RoomMember, ThreadMemberMinimal, User},
+};
 
 /// Thread list
 ///
@@ -46,3 +49,5 @@ impl ThreadInfo {
             && self.preview_members.is_empty()
     }
 }
+
+export_models!(ThreadList, ThreadInfo);

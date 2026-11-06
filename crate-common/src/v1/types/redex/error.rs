@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{EvalId, RedexId};
+use crate::{
+    util::registry::export_models,
+    v1::types::{EvalId, RedexId},
+};
 
 // TODO: use this in routes
 
@@ -67,3 +70,5 @@ impl std::fmt::Display for RedexError {
         write!(f, "RedexError({}) in {}", self.message, self.run_id)
     }
 }
+
+export_models!(RedexError, RedexErrorType, RedexErrorLocation);

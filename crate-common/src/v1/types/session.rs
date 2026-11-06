@@ -1,6 +1,7 @@
 use lamprey_macros::{Diff, record};
 use std::{fmt, str::FromStr};
 
+use crate::util::registry::export_models;
 use crate::v1::types::{ApplicationId, util::Time};
 
 #[cfg(feature = "serde")]
@@ -287,3 +288,15 @@ impl SessionImprint {
         }
     }
 }
+
+export_models!(
+    Session,
+    SessionCreate,
+    SessionImprint,
+    SessionPatch,
+    SessionStatus,
+    SessionSummary,
+    SessionToken,
+    SessionType,
+    SessionWithToken,
+);

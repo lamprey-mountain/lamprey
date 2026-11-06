@@ -1,11 +1,14 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{
-    ChannelId, MediaId, RoomMember, ThreadMember, User, UserId,
-    components::ComponentCreate,
-    ids::{DocumentBranchId, DocumentTagId},
-    misc::Time,
-    util::Diff,
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        ChannelId, MediaId, RoomMember, ThreadMember, User, UserId,
+        components::ComponentCreate,
+        ids::{DocumentBranchId, DocumentTagId},
+        misc::Time,
+        util::Diff,
+    },
 };
 
 #[cfg(feature = "serde")]
@@ -682,3 +685,41 @@ pub struct WikiGraphDocument {
     pub title: String,
     pub weight: u64,
 }
+
+export_models!(
+    Document,
+    DocumentArchived,
+    DocumentBranch,
+    DocumentBranchState,
+    DocumentBranchListParams,
+    DocumentBranchCreate,
+    DocumentBranchPatch,
+    DocumentBranchMerge,
+    DocumentBranchSync,
+    DocumentBranchMergeResult,
+    DocumentBranchMergeResultStatus,
+    DocumentTag,
+    DocumentTagCreate,
+    DocumentTagPatch,
+    HistoryParams,
+    Changeset,
+    DocumentChange,
+    HistoryPagination,
+    DocumentCrdtDiffParams,
+    DocumentCrdtApply,
+    Wiki,
+    DocumentPublished,
+    SerdocPut,
+    DocumentPatch,
+    DocumentPublishedPatch,
+    DocumentArchivedPatch,
+    WikiPatch,
+    DocumentRevert,
+    DocumentMediaAttach,
+    WikiGraphQuery,
+    WikiGraph,
+    WikiGraphDocument,
+    use crdt,
+    use ids,
+    use serialized,
+);

@@ -1,5 +1,8 @@
-use crate::v1::types::{
-    AutomodRuleId, ChannelId, MessageId, RoleId, RoomId, UserId, misc::duration::Duration,
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        AutomodRuleId, ChannelId, MessageId, RoleId, RoomId, UserId, misc::duration::Duration,
+    },
 };
 
 use lamprey_macros::record;
@@ -493,6 +496,24 @@ impl AutomodTextLocation {
         )
     }
 }
+
+export_models!(
+    AutomodRule,
+    AutomodRuleCreate,
+    AutomodRuleUpdate,
+    AutomodRuleSummary,
+    AutomodTarget,
+    AutomodRuleExecution,
+    AutomodRuleTestRequest,
+    AutomodRuleTest,
+    AutomodMatches,
+    AutomodMatchFragment,
+    AutomodMatchKind,
+    AutomodTextLocation,
+    AutomodMediaLocation,
+    AutomodTrigger,
+    AutomodAction,
+);
 
 #[cfg(feature = "validator")]
 mod val {

@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::registry::export_models;
 #[cfg(feature = "feat_tag_reactions")]
 use crate::v1::types::tag::Tag;
 use crate::v1::types::{EmojiId, emoji::EmojiCustom, util::Time};
@@ -309,3 +310,14 @@ mod tests {
         }
     }
 }
+
+export_models!(
+    Reaction,
+    ReactionInfo,
+    ReactionCounts,
+    ReactionCount,
+    ReactionListItem,
+    ReactionKey,
+    ReactionKeyParam,
+    ReactionKeyField
+);

@@ -6,7 +6,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::ids::{DocumentBranchId, DocumentTagId};
+use crate::{
+    util::registry::export_models,
+    v1::types::ids::{DocumentBranchId, DocumentTagId},
+};
 
 /// an exact version of a document at a point in time
 ///
@@ -152,3 +155,5 @@ mod document_revision_id_schema {
         }
     }
 }
+
+export_models!(DocumentRevisionId, DocumentRevisionRef);

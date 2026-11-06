@@ -1,5 +1,7 @@
 //! types for interacting with the underlying yrs crdt
 
+use crate::util::registry::export_models;
+
 // TODO: use Binary (or Bytes)
 
 /// a pointer to a client's state at a point in time
@@ -154,3 +156,5 @@ mod utoipa_impl {
         }
     }
 }
+
+export_models!(DocumentStateVector, DocumentUpdate, DocumentPosition);

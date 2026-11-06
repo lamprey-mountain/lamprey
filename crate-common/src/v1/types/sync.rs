@@ -1,3 +1,4 @@
+use crate::util::registry::export_models;
 use crate::v1::types::ack::AckState;
 #[cfg(feature = "feat_e2ee")]
 use crate::v1::types::e2ee::E2EEDispatch;
@@ -1136,3 +1137,18 @@ impl MessagePayload {
         }
     }
 }
+
+export_models!(
+    MessageHello,
+    MessageClient,
+    ConnectionProperties,
+    SyncSubscription,
+    SyncSubscribeScript,
+    SyncSubscribeDocument,
+    SyncResume,
+    MessageEnvelope,
+    MessagePayload,
+    MessageSync,
+    SyncParams,
+    use member_lists,
+);

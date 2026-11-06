@@ -2,7 +2,10 @@
 
 use lamprey_macros::record;
 
-use crate::v1::types::{Channel, ChannelId, MessageId, misc::Time};
+use crate::{
+    util::registry::export_models,
+    v1::types::{Channel, ChannelId, MessageId, misc::Time},
+};
 
 /// acknowledge a message in a channel
 #[record]
@@ -162,3 +165,12 @@ impl AckState {
         }
     }
 }
+
+export_models!(
+    AckCreate,
+    AckBulk,
+    AckBulkItem,
+    AckType,
+    AckState,
+    ChannelAckMetadata
+);

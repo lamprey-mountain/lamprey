@@ -9,6 +9,7 @@ use utoipa::ToSchema;
 #[cfg(feature = "validator")]
 use validator::Validate;
 
+use crate::util::registry::export_models;
 use crate::v1::types::util::Time;
 use crate::v1::types::{ChannelId, PaginationKey, Role, RoleId, RoomId, UserId};
 
@@ -262,3 +263,13 @@ impl PartialEq for Invite {
 }
 
 impl Eq for Invite {}
+
+export_models!(
+    Invite,
+    InviteWithMetadata,
+    InviteTarget,
+    InviteTargetId,
+    InviteCode,
+    InviteCreate,
+    InvitePatch
+);

@@ -7,7 +7,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{ChannelId, RedexId, UserId, federation::Hostname};
+use crate::{
+    util::registry::export_models,
+    v1::types::{ChannelId, RedexId, UserId, federation::Hostname},
+};
 
 /// metadata about a redex
 #[record]
@@ -139,3 +142,12 @@ mod v {
         }
     }
 }
+
+export_models!(
+    RedexMetadata,
+    RedexAuthor,
+    RedexAuthorOrigin,
+    RedexOrigin,
+    Semver,
+    License
+);

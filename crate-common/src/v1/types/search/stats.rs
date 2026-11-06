@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{ChannelId, MessageId, RoomId};
+use crate::{
+    util::registry::export_models,
+    v1::types::{ChannelId, MessageId, RoomId},
+};
 
 /// Overall search index statistics
 #[record]
@@ -41,3 +44,9 @@ pub struct SearchIndexStatsRoom {
     pub count_messages: u64,
     pub count_media: u64,
 }
+
+export_models!(
+    SearchIndexStats,
+    SearchIndexStatsChannel,
+    SearchIndexStatsRoom
+);

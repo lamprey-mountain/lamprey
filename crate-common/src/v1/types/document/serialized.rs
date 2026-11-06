@@ -4,7 +4,7 @@
 
 use lamprey_macros::record;
 
-use crate::v1::types::components::ComponentCanonical;
+use crate::{util::registry::export_models, v1::types::components::ComponentCanonical};
 
 /// serialized document
 #[record]
@@ -12,3 +12,5 @@ use crate::v1::types::components::ComponentCanonical;
 pub struct Serdoc {
     pub components: Vec<ComponentCanonical>,
 }
+
+export_models!(Serdoc);

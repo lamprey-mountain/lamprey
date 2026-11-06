@@ -2,6 +2,7 @@ use lamprey_macros::record;
 
 use uuid::Uuid;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{
     Channel, ChannelId, Message, MessageId, NotificationId, RoomId, RoomMember, ThreadMember, User,
     UserId, reaction::ReactionKeyParam, util::Time,
@@ -289,3 +290,14 @@ impl Notification {
         self.ty.message_id()
     }
 }
+
+export_models!(
+    Notification,
+    NotificationType,
+    NotificationQuery,
+    NotificationCreate,
+    NotificationMarkRead,
+    NotificationFlush,
+    NotificationPagination,
+    use preferences,
+);

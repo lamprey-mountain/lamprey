@@ -8,6 +8,7 @@ use url::Url;
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
+use crate::util::registry::export_models;
 use crate::v1::types::MediaId;
 use crate::v1::types::components::acl::Allow;
 use crate::v1::types::e2ee::media::EncryptedMedia;
@@ -819,3 +820,19 @@ impl Components<Thin> {
         }
     }
 }
+
+export_models!(
+    ComponentId,
+    ComponentCustomId,
+    ButtonStyle,
+    ComponentCreate,
+    ComponentCanonical,
+    ComponentEncrypted,
+    ComponentsCreate,
+    ComponentsCanonical,
+    ComponentsEncrypted,
+    Create,
+    Canonical,
+    Thin,
+    Encrypted
+);

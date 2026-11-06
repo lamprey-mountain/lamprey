@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use lamprey_macros::record;
 use url::Url;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{
     SfuId,
     misc::{Time, binary::Binary},
@@ -199,3 +200,23 @@ pub enum ServerWebtransportCert {
     #[serde(rename = "sha-256")]
     Sha256 { value: Binary<32> },
 }
+
+export_models!(
+    ServerModeration,
+    ServerAutomodList,
+    ServerMediaScanner,
+    ServerInfo,
+    ServerFeatures,
+    ServerRegistration,
+    ServerMedia,
+    ServerAuth,
+    ServerAuthOauth,
+    ServerVoice,
+    ServerWebPush,
+    ServerVersion,
+    ServerVoiceHealth,
+    ServerVoiceHealthSfu,
+    ServerWebtransport,
+    ServerWebtransportCert,
+    ServerRedex,
+);

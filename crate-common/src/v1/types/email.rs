@@ -1,6 +1,8 @@
 use lamprey_macros::record;
 use std::convert::TryFrom;
 
+use crate::util::registry::export_models;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -128,3 +130,5 @@ impl AsRef<str> for EmailAddr {
 }
 
 // TODO: impl deref?
+
+export_models!(EmailAddr, EmailInfo, EmailInfoPatch, EmailTrust);

@@ -1,6 +1,7 @@
 use lamprey_macros::record;
 
 use crate::{
+    util::registry::export_models,
     v1::types::{HarvestId, RoomId, UserId, misc::Time},
     v2::types::media::Media,
 };
@@ -128,3 +129,13 @@ pub enum HarvestType {
         create: HarvestCreateRoom,
     },
 }
+
+export_models!(
+    Harvest,
+    HarvestStatus,
+    HarvestFailedCode,
+    HarvestCancelReason,
+    HarvestType,
+    HarvestCreateUser,
+    HarvestCreateRoom
+);

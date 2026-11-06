@@ -1,6 +1,7 @@
 use lamprey_macros::record;
 use url::Url;
 
+use crate::util::registry::export_models;
 use crate::v1::types::{ApplicationId, User, UserId, application::Application, email::EmailAddr};
 
 pub mod scope;
@@ -275,3 +276,24 @@ pub struct OauthIntrospectResponse {
     pub username: UserId,
     pub exp: Option<u64>,
 }
+
+export_models!(
+    OidcClaims,
+    AuthServerMetadata,
+    OidcDiscovery,
+    OauthAuthMethod,
+    OauthCodeChallengeMethod,
+    Jwks,
+    Jwk,
+    Userinfo,
+    OauthAuthorizeInfo,
+    OauthAuthorizeParams,
+    OauthAuthorizeResponse,
+    OauthResponseType,
+    OauthGrantType,
+    OauthTokenRequest,
+    OauthTokenResponse,
+    OauthTokenRevoke,
+    OauthIntrospectResponse,
+    use scope
+);

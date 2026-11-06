@@ -2,6 +2,8 @@
 
 use thiserror::Error;
 
+use crate::util::registry::export_models;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -795,3 +797,5 @@ pub enum ErrorCode {
     #[error("regex too complex")]
     RegexTooComplex,
 }
+
+export_models!(ErrorCode);

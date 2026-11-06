@@ -1,6 +1,7 @@
 use lamprey_macros::record;
 
 use crate::{
+    util::registry::export_models,
     v1::types::{MediaId, User, search::common::SearchRequest},
     v2::types::media::Media,
 };
@@ -43,3 +44,5 @@ pub struct MediaSearch {
     /// current page cursor
     pub cursor: Option<String>,
 }
+
+export_models!(MediaSearchRequest, MediaSearchOrderField, MediaSearch);

@@ -9,12 +9,15 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "utoipa")]
 use utoipa::ToSchema;
 
-use crate::v1::types::{
-    ChannelId, SfuId, UserId,
-    voice::{
-        IceCandidate, SessionDescription, SfuStats, SubscriptionUpdate, TrackAnnouncement,
-        TrackCreate, TrackId, TrackMapping, VoiceErrorCode, VoiceStateUpdate,
-        internal::{SfuVoiceState, VoiceConfig},
+use crate::{
+    util::registry::export_models,
+    v1::types::{
+        ChannelId, SfuId, UserId,
+        voice::{
+            IceCandidate, SessionDescription, SfuStats, SubscriptionUpdate, TrackAnnouncement,
+            TrackCreate, TrackId, TrackMapping, VoiceErrorCode, VoiceStateUpdate,
+            internal::{SfuVoiceState, VoiceConfig},
+        },
     },
 };
 
@@ -256,3 +259,5 @@ pub enum SignallingEvent {
         code: VoiceErrorCode,
     },
 }
+
+export_models!(SignallingCommand, SignallingEvent);

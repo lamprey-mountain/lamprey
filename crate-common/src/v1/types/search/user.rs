@@ -1,6 +1,9 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{User, UserId, search::common::SearchRequest};
+use crate::{
+    util::registry::export_models,
+    v1::types::{User, UserId, search::common::SearchRequest},
+};
 
 #[record]
 pub struct UserSearchRequest {
@@ -45,3 +48,5 @@ pub struct UserSearch {
     /// current page cursor
     pub cursor: Option<String>,
 }
+
+export_models!(UserSearchRequest, UserSearchOrderField, UserSearch);

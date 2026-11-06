@@ -7,6 +7,7 @@ use validator::Validate;
 
 use lamprey_macros::{Diff, record};
 
+use crate::util::registry::export_models;
 use crate::v1::types::{
     ChannelId, MediaId, MediaVerId, Mime, RoomId, UserId, federation::Remote, misc::hashes::Hashes,
     util::Time,
@@ -498,3 +499,26 @@ impl Media {
         }
     }
 }
+
+export_models!(
+    MediaReference,
+    MediaDoneParams,
+    MediaDirectParams,
+    MediaStatus,
+    Media,
+    MediaExpiry,
+    MediaErrorReason,
+    MediaQuarantine,
+    MediaScan,
+    MediaMetadata,
+    MediaPatch,
+    MediaCreate,
+    MediaClone,
+    MediaCreateSource,
+    MediaCreated,
+    use links,
+    use proxy,
+    use resolvable,
+    use scanner,
+    use track,
+);

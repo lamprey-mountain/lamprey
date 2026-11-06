@@ -2,6 +2,7 @@
 
 use lamprey_macros::record;
 
+use crate::util::registry::export_models;
 use crate::v1::types::util::Time;
 
 fn true_fn() -> bool {
@@ -192,3 +193,16 @@ pub enum NotifsVoice {
     #[default]
     Nothing,
 }
+
+export_models!(
+    NotifsGlobal,
+    NotifsRoom,
+    NotifsChannel,
+    NotifsMessages,
+    NotifsReplies,
+    NotifsThreads,
+    NotifsReactions,
+    NotifsTts,
+    Mute,
+    NotifsVoice,
+);
