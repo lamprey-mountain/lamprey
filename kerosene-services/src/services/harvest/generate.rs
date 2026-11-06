@@ -17,8 +17,7 @@ use common::v1::types::{
             ARCHIVE_API_VERSION, ARCHIVE_VERSION, HarvestInfo, Metadata, ReactionArchive, RoomFile,
         },
     },
-    message::MessageVersion,
-    reaction::{ReactionKeyParam, ReactionListItem},
+    reaction::ReactionKeyParam,
     server::{ServerFeatures, ServerInfo, ServerMedia, ServerVersion},
     util::Time,
 };
@@ -440,9 +439,7 @@ impl<'a> Extract<'a> {
                     }
                     self.users.insert(item.user_id, None);
                     push_line(
-                        self.buffered_reactions
-                            .entry(item.channel_id)
-                            .or_default(),
+                        self.buffered_reactions.entry(item.channel_id).or_default(),
                         &ReactionArchive {
                             message_id: item.message_id,
                             key: reaction_key(&item.key),

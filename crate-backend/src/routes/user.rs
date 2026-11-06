@@ -412,38 +412,6 @@ async fn user_list(
     Ok(Json(users))
 }
 
-/// Harvest get
-#[handler(routes::harvest_get)]
-async fn harvest_get(
-    auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::harvest_get::Request,
-) -> Result<impl IntoResponse> {
-    if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
-        return Err(ApiError::from_code(ErrorCode::BotsCannotUseThisEndpoint).into());
-    }
-
-    // suspended users can get a harvest for themselves
-
-    Ok(Error::Unimplemented)
-}
-
-/// Harvest create
-#[handler(routes::harvest_create)]
-async fn harvest_create(
-    auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::harvest_create::Request,
-) -> Result<impl IntoResponse> {
-    if auth.user.bot || auth.user.webhook.is_some() || auth.user.puppet.is_some() {
-        return Err(ApiError::from_code(ErrorCode::BotsCannotUseThisEndpoint).into());
-    }
-
-    // suspended users can create a harvest for themselves
-
-    Ok(Error::Unimplemented)
-}
-
 /// User search
 #[handler(routes::user_search)]
 async fn user_search(
@@ -475,7 +443,5 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(guest_create))
         .routes(routes2!(user_presence_set))
         .routes(routes2!(user_list))
-        .routes(routes2!(harvest_get))
-        .routes(routes2!(harvest_create))
         .routes(routes2!(user_search))
 }

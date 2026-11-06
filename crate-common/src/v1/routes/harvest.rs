@@ -5,6 +5,7 @@ use lamprey_macros::endpoint;
     get,
     path = "/user/{user_id}/harvest",
     tags = ["harvest"],
+    scopes = [Full],
     response(OK, body = Harvest, description = "success"),
     response(NOT_FOUND, description = "no harvest found"),
 )]
@@ -27,6 +28,7 @@ pub mod harvest_user_get {
     post,
     path = "/user/{user_id}/harvest",
     tags = ["harvest"],
+    scopes = [Full],
     audit_log_events = ["HarvestCreate"],
     response(ACCEPTED, description = "harvest has been queued"),
 )]
@@ -49,6 +51,7 @@ pub mod harvest_user_create {
     get,
     path = "/room/{room_id}/harvest",
     tags = ["harvest"],
+    scopes = [Full],
     permissions = [Admin],
     response(OK, body = Harvest, description = "success"),
     response(NOT_FOUND, description = "no harvest found"),
@@ -72,6 +75,7 @@ pub mod harvest_room_get {
     post,
     path = "/room/{room_id}/harvest",
     tags = ["harvest"],
+    scopes = [Full],
     permissions = [Admin],
     audit_log_events = ["HarvestCreate"],
     response(ACCEPTED, description = "harvest has been queued"),
@@ -95,8 +99,9 @@ pub mod harvest_room_create {
     get,
     path = "/harvest/{harvest_id}",
     tags = ["harvest"],
+    scopes = [Full],
     permissions_optional = [Admin],
-    response(OK, description = "success"),
+    response(OK, body = Harvest, description = "success"),
 )]
 pub mod harvest_get {
     use crate::v1::types::{HarvestId, harvest::Harvest};
