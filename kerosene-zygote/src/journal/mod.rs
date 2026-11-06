@@ -20,6 +20,7 @@ mod reader;
 
 pub(crate) use backend::Backend;
 pub use backend::Metadata;
+pub use backend::memory::MemoryBackend;
 pub use config::Config;
 pub use error::{OpenError, ReadError, WriteError};
 pub use journal::{Block, Journal, JournalId};

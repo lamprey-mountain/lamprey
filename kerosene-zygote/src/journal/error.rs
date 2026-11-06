@@ -48,6 +48,22 @@ pub enum WriteError {
     #[error("this journal has been deleted")]
     Deleted,
 
+    /// the meta journal cannot be written to manually
+    ///
+    /// the backend appends catalog events to it internally.
+    ///
+    /// can occur while writing
+    #[error("cannot manually write to the meta journal")]
+    MetaWrite,
+
+    /// the meta journal cannot be frozen
+    ///
+    /// the catalog must remain writable.
+    ///
+    /// can occur while freezing
+    #[error("cannot freeze the meta journal")]
+    MetaFreeze,
+
     /// ran out of space
     ///
     /// can occur while writing

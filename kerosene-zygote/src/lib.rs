@@ -4,6 +4,7 @@ pub mod broadcast;
 pub mod cluster;
 pub mod journal;
 pub mod net;
+pub mod projection;
 
 // TODO: remove
 // pub mod stream;
