@@ -90,6 +90,8 @@ components(schemas(
     common::v1::types::room_analytics::AnalyticsMembersLeave,
     common::v1::types::room_analytics::AnalyticsOverview,
     // application/integration types
+    common::v1::types::application::ApplicationCreate,
+    common::v1::types::application::ApplicationUpdate,
     common::v1::types::application::Integration,
     // moderation types
     common::v1::types::moderation::ReportReason,
