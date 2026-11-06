@@ -8,11 +8,20 @@ use common::v1::types::{
     util::Time,
 };
 use tokio::sync::Semaphore;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
+
+mod archive;
+mod generate;
 
 /// the maximum number of harvest jobs that can be running simultaneously
 // TODO: make this configurable
 const MAX_HARVEST_JOBS: usize = 2;
+
+/// how long a completed harvest archive stays downloadable
+pub(super) const EXPIRES_AFTER: Duration = Duration::from_secs(14 * 24 * 60 * 60);
+
+/// how often to check for expired harvests
+const GC_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
 pub struct ServiceHarvest {
     globals: Globals,
@@ -24,6 +33,33 @@ impl ServiceHarvest {
     }
 
     pub(super) fn start_background_tasks(&self) {
+        let globals = self.globals.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(GC_INTERVAL).await;
+
+                let expired = match globals.begin_read().await {
+                    Ok(mut txn) => match txn.harvest_gc(Time::now_utc()).await {
+                        Ok(expired) => expired,
+                        Err(e) => {
+                            error!("failed to fetch expired harvests: {e:?}");
+                            continue;
+                        }
+                    },
+                    Err(e) => {
+                        error!("failed to acquire data for harvest gc: {e:?}");
+                        continue;
+                    }
+                };
+
+                for harvest in expired {
+                    if let Err(e) = gc_harvest(&globals, harvest).await {
+                        error!("failed to garbage collect harvest: {e:?}");
+                    }
+                }
+            }
+        });
+
         let globals = self.globals.clone();
         tokio::spawn(async move {
             let semaphore = Arc::new(Semaphore::new(MAX_HARVEST_JOBS));
@@ -135,19 +171,6 @@ impl ServiceHarvest {
         Ok(harvest)
     }
 
-    /// generate a harvest
-    async fn generate(&self, _harvest: Harvest) -> Result<()> {
-        // 1. claim harvest (use postgres as queue)
-        // 2. create temp sqlite file
-        // 3. open with rusqlite
-        // 4. fully paginate through all data, write to sqlite
-        // 5. flush, close file
-        // 6. upload sqlite db with media service
-        // 7. update harvest (update postgres)
-        // 8. emit message sync event
-        todo!()
-    }
-
     /// get a harvest
     pub async fn get(&self, harvest_id: HarvestId) -> Result<Harvest> {
         let mut db = self.globals.begin_read().await?;
@@ -177,4 +200,29 @@ impl ServiceHarvest {
             .ok_or_else(|| ApiError::from_code(ErrorCode::UnknownHarvest))?;
         Ok(harvest)
     }
+}
+
+/// delete an expired harvest's archive and record
+async fn gc_harvest(globals: &Globals, harvest: Harvest) -> Result<()> {
+    if let HarvestStatus::Completed { url, .. } = &harvest.status {
+        match globals
+            .blobs()
+            .delete(url.path().trim_start_matches('/'))
+            .await
+        {
+            Ok(()) => info!("deleted expired harvest archive {}", harvest.id),
+            Err(e) if e.kind() == opendal::ErrorKind::NotFound => {}
+            Err(e) => {
+                warn!("failed to delete harvest archive {}: {e}", harvest.id);
+                return Ok(());
+            }
+        }
+    }
+
+    // PERF: batch deletes
+    let mut txn = globals.begin().await?;
+    txn.harvest_delete(harvest.id).await?;
+    txn.commit().await?;
+
+    Ok(())
 }

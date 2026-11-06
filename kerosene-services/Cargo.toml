@@ -12,6 +12,7 @@ keywords.workspace = true
 async-nats = "0.46.0"
 async-tempfile = "0.7.0"
 async-trait = "0.1.92"
+async_zip = { version = "0.0.19", features = ["tokio", "deflate"] }
 axum = { version = "0.8.9", features = ["macros", "ws", "multipart"] }
 axum-extra = { version = "0.10.3", features = ["typed-header"] }
 base32 = "0.5.1"
