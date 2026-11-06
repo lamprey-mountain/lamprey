@@ -54,6 +54,8 @@ type CheckboxOptionWithLabelProps = {
 	description?: string;
 	class?: string;
 	disabled?: boolean;
+	/** background color of the checkbox box when checked */
+	background?: string;
 };
 
 export const CheckboxOptionWithLabel = (
@@ -68,7 +70,11 @@ export const CheckboxOptionWithLabel = (
 			class={props.class}
 			disabled={props.disabled}
 		>
-			<Checkbox checked={props.checked} seed={props.seed} />
+			<Checkbox
+				checked={props.checked}
+				seed={props.seed}
+				background={props.background}
+			/>
 			<label for={props.id} style="display: block">
 				<div>{props.label}</div>
 				{props.description && <div class="dim">{props.description}</div>}

@@ -1,7 +1,6 @@
 import { onMount, type ParentProps, type Ref } from "solid-js";
 import { useApi } from "@/api";
 import type { Modal as ModalType } from "@/app/context";
-import { ModalResetPassword } from "@/components/features/user_settings/mod.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { ModalAttachment } from "./ModalAttachment.tsx";
 import { ModalBan } from "./ModalBan.tsx";
@@ -21,6 +20,7 @@ import { ModalNotifications } from "./ModalNotifications.tsx";
 import { ModalPalette } from "./ModalPalette.tsx";
 import { ModalPrivacy } from "./ModalPrivacy.tsx";
 import { ModalReactions } from "./ModalReactions.tsx";
+import { ModalResetPassword } from "./ModalResetPassword.tsx";
 import { ModalRoomCreateOrJoin } from "./ModalRoomCreateOrJoin";
 import { ModalRoomSettings } from "./ModalRoomSettings.tsx";
 import { ModalTagEditor } from "./ModalTagEditor.tsx";

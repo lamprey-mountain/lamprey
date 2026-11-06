@@ -1,17 +1,8 @@
 import type { User } from "sdk";
-import {
-	createResource,
-	createSignal,
-	For,
-	onCleanup,
-	Show,
-	type VoidProps,
-} from "solid-js";
+import { createResource, For, onCleanup, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
-import { useCtx } from "@/app/context";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
-import { Modal } from "@/modals/mod";
 
 export function Authentication(props: VoidProps<{ user: User }>) {
 	const [, modalctl] = useModals();
@@ -314,72 +305,3 @@ function Oauth() {
 		</div>
 	);
 }
-
-export const ModalResetPassword = () => {
-	const [password, setPassword] = createSignal("");
-	const [confirmPassword, setConfirmPassword] = createSignal("");
-	const ctx = useCtx();
-	const [, modalctl] = useModals();
-
-	async function handlePasswordSet(e: SubmitEvent) {
-		e.preventDefault();
-
-		if (!password()) {
-			modalctl.alert("missing password");
-			return;
-		}
-		if (!confirmPassword()) {
-			modalctl.alert("missing confirmPassword");
-			return;
-		}
-
-		if (password() !== confirmPassword()) {
-			modalctl.alert("password !== confirmPassword");
-			return;
-		}
-
-		ctx.client.http.PUT("/api/v1/auth/password", {
-			body: { password: password() },
-		});
-	}
-
-	return (
-		<Modal>
-			<div class="auth">
-				<section class="form-wrapper">
-					reset password
-					<form onSubmit={handlePasswordSet}>
-						<label>
-							<div class="label-text">password</div>
-							<input
-								class="input"
-								type="password"
-								placeholder="dolphins"
-								value={password()}
-								onInput={(e) => setPassword(e.currentTarget.value)}
-							/>
-						</label>
-						<br />
-						<label>
-							<div class="label-text">confirm password</div>
-							<input
-								class="input"
-								type="password"
-								placeholder="dolphins"
-								value={confirmPassword()}
-								onInput={(e) => setConfirmPassword(e.currentTarget.value)}
-							/>
-						</label>
-						<br />
-						<br />
-						<input
-							class="button submit-btn"
-							type="submit"
-							value={"set password"}
-						/>
-					</form>
-				</section>
-			</div>
-		</Modal>
-	);
-};

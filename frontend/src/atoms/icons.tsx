@@ -109,9 +109,11 @@ export const Checkbox = (props: {
 	checked?: boolean;
 	indeterminate?: boolean;
 	seed?: string;
+	/** fill/stroke color of the box when active (defaults to the link color) */
+	background?: string;
 }) => {
 	const active = () => props.checked || props.indeterminate;
-
+	const color = () => props.background ?? "oklch(var(--color-link-200))";
 	return (
 		<svg
 			class="radio"
@@ -125,8 +127,8 @@ export const Checkbox = (props: {
 				width="12"
 				height="12"
 				rx="2"
-				fill={active() ? "oklch(var(--color-link-200))" : "none"}
-				stroke={active() ? "oklch(var(--color-link-200))" : "currentColor"}
+				fill={active() ? color() : "none"}
+				stroke={active() ? color() : "currentColor"}
 				stroke-width="1"
 			/>
 			<Show when={active() && props.seed}>

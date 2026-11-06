@@ -14,6 +14,7 @@ export { default as icEmojiPeople } from "@/assets/emoji-people.png";
 export { default as icEmojiPlaces } from "@/assets/emoji-places.png";
 export { default as icEmojiSymbols } from "@/assets/emoji-symbols.png";
 export { default as icExit } from "@/assets/exit.png";
+export { default as icEye } from "@/assets/eye-1.png";
 export { default as icGear } from "@/assets/gear.png";
 export { default as icHeadphones } from "@/assets/headphones.png";
 export {
