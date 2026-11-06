@@ -1,4 +1,4 @@
-use common::v1::types::auth::{CaptchaChallenge, TotpInit, TotpRecoveryCodes};
+use common::v1::types::auth::{CaptchaChallenge, TotpInit, TotpRecoveryCodes, WebauthnChallenge};
 use common::v1::types::util::Changes;
 use common::v1::types::{AuditLogEntryType, Session, SessionStatus, UserId};
 use lamprey_backend_services::compat::types::EmailPurpose;
@@ -123,6 +123,11 @@ pub async fn totp_exec(
     req: Req<routes::auth_totp_exec::Endpoint>,
 ) -> Result<routes::auth_totp_exec::Response> {
     let session = req.identity().ensure_session()?;
+
+    if session.status.bound_expired() {
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
     let session_id = session.id;
     let user_id = mfa_user_id(session)?;
     let was_unauthenticated = matches!(
@@ -210,6 +215,11 @@ pub async fn recovery_code_exec(
     req: Req<routes::auth_totp_recovery_exec::Endpoint>,
 ) -> Result<routes::auth_totp_recovery_exec::Response> {
     let session = req.identity().ensure_session()?;
+
+    if session.status.bound_expired() {
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
     let session_id = session.id;
     let user_id = mfa_user_id(session)?;
     let was_unauthenticated = matches!(
@@ -299,7 +309,9 @@ pub async fn password_exec(
     req: Req<routes::auth_password_exec::Endpoint>,
 ) -> Result<routes::auth_password_exec::Response> {
     let session = req.identity().ensure_session()?;
-    if session.status != SessionStatus::Unauthorized && !session.status.bound_expired() {
+    if session.status.is_authenticated()
+        || (session.status.is_bound() && !session.status.bound_expired())
+    {
         return Err(ApiError::from_code(ErrorCode::AlreadyAuthenticated).into());
     }
 
@@ -510,54 +522,175 @@ pub async fn captcha_submit(
     Ok(routes::auth_captcha_submit::Response {})
 }
 
-// TODO: implement WebAuthn
 #[handler(routes::auth_webauthn_register_challenge)]
 pub async fn webauthn_register_challenge(
-    _req: Req<routes::auth_webauthn_register_challenge::Endpoint>,
+    req: Req<routes::auth_webauthn_register_challenge::Endpoint>,
 ) -> Result<routes::auth_webauthn_register_challenge::Response> {
-    Err(Error::Unimplemented)
+    req.identity().ensure_sudo()?;
+    let session_id = req.identity().ensure_session()?.id;
+    let user = req.identity().ensure_user()?;
+
+    let challenge = req
+        .services()
+        .auth
+        .webauthn_register_challenge(user, session_id)
+        .await
+        .cast_internal()?;
+
+    Ok(routes::auth_webauthn_register_challenge::Response {
+        challenge: WebauthnChallenge { challenge },
+    })
 }
 
 #[handler(routes::auth_webauthn_register_finish)]
 pub async fn webauthn_register_finish(
-    _req: Req<routes::auth_webauthn_register_finish::Endpoint>,
+    req: Req<routes::auth_webauthn_register_finish::Endpoint>,
 ) -> Result<routes::auth_webauthn_register_finish::Response> {
-    Err(Error::Unimplemented)
+    req.identity().ensure_sudo()?;
+    let session_id = req.identity().ensure_session()?.id;
+    let user = req.identity().ensure_user()?;
+
+    let authenticator = req
+        .services()
+        .auth
+        .webauthn_register_finish(user, session_id, &req.inner().credential.credential)
+        .await
+        .cast_internal()?;
+
+    req.audit_log()
+        .push(
+            user.id.into_inner().into(),
+            AuditLogEntryType::AuthUpdate {
+                changes: Changes::new()
+                    .add("authenticator", &authenticator.name)
+                    .build(),
+            },
+        )
+        .success();
+
+    Ok(routes::auth_webauthn_register_finish::Response { authenticator })
 }
 
 #[handler(routes::auth_webauthn_auth_challenge)]
 pub async fn webauthn_auth_challenge(
-    _req: Req<routes::auth_webauthn_auth_challenge::Endpoint>,
+    req: Req<routes::auth_webauthn_auth_challenge::Endpoint>,
 ) -> Result<routes::auth_webauthn_auth_challenge::Response> {
-    Err(Error::Unimplemented)
+    let session = req.identity().ensure_session()?;
+
+    if session.status.bound_expired() {
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
+    let challenge = req
+        .services()
+        .auth
+        .webauthn_auth_challenge(session.id, session.user_id())
+        .await
+        .cast_internal()?;
+
+    Ok(routes::auth_webauthn_auth_challenge::Response {
+        challenge: WebauthnChallenge { challenge },
+    })
 }
 
 #[handler(routes::auth_webauthn_auth_finish)]
 pub async fn webauthn_auth_finish(
-    _req: Req<routes::auth_webauthn_auth_finish::Endpoint>,
+    req: Req<routes::auth_webauthn_auth_finish::Endpoint>,
 ) -> Result<routes::auth_webauthn_auth_finish::Response> {
-    Err(Error::Unimplemented)
+    let session = req.identity().ensure_session()?.clone();
+
+    if session.status.bound_expired() {
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
+    let (user_id, state) = req
+        .services()
+        .auth
+        .webauthn_auth_finish(&session, &req.inner().credential.credential)
+        .await
+        .cast_internal()?;
+
+    req.audit_log_as(user_id, &session)
+        .push(
+            user_id.into_inner().into(),
+            AuditLogEntryType::SessionLogin {
+                user_id,
+                session_id: session.id,
+            },
+        )
+        .success();
+
+    Ok(routes::auth_webauthn_auth_finish::Response { state })
 }
 
 #[handler(routes::auth_webauthn_authenticator_list)]
 pub async fn webauthn_authenticator_list(
-    _req: Req<routes::auth_webauthn_authenticator_list::Endpoint>,
+    req: Req<routes::auth_webauthn_authenticator_list::Endpoint>,
 ) -> Result<routes::auth_webauthn_authenticator_list::Response> {
-    Err(Error::Unimplemented)
+    let user = req.identity().ensure_user()?;
+
+    let authenticators = req
+        .services()
+        .auth
+        .webauthn_authenticators(user.id)
+        .await
+        .cast_internal()?;
+
+    Ok(routes::auth_webauthn_authenticator_list::Response { authenticators })
 }
 
 #[handler(routes::auth_webauthn_authenticator_patch)]
 pub async fn webauthn_authenticator_patch(
-    _req: Req<routes::auth_webauthn_authenticator_patch::Endpoint>,
+    req: Req<routes::auth_webauthn_authenticator_patch::Endpoint>,
 ) -> Result<routes::auth_webauthn_authenticator_patch::Response> {
-    Err(Error::Unimplemented)
+    req.identity().ensure_sudo()?;
+    let user = req.identity().ensure_user()?;
+
+    let changes = req
+        .services()
+        .auth
+        .webauthn_rename(
+            user.id,
+            req.inner().authenticator_id,
+            req.inner().patch.name.as_deref(),
+        )
+        .await
+        .cast_internal()?;
+
+    if !changes.is_empty() {
+        req.audit_log()
+            .push(
+                user.id.into_inner().into(),
+                AuditLogEntryType::AuthUpdate { changes },
+            )
+            .success();
+    }
+
+    Ok(routes::auth_webauthn_authenticator_patch::Response {})
 }
 
 #[handler(routes::auth_webauthn_authenticator_delete)]
 pub async fn webauthn_authenticator_delete(
-    _req: Req<routes::auth_webauthn_authenticator_delete::Endpoint>,
+    req: Req<routes::auth_webauthn_authenticator_delete::Endpoint>,
 ) -> Result<routes::auth_webauthn_authenticator_delete::Response> {
-    Err(Error::Unimplemented)
+    req.identity().ensure_sudo()?;
+    let user = req.identity().ensure_user()?;
+
+    let changes = req
+        .services()
+        .auth
+        .webauthn_delete(user.id, req.inner().authenticator_id)
+        .await
+        .cast_internal()?;
+
+    req.audit_log()
+        .push(
+            user.id.into_inner().into(),
+            AuditLogEntryType::AuthUpdate { changes },
+        )
+        .success();
+
+    Ok(routes::auth_webauthn_authenticator_delete::Response {})
 }
 
 export_routes!(
