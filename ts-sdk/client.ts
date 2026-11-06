@@ -21,10 +21,10 @@ export type ClientOptions = {
 	apiUrl: string;
 	token?: string;
 	onReady: (event: MessageReady) => void;
-	onSync: (event: MessageSync, raw: MessageEnvelope) => void;
-	onError?: (error: Error) => void;
-	onSend?: (data: unknown) => void;
-	onMessage?: (raw: MessageEnvelope) => void;
+	onSync: (event: MessageSync, raw: MessageEnvelope, stream?: number) => void;
+	onError?: (error: Error, stream?: number) => void;
+	onSend?: (data: unknown, stream?: number) => void;
+	onMessage?: (raw: MessageEnvelope, stream?: number) => void;
 	onStreamOpen?: (stream: StreamInfo) => void;
 	onStreamClose?: (stream: StreamInfo) => void;
 	format?: "json" | "msgpack";
