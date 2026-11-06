@@ -11,7 +11,7 @@ use lamprey_backend_data_postgres::data::postgres::PostgresPool;
 use lamprey_backend_data_postgres::data::{AnyData, Database};
 use opendal::layers::LoggingLayer;
 use sqlx::postgres::PgPoolOptions;
-use tracing::info;
+use tracing::{error, info};
 
 pub mod messaging;
 
@@ -138,7 +138,15 @@ impl Globals {
 
         // initialize server
         inner.database.migrate().await?;
-        inner.blobs.check().await?; // TODO: remove
+
+        // check if object store is reachable
+        let inner2 = inner.clone();
+        tokio::spawn(async move {
+            if let Err(err) = inner2.blobs.check().await {
+                error!("blob storage is unreachable: {err}");
+            }
+        });
+
         srv.start_background_tasks().await;
 
         srv.notifications.init_vapid_keys().await?;
