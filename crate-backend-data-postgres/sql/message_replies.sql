@@ -7,8 +7,10 @@ WITH recursive message_tree AS (
         message m
         JOIN message_version mv ON m.latest_version_id = mv.version_id
     WHERE
-        ($2::uuid IS NOT NULL AND m.id = $2::uuid)
-        OR ($2::uuid IS NULL AND mv.reply_id IS NULL)
+        m.channel_id = $1
+        AND m.deleted_at IS NULL
+        AND (($2::uuid IS NOT NULL AND m.id = $2::uuid)
+             OR ($2::uuid IS NULL AND mv.reply_id IS NULL))
     UNION ALL
     SELECT
         m.id,
@@ -19,7 +21,9 @@ WITH recursive message_tree AS (
         JOIN message_version mv2 ON m.latest_version_id = mv2.version_id
         JOIN message_tree mt ON mv2.reply_id = mt.id
     WHERE
-        mt.depth < $3
+        m.channel_id = $1
+        AND m.deleted_at IS NULL
+        AND mt.depth < $3
 ),
 ranked_messages AS (
     SELECT
@@ -38,20 +42,22 @@ direct_counts AS (
     SELECT mv.reply_id as id, count(*) as count_direct
     FROM message m
     JOIN message_version mv ON m.latest_version_id = mv.version_id
-    WHERE m.channel_id = $1 AND m.deleted_at IS NULL AND mv.reply_id IS NOT NULL
+    JOIN filtered_messages fm ON mv.reply_id = fm.id
+    WHERE m.deleted_at IS NULL
     GROUP BY mv.reply_id
 ),
 recursive_counts_cte AS (
     SELECT mv.reply_id, m.id as descendant_id
     FROM message m
     JOIN message_version mv ON m.latest_version_id = mv.version_id
-    WHERE m.channel_id = $1 AND m.deleted_at IS NULL AND mv.reply_id IS NOT NULL
+    JOIN filtered_messages fm ON mv.reply_id = fm.id
+    WHERE m.deleted_at IS NULL
     UNION ALL
     SELECT rc.reply_id, m.id
     FROM recursive_counts_cte rc
     JOIN message_version mv ON mv.reply_id = rc.descendant_id
     JOIN message m ON m.latest_version_id = mv.version_id
-    WHERE m.channel_id = $1 AND m.deleted_at IS NULL
+    WHERE m.deleted_at IS NULL
 ),
 recursive_counts AS (
     SELECT reply_id as id, count(*) as count_recursive
