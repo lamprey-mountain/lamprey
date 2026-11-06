@@ -10,13 +10,15 @@ use common::v1::types::{
     AuditLogEntry, AuditLogEntryId, AuditLogEntryType, MessageSync, SessionStatus, UserPatch,
 };
 use common::v1::types::{AuditLogEntryStatus, Permission, SERVER_ROOM_ID, Suspended};
+use common::v2::types::media::MediaLinkType;
 use http::StatusCode;
+use kerosene_services::services::media::MediaLinker;
 use lamprey_macros::handler;
 use tracing::warn;
 use utoipa_axum::router::OpenApiRouter;
 
 use crate::routes::util::{Auth, AuthRelaxed2};
-use crate::types::{DbUserCreate, MediaLinkType, RoomMemberPut};
+use crate::types::{DbUserCreate, RoomMemberPut};
 use crate::{ServerState, routes2};
 
 use crate::error::{Error, Result};
@@ -45,7 +47,14 @@ async fn user_delete(
 
     let user_to_delete = srv.users.get(target_user_id, Some(auth.user.id)).await?;
     data.user_delete(target_user_id).await?;
-    data.media_link_delete(target_user_id.into_inner(), MediaLinkType::UserAvatar)
+    MediaLinker::new_without_user()
+        .delete(MediaLinkType::UserAvatar {
+            user_id: target_user_id,
+        })
+        .delete(MediaLinkType::UserBanner {
+            user_id: target_user_id,
+        })
+        .write(&mut *data)
         .await?;
     let srv = s.services();
     srv.users.invalidate(target_user_id).await;
@@ -89,22 +98,49 @@ async fn user_undelete(
     data.user_undelete(target_user_id).await?;
 
     let user = srv.users.get(target_user_id, Some(auth.user.id)).await?;
-    let avatar_media_id = user.avatar;
-    if let Some(media_id) = avatar_media_id {
-        if data
-            .media_link_create_exclusive(
-                media_id,
-                target_user_id.into_inner(),
-                MediaLinkType::UserAvatar,
-            )
-            .await
-            .is_err()
-        {
+    if let Some(media_id) = user.avatar {
+        let linked = match data.media_select(media_id).await {
+            Ok(media) => MediaLinker::new_without_user()
+                .create(MediaLinkType::UserAvatar {
+                    user_id: target_user_id,
+                })
+                .media(&media)
+                .write(&mut *data)
+                .await
+                .is_ok(),
+            Err(_) => false,
+        };
+        if !linked {
             warn!("failed to re-link avatar for user {}", target_user_id);
             data.user_update(
                 target_user_id,
                 UserPatch {
                     avatar: Some(None),
+                    ..Default::default()
+                },
+            )
+            .await?;
+        }
+    }
+
+    if let Some(media_id) = user.banner {
+        let linked = match data.media_select(media_id).await {
+            Ok(media) => MediaLinker::new_without_user()
+                .create(MediaLinkType::UserBanner {
+                    user_id: target_user_id,
+                })
+                .media(&media)
+                .write(&mut *data)
+                .await
+                .is_ok(),
+            Err(_) => false,
+        };
+        if !linked {
+            warn!("failed to re-link banner for user {}", target_user_id);
+            data.user_update(
+                target_user_id,
+                UserPatch {
+                    banner: Some(None),
                     ..Default::default()
                 },
             )

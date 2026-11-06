@@ -22,7 +22,7 @@ use crate::prelude::*;
 use crate::routes::util::Auth;
 use crate::routes::util::auth::Auth4;
 use crate::routes2;
-use crate::types::{DbRoomCreate, MediaLinkType, MessageSync, PaginationResponse, Permission};
+use crate::types::{DbRoomCreate, MessageSync, PaginationResponse, Permission};
 use common::v1::types::error::{ApiError, ErrorCode};
 use kerosene_services::services::search::SearchRoomsVisibility;
 
@@ -271,6 +271,14 @@ async fn room_edit(
         }
     }
 
+    if let Some(Some(media_id)) = req.patch.banner {
+        let mut data = s.data();
+        let media = data.media_select(media_id).await?;
+        if !media.metadata.is_image() {
+            return Err(ApiError::from_code(ErrorCode::MediaNotAnImage).into());
+        }
+    }
+
     let _user_id = user.id;
 
     let room = s
@@ -278,20 +286,6 @@ async fn room_edit(
         .rooms
         .update(req.room_id, &mut auth, req.patch.clone())
         .await?;
-
-    if let Some(maybe_media_id) = req.patch.icon {
-        let mut data = s.data();
-        data.media_link_delete(req.room_id.into_inner(), MediaLinkType::RoomIcon)
-            .await?;
-        if let Some(media_id) = maybe_media_id {
-            data.media_link_create_exclusive(
-                media_id,
-                req.room_id.into_inner(),
-                MediaLinkType::RoomIcon,
-            )
-            .await?;
-        }
-    }
 
     Ok(Json(room))
 }

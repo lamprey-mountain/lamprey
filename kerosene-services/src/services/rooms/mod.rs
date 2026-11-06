@@ -8,7 +8,7 @@ use common::v1::types::{
 };
 use common::v2::types::{AUTOMOD_USER_ID, SERVER_ROOM_ID, SERVER_USER_ID};
 use dashmap::{DashMap, DashSet};
-use kerosene_core::error::{ApiError, ErrorCode};
+use kerosene_core::error::ServerError;
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use lamprey_backend_data_postgres::DbUserCreate;
 use moka::future::Cache;
@@ -18,8 +18,10 @@ use validator::Validate;
 
 use crate::consts::MAX_LOADED_ROOMS;
 use crate::prelude::*;
+use crate::services::media::MediaLinker;
 use crate::services::room_template::builtin;
-use crate::types::{DbMessageCreate, DbRoomCreate, MediaLinkType};
+use crate::types::{DbMessageCreate, DbRoomCreate};
+use common::v2::types::media::MediaLinkType;
 
 pub mod actor;
 pub mod types;
@@ -407,23 +409,39 @@ impl ServiceRooms {
         }
 
         if let Some(icon) = &patch.icon {
-            if start.icon.is_some() {
-                txn.media_link_delete_all(*room_id).await?;
+            let media = match icon {
+                Some(media_id) => Some(txn.media_select(*media_id).await?),
+                None => None,
+            };
+            let mut media_linker = MediaLinker::new_without_user();
+            media_linker.delete(MediaLinkType::RoomIcon { room_id });
+            if let Some(media) = &media {
+                media_linker
+                    .create(MediaLinkType::RoomIcon { room_id })
+                    .media(media);
             }
-            if let Some(media_id) = icon {
-                txn.media_link_insert(*media_id, *room_id, MediaLinkType::RoomIcon)
-                    .await?;
-            }
+            media_linker
+                .write(&mut *txn)
+                .await
+                .map_err(ServerError::from)?;
         }
 
         if let Some(banner) = &patch.banner {
-            if start.banner.is_some() {
-                txn.media_link_delete_all(*room_id).await?;
+            let media = match banner {
+                Some(media_id) => Some(txn.media_select(*media_id).await?),
+                None => None,
+            };
+            let mut media_linker = MediaLinker::new_without_user();
+            media_linker.delete(MediaLinkType::RoomBanner { room_id });
+            if let Some(media) = &media {
+                media_linker
+                    .create(MediaLinkType::RoomBanner { room_id })
+                    .media(media);
             }
-            if let Some(media_id) = banner {
-                txn.media_link_insert(*media_id, *room_id, MediaLinkType::RoomBanner)
-                    .await?;
-            }
+            media_linker
+                .write(&mut *txn)
+                .await
+                .map_err(ServerError::from)?;
         }
 
         if let Some(Some(chan_id)) = patch.welcome_channel_id {
@@ -578,24 +596,24 @@ impl ServiceRooms {
 
         if let Some(media_id) = create.icon {
             // TODO: move check that media is an image to the room service
-            let links = txn.media_link_select(media_id).await?;
-            if !links.is_empty() {
-                return Err(ApiError::from_code(ErrorCode::MediaAlreadyUsed).into());
-            }
-
-            txn.media_link_create_exclusive(media_id, *room_id, MediaLinkType::RoomIcon)
-                .await?;
+            let media = txn.media_select(media_id).await?;
+            MediaLinker::new_without_user()
+                .create(MediaLinkType::RoomIcon { room_id })
+                .media(&media)
+                .write(&mut *txn)
+                .await
+                .map_err(ServerError::from)?;
         }
 
         if let Some(media_id) = create.banner {
             // TODO: move check that media is an image to the room service
-            let links = txn.media_link_select(media_id).await?;
-            if !links.is_empty() {
-                return Err(ApiError::from_code(ErrorCode::MediaAlreadyUsed).into());
-            }
-
-            txn.media_link_create_exclusive(media_id, *room_id, MediaLinkType::RoomBanner)
-                .await?;
+            let media = txn.media_select(media_id).await?;
+            MediaLinker::new_without_user()
+                .create(MediaLinkType::RoomBanner { room_id })
+                .media(&media)
+                .write(&mut *txn)
+                .await
+                .map_err(ServerError::from)?;
         }
 
         txn.commit().await?;

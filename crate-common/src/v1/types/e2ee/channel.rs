@@ -44,7 +44,4 @@ impl Default for ChannelEncryption {
     }
 }
 
-export_models!(
-    ChannelEncryption,
-    ChannelEncryptionAlgorithm,
-);
+export_models!(ChannelEncryption, ChannelEncryptionAlgorithm,);

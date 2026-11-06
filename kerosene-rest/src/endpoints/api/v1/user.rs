@@ -97,57 +97,63 @@ pub async fn update(
         return Ok(routes::user_update::Response { user: start });
     }
 
-    let mut lm = MediaLinker::new(auth_user.id);
-    let mut media_store = Vec::new();
-
-    if let Some(maybe_avatar) = inner.patch.avatar {
-        lm.delete(MediaLinkType::UserAvatar {
-            user_id: target_user_id,
-        });
-        if let Some(avatar_media_id) = maybe_avatar {
-            let media = data.media_select(avatar_media_id).await.cast_internal()?;
-            if !media.metadata.is_image() {
-                return Err(ApiError::with_message(
-                    ErrorCode::MediaNotAnImage,
-                    "avatar must be an image".to_string(),
-                )
-                .into());
-            }
-            media_store.push(media);
-            lm.create(MediaLinkType::UserAvatar {
-                user_id: target_user_id,
-            });
+    let mut avatar_media = None;
+    if let Some(Some(avatar_media_id)) = inner.patch.avatar {
+        let media = data.media_select(avatar_media_id).await.cast_internal()?;
+        if !media.metadata.is_image() {
+            return Err(ApiError::with_message(
+                ErrorCode::MediaNotAnImage,
+                "avatar must be an image".to_string(),
+            )
+            .into());
         }
+        avatar_media = Some(media);
     }
 
-    if let Some(maybe_banner) = inner.patch.banner {
-        lm.delete(MediaLinkType::UserBanner {
-            user_id: target_user_id,
-        });
-        if let Some(banner_media_id) = maybe_banner {
-            let media = data.media_select(banner_media_id).await.cast_internal()?;
-            if !media.metadata.is_image() {
-                return Err(ApiError::with_message(
-                    ErrorCode::MediaNotAnImage,
-                    "banner must be an image".to_string(),
-                )
-                .into());
-            }
-            media_store.push(media);
-            lm.create(MediaLinkType::UserBanner {
-                user_id: target_user_id,
-            });
+    let mut banner_media = None;
+    if let Some(Some(banner_media_id)) = inner.patch.banner {
+        let media = data.media_select(banner_media_id).await.cast_internal()?;
+        if !media.metadata.is_image() {
+            return Err(ApiError::with_message(
+                ErrorCode::MediaNotAnImage,
+                "banner must be an image".to_string(),
+            )
+            .into());
         }
-    }
-
-    for m in &media_store {
-        lm.media(m);
+        banner_media = Some(media);
     }
 
     data.user_update(target_user_id, inner.patch.clone())
         .await
         .cast_internal()?;
-    lm.write(&mut *data).await?;
+
+    if inner.patch.avatar.is_some() {
+        let mut lm = MediaLinker::new(auth_user.id);
+        lm.delete(MediaLinkType::UserAvatar {
+            user_id: target_user_id,
+        });
+        if let Some(media) = &avatar_media {
+            lm.create(MediaLinkType::UserAvatar {
+                user_id: target_user_id,
+            })
+            .media(media);
+        }
+        lm.write(&mut *data).await?;
+    }
+
+    if inner.patch.banner.is_some() {
+        let mut lm = MediaLinker::new(auth_user.id);
+        lm.delete(MediaLinkType::UserBanner {
+            user_id: target_user_id,
+        });
+        if let Some(media) = &banner_media {
+            lm.create(MediaLinkType::UserBanner {
+                user_id: target_user_id,
+            })
+            .media(media);
+        }
+        lm.write(&mut *data).await?;
+    }
 
     data.commit().await.cast_internal()?;
     srv.users.invalidate(target_user_id).await;

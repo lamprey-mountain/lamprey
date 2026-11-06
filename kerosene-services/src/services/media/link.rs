@@ -214,6 +214,7 @@ impl<'a> MediaLinker<'a> {
         }
 
         // PERF: batch select and update
+        let mut media_links = Vec::with_capacity(self.media.len());
         for media in &self.media {
             // check if there are any conflicting links
             let links = txn.media_link_select(media.id).await?;
@@ -226,18 +227,21 @@ impl<'a> MediaLinker<'a> {
                     return Err(MediaLinkerError::Conflict(media.id));
                 }
             }
+            media_links.push((media, links));
+        }
 
+        // deletes are independent of media, so run them once before creating links
+        for link in &self.delete {
+            let comp = MediaCompatible::from(link);
+            txn.media_link_delete(comp.target_id, comp.target_type)
+                .await?;
+        }
+
+        for (media, links) in media_links {
             // create links
             for link in &self.create {
-                let comp: MediaCompatible = (&*link).into();
+                let comp = MediaCompatible::from(link);
                 txn.media_link_insert(media.id, comp.target_id, comp.target_type)
-                    .await?;
-            }
-
-            // delete links
-            for link in &self.delete {
-                let comp: MediaCompatible = (&*link).into();
-                txn.media_link_delete(comp.target_id, comp.target_type)
                     .await?;
             }
 

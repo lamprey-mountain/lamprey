@@ -138,7 +138,4 @@ mod old {
     }
 }
 
-export_models!(
-    Dispatch,
-    DispatchChannel,
-);
+export_models!(Dispatch, DispatchChannel,);
