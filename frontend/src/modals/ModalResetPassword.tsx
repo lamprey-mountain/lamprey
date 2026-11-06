@@ -1,3 +1,4 @@
+import { debounce } from "@solid-primitives/scheduled";
 import {
 	createMemo,
 	createSignal,
@@ -26,6 +27,8 @@ const STRENGTH_LEVELS = [
 	{ label: "very strong", className: "very-strong" },
 ] as const;
 
+const SCORE_DEBOUNCE_MS = 200;
+
 export const ModalResetPassword = () => {
 	const [password, setPassword] = createSignal("");
 	const [confirmPassword, setConfirmPassword] = createSignal("");
@@ -44,8 +47,18 @@ export const ModalResetPassword = () => {
 
 	const scorer = createPasswordStrengthScorer();
 	let latestRequestId = 0;
+	let scoreAbort: AbortController | undefined;
 
-	onCleanup(() => scorer.dispose());
+	const evaluateDebounced = debounce((value: string) => {
+		void evaluate(value);
+	}, SCORE_DEBOUNCE_MS);
+
+	onCleanup(() => {
+		latestRequestId++;
+		scoreAbort?.abort();
+		evaluateDebounced.clear();
+		scorer.dispose();
+	});
 
 	const tooWeak = createMemo(() => {
 		// if the strength couldn't be determined, require explicitly allowing
@@ -84,25 +97,40 @@ export const ModalResetPassword = () => {
 		);
 	};
 
-	async function evaluate(value: string) {
-		const id = ++latestRequestId;
-
+	function scheduleEvaluate(value: string) {
+		latestRequestId++;
+		scoreAbort?.abort();
+		scoreAbort = undefined;
 		setCheckError(false);
+
 		if (!value) {
+			evaluateDebounced.clear();
 			setStrength(null);
 			setChecking(false);
 			return;
 		}
 
-		// the previous result stays visible (and submit stays disabled via
-		// `checking`) so the bar can transition to the new score
+		// keep submit disabled while the debounced score is pending
 		setChecking(true);
-		const result = await scorer.score(value, userInputs());
+		evaluateDebounced(value);
+	}
+
+	async function evaluate(value: string) {
+		const id = latestRequestId;
+		const controller = new AbortController();
+		scoreAbort = controller;
+
+		const result = await scorer.score(value, userInputs(), {
+			signal: controller.signal,
+		});
 		if (latestRequestId !== id) return;
+		scoreAbort = undefined;
 
 		if (result) {
 			setStrength(result);
+			setCheckError(false);
 		} else {
+			setStrength(null);
 			setCheckError(true);
 		}
 		setChecking(false);
@@ -150,7 +178,7 @@ export const ModalResetPassword = () => {
 							onInput={(e) => {
 								setSubmitError(null);
 								setPassword(e.currentTarget.value);
-								void evaluate(e.currentTarget.value);
+								scheduleEvaluate(e.currentTarget.value);
 							}}
 							ref={(el) => queueMicrotask(() => el.focus())}
 						/>
