@@ -40,9 +40,10 @@ use uuid::Uuid;
 use crate::error::Result;
 use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbEmailQueue, DbMessageCreate, DbMessageUpdate,
-    DbRoleCreate, DbRoomCreate, DbRoomTemplate, DbSessionCreate, DbUserCreate, DehydratedDocument,
-    DocumentUpdateSummary, EmailPurpose, MediaLink, MediaLinkType, MentionsIds, MessageId,
-    MessageRef, MessageVerId, MessageWithCounts, PushData, UrlEmbedQueue, UserPatch, UserVerId,
+    DbRoleCreate, DbRoomCreate, DbRoomTemplate, DbSessionCreate, DbUserCreate,
+    DbWebauthnCredential, DehydratedDocument, DocumentUpdateSummary, EmailPurpose, MediaLink,
+    MediaLinkType, MentionsIds, MessageId, MessageRef, MessageVerId, MessageWithCounts, PushData,
+    UrlEmbedQueue, UserPatch, UserVerId,
 };
 use common::v1::types::components::{self, Components};
 
@@ -665,6 +666,42 @@ pub trait DataAuth {
         session_id: SessionId,
     ) -> Result<()>;
     async fn oauth_refresh_token_use(&mut self, token: String) -> Result<SessionId>;
+
+    async fn user_lock(&mut self, user_id: UserId) -> Result<()>;
+
+    async fn webauthn_credential_list(
+        &mut self,
+        user_id: UserId,
+    ) -> Result<Vec<DbWebauthnCredential>>;
+    async fn webauthn_credential_get(
+        &mut self,
+        user_id: UserId,
+        id: Uuid,
+    ) -> Result<Option<DbWebauthnCredential>>;
+    async fn webauthn_credential_get_by_credential_id(
+        &mut self,
+        credential_id: &[u8],
+    ) -> Result<Option<DbWebauthnCredential>>;
+    async fn webauthn_credential_create(
+        &mut self,
+        user_id: UserId,
+        name: &str,
+        credential_id: &[u8],
+        passkey: &str,
+    ) -> Result<Uuid>;
+    async fn webauthn_credential_update_passkey(
+        &mut self,
+        user_id: UserId,
+        id: Uuid,
+        passkey: &str,
+    ) -> Result<()>;
+    async fn webauthn_credential_rename(
+        &mut self,
+        user_id: UserId,
+        id: Uuid,
+        name: &str,
+    ) -> Result<()>;
+    async fn webauthn_credential_delete(&mut self, user_id: UserId, id: Uuid) -> Result<()>;
 }
 
 #[async_trait]

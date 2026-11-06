@@ -804,6 +804,17 @@ pub enum EmailPurpose {
     Reset,
 }
 
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DbWebauthnCredential {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub name: String,
+    pub credential_id: Vec<u8>,
+    pub passkey: String,
+    pub created_at: PrimitiveDateTime,
+    pub last_used_at: Option<PrimitiveDateTime>,
+}
+
 #[derive(sqlx::Type)]
 #[sqlx(type_name = "room_type")]
 pub enum DbRoomType {

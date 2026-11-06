@@ -191,6 +191,14 @@ pub enum ErrorCode {
     #[error("unknown user email")]
     UnknownUserEmail,
 
+    /// unknown webauthn authenticator
+    #[error("unknown webauthn authenticator")]
+    UnknownAuthenticator,
+
+    /// webauthn authenticator is already registered
+    #[error("webauthn authenticator already registered")]
+    AuthenticatorAlreadyRegistered,
+
     /// unknown document branch
     #[error("unknown document branch")]
     UnknownDocumentBranch,

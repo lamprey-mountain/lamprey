@@ -30,6 +30,8 @@ impl ErrorCode {
             ErrorCode::UnknownThreadMember => StatusCode::NOT_FOUND,
             ErrorCode::UnknownRoomBan => StatusCode::NOT_FOUND,
             ErrorCode::UnknownUserEmail => StatusCode::NOT_FOUND,
+            ErrorCode::UnknownAuthenticator => StatusCode::NOT_FOUND,
+            ErrorCode::AuthenticatorAlreadyRegistered => StatusCode::CONFLICT,
             ErrorCode::UnknownDocumentBranch => StatusCode::NOT_FOUND,
             ErrorCode::UnknownDocumentRevision => StatusCode::NOT_FOUND,
             ErrorCode::UnknownEmoji => StatusCode::NOT_FOUND,
