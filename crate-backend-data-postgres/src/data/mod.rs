@@ -281,6 +281,11 @@ pub trait DataMessage {
         channel_id: ChannelId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
+    async fn message_list_by_author(
+        &mut self,
+        author_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>>;
     async fn message_delete(&mut self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
     async fn message_delete_bulk(
         &mut self,

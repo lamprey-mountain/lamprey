@@ -39,6 +39,15 @@ use uuid::Uuid;
 use crate::types::data::{SearchReindexQueue, SearchReindexQueueTarget};
 use crate::{Result, config::ConfigInternal, types::admin::AdminCollectGarbageMode};
 
+/// a reaction a user has sent
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ReactionSent {
+    pub message_id: MessageId,
+    pub channel_id: ChannelId,
+    /// the reaction key
+    pub key: String,
+}
+
 #[async_trait]
 pub trait DataRoleMember {
     async fn role_member_put(
@@ -736,6 +745,13 @@ pub trait DataReaction {
         user_id: UserId,
         messages: &[MessageId],
     ) -> Result<Vec<(MessageId, Vec<(ReactionKeyParam, u64, bool)>)>>;
+    /// list all reactions a user has sent, paginated by (message_id, key)
+    async fn reaction_list_by_author(
+        &mut self,
+        user_id: UserId,
+        after: Option<(MessageId, String)>,
+        limit: u16,
+    ) -> Result<Vec<ReactionSent>>;
 }
 
 #[async_trait]

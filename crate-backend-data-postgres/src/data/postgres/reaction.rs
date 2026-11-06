@@ -12,6 +12,7 @@ use crate::data::postgres::Pagination;
 use crate::error::Result;
 use crate::gen_paginate;
 use crate::types::UserId;
+use lamprey_backend_core::data::ReactionSent;
 
 use crate::data::DataReaction;
 
@@ -286,5 +287,40 @@ impl DataReaction for Postgres {
             .collect();
 
         Ok(formatted)
+    }
+
+    async fn reaction_list_by_author(
+        &mut self,
+        user_id: UserId,
+        after: Option<(MessageId, String)>,
+        limit: u16,
+    ) -> Result<Vec<ReactionSent>> {
+        let mut conn = self.acquire().await?;
+        let rows = query!(
+            r#"
+            SELECT message_id, channel_id, key
+            FROM reaction
+            WHERE user_id = $1
+              AND deleted_seq IS NULL
+              AND ($2::uuid IS NULL OR message_id > $2 OR (message_id = $2 AND key > $3))
+            ORDER BY message_id, key
+            LIMIT $4
+            "#,
+            *user_id,
+            after.as_ref().map(|(m, _)| **m),
+            after.as_ref().map(|(_, k)| k.clone()),
+            limit as i32
+        )
+        .fetch_all(conn.ext())
+        .await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|r| ReactionSent {
+                message_id: r.message_id.into(),
+                channel_id: r.channel_id.into(),
+                key: r.key,
+            })
+            .collect())
     }
 }

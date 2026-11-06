@@ -1219,6 +1219,32 @@ impl DataMessage for Postgres {
         )
     }
 
+    async fn message_list_by_author(
+        &mut self,
+        author_id: UserId,
+        pagination: PaginationQuery<MessageId>,
+    ) -> Result<PaginationResponse<Message>> {
+        let p: Pagination<_> = pagination.try_into()?;
+        gen_paginate!(
+            p,
+            self,
+            query_file_as!(
+                DbMessage,
+                r"sql/message_list_by_author.sql",
+                *author_id,
+                *p.after,
+                *p.before,
+                p.dir.to_string(),
+                (p.limit + 1) as i32
+            ),
+            query_file_scalar!(
+                "sql/message_list_by_author_count.sql",
+                author_id.into_inner()
+            ),
+            |i: &Message| i.id.to_string()
+        )
+    }
+
     async fn message_id_get_by_version(
         &mut self,
         channel_id: ChannelId,

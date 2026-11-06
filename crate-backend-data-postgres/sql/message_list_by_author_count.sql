@@ -1,0 +1,1 @@
+SELECT COUNT(*) FROM message WHERE author_id = $1
