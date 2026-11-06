@@ -18,20 +18,12 @@ import {
 import { icEye } from "@/utils/icons";
 import { Modal } from "./mod";
 
-const STRENGTH_LABELS = [
-	"very weak",
-	"weak",
-	"fair",
-	"strong",
-	"very strong",
-] as const;
-
-const STRENGTH_CLASSES = [
-	"very-weak",
-	"weak",
-	"fair",
-	"strong",
-	"very-strong",
+const STRENGTH_LEVELS = [
+	{ label: "very weak", className: "very-weak" },
+	{ label: "weak", className: "weak" },
+	{ label: "fair", className: "fair" },
+	{ label: "strong", className: "strong" },
+	{ label: "very strong", className: "very-strong" },
 ] as const;
 
 export const ModalResetPassword = () => {
@@ -240,8 +232,7 @@ function FieldError(props: ParentProps) {
 }
 
 function Strength(props: { result: () => PasswordStrength }) {
-	const strengthClass = () => STRENGTH_CLASSES[props.result().score];
-	const label = () => STRENGTH_LABELS[props.result().score];
+	const level = () => STRENGTH_LEVELS[props.result().score];
 	const warnings = createMemo(() => {
 		const { warning, suggestions } = props.result();
 		return [warning, ...suggestions].filter((w) => w.length > 0);
@@ -252,11 +243,11 @@ function Strength(props: { result: () => PasswordStrength }) {
 			<div class="meter">
 				<div class="track">
 					<div
-						class={`fill ${strengthClass()}`}
+						class={`fill ${level().className}`}
 						style={{ width: `${fill()}%` }}
 					/>
 				</div>
-				<div class={`label ${strengthClass()}`}>{label()}</div>
+				<div class={`label ${level().className}`}>{level().label}</div>
 			</div>
 			<Show when={warnings().length > 0}>
 				<ul class="warnings dim">
