@@ -236,83 +236,6 @@ pub mod auth_password_exec {
 
     pub struct Response {}
 }
-
-/// Auth webauthn challenge
-#[endpoint(
-    post,
-    path = "/auth/webauthn/challenge",
-    tags = ["auth"],
-    scopes = [Full],
-    response(OK, body = WebauthnChallenge, description = "success"),
-)]
-pub mod auth_webauthn_challenge {
-    use crate::v1::types::auth::WebauthnChallenge;
-
-    pub struct Request {}
-
-    pub struct Response {
-        #[json]
-        pub challenge: WebauthnChallenge,
-    }
-}
-
-/// Auth webauthn finish
-#[endpoint(
-    post,
-    path = "/auth/webauthn/finish",
-    tags = ["auth"],
-    scopes = [Full],
-    audit_log_events = ["AuthUpdate"],
-    response(NO_CONTENT, description = "success"),
-)]
-pub mod auth_webauthn_finish {
-    use crate::v1::types::auth::WebauthnFinish;
-
-    pub struct Request {
-        #[json]
-        pub finish: WebauthnFinish,
-    }
-
-    pub struct Response {}
-}
-
-/// Auth webauthn authenticators
-#[endpoint(
-    get,
-    path = "/auth/webauthn/authenticator",
-    tags = ["auth"],
-    scopes = [Full],
-    response(OK, body = Vec<WebauthnAuthenticator>, description = "success"),
-)]
-pub mod auth_webauthn_authenticators {
-    use crate::v1::types::auth::WebauthnAuthenticator;
-
-    pub struct Request {}
-
-    pub struct Response {
-        #[json]
-        pub authenticators: Vec<WebauthnAuthenticator>,
-    }
-}
-
-/// Auth webauthn authenticator delete
-#[endpoint(
-    delete,
-    path = "/auth/webauthn/authenticator/{authenticator_id}",
-    tags = ["auth"],
-    scopes = [Full],
-    audit_log_events = ["AuthUpdate"],
-    response(NO_CONTENT, description = "success"),
-)]
-pub mod auth_webauthn_authenticator_delete {
-    pub struct Request {
-        #[path]
-        pub authenticator_id: String,
-    }
-
-    pub struct Response {}
-}
-
 /// Auth captcha challenge
 #[endpoint(
     get,
@@ -355,58 +278,158 @@ pub mod auth_captcha_submit {
     pub struct Response {}
 }
 
-/// Auth webauthn init
+/// Auth webauthn register challenge
+///
+/// Get options for registering a new authenticator
 #[endpoint(
     post,
-    path = "/auth/webauthn/init",
+    path = "/auth/webauthn/register/challenge",
+    tags = ["auth"],
+    scopes = [Full],
+    response(OK, body = WebauthnChallenge, description = "success"),
+)]
+pub mod auth_webauthn_register_challenge {
+    use crate::v1::types::auth::WebauthnChallenge;
+
+    pub struct Request {}
+
+    pub struct Response {
+        #[json]
+        pub challenge: WebauthnChallenge,
+    }
+}
+
+/// Auth webauthn register finish
+///
+/// Verify an attestation response and store the new authenticator
+#[endpoint(
+    post,
+    path = "/auth/webauthn/register/finish",
     tags = ["auth"],
     scopes = [Full],
     audit_log_events = ["AuthUpdate"],
-    response(OK, description = "success"),
+    response(OK, body = WebauthnAuthenticator, description = "success"),
 )]
-pub mod auth_webauthn_init {
-    pub struct Request {}
-    pub struct Response {}
+pub mod auth_webauthn_register_finish {
+    use crate::v1::types::auth::{WebauthnAuthenticator, WebauthnCredential};
+
+    pub struct Request {
+        #[json]
+        pub credential: WebauthnCredential,
+    }
+
+    pub struct Response {
+        #[json]
+        pub authenticator: WebauthnAuthenticator,
+    }
 }
 
-/// Auth webauthn exec
+/// Auth webauthn challenge
+///
+/// Get options for authenticating with a registered authenticator
 #[endpoint(
     post,
-    path = "/auth/webauthn/exec",
-    tags = ["auth"],
-    audit_log_events = ["SessionLogin"],
-    response(OK, description = "success"),
+    path = "/auth/webauthn/challenge",
+    tags = ["auth", "badge.unauthenticated"],
+    response(OK, body = WebauthnChallenge, description = "success"),
 )]
-pub mod auth_webauthn_exec {
+pub mod auth_webauthn_auth_challenge {
+    use crate::v1::types::auth::WebauthnChallenge;
+
     pub struct Request {}
-    pub struct Response {}
+
+    pub struct Response {
+        #[json]
+        pub challenge: WebauthnChallenge,
+    }
 }
 
-/// Auth webauthn patch
+/// Auth webauthn finish
+///
+/// Verify an assertion response and authenticate the session
+#[endpoint(
+    post,
+    path = "/auth/webauthn/finish",
+    tags = ["auth", "badge.unauthenticated"],
+    audit_log_events = ["SessionLogin"],
+    response(OK, body = AuthState, description = "success"),
+)]
+pub mod auth_webauthn_auth_finish {
+    use crate::v1::types::auth::{AuthState, WebauthnCredential};
+
+    pub struct Request {
+        #[json]
+        pub credential: WebauthnCredential,
+    }
+
+    pub struct Response {
+        #[json]
+        pub state: AuthState,
+    }
+}
+
+/// Auth webauthn authenticators
+///
+/// List a user's registered authenticators
+#[endpoint(
+    get,
+    path = "/auth/webauthn/authenticator",
+    tags = ["auth"],
+    scopes = [Full],
+    response(OK, body = Vec<WebauthnAuthenticator>, description = "success"),
+)]
+pub mod auth_webauthn_authenticator_list {
+    use crate::v1::types::auth::WebauthnAuthenticator;
+
+    pub struct Request {}
+
+    pub struct Response {
+        #[json]
+        pub authenticators: Vec<WebauthnAuthenticator>,
+    }
+}
+
+/// Auth webauthn authenticator rename
 #[endpoint(
     patch,
-    path = "/auth/webauthn",
+    path = "/auth/webauthn/authenticator/{authenticator_id}",
     tags = ["auth"],
     scopes = [Full],
     audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
-pub mod auth_webauthn_patch {
-    pub struct Request {}
+pub mod auth_webauthn_authenticator_patch {
+    use crate::v1::types::WebauthnAuthenticatorId;
+    use crate::v1::types::auth::WebauthnPatch;
+
+    pub struct Request {
+        #[path]
+        pub authenticator_id: WebauthnAuthenticatorId,
+
+        #[json]
+        pub patch: WebauthnPatch,
+    }
+
     pub struct Response {}
 }
 
-/// Auth webauthn delete
+/// Auth webauthn authenticator delete
 #[endpoint(
     delete,
-    path = "/auth/webauthn",
+    path = "/auth/webauthn/authenticator/{authenticator_id}",
     tags = ["auth"],
     scopes = [Full],
     audit_log_events = ["AuthUpdate"],
     response(NO_CONTENT, description = "success"),
 )]
-pub mod auth_webauthn_delete {
-    pub struct Request {}
+pub mod auth_webauthn_authenticator_delete {
+    use crate::v1::types::WebauthnAuthenticatorId;
+
+    pub struct Request {
+        #[path]
+        pub authenticator_id: WebauthnAuthenticatorId,
+    }
+
     pub struct Response {}
 }
 

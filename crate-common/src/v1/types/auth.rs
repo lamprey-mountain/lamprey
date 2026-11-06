@@ -1,7 +1,6 @@
 use lamprey_macros::record;
-use uuid::Uuid;
 
-use crate::v1::types::{UserId, email::EmailAddr, util::Time};
+use crate::v1::types::{UserId, WebauthnAuthenticatorId, email::EmailAddr, util::Time};
 
 /// response to a totp init request
 #[record]
@@ -84,12 +83,10 @@ pub struct WebauthnChallenge {
     pub challenge: String,
 }
 
+/// request body for a webauthn ceremony response
 #[record]
 #[derive(PartialEq, Eq)]
-pub struct WebauthnFinish {
-    /// if this authenticator should be registered if it doesn't exist yet
-    pub register: bool,
-
+pub struct WebauthnCredential {
     /// public key credentials response as stringified json
     pub credential: String,
 }
@@ -97,7 +94,7 @@ pub struct WebauthnFinish {
 #[record]
 #[derive(PartialEq, Eq)]
 pub struct WebauthnAuthenticator {
-    pub id: Uuid,
+    pub id: WebauthnAuthenticatorId,
     pub name: String,
     pub created_at: Time,
 }

@@ -292,6 +292,10 @@ genid!(MediaVer, "00000000-0000-0000-0ver-0000000media");
 genid!(MediaTrack, "00000000-0000-0000-0000-00mediatrack");
 genid!(Session, "00000000-0000-0000-0000-00000session");
 // genid!(SessionVer, "00000000-0000-0000-0ver-00000session");
+genid!(
+    WebauthnAuthenticator,
+    "00000000-0000-0000-0000-0webauthnaut"
+);
 genid!(AuditLogEntry, "00000000-0000-0000-0000-0auditlogent");
 genid!(Embed, "00000000-0000-0000-0new-0000000embed");
 // TODO: rename to ThreadTagId

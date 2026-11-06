@@ -510,39 +510,54 @@ pub async fn captcha_submit(
     Ok(routes::auth_captcha_submit::Response {})
 }
 
-#[handler(routes::auth_webauthn_init)]
-pub async fn webauthn_init(
-    req: Req<routes::auth_webauthn_init::Endpoint>,
-) -> Result<routes::auth_webauthn_init::Response> {
-    req.identity().ensure_sudo()?;
-    // TODO: implement WebAuthn
-    Ok(routes::auth_webauthn_init::Response {})
+// TODO: implement WebAuthn
+#[handler(routes::auth_webauthn_register_challenge)]
+pub async fn webauthn_register_challenge(
+    _req: Req<routes::auth_webauthn_register_challenge::Endpoint>,
+) -> Result<routes::auth_webauthn_register_challenge::Response> {
+    Err(Error::Unimplemented)
 }
 
-#[handler(routes::auth_webauthn_exec)]
-pub async fn webauthn_exec(
-    _req: Req<routes::auth_webauthn_exec::Endpoint>,
-) -> Result<routes::auth_webauthn_exec::Response> {
-    // TODO: implement WebAuthn
-    Ok(routes::auth_webauthn_exec::Response {})
+#[handler(routes::auth_webauthn_register_finish)]
+pub async fn webauthn_register_finish(
+    _req: Req<routes::auth_webauthn_register_finish::Endpoint>,
+) -> Result<routes::auth_webauthn_register_finish::Response> {
+    Err(Error::Unimplemented)
 }
 
-#[handler(routes::auth_webauthn_patch)]
-pub async fn webauthn_patch(
-    req: Req<routes::auth_webauthn_patch::Endpoint>,
-) -> Result<routes::auth_webauthn_patch::Response> {
-    req.identity().ensure_sudo()?;
-    // TODO: implement WebAuthn
-    Ok(routes::auth_webauthn_patch::Response {})
+#[handler(routes::auth_webauthn_auth_challenge)]
+pub async fn webauthn_auth_challenge(
+    _req: Req<routes::auth_webauthn_auth_challenge::Endpoint>,
+) -> Result<routes::auth_webauthn_auth_challenge::Response> {
+    Err(Error::Unimplemented)
 }
 
-#[handler(routes::auth_webauthn_delete)]
-pub async fn webauthn_delete(
-    req: Req<routes::auth_webauthn_delete::Endpoint>,
-) -> Result<routes::auth_webauthn_delete::Response> {
-    req.identity().ensure_sudo()?;
-    // TODO: implement WebAuthn
-    Ok(routes::auth_webauthn_delete::Response {})
+#[handler(routes::auth_webauthn_auth_finish)]
+pub async fn webauthn_auth_finish(
+    _req: Req<routes::auth_webauthn_auth_finish::Endpoint>,
+) -> Result<routes::auth_webauthn_auth_finish::Response> {
+    Err(Error::Unimplemented)
+}
+
+#[handler(routes::auth_webauthn_authenticator_list)]
+pub async fn webauthn_authenticator_list(
+    _req: Req<routes::auth_webauthn_authenticator_list::Endpoint>,
+) -> Result<routes::auth_webauthn_authenticator_list::Response> {
+    Err(Error::Unimplemented)
+}
+
+#[handler(routes::auth_webauthn_authenticator_patch)]
+pub async fn webauthn_authenticator_patch(
+    _req: Req<routes::auth_webauthn_authenticator_patch::Endpoint>,
+) -> Result<routes::auth_webauthn_authenticator_patch::Response> {
+    Err(Error::Unimplemented)
+}
+
+#[handler(routes::auth_webauthn_authenticator_delete)]
+pub async fn webauthn_authenticator_delete(
+    _req: Req<routes::auth_webauthn_authenticator_delete::Endpoint>,
+) -> Result<routes::auth_webauthn_authenticator_delete::Response> {
+    Err(Error::Unimplemented)
 }
 
 export_routes!(
@@ -567,8 +582,11 @@ export_routes!(
     captcha_challenge,
     captcha_init,
     captcha_submit,
-    webauthn_init,
-    webauthn_exec,
-    webauthn_patch,
-    webauthn_delete,
+    webauthn_register_challenge,
+    webauthn_register_finish,
+    webauthn_auth_challenge,
+    webauthn_auth_finish,
+    webauthn_authenticator_list,
+    webauthn_authenticator_patch,
+    webauthn_authenticator_delete,
 );
