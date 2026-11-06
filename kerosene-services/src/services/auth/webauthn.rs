@@ -8,7 +8,7 @@ use common::v1::types::WebauthnAuthenticatorId;
 use common::v1::types::auth::{AuthState, WebauthnAuthenticator};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
-use common::v1::types::{MessageSync, Session, SessionId, SessionStatus, User};
+use common::v1::types::{Session, SessionId, SessionStatus, User};
 use webauthn_rs::prelude::{
     Passkey, PasskeyAuthentication, PasskeyRegistration, PublicKeyCredential,
     RegisterPublicKeyCredential, Webauthn,
@@ -22,6 +22,7 @@ use super::ServiceAuth;
 pub(super) enum PendingWebauthn {
     Register(Box<PasskeyRegistration>),
     Authenticate(Box<PasskeyAuthentication>),
+    Sudo(Box<PasskeyAuthentication>),
 }
 
 // TODO: move audit log logic here
@@ -219,6 +220,26 @@ impl ServiceAuth {
         session_id: SessionId,
         user_id: Option<UserId>,
     ) -> Result<String> {
+        self.webauthn_authentication_challenge(session_id, user_id, false)
+            .await
+    }
+
+    /// start a webauthn ceremony to enter sudo mode
+    pub async fn webauthn_sudo_challenge(
+        &self,
+        session_id: SessionId,
+        user_id: UserId,
+    ) -> Result<String> {
+        self.webauthn_authentication_challenge(session_id, Some(user_id), true)
+            .await
+    }
+
+    async fn webauthn_authentication_challenge(
+        &self,
+        session_id: SessionId,
+        user_id: Option<UserId>,
+        sudo: bool,
+    ) -> Result<String> {
         let Some(user_id) = user_id else {
             return Err(ApiError::with_message(
                 ErrorCode::MissingAuth,
@@ -257,34 +278,30 @@ impl ServiceAuth {
                 Error::Internal(format!("failed to start webauthn authentication: {err}"))
             })?;
 
-        self.put_ceremony(session_id, PendingWebauthn::Authenticate(Box::new(state)));
+        let ceremony = if sudo {
+            PendingWebauthn::Sudo(Box::new(state))
+        } else {
+            PendingWebauthn::Authenticate(Box::new(state))
+        };
+        self.put_ceremony(session_id, ceremony);
 
         serde_json::to_string(&challenge).map_err(|err| {
             Error::Internal(format!("failed to serialize webauthn challenge: {err}"))
         })
     }
 
-    /// verify an assertion and authenticate the session
-    ///
-    /// returns the authenticated user and their auth state
-    pub async fn webauthn_auth_finish(
+    /// verify an assertion, returning the credential's user
+    async fn webauthn_verify_assertion(
         &self,
         session: &Session,
+        state: &PasskeyAuthentication,
         credential: &str,
-    ) -> Result<(UserId, AuthState)> {
-        let PendingWebauthn::Authenticate(state) = self.take_ceremony(session.id)? else {
-            return Err(ApiError::with_message(
-                ErrorCode::InvalidData,
-                "no webauthn authentication in progress".to_owned(),
-            )
-            .into());
-        };
-
+    ) -> Result<UserId> {
         let credential: PublicKeyCredential = serde_json::from_str(credential)
             .map_err(|_| ApiError::from_code(ErrorCode::InvalidData))?;
         let result = self
             .webauthn()?
-            .finish_passkey_authentication(&credential, &state)
+            .finish_passkey_authentication(&credential, state)
             .map_err(|err| {
                 tracing::debug!(?err, "webauthn assertion verification failed");
                 Error::ApiError(ApiError::with_message(
@@ -318,39 +335,65 @@ impl ServiceAuth {
             txn.webauthn_credential_update_passkey(user_id, stored.id, &passkey_json)
                 .await?;
         }
-
-        let was_authenticated = !matches!(
-            session.status,
-            SessionStatus::Unauthorized | SessionStatus::Bound { .. }
-        );
-        // a completed webauthn ceremony is a full second factor, same as totp
-        let status = SessionStatus::Sudo {
-            user_id,
-            sudo_expires_at: Time::now_utc()
-                .saturating_add(super::SUDO_DURATION)
-                .into(),
-        };
-        txn.session_set_status(session.id, status).await?;
         txn.commit().await?;
 
-        let srv = self.state.services();
-        srv.sessions.invalidate(session.id).await;
-        let session = srv.sessions.get(session.id).await?;
-        if was_authenticated {
-            self.state
-                .messaging()
-                .broadcast_global(MessageSync::SessionUpdate {
-                    session: (*session).clone(),
-                })
-                .await?;
-        } else {
-            self.state
-                .messaging()
-                .broadcast_global(MessageSync::SessionCreate {
-                    session: (*session).clone(),
-                })
-                .await?;
-        }
+        Ok(user_id)
+    }
+
+    /// verify an assertion and authenticate the session
+    ///
+    /// returns the authenticated user and their auth state
+    pub async fn webauthn_auth_finish(
+        &self,
+        session: &Session,
+        credential: &str,
+    ) -> Result<(UserId, AuthState)> {
+        let PendingWebauthn::Authenticate(state) = self.take_ceremony(session.id)? else {
+            return Err(ApiError::with_message(
+                ErrorCode::InvalidData,
+                "no webauthn authentication in progress".to_owned(),
+            )
+            .into());
+        };
+
+        let user_id = self
+            .webauthn_verify_assertion(session, &state, credential)
+            .await?;
+        let was_authenticated = session.status.is_authenticated();
+        let status = match &session.status {
+            // never downgrade an existing sudo session
+            SessionStatus::Sudo { .. } => session.status.clone(),
+            _ => SessionStatus::Authorized { user_id },
+        };
+        self.set_session_status_and_broadcast(session.id, status, was_authenticated)
+            .await?;
+
+        Ok((user_id, self.get_state(user_id).await?))
+    }
+
+    /// verify an assertion and upgrade the session to sudo mode
+    pub async fn webauthn_sudo_finish(
+        &self,
+        session: &Session,
+        credential: &str,
+    ) -> Result<(UserId, AuthState)> {
+        let PendingWebauthn::Sudo(state) = self.take_ceremony(session.id)? else {
+            return Err(ApiError::with_message(
+                ErrorCode::InvalidData,
+                "no webauthn sudo ceremony in progress".to_owned(),
+            )
+            .into());
+        };
+
+        let user_id = self
+            .webauthn_verify_assertion(session, &state, credential)
+            .await?;
+        self.set_session_status_and_broadcast(
+            session.id,
+            super::sudo_status(user_id),
+            session.status.is_authenticated(),
+        )
+        .await?;
 
         Ok((user_id, self.get_state(user_id).await?))
     }

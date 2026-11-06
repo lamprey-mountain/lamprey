@@ -301,6 +301,50 @@ pub mod auth_webauthn_auth_finish {
     }
 }
 
+/// Auth webauthn sudo challenge
+///
+/// Get options for entering sudo mode with a registered authenticator
+#[endpoint(
+    post,
+    path = "/auth/webauthn/sudo/challenge",
+    tags = ["auth", "badge.unauthenticated"],
+    response(OK, body = WebauthnChallenge, description = "success"),
+)]
+pub mod auth_webauthn_sudo_challenge {
+    use crate::v1::types::auth::WebauthnChallenge;
+
+    pub struct Request {}
+
+    pub struct Response {
+        #[json]
+        pub challenge: WebauthnChallenge,
+    }
+}
+
+/// Auth webauthn sudo finish
+///
+/// Verify an assertion response and enter sudo mode
+#[endpoint(
+    post,
+    path = "/auth/webauthn/sudo/finish",
+    tags = ["auth", "badge.unauthenticated"],
+    audit_log_events = ["SessionLogin", "AuthSudo"],
+    response(OK, body = AuthState, description = "success"),
+)]
+pub mod auth_webauthn_sudo_finish {
+    use crate::v1::types::auth::{AuthState, WebauthnCredential};
+
+    pub struct Request {
+        #[json]
+        pub credential: WebauthnCredential,
+    }
+
+    pub struct Response {
+        #[json]
+        pub state: AuthState,
+    }
+}
+
 /// Auth webauthn authenticators
 ///
 /// List a user's registered authenticators
@@ -497,6 +541,30 @@ pub mod auth_totp_exec {
     }
 }
 
+/// Auth totp sudo
+///
+/// Verify a totp code and enter sudo mode
+#[endpoint(
+    post,
+    path = "/auth/totp/sudo",
+    tags = ["auth"],
+    audit_log_events = ["SessionLogin", "AuthSudo"],
+    response(OK, body = AuthState, description = "success"),
+)]
+pub mod auth_totp_sudo {
+    use crate::v1::types::auth::{AuthState, TotpVerificationRequest};
+
+    pub struct Request {
+        #[json]
+        pub verification: TotpVerificationRequest,
+    }
+
+    pub struct Response {
+        #[json]
+        pub state: AuthState,
+    }
+}
+
 /// Auth totp recovery exec
 ///
 /// Use a recovery code
@@ -508,6 +576,30 @@ pub mod auth_totp_exec {
     response(OK, body = AuthState, description = "success"),
 )]
 pub mod auth_totp_recovery_exec {
+    use crate::v1::types::auth::{AuthState, TotpVerificationRequest};
+
+    pub struct Request {
+        #[json]
+        pub verification: TotpVerificationRequest,
+    }
+
+    pub struct Response {
+        #[json]
+        pub state: AuthState,
+    }
+}
+
+/// Auth totp recovery sudo
+///
+/// Use a recovery code to enter sudo mode
+#[endpoint(
+    post,
+    path = "/auth/totp/recovery/sudo",
+    tags = ["auth"],
+    audit_log_events = ["SessionLogin", "AuthSudo"],
+    response(OK, body = AuthState, description = "success"),
+)]
+pub mod auth_totp_recovery_sudo {
     use crate::v1::types::auth::{AuthState, TotpVerificationRequest};
 
     pub struct Request {

@@ -44,6 +44,14 @@ fn bound_status(user_id: UserId) -> SessionStatus {
     }
 }
 
+/// session status for a user that just entered sudo mode
+fn sudo_status(user_id: UserId) -> SessionStatus {
+    SessionStatus::Sudo {
+        user_id,
+        sudo_expires_at: Time::now_utc().saturating_add(SUDO_DURATION).into(),
+    }
+}
+
 pub struct ServiceAuth {
     state: Globals,
     webauthn: Option<Webauthn>,
@@ -207,6 +215,38 @@ impl ServiceAuth {
         Ok((*session).clone())
     }
 
+    /// broadcast a session status change, creating or updating as needed
+    async fn broadcast_session_status(
+        &self,
+        session: Session,
+        was_authenticated: bool,
+    ) -> Result<()> {
+        if was_authenticated {
+            self.state
+                .messaging()
+                .broadcast_global(MessageSync::SessionUpdate { session })
+                .await?;
+        } else {
+            self.state
+                .messaging()
+                .broadcast_global(MessageSync::SessionCreate { session })
+                .await?;
+        }
+        Ok(())
+    }
+
+    /// set a session's status and broadcast the change
+    async fn set_session_status_and_broadcast(
+        &self,
+        session_id: SessionId,
+        status: SessionStatus,
+        was_authenticated: bool,
+    ) -> Result<()> {
+        let session = self.set_session_status(session_id, status).await?;
+        self.broadcast_session_status(session, was_authenticated)
+            .await
+    }
+
     /// start totp setup, returning the new secret
     pub async fn init_totp(&self, user_id: UserId) -> Result<String> {
         let secret = self.generate_totp_secret();
@@ -271,13 +311,8 @@ impl ServiceAuth {
         ))
     }
 
-    /// verify a totp code and upgrade the session to sudo mode
-    pub async fn totp_exec(
-        &self,
-        session_id: SessionId,
-        user_id: UserId,
-        code: &str,
-    ) -> Result<AuthState> {
+    /// verify a user's totp code
+    async fn verify_totp_for_user(&self, user_id: UserId, code: &str) -> Result<()> {
         let (secret, enabled) = {
             let mut txn = self.state.begin_read().await?;
             txn.auth_totp_get(user_id)
@@ -288,8 +323,44 @@ impl ServiceAuth {
             return Err(ApiError::from_code(ErrorCode::TotpNotEnabled).into());
         }
 
-        self.verify_totp_code(&secret, code)?;
-        self.sudo_upgrade(session_id, user_id).await?;
+        self.verify_totp_code(&secret, code)
+    }
+
+    /// verify a totp code and authenticate the session
+    pub async fn totp_exec(
+        &self,
+        session: &Session,
+        user_id: UserId,
+        code: &str,
+    ) -> Result<AuthState> {
+        self.verify_totp_for_user(user_id, code).await?;
+
+        let was_authenticated = session.status.is_authenticated();
+        let status = match &session.status {
+            // never downgrade an existing sudo session
+            SessionStatus::Sudo { .. } => session.status.clone(),
+            _ => SessionStatus::Authorized { user_id },
+        };
+        self.set_session_status_and_broadcast(session.id, status, was_authenticated)
+            .await?;
+
+        self.get_state(user_id).await
+    }
+
+    /// verify a totp code and upgrade the session to sudo mode
+    pub async fn totp_sudo(
+        &self,
+        session: &Session,
+        user_id: UserId,
+        code: &str,
+    ) -> Result<AuthState> {
+        self.verify_totp_for_user(user_id, code).await?;
+        self.set_session_status_and_broadcast(
+            session.id,
+            sudo_status(user_id),
+            session.status.is_authenticated(),
+        )
+        .await?;
 
         self.get_state(user_id).await
     }
@@ -324,13 +395,8 @@ impl ServiceAuth {
         Ok(codes)
     }
 
-    /// consume a recovery code and upgrade the session to sudo mode
-    pub async fn recovery_code_exec(
-        &self,
-        session_id: SessionId,
-        user_id: UserId,
-        code: &str,
-    ) -> Result<AuthState> {
+    /// consume a recovery code
+    async fn consume_recovery_code(&self, user_id: UserId, code: &str) -> Result<()> {
         let mut txn = self.state.begin().await?;
         let (_secret, enabled) = txn
             .auth_totp_get(user_id)
@@ -342,8 +408,44 @@ impl ServiceAuth {
 
         txn.auth_totp_recovery_use(user_id, code).await?;
         txn.commit().await?;
+        Ok(())
+    }
 
-        self.sudo_upgrade(session_id, user_id).await?;
+    /// consume a recovery code and authenticate the session
+    pub async fn recovery_code_exec(
+        &self,
+        session: &Session,
+        user_id: UserId,
+        code: &str,
+    ) -> Result<AuthState> {
+        self.consume_recovery_code(user_id, code).await?;
+
+        let was_authenticated = session.status.is_authenticated();
+        let status = match &session.status {
+            // never downgrade an existing sudo session
+            SessionStatus::Sudo { .. } => session.status.clone(),
+            _ => SessionStatus::Authorized { user_id },
+        };
+        self.set_session_status_and_broadcast(session.id, status, was_authenticated)
+            .await?;
+
+        self.get_state(user_id).await
+    }
+
+    /// consume a recovery code and upgrade the session to sudo mode
+    pub async fn recovery_code_sudo(
+        &self,
+        session: &Session,
+        user_id: UserId,
+        code: &str,
+    ) -> Result<AuthState> {
+        self.consume_recovery_code(user_id, code).await?;
+        self.set_session_status_and_broadcast(
+            session.id,
+            sudo_status(user_id),
+            session.status.is_authenticated(),
+        )
+        .await?;
 
         self.get_state(user_id).await
     }
@@ -438,12 +540,9 @@ impl ServiceAuth {
         Ok(true)
     }
 
-    /// upgrade a session to sudo mode
+    /// upgrade a session to sudo mode without verifying a factor
     pub async fn sudo_upgrade(&self, session_id: SessionId, user_id: UserId) -> Result<()> {
-        let status = SessionStatus::Sudo {
-            user_id,
-            sudo_expires_at: Time::now_utc().saturating_add(SUDO_DURATION).into(),
-        };
+        let status = sudo_status(user_id);
         let session = self.set_session_status(session_id, status).await?;
         self.state
             .messaging()
@@ -595,10 +694,7 @@ impl ServiceAuth {
                 if mfa_pending {
                     bound_status(user_id)
                 } else {
-                    SessionStatus::Sudo {
-                        user_id,
-                        sudo_expires_at: Time::now_utc().saturating_add(SUDO_DURATION).into(),
-                    }
+                    sudo_status(user_id)
                 }
             }
         };

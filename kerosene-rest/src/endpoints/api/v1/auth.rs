@@ -138,11 +138,49 @@ pub async fn totp_exec(
     let state = req
         .services()
         .auth
-        .totp_exec(session_id, user_id, &req.inner().verification.code)
+        .totp_exec(session, user_id, &req.inner().verification.code)
         .await
         .cast_internal()?;
 
-    // SessionLogin must be recorded before AuthSudo when this endpoint authenticates the session
+    if was_unauthenticated {
+        req.audit_log_as(user_id, session)
+            .push(
+                user_id.into_inner().into(),
+                AuditLogEntryType::SessionLogin {
+                    user_id,
+                    session_id,
+                },
+            )
+            .success();
+    }
+
+    Ok(routes::auth_totp_exec::Response { state })
+}
+
+#[handler(routes::auth_totp_sudo)]
+pub async fn totp_sudo(
+    req: Req<routes::auth_totp_sudo::Endpoint>,
+) -> Result<routes::auth_totp_sudo::Response> {
+    let session = req.identity().ensure_session()?;
+
+    if session.status.bound_expired() {
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
+    let session_id = session.id;
+    let user_id = mfa_user_id(session)?;
+    let was_unauthenticated = matches!(
+        session.status,
+        SessionStatus::Unauthorized | SessionStatus::Bound { .. }
+    );
+
+    let state = req
+        .services()
+        .auth
+        .totp_sudo(session, user_id, &req.inner().verification.code)
+        .await
+        .cast_internal()?;
+
     let al = req.audit_log_as(user_id, session);
     if was_unauthenticated {
         al.push(
@@ -160,7 +198,7 @@ pub async fn totp_exec(
     )
     .success();
 
-    Ok(routes::auth_totp_exec::Response { state })
+    Ok(routes::auth_totp_sudo::Response { state })
 }
 
 #[handler(routes::auth_totp_recovery_codes_get)]
@@ -230,11 +268,49 @@ pub async fn recovery_code_exec(
     let state = req
         .services()
         .auth
-        .recovery_code_exec(session_id, user_id, &req.inner().verification.code)
+        .recovery_code_exec(session, user_id, &req.inner().verification.code)
         .await
         .cast_internal()?;
 
-    // SessionLogin must be recorded before AuthSudo when this endpoint authenticates the session
+    if was_unauthenticated {
+        req.audit_log_as(user_id, session)
+            .push(
+                user_id.into_inner().into(),
+                AuditLogEntryType::SessionLogin {
+                    user_id,
+                    session_id,
+                },
+            )
+            .success();
+    }
+
+    Ok(routes::auth_totp_recovery_exec::Response { state })
+}
+
+#[handler(routes::auth_totp_recovery_sudo)]
+pub async fn recovery_code_sudo(
+    req: Req<routes::auth_totp_recovery_sudo::Endpoint>,
+) -> Result<routes::auth_totp_recovery_sudo::Response> {
+    let session = req.identity().ensure_session()?;
+
+    if session.status.bound_expired() {
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
+    let session_id = session.id;
+    let user_id = mfa_user_id(session)?;
+    let was_unauthenticated = matches!(
+        session.status,
+        SessionStatus::Unauthorized | SessionStatus::Bound { .. }
+    );
+
+    let state = req
+        .services()
+        .auth
+        .recovery_code_sudo(session, user_id, &req.inner().verification.code)
+        .await
+        .cast_internal()?;
+
     let al = req.audit_log_as(user_id, session);
     if was_unauthenticated {
         al.push(
@@ -252,7 +328,7 @@ pub async fn recovery_code_exec(
     )
     .success();
 
-    Ok(routes::auth_totp_recovery_exec::Response { state })
+    Ok(routes::auth_totp_recovery_sudo::Response { state })
 }
 
 #[handler(routes::auth_password_set)]
@@ -603,6 +679,7 @@ pub async fn webauthn_auth_finish(
         return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
     }
 
+    let was_unauthenticated = !session.status.is_authenticated();
     let (user_id, state) = req
         .services()
         .auth
@@ -610,8 +687,65 @@ pub async fn webauthn_auth_finish(
         .await
         .cast_internal()?;
 
-    req.audit_log_as(user_id, &session)
-        .push(
+    if was_unauthenticated {
+        req.audit_log_as(user_id, &session)
+            .push(
+                user_id.into_inner().into(),
+                AuditLogEntryType::SessionLogin {
+                    user_id,
+                    session_id: session.id,
+                },
+            )
+            .success();
+    }
+
+    Ok(routes::auth_webauthn_auth_finish::Response { state })
+}
+
+#[handler(routes::auth_webauthn_sudo_challenge)]
+pub async fn webauthn_sudo_challenge(
+    req: Req<routes::auth_webauthn_sudo_challenge::Endpoint>,
+) -> Result<routes::auth_webauthn_sudo_challenge::Response> {
+    let session = req.identity().ensure_session()?;
+
+    if session.status.bound_expired() {
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
+    let user_id = mfa_user_id(session)?;
+    let challenge = req
+        .services()
+        .auth
+        .webauthn_sudo_challenge(session.id, user_id)
+        .await
+        .cast_internal()?;
+
+    Ok(routes::auth_webauthn_sudo_challenge::Response {
+        challenge: WebauthnChallenge { challenge },
+    })
+}
+
+#[handler(routes::auth_webauthn_sudo_finish)]
+pub async fn webauthn_sudo_finish(
+    req: Req<routes::auth_webauthn_sudo_finish::Endpoint>,
+) -> Result<routes::auth_webauthn_sudo_finish::Response> {
+    let session = req.identity().ensure_session()?.clone();
+
+    if session.status.bound_expired() {
+        return Err(ApiError::from_code(ErrorCode::InvalidOrExpiredCode).into());
+    }
+
+    let was_unauthenticated = !session.status.is_authenticated();
+    let (user_id, state) = req
+        .services()
+        .auth
+        .webauthn_sudo_finish(&session, &req.inner().credential.credential)
+        .await
+        .cast_internal()?;
+
+    let al = req.audit_log_as(user_id, &session);
+    if was_unauthenticated {
+        al.push(
             user_id.into_inner().into(),
             AuditLogEntryType::SessionLogin {
                 user_id,
@@ -619,8 +753,16 @@ pub async fn webauthn_auth_finish(
             },
         )
         .success();
+    }
+    al.push(
+        user_id.into_inner().into(),
+        AuditLogEntryType::AuthSudo {
+            session_id: session.id,
+        },
+    )
+    .success();
 
-    Ok(routes::auth_webauthn_auth_finish::Response { state })
+    Ok(routes::auth_webauthn_sudo_finish::Response { state })
 }
 
 #[handler(routes::auth_webauthn_authenticator_list)]
@@ -700,9 +842,11 @@ export_routes!(
     totp_enable,
     totp_delete,
     totp_exec,
+    totp_sudo,
     recovery_codes_get,
     recovery_codes_rotate,
     recovery_code_exec,
+    recovery_code_sudo,
     password_set,
     password_delete,
     password_exec,
@@ -719,6 +863,8 @@ export_routes!(
     webauthn_register_finish,
     webauthn_auth_challenge,
     webauthn_auth_finish,
+    webauthn_sudo_challenge,
+    webauthn_sudo_finish,
     webauthn_authenticator_list,
     webauthn_authenticator_patch,
     webauthn_authenticator_delete,
