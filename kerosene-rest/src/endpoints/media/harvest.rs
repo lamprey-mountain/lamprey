@@ -46,7 +46,11 @@ async fn get(req: Req<routes::harvest_get::Endpoint>) -> Result<routes::harvest_
 
     if id != harvest.id.to_string()
         || token.is_empty()
-        || token.as_bytes().ct_eq(req.inner().token.as_bytes()).unwrap_u8() != 1
+        || token
+            .as_bytes()
+            .ct_eq(req.inner().token.as_bytes())
+            .unwrap_u8()
+            != 1
         || filename.is_empty()
         || filename.contains('/')
         || filename != req.inner().filename

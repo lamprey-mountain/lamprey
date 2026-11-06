@@ -259,46 +259,6 @@ pub mod user_list {
     }
 }
 
-// TODO: remove
-/// Harvest get
-#[endpoint(
-    get,
-    path = "/user/@self/harvest",
-    tags = ["user"],
-    response(OK, body = Harvest, description = "success"),
-    response(NOT_FOUND, description = "no harvest found"),
-)]
-pub mod harvest_get {
-    use crate::v1::types::harvest::Harvest;
-
-    pub struct Request {}
-
-    pub struct Response {
-        #[json]
-        pub harvest: Harvest,
-    }
-}
-
-// TODO: remove
-/// Harvest create
-#[endpoint(
-    post,
-    path = "/user/@self/harvest",
-    tags = ["user"],
-    audit_log_events = ["HarvestCreate"],
-    response(ACCEPTED, description = "harvest has been queued"),
-)]
-pub mod harvest_create {
-    use crate::v1::types::harvest::HarvestCreateUser;
-
-    pub struct Request {
-        #[json]
-        pub harvest: HarvestCreateUser,
-    }
-
-    pub struct Response {}
-}
-
 /// User search
 #[endpoint(
     post,

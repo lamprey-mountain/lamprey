@@ -69,6 +69,7 @@ pub use dm::*;
 pub use document::*;
 pub use emoji::*;
 pub use federation::*;
+pub use harvest::*;
 pub use interaction::*;
 pub use invite::*;
 pub use media::*;
