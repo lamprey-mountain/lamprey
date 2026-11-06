@@ -1,5 +1,12 @@
 import type { User } from "sdk";
-import { createResource, For, onCleanup, Show, type VoidProps } from "solid-js";
+import {
+	createResource,
+	createSignal,
+	For,
+	onCleanup,
+	Show,
+	type VoidProps,
+} from "solid-js";
 import { useApi } from "@/api";
 import { useModals } from "@/contexts/modal";
 import { flags } from "@/lib/flags";
@@ -31,7 +38,7 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 			<br />
 			<Show when={flags.has("auth_totp")}>
 				<h3>totp</h3>
-				<div>todo</div>
+				<Totp user={props.user} />
 				<br />
 			</Show>
 			<Show when={flags.has("auth_webauthn")}>
@@ -115,6 +122,140 @@ export function Authentication(props: VoidProps<{ user: User }>) {
 					</button>
 				</div>
 			</div>
+		</div>
+	);
+}
+
+function Totp(props: VoidProps<{ user: User }>) {
+	const api = useApi();
+	const [, modalctl] = useModals();
+
+	// TODO: remove this cast when the openapi schema is regenerated with
+	// the totp routes (mirror the cast in Oauth)
+	const [state, { refetch }] = createResource(async () => {
+		const { data } = await api.client.http.GET(
+			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
+			"/api/v1/auth/state" as any,
+			{},
+		);
+		return data as { has_totp?: boolean } | undefined;
+	});
+
+	return (
+		<div class="totp">
+			<Show when={state()} fallback={<div>loading...</div>}>
+				<Show
+					when={state()?.has_totp}
+					fallback={
+						<button
+							type="button"
+							class="button primary"
+							onClick={() =>
+								modalctl.open({
+									type: "totp_setup",
+									account_name: props.user.id,
+								})
+							}
+						>
+							enable totp
+						</button>
+					}
+				>
+					<TotpManage onDisabled={refetch} />
+				</Show>
+			</Show>
+		</div>
+	);
+}
+
+function TotpManage(props: VoidProps<{ onDisabled: () => void }>) {
+	const api = useApi();
+
+	const [codes, codesCtl] = createResource(async () => {
+		const { data } = await api.client.http.GET(
+			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
+			"/api/v1/auth/totp/recovery-codes" as any,
+			{},
+		);
+		return data as
+			| { codes: { code: string; used_at?: string | null }[] }
+			| undefined;
+	});
+	const [error, setError] = createSignal<string | null>(null);
+
+	const isSudo = () => api.session()?.status === "Sudo";
+
+	const rotate = async () => {
+		setError(null);
+		const { error: err } = await api.client.http.POST(
+			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
+			"/api/v1/auth/totp/recovery-codes" as any,
+			{},
+		);
+		if (err) {
+			setError("failed to rotate recovery codes");
+			return;
+		}
+		codesCtl.refetch();
+	};
+
+	const disable = async () => {
+		setError(null);
+		const { error: err } = await api.client.http.DELETE(
+			// biome-ignore lint/suspicious/noExplicitAny: schema is outdated
+			"/api/v1/auth/totp" as any,
+			{},
+		);
+		if (err) {
+			setError("failed to disable totp");
+			return;
+		}
+		props.onDisabled();
+	};
+
+	return (
+		<div class="totp">
+			<div>two-factor authentication is enabled</div>
+			<div>
+				<button
+					type="button"
+					class="button"
+					classList={{ disabled: !isSudo() }}
+					data-tooltip={!isSudo() ? "Requires sudo" : undefined}
+					onClick={rotate}
+				>
+					rotate recovery codes
+				</button>
+				<button
+					type="button"
+					class="button danger"
+					classList={{ disabled: !isSudo() }}
+					data-tooltip={!isSudo() ? "Requires sudo" : undefined}
+					onClick={disable}
+				>
+					disable totp
+				</button>
+			</div>
+			<Show when={codes.error}>
+				<div class="error">error loading recovery codes</div>
+			</Show>
+			<Show when={codes()}>
+				<div class="recovery-codes">
+					<For each={codes()?.codes}>
+						{(rc) => (
+							<div class="recovery-code">
+								<code>{rc.code}</code>
+								<Show when={rc.used_at}>
+									<span> (used)</span>
+								</Show>
+							</div>
+						)}
+					</For>
+				</div>
+			</Show>
+			<Show when={error()}>
+				<div class="error">{error()}</div>
+			</Show>
 		</div>
 	);
 }

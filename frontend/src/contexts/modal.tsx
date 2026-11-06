@@ -52,6 +52,10 @@ export type Modal =
 			message_id: string;
 	  }
 	| {
+			type: "totp_setup";
+			account_name: string;
+	  }
+	| {
 			type: "reset_password";
 	  }
 	| {

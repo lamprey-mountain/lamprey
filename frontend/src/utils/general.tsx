@@ -77,7 +77,12 @@ export const Copyable = (props: { children: string }) => {
 	);
 };
 
-export const Copyable2 = (props: { children: string; name: string }) => {
+export const Copyable2 = (props: {
+	children: string;
+	name: string;
+	/** value written to the clipboard, defaults to children */
+	copy?: string;
+}) => {
 	const [copied, setCopied] = createSignal(false);
 	const clearCopied = debounce(() => setCopied(false), 2000);
 
@@ -92,7 +97,7 @@ export const Copyable2 = (props: { children: string; name: string }) => {
 
 	const copy = (e: MouseEvent) => {
 		e.stopPropagation();
-		navigator.clipboard.writeText(props.children);
+		navigator.clipboard.writeText(props.copy ?? props.children);
 		setCopied(true);
 		clearCopied();
 	};

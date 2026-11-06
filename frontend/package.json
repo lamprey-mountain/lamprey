@@ -55,6 +55,7 @@
 		"prosemirror-state": "^1.4.4",
 		"prosemirror-transform": "^1.12.0",
 		"prosemirror-view": "^1.42.2",
+		"qr": "^0.7.2",
 		"sanitize-html": "^2.17.7",
 		"sdk": "workspace:^",
 		"solid-floating-ui": "^0.3.1",

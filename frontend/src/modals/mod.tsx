@@ -26,6 +26,7 @@ import { ModalRoomSettings } from "./ModalRoomSettings.tsx";
 import { ModalTagEditor } from "./ModalTagEditor.tsx";
 import { ModalThreadCreate } from "./ModalThreadCreate.tsx";
 import { ModalTimeout } from "./ModalTimeout.tsx";
+import { ModalTotpSetup } from "./ModalTotpSetup.tsx";
 import { ModalUserSettings } from "./ModalUserSettings.tsx";
 import { ModalViewChannelNickname } from "./ModalViewChannelNickname.tsx";
 
@@ -34,6 +35,8 @@ export const Modal = (
 		onKeyDown?: (e: KeyboardEvent) => void;
 		class?: string;
 		contentRef?: Ref<HTMLDivElement>;
+		/** clicking the backdrop closes the modal, defaults to true */
+		closeOnBackdrop?: boolean;
 	}>,
 ) => {
 	const [, modalCtl] = useModals();
@@ -44,7 +47,12 @@ export const Modal = (
 			tabindex="-1"
 			autofocus
 		>
-			<div class="bg" onClick={() => modalCtl.close()}></div>
+			<div
+				class="bg"
+				onClick={() => {
+					if (props.closeOnBackdrop ?? true) modalCtl.close();
+				}}
+			/>
 			<div class="content" ref={props.contentRef}>
 				<div class="base"></div>
 				<div class="inner" role="dialog" aria-modal>
@@ -92,6 +100,12 @@ function isResetPassword(
 	modal: ModalType,
 ): modal is Extract<ModalType, { type: "reset_password" }> {
 	return modal.type === "reset_password";
+}
+
+function isTotpSetup(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "totp_setup" }> {
+	return modal.type === "totp_setup";
 }
 
 function isLogout(
@@ -254,6 +268,9 @@ export function getModal(modal: ModalType) {
 	}
 	if (isResetPassword(modal)) {
 		return <ModalResetPassword />;
+	}
+	if (isTotpSetup(modal)) {
+		return <ModalTotpSetup account_name={modal.account_name} />;
 	}
 	if (isLogout(modal)) {
 		return <ModalLogout />;

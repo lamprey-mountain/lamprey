@@ -218,6 +218,11 @@
 	}
 }
 
+.totp {
+	// fixed height so the section doesn't jump while the totp/sudo state loads
+	min-height: 40px;
+}
+
 .user-settings-lang {
 	.langs {
 		display: flex;
