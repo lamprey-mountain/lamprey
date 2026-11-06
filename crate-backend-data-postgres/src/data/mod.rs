@@ -873,6 +873,12 @@ pub trait DataHarvest {
     async fn harvest_get_user(&mut self, user_id: UserId) -> Result<Option<Harvest>>;
     async fn harvest_get_room(&mut self, room_id: RoomId) -> Result<Option<Harvest>>;
     async fn harvest_claim(&mut self) -> Result<Option<Harvest>>;
+    /// delete a harvest record
+    async fn harvest_delete(&mut self, harvest_id: HarvestId) -> Result<()>;
+    /// list all expired harvests
+    ///
+    /// completed: past `expires_at`; failed/cancelled: older than 2 weeks
+    async fn harvest_gc(&mut self, now: Time) -> Result<Vec<Harvest>>;
 }
 
 // TODO: impl this trait

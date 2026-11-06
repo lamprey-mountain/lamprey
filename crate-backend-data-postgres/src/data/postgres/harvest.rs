@@ -3,8 +3,9 @@ use crate::data::DataHarvest;
 use crate::error::Result;
 use async_trait::async_trait;
 use common::v1::types::harvest::{Harvest, HarvestType};
+use common::v1::types::util::Time;
 use common::v1::types::{HarvestId, RoomId, UserId};
-use sqlx::{query, query_scalar};
+use sqlx::{query, query_file_scalar, query_scalar};
 
 #[async_trait]
 impl DataHarvest for Postgres {
@@ -90,5 +91,32 @@ impl DataHarvest for Postgres {
         .await?;
 
         Ok(data.map(|d| serde_json::from_value(d)).transpose()?)
+    }
+
+    async fn harvest_delete(&mut self, harvest_id: HarvestId) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        query!("DELETE FROM harvest WHERE id = $1", harvest_id.to_string())
+            .execute(conn.ext())
+            .await?;
+        Ok(())
+    }
+
+    /// list all expired harvests
+    ///
+    /// completed: past `expires_at`; failed/cancelled: older than 2 weeks
+    async fn harvest_gc(&mut self, now: Time) -> Result<Vec<Harvest>> {
+        let mut conn = self.acquire().await?;
+        let data = query_file_scalar!(
+            "sql/harvest_expired.sql",
+            now.into_inner(),
+            *now - time::Duration::weeks(2)
+        )
+        .fetch_all(conn.ext())
+        .await?;
+
+        data.into_iter()
+            .map(|d| serde_json::from_value(d))
+            .collect::<std::result::Result<Vec<_>, _>>()
+            .map_err(Into::into)
     }
 }
