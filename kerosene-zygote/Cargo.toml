@@ -12,7 +12,7 @@ keywords.workspace = true
 bytes = { workspace = true }
 futures = { workspace = true }
 quinn = { workspace = true }
-rand = "0.10.2"
+rand = "0.10.3"
 rcgen = { workspace = true }
 rustls = { workspace = true, features = ["ring"] }
 slotmap = { workspace = true }

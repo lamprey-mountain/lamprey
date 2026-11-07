@@ -282,7 +282,7 @@ impl DocumentActor {
         let update_out = Arc::new(std::sync::Mutex::new(Vec::new()));
         let update_out_inner = update_out.clone();
 
-        let _sub_update = self.doc.observe_update_v1(move |_, event| {
+        self.doc.observe_update_v1("serdoc_put", move |_, event| {
             let mut u = update_out_inner.lock().unwrap();
             *u = event.update.to_vec();
         });
@@ -305,7 +305,7 @@ impl DocumentActor {
 
         serialized::serdoc_apply_to_doc(&self.doc, &canonical_components);
 
-        drop(_sub_update);
+        self.doc.unobserve_update_v1("serdoc_put");
 
         let update_bytes = {
             let u = update_out.lock().unwrap();
@@ -397,12 +397,9 @@ impl DocumentActor {
         let stats = Arc::new(std::sync::Mutex::new((0, 0)));
         let stats_inner = stats.clone();
 
-        let mut _sub_xml = None;
-        let mut _sub_text = None;
-
         if self.context_id.is_prose() {
             let xml = self.doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
-            _sub_xml = Some(xml.observe_deep(move |txn, events| {
+            xml.observe_deep("deep_stats", move |txn, events| {
                 let mut stats = stats_inner.lock().unwrap();
                 for e in events.iter() {
                     match e {
@@ -440,10 +437,10 @@ impl DocumentActor {
                         _ => {}
                     }
                 }
-            }));
+            });
         } else {
             let text = self.doc.get_or_insert_text(DOCUMENT_ROOT_NAME);
-            _sub_text = Some(text.observe_deep(move |txn, events| {
+            text.observe_deep("deep_stats", move |txn, events| {
                 let mut stats = stats_inner.lock().unwrap();
                 for e in events.iter() {
                     match e {
@@ -481,7 +478,7 @@ impl DocumentActor {
                         _ => {}
                     }
                 }
-            }));
+            });
         }
 
         let mut txn = self.doc.transact_mut();
@@ -501,8 +498,13 @@ impl DocumentActor {
         }
 
         drop(txn);
-        drop(_sub_xml);
-        drop(_sub_text);
+        if self.context_id.is_prose() {
+            let xml = self.doc.get_or_insert_xml_fragment(DOCUMENT_ROOT_NAME);
+            xml.unobserve_deep("deep_stats");
+        } else {
+            let text = self.doc.get_or_insert_text(DOCUMENT_ROOT_NAME);
+            text.unobserve_deep("deep_stats");
+        }
 
         let (stat_inserted, stat_deleted) = {
             let s = stats.lock().unwrap();

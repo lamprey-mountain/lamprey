@@ -30,12 +30,12 @@ mediatype = { workspace = true, features = ["serde"] }
 multer = { workspace = true }
 opendal = { workspace = true, features = ["services-s3", "services-fs"] }
 opentelemetry-otlp = { workspace = true, features = ["grpc-tonic", "logs", "metrics", "trace"] }
-reqwest = { workspace = true, features = ["rustls-tls-native-roots", "json"] }
+reqwest = { workspace = true, features = ["rustls", "json"] }
 rmp-serde = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "postgres", "uuid", "time", "ipnetwork"] }
-strum = { version = "0.27.2", features = ["derive"] }
+strum = { version = "0.28.0", features = ["derive"] }
 tantivy = { workspace = true }
 thiserror = { workspace = true }
 time = { workspace = true, features = ["serde"] }

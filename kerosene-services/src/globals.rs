@@ -87,15 +87,11 @@ impl Globals {
                             .map_err(|err| Error::Internal(err.to_string()))?
                             .as_ref(),
                     );
-                opendal::Operator::new(builder)?
-                    .layer(LoggingLayer::default())
-                    .finish()
+                opendal::Operator::new(builder)?.layer(LoggingLayer::default())
             }
             ConfigBlobs::Fs(fs) => {
                 let builder = opendal::services::Fs::default().root(fs.data_dir.to_str().unwrap());
-                opendal::Operator::new(builder)?
-                    .layer(LoggingLayer::default())
-                    .finish()
+                opendal::Operator::new(builder)?.layer(LoggingLayer::default())
             }
         };
 

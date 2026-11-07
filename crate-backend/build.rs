@@ -1,4 +1,4 @@
-use vergen_gitcl::{CargoBuilder, Emitter, GitclBuilder, RustcBuilder};
+use vergen_gitcl::{Cargo, Emitter, Gitcl, Rustc};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     if std::env::var("CARGO_FEATURE_EMBED_FRONTEND").is_ok() {
@@ -8,22 +8,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rustc-env=RUST_EMBED_FRONTEND_PATH={}", frontend_dist);
     }
 
-    let cargo = CargoBuilder::default()
+    let cargo = Cargo::builder()
         .opt_level(true)
         .debug(true)
         .target_triple(true)
-        .build()?;
-    let git = GitclBuilder::default()
+        .build();
+    let git = Gitcl::builder()
         .sha(true)
         .commit_timestamp(true)
         .dirty(true)
-        .build()?;
-    let rustc = RustcBuilder::default()
+        .build();
+    let rustc = Rustc::builder()
         .semver(true)
         .llvm_version(true)
         .commit_hash(true)
         .channel(true)
-        .build()?;
+        .build();
 
     Emitter::default()
         .add_instructions(&cargo)?

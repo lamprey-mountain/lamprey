@@ -26,7 +26,7 @@ chrono-tz = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 common = { workspace = true, features = ["utoipa", "validator"] }
 constant_time_eq = { workspace = true }
-csscolorparser = { workspace = true, features = ["lab"] }
+csscolorparser = { workspace = true }
 dashmap = { workspace = true }
 decancer = { workspace = true }
 dotenvy = { workspace = true }
@@ -59,10 +59,10 @@ lettre = { workspace = true, features = ["builder", "pool", "smtp-transport", "t
 matchit = {version = "0.9.2", optional = true}
 maxminddb = { workspace = true }
 mediatype = { workspace = true, features = ["serde"] }
-minijinja = "2.24.0"
+minijinja = "3.0.5"
 moka = { workspace = true, features = ["future"] }
 multer = { workspace = true }
-nanoid = "0.4.0"
+nanoid = "0.5.0"
 once_cell = { workspace = true }
 opendal = { workspace = true, features = ["services-s3", "services-fs"] }
 opentelemetry = { workspace = true }
@@ -71,13 +71,13 @@ opentelemetry_sdk = { workspace = true, features = ["rt-tokio", "tokio"] }
 p256 = { workspace = true, features = ["pkcs8"] }
 pastey = "0.2.3"
 prometheus = { version = "0.14.0", features = ["process"] }
-rand = "0.9.5"
+rand = "0.10.3"
 regex = { workspace = true }
-reqwest = { workspace = true, features = ["rustls-tls-native-roots", "json"] }
+reqwest = { workspace = true, features = ["rustls", "json"] }
 rmp-serde = { workspace = true }
 rrule = { workspace = true }
 rust-argon2 = { workspace = true }
-rust-embed = { version = "8.12.0", optional = true, features = ["interpolate-folder-path"] }
+rust-embed = { version = "8.13.0", optional = true, features = ["interpolate-folder-path"] }
 rustls = { workspace = true, features = ["ring"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -85,7 +85,7 @@ serde_path_to_error = { workspace = true }
 serde_urlencoded = { workspace = true }
 sha2 = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "postgres", "uuid", "time", "ipnetwork"] }
-strum = { version = "0.27.2", features = ["derive"] }
+strum = { version = "0.28.0", features = ["derive"] }
 subtle = { workspace = true }
 tantivy = { workspace = true }
 thiserror = { workspace = true }
@@ -107,7 +107,7 @@ wtransport = { workspace = true, optional = true }
 yrs = { workspace = true, features = ["sync"] }
 
 [build-dependencies]
-vergen-gitcl = { version = "9.1.0", features = ["build", "cargo", "rustc"] }
+vergen-gitcl = { version = "10.0.3", features = ["build", "cargo", "rustc"] }
 
 [features]
 default = ["webtransport"]

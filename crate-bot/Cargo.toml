@@ -19,7 +19,7 @@ dotenvy = { workspace = true }
 figment = { workspace = true, features = ["env", "toml"] }
 futures = { workspace = true }
 futures-util = { workspace = true }
-reqwest = { workspace = true, features = ["rustls-tls-native-roots", "json"] }
+reqwest = { workspace = true, features = ["rustls", "json"] }
 rustls = { workspace = true, features = ["ring"] }
 sdk = { workspace = true, features = ["voice"] }
 serde = { workspace = true, features = ["derive"] }

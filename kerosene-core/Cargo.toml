@@ -22,7 +22,7 @@ opentelemetry-otlp = { workspace = true, features = ["grpc-tonic", "logs", "metr
 opentelemetry_sdk = { workspace = true, features = ["rt-tokio", "tokio"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
-strum = { version = "0.27.2", features = ["derive"] }
+strum = { version = "0.28.0", features = ["derive"] }
 thiserror = { workspace = true }
 time = { workspace = true }
 tokio = { workspace = true, features = ["process"] }

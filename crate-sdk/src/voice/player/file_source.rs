@@ -15,10 +15,9 @@ use str0m::{
 };
 use symphonia::core::{
     codecs,
-    formats::{FormatReader, SeekMode, SeekTo},
+    formats::{FormatReader, SeekMode, SeekTo, probe::Hint},
     io::MediaSourceStream,
-    probe::Hint,
-    units::TimeBase,
+    units::{Time, TimeBase},
 };
 
 use super::{Frame, Producer, Source};
@@ -59,37 +58,44 @@ impl FileSource {
 
     /// open a media source from a symphonia `MediaSourceStream`
     pub fn from_stream(
-        mss: MediaSourceStream,
+        mss: MediaSourceStream<'static>,
         hint: Hint,
         seekable: bool,
     ) -> Result<Self, VoiceError> {
         Self::probe(mss, hint, seekable)
     }
 
-    fn probe(mss: MediaSourceStream, hint: Hint, seekable: bool) -> Result<Self, VoiceError> {
-        let probed = symphonia::default::get_probe().format(
+    fn probe(
+        mss: MediaSourceStream<'static>,
+        hint: Hint,
+        seekable: bool,
+    ) -> Result<Self, VoiceError> {
+        let format = symphonia::default::get_probe().probe(
             &hint,
             mss,
-            &Default::default(),
-            &Default::default(),
+            Default::default(),
+            Default::default(),
         )?;
 
-        let format = probed.format;
         let track = format
             .tracks()
             .iter()
-            .find(|t| t.codec_params.codec == codecs::CODEC_TYPE_OPUS)
+            .find(|t| {
+                t.codec_params
+                    .as_ref()
+                    .and_then(|params| params.audio())
+                    .is_some_and(|audio| audio.codec == codecs::audio::well_known::CODEC_ID_OPUS)
+            })
             .ok_or(VoiceError::NoMatchingTrack)?;
 
         let track_id = track.id;
         let time_base = track
-            .codec_params
             .time_base
-            .unwrap_or_else(|| TimeBase::new(1, 48_000));
-        let duration = track.codec_params.n_frames.map(|frames| {
-            let t = time_base.calc_time(frames);
-            Duration::from_secs(t.seconds) + Duration::from_secs_f64(t.frac)
-        });
+            .unwrap_or_else(|| TimeBase::try_new(1, 48_000).unwrap());
+        let duration = track
+            .duration
+            .and_then(|duration| time_base.calc_duration(duration))
+            .map(std_time);
 
         Ok(Self {
             format,
@@ -109,7 +115,8 @@ impl Stream for FileSource {
     fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
             let packet = match self.format.next_packet() {
-                Ok(packet) => packet,
+                Ok(Some(packet)) => packet,
+                Ok(None) => return Poll::Ready(None),
                 Err(symphonia::core::errors::Error::IoError(e))
                     if e.kind() == std::io::ErrorKind::UnexpectedEof =>
                 {
@@ -121,14 +128,13 @@ impl Stream for FileSource {
                 Err(e) => return Poll::Ready(Some(Err(VoiceError::Symphonia(e)))),
             };
 
-            if packet.track_id() == self.track_id {
-                let ts = packet.ts();
-                let t = self.time_base.calc_time(ts);
-                self.position = Duration::from_secs(t.seconds) + Duration::from_secs_f64(t.frac);
+            if packet.track_id == self.track_id {
+                let ts = packet.pts;
+                self.position = std_time(self.time_base.calc_time_saturating(ts));
 
-                let freq =
-                    Frequency::new(self.time_base.denom).unwrap_or(Frequency::FORTY_EIGHT_KHZ);
-                let time = MediaTime::new(ts, freq);
+                let freq = Frequency::new(self.time_base.denom.get())
+                    .unwrap_or(Frequency::FORTY_EIGHT_KHZ);
+                let time = MediaTime::new(ts.get() as u64, freq);
 
                 return Poll::Ready(Some(Ok(Frame {
                     codec: self.codec,
@@ -158,10 +164,8 @@ impl Source for FileSource {
             return Err(VoiceError::NotSeekable);
         }
 
-        let time = symphonia::core::units::Time {
-            seconds: position.as_secs(),
-            frac: f64::from(position.subsec_nanos()) / 1_000_000_000.0,
-        };
+        let time =
+            Time::try_new(position.as_secs() as i64, position.subsec_nanos()).unwrap_or_default();
 
         let seeked = self.format.seek(
             SeekMode::Accurate,
@@ -171,8 +175,7 @@ impl Source for FileSource {
             },
         )?;
 
-        let t = self.time_base.calc_time(seeked.actual_ts);
-        let actual = Duration::from_secs(t.seconds) + Duration::from_secs_f64(t.frac);
+        let actual = std_time(self.time_base.calc_time_saturating(seeked.actual_ts));
         self.position = actual;
         Ok(actual)
     }
@@ -184,4 +187,9 @@ impl Source for FileSource {
     fn position(&self) -> Option<Duration> {
         Some(self.position)
     }
+}
+
+fn std_time(time: Time) -> Duration {
+    let (secs, nanos) = time.parts();
+    Duration::from_secs(secs.max(0) as u64) + Duration::from_nanos(u64::from(nanos))
 }

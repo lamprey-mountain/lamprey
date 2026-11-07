@@ -19,7 +19,7 @@ clap = { workspace = true, features = ["derive"] }
 figment = { workspace = true, features = ["toml", "env"] }
 image = { workspace = true }
 ndarray = "0.17.2"
-ort = { version = "2.0.0-rc.14", default-features = false, features = ["std", "ndarray", "tracing", "api-27"] }
+ort = { version = "2.0.0-rc.15", default-features = false, features = ["std", "ndarray", "tracing", "api-27"] }
 reqwest = { workspace = true, default-features = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
