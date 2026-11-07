@@ -259,6 +259,19 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 		);
 	};
 
+	const isThreadChannel = (c: Channel) =>
+		c.type === "ThreadPublic" ||
+		c.type === "ThreadPrivate" ||
+		c.type === "ThreadForum2";
+
+	const showsAllThreads = (c: Channel) => {
+		if (!c.parent_id) return false;
+		const frontend = channels2.cache.get(c.parent_id)?.preferences?.frontend as
+			| { show_all_threads?: boolean }
+			| undefined;
+		return frontend?.show_all_threads ?? false;
+	};
+
 	const categories = createMemo<NavCategory[]>(() => {
 		const currentView = view();
 		if (currentView) return viewCategories(currentView);
@@ -281,17 +294,17 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 
 		const allChannels = Array.from(allChannelsMap.values());
 
-		const threads = allChannels.filter(
-			(c) =>
-				(c.type === "ThreadPublic" ||
-					c.type === "ThreadPrivate" ||
-					c.type === "ThreadForum2" ||
-					(c.type === "Document" &&
-						c.parent_id &&
-						channels2.cache.get(c.parent_id)?.type === "Wiki")) &&
-				!c.archived_at &&
-				canViewChannel(c),
-		);
+		const threads = allChannels.filter((c) => {
+			if (c.archived_at || !canViewChannel(c)) return false;
+			if (isThreadChannel(c)) {
+				return showsAllThreads(c) || !!c.thread_member;
+			}
+			return (
+				c.type === "Document" &&
+				!!c.parent_id &&
+				channels2.cache.get(c.parent_id)?.type === "Wiki"
+			);
+		});
 		const channels = allChannels.filter(
 			(c) =>
 				c.type !== "ThreadPublic" &&

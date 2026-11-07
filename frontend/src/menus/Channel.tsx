@@ -62,6 +62,49 @@ export function ChannelMenu(props: { channel_id: string }) {
 		() => props.channel_id,
 		self_id,
 	);
+
+	const canHaveThreads = () => {
+		const ty = channel()?.type;
+		return (
+			ty === "Text" ||
+			ty === "Announcement" ||
+			// ty === "Dm" ||
+			// ty === "Gdm" ||
+			ty === "Forum" ||
+			ty === "Forum2" ||
+			ty === "Ticket"
+		);
+	};
+
+	const showAllThreads = () =>
+		(channel()?.preferences?.frontend.show_all_threads as
+			| boolean
+			| undefined) ?? false;
+
+	const toggleShowAllThreads = () => {
+		const c = channel();
+		if (!c) return;
+
+		const current = c.preferences;
+		const newConfig: PreferencesChannel = {
+			notifs: current?.notifs ?? {},
+			frontend: {
+				...(current?.frontend ?? {}),
+				show_all_threads: !showAllThreads(),
+			} as PreferencesChannel["frontend"],
+		};
+
+		channels2.cache.set(c.id, { ...c, preferences: newConfig });
+		ctx.client.http
+			.PUT("/api/v1/preferences/channel/{channel_id}", {
+				params: { path: { channel_id: c.id } },
+				body: newConfig,
+			})
+			.catch((e) => {
+				console.error("Failed to update channel preferences", e);
+			});
+	};
+
 	const copyId = () => navigator.clipboard.writeText(props.channel_id);
 	const markRead = async () => {
 		const c = channels2.cache.get(props.channel_id);
@@ -232,6 +275,17 @@ export function ChannelMenu(props: { channel_id: string }) {
 			<Show when={channel() && isThread()}>
 				<Item onClick={joinOrLeaveChannel}>
 					{self_channel_member() ? "leave" : "join"}
+				</Item>
+			</Show>
+			<Show when={channel() && !isThread() && canHaveThreads()}>
+				<Item onClick={toggleShowAllThreads}>
+					<div style="display: flex; align-items: start; gap: 8px">
+						<div style="margin: 2px 0">show all threads</div>
+						<Checkbox
+							checked={showAllThreads()}
+							seed={`menu-channel-${props.channel_id}-show-all-threads`}
+						/>
+					</div>
 				</Item>
 			</Show>
 			<Separator />
