@@ -262,6 +262,9 @@ pub struct PreferencesChannelFrontend {
     /// show members who are not sharing video
     pub show_people_without_video: bool,
 
+    /// show all active threads in the channel nav, instead of only joined ones
+    pub show_all_threads: bool,
+
     /// extra implementation defined config (TEMPORARY?)
     #[serde(flatten)]
     pub extra: HashMap<String, serde_json::Value>,
@@ -368,6 +371,7 @@ impl Default for PreferencesChannelFrontend {
         Self {
             grid_view: false,
             show_people_without_video: true,
+            show_all_threads: false,
             extra: HashMap::new(),
         }
     }
