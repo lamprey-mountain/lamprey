@@ -9,13 +9,13 @@
 		"check": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"openapi-typescript": "^7.6.1",
-		"typescript": "^5.7.3"
+		"openapi-typescript": "^7.13.0",
+		"typescript": "^5.9.3"
 	},
 	"dependencies": {
-		"idb": "^8.0.3",
-		"msgpackr": "^1.11.9",
-		"openapi-fetch": "^0.13.4",
-		"uuidv7": "^1.0.2"
+		"idb": "^8.0.4",
+		"msgpackr": "^1.12.1",
+		"openapi-fetch": "^0.13.8",
+		"uuidv7": "^1.2.1"
 	}
 }
