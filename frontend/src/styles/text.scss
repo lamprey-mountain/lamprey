@@ -288,12 +288,12 @@ kbd {
 	}
 
 	&.emoji-only {
-		font-size: 1.5rem !important;
+		font-size: 1.5rem;
 		line-height: 1.5;
 
 		.emoji {
-			width: 1.5em !important;
-			height: 1.5em !important;
+			width: 1.5em;
+			height: 1.5em;
 		}
 	}
 }
