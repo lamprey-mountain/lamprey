@@ -2317,23 +2317,6 @@ export interface paths {
 		patch: operations["interaction_message_edit"];
 		trace?: never;
 	};
-	"/api/v1/internal/harvest/{harvest_id}/{token}/download": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Harvest download */
-		get: operations["harvest_download"];
-		put?: never;
-		post?: never;
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/internal/rpc": {
 		parameters: {
 			query?: never;
@@ -4132,24 +4115,6 @@ export interface paths {
 		patch?: never;
 		trace?: never;
 	};
-	"/api/v1/user/@self/harvest": {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		/** Harvest get */
-		get: operations["harvest_get"];
-		put?: never;
-		/** Harvest create */
-		post: operations["harvest_create"];
-		delete?: never;
-		options?: never;
-		head?: never;
-		patch?: never;
-		trace?: never;
-	};
 	"/api/v1/user/@self/ignore": {
 		parameters: {
 			query?: never;
@@ -4820,7 +4785,7 @@ export interface components {
 			 * @description The new mention count. Defaults to 0.
 			 */
 			mention_count?: number;
-			message_id?: null | components["schemas"]["Id"];
+			message_id?: components["schemas"]["Id"] | null;
 		};
 		/** @description a user's read state for a resource */
 		AckState: components["schemas"]["AckType"] & {
@@ -4842,7 +4807,7 @@ export interface components {
 					type: "Pins";
 			  };
 		Activity: {
-			clear_at?: null | components["schemas"]["Time"];
+			clear_at?: components["schemas"]["Time"] | null;
 			text: string;
 			/** @enum {string} */
 			type: "Custom";
@@ -4929,7 +4894,7 @@ export interface components {
 			message_count: number;
 		};
 		AnalyticsChannelParams: {
-			channel_id?: null | components["schemas"]["Id"];
+			channel_id?: components["schemas"]["Id"] | null;
 		};
 		AnalyticsInvites: {
 			/** @description The bucket for this data point. */
@@ -5015,13 +4980,13 @@ export interface components {
 		};
 		AnalyticsParams: {
 			aggregate: components["schemas"]["Aggregation"];
-			end?: null | components["schemas"]["Time"];
+			end?: components["schemas"]["Time"] | null;
 			/**
 			 * Format: int32
 			 * @description limit between 1..1024, default to 10
 			 */
 			limit?: number | null;
-			start?: null | components["schemas"]["Time"];
+			start?: components["schemas"]["Time"] | null;
 		};
 		AnalyticsUsagesAdd: {
 			/** @description The bucket for this data point. */
@@ -5060,7 +5025,7 @@ export interface components {
 			fields?: components["schemas"]["ErrorField"][];
 			/** @description human readable error message */
 			message: string;
-			ratelimit?: null | components["schemas"]["Ratelimit"];
+			ratelimit?: components["schemas"]["Ratelimit"] | null;
 			/** @description required room permissions */
 			required_permissions?: components["schemas"]["Permission"][];
 			/** @description required server permissions */
@@ -5073,7 +5038,7 @@ export interface components {
 			warnings?: components["schemas"]["Warning"][];
 		};
 		Application: {
-			bridge?: null | components["schemas"]["Bridge"];
+			bridge?: components["schemas"]["Bridge"] | null;
 			description?: string | null;
 			id: components["schemas"]["Id"];
 			name: string;
@@ -5097,7 +5062,7 @@ export interface components {
 		/** @enum {string} */
 		ApplicationConnectionProviderFieldType: "Int";
 		ApplicationCreate: {
-			bridge?: null | components["schemas"]["Bridge"];
+			bridge?: components["schemas"]["Bridge"] | null;
 			description?: string | null;
 			name: string;
 			oauth_confidential?: boolean | null;
@@ -5127,7 +5092,7 @@ export interface components {
 			token_url: string;
 		};
 		ApplicationPatch: {
-			bridge?: null | components["schemas"]["Bridge"];
+			bridge?: components["schemas"]["Bridge"] | null;
 			description?: string | null;
 			name?: string | null;
 			oauth_confidential?: boolean | null;
@@ -5141,7 +5106,7 @@ export interface components {
 			old: unknown;
 		};
 		AuditLogEntry: components["schemas"]["AuditLogEntryType"] & {
-			application_id?: null | components["schemas"]["Id"];
+			application_id?: components["schemas"]["Id"] | null;
 			/** @description when the request ended */
 			ended_at: components["schemas"]["Time"];
 			/** @description Unique id idenfitying this entry */
@@ -5156,7 +5121,7 @@ export interface components {
 			reason?: string | null;
 			/** @description Room this happened in. Is user_id for user audit logs. */
 			room_id: components["schemas"]["Id"];
-			session_id?: null | components["schemas"]["Id"];
+			session_id?: components["schemas"]["Id"] | null;
 			/** @description when the request started */
 			started_at: components["schemas"]["Time"];
 			/** @description the status of the request */
@@ -5259,7 +5224,7 @@ export interface components {
 			| {
 					metadata: {
 						changes: components["schemas"]["AuditLogChange"][];
-						role_id?: null | components["schemas"]["Id"];
+						role_id?: components["schemas"]["Id"] | null;
 					};
 					/** @enum {string} */
 					type: "RoleCreate";
@@ -5267,7 +5232,7 @@ export interface components {
 			| {
 					metadata: {
 						changes: components["schemas"]["AuditLogChange"][];
-						role_id?: null | components["schemas"]["Id"];
+						role_id?: components["schemas"]["Id"] | null;
 					};
 					/** @enum {string} */
 					type: "RoleUpdate";
@@ -5508,7 +5473,7 @@ export interface components {
 			  }
 			| {
 					metadata: {
-						expires_at?: null | components["schemas"]["Time"];
+						expires_at?: components["schemas"]["Time"] | null;
 						user_id: components["schemas"]["Id"];
 					};
 					/** @enum {string} */
@@ -5872,8 +5837,8 @@ export interface components {
 			| {
 					metadata: {
 						channel_id: components["schemas"]["Id"];
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						user_id: components["schemas"]["Id"];
 					};
 					/** @enum {string} */
@@ -6225,9 +6190,9 @@ export interface components {
 			actions: components["schemas"]["AutomodAction"][];
 			/** @description the id of any automod execution message that was sent due to a SendAlert action */
 			alert_message_id: components["schemas"]["Id"][];
-			channel_id?: null | components["schemas"]["Id"];
-			matches?: null | components["schemas"]["AutomodMatches"];
-			message_id?: null | components["schemas"]["Id"];
+			channel_id?: components["schemas"]["Id"] | null;
+			matches?: components["schemas"]["AutomodMatches"] | null;
+			message_id?: components["schemas"]["Id"] | null;
 			/** @description the id of the room that this execution happened in */
 			room_id: components["schemas"]["Id"];
 			/** @description the rule that was executed */
@@ -6250,7 +6215,7 @@ export interface components {
 			 *     eg. if one rule times a user out for 60 seconds and another times out for 120 seconds, there would be one action that times out for 120 seconds
 			 */
 			actions: components["schemas"]["AutomodAction"][];
-			matches?: null | components["schemas"]["AutomodMatches"];
+			matches?: components["schemas"]["AutomodMatches"] | null;
 			/** @description the rules that matched the text */
 			rules: components["schemas"]["AutomodRule"][];
 		};
@@ -6269,8 +6234,8 @@ export interface components {
 			except_roles?: components["schemas"]["Id"][] | null;
 			include_everyone?: boolean | null;
 			name?: string | null;
-			target?: null | components["schemas"]["AutomodTarget"];
-			trigger?: null | components["schemas"]["AutomodTrigger"];
+			target?: components["schemas"]["AutomodTarget"] | null;
+			trigger?: components["schemas"]["AutomodTrigger"] | null;
 		};
 		/**
 		 * @description what this rule should be evaluated on
@@ -6356,7 +6321,7 @@ export interface components {
 		ButtonStyle: "Primary" | "Secondary" | "Danger";
 		/** @description channel metadata for a calendar */
 		Calendar: {
-			color?: null | components["schemas"]["Color"];
+			color?: components["schemas"]["Color"] | null;
 			/** @description the default timezone events in this calendar should be created in */
 			default_timezone: components["schemas"]["Timezone"];
 		};
@@ -6370,21 +6335,21 @@ export interface components {
 			all_day?: boolean;
 			/** @description the id of the calendar channel that this event was created in */
 			channel_id: components["schemas"]["Id"];
-			creator_id?: null | components["schemas"]["Id"];
+			creator_id?: components["schemas"]["Id"] | null;
 			/** @description description for this event. supports markdown. */
 			description?: string | null;
-			ends_at?: null | components["schemas"]["Time"];
+			ends_at?: components["schemas"]["Time"] | null;
 			/** @description unique identifier for this calendar event */
 			id: components["schemas"]["Id"];
 			/** @description location where this event will take place */
 			location?: string | null;
-			media_id?: null | components["schemas"]["Id"];
+			media_id?: components["schemas"]["Id"] | null;
 			participant_counts: components["schemas"]["CalendarParticipantCounts"];
-			recurrence?: null | components["schemas"]["Recurrence"];
-			room_id?: null | components["schemas"]["Id"];
+			recurrence?: components["schemas"]["Recurrence"] | null;
+			room_id?: components["schemas"]["Id"] | null;
 			/** @description when this event starts */
 			starts_at: components["schemas"]["Time"];
-			timezone?: null | components["schemas"]["Timezone"];
+			timezone?: components["schemas"]["Timezone"] | null;
 			/** @description name for this event */
 			title: string;
 			/**
@@ -6396,12 +6361,12 @@ export interface components {
 		CalendarEventCreate: {
 			all_day?: boolean;
 			description?: string | null;
-			ends_at?: null | components["schemas"]["Time"];
+			ends_at?: components["schemas"]["Time"] | null;
 			location?: string | null;
-			media_id?: null | components["schemas"]["Id"];
-			recurrence?: null | components["schemas"]["Recurrence"];
+			media_id?: components["schemas"]["Id"] | null;
+			recurrence?: components["schemas"]["Recurrence"] | null;
 			starts_at: components["schemas"]["Time"];
-			timezone?: null | components["schemas"]["Timezone"];
+			timezone?: components["schemas"]["Timezone"] | null;
 			title: string;
 			/** Format: uri */
 			url?: string | null;
@@ -6410,27 +6375,27 @@ export interface components {
 			events: components["schemas"]["CalendarEvent"][];
 		};
 		CalendarEventListQuery: {
-			dir?: null | components["schemas"]["PaginationDirection"];
-			from?: null | components["schemas"]["Id"];
-			from_time?: null | components["schemas"]["Time"];
+			dir?: components["schemas"]["PaginationDirection"] | null;
+			from?: components["schemas"]["Id"] | null;
+			from_time?: components["schemas"]["Time"] | null;
 			/**
 			 * Format: int32
 			 * @description return at most this many calendar events
 			 */
 			limit?: number | null;
-			to?: null | components["schemas"]["Id"];
-			to_time?: null | components["schemas"]["Time"];
+			to?: components["schemas"]["Id"] | null;
+			to_time?: components["schemas"]["Time"] | null;
 		};
 		CalendarEventUpdate: {
 			all_day?: boolean | null;
-			channel_id?: null | components["schemas"]["Id"];
+			channel_id?: components["schemas"]["Id"] | null;
 			description?: string | null;
-			ends_at?: null | components["schemas"]["Time"];
+			ends_at?: components["schemas"]["Time"] | null;
 			location?: string | null;
-			media_id?: null | components["schemas"]["Id"];
-			recurrence?: null | components["schemas"]["Recurrence"];
-			starts_at?: null | components["schemas"]["Time"];
-			timezone?: null | components["schemas"]["Timezone"];
+			media_id?: components["schemas"]["Id"] | null;
+			recurrence?: components["schemas"]["Recurrence"] | null;
+			starts_at?: components["schemas"]["Time"] | null;
+			timezone?: components["schemas"]["Timezone"] | null;
 			title?: string | null;
 			/** Format: uri */
 			url?: string | null;
@@ -6446,7 +6411,7 @@ export interface components {
 		 *
 		 *     used for recurring events
 		 */
-		CalendarInstance: (null | components["schemas"]["CalendarOverwrite"]) & {
+		CalendarInstance: (components["schemas"]["CalendarOverwrite"] | null) & {
 			/** @description the id of the calendar event this is for */
 			event_id: components["schemas"]["Id"];
 			/** @description the sequence number of this instance */
@@ -6468,21 +6433,21 @@ export interface components {
 		CalendarOverwrite: {
 			/** @description whether this event is cancelled */
 			cancelled?: boolean;
-			ends_at?: null | components["schemas"]["Time"];
+			ends_at?: components["schemas"]["Time"] | null;
 			/** @description extra description to show for this event instance */
 			extra_description?: string | null;
 			/** @description overwrite the location for this event instance */
 			location?: string | null;
-			starts_at?: null | components["schemas"]["Time"];
+			starts_at?: components["schemas"]["Time"] | null;
 			/** @description set the title for this event instance */
 			title?: string | null;
 			/** Format: uri */
 			url?: string | null;
 		};
 		CalendarParticipant: {
-			member?: null | components["schemas"]["RoomMember"];
+			member?: components["schemas"]["RoomMember"] | null;
 			status: components["schemas"]["CalendarRsvpStatus"];
-			user?: null | components["schemas"]["User"];
+			user?: components["schemas"]["User"] | null;
 			user_id: components["schemas"]["Id"];
 		};
 		CalendarParticipantCounts: {
@@ -6518,8 +6483,8 @@ export interface components {
 			include_member?: boolean;
 		};
 		CalendarPatch: {
-			color?: null | components["schemas"]["Color"];
-			default_timezone?: null | components["schemas"]["Timezone"];
+			color?: components["schemas"]["Color"] | null;
+			default_timezone?: components["schemas"]["Timezone"] | null;
 		};
 		/**
 		 * @description the status of a participant
@@ -6529,7 +6494,7 @@ export interface components {
 		/** @description info about a currently active voice channel, with extra ids */
 		Call: components["schemas"]["CallMetadata"] & {
 			channel_id: components["schemas"]["Id"];
-			room_id?: null | components["schemas"]["Id"];
+			room_id?: components["schemas"]["Id"] | null;
 		};
 		CallCreate: {
 			/**
@@ -6590,7 +6555,7 @@ export interface components {
 		Changeset: {
 			/** @description every author that contributed to this change group */
 			authors: components["schemas"]["Id"][];
-			document_id?: null | components["schemas"]["Id"];
+			document_id?: components["schemas"]["Id"] | null;
 			/**
 			 * Format: int32
 			 * @description the sequence number of the last update in this changeset
@@ -6618,7 +6583,7 @@ export interface components {
 		};
 		/** @description A channel */
 		Channel: {
-			archived_at?: null | components["schemas"]["Time"];
+			archived_at?: components["schemas"]["Time"] | null;
 			/**
 			 * Format: int64
 			 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -6633,7 +6598,7 @@ export interface components {
 			 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 			 */
 			bitrate?: number | null;
-			calendar?: null | components["schemas"]["Calendar"];
+			calendar?: components["schemas"]["Calendar"] | null;
 			creator_id: components["schemas"]["Id"];
 			/**
 			 * Format: int64
@@ -6647,24 +6612,24 @@ export interface components {
 			 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 			 */
 			default_slowmode_message?: number | null;
-			deleted_at?: null | components["schemas"]["Time"];
+			deleted_at?: components["schemas"]["Time"] | null;
 			description?: string | null;
-			document?: null | components["schemas"]["Document"];
-			icon?: null | components["schemas"]["Id"];
+			document?: components["schemas"]["Document"] | null;
+			icon?: components["schemas"]["Id"] | null;
 			id: components["schemas"]["Id"];
 			/** @description whether users without ThreadManage can add other members to this thread */
 			invitable?: boolean;
 			is_unread?: boolean | null;
-			last_message_id?: null | components["schemas"]["Id"];
-			last_pin_timestamp?: null | components["schemas"]["Time"];
-			last_read_id?: null | components["schemas"]["Id"];
-			last_version_id?: null | components["schemas"]["Id"];
+			last_message_id?: components["schemas"]["Id"] | null;
+			last_pin_timestamp?: components["schemas"]["Time"] | null;
+			last_read_id?: components["schemas"]["Id"] | null;
+			last_version_id?: components["schemas"]["Id"] | null;
 			/**
 			 * @description monotonic sync sequence number, incremented on every action.
 			 *     used for incremental channel sync.
 			 */
 			latest_seq?: components["schemas"]["Seq"];
-			locked?: null | components["schemas"]["Locked"];
+			locked?: components["schemas"]["Locked"] | null;
 			/**
 			 * Format: int64
 			 * @description number of people in this room
@@ -6682,8 +6647,8 @@ export interface components {
 			 * @description number of people who are online in this room
 			 */
 			online_count: number;
-			owner_id?: null | components["schemas"]["Id"];
-			parent_id?: null | components["schemas"]["Id"];
+			owner_id?: components["schemas"]["Id"] | null;
+			parent_id?: components["schemas"]["Id"] | null;
 			/** @description permission overwrites for this channel */
 			permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 			/**
@@ -6695,11 +6660,11 @@ export interface components {
 			 *     - channels without a position come last, ordered by newest first
 			 */
 			position?: number | null;
-			preferences?: null | components["schemas"]["PreferencesChannel"];
+			preferences?: components["schemas"]["PreferencesChannel"] | null;
 			/** @description for dm and gdm channels, this is who the dm is with */
 			recipients?: components["schemas"]["User"][];
-			remote?: null | components["schemas"]["Remote_Id"];
-			room_id?: null | components["schemas"]["Id"];
+			remote?: components["schemas"]["Remote_Id"] | null;
+			room_id?: components["schemas"]["Id"] | null;
 			/** Format: int64 */
 			root_message_count?: number | null;
 			/**
@@ -6709,7 +6674,7 @@ export interface components {
 			 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 			 */
 			slowmode_message?: number | null;
-			slowmode_message_expire_at?: null | components["schemas"]["Time"];
+			slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 			/**
 			 * Format: int64
 			 * @description minimum delay in seconds between creating new threads
@@ -6717,7 +6682,7 @@ export interface components {
 			 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 			 */
 			slowmode_thread?: number | null;
-			slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+			slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 			/**
 			 * Format: int64
 			 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -6725,7 +6690,7 @@ export interface components {
 			tag_count?: number;
 			/** @description tags that are applied to this thread */
 			tags?: components["schemas"]["Id"][] | null;
-			thread_member?: null | components["schemas"]["ThreadMember"];
+			thread_member?: components["schemas"]["ThreadMember"] | null;
 			/** @description type specific data for this channel */
 			type: components["schemas"]["ChannelType"];
 			/** @description url that this info channel should link to */
@@ -6737,12 +6702,12 @@ export interface components {
 			user_limit?: number | null;
 			/** @description only updates when the channel itself is updated, not the stuff in the channel */
 			version_id: components["schemas"]["Id"];
-			wiki?: null | components["schemas"]["Wiki"];
+			wiki?: components["schemas"]["Wiki"] | null;
 		};
 		/** @description relevant read state metadata for a channel */
 		ChannelAckMetadata: {
-			last_message_id?: null | components["schemas"]["Id"];
-			last_pin_timestamp?: null | components["schemas"]["Time"];
+			last_message_id?: components["schemas"]["Id"] | null;
+			last_pin_timestamp?: components["schemas"]["Time"] | null;
 			/**
 			 * Format: int64
 			 * @description the number of messages in this channel
@@ -6758,8 +6723,8 @@ export interface components {
 		};
 		/** @description channel metadata for a broadcast channel */
 		ChannelBroadcast: {
-			broadcaster_id?: null | components["schemas"]["Id"];
-			schedule_id?: null | components["schemas"]["Id"];
+			broadcaster_id?: components["schemas"]["Id"] | null;
+			schedule_id?: components["schemas"]["Id"] | null;
 		};
 		ChannelCreate: {
 			/** Format: int64 */
@@ -6780,13 +6745,13 @@ export interface components {
 			/** Format: int64 */
 			default_slowmode_message?: number | null;
 			description?: string | null;
-			icon?: null | components["schemas"]["Id"];
+			icon?: components["schemas"]["Id"] | null;
 			/** @description whether users without ThreadManage can add other members to this thread */
 			invitable?: boolean;
 			name: string;
 			/** @description not safe for work */
 			nsfw?: boolean;
-			parent_id?: null | components["schemas"]["Id"];
+			parent_id?: components["schemas"]["Id"] | null;
 			permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
 			/** @description the recipient(s) for this dm/gdm */
 			recipients?: components["schemas"]["Id"][] | null;
@@ -6794,7 +6759,7 @@ export interface components {
 			slowmode_message?: number | null;
 			/** Format: int64 */
 			slowmode_thread?: number | null;
-			starter_message?: null | components["schemas"]["MessageCreate"];
+			starter_message?: components["schemas"]["MessageCreate"] | null;
 			/** @description tags to apply to this thread (overwrite, not append) */
 			tags?: components["schemas"]["Id"][] | null;
 			/** @description The type of this channel */
@@ -6819,7 +6784,7 @@ export interface components {
 		ChannelEncryptionAlgorithm: "MlsV1";
 		/** @description Query parameters for channel list removed */
 		ChannelListRemovedQuery: {
-			parent_id?: null | components["schemas"]["Id"];
+			parent_id?: components["schemas"]["Id"] | null;
 		};
 		ChannelMemberSearch: {
 			/** Format: int32 */
@@ -6848,33 +6813,33 @@ export interface components {
 			auto_name?: string | null;
 			/** Format: int64 */
 			bitrate?: number | null;
-			calendar?: null | components["schemas"]["CalendarPatch"];
+			calendar?: components["schemas"]["CalendarPatch"] | null;
 			/** Format: int64 */
 			default_auto_archive_duration?: number | null;
 			/** Format: int64 */
 			default_slowmode_message?: number | null;
 			description?: string | null;
-			document?: null | components["schemas"]["DocumentPatch"];
-			icon?: null | components["schemas"]["Id"];
+			document?: components["schemas"]["DocumentPatch"] | null;
+			icon?: components["schemas"]["Id"] | null;
 			invitable?: boolean | null;
-			locked?: null | components["schemas"]["Locked"];
+			locked?: components["schemas"]["Locked"] | null;
 			name?: string | null;
 			/** @description not safe for work */
 			nsfw?: boolean | null;
-			owner_id?: null | components["schemas"]["Id"];
-			parent_id?: null | components["schemas"]["Id"];
+			owner_id?: components["schemas"]["Id"] | null;
+			parent_id?: components["schemas"]["Id"] | null;
 			/** Format: int64 */
 			slowmode_message?: number | null;
 			/** Format: int64 */
 			slowmode_thread?: number | null;
 			/** @description tags to apply to this thread (overwrite, not append) */
 			tags?: components["schemas"]["Id"][] | null;
-			ty?: null | components["schemas"]["ChannelType"];
+			ty?: components["schemas"]["ChannelType"] | null;
 			/** Format: uri */
 			url?: string | null;
 			/** Format: int64 */
 			user_limit?: number | null;
-			wiki?: null | components["schemas"]["WikiPatch"];
+			wiki?: components["schemas"]["WikiPatch"] | null;
 		};
 		/** @description reorder some channels */
 		ChannelReorder: {
@@ -6883,7 +6848,7 @@ export interface components {
 		};
 		ChannelReorderItem: {
 			id: components["schemas"]["Id"];
-			parent_id?: null | components["schemas"]["Id"];
+			parent_id?: components["schemas"]["Id"] | null;
 			/** Format: int32 */
 			position?: number | null;
 		};
@@ -6971,7 +6936,7 @@ export interface components {
 			 * @description bitrate for audio tracks. defaults to 65535 (64Kibps).
 			 */
 			bitrate: number;
-			call?: null | components["schemas"]["CallMetadata"];
+			call?: components["schemas"]["CallMetadata"] | null;
 			/**
 			 * Format: int64
 			 * @description maximum number of users who can be in this voice channel
@@ -6992,7 +6957,7 @@ export interface components {
 		};
 		/** @description a single component in a tree */
 		Component: components["schemas"]["ComponentType_Encrypted"] & {
-			allow?: null | components["schemas"]["Allow"];
+			allow?: components["schemas"]["Allow"] | null;
 			id: components["schemas"]["ComponentId"];
 		};
 		/**
@@ -7037,10 +7002,10 @@ export interface components {
 			media: {
 				/** @description Descriptive alt text. */
 				alt?: string | null;
-				channel_id?: null | components["schemas"]["Id"];
+				channel_id?: components["schemas"]["Id"] | null;
 				/** @description The mime type of this piece of media. */
 				content_type: components["schemas"]["Mime"];
-				deleted_at?: null | components["schemas"]["Time"];
+				deleted_at?: components["schemas"]["Time"] | null;
 				filename: string;
 				/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
 				has_gifv: boolean;
@@ -7053,9 +7018,9 @@ export interface components {
 				links?: components["schemas"]["MediaLinkType"][];
 				/** @description Additional filetype-specific metadata for the file */
 				metadata: components["schemas"]["MediaMetadata"];
-				quarantine?: null | components["schemas"]["MediaQuarantine"];
-				remote?: null | components["schemas"]["Remote_Id"];
-				room_id?: null | components["schemas"]["Id"];
+				quarantine?: components["schemas"]["MediaQuarantine"] | null;
+				remote?: components["schemas"]["Remote_Id"] | null;
+				room_id?: components["schemas"]["Id"] | null;
 				/** @description The results of automated scans. */
 				scans?: components["schemas"]["MediaScan"][];
 				/**
@@ -7075,7 +7040,7 @@ export interface components {
 				 *     Once set to `true`, this cannot be unset.
 				 */
 				strip_exif?: boolean;
-				user_id?: null | components["schemas"]["Id"];
+				user_id?: components["schemas"]["Id"] | null;
 				version_id: components["schemas"]["Id"];
 			};
 			spoiler?: boolean;
@@ -7147,7 +7112,7 @@ export interface components {
 					url?: string | null;
 			  }
 			| {
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					components: components["schemas"]["Component_Canonical"][];
 					/** @enum {string} */
 					type: "Container";
@@ -7163,7 +7128,7 @@ export interface components {
 					type: "Reference";
 			  }
 			| {
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					details: components["schemas"]["Component_Canonical"][];
 					open?: boolean;
 					summary: components["schemas"]["Component_Canonical"][];
@@ -7171,7 +7136,7 @@ export interface components {
 					type: "Details";
 			  }
 			| {
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					components: components["schemas"]["Component_Canonical"][];
 					/** @enum {string} */
 					type: "Section";
@@ -7230,7 +7195,7 @@ export interface components {
 					url?: string | null;
 			  }
 			| {
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					components: components["schemas"]["Component_Create"][];
 					/** @enum {string} */
 					type: "Container";
@@ -7246,7 +7211,7 @@ export interface components {
 					type: "Reference";
 			  }
 			| {
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					details: components["schemas"]["Component_Create"][];
 					open?: boolean;
 					summary: components["schemas"]["Component_Create"][];
@@ -7254,7 +7219,7 @@ export interface components {
 					type: "Details";
 			  }
 			| {
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					components: components["schemas"]["Component_Create"][];
 					/** @enum {string} */
 					type: "Section";
@@ -7313,7 +7278,7 @@ export interface components {
 					url?: string | null;
 			  }
 			| {
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					components: components["schemas"]["Component_Encrypted"][];
 					/** @enum {string} */
 					type: "Container";
@@ -7329,7 +7294,7 @@ export interface components {
 					type: "Reference";
 			  }
 			| {
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					details: components["schemas"]["Component_Encrypted"][];
 					open?: boolean;
 					summary: components["schemas"]["Component_Encrypted"][];
@@ -7337,7 +7302,7 @@ export interface components {
 					type: "Details";
 			  }
 			| {
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					components: components["schemas"]["Component_Encrypted"][];
 					/** @enum {string} */
 					type: "Section";
@@ -7354,17 +7319,17 @@ export interface components {
 			  };
 		/** @description a single component in a tree */
 		Component_Canonical: components["schemas"]["ComponentType_Canonical"] & {
-			allow?: null | components["schemas"]["Allow"];
+			allow?: components["schemas"]["Allow"] | null;
 			id: components["schemas"]["ComponentId"];
 		};
 		/** @description a single component in a tree */
 		Component_Create: components["schemas"]["ComponentType_Create"] & {
-			allow?: null | components["schemas"]["Allow"];
+			allow?: components["schemas"]["Allow"] | null;
 			id: components["schemas"]["Option"];
 		};
 		/** @description a single component in a tree */
 		Component_Encrypted: components["schemas"]["ComponentType_Encrypted"] & {
-			allow?: null | components["schemas"]["Allow"];
+			allow?: components["schemas"]["Allow"] | null;
 			id: components["schemas"]["ComponentId"];
 		};
 		Components: components["schemas"]["Component_Encrypted"][];
@@ -7377,7 +7342,7 @@ export interface components {
 		 */
 		Compression: "deflate";
 		Config: {
-			compression?: null | components["schemas"]["Compression"];
+			compression?: components["schemas"]["Compression"] | null;
 			encoding?: components["schemas"]["Encoding"];
 			version: components["schemas"]["Version"];
 		};
@@ -7444,8 +7409,8 @@ export interface components {
 			 *     eg. the message a button is on or the message that contains the link to unfurl
 			 */
 			message: components["schemas"]["Message"];
-			room?: null | components["schemas"]["Room"];
-			room_member?: null | components["schemas"]["RoomMember"];
+			room?: components["schemas"]["Room"] | null;
+			room_member?: components["schemas"]["RoomMember"] | null;
 			/** @description the user who initiated this interaction */
 			user: components["schemas"]["User"];
 			/** @description the permissions the user has in the target channel */
@@ -7454,8 +7419,8 @@ export interface components {
 		ContextQuery: {
 			/** Format: int32 */
 			limit?: number | null;
-			to_end?: null | components["schemas"]["Id"];
-			to_start?: null | components["schemas"]["Id"];
+			to_end?: components["schemas"]["Id"] | null;
+			to_start?: components["schemas"]["Id"] | null;
 		};
 		ContextResponse: {
 			has_after: boolean;
@@ -7611,14 +7576,14 @@ export interface components {
 		 *     these properties only exist for documents in wiki channels
 		 */
 		Document: {
-			archived?: null | components["schemas"]["DocumentArchived"];
+			archived?: components["schemas"]["DocumentArchived"] | null;
 			/**
 			 * @description whether this document is a draft
 			 *
 			 *     drafts aren't shown publicly, and can only be seen by the user who created it.
 			 */
 			draft: boolean;
-			published?: null | components["schemas"]["DocumentPublished"];
+			published?: components["schemas"]["DocumentPublished"] | null;
 			/** @description custom url path to put this at */
 			slug?: string | null;
 			/** @description whether this document is a reusable template */
@@ -7648,7 +7613,7 @@ export interface components {
 			id: components["schemas"]["Id"];
 			/** @description the name of this branch */
 			name?: string | null;
-			parent_id?: null | components["schemas"]["DocumentRevisionId"];
+			parent_id?: components["schemas"]["DocumentRevisionId"] | null;
 			/**
 			 * @description Whether this is a private branch.
 			 *
@@ -7671,7 +7636,7 @@ export interface components {
 			state?: components["schemas"]["DocumentBranchState"][];
 		};
 		DocumentBranchMerge: {
-			target_branch_id?: null | components["schemas"]["Id"];
+			target_branch_id?: components["schemas"]["Id"] | null;
 		};
 		DocumentBranchMergeResult: {
 			status: components["schemas"]["DocumentBranchMergeResultStatus"];
@@ -7686,7 +7651,7 @@ export interface components {
 		/** @enum {string} */
 		DocumentBranchState: "Active" | "Closed" | "Merged";
 		DocumentBranchSync: {
-			sync_from_branch_id?: null | components["schemas"]["Id"];
+			sync_from_branch_id?: components["schemas"]["Id"] | null;
 		};
 		/** @description a single atomic change to a document */
 		DocumentChange: {
@@ -7718,15 +7683,15 @@ export interface components {
 		};
 		/** @description parameters for getting a crdt */
 		DocumentCrdtDiffParams: {
-			sv?: null | components["schemas"]["DocumentStateVector"];
+			sv?: components["schemas"]["DocumentStateVector"] | null;
 		};
 		DocumentMediaAttach: {
 			media_id: components["schemas"]["Id"];
 		};
 		DocumentPatch: {
-			archived?: null | components["schemas"]["DocumentArchivedPatch"];
+			archived?: components["schemas"]["DocumentArchivedPatch"] | null;
 			draft?: boolean | null;
-			published?: null | components["schemas"]["DocumentPublishedPatch"];
+			published?: components["schemas"]["DocumentPublishedPatch"] | null;
 			slug?: string | null;
 			template?: boolean | null;
 		};
@@ -7742,11 +7707,11 @@ export interface components {
 			unlisted?: boolean;
 		};
 		DocumentPublishedPatch: {
-			revision?: null | components["schemas"]["DocumentRevisionRef"];
+			revision?: components["schemas"]["DocumentRevisionRef"] | null;
 			unlisted?: boolean | null;
 		};
 		DocumentRevert: {
-			target_branch_id?: null | components["schemas"]["Id"];
+			target_branch_id?: components["schemas"]["Id"] | null;
 		};
 		/**
 		 * @description an exact version of a document at a point in time
@@ -7774,7 +7739,7 @@ export interface components {
 			branch_id: components["schemas"]["Id"];
 			/** @description when this tag was created */
 			created_at: components["schemas"]["Time"];
-			creator_id?: null | components["schemas"]["Id"];
+			creator_id?: components["schemas"]["Id"] | null;
 			/** @description optional more detailed description */
 			description?: string | null;
 			/** @description the unique identifier for this tag */
@@ -7830,7 +7795,7 @@ export interface components {
 		 */
 		EmailTrust: "Never" | "Trusted" | "Full";
 		Embed: {
-			author_avatar?: null | components["schemas"]["Media"];
+			author_avatar?: components["schemas"]["Media"] | null;
 			author_name?: string | null;
 			/** Format: uri */
 			author_url?: string | null;
@@ -7839,14 +7804,14 @@ export interface components {
 			 * @description the final resolved url, after redirects and canonicalization. If None, its the same as `url`.
 			 */
 			canonical_url?: string | null;
-			color?: null | components["schemas"]["Color"];
+			color?: components["schemas"]["Color"] | null;
 			description?: string | null;
 			id: components["schemas"]["Id"];
-			media?: null | components["schemas"]["Media"];
-			site_avatar?: null | components["schemas"]["Media"];
+			media?: components["schemas"]["Media"] | null;
+			site_avatar?: components["schemas"]["Media"] | null;
 			/** @description the name of the website */
 			site_name?: string | null;
-			thumbnail?: null | components["schemas"]["Media"];
+			thumbnail?: components["schemas"]["Media"] | null;
 			title?: string | null;
 			/** @description what kind of thing this is */
 			type?: components["schemas"]["EmbedType"];
@@ -7857,14 +7822,14 @@ export interface components {
 			url?: string | null;
 		};
 		EmbedCreate: {
-			author_avatar?: null | components["schemas"]["MediaReference"];
+			author_avatar?: components["schemas"]["MediaReference"] | null;
 			author_name?: string | null;
 			/** Format: uri */
 			author_url?: string | null;
-			color?: null | components["schemas"]["Color"];
+			color?: components["schemas"]["Color"] | null;
 			description?: string | null;
-			media?: null | components["schemas"]["MediaReference"];
-			thumbnail?: null | components["schemas"]["MediaReference"];
+			media?: components["schemas"]["MediaReference"] | null;
+			thumbnail?: components["schemas"]["MediaReference"] | null;
 			title?: string | null;
 			/**
 			 * Format: uri
@@ -7885,11 +7850,11 @@ export interface components {
 		EmojiCustom: {
 			/** @description whether this emoji is animated */
 			animated: boolean;
-			creator_id?: null | components["schemas"]["Id"];
+			creator_id?: components["schemas"]["Id"] | null;
 			id: components["schemas"]["Id"];
 			media_id: components["schemas"]["Id"];
 			name: string;
-			owner?: null | components["schemas"]["EmojiOwner"];
+			owner?: components["schemas"]["EmojiOwner"] | null;
 		};
 		EmojiCustomCreate: {
 			animated: boolean;
@@ -8067,7 +8032,7 @@ export interface components {
 			redex_id: components["schemas"]["Id"];
 			redex_version_id: components["schemas"]["Id"];
 			status: components["schemas"]["EvalStatus"];
-			stopped_at?: null | components["schemas"]["Time"];
+			stopped_at?: components["schemas"]["Time"] | null;
 		};
 		/** @description request to start a redex run via trigger */
 		EvalCreateManual: {
@@ -8251,8 +8216,8 @@ export interface components {
 			 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification
 			 */
 			mentions?: components["schemas"]["ParseMentions"];
-			metadata?: null | components["schemas"]["Metadata"];
-			reply_id?: null | components["schemas"]["Id"];
+			metadata?: components["schemas"]["Metadata"] | null;
+			reply_id?: components["schemas"]["Id"] | null;
 		};
 		/** @description a delta sent to a client to apply to a live flume */
 		FlumeDeltaCanonical: {
@@ -8260,7 +8225,7 @@ export interface components {
 			append?: components["schemas"]["FlumeAppendCanonical"][];
 			/** @description delete some components */
 			delete?: components["schemas"]["ComponentId"][];
-			init?: null | components["schemas"]["Components"];
+			init?: components["schemas"]["Components"] | null;
 			/**
 			 * @description replace a component with one or more components
 			 *
@@ -8276,7 +8241,7 @@ export interface components {
 			append?: components["schemas"]["FlumeAppendCreate"][];
 			/** @description delete some components */
 			delete?: components["schemas"]["ComponentId"][];
-			init?: null | components["schemas"]["Components"];
+			init?: components["schemas"]["Components"] | null;
 			/**
 			 * @description replace a component with one or more components
 			 *
@@ -8384,7 +8349,7 @@ export interface components {
 					status: "Queued";
 			  }
 			| {
-					eta_at?: null | components["schemas"]["Time"];
+					eta_at?: components["schemas"]["Time"] | null;
 					/** @description when archiving started */
 					started_at: components["schemas"]["Time"];
 					/** @enum {string} */
@@ -8400,10 +8365,23 @@ export interface components {
 			| {
 					completed_at: components["schemas"]["Time"];
 					expires_at: components["schemas"]["Time"];
-					media: components["schemas"]["Media"];
+					/** @description hashes of the archive */
+					hashes: components["schemas"]["Hashes"];
+					/**
+					 * Format: int64
+					 * @description size of the archive in bytes
+					 */
+					size: number;
 					started_at: components["schemas"]["Time"];
 					/** @enum {string} */
 					status: "Completed";
+					/**
+					 * Format: uri
+					 * @description url to download the archive
+					 *
+					 *     `https://cdn/harvest/{harvest_id}/{token}/harvest-{yyyy-mm-dd}.zip`
+					 */
+					url: string;
 			  }
 			| {
 					cancelled_at: components["schemas"]["Time"];
@@ -8496,7 +8474,7 @@ export interface components {
 		Id: string;
 		/** @description how a user is ignoring another user */
 		Ignore: {
-			until?: null | components["schemas"]["Time"];
+			until?: components["schemas"]["Time"] | null;
 		};
 		Initial: {
 			/** @description the ranges to subscribe to */
@@ -8561,7 +8539,7 @@ export interface components {
 			creator_id: components["schemas"]["Id"];
 			/** @description a description for this invite */
 			description?: string | null;
-			expires_at?: null | components["schemas"]["Time"];
+			expires_at?: components["schemas"]["Time"] | null;
 			/** @description if this invite's code is custom (instead of random) */
 			is_vanity: boolean;
 			/** @description where this invite leads */
@@ -8575,7 +8553,7 @@ export interface components {
 		InviteCreate: {
 			/** @description a description for this invite */
 			description?: string | null;
-			expires_at?: null | components["schemas"]["Time"];
+			expires_at?: components["schemas"]["Time"] | null;
 			/**
 			 * Format: int32
 			 * @description the maximum number of times this invite can be used
@@ -8588,7 +8566,7 @@ export interface components {
 		InvitePatch: {
 			/** @description a description for this invite */
 			description?: string | null;
-			expires_at?: null | components["schemas"]["Time"];
+			expires_at?: components["schemas"]["Time"] | null;
 			/**
 			 * Format: int32
 			 * @description the maximum number of times this invite can be used
@@ -8600,7 +8578,7 @@ export interface components {
 		/** @description where this invite leads */
 		InviteTarget:
 			| {
-					channel?: null | components["schemas"]["Channel"];
+					channel?: components["schemas"]["Channel"] | null;
 					/** @description which roles to apply when accepting the invite */
 					roles: components["schemas"]["Role"][];
 					/** @description the room itself */
@@ -8625,7 +8603,7 @@ export interface components {
 		/** @description the type and id of this invite's target */
 		InviteTargetId:
 			| {
-					channel_id?: null | components["schemas"]["Id"];
+					channel_id?: components["schemas"]["Id"] | null;
 					role_ids?: components["schemas"]["Id"][];
 					room_id: components["schemas"]["Id"];
 					/** @enum {string} */
@@ -8687,7 +8665,7 @@ export interface components {
 			country_name?: string | null;
 			/** @description whether this ip is in the european union */
 			is_in_european_union: boolean;
-			location?: null | components["schemas"]["IpLocation"];
+			location?: components["schemas"]["IpLocation"] | null;
 			/** @description iana time zone identifier, eg. "America/New_York" */
 			time_zone?: string | null;
 		};
@@ -8768,16 +8746,16 @@ export interface components {
 		Locked: {
 			/** @description if present, users with these roles bypass the lock */
 			allow_roles?: components["schemas"]["Id"][];
-			until?: null | components["schemas"]["Time"];
+			until?: components["schemas"]["Time"] | null;
 		};
 		/** @description A piece of media. */
 		Media: {
 			/** @description Descriptive alt text. */
 			alt?: string | null;
-			channel_id?: null | components["schemas"]["Id"];
+			channel_id?: components["schemas"]["Id"] | null;
 			/** @description The mime type of this piece of media. */
 			content_type: components["schemas"]["Mime"];
-			deleted_at?: null | components["schemas"]["Time"];
+			deleted_at?: components["schemas"]["Time"] | null;
 			filename: string;
 			/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
 			has_gifv: boolean;
@@ -8790,9 +8768,9 @@ export interface components {
 			links?: components["schemas"]["MediaLinkType"][];
 			/** @description Additional filetype-specific metadata for the file */
 			metadata: components["schemas"]["MediaMetadata"];
-			quarantine?: null | components["schemas"]["MediaQuarantine"];
-			remote?: null | components["schemas"]["Remote_Id"];
-			room_id?: null | components["schemas"]["Id"];
+			quarantine?: components["schemas"]["MediaQuarantine"] | null;
+			remote?: components["schemas"]["Remote_Id"] | null;
+			room_id?: components["schemas"]["Id"] | null;
 			/** @description The results of automated scans. */
 			scans?: components["schemas"]["MediaScan"][];
 			/**
@@ -8812,7 +8790,7 @@ export interface components {
 			 *     Once set to `true`, this cannot be unset.
 			 */
 			strip_exif?: boolean;
-			user_id?: null | components["schemas"]["Id"];
+			user_id?: components["schemas"]["Id"] | null;
 			version_id: components["schemas"]["Id"];
 		};
 		MediaClone: {
@@ -9198,11 +9176,11 @@ export interface components {
 			| {
 					/** Format: int64 */
 					position: number;
-					room_member?: null | components["schemas"]["RoomMember"];
-					thread_member?: null | components["schemas"]["ThreadMember"];
+					room_member?: components["schemas"]["RoomMember"] | null;
+					thread_member?: components["schemas"]["ThreadMember"] | null;
 					/** @enum {string} */
 					type: "Insert";
-					user?: null | components["schemas"]["User"];
+					user?: components["schemas"]["User"] | null;
 					user_id: components["schemas"]["Id"];
 			  }
 			| {
@@ -9222,7 +9200,7 @@ export interface components {
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "channel";
 			  };
@@ -9245,7 +9223,7 @@ export interface components {
 			id: components["schemas"]["Id"];
 			/** @description the name of this channel */
 			name: string;
-			room_id?: null | components["schemas"]["Id"];
+			room_id?: components["schemas"]["Id"] | null;
 			/** @description the type of this channel */
 			type: components["schemas"]["ChannelType"];
 		};
@@ -9277,22 +9255,22 @@ export interface components {
 			channel_id: components["schemas"]["Id"];
 			/** @description when this message was created */
 			created_at: components["schemas"]["Time"];
-			deleted_at?: null | components["schemas"]["Time"];
+			deleted_at?: components["schemas"]["Time"] | null;
 			/**
 			 * @description whether this message is ephemeral
 			 *
 			 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
 			 */
 			ephemeral?: boolean;
-			flume?: null | components["schemas"]["MessageFlume"];
+			flume?: components["schemas"]["MessageFlume"] | null;
 			id: components["schemas"]["Id"];
-			interaction?: null | components["schemas"]["MessageInteraction"];
+			interaction?: components["schemas"]["MessageInteraction"] | null;
 			latest_version: components["schemas"]["MessageVersion"];
-			pinned?: null | components["schemas"]["Pinned"];
+			pinned?: components["schemas"]["Pinned"] | null;
 			reactions?: components["schemas"]["ReactionCounts"];
-			removed_at?: null | components["schemas"]["Time"];
-			room_id?: null | components["schemas"]["Id"];
-			thread?: null | components["schemas"]["Channel"];
+			removed_at?: components["schemas"]["Time"] | null;
+			room_id?: components["schemas"]["Id"] | null;
+			thread?: components["schemas"]["Channel"] | null;
 		};
 		MessageAttachment: components["schemas"]["MessageAttachmentType"] & {
 			/** @description if this is a spoiler and should be blurred */
@@ -9330,28 +9308,28 @@ export interface components {
 		MessageAutomodExecution: {
 			/** @description the actions that were executed */
 			actions: components["schemas"]["AutomodAction"][];
-			channel_id?: null | components["schemas"]["Id"];
-			flagged_message_id?: null | components["schemas"]["Id"];
-			matches?: null | components["schemas"]["AutomodMatches"];
+			channel_id?: components["schemas"]["Id"] | null;
+			flagged_message_id?: components["schemas"]["Id"] | null;
+			matches?: components["schemas"]["AutomodMatches"] | null;
 			/** @description the rules that were triggered */
 			rules: components["schemas"]["AutomodRuleSummary"][];
 			/** @description the user who triggered this execution */
 			user_id: components["schemas"]["Id"];
 		};
 		MessageCall: {
-			ended_at?: null | components["schemas"]["Time"];
+			ended_at?: components["schemas"]["Time"] | null;
 			/** @description the people who joined the call */
 			participants: components["schemas"]["Id"][];
 		};
 		/** @description Information about a channel icon change */
 		MessageChannelIcon: {
-			icon_id_new?: null | components["schemas"]["Id"];
-			icon_id_old?: null | components["schemas"]["Id"];
+			icon_id_new?: components["schemas"]["Id"] | null;
+			icon_id_old?: components["schemas"]["Id"] | null;
 		};
 		/** @description Information about a thread being moved */
 		MessageChannelMoved: {
-			parent_id_new?: null | components["schemas"]["Id"];
-			parent_id_old?: null | components["schemas"]["Id"];
+			parent_id_new?: components["schemas"]["Id"] | null;
+			parent_id_old?: components["schemas"]["Id"] | null;
 		};
 		/** @description Information about the pingback */
 		MessageChannelPingback: {
@@ -9401,15 +9379,15 @@ export interface components {
 			| {
 					/** @description the ranges to subscribe to */
 					ranges: [number, number][];
-					room_id?: null | components["schemas"]["Id"];
-					thread_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
+					thread_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "MemberListSubscribe";
 			  }
 			| {
 					branch_id: components["schemas"]["Id"];
 					channel_id: components["schemas"]["Id"];
-					state_vector?: null | components["schemas"]["DocumentStateVector"];
+					state_vector?: components["schemas"]["DocumentStateVector"] | null;
 					/** @enum {string} */
 					type: "DocumentSubscribe";
 			  }
@@ -9417,7 +9395,7 @@ export interface components {
 					branch_id: components["schemas"]["Id"];
 					/** @description the document thats being edited */
 					channel_id: components["schemas"]["Id"];
-					redex_id?: null | components["schemas"]["Id"];
+					redex_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "DocumentEdit";
 					/** @description the encoded update to this document */
@@ -9428,7 +9406,7 @@ export interface components {
 					channel_id: components["schemas"]["Id"];
 					cursor_head: string;
 					cursor_tail?: string | null;
-					redex_id?: null | components["schemas"]["Id"];
+					redex_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "DocumentPresence";
 			  }
@@ -9455,15 +9433,15 @@ export interface components {
 		MessageCreate: {
 			/** @description message attachments */
 			attachments?: components["schemas"]["MessageAttachmentCreate"][];
-			components?: null | components["schemas"]["Components_Create"];
+			components?: components["schemas"]["Components_Create"] | null;
 			/** @description the message's content in markdown */
 			content?: string | null;
 			embeds?: components["schemas"]["EmbedCreate"][];
 			/** @description whether to make this message ephemeral */
 			ephemeral?: boolean;
 			mentions?: components["schemas"]["ParseMentions"];
-			metadata?: null | components["schemas"]["Metadata"];
-			reply_id?: null | components["schemas"]["Id"];
+			metadata?: components["schemas"]["Metadata"] | null;
+			reply_id?: components["schemas"]["Id"] | null;
 		};
 		/** @description a basic message, written using markdown */
 		MessageDefaultMarkdown: {
@@ -9473,8 +9451,8 @@ export interface components {
 			/** @description the message's content in markdown */
 			content?: string | null;
 			embeds: components["schemas"]["Embed"][];
-			metadata?: null | components["schemas"]["Metadata"];
-			reply_id?: null | components["schemas"]["Id"];
+			metadata?: components["schemas"]["Metadata"] | null;
+			reply_id?: components["schemas"]["Id"] | null;
 		};
 		/** @description a basic message, written using markdown. for use with e2ee. */
 		MessageDefaultMarkdownEncrypted: {
@@ -9484,8 +9462,8 @@ export interface components {
 			/** @description the message's content in markdown */
 			content?: string | null;
 			embeds: components["schemas"]["Embed"][];
-			metadata?: null | components["schemas"]["Metadata"];
-			reply_id?: null | components["schemas"]["Id"];
+			metadata?: components["schemas"]["Metadata"] | null;
+			reply_id?: components["schemas"]["Id"] | null;
 		};
 		MessageDocumentEdits: {
 			/** @description the last revision included in this summary */
@@ -9525,15 +9503,15 @@ export interface components {
 			state: components["schemas"]["FlumeState"];
 		};
 		MessageHello: {
-			presence?: null | components["schemas"]["Presence"];
-			resume?: null | components["schemas"]["SyncResume"];
+			presence?: components["schemas"]["Presence"] | null;
+			resume?: components["schemas"]["SyncResume"] | null;
 			token: components["schemas"]["SessionToken"];
 		};
 		/** @description the interaction that caused this message to be sent */
 		MessageInteraction: {
 			application_id: components["schemas"]["Id"];
 			id: components["schemas"]["Id"];
-			source_message_id?: null | components["schemas"]["Id"];
+			source_message_id?: components["schemas"]["Id"] | null;
 			/** @description the user who triggered this interaction */
 			user_id: components["schemas"]["Id"];
 		};
@@ -9568,12 +9546,12 @@ export interface components {
 		MessagePatch: {
 			/** @description message attachments */
 			attachments?: components["schemas"]["MessageAttachmentCreate"][] | null;
-			components?: null | components["schemas"]["Components_Create"];
+			components?: components["schemas"]["Components_Create"] | null;
 			/** @description the new message content in markdown */
 			content?: string | null;
 			embeds?: components["schemas"]["EmbedCreate"][] | null;
-			metadata?: null | components["schemas"]["Metadata"];
-			reply_id?: null | components["schemas"]["Id"];
+			metadata?: components["schemas"]["Metadata"] | null;
+			reply_id?: components["schemas"]["Id"] | null;
 		};
 		MessagePayload:
 			| {
@@ -9594,13 +9572,13 @@ export interface components {
 					seq: number;
 			  }
 			| {
-					code?: null | components["schemas"]["SyncErrorCode"];
+					code?: components["schemas"]["SyncErrorCode"] | null;
 					error: string;
 					/** @enum {string} */
 					op: "Error";
 			  }
 			| {
-					application?: null | components["schemas"]["Application"];
+					application?: components["schemas"]["Application"] | null;
 					/** @description connection id */
 					conn: components["schemas"]["Id"];
 					/** @enum {string} */
@@ -9612,7 +9590,7 @@ export interface components {
 					seq: number;
 					/** @description current session */
 					session: components["schemas"]["Session"];
-					user?: null | components["schemas"]["User"];
+					user?: components["schemas"]["User"] | null;
 			  }
 			| {
 					/** @enum {string} */
@@ -9674,7 +9652,7 @@ export interface components {
 			/** @description who this message mentioned */
 			mentions?: components["schemas"]["Mentions"];
 			message_id: components["schemas"]["Id"];
-			room_id?: null | components["schemas"]["Id"];
+			room_id?: components["schemas"]["Id"] | null;
 			version_id: components["schemas"]["Id"];
 		};
 		/**
@@ -9734,7 +9712,7 @@ export interface components {
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "ChannelTyping";
 					until: components["schemas"]["Time"];
@@ -9767,14 +9745,14 @@ export interface components {
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_id: components["schemas"]["Id"];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "MessageDelete";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_id: components["schemas"]["Id"];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "MessageVersionDelete";
 					version_id: components["schemas"]["Id"];
@@ -9782,21 +9760,21 @@ export interface components {
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_ids: components["schemas"]["Id"][];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "MessageDeleteBulk";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_ids: components["schemas"]["Id"][];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "MessageRemove";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_ids: components["schemas"]["Id"][];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "MessageRestore";
 			  }
@@ -9828,7 +9806,7 @@ export interface components {
 					added: components["schemas"]["ThreadMember"][];
 					/** @description members that were removed from the thread */
 					removed: components["schemas"]["Id"][];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					thread_id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "ThreadMemberUpsert";
@@ -9876,7 +9854,7 @@ export interface components {
 					channel_id: components["schemas"]["Id"];
 					key: components["schemas"]["ReactionKey"];
 					message_id: components["schemas"]["Id"];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "ReactionCreate";
 					user_id: components["schemas"]["Id"];
@@ -9885,7 +9863,7 @@ export interface components {
 					channel_id: components["schemas"]["Id"];
 					key: components["schemas"]["ReactionKey"];
 					message_id: components["schemas"]["Id"];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "ReactionDelete";
 					user_id: components["schemas"]["Id"];
@@ -9894,14 +9872,14 @@ export interface components {
 					channel_id: components["schemas"]["Id"];
 					key: components["schemas"]["ReactionKey"];
 					message_id: components["schemas"]["Id"];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "ReactionDeleteKey";
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
 					message_id: components["schemas"]["Id"];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "ReactionDeleteAll";
 			  }
@@ -9946,7 +9924,7 @@ export interface components {
 					user_id: components["schemas"]["Id"];
 			  }
 			| {
-					state?: null | components["schemas"]["VoiceState"];
+					state?: components["schemas"]["VoiceState"] | null;
 					/** @enum {string} */
 					type: "VoiceState";
 					/** @description the id of the user who's voice state was updated */
@@ -10029,7 +10007,7 @@ export interface components {
 					id: components["schemas"]["Id"];
 					/** @enum {string} */
 					type: "SessionDelete";
-					user_id?: null | components["schemas"]["Id"];
+					user_id?: components["schemas"]["Id"] | null;
 			  }
 			| {
 					/** @enum {string} */
@@ -10079,12 +10057,12 @@ export interface components {
 					user_id: components["schemas"]["Id"];
 			  }
 			| {
-					channel_id?: null | components["schemas"]["Id"];
+					channel_id?: components["schemas"]["Id"] | null;
 					/** @description where to route this list sync to */
 					connection_id: components["schemas"]["Id"];
 					groups: components["schemas"]["MemberListGroup"][];
 					ops: components["schemas"]["MemberListOp"][];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "MemberListSync";
 			  }
@@ -10192,7 +10170,7 @@ export interface components {
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "WebhookDelete";
 					webhook_id: components["schemas"]["Id"];
@@ -10220,8 +10198,8 @@ export interface components {
 			  }
 			| {
 					channel_id: components["schemas"]["Id"];
-					slowmode_message_expire_at?: null | components["schemas"]["Time"];
-					slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+					slowmode_message_expire_at?: components["schemas"]["Time"] | null;
+					slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 					/** @enum {string} */
 					type: "RatelimitUpdate";
 					user_id: components["schemas"]["Id"];
@@ -10405,8 +10383,8 @@ export interface components {
 			  };
 		/** @description Information about a thread being created */
 		MessageThreadCreated: {
-			source_message_id?: null | components["schemas"]["Id"];
-			thread_id?: null | components["schemas"]["Id"];
+			source_message_id?: components["schemas"]["Id"] | null;
+			thread_id?: components["schemas"]["Id"] | null;
 		};
 		MessageType:
 			| (components["schemas"]["MessageDefaultMarkdown"] & {
@@ -10483,10 +10461,10 @@ export interface components {
 			  });
 		/** @description a message's content at a point in time */
 		MessageVersion: components["schemas"]["MessageType"] & {
-			author_id?: null | components["schemas"]["Id"];
+			author_id?: components["schemas"]["Id"] | null;
 			/** @description when this message version was created, use this as edited_at */
 			created_at: components["schemas"]["Time"];
-			deleted_at?: null | components["schemas"]["Time"];
+			deleted_at?: components["schemas"]["Time"] | null;
 			/** @description who this message mentioned */
 			mentions?: components["schemas"]["Mentions"];
 			version_id: components["schemas"]["Id"];
@@ -10584,7 +10562,7 @@ export interface components {
 			 * @description the selected duration in seconds in the ui
 			 */
 			duration?: number | null;
-			expires_at?: null | components["schemas"]["Time"];
+			expires_at?: components["schemas"]["Time"] | null;
 		};
 		/**
 		 * @description a notification
@@ -10597,11 +10575,11 @@ export interface components {
 			id: components["schemas"]["Id"];
 			/** @description user defined note for this notification */
 			note?: string | null;
-			read_at?: null | components["schemas"]["Time"];
+			read_at?: components["schemas"]["Time"] | null;
 		};
 		/** @description create a new message reminder notification */
 		NotificationCreate: {
-			added_at?: null | components["schemas"]["Time"];
+			added_at?: components["schemas"]["Time"] | null;
 			/** @description the channel this message was sent in */
 			channel_id: components["schemas"]["Id"];
 			/** @description the id of the message that was sent */
@@ -10609,8 +10587,8 @@ export interface components {
 		};
 		/** @description delete some notifications */
 		NotificationFlush: {
-			after?: null | components["schemas"]["Id"];
-			before?: null | components["schemas"]["Id"];
+			after?: components["schemas"]["Id"] | null;
+			before?: components["schemas"]["Id"] | null;
 			/** @description restrict to just these channels */
 			channel_ids?: components["schemas"]["Id"][] | null;
 			/** @description also include unread notifications */
@@ -10668,7 +10646,7 @@ export interface components {
 					message_id: components["schemas"]["Id"];
 					/** @description this notification was triggered by a reply */
 					reply: boolean;
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "Message";
 					/** @description the author of this message */
@@ -10680,14 +10658,14 @@ export interface components {
 					/** @description the id of the message that was reacted to */
 					message_id: components["schemas"]["Id"];
 					reaction_key: components["schemas"]["ReactionKeyParam"];
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @enum {string} */
 					type: "Reaction";
 					/** @description the user who created this reaction */
 					user_id: components["schemas"]["Id"];
 			  }
 			| {
-					room_id?: null | components["schemas"]["Id"];
+					room_id?: components["schemas"]["Id"] | null;
 					/** @description the id of the thread */
 					thread_id: components["schemas"]["Id"];
 					/** @enum {string} */
@@ -10712,15 +10690,15 @@ export interface components {
 			  };
 		/** @description notification config for a channel */
 		NotifsChannel: {
-			messages?: null | components["schemas"]["NotifsMessages"];
-			mute?: null | components["schemas"]["Mute"];
-			replies?: null | components["schemas"]["NotifsReplies"];
-			threads?: null | components["schemas"]["NotifsThreads"];
+			messages?: components["schemas"]["NotifsMessages"] | null;
+			mute?: components["schemas"]["Mute"] | null;
+			replies?: components["schemas"]["NotifsReplies"] | null;
+			threads?: components["schemas"]["NotifsThreads"] | null;
 		};
 		/** @description notification config for a user (works globally) */
 		NotifsGlobal: {
 			messages: components["schemas"]["NotifsMessages"];
-			mute?: null | components["schemas"]["Mute"];
+			mute?: components["schemas"]["Mute"] | null;
 			reactions: components["schemas"]["NotifsReactions"];
 			replies: components["schemas"]["NotifsReplies"];
 			threads: components["schemas"]["NotifsThreads"];
@@ -10755,10 +10733,10 @@ export interface components {
 			 *     defaults to true
 			 */
 			mention_roles?: boolean;
-			messages?: null | components["schemas"]["NotifsMessages"];
-			mute?: null | components["schemas"]["Mute"];
-			replies?: null | components["schemas"]["NotifsReplies"];
-			threads?: null | components["schemas"]["NotifsThreads"];
+			messages?: components["schemas"]["NotifsMessages"] | null;
+			mute?: components["schemas"]["Mute"] | null;
+			replies?: components["schemas"]["NotifsReplies"] | null;
+			threads?: components["schemas"]["NotifsThreads"] | null;
 		};
 		/**
 		 * @description how to handle new threads
@@ -10990,7 +10968,7 @@ export interface components {
 		 */
 		PaginationDirection: "f" | "b";
 		PaginationQuery_Id: {
-			dir?: null | components["schemas"]["PaginationDirection"];
+			dir?: components["schemas"]["PaginationDirection"] | null;
 			/**
 			 * Uuid
 			 * Format: uuid
@@ -11033,22 +11011,22 @@ export interface components {
 				channel_id: components["schemas"]["Id"];
 				/** @description when this message was created */
 				created_at: components["schemas"]["Time"];
-				deleted_at?: null | components["schemas"]["Time"];
+				deleted_at?: components["schemas"]["Time"] | null;
 				/**
 				 * @description whether this message is ephemeral
 				 *
 				 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
 				 */
 				ephemeral?: boolean;
-				flume?: null | components["schemas"]["MessageFlume"];
+				flume?: components["schemas"]["MessageFlume"] | null;
 				id: components["schemas"]["Id"];
-				interaction?: null | components["schemas"]["MessageInteraction"];
+				interaction?: components["schemas"]["MessageInteraction"] | null;
 				latest_version: components["schemas"]["MessageVersion"];
-				pinned?: null | components["schemas"]["Pinned"];
+				pinned?: components["schemas"]["Pinned"] | null;
 				reactions?: components["schemas"]["ReactionCounts"];
-				removed_at?: null | components["schemas"]["Time"];
-				room_id?: null | components["schemas"]["Id"];
-				thread?: null | components["schemas"]["Channel"];
+				removed_at?: components["schemas"]["Time"] | null;
+				room_id?: components["schemas"]["Id"] | null;
+				thread?: components["schemas"]["Channel"] | null;
 			}[];
 			/** Format: int64 */
 			total: number;
@@ -11057,12 +11035,12 @@ export interface components {
 			cursor?: string | null;
 			has_more: boolean;
 			items: {
-				avatar?: null | components["schemas"]["Id"];
+				avatar?: components["schemas"]["Id"] | null;
 				channel_id: components["schemas"]["Id"];
-				creator_id?: null | components["schemas"]["Id"];
+				creator_id?: components["schemas"]["Id"] | null;
 				id: components["schemas"]["Id"];
 				name: string;
-				room_id?: null | components["schemas"]["Id"];
+				room_id?: components["schemas"]["Id"] | null;
 				token?: string | null;
 			}[];
 			/** Format: int64 */
@@ -11227,6 +11205,11 @@ export interface components {
 			 */
 			grid_view: boolean;
 			/**
+			 * @description show all active threads in the channel nav, instead of only joined ones
+			 * @default false
+			 */
+			show_all_threads: boolean;
+			/**
 			 * @description show members who are not sharing video
 			 * @default true
 			 */
@@ -11259,7 +11242,7 @@ export interface components {
 			 *     requires the room to have allow_dms set
 			 */
 			allow_mutual_room: boolean;
-			pause_until?: null | components["schemas"]["Time"];
+			pause_until?: components["schemas"]["Time"] | null;
 		};
 		/** @description config specific to the frontend */
 		PreferencesGlobalFrontend: {
@@ -11291,7 +11274,10 @@ export interface components {
 			 * @default 100
 			 */
 			chat_font_scale: number;
-			/** @default auto */
+			/**
+			 * @description how dates are formatted
+			 * @default auto
+			 */
 			date_format: components["schemas"]["DateFormat"];
 			/**
 			 * @description show desktop notifications
@@ -11319,7 +11305,10 @@ export interface components {
 			 * @default 8
 			 */
 			message_spacing: number;
-			/** @default cozy */
+			/**
+			 * @description how messages are displayed
+			 * @default cozy
+			 */
 			message_style: components["schemas"]["MessageStyle"];
 			/**
 			 * Format: double
@@ -11357,7 +11346,10 @@ export interface components {
 			 * @default true
 			 */
 			reduced_motion_sync: boolean;
-			/** @default [] */
+			/**
+			 * @description room navigation sidebar
+			 * @default []
+			 */
 			room_sidebar: components["schemas"]["Sidebar"];
 			/**
 			 * Format: double
@@ -11381,9 +11373,15 @@ export interface components {
 			 * @default 75
 			 */
 			speaker_volume: number;
-			/** @default click */
+			/**
+			 * @description how spoilers are revealed
+			 * @default click
+			 */
 			spoilers: components["schemas"]["Spoilers"];
-			/** @default auto */
+			/**
+			 * @description the color theme to use
+			 * @default auto
+			 */
 			theme: components["schemas"]["Theme"];
 			/**
 			 * @description open document threads in the sidebar
@@ -11400,7 +11398,10 @@ export interface components {
 			 * @default true
 			 */
 			threads_sidebar_text: boolean;
-			/** @default auto */
+			/**
+			 * @description how times are formatted
+			 * @default auto
+			 */
 			time_format: components["schemas"]["TimeFormat"];
 			/**
 			 * @description read notifications aloud with text to speech
@@ -11439,7 +11440,10 @@ export interface components {
 			 * @default false
 			 */
 			voice_echo_cancellation: boolean;
-			/** @default vad */
+			/**
+			 * @description how voice input is activated
+			 * @default vad
+			 */
 			voice_input_mode: components["schemas"]["VoiceInputMode"];
 			/**
 			 * @description enable noise suppression
@@ -11575,7 +11579,7 @@ export interface components {
 		};
 		/** @description represents a user on another platform */
 		Puppet: {
-			alias_id?: null | components["schemas"]["Id"];
+			alias_id?: components["schemas"]["Id"] | null;
 			/** @description an opaque identifier from the other platform */
 			external_id?: string;
 			/**
@@ -11624,8 +11628,8 @@ export interface components {
 			retry_after: number;
 		};
 		RatelimitPut: {
-			slowmode_message_expire_at?: null | components["schemas"]["Time"];
-			slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+			slowmode_message_expire_at?: components["schemas"]["Time"] | null;
+			slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 		};
 		/** @description A reaction with its creation timestamp, returned in sync events. */
 		Reaction: components["schemas"]["ReactionInfo"] & {
@@ -11727,7 +11731,7 @@ export interface components {
 			channel_id: components["schemas"]["Id"];
 			created_at: components["schemas"]["Time"];
 			creator_id: components["schemas"]["Id"];
-			deleted_at?: null | components["schemas"]["Time"];
+			deleted_at?: components["schemas"]["Time"] | null;
 			/** @description detected inputs for this script */
 			handlers: components["schemas"]["RedexHandler"][];
 			id: components["schemas"]["Id"];
@@ -11748,7 +11752,7 @@ export interface components {
 			name: string;
 			/** Format: uri */
 			url?: string | null;
-			user?: null | components["schemas"]["RedexAuthorOrigin"];
+			user?: components["schemas"]["RedexAuthorOrigin"] | null;
 		};
 		RedexAuthorOrigin: {
 			/** @description the host this user is on */
@@ -11947,10 +11951,10 @@ export interface components {
 			description?: string | null;
 			/** Format: uri */
 			homepage_url?: string | null;
-			license?: null | components["schemas"]["License"];
+			license?: components["schemas"]["License"] | null;
 			name: string;
-			origin?: null | components["schemas"]["RedexOrigin"];
-			version?: null | components["schemas"]["Semver"];
+			origin?: components["schemas"]["RedexOrigin"] | null;
+			version?: components["schemas"]["Semver"] | null;
 		};
 		RedexOrigin: {
 			channel_id: components["schemas"]["Id"];
@@ -11973,7 +11977,7 @@ export interface components {
 		/** @description information about a redex version */
 		RedexVersion: {
 			created_at: components["schemas"]["Time"];
-			deleted_at?: null | components["schemas"]["Time"];
+			deleted_at?: components["schemas"]["Time"] | null;
 			format: components["schemas"]["RedexFormat"];
 			location: components["schemas"]["RedexLocation"];
 			metadata: components["schemas"]["RedexMetadata"];
@@ -12000,11 +12004,11 @@ export interface components {
 			 */
 			room_ids: components["schemas"]["Id"][];
 		};
-		Relationship: (null | components["schemas"]["Ignore"]) & {
-			relation?: null | components["schemas"]["RelationshipType"];
+		Relationship: (components["schemas"]["Ignore"] | null) & {
+			relation?: components["schemas"]["RelationshipType"] | null;
 		};
-		RelationshipPatch: (null | components["schemas"]["Ignore"]) & {
-			relation?: null | components["schemas"]["RelationshipType"];
+		RelationshipPatch: (components["schemas"]["Ignore"] | null) & {
+			relation?: components["schemas"]["RelationshipType"] | null;
 		};
 		/**
 		 * @description a relationship between two users
@@ -12168,7 +12172,7 @@ export interface components {
 			sticky?: boolean;
 		};
 		RoleDeleteQuery: {
-			fallback_role_id?: null | components["schemas"]["Id"];
+			fallback_role_id?: components["schemas"]["Id"] | null;
 		};
 		/** @description apply and remove a role to many members at once */
 		RoleMemberBulkPatch: {
@@ -12205,21 +12209,21 @@ export interface components {
 		 *     and so on for instant messaging.
 		 */
 		Room: {
-			afk_channel_id?: null | components["schemas"]["Id"];
+			afk_channel_id?: components["schemas"]["Id"] | null;
 			/**
 			 * Format: int64
 			 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 			 */
 			afk_channel_timeout: number;
-			archived_at?: null | components["schemas"]["Time"];
-			banner?: null | components["schemas"]["Id"];
+			archived_at?: components["schemas"]["Time"] | null;
+			banner?: components["schemas"]["Id"] | null;
 			/**
 			 * Format: int64
 			 * @deprecated
 			 * @description number of active channels
 			 */
 			channel_count: number;
-			deleted_at?: null | components["schemas"]["Time"];
+			deleted_at?: components["schemas"]["Time"] | null;
 			description?: string | null;
 			/**
 			 * Format: int64
@@ -12228,10 +12232,10 @@ export interface components {
 			emoji_count: number;
 			/** @description features enabled for this room */
 			features: components["schemas"]["RoomFeatures"];
-			icon?: null | components["schemas"]["Id"];
+			icon?: components["schemas"]["Id"] | null;
 			/** @description A unique identifier for this room */
 			id: components["schemas"]["Id"];
-			invites_paused_until?: null | components["schemas"]["Time"];
+			invites_paused_until?: components["schemas"]["Time"] | null;
 			/**
 			 * Format: int64
 			 * @description number of people in this room
@@ -12243,13 +12247,13 @@ export interface components {
 			 * @description number of people who are online in this room
 			 */
 			online_count: number;
-			owner_id?: null | components["schemas"]["Id"];
-			preferences?: null | components["schemas"]["PreferencesRoom"];
+			owner_id?: components["schemas"]["Id"] | null;
+			preferences?: components["schemas"]["PreferencesRoom"] | null;
 			/** @description anyone can view and join */
 			public: boolean;
 			/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 			quarantined: boolean;
-			remote?: null | components["schemas"]["Remote_Id"];
+			remote?: components["schemas"]["Remote_Id"] | null;
 			/** @description security configuration for this room */
 			security: components["schemas"]["RoomSecurity"];
 			type: components["schemas"]["RoomType"];
@@ -12258,13 +12262,13 @@ export interface components {
 			 * @description A monotonically increasing id that is updated every time this room is modified.
 			 */
 			version_id: string;
-			welcome_channel_id?: null | components["schemas"]["Id"];
+			welcome_channel_id?: components["schemas"]["Id"] | null;
 		};
 		/** @description represents a restriction on who can join the room */
 		RoomBan: {
 			/** @description when the ban was created */
 			created_at: components["schemas"]["Time"];
-			expires_at?: null | components["schemas"]["Time"];
+			expires_at?: components["schemas"]["Time"] | null;
 			/** @description the supplied reason why this user should be banned */
 			reason?: string | null;
 			/** @description the user who is banned */
@@ -12272,12 +12276,12 @@ export interface components {
 		};
 		/** @description create many bans at once */
 		RoomBanBulkCreate: {
-			expires_at?: null | components["schemas"]["Time"];
+			expires_at?: components["schemas"]["Time"] | null;
 			/** @description who to ban */
 			target_ids?: components["schemas"]["Id"][];
 		};
 		RoomBanCreate: {
-			expires_at?: null | components["schemas"]["Time"];
+			expires_at?: components["schemas"]["Time"] | null;
 		};
 		RoomBanType:
 			| {
@@ -12296,9 +12300,9 @@ export interface components {
 			  };
 		/** @description Data required to create a room */
 		RoomCreate: {
-			banner?: null | components["schemas"]["Id"];
+			banner?: components["schemas"]["Id"] | null;
 			description?: string | null;
-			icon?: null | components["schemas"]["Id"];
+			icon?: components["schemas"]["Id"] | null;
 			name: string;
 			public?: boolean | null;
 		};
@@ -12316,7 +12320,7 @@ export interface components {
 			joined_at: components["schemas"]["Time"];
 			/** @description whether this user is muted by a moderator */
 			mute: boolean;
-			origin?: null | components["schemas"]["RoomMemberOrigin"];
+			origin?: components["schemas"]["RoomMemberOrigin"] | null;
 			/** @description like nickname, but for your description/bio/about */
 			override_description?: string | null;
 			/** @description aka nickname */
@@ -12326,7 +12330,7 @@ export interface components {
 			/** @description the roles that this member has */
 			roles: components["schemas"]["Id"][];
 			room_id: components["schemas"]["Id"];
-			timeout_until?: null | components["schemas"]["Time"];
+			timeout_until?: components["schemas"]["Time"] | null;
 			user_id: components["schemas"]["Id"];
 		};
 		/** @description Query parameters for room member delete */
@@ -12375,7 +12379,7 @@ export interface components {
 			override_name?: string | null;
 			/** @description the roles that this member has */
 			roles: components["schemas"]["Id"][];
-			timeout_until?: null | components["schemas"]["Time"];
+			timeout_until?: components["schemas"]["Time"] | null;
 		};
 		RoomMemberSearch: {
 			/** Format: int32 */
@@ -12383,15 +12387,15 @@ export interface components {
 			query: string;
 		};
 		RoomMemberSearchAdvanced: {
-			create_after?: null | components["schemas"]["Time"];
-			create_before?: null | components["schemas"]["Time"];
+			create_after?: components["schemas"]["Time"] | null;
+			create_before?: components["schemas"]["Time"] | null;
 			/** @description return members who are/aren't room deafened */
 			deaf?: boolean | null;
 			/** @description return members who are/aren't server guests */
 			guest?: boolean | null;
-			invite?: null | components["schemas"]["InviteCode"];
-			join_after?: null | components["schemas"]["Time"];
-			join_before?: null | components["schemas"]["Time"];
+			invite?: components["schemas"]["InviteCode"] | null;
+			join_after?: components["schemas"]["Time"] | null;
+			join_before?: components["schemas"]["Time"] | null;
 			/**
 			 * Format: int32
 			 * @description maximum number of results to return
@@ -12427,29 +12431,29 @@ export interface components {
 			override_name?: string | null;
 			/** @description the roles that this member has */
 			roles?: components["schemas"]["Id"][] | null;
-			timeout_until?: null | components["schemas"]["Time"];
+			timeout_until?: components["schemas"]["Time"] | null;
 		};
 		/** @description An update to a room */
 		RoomPatch: {
-			afk_channel_id?: null | components["schemas"]["Id"];
+			afk_channel_id?: components["schemas"]["Id"] | null;
 			/**
 			 * Format: int64
 			 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 			 */
 			afk_channel_timeout?: number | null;
-			banner?: null | components["schemas"]["Id"];
+			banner?: components["schemas"]["Id"] | null;
 			description?: string | null;
-			icon?: null | components["schemas"]["Id"];
-			invites_paused_until?: null | components["schemas"]["Time"];
+			icon?: components["schemas"]["Id"] | null;
+			invites_paused_until?: components["schemas"]["Time"] | null;
 			name?: string | null;
 			public?: boolean | null;
-			welcome_channel_id?: null | components["schemas"]["Id"];
+			welcome_channel_id?: components["schemas"]["Id"] | null;
 		};
 		/** @description a minimal preview of a room */
 		RoomPreview: {
-			banner?: null | components["schemas"]["Id"];
+			banner?: components["schemas"]["Id"] | null;
 			description?: string | null;
-			icon?: null | components["schemas"]["Id"];
+			icon?: components["schemas"]["Id"] | null;
 			id: components["schemas"]["Id"];
 			/**
 			 * Format: int64
@@ -12528,7 +12532,7 @@ export interface components {
 			/** @description name for this template */
 			name: string;
 			snapshot: components["schemas"]["RoomTemplateSnapshot"];
-			source_room_id?: null | components["schemas"]["Id"];
+			source_room_id?: components["schemas"]["Id"] | null;
 			/** @description when this template was last edited or synced */
 			updated_at: components["schemas"]["Time"];
 		};
@@ -12568,12 +12572,12 @@ export interface components {
 		};
 		/** @description a snapshot of a room */
 		RoomTemplateSnapshot: {
-			afk_channel_id?: null | components["schemas"]["Id"];
+			afk_channel_id?: components["schemas"]["Id"] | null;
 			/** Format: int64 */
 			afk_channel_timeout: number;
 			channels: components["schemas"]["RoomTemplateChannel"][];
 			roles: components["schemas"]["RoomTemplateRole"][];
-			welcome_channel_id?: null | components["schemas"]["Id"];
+			welcome_channel_id?: components["schemas"]["Id"] | null;
 		};
 		/** @enum {string} */
 		RoomType: "Default" | "Server" | "Emoji";
@@ -12631,7 +12635,7 @@ export interface components {
 			count_media: number;
 			/** Format: int64 */
 			count_messages: number;
-			last_indexed_message_id?: null | components["schemas"]["Id"];
+			last_indexed_message_id?: components["schemas"]["Id"] | null;
 		};
 		/** @description Search index statistics for a room */
 		SearchIndexStatsRoom: {
@@ -12701,14 +12705,14 @@ export interface components {
 		};
 		/** @description shows some parts of config */
 		ServerFeatures: {
-			catptcha?: null | components["schemas"]["Captcha"];
-			email?: null | components["schemas"]["Email"];
-			experiments?: null | components["schemas"]["Experiments"];
-			media?: null | components["schemas"]["Media"];
-			oauth?: null | components["schemas"]["Oauth"];
-			registration?: null | components["schemas"]["Registration"];
-			url_embed?: null | components["schemas"]["UrlEmbed"];
-			voice?: null | components["schemas"]["Voice"];
+			catptcha?: components["schemas"]["Captcha"] | null;
+			email?: components["schemas"]["Email"] | null;
+			experiments?: components["schemas"]["Experiments"] | null;
+			media?: components["schemas"]["Media"] | null;
+			oauth?: components["schemas"]["Oauth"] | null;
+			registration?: components["schemas"]["Registration"] | null;
+			url_embed?: components["schemas"]["UrlEmbed"] | null;
+			voice?: components["schemas"]["Voice"] | null;
 		};
 		ServerInfo: {
 			/** Format: uri */
@@ -12828,10 +12832,10 @@ export interface components {
 			value: components["schemas"]["Binary"];
 		};
 		Session: components["schemas"]["SessionStatus"] & {
-			app_id?: null | components["schemas"]["Id"];
-			authorized_at?: null | components["schemas"]["Time"];
-			deauthorized_at?: null | components["schemas"]["Time"];
-			expires_at?: null | components["schemas"]["Time"];
+			app_id?: components["schemas"]["Id"] | null;
+			authorized_at?: components["schemas"]["Time"] | null;
+			deauthorized_at?: components["schemas"]["Time"] | null;
+			expires_at?: components["schemas"]["Time"] | null;
 			id: components["schemas"]["Id"];
 			/** @description session imprint metadata */
 			imprint: components["schemas"]["SessionImprint"];
@@ -12886,11 +12890,11 @@ export interface components {
 			  };
 		/** @description minimal session persisted for audit log */
 		SessionSummary: {
-			app_id?: null | components["schemas"]["Id"];
+			app_id?: components["schemas"]["Id"] | null;
 			authorized_at: components["schemas"]["Time"];
-			deauthorized_at?: null | components["schemas"]["Time"];
+			deauthorized_at?: components["schemas"]["Time"] | null;
 			id: components["schemas"]["Id"];
-			last_seen_at?: null | components["schemas"]["Time"];
+			last_seen_at?: components["schemas"]["Time"] | null;
 			name?: string | null;
 		};
 		/** @example super_secret_session_token */
@@ -12901,7 +12905,7 @@ export interface components {
 			token: components["schemas"]["SessionToken"];
 		};
 		Sfu: {
-			external?: null | components["schemas"]["SfuExternal"];
+			external?: components["schemas"]["SfuExternal"] | null;
 			id: components["schemas"]["Id"];
 			/** @description human readable name (for debugging) */
 			name: string;
@@ -13093,11 +13097,11 @@ export interface components {
 			remove: components["schemas"]["TrackId"][];
 		};
 		SuspendRequest: {
-			expires_at?: null | components["schemas"]["Time"];
+			expires_at?: components["schemas"]["Time"] | null;
 		};
 		Suspended: {
 			created_at: components["schemas"]["Time"];
-			expires_at?: null | components["schemas"]["Time"];
+			expires_at?: components["schemas"]["Time"] | null;
 			reason?: string | null;
 		};
 		/**
@@ -13116,7 +13120,7 @@ export interface components {
 			| "InvalidData"
 			| "TooBig";
 		SyncParams: {
-			compression?: null | components["schemas"]["Compression"];
+			compression?: components["schemas"]["Compression"] | null;
 			format?: components["schemas"]["Encoding"];
 			version: components["schemas"]["Version"];
 		};
@@ -13128,14 +13132,14 @@ export interface components {
 		SyncSubscribeDocument: {
 			branch_id: components["schemas"]["Id"];
 			channel_id: components["schemas"]["Id"];
-			redex_id?: null | components["schemas"]["Id"];
-			state_vector?: null | components["schemas"]["DocumentStateVector"];
+			redex_id?: components["schemas"]["Id"] | null;
+			state_vector?: components["schemas"]["DocumentStateVector"] | null;
 		};
 		SyncSubscribeMemberList: {
-			channel_id?: null | components["schemas"]["Id"];
+			channel_id?: components["schemas"]["Id"] | null;
 			/** @description the ranges to subscribe to */
 			ranges: [number, number][];
-			room_id?: null | components["schemas"]["Id"];
+			room_id?: components["schemas"]["Id"] | null;
 		};
 		SyncSubscribeScript: {
 			channel_id: components["schemas"]["Id"];
@@ -13167,7 +13171,7 @@ export interface components {
 			 */
 			archived: boolean;
 			channel_id: components["schemas"]["Id"];
-			color?: null | components["schemas"]["Color"];
+			color?: components["schemas"]["Color"] | null;
 			description?: string | null;
 			id: components["schemas"]["Id"];
 			name: string;
@@ -13182,7 +13186,7 @@ export interface components {
 			total_thread_count: number;
 		};
 		TagCreate: {
-			color?: null | components["schemas"]["Color"];
+			color?: components["schemas"]["Color"] | null;
 			description?: string | null;
 			name: string;
 			restricted?: boolean;
@@ -13201,14 +13205,14 @@ export interface components {
 		};
 		/** @description minimal data needed to render a tag */
 		TagMinimal: {
-			color?: null | components["schemas"]["Color"];
+			color?: components["schemas"]["Color"] | null;
 			id: components["schemas"]["Id"];
 			name: string;
 			spoiler: boolean;
 		};
 		TagPatch: {
 			archived?: boolean | null;
-			color?: null | components["schemas"]["Color"];
+			color?: components["schemas"]["Color"] | null;
 			description?: string | null;
 			name?: string | null;
 			restricted?: boolean | null;
@@ -13224,7 +13228,7 @@ export interface components {
 			query: string;
 		};
 		TestPermissionsRequest: {
-			channel_id?: null | components["schemas"]["Id"];
+			channel_id?: components["schemas"]["Id"] | null;
 			room_id: components["schemas"]["Id"];
 			user_id: components["schemas"]["Id"];
 		};
@@ -13249,8 +13253,8 @@ export interface components {
 		Thin: never;
 		/** @description additional channel metadata for a thread */
 		ThreadInfo: {
-			first_message?: null | components["schemas"]["Message"];
-			last_message?: null | components["schemas"]["Message"];
+			first_message?: components["schemas"]["Message"] | null;
+			last_message?: components["schemas"]["Message"] | null;
 			/** @description a list of thread members */
 			preview_members?: components["schemas"]["ThreadMemberMinimal"][];
 		};
@@ -13305,7 +13309,7 @@ export interface components {
 		TimeFormat: "auto" | "12h" | "24h";
 		/** @description a room member's timeout */
 		Timeout: {
-			expires_at?: null | components["schemas"]["Time"];
+			expires_at?: components["schemas"]["Time"] | null;
 			/**
 			 * @description moderator only reason for why this timeout exists
 			 *
@@ -13330,7 +13334,7 @@ export interface components {
 		};
 		TotpRecoveryCode: {
 			code: string;
-			used_at?: null | components["schemas"]["Time"];
+			used_at?: components["schemas"]["Time"] | null;
 		};
 		TotpRecoveryCodes: {
 			codes: components["schemas"]["TotpRecoveryCode"][];
@@ -13402,7 +13406,7 @@ export interface components {
 			key: components["schemas"]["TrackKey"];
 			/** @description whether this track is for audio or video */
 			kind: components["schemas"]["MediaKind"];
-			whisper?: null | components["schemas"]["TrackWhisper"];
+			whisper?: components["schemas"]["TrackWhisper"] | null;
 		};
 		/** @description where a track came from */
 		TrackSource:
@@ -13424,7 +13428,7 @@ export interface components {
 		TrackUpdate: {
 			label?: string | null;
 			lang?: string | null;
-			type?: null | components["schemas"]["TrackType"];
+			type?: components["schemas"]["TrackType"] | null;
 		};
 		/**
 		 * @description track whispering config
@@ -13485,11 +13489,11 @@ export interface components {
 		};
 		UrlEmbed: Record<string, never>;
 		User: {
-			avatar?: null | components["schemas"]["Id"];
-			banner?: null | components["schemas"]["Id"];
+			avatar?: components["schemas"]["Id"] | null;
+			banner?: components["schemas"]["Id"] | null;
 			/** @description whether this user is a bot */
 			bot: boolean;
-			deleted_at?: null | components["schemas"]["Time"];
+			deleted_at?: components["schemas"]["Time"] | null;
 			description?: string | null;
 			emails?: components["schemas"]["EmailInfo"][] | null;
 			/**
@@ -13500,16 +13504,16 @@ export interface components {
 			has_mfa?: boolean | null;
 			id: components["schemas"]["Id"];
 			name: string;
-			preferences?: null | components["schemas"]["PreferencesUser"];
+			preferences?: components["schemas"]["PreferencesUser"] | null;
 			presence: components["schemas"]["Presence"];
-			puppet?: null | components["schemas"]["Puppet"];
-			registered_at?: null | components["schemas"]["Time"];
-			remote?: null | components["schemas"]["Remote_Id"];
-			suspended?: null | components["schemas"]["Suspended"];
+			puppet?: components["schemas"]["Puppet"] | null;
+			registered_at?: components["schemas"]["Time"] | null;
+			remote?: components["schemas"]["Remote_Id"] | null;
+			suspended?: components["schemas"]["Suspended"] | null;
 			/** @description whether this user is an official system user */
 			system: boolean;
 			version_id: components["schemas"]["Id"];
-			webhook?: null | components["schemas"]["UserWebhook"];
+			webhook?: components["schemas"]["UserWebhook"] | null;
 		};
 		UserCreate: {
 			description?: string | null;
@@ -13519,11 +13523,11 @@ export interface components {
 		/** @enum {string} */
 		UserListFilter: "guest" | "registered" | "bot" | "puppet";
 		UserListParams: {
-			filter?: null | components["schemas"]["UserListFilter"];
+			filter?: components["schemas"]["UserListFilter"] | null;
 		};
 		UserPatch: {
-			avatar?: null | components["schemas"]["Id"];
-			banner?: null | components["schemas"]["Id"];
+			avatar?: components["schemas"]["Id"] | null;
+			banner?: components["schemas"]["Id"] | null;
 			description?: string | null;
 			name?: string | null;
 		};
@@ -13550,7 +13554,7 @@ export interface components {
 		UserWebhook: {
 			channel_id: components["schemas"]["Id"];
 			creator_id: components["schemas"]["Id"];
-			room_id?: null | components["schemas"]["Id"];
+			room_id?: components["schemas"]["Id"] | null;
 		};
 		UserWithPrivate: components["schemas"]["User"] & {
 			config: components["schemas"]["PreferencesGlobal"];
@@ -13560,7 +13564,7 @@ export interface components {
 		};
 		/** @description user info response for openid connect */
 		Userinfo: {
-			email?: null | components["schemas"]["EmailAddr"];
+			email?: components["schemas"]["EmailAddr"] | null;
 			/** @description if the provided email has been verified or not */
 			email_verified: boolean;
 			/**
@@ -13604,7 +13608,7 @@ export interface components {
 		ViewChannel: {
 			id: components["schemas"]["Id"];
 			nickname?: string | null;
-			room_id?: null | components["schemas"]["Id"];
+			room_id?: components["schemas"]["Id"] | null;
 		};
 		Voice: Record<string, never>;
 		/** @description voice config the local user can set on someone else */
@@ -13638,23 +13642,23 @@ export interface components {
 		VoiceState: {
 			/** @description the channel this user is connected to */
 			channel_id: components["schemas"]["Id"];
-			connection_id?: null | components["schemas"]["Id"];
+			connection_id?: components["schemas"]["Id"] | null;
 			/** @description whether this user is deafened by a moderator */
 			deaf: boolean;
 			/** @description when this user joined the call */
 			joined_at: components["schemas"]["Time"];
 			/** @description whether this user is muted by a moderator */
 			mute: boolean;
-			requested_to_speak_at?: null | components["schemas"]["Time"];
-			room_id?: null | components["schemas"]["Id"];
-			screenshare?: null | components["schemas"]["VoiceStateScreenshare"];
+			requested_to_speak_at?: components["schemas"]["Time"] | null;
+			room_id?: components["schemas"]["Id"] | null;
+			screenshare?: components["schemas"]["VoiceStateScreenshare"] | null;
 			/** @description whether this user has deafened themselves */
 			self_deaf: boolean;
 			/** @description whether this user has muted themselves */
 			self_mute: boolean;
 			/** @description whether this user has enabled their camera */
 			self_video: boolean;
-			session_id?: null | components["schemas"]["Id"];
+			session_id?: components["schemas"]["Id"] | null;
 			/** @description whether this user is suppressed, similar to a transient `mute: true` */
 			suppress: boolean;
 			/** @description the user this state belongs to */
@@ -13662,8 +13666,8 @@ export interface components {
 		};
 		/** @description the voice state with user/room member info */
 		VoiceStateFull: components["schemas"]["VoiceState"] & {
-			member?: null | components["schemas"]["RoomMember"];
-			thread_member?: null | components["schemas"]["ThreadMember"];
+			member?: components["schemas"]["RoomMember"] | null;
+			thread_member?: components["schemas"]["ThreadMember"] | null;
 			user: components["schemas"]["User"];
 		};
 		VoiceStateMove: {
@@ -13685,12 +13689,12 @@ export interface components {
 		 *     sent via rest
 		 */
 		VoiceStatePatch: {
-			channel_id?: null | components["schemas"]["Id"];
+			channel_id?: components["schemas"]["Id"] | null;
 			/** @description same as room member deaf */
 			deaf?: boolean | null;
 			/** @description same as room member mute */
 			mute?: boolean | null;
-			requested_to_speak_at?: null | components["schemas"]["Time"];
+			requested_to_speak_at?: components["schemas"]["Time"] | null;
 			/**
 			 * @description allow this user to speak in the current channel
 			 *
@@ -13702,15 +13706,15 @@ export interface components {
 		VoiceStateScreenshare: {
 			/** @description when this user started sharing their screen */
 			started_at: components["schemas"]["Time"];
-			thumbnail?: null | components["schemas"]["Id"];
+			thumbnail?: components["schemas"]["Id"] | null;
 		};
 		VoiceStateScreenshareUpdate: {
-			thumbnail?: null | components["schemas"]["Id"];
+			thumbnail?: components["schemas"]["Id"] | null;
 		};
 		/** @description represents an update that a user would like to make to their voice state */
 		VoiceStateUpdate: {
 			channel_id: components["schemas"]["Id"];
-			screenshare?: null | components["schemas"]["VoiceStateScreenshareUpdate"];
+			screenshare?: components["schemas"]["VoiceStateScreenshareUpdate"] | null;
 			self_deaf: boolean;
 			self_mute: boolean;
 			self_video: boolean;
@@ -13741,21 +13745,30 @@ export interface components {
 			name?: string | null;
 		};
 		Webhook: {
-			avatar?: null | components["schemas"]["Id"];
+			avatar?: components["schemas"]["Id"] | null;
 			channel_id: components["schemas"]["Id"];
-			creator_id?: null | components["schemas"]["Id"];
+			creator_id?: components["schemas"]["Id"] | null;
 			id: components["schemas"]["Id"];
 			name: string;
-			room_id?: null | components["schemas"]["Id"];
+			room_id?: components["schemas"]["Id"] | null;
 			token?: string | null;
 		};
 		WebhookCreate: {
-			avatar?: null | components["schemas"]["Id"];
+			avatar?: components["schemas"]["Id"] | null;
 			name: string;
 		};
+		/** @description webhook info fetched from its token/url */
+		WebhookInfo: {
+			avatar?: components["schemas"]["Id"] | null;
+			channel_id: components["schemas"]["Id"];
+			id: components["schemas"]["Id"];
+			name: string;
+			room_id?: components["schemas"]["Id"] | null;
+			token?: string | null;
+		};
 		WebhookUpdate: {
-			avatar?: null | components["schemas"]["Id"];
-			channel_id?: null | components["schemas"]["Id"];
+			avatar?: components["schemas"]["Id"] | null;
+			channel_id?: components["schemas"]["Id"] | null;
 			name?: string | null;
 			rotate_token?: boolean;
 		};
@@ -13763,8 +13776,8 @@ export interface components {
 		Wiki: {
 			/** @description whether to allow indexing by search engines */
 			allow_indexing?: boolean;
-			page_index?: null | components["schemas"]["Id"];
-			page_notfound?: null | components["schemas"]["Id"];
+			page_index?: components["schemas"]["Id"] | null;
+			page_notfound?: components["schemas"]["Id"] | null;
 		};
 		WikiGraph: {
 			documents: components["schemas"]["WikiGraphDocument"][];
@@ -13777,7 +13790,7 @@ export interface components {
 			weight: number;
 		};
 		WikiGraphQuery: {
-			document_id?: null | components["schemas"]["Id"];
+			document_id?: components["schemas"]["Id"] | null;
 			/**
 			 * Format: int32
 			 * @description maximum number of documents to return
@@ -13786,8 +13799,8 @@ export interface components {
 		};
 		WikiPatch: {
 			allow_indexing?: boolean | null;
-			page_index?: null | components["schemas"]["Id"];
-			page_notfound?: null | components["schemas"]["Id"];
+			page_index?: components["schemas"]["Id"] | null;
+			page_notfound?: components["schemas"]["Id"] | null;
 		};
 		WithMembersQuery: {
 			/**
@@ -14253,7 +14266,7 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					bridge?: null | components["schemas"]["Bridge"];
+					bridge?: components["schemas"]["Bridge"] | null;
 					description?: string | null;
 					name: string;
 					oauth_confidential?: boolean | null;
@@ -14271,7 +14284,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						bridge?: null | components["schemas"]["Bridge"];
+						bridge?: components["schemas"]["Bridge"] | null;
 						description?: string | null;
 						id: components["schemas"]["Id"];
 						name: string;
@@ -14306,7 +14319,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						bridge?: null | components["schemas"]["Bridge"];
+						bridge?: components["schemas"]["Bridge"] | null;
 						description?: string | null;
 						id: components["schemas"]["Id"];
 						name: string;
@@ -14355,7 +14368,7 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					bridge?: null | components["schemas"]["Bridge"];
+					bridge?: components["schemas"]["Bridge"] | null;
 					description?: string | null;
 					name?: string | null;
 					oauth_confidential?: boolean | null;
@@ -14373,7 +14386,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						bridge?: null | components["schemas"]["Bridge"];
+						bridge?: components["schemas"]["Bridge"] | null;
 						description?: string | null;
 						id: components["schemas"]["Id"];
 						name: string;
@@ -14446,11 +14459,11 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						avatar?: null | components["schemas"]["Id"];
-						banner?: null | components["schemas"]["Id"];
+						avatar?: components["schemas"]["Id"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/** @description whether this user is a bot */
 						bot: boolean;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						emails?: components["schemas"]["EmailInfo"][] | null;
 						/**
@@ -14461,16 +14474,16 @@ export interface operations {
 						has_mfa?: boolean | null;
 						id: components["schemas"]["Id"];
 						name: string;
-						preferences?: null | components["schemas"]["PreferencesUser"];
+						preferences?: components["schemas"]["PreferencesUser"] | null;
 						presence: components["schemas"]["Presence"];
-						puppet?: null | components["schemas"]["Puppet"];
-						registered_at?: null | components["schemas"]["Time"];
-						remote?: null | components["schemas"]["Remote_Id"];
-						suspended?: null | components["schemas"]["Suspended"];
+						puppet?: components["schemas"]["Puppet"] | null;
+						registered_at?: components["schemas"]["Time"] | null;
+						remote?: components["schemas"]["Remote_Id"] | null;
+						suspended?: components["schemas"]["Suspended"] | null;
 						/** @description whether this user is an official system user */
 						system: boolean;
 						version_id: components["schemas"]["Id"];
-						webhook?: null | components["schemas"]["UserWebhook"];
+						webhook?: components["schemas"]["UserWebhook"] | null;
 					};
 				};
 			};
@@ -14481,11 +14494,11 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						avatar?: null | components["schemas"]["Id"];
-						banner?: null | components["schemas"]["Id"];
+						avatar?: components["schemas"]["Id"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/** @description whether this user is a bot */
 						bot: boolean;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						emails?: components["schemas"]["EmailInfo"][] | null;
 						/**
@@ -14496,16 +14509,16 @@ export interface operations {
 						has_mfa?: boolean | null;
 						id: components["schemas"]["Id"];
 						name: string;
-						preferences?: null | components["schemas"]["PreferencesUser"];
+						preferences?: components["schemas"]["PreferencesUser"] | null;
 						presence: components["schemas"]["Presence"];
-						puppet?: null | components["schemas"]["Puppet"];
-						registered_at?: null | components["schemas"]["Time"];
-						remote?: null | components["schemas"]["Remote_Id"];
-						suspended?: null | components["schemas"]["Suspended"];
+						puppet?: components["schemas"]["Puppet"] | null;
+						registered_at?: components["schemas"]["Time"] | null;
+						remote?: components["schemas"]["Remote_Id"] | null;
+						suspended?: components["schemas"]["Suspended"] | null;
 						/** @description whether this user is an official system user */
 						system: boolean;
 						version_id: components["schemas"]["Id"];
-						webhook?: null | components["schemas"]["UserWebhook"];
+						webhook?: components["schemas"]["UserWebhook"] | null;
 					};
 				};
 			};
@@ -14529,7 +14542,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						bridge?: null | components["schemas"]["Bridge"];
+						bridge?: components["schemas"]["Bridge"] | null;
 						description?: string | null;
 						id: components["schemas"]["Id"];
 						name: string;
@@ -14604,13 +14617,13 @@ export interface operations {
 			query?: {
 				/** @description return at most this many calendar events */
 				limit?: number | null;
-				from?: null | components["schemas"]["Id"];
-				to?: null | components["schemas"]["Id"];
-				dir?: null | components["schemas"]["PaginationDirection"];
+				from?: components["schemas"]["Id"] | null;
+				to?: components["schemas"]["Id"] | null;
+				dir?: components["schemas"]["PaginationDirection"] | null;
 				/** @description only return calendar events that start after this time */
-				from_time?: null | components["schemas"]["Time"];
+				from_time?: components["schemas"]["Time"] | null;
 				/** @description only return calendar events that end before this time */
-				to_time?: null | components["schemas"]["Time"];
+				to_time?: components["schemas"]["Time"] | null;
 			};
 			header?: never;
 			path?: never;
@@ -14636,13 +14649,13 @@ export interface operations {
 			query?: {
 				/** @description return at most this many calendar events */
 				limit?: number | null;
-				from?: null | components["schemas"]["Id"];
-				to?: null | components["schemas"]["Id"];
-				dir?: null | components["schemas"]["PaginationDirection"];
+				from?: components["schemas"]["Id"] | null;
+				to?: components["schemas"]["Id"] | null;
+				dir?: components["schemas"]["PaginationDirection"] | null;
 				/** @description only return calendar events that start after this time */
-				from_time?: null | components["schemas"]["Time"];
+				from_time?: components["schemas"]["Time"] | null;
 				/** @description only return calendar events that end before this time */
-				to_time?: null | components["schemas"]["Time"];
+				to_time?: components["schemas"]["Time"] | null;
 			};
 			header?: never;
 			path: {
@@ -14679,12 +14692,12 @@ export interface operations {
 				"application/json": {
 					all_day?: boolean;
 					description?: string | null;
-					ends_at?: null | components["schemas"]["Time"];
+					ends_at?: components["schemas"]["Time"] | null;
 					location?: string | null;
-					media_id?: null | components["schemas"]["Id"];
-					recurrence?: null | components["schemas"]["Recurrence"];
+					media_id?: components["schemas"]["Id"] | null;
+					recurrence?: components["schemas"]["Recurrence"] | null;
 					starts_at: components["schemas"]["Time"];
-					timezone?: null | components["schemas"]["Timezone"];
+					timezone?: components["schemas"]["Timezone"] | null;
 					title: string;
 					/** Format: uri */
 					url?: string | null;
@@ -14707,21 +14720,21 @@ export interface operations {
 						all_day?: boolean;
 						/** @description the id of the calendar channel that this event was created in */
 						channel_id: components["schemas"]["Id"];
-						creator_id?: null | components["schemas"]["Id"];
+						creator_id?: components["schemas"]["Id"] | null;
 						/** @description description for this event. supports markdown. */
 						description?: string | null;
-						ends_at?: null | components["schemas"]["Time"];
+						ends_at?: components["schemas"]["Time"] | null;
 						/** @description unique identifier for this calendar event */
 						id: components["schemas"]["Id"];
 						/** @description location where this event will take place */
 						location?: string | null;
-						media_id?: null | components["schemas"]["Id"];
+						media_id?: components["schemas"]["Id"] | null;
 						participant_counts: components["schemas"]["CalendarParticipantCounts"];
-						recurrence?: null | components["schemas"]["Recurrence"];
-						room_id?: null | components["schemas"]["Id"];
+						recurrence?: components["schemas"]["Recurrence"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** @description when this event starts */
 						starts_at: components["schemas"]["Time"];
-						timezone?: null | components["schemas"]["Timezone"];
+						timezone?: components["schemas"]["Timezone"] | null;
 						/** @description name for this event */
 						title: string;
 						/**
@@ -14761,21 +14774,21 @@ export interface operations {
 						all_day?: boolean;
 						/** @description the id of the calendar channel that this event was created in */
 						channel_id: components["schemas"]["Id"];
-						creator_id?: null | components["schemas"]["Id"];
+						creator_id?: components["schemas"]["Id"] | null;
 						/** @description description for this event. supports markdown. */
 						description?: string | null;
-						ends_at?: null | components["schemas"]["Time"];
+						ends_at?: components["schemas"]["Time"] | null;
 						/** @description unique identifier for this calendar event */
 						id: components["schemas"]["Id"];
 						/** @description location where this event will take place */
 						location?: string | null;
-						media_id?: null | components["schemas"]["Id"];
+						media_id?: components["schemas"]["Id"] | null;
 						participant_counts: components["schemas"]["CalendarParticipantCounts"];
-						recurrence?: null | components["schemas"]["Recurrence"];
-						room_id?: null | components["schemas"]["Id"];
+						recurrence?: components["schemas"]["Recurrence"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** @description when this event starts */
 						starts_at: components["schemas"]["Time"];
-						timezone?: null | components["schemas"]["Timezone"];
+						timezone?: components["schemas"]["Timezone"] | null;
 						/** @description name for this event */
 						title: string;
 						/**
@@ -14823,14 +14836,14 @@ export interface operations {
 			content: {
 				"application/json": {
 					all_day?: boolean | null;
-					channel_id?: null | components["schemas"]["Id"];
+					channel_id?: components["schemas"]["Id"] | null;
 					description?: string | null;
-					ends_at?: null | components["schemas"]["Time"];
+					ends_at?: components["schemas"]["Time"] | null;
 					location?: string | null;
-					media_id?: null | components["schemas"]["Id"];
-					recurrence?: null | components["schemas"]["Recurrence"];
-					starts_at?: null | components["schemas"]["Time"];
-					timezone?: null | components["schemas"]["Timezone"];
+					media_id?: components["schemas"]["Id"] | null;
+					recurrence?: components["schemas"]["Recurrence"] | null;
+					starts_at?: components["schemas"]["Time"] | null;
+					timezone?: components["schemas"]["Timezone"] | null;
 					title?: string | null;
 					/** Format: uri */
 					url?: string | null;
@@ -14853,21 +14866,21 @@ export interface operations {
 						all_day?: boolean;
 						/** @description the id of the calendar channel that this event was created in */
 						channel_id: components["schemas"]["Id"];
-						creator_id?: null | components["schemas"]["Id"];
+						creator_id?: components["schemas"]["Id"] | null;
 						/** @description description for this event. supports markdown. */
 						description?: string | null;
-						ends_at?: null | components["schemas"]["Time"];
+						ends_at?: components["schemas"]["Time"] | null;
 						/** @description unique identifier for this calendar event */
 						id: components["schemas"]["Id"];
 						/** @description location where this event will take place */
 						location?: string | null;
-						media_id?: null | components["schemas"]["Id"];
+						media_id?: components["schemas"]["Id"] | null;
 						participant_counts: components["schemas"]["CalendarParticipantCounts"];
-						recurrence?: null | components["schemas"]["Recurrence"];
-						room_id?: null | components["schemas"]["Id"];
+						recurrence?: components["schemas"]["Recurrence"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** @description when this event starts */
 						starts_at: components["schemas"]["Time"];
-						timezone?: null | components["schemas"]["Timezone"];
+						timezone?: components["schemas"]["Timezone"] | null;
 						/** @description name for this event */
 						title: string;
 						/**
@@ -14903,9 +14916,9 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						member?: null | components["schemas"]["RoomMember"];
+						member?: components["schemas"]["RoomMember"] | null;
 						status: components["schemas"]["CalendarRsvpStatus"];
-						user?: null | components["schemas"]["User"];
+						user?: components["schemas"]["User"] | null;
 						user_id: components["schemas"]["Id"];
 					}[];
 				};
@@ -14985,12 +14998,12 @@ export interface operations {
 					"application/json": {
 						/** @description whether this event is cancelled */
 						cancelled?: boolean;
-						ends_at?: null | components["schemas"]["Time"];
+						ends_at?: components["schemas"]["Time"] | null;
 						/** @description extra description to show for this event instance */
 						extra_description?: string | null;
 						/** @description overwrite the location for this event instance */
 						location?: string | null;
-						starts_at?: null | components["schemas"]["Time"];
+						starts_at?: components["schemas"]["Time"] | null;
 						/** @description set the title for this event instance */
 						title?: string | null;
 						/** Format: uri */
@@ -15022,12 +15035,12 @@ export interface operations {
 					"application/json": {
 						/** @description whether this event is cancelled */
 						cancelled?: boolean;
-						ends_at?: null | components["schemas"]["Time"];
+						ends_at?: components["schemas"]["Time"] | null;
 						/** @description extra description to show for this event instance */
 						extra_description?: string | null;
 						/** @description overwrite the location for this event instance */
 						location?: string | null;
-						starts_at?: null | components["schemas"]["Time"];
+						starts_at?: components["schemas"]["Time"] | null;
 						/** @description set the title for this event instance */
 						title?: string | null;
 						/** Format: uri */
@@ -15053,12 +15066,12 @@ export interface operations {
 				"application/json": {
 					/** @description whether this event is cancelled */
 					cancelled?: boolean;
-					ends_at?: null | components["schemas"]["Time"];
+					ends_at?: components["schemas"]["Time"] | null;
 					/** @description extra description to show for this event instance */
 					extra_description?: string | null;
 					/** @description overwrite the location for this event instance */
 					location?: string | null;
-					starts_at?: null | components["schemas"]["Time"];
+					starts_at?: components["schemas"]["Time"] | null;
 					/** @description set the title for this event instance */
 					title?: string | null;
 					/** Format: uri */
@@ -15076,12 +15089,12 @@ export interface operations {
 					"application/json": {
 						/** @description whether this event is cancelled */
 						cancelled?: boolean;
-						ends_at?: null | components["schemas"]["Time"];
+						ends_at?: components["schemas"]["Time"] | null;
 						/** @description extra description to show for this event instance */
 						extra_description?: string | null;
 						/** @description overwrite the location for this event instance */
 						location?: string | null;
-						starts_at?: null | components["schemas"]["Time"];
+						starts_at?: components["schemas"]["Time"] | null;
 						/** @description set the title for this event instance */
 						title?: string | null;
 						/** Format: uri */
@@ -15135,9 +15148,9 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						member?: null | components["schemas"]["RoomMember"];
+						member?: components["schemas"]["RoomMember"] | null;
 						status: components["schemas"]["CalendarRsvpStatus"];
-						user?: null | components["schemas"]["User"];
+						user?: components["schemas"]["User"] | null;
 						user_id: components["schemas"]["Id"];
 					}[];
 				};
@@ -15164,9 +15177,9 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						member?: null | components["schemas"]["RoomMember"];
+						member?: components["schemas"]["RoomMember"] | null;
 						status: components["schemas"]["CalendarRsvpStatus"];
-						user?: null | components["schemas"]["User"];
+						user?: components["schemas"]["User"] | null;
 						user_id: components["schemas"]["Id"];
 					};
 				};
@@ -15253,13 +15266,13 @@ export interface operations {
 					/** Format: int64 */
 					default_slowmode_message?: number | null;
 					description?: string | null;
-					icon?: null | components["schemas"]["Id"];
+					icon?: components["schemas"]["Id"] | null;
 					/** @description whether users without ThreadManage can add other members to this thread */
 					invitable?: boolean;
 					name: string;
 					/** @description not safe for work */
 					nsfw?: boolean;
-					parent_id?: null | components["schemas"]["Id"];
+					parent_id?: components["schemas"]["Id"] | null;
 					permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
 					/** @description the recipient(s) for this dm/gdm */
 					recipients?: components["schemas"]["Id"][] | null;
@@ -15267,7 +15280,7 @@ export interface operations {
 					slowmode_message?: number | null;
 					/** Format: int64 */
 					slowmode_thread?: number | null;
-					starter_message?: null | components["schemas"]["MessageCreate"];
+					starter_message?: components["schemas"]["MessageCreate"] | null;
 					/** @description tags to apply to this thread (overwrite, not append) */
 					tags?: components["schemas"]["Id"][] | null;
 					/** @description The type of this channel */
@@ -15287,7 +15300,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -15302,7 +15315,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -15316,24 +15329,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -15351,8 +15364,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -15364,11 +15377,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -15378,7 +15391,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -15386,7 +15399,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -15394,7 +15407,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -15406,7 +15419,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -15417,7 +15430,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -15432,7 +15445,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -15446,24 +15459,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -15481,8 +15494,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -15494,11 +15507,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -15508,7 +15521,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -15516,7 +15529,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -15524,7 +15537,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -15536,7 +15549,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -15560,7 +15573,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -15575,7 +15588,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -15589,24 +15602,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -15624,8 +15637,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -15637,11 +15650,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -15651,7 +15664,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -15659,7 +15672,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -15667,7 +15680,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -15679,7 +15692,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -15706,33 +15719,33 @@ export interface operations {
 					auto_name?: string | null;
 					/** Format: int64 */
 					bitrate?: number | null;
-					calendar?: null | components["schemas"]["CalendarPatch"];
+					calendar?: components["schemas"]["CalendarPatch"] | null;
 					/** Format: int64 */
 					default_auto_archive_duration?: number | null;
 					/** Format: int64 */
 					default_slowmode_message?: number | null;
 					description?: string | null;
-					document?: null | components["schemas"]["DocumentPatch"];
-					icon?: null | components["schemas"]["Id"];
+					document?: components["schemas"]["DocumentPatch"] | null;
+					icon?: components["schemas"]["Id"] | null;
 					invitable?: boolean | null;
-					locked?: null | components["schemas"]["Locked"];
+					locked?: components["schemas"]["Locked"] | null;
 					name?: string | null;
 					/** @description not safe for work */
 					nsfw?: boolean | null;
-					owner_id?: null | components["schemas"]["Id"];
-					parent_id?: null | components["schemas"]["Id"];
+					owner_id?: components["schemas"]["Id"] | null;
+					parent_id?: components["schemas"]["Id"] | null;
 					/** Format: int64 */
 					slowmode_message?: number | null;
 					/** Format: int64 */
 					slowmode_thread?: number | null;
 					/** @description tags to apply to this thread (overwrite, not append) */
 					tags?: components["schemas"]["Id"][] | null;
-					ty?: null | components["schemas"]["ChannelType"];
+					ty?: components["schemas"]["ChannelType"] | null;
 					/** Format: uri */
 					url?: string | null;
 					/** Format: int64 */
 					user_limit?: number | null;
-					wiki?: null | components["schemas"]["WikiPatch"];
+					wiki?: components["schemas"]["WikiPatch"] | null;
 				};
 			};
 		};
@@ -15744,7 +15757,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -15759,7 +15772,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -15773,24 +15786,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -15808,8 +15821,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -15821,11 +15834,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -15835,7 +15848,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -15843,7 +15856,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -15851,7 +15864,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -15863,7 +15876,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -15874,7 +15887,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -15889,7 +15902,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -15903,24 +15916,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -15938,8 +15951,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -15951,11 +15964,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -15965,7 +15978,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -15973,7 +15986,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -15981,7 +15994,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -15993,7 +16006,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -16016,7 +16029,7 @@ export interface operations {
 					 * @description The new mention count. Defaults to 0.
 					 */
 					mention_count?: number;
-					message_id?: null | components["schemas"]["Id"];
+					message_id?: components["schemas"]["Id"] | null;
 				};
 			};
 		};
@@ -16070,8 +16083,8 @@ export interface operations {
 	message_context: {
 		parameters: {
 			query?: {
-				to_start?: null | components["schemas"]["Id"];
-				to_end?: null | components["schemas"]["Id"];
+				to_start?: components["schemas"]["Id"] | null;
+				to_end?: components["schemas"]["Id"] | null;
 				limit?: number | null;
 			};
 			header?: never;
@@ -16123,8 +16136,8 @@ export interface operations {
 					 *     note that you can *only* mention on flume create; editing in a mention later will *not* create a notification
 					 */
 					mentions?: components["schemas"]["ParseMentions"];
-					metadata?: null | components["schemas"]["Metadata"];
-					reply_id?: null | components["schemas"]["Id"];
+					metadata?: components["schemas"]["Metadata"] | null;
+					reply_id?: components["schemas"]["Id"] | null;
 				};
 			};
 		};
@@ -16141,22 +16154,22 @@ export interface operations {
 						channel_id: components["schemas"]["Id"];
 						/** @description when this message was created */
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						/**
 						 * @description whether this message is ephemeral
 						 *
 						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
 						 */
 						ephemeral?: boolean;
-						flume?: null | components["schemas"]["MessageFlume"];
+						flume?: components["schemas"]["MessageFlume"] | null;
 						id: components["schemas"]["Id"];
-						interaction?: null | components["schemas"]["MessageInteraction"];
+						interaction?: components["schemas"]["MessageInteraction"] | null;
 						latest_version: components["schemas"]["MessageVersion"];
-						pinned?: null | components["schemas"]["Pinned"];
+						pinned?: components["schemas"]["Pinned"] | null;
 						reactions?: components["schemas"]["ReactionCounts"];
-						removed_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						thread?: null | components["schemas"]["Channel"];
+						removed_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						thread?: components["schemas"]["Channel"] | null;
 					};
 				};
 			};
@@ -16186,22 +16199,22 @@ export interface operations {
 						channel_id: components["schemas"]["Id"];
 						/** @description when this message was created */
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						/**
 						 * @description whether this message is ephemeral
 						 *
 						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
 						 */
 						ephemeral?: boolean;
-						flume?: null | components["schemas"]["MessageFlume"];
+						flume?: components["schemas"]["MessageFlume"] | null;
 						id: components["schemas"]["Id"];
-						interaction?: null | components["schemas"]["MessageInteraction"];
+						interaction?: components["schemas"]["MessageInteraction"] | null;
 						latest_version: components["schemas"]["MessageVersion"];
-						pinned?: null | components["schemas"]["Pinned"];
+						pinned?: components["schemas"]["Pinned"] | null;
 						reactions?: components["schemas"]["ReactionCounts"];
-						removed_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						thread?: null | components["schemas"]["Channel"];
+						removed_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						thread?: components["schemas"]["Channel"] | null;
 					};
 				};
 			};
@@ -16224,7 +16237,7 @@ export interface operations {
 					append?: components["schemas"]["FlumeAppendCreate"][];
 					/** @description delete some components */
 					delete?: components["schemas"]["ComponentId"][];
-					init?: null | components["schemas"]["Components"];
+					init?: components["schemas"]["Components"] | null;
 					/**
 					 * @description replace a component with one or more components
 					 *
@@ -16321,7 +16334,7 @@ export interface operations {
 				"application/json": {
 					/** @description a description for this invite */
 					description?: string | null;
-					expires_at?: null | components["schemas"]["Time"];
+					expires_at?: components["schemas"]["Time"] | null;
 					/**
 					 * Format: int32
 					 * @description the maximum number of times this invite can be used
@@ -16351,7 +16364,7 @@ export interface operations {
 						creator_id: components["schemas"]["Id"];
 						/** @description a description for this invite */
 						description?: string | null;
-						expires_at?: null | components["schemas"]["Time"];
+						expires_at?: components["schemas"]["Time"] | null;
 						/** @description if this invite's code is custom (instead of random) */
 						is_vanity: boolean;
 						/** @description where this invite leads */
@@ -16618,12 +16631,12 @@ export interface operations {
 					attachments?:
 						| components["schemas"]["MessageAttachmentCreate"][]
 						| null;
-					components?: null | components["schemas"]["Components_Create"];
+					components?: components["schemas"]["Components_Create"] | null;
 					/** @description the new message content in markdown */
 					content?: string | null;
 					embeds?: components["schemas"]["EmbedCreate"][] | null;
-					metadata?: null | components["schemas"]["Metadata"];
-					reply_id?: null | components["schemas"]["Id"];
+					metadata?: components["schemas"]["Metadata"] | null;
+					reply_id?: components["schemas"]["Id"] | null;
 				};
 			};
 		};
@@ -16640,22 +16653,22 @@ export interface operations {
 						channel_id: components["schemas"]["Id"];
 						/** @description when this message was created */
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						/**
 						 * @description whether this message is ephemeral
 						 *
 						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
 						 */
 						ephemeral?: boolean;
-						flume?: null | components["schemas"]["MessageFlume"];
+						flume?: components["schemas"]["MessageFlume"] | null;
 						id: components["schemas"]["Id"];
-						interaction?: null | components["schemas"]["MessageInteraction"];
+						interaction?: components["schemas"]["MessageInteraction"] | null;
 						latest_version: components["schemas"]["MessageVersion"];
-						pinned?: null | components["schemas"]["Pinned"];
+						pinned?: components["schemas"]["Pinned"] | null;
 						reactions?: components["schemas"]["ReactionCounts"];
-						removed_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						thread?: null | components["schemas"]["Channel"];
+						removed_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						thread?: components["schemas"]["Channel"] | null;
 					};
 				};
 			};
@@ -16830,13 +16843,13 @@ export interface operations {
 					/** Format: int64 */
 					default_slowmode_message?: number | null;
 					description?: string | null;
-					icon?: null | components["schemas"]["Id"];
+					icon?: components["schemas"]["Id"] | null;
 					/** @description whether users without ThreadManage can add other members to this thread */
 					invitable?: boolean;
 					name: string;
 					/** @description not safe for work */
 					nsfw?: boolean;
-					parent_id?: null | components["schemas"]["Id"];
+					parent_id?: components["schemas"]["Id"] | null;
 					permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
 					/** @description the recipient(s) for this dm/gdm */
 					recipients?: components["schemas"]["Id"][] | null;
@@ -16844,7 +16857,7 @@ export interface operations {
 					slowmode_message?: number | null;
 					/** Format: int64 */
 					slowmode_thread?: number | null;
-					starter_message?: null | components["schemas"]["MessageCreate"];
+					starter_message?: components["schemas"]["MessageCreate"] | null;
 					/** @description tags to apply to this thread (overwrite, not append) */
 					tags?: components["schemas"]["Id"][] | null;
 					/** @description The type of this channel */
@@ -16864,7 +16877,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -16879,7 +16892,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -16893,24 +16906,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -16928,8 +16941,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -16941,11 +16954,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -16955,7 +16968,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -16963,7 +16976,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -16971,7 +16984,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -16983,7 +16996,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -17055,22 +17068,22 @@ export interface operations {
 						channel_id: components["schemas"]["Id"];
 						/** @description when this message was created */
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						/**
 						 * @description whether this message is ephemeral
 						 *
 						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
 						 */
 						ephemeral?: boolean;
-						flume?: null | components["schemas"]["MessageFlume"];
+						flume?: components["schemas"]["MessageFlume"] | null;
 						id: components["schemas"]["Id"];
-						interaction?: null | components["schemas"]["MessageInteraction"];
+						interaction?: components["schemas"]["MessageInteraction"] | null;
 						latest_version: components["schemas"]["MessageVersion"];
-						pinned?: null | components["schemas"]["Pinned"];
+						pinned?: components["schemas"]["Pinned"] | null;
 						reactions?: components["schemas"]["ReactionCounts"];
-						removed_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						thread?: null | components["schemas"]["Channel"];
+						removed_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						thread?: components["schemas"]["Channel"] | null;
 					};
 				};
 			};
@@ -17159,22 +17172,22 @@ export interface operations {
 						channel_id: components["schemas"]["Id"];
 						/** @description when this message was created */
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						/**
 						 * @description whether this message is ephemeral
 						 *
 						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
 						 */
 						ephemeral?: boolean;
-						flume?: null | components["schemas"]["MessageFlume"];
+						flume?: components["schemas"]["MessageFlume"] | null;
 						id: components["schemas"]["Id"];
-						interaction?: null | components["schemas"]["MessageInteraction"];
+						interaction?: components["schemas"]["MessageInteraction"] | null;
 						latest_version: components["schemas"]["MessageVersion"];
-						pinned?: null | components["schemas"]["Pinned"];
+						pinned?: components["schemas"]["Pinned"] | null;
 						reactions?: components["schemas"]["ReactionCounts"];
-						removed_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						thread?: null | components["schemas"]["Channel"];
+						removed_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						thread?: components["schemas"]["Channel"] | null;
 					};
 				};
 			};
@@ -17315,8 +17328,8 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					slowmode_message_expire_at?: null | components["schemas"]["Time"];
-					slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+					slowmode_message_expire_at?: components["schemas"]["Time"] | null;
+					slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 				};
 			};
 		};
@@ -17412,7 +17425,7 @@ export interface operations {
 						channel_id: components["schemas"]["Id"];
 						created_at: components["schemas"]["Time"];
 						creator_id: components["schemas"]["Id"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						/** @description detected inputs for this script */
 						handlers: components["schemas"]["RedexHandler"][];
 						id: components["schemas"]["Id"];
@@ -17453,7 +17466,7 @@ export interface operations {
 						channel_id: components["schemas"]["Id"];
 						created_at: components["schemas"]["Time"];
 						creator_id: components["schemas"]["Id"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						/** @description detected inputs for this script */
 						handlers: components["schemas"]["RedexHandler"][];
 						id: components["schemas"]["Id"];
@@ -17523,7 +17536,7 @@ export interface operations {
 				content: {
 					"application/json": {
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						format: components["schemas"]["RedexFormat"];
 						location: components["schemas"]["RedexLocation"];
 						metadata: components["schemas"]["RedexMetadata"];
@@ -17586,7 +17599,7 @@ export interface operations {
 				content: {
 					"application/json": {
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						format: components["schemas"]["RedexFormat"];
 						location: components["schemas"]["RedexLocation"];
 						metadata: components["schemas"]["RedexMetadata"];
@@ -17657,7 +17670,7 @@ export interface operations {
 						redex_id: components["schemas"]["Id"];
 						redex_version_id: components["schemas"]["Id"];
 						status: components["schemas"]["EvalStatus"];
-						stopped_at?: null | components["schemas"]["Time"];
+						stopped_at?: components["schemas"]["Time"] | null;
 					};
 				};
 			};
@@ -17769,7 +17782,7 @@ export interface operations {
 						redex_id: components["schemas"]["Id"];
 						redex_version_id: components["schemas"]["Id"];
 						status: components["schemas"]["EvalStatus"];
-						stopped_at?: null | components["schemas"]["Time"];
+						stopped_at?: components["schemas"]["Time"] | null;
 					};
 				};
 			};
@@ -17830,7 +17843,7 @@ export interface operations {
 				content: {
 					"application/json": {
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						format: components["schemas"]["RedexFormat"];
 						location: components["schemas"]["RedexLocation"];
 						metadata: components["schemas"]["RedexMetadata"];
@@ -17884,7 +17897,7 @@ export interface operations {
 				content: {
 					"application/json": {
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						format: components["schemas"]["RedexFormat"];
 						location: components["schemas"]["RedexLocation"];
 						metadata: components["schemas"]["RedexMetadata"];
@@ -18055,7 +18068,7 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					description?: string | null;
 					name: string;
 					restricted?: boolean;
@@ -18083,7 +18096,7 @@ export interface operations {
 						 */
 						archived: boolean;
 						channel_id: components["schemas"]["Id"];
-						color?: null | components["schemas"]["Color"];
+						color?: components["schemas"]["Color"] | null;
 						description?: string | null;
 						id: components["schemas"]["Id"];
 						name: string;
@@ -18172,7 +18185,7 @@ export interface operations {
 						 */
 						archived: boolean;
 						channel_id: components["schemas"]["Id"];
-						color?: null | components["schemas"]["Color"];
+						color?: components["schemas"]["Color"] | null;
 						description?: string | null;
 						id: components["schemas"]["Id"];
 						name: string;
@@ -18227,7 +18240,7 @@ export interface operations {
 			content: {
 				"application/json": {
 					archived?: boolean | null;
-					color?: null | components["schemas"]["Color"];
+					color?: components["schemas"]["Color"] | null;
 					description?: string | null;
 					name?: string | null;
 					restricted?: boolean | null;
@@ -18255,7 +18268,7 @@ export interface operations {
 						 */
 						archived: boolean;
 						channel_id: components["schemas"]["Id"];
-						color?: null | components["schemas"]["Color"];
+						color?: components["schemas"]["Color"] | null;
 						description?: string | null;
 						id: components["schemas"]["Id"];
 						name: string;
@@ -18339,13 +18352,13 @@ export interface operations {
 					/** Format: int64 */
 					default_slowmode_message?: number | null;
 					description?: string | null;
-					icon?: null | components["schemas"]["Id"];
+					icon?: components["schemas"]["Id"] | null;
 					/** @description whether users without ThreadManage can add other members to this thread */
 					invitable?: boolean;
 					name: string;
 					/** @description not safe for work */
 					nsfw?: boolean;
-					parent_id?: null | components["schemas"]["Id"];
+					parent_id?: components["schemas"]["Id"] | null;
 					permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
 					/** @description the recipient(s) for this dm/gdm */
 					recipients?: components["schemas"]["Id"][] | null;
@@ -18353,7 +18366,7 @@ export interface operations {
 					slowmode_message?: number | null;
 					/** Format: int64 */
 					slowmode_thread?: number | null;
-					starter_message?: null | components["schemas"]["MessageCreate"];
+					starter_message?: components["schemas"]["MessageCreate"] | null;
 					/** @description tags to apply to this thread (overwrite, not append) */
 					tags?: components["schemas"]["Id"][] | null;
 					/** @description The type of this channel */
@@ -18373,7 +18386,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -18388,7 +18401,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -18402,24 +18415,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -18437,8 +18450,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -18450,11 +18463,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -18464,7 +18477,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -18472,7 +18485,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -18480,7 +18493,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -18492,7 +18505,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -18617,7 +18630,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -18632,7 +18645,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -18646,24 +18659,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -18681,8 +18694,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -18694,11 +18707,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -18708,7 +18721,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -18716,7 +18729,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -18724,7 +18737,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -18736,7 +18749,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -18780,21 +18793,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -18803,10 +18816,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -18818,13 +18831,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -18833,7 +18846,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -19096,7 +19109,7 @@ export interface operations {
 						id: components["schemas"]["Id"];
 						/** @description the name of this branch */
 						name?: string | null;
-						parent_id?: null | components["schemas"]["DocumentRevisionId"];
+						parent_id?: components["schemas"]["DocumentRevisionId"] | null;
 						/**
 						 * @description Whether this is a private branch.
 						 *
@@ -19151,7 +19164,7 @@ export interface operations {
 						id: components["schemas"]["Id"];
 						/** @description the name of this branch */
 						name?: string | null;
-						parent_id?: null | components["schemas"]["DocumentRevisionId"];
+						parent_id?: components["schemas"]["DocumentRevisionId"] | null;
 						/**
 						 * @description Whether this is a private branch.
 						 *
@@ -19198,7 +19211,7 @@ export interface operations {
 						id: components["schemas"]["Id"];
 						/** @description the name of this branch */
 						name?: string | null;
-						parent_id?: null | components["schemas"]["DocumentRevisionId"];
+						parent_id?: components["schemas"]["DocumentRevisionId"] | null;
 						/**
 						 * @description Whether this is a private branch.
 						 *
@@ -19242,7 +19255,7 @@ export interface operations {
 	document_crdt_diff: {
 		parameters: {
 			query?: {
-				sv?: null | components["schemas"]["DocumentStateVector"];
+				sv?: components["schemas"]["DocumentStateVector"] | null;
 			};
 			header?: never;
 			path: {
@@ -19347,7 +19360,7 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					target_branch_id?: null | components["schemas"]["Id"];
+					target_branch_id?: components["schemas"]["Id"] | null;
 				};
 			};
 		};
@@ -19374,7 +19387,7 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					sync_from_branch_id?: null | components["schemas"]["Id"];
+					sync_from_branch_id?: components["schemas"]["Id"] | null;
 				};
 			};
 		};
@@ -19428,7 +19441,7 @@ export interface operations {
 						id: components["schemas"]["Id"];
 						/** @description the name of this branch */
 						name?: string | null;
-						parent_id?: null | components["schemas"]["DocumentRevisionId"];
+						parent_id?: components["schemas"]["DocumentRevisionId"] | null;
 						/**
 						 * @description Whether this is a private branch.
 						 *
@@ -19514,7 +19527,7 @@ export interface operations {
 						branch_id: components["schemas"]["Id"];
 						/** @description when this tag was created */
 						created_at: components["schemas"]["Time"];
-						creator_id?: null | components["schemas"]["Id"];
+						creator_id?: components["schemas"]["Id"] | null;
 						/** @description optional more detailed description */
 						description?: string | null;
 						/** @description the unique identifier for this tag */
@@ -19582,7 +19595,7 @@ export interface operations {
 						branch_id: components["schemas"]["Id"];
 						/** @description when this tag was created */
 						created_at: components["schemas"]["Time"];
-						creator_id?: null | components["schemas"]["Id"];
+						creator_id?: components["schemas"]["Id"] | null;
 						/** @description optional more detailed description */
 						description?: string | null;
 						/** @description the unique identifier for this tag */
@@ -19650,7 +19663,7 @@ export interface operations {
 						branch_id: components["schemas"]["Id"];
 						/** @description when this tag was created */
 						created_at: components["schemas"]["Time"];
-						creator_id?: null | components["schemas"]["Id"];
+						creator_id?: components["schemas"]["Id"] | null;
 						/** @description optional more detailed description */
 						description?: string | null;
 						/** @description the unique identifier for this tag */
@@ -19718,11 +19731,11 @@ export interface operations {
 					"application/json": {
 						/** @description whether this emoji is animated */
 						animated: boolean;
-						creator_id?: null | components["schemas"]["Id"];
+						creator_id?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						media_id: components["schemas"]["Id"];
 						name: string;
-						owner?: null | components["schemas"]["EmojiOwner"];
+						owner?: components["schemas"]["EmojiOwner"] | null;
 					};
 				};
 			};
@@ -19751,11 +19764,11 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						avatar?: null | components["schemas"]["Id"];
-						banner?: null | components["schemas"]["Id"];
+						avatar?: components["schemas"]["Id"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/** @description whether this user is a bot */
 						bot: boolean;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						emails?: components["schemas"]["EmailInfo"][] | null;
 						/**
@@ -19766,16 +19779,16 @@ export interface operations {
 						has_mfa?: boolean | null;
 						id: components["schemas"]["Id"];
 						name: string;
-						preferences?: null | components["schemas"]["PreferencesUser"];
+						preferences?: components["schemas"]["PreferencesUser"] | null;
 						presence: components["schemas"]["Presence"];
-						puppet?: null | components["schemas"]["Puppet"];
-						registered_at?: null | components["schemas"]["Time"];
-						remote?: null | components["schemas"]["Remote_Id"];
-						suspended?: null | components["schemas"]["Suspended"];
+						puppet?: components["schemas"]["Puppet"] | null;
+						registered_at?: components["schemas"]["Time"] | null;
+						remote?: components["schemas"]["Remote_Id"] | null;
+						suspended?: components["schemas"]["Suspended"] | null;
 						/** @description whether this user is an official system user */
 						system: boolean;
 						version_id: components["schemas"]["Id"];
-						webhook?: null | components["schemas"]["UserWebhook"];
+						webhook?: components["schemas"]["UserWebhook"] | null;
 					};
 				};
 			};
@@ -19852,7 +19865,7 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					added_at?: null | components["schemas"]["Time"];
+					added_at?: components["schemas"]["Time"] | null;
 					/** @description the channel this message was sent in */
 					channel_id: components["schemas"]["Id"];
 					/** @description the id of the message that was sent */
@@ -19873,7 +19886,7 @@ export interface operations {
 						id: components["schemas"]["Id"];
 						/** @description user defined note for this notification */
 						note?: string | null;
-						read_at?: null | components["schemas"]["Time"];
+						read_at?: components["schemas"]["Time"] | null;
 					};
 				};
 			};
@@ -19889,8 +19902,8 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					after?: null | components["schemas"]["Id"];
-					before?: null | components["schemas"]["Id"];
+					after?: components["schemas"]["Id"] | null;
+					before?: components["schemas"]["Id"] | null;
 					/** @description restrict to just these channels */
 					channel_ids?: components["schemas"]["Id"][] | null;
 					/** @description also include unread notifications */
@@ -20071,15 +20084,15 @@ export interface operations {
 				"application/json": {
 					/** @description message attachments */
 					attachments?: components["schemas"]["MessageAttachmentCreate"][];
-					components?: null | components["schemas"]["Components_Create"];
+					components?: components["schemas"]["Components_Create"] | null;
 					/** @description the message's content in markdown */
 					content?: string | null;
 					embeds?: components["schemas"]["EmbedCreate"][];
 					/** @description whether to make this message ephemeral */
 					ephemeral?: boolean;
 					mentions?: components["schemas"]["ParseMentions"];
-					metadata?: null | components["schemas"]["Metadata"];
-					reply_id?: null | components["schemas"]["Id"];
+					metadata?: components["schemas"]["Metadata"] | null;
+					reply_id?: components["schemas"]["Id"] | null;
 				};
 			};
 		};
@@ -20096,22 +20109,22 @@ export interface operations {
 						channel_id: components["schemas"]["Id"];
 						/** @description when this message was created */
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						/**
 						 * @description whether this message is ephemeral
 						 *
 						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
 						 */
 						ephemeral?: boolean;
-						flume?: null | components["schemas"]["MessageFlume"];
+						flume?: components["schemas"]["MessageFlume"] | null;
 						id: components["schemas"]["Id"];
-						interaction?: null | components["schemas"]["MessageInteraction"];
+						interaction?: components["schemas"]["MessageInteraction"] | null;
 						latest_version: components["schemas"]["MessageVersion"];
-						pinned?: null | components["schemas"]["Pinned"];
+						pinned?: components["schemas"]["Pinned"] | null;
 						reactions?: components["schemas"]["ReactionCounts"];
-						removed_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						thread?: null | components["schemas"]["Channel"];
+						removed_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						thread?: components["schemas"]["Channel"] | null;
 					};
 				};
 			};
@@ -20142,22 +20155,22 @@ export interface operations {
 						channel_id: components["schemas"]["Id"];
 						/** @description when this message was created */
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						/**
 						 * @description whether this message is ephemeral
 						 *
 						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
 						 */
 						ephemeral?: boolean;
-						flume?: null | components["schemas"]["MessageFlume"];
+						flume?: components["schemas"]["MessageFlume"] | null;
 						id: components["schemas"]["Id"];
-						interaction?: null | components["schemas"]["MessageInteraction"];
+						interaction?: components["schemas"]["MessageInteraction"] | null;
 						latest_version: components["schemas"]["MessageVersion"];
-						pinned?: null | components["schemas"]["Pinned"];
+						pinned?: components["schemas"]["Pinned"] | null;
 						reactions?: components["schemas"]["ReactionCounts"];
-						removed_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						thread?: null | components["schemas"]["Channel"];
+						removed_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						thread?: components["schemas"]["Channel"] | null;
 					};
 				};
 			};
@@ -20205,12 +20218,12 @@ export interface operations {
 					attachments?:
 						| components["schemas"]["MessageAttachmentCreate"][]
 						| null;
-					components?: null | components["schemas"]["Components_Create"];
+					components?: components["schemas"]["Components_Create"] | null;
 					/** @description the new message content in markdown */
 					content?: string | null;
 					embeds?: components["schemas"]["EmbedCreate"][] | null;
-					metadata?: null | components["schemas"]["Metadata"];
-					reply_id?: null | components["schemas"]["Id"];
+					metadata?: components["schemas"]["Metadata"] | null;
+					reply_id?: components["schemas"]["Id"] | null;
 				};
 			};
 		};
@@ -20227,48 +20240,27 @@ export interface operations {
 						channel_id: components["schemas"]["Id"];
 						/** @description when this message was created */
 						created_at: components["schemas"]["Time"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						/**
 						 * @description whether this message is ephemeral
 						 *
 						 *     ephemeral messages are only visible to the user who created an interaction and aren't stored
 						 */
 						ephemeral?: boolean;
-						flume?: null | components["schemas"]["MessageFlume"];
+						flume?: components["schemas"]["MessageFlume"] | null;
 						id: components["schemas"]["Id"];
-						interaction?: null | components["schemas"]["MessageInteraction"];
+						interaction?: components["schemas"]["MessageInteraction"] | null;
 						latest_version: components["schemas"]["MessageVersion"];
-						pinned?: null | components["schemas"]["Pinned"];
+						pinned?: components["schemas"]["Pinned"] | null;
 						reactions?: components["schemas"]["ReactionCounts"];
-						removed_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						thread?: null | components["schemas"]["Channel"];
+						removed_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						thread?: components["schemas"]["Channel"] | null;
 					};
 				};
 			};
 			/** @description no change */
 			204: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	harvest_download: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path: {
-				harvest_id: string;
-				token: string;
-			};
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
 				headers: {
 					[name: string]: unknown;
 				};
@@ -20385,7 +20377,7 @@ export interface operations {
 				"application/json": {
 					/** @description a description for this invite */
 					description?: string | null;
-					expires_at?: null | components["schemas"]["Time"];
+					expires_at?: components["schemas"]["Time"] | null;
 					/**
 					 * Format: int32
 					 * @description the maximum number of times this invite can be used
@@ -20414,7 +20406,7 @@ export interface operations {
 						creator_id: components["schemas"]["Id"];
 						/** @description a description for this invite */
 						description?: string | null;
-						expires_at?: null | components["schemas"]["Time"];
+						expires_at?: components["schemas"]["Time"] | null;
 						/** @description if this invite's code is custom (instead of random) */
 						is_vanity: boolean;
 						/** @description where this invite leads */
@@ -20527,10 +20519,10 @@ export interface operations {
 					"application/json": {
 						/** @description Descriptive alt text. */
 						alt?: string | null;
-						channel_id?: null | components["schemas"]["Id"];
+						channel_id?: components["schemas"]["Id"] | null;
 						/** @description The mime type of this piece of media. */
 						content_type: components["schemas"]["Mime"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						filename: string;
 						/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
 						has_gifv: boolean;
@@ -20543,9 +20535,9 @@ export interface operations {
 						links?: components["schemas"]["MediaLinkType"][];
 						/** @description Additional filetype-specific metadata for the file */
 						metadata: components["schemas"]["MediaMetadata"];
-						quarantine?: null | components["schemas"]["MediaQuarantine"];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						quarantine?: components["schemas"]["MediaQuarantine"] | null;
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** @description The results of automated scans. */
 						scans?: components["schemas"]["MediaScan"][];
 						/**
@@ -20565,7 +20557,7 @@ export interface operations {
 						 *     Once set to `true`, this cannot be unset.
 						 */
 						strip_exif?: boolean;
-						user_id?: null | components["schemas"]["Id"];
+						user_id?: components["schemas"]["Id"] | null;
 						version_id: components["schemas"]["Id"];
 					};
 				};
@@ -20635,10 +20627,10 @@ export interface operations {
 					"application/json": {
 						/** @description Descriptive alt text. */
 						alt?: string | null;
-						channel_id?: null | components["schemas"]["Id"];
+						channel_id?: components["schemas"]["Id"] | null;
 						/** @description The mime type of this piece of media. */
 						content_type: components["schemas"]["Mime"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						filename: string;
 						/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
 						has_gifv: boolean;
@@ -20651,9 +20643,9 @@ export interface operations {
 						links?: components["schemas"]["MediaLinkType"][];
 						/** @description Additional filetype-specific metadata for the file */
 						metadata: components["schemas"]["MediaMetadata"];
-						quarantine?: null | components["schemas"]["MediaQuarantine"];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						quarantine?: components["schemas"]["MediaQuarantine"] | null;
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** @description The results of automated scans. */
 						scans?: components["schemas"]["MediaScan"][];
 						/**
@@ -20673,7 +20665,7 @@ export interface operations {
 						 *     Once set to `true`, this cannot be unset.
 						 */
 						strip_exif?: boolean;
-						user_id?: null | components["schemas"]["Id"];
+						user_id?: components["schemas"]["Id"] | null;
 						version_id: components["schemas"]["Id"];
 					};
 				};
@@ -20709,10 +20701,10 @@ export interface operations {
 					"application/json": {
 						/** @description Descriptive alt text. */
 						alt?: string | null;
-						channel_id?: null | components["schemas"]["Id"];
+						channel_id?: components["schemas"]["Id"] | null;
 						/** @description The mime type of this piece of media. */
 						content_type: components["schemas"]["Mime"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						filename: string;
 						/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
 						has_gifv: boolean;
@@ -20725,9 +20717,9 @@ export interface operations {
 						links?: components["schemas"]["MediaLinkType"][];
 						/** @description Additional filetype-specific metadata for the file */
 						metadata: components["schemas"]["MediaMetadata"];
-						quarantine?: null | components["schemas"]["MediaQuarantine"];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						quarantine?: components["schemas"]["MediaQuarantine"] | null;
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** @description The results of automated scans. */
 						scans?: components["schemas"]["MediaScan"][];
 						/**
@@ -20747,7 +20739,7 @@ export interface operations {
 						 *     Once set to `true`, this cannot be unset.
 						 */
 						strip_exif?: boolean;
-						user_id?: null | components["schemas"]["Id"];
+						user_id?: components["schemas"]["Id"] | null;
 						version_id: components["schemas"]["Id"];
 					};
 				};
@@ -20785,10 +20777,10 @@ export interface operations {
 					"application/json": {
 						/** @description Descriptive alt text. */
 						alt?: string | null;
-						channel_id?: null | components["schemas"]["Id"];
+						channel_id?: components["schemas"]["Id"] | null;
 						/** @description The mime type of this piece of media. */
 						content_type: components["schemas"]["Mime"];
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						filename: string;
 						/** @description Whether this media can be fetched through the `/gifv/{media_id}` cdn route. */
 						has_gifv: boolean;
@@ -20801,9 +20793,9 @@ export interface operations {
 						links?: components["schemas"]["MediaLinkType"][];
 						/** @description Additional filetype-specific metadata for the file */
 						metadata: components["schemas"]["MediaMetadata"];
-						quarantine?: null | components["schemas"]["MediaQuarantine"];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						quarantine?: components["schemas"]["MediaQuarantine"] | null;
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** @description The results of automated scans. */
 						scans?: components["schemas"]["MediaScan"][];
 						/**
@@ -20823,7 +20815,7 @@ export interface operations {
 						 *     Once set to `true`, this cannot be unset.
 						 */
 						strip_exif?: boolean;
-						user_id?: null | components["schemas"]["Id"];
+						user_id?: components["schemas"]["Id"] | null;
 						version_id: components["schemas"]["Id"];
 					};
 				};
@@ -21038,7 +21030,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						email?: null | components["schemas"]["EmailAddr"];
+						email?: components["schemas"]["EmailAddr"] | null;
 						/** @description if the provided email has been verified or not */
 						email_verified: boolean;
 						/**
@@ -21079,9 +21071,9 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					banner?: null | components["schemas"]["Id"];
+					banner?: components["schemas"]["Id"] | null;
 					description?: string | null;
-					icon?: null | components["schemas"]["Id"];
+					icon?: components["schemas"]["Id"] | null;
 					name: string;
 					public?: boolean | null;
 				};
@@ -21095,21 +21087,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -21118,10 +21110,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -21133,13 +21125,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -21148,7 +21140,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -21240,21 +21232,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -21263,10 +21255,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -21278,13 +21270,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -21293,7 +21285,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -21735,9 +21727,9 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					banner?: null | components["schemas"]["Id"];
+					banner?: components["schemas"]["Id"] | null;
 					description?: string | null;
-					icon?: null | components["schemas"]["Id"];
+					icon?: components["schemas"]["Id"] | null;
 					name: string;
 					public?: boolean | null;
 				};
@@ -21751,21 +21743,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -21774,10 +21766,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -21789,13 +21781,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -21804,7 +21796,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -21886,7 +21878,7 @@ export interface operations {
 						/** @description name for this template */
 						name: string;
 						snapshot: components["schemas"]["RoomTemplateSnapshot"];
-						source_room_id?: null | components["schemas"]["Id"];
+						source_room_id?: components["schemas"]["Id"] | null;
 						/** @description when this template was last edited or synced */
 						updated_at: components["schemas"]["Time"];
 					};
@@ -21928,7 +21920,7 @@ export interface operations {
 						/** @description name for this template */
 						name: string;
 						snapshot: components["schemas"]["RoomTemplateSnapshot"];
-						source_room_id?: null | components["schemas"]["Id"];
+						source_room_id?: components["schemas"]["Id"] | null;
 						/** @description when this template was last edited or synced */
 						updated_at: components["schemas"]["Time"];
 					};
@@ -21997,7 +21989,7 @@ export interface operations {
 						/** @description name for this template */
 						name: string;
 						snapshot: components["schemas"]["RoomTemplateSnapshot"];
-						source_room_id?: null | components["schemas"]["Id"];
+						source_room_id?: components["schemas"]["Id"] | null;
 						/** @description when this template was last edited or synced */
 						updated_at: components["schemas"]["Time"];
 					};
@@ -22039,7 +22031,7 @@ export interface operations {
 						/** @description name for this template */
 						name: string;
 						snapshot: components["schemas"]["RoomTemplateSnapshot"];
-						source_room_id?: null | components["schemas"]["Id"];
+						source_room_id?: components["schemas"]["Id"] | null;
 						/** @description when this template was last edited or synced */
 						updated_at: components["schemas"]["Time"];
 					};
@@ -22092,21 +22084,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -22115,10 +22107,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -22130,13 +22122,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -22145,7 +22137,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -22190,19 +22182,19 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					afk_channel_id?: null | components["schemas"]["Id"];
+					afk_channel_id?: components["schemas"]["Id"] | null;
 					/**
 					 * Format: int64
 					 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 					 */
 					afk_channel_timeout?: number | null;
-					banner?: null | components["schemas"]["Id"];
+					banner?: components["schemas"]["Id"] | null;
 					description?: string | null;
-					icon?: null | components["schemas"]["Id"];
-					invites_paused_until?: null | components["schemas"]["Time"];
+					icon?: components["schemas"]["Id"] | null;
+					invites_paused_until?: components["schemas"]["Time"] | null;
 					name?: string | null;
 					public?: boolean | null;
-					welcome_channel_id?: null | components["schemas"]["Id"];
+					welcome_channel_id?: components["schemas"]["Id"] | null;
 				};
 			};
 		};
@@ -22214,21 +22206,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -22237,10 +22229,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -22252,13 +22244,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -22267,7 +22259,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -22303,13 +22295,13 @@ export interface operations {
 	room_analytics_channels: {
 		parameters: {
 			query: {
-				start?: null | components["schemas"]["Time"];
-				end?: null | components["schemas"]["Time"];
+				start?: components["schemas"]["Time"] | null;
+				end?: components["schemas"]["Time"] | null;
 				aggregate: components["schemas"]["Aggregation"];
 				/** @description limit between 1..1024, default to 10 */
 				limit?: number | null;
 				/** @description return only analytics for this channel, otherwise return data points for everything */
-				channel_id?: null | components["schemas"]["Id"];
+				channel_id?: components["schemas"]["Id"] | null;
 			};
 			header?: never;
 			path: {
@@ -22343,8 +22335,8 @@ export interface operations {
 	room_analytics_invites: {
 		parameters: {
 			query: {
-				start?: null | components["schemas"]["Time"];
-				end?: null | components["schemas"]["Time"];
+				start?: components["schemas"]["Time"] | null;
+				end?: components["schemas"]["Time"] | null;
 				aggregate: components["schemas"]["Aggregation"];
 				/** @description limit between 1..1024, default to 10 */
 				limit?: number | null;
@@ -22381,8 +22373,8 @@ export interface operations {
 	room_analytics_members_count: {
 		parameters: {
 			query: {
-				start?: null | components["schemas"]["Time"];
-				end?: null | components["schemas"]["Time"];
+				start?: components["schemas"]["Time"] | null;
+				end?: components["schemas"]["Time"] | null;
 				aggregate: components["schemas"]["Aggregation"];
 				/** @description limit between 1..1024, default to 10 */
 				limit?: number | null;
@@ -22417,8 +22409,8 @@ export interface operations {
 	room_analytics_members_join: {
 		parameters: {
 			query: {
-				start?: null | components["schemas"]["Time"];
-				end?: null | components["schemas"]["Time"];
+				start?: components["schemas"]["Time"] | null;
+				end?: components["schemas"]["Time"] | null;
 				aggregate: components["schemas"]["Aggregation"];
 				/** @description limit between 1..1024, default to 10 */
 				limit?: number | null;
@@ -22453,8 +22445,8 @@ export interface operations {
 	room_analytics_members_leave: {
 		parameters: {
 			query: {
-				start?: null | components["schemas"]["Time"];
-				end?: null | components["schemas"]["Time"];
+				start?: components["schemas"]["Time"] | null;
+				end?: components["schemas"]["Time"] | null;
 				aggregate: components["schemas"]["Aggregation"];
 				/** @description limit between 1..1024, default to 10 */
 				limit?: number | null;
@@ -22489,8 +22481,8 @@ export interface operations {
 	room_analytics_overview: {
 		parameters: {
 			query: {
-				start?: null | components["schemas"]["Time"];
-				end?: null | components["schemas"]["Time"];
+				start?: components["schemas"]["Time"] | null;
+				end?: components["schemas"]["Time"] | null;
 				aggregate: components["schemas"]["Aggregation"];
 				/** @description limit between 1..1024, default to 10 */
 				limit?: number | null;
@@ -22723,7 +22715,7 @@ export interface operations {
 						 *     eg. if one rule times a user out for 60 seconds and another times out for 120 seconds, there would be one action that times out for 120 seconds
 						 */
 						actions: components["schemas"]["AutomodAction"][];
-						matches?: null | components["schemas"]["AutomodMatches"];
+						matches?: components["schemas"]["AutomodMatches"] | null;
 						/** @description the rules that matched the text */
 						rules: components["schemas"]["AutomodRule"][];
 					};
@@ -22814,8 +22806,8 @@ export interface operations {
 					except_roles?: components["schemas"]["Id"][] | null;
 					include_everyone?: boolean | null;
 					name?: string | null;
-					target?: null | components["schemas"]["AutomodTarget"];
-					trigger?: null | components["schemas"]["AutomodTrigger"];
+					target?: components["schemas"]["AutomodTarget"] | null;
+					trigger?: components["schemas"]["AutomodTrigger"] | null;
 				};
 			};
 		};
@@ -22895,7 +22887,7 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					expires_at?: null | components["schemas"]["Time"];
+					expires_at?: components["schemas"]["Time"] | null;
 					/** @description who to ban */
 					target_ids?: components["schemas"]["Id"][];
 				};
@@ -22966,7 +22958,7 @@ export interface operations {
 					"application/json": {
 						/** @description when the ban was created */
 						created_at: components["schemas"]["Time"];
-						expires_at?: null | components["schemas"]["Time"];
+						expires_at?: components["schemas"]["Time"] | null;
 						/** @description the supplied reason why this user should be banned */
 						reason?: string | null;
 						/** @description the user who is banned */
@@ -22989,7 +22981,7 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					expires_at?: null | components["schemas"]["Time"];
+					expires_at?: components["schemas"]["Time"] | null;
 				};
 			};
 		};
@@ -23089,13 +23081,13 @@ export interface operations {
 					/** Format: int64 */
 					default_slowmode_message?: number | null;
 					description?: string | null;
-					icon?: null | components["schemas"]["Id"];
+					icon?: components["schemas"]["Id"] | null;
 					/** @description whether users without ThreadManage can add other members to this thread */
 					invitable?: boolean;
 					name: string;
 					/** @description not safe for work */
 					nsfw?: boolean;
-					parent_id?: null | components["schemas"]["Id"];
+					parent_id?: components["schemas"]["Id"] | null;
 					permission_overwrites?: components["schemas"]["PermissionOverwrite"][];
 					/** @description the recipient(s) for this dm/gdm */
 					recipients?: components["schemas"]["Id"][] | null;
@@ -23103,7 +23095,7 @@ export interface operations {
 					slowmode_message?: number | null;
 					/** Format: int64 */
 					slowmode_thread?: number | null;
-					starter_message?: null | components["schemas"]["MessageCreate"];
+					starter_message?: components["schemas"]["MessageCreate"] | null;
 					/** @description tags to apply to this thread (overwrite, not append) */
 					tags?: components["schemas"]["Id"][] | null;
 					/** @description The type of this channel */
@@ -23123,7 +23115,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -23138,7 +23130,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -23152,24 +23144,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -23187,8 +23179,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -23200,11 +23192,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -23214,7 +23206,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -23222,7 +23214,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -23230,7 +23222,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -23242,7 +23234,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -23278,7 +23270,7 @@ export interface operations {
 	channel_list_removed: {
 		parameters: {
 			query?: {
-				parent_id?: null | components["schemas"]["Id"];
+				parent_id?: components["schemas"]["Id"] | null;
 				from?: string;
 				to?: string;
 				dir?: "b" | "f";
@@ -23372,11 +23364,11 @@ export interface operations {
 					"application/json": {
 						/** @description whether this emoji is animated */
 						animated: boolean;
-						creator_id?: null | components["schemas"]["Id"];
+						creator_id?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						media_id: components["schemas"]["Id"];
 						name: string;
-						owner?: null | components["schemas"]["EmojiOwner"];
+						owner?: components["schemas"]["EmojiOwner"] | null;
 					};
 				};
 			};
@@ -23403,11 +23395,11 @@ export interface operations {
 					"application/json": {
 						/** @description whether this emoji is animated */
 						animated: boolean;
-						creator_id?: null | components["schemas"]["Id"];
+						creator_id?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						media_id: components["schemas"]["Id"];
 						name: string;
-						owner?: null | components["schemas"]["EmojiOwner"];
+						owner?: components["schemas"]["EmojiOwner"] | null;
 					};
 				};
 			};
@@ -23461,11 +23453,11 @@ export interface operations {
 					"application/json": {
 						/** @description whether this emoji is animated */
 						animated: boolean;
-						creator_id?: null | components["schemas"]["Id"];
+						creator_id?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						media_id: components["schemas"]["Id"];
 						name: string;
-						owner?: null | components["schemas"]["EmojiOwner"];
+						owner?: components["schemas"]["EmojiOwner"] | null;
 					};
 				};
 			};
@@ -23490,21 +23482,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -23513,10 +23505,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -23528,13 +23520,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -23543,7 +23535,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -23568,21 +23560,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -23591,10 +23583,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -23606,13 +23598,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -23621,7 +23613,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -23707,7 +23699,7 @@ export interface operations {
 				"application/json": {
 					/** @description a description for this invite */
 					description?: string | null;
-					expires_at?: null | components["schemas"]["Time"];
+					expires_at?: components["schemas"]["Time"] | null;
 					/**
 					 * Format: int32
 					 * @description the maximum number of times this invite can be used
@@ -23737,7 +23729,7 @@ export interface operations {
 						creator_id: components["schemas"]["Id"];
 						/** @description a description for this invite */
 						description?: string | null;
-						expires_at?: null | components["schemas"]["Time"];
+						expires_at?: components["schemas"]["Time"] | null;
 						/** @description if this invite's code is custom (instead of random) */
 						is_vanity: boolean;
 						/** @description where this invite leads */
@@ -23820,15 +23812,15 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					create_after?: null | components["schemas"]["Time"];
-					create_before?: null | components["schemas"]["Time"];
+					create_after?: components["schemas"]["Time"] | null;
+					create_before?: components["schemas"]["Time"] | null;
 					/** @description return members who are/aren't room deafened */
 					deaf?: boolean | null;
 					/** @description return members who are/aren't server guests */
 					guest?: boolean | null;
-					invite?: null | components["schemas"]["InviteCode"];
-					join_after?: null | components["schemas"]["Time"];
-					join_before?: null | components["schemas"]["Time"];
+					invite?: components["schemas"]["InviteCode"] | null;
+					join_after?: components["schemas"]["Time"] | null;
+					join_before?: components["schemas"]["Time"] | null;
 					/**
 					 * Format: int32
 					 * @description maximum number of results to return
@@ -23887,7 +23879,7 @@ export interface operations {
 						joined_at: components["schemas"]["Time"];
 						/** @description whether this user is muted by a moderator */
 						mute: boolean;
-						origin?: null | components["schemas"]["RoomMemberOrigin"];
+						origin?: components["schemas"]["RoomMemberOrigin"] | null;
 						/** @description like nickname, but for your description/bio/about */
 						override_description?: string | null;
 						/** @description aka nickname */
@@ -23897,7 +23889,7 @@ export interface operations {
 						/** @description the roles that this member has */
 						roles: components["schemas"]["Id"][];
 						room_id: components["schemas"]["Id"];
-						timeout_until?: null | components["schemas"]["Time"];
+						timeout_until?: components["schemas"]["Time"] | null;
 						user_id: components["schemas"]["Id"];
 					};
 				};
@@ -23925,7 +23917,7 @@ export interface operations {
 					override_name?: string | null;
 					/** @description the roles that this member has */
 					roles: components["schemas"]["Id"][];
-					timeout_until?: null | components["schemas"]["Time"];
+					timeout_until?: components["schemas"]["Time"] | null;
 				};
 			};
 		};
@@ -23943,7 +23935,7 @@ export interface operations {
 						joined_at: components["schemas"]["Time"];
 						/** @description whether this user is muted by a moderator */
 						mute: boolean;
-						origin?: null | components["schemas"]["RoomMemberOrigin"];
+						origin?: components["schemas"]["RoomMemberOrigin"] | null;
 						/** @description like nickname, but for your description/bio/about */
 						override_description?: string | null;
 						/** @description aka nickname */
@@ -23953,7 +23945,7 @@ export interface operations {
 						/** @description the roles that this member has */
 						roles: components["schemas"]["Id"][];
 						room_id: components["schemas"]["Id"];
-						timeout_until?: null | components["schemas"]["Time"];
+						timeout_until?: components["schemas"]["Time"] | null;
 						user_id: components["schemas"]["Id"];
 					};
 				};
@@ -24011,7 +24003,7 @@ export interface operations {
 					override_name?: string | null;
 					/** @description the roles that this member has */
 					roles?: components["schemas"]["Id"][] | null;
-					timeout_until?: null | components["schemas"]["Time"];
+					timeout_until?: components["schemas"]["Time"] | null;
 				};
 			};
 		};
@@ -24029,7 +24021,7 @@ export interface operations {
 						joined_at: components["schemas"]["Time"];
 						/** @description whether this user is muted by a moderator */
 						mute: boolean;
-						origin?: null | components["schemas"]["RoomMemberOrigin"];
+						origin?: components["schemas"]["RoomMemberOrigin"] | null;
 						/** @description like nickname, but for your description/bio/about */
 						override_description?: string | null;
 						/** @description aka nickname */
@@ -24039,7 +24031,7 @@ export interface operations {
 						/** @description the roles that this member has */
 						roles: components["schemas"]["Id"][];
 						room_id: components["schemas"]["Id"];
-						timeout_until?: null | components["schemas"]["Time"];
+						timeout_until?: components["schemas"]["Time"] | null;
 						user_id: components["schemas"]["Id"];
 					};
 				};
@@ -24194,21 +24186,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -24217,10 +24209,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -24232,13 +24224,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -24247,7 +24239,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -24271,21 +24263,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -24294,10 +24286,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -24309,13 +24301,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -24324,7 +24316,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -24567,7 +24559,7 @@ export interface operations {
 	role_delete: {
 		parameters: {
 			query?: {
-				fallback_role_id?: null | components["schemas"]["Id"];
+				fallback_role_id?: components["schemas"]["Id"] | null;
 			};
 			header?: never;
 			path: {
@@ -24755,7 +24747,7 @@ export interface operations {
 						joined_at: components["schemas"]["Time"];
 						/** @description whether this user is muted by a moderator */
 						mute: boolean;
-						origin?: null | components["schemas"]["RoomMemberOrigin"];
+						origin?: components["schemas"]["RoomMemberOrigin"] | null;
 						/** @description like nickname, but for your description/bio/about */
 						override_description?: string | null;
 						/** @description aka nickname */
@@ -24765,7 +24757,7 @@ export interface operations {
 						/** @description the roles that this member has */
 						roles: components["schemas"]["Id"][];
 						room_id: components["schemas"]["Id"];
-						timeout_until?: null | components["schemas"]["Time"];
+						timeout_until?: components["schemas"]["Time"] | null;
 						user_id: components["schemas"]["Id"];
 					};
 				};
@@ -24819,21 +24811,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -24842,10 +24834,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -24857,13 +24849,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -24872,7 +24864,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -24933,21 +24925,21 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						afk_channel_id?: null | components["schemas"]["Id"];
+						afk_channel_id?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @description how long to wait before moving idle people to the afk channel, in milliseconds
 						 */
 						afk_channel_timeout: number;
-						archived_at?: null | components["schemas"]["Time"];
-						banner?: null | components["schemas"]["Id"];
+						archived_at?: components["schemas"]["Time"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/**
 						 * Format: int64
 						 * @deprecated
 						 * @description number of active channels
 						 */
 						channel_count: number;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						/**
 						 * Format: int64
@@ -24956,10 +24948,10 @@ export interface operations {
 						emoji_count: number;
 						/** @description features enabled for this room */
 						features: components["schemas"]["RoomFeatures"];
-						icon?: null | components["schemas"]["Id"];
+						icon?: components["schemas"]["Id"] | null;
 						/** @description A unique identifier for this room */
 						id: components["schemas"]["Id"];
-						invites_paused_until?: null | components["schemas"]["Time"];
+						invites_paused_until?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -24971,13 +24963,13 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						preferences?: null | components["schemas"]["PreferencesRoom"];
+						owner_id?: components["schemas"]["Id"] | null;
+						preferences?: components["schemas"]["PreferencesRoom"] | null;
 						/** @description anyone can view and join */
 						public: boolean;
 						/** @description whether this room is read-only. permissions for all room members (including owner) will be masked to View and ViewAuditLog, similar to timing out a single user. */
 						quarantined: boolean;
-						remote?: null | components["schemas"]["Remote_Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
 						/** @description security configuration for this room */
 						security: components["schemas"]["RoomSecurity"];
 						type: components["schemas"]["RoomType"];
@@ -24986,7 +24978,7 @@ export interface operations {
 						 * @description A monotonically increasing id that is updated every time this room is modified.
 						 */
 						version_id: string;
-						welcome_channel_id?: null | components["schemas"]["Id"];
+						welcome_channel_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -25308,7 +25300,7 @@ export interface operations {
 				"application/json": {
 					/** @description a description for this invite */
 					description?: string | null;
-					expires_at?: null | components["schemas"]["Time"];
+					expires_at?: components["schemas"]["Time"] | null;
 					/**
 					 * Format: int32
 					 * @description the maximum number of times this invite can be used
@@ -25338,7 +25330,7 @@ export interface operations {
 						creator_id: components["schemas"]["Id"];
 						/** @description a description for this invite */
 						description?: string | null;
-						expires_at?: null | components["schemas"]["Time"];
+						expires_at?: components["schemas"]["Time"] | null;
 						/** @description if this invite's code is custom (instead of random) */
 						is_vanity: boolean;
 						/** @description where this invite leads */
@@ -25596,10 +25588,10 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["SessionStatus"] & {
-						app_id?: null | components["schemas"]["Id"];
-						authorized_at?: null | components["schemas"]["Time"];
-						deauthorized_at?: null | components["schemas"]["Time"];
-						expires_at?: null | components["schemas"]["Time"];
+						app_id?: components["schemas"]["Id"] | null;
+						authorized_at?: components["schemas"]["Time"] | null;
+						deauthorized_at?: components["schemas"]["Time"] | null;
+						expires_at?: components["schemas"]["Time"] | null;
 						id: components["schemas"]["Id"];
 						/** @description session imprint metadata */
 						imprint: components["schemas"]["SessionImprint"];
@@ -25655,10 +25647,10 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["SessionStatus"] & {
-						app_id?: null | components["schemas"]["Id"];
-						authorized_at?: null | components["schemas"]["Time"];
-						deauthorized_at?: null | components["schemas"]["Time"];
-						expires_at?: null | components["schemas"]["Time"];
+						app_id?: components["schemas"]["Id"] | null;
+						authorized_at?: components["schemas"]["Time"] | null;
+						deauthorized_at?: components["schemas"]["Time"] | null;
+						expires_at?: components["schemas"]["Time"] | null;
 						id: components["schemas"]["Id"];
 						/** @description session imprint metadata */
 						imprint: components["schemas"]["SessionImprint"];
@@ -25675,10 +25667,10 @@ export interface operations {
 				};
 				content: {
 					"application/json": components["schemas"]["SessionStatus"] & {
-						app_id?: null | components["schemas"]["Id"];
-						authorized_at?: null | components["schemas"]["Time"];
-						deauthorized_at?: null | components["schemas"]["Time"];
-						expires_at?: null | components["schemas"]["Time"];
+						app_id?: components["schemas"]["Id"] | null;
+						authorized_at?: components["schemas"]["Time"] | null;
+						deauthorized_at?: components["schemas"]["Time"] | null;
+						expires_at?: components["schemas"]["Time"] | null;
 						id: components["schemas"]["Id"];
 						/** @description session imprint metadata */
 						imprint: components["schemas"]["SessionImprint"];
@@ -25815,7 +25807,7 @@ export interface operations {
 		parameters: {
 			query: {
 				pagination: components["schemas"]["PaginationQuery_Id"];
-				filter?: null | components["schemas"]["UserListFilter"];
+				filter?: components["schemas"]["UserListFilter"] | null;
 			};
 			header?: never;
 			path?: never;
@@ -25983,7 +25975,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -25998,7 +25990,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -26012,24 +26004,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -26047,8 +26039,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -26060,11 +26052,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -26074,7 +26066,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -26082,7 +26074,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -26090,7 +26082,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -26102,7 +26094,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -26126,7 +26118,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -26141,7 +26133,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -26155,24 +26147,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -26190,8 +26182,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -26203,11 +26195,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -26217,7 +26209,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -26225,7 +26217,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -26233,7 +26225,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -26245,7 +26237,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -26256,7 +26248,7 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						archived_at?: null | components["schemas"]["Time"];
+						archived_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description when to automatically archive this thread due to inactivity, in seconds
@@ -26271,7 +26263,7 @@ export interface operations {
 						 * @description bitrate, for voice channels. defaults to 65535 (64Kibps).
 						 */
 						bitrate?: number | null;
-						calendar?: null | components["schemas"]["Calendar"];
+						calendar?: components["schemas"]["Calendar"] | null;
 						creator_id: components["schemas"]["Id"];
 						/**
 						 * Format: int64
@@ -26285,24 +26277,24 @@ export interface operations {
 						 *     this value is copied, changing this wont change old threads. can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						default_slowmode_message?: number | null;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
-						document?: null | components["schemas"]["Document"];
-						icon?: null | components["schemas"]["Id"];
+						document?: components["schemas"]["Document"] | null;
+						icon?: components["schemas"]["Id"] | null;
 						id: components["schemas"]["Id"];
 						/** @description whether users without ThreadManage can add other members to this thread */
 						invitable?: boolean;
 						is_unread?: boolean | null;
-						last_message_id?: null | components["schemas"]["Id"];
-						last_pin_timestamp?: null | components["schemas"]["Time"];
-						last_read_id?: null | components["schemas"]["Id"];
-						last_version_id?: null | components["schemas"]["Id"];
+						last_message_id?: components["schemas"]["Id"] | null;
+						last_pin_timestamp?: components["schemas"]["Time"] | null;
+						last_read_id?: components["schemas"]["Id"] | null;
+						last_version_id?: components["schemas"]["Id"] | null;
 						/**
 						 * @description monotonic sync sequence number, incremented on every action.
 						 *     used for incremental channel sync.
 						 */
 						latest_seq?: components["schemas"]["Seq"];
-						locked?: null | components["schemas"]["Locked"];
+						locked?: components["schemas"]["Locked"] | null;
 						/**
 						 * Format: int64
 						 * @description number of people in this room
@@ -26320,8 +26312,8 @@ export interface operations {
 						 * @description number of people who are online in this room
 						 */
 						online_count: number;
-						owner_id?: null | components["schemas"]["Id"];
-						parent_id?: null | components["schemas"]["Id"];
+						owner_id?: components["schemas"]["Id"] | null;
+						parent_id?: components["schemas"]["Id"] | null;
 						/** @description permission overwrites for this channel */
 						permission_overwrites: components["schemas"]["PermissionOverwrite"][];
 						/**
@@ -26333,11 +26325,11 @@ export interface operations {
 						 *     - channels without a position come last, ordered by newest first
 						 */
 						position?: number | null;
-						preferences?: null | components["schemas"]["PreferencesChannel"];
+						preferences?: components["schemas"]["PreferencesChannel"] | null;
 						/** @description for dm and gdm channels, this is who the dm is with */
 						recipients?: components["schemas"]["User"][];
-						remote?: null | components["schemas"]["Remote_Id"];
-						room_id?: null | components["schemas"]["Id"];
+						remote?: components["schemas"]["Remote_Id"] | null;
+						room_id?: components["schemas"]["Id"] | null;
 						/** Format: int64 */
 						root_message_count?: number | null;
 						/**
@@ -26347,7 +26339,7 @@ export interface operations {
 						 *     can only be set on channels with text. must have ChannelManage permission to change, or ThreadManage if this is a thread.
 						 */
 						slowmode_message?: number | null;
-						slowmode_message_expire_at?: null | components["schemas"]["Time"];
+						slowmode_message_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description minimum delay in seconds between creating new threads
@@ -26355,7 +26347,7 @@ export interface operations {
 						 *     can only be set on channels with has_threads. must have ChannelManage permission to change.
 						 */
 						slowmode_thread?: number | null;
-						slowmode_thread_expire_at?: null | components["schemas"]["Time"];
+						slowmode_thread_expire_at?: components["schemas"]["Time"] | null;
 						/**
 						 * Format: int64
 						 * @description number of tags in this Forum, Forum2, or Ticket channel
@@ -26363,7 +26355,7 @@ export interface operations {
 						tag_count?: number;
 						/** @description tags that are applied to this thread */
 						tags?: components["schemas"]["Id"][] | null;
-						thread_member?: null | components["schemas"]["ThreadMember"];
+						thread_member?: components["schemas"]["ThreadMember"] | null;
 						/** @description type specific data for this channel */
 						type: components["schemas"]["ChannelType"];
 						/** @description url that this info channel should link to */
@@ -26375,7 +26367,7 @@ export interface operations {
 						user_limit?: number | null;
 						/** @description only updates when the channel itself is updated, not the stuff in the channel */
 						version_id: components["schemas"]["Id"];
-						wiki?: null | components["schemas"]["Wiki"];
+						wiki?: components["schemas"]["Wiki"] | null;
 					};
 				};
 			};
@@ -26483,67 +26475,6 @@ export interface operations {
 			};
 		};
 	};
-	harvest_get: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody?: never;
-		responses: {
-			/** @description success */
-			200: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content: {
-					"application/json": components["schemas"]["HarvestStatus"] &
-						components["schemas"]["HarvestType"] & {
-							id: components["schemas"]["Id"];
-							/** @description when this archive was created */
-							queued_at: components["schemas"]["Time"];
-							/** @description user who requested this harvest to be generated */
-							requester_id: components["schemas"]["Id"];
-						};
-				};
-			};
-			/** @description no harvest found */
-			404: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
-	harvest_create: {
-		parameters: {
-			query?: never;
-			header?: never;
-			path?: never;
-			cookie?: never;
-		};
-		requestBody: {
-			content: {
-				"application/json": {
-					/** @description include all messages you have sent */
-					include_messages: boolean;
-					/** @description include all reactions you have sent */
-					include_reactions: boolean;
-				};
-			};
-		};
-		responses: {
-			/** @description harvest has been queued */
-			202: {
-				headers: {
-					[name: string]: unknown;
-				};
-				content?: never;
-			};
-		};
-	};
 	ignore_list: {
 		parameters: {
 			query?: {
@@ -26587,7 +26518,7 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					until?: null | components["schemas"]["Time"];
+					until?: components["schemas"]["Time"] | null;
 				};
 			};
 		};
@@ -27073,7 +27004,7 @@ export interface operations {
 				"application/json": {
 					/** @description a description for this invite */
 					description?: string | null;
-					expires_at?: null | components["schemas"]["Time"];
+					expires_at?: components["schemas"]["Time"] | null;
 					/**
 					 * Format: int32
 					 * @description the maximum number of times this invite can be used
@@ -27103,7 +27034,7 @@ export interface operations {
 						creator_id: components["schemas"]["Id"];
 						/** @description a description for this invite */
 						description?: string | null;
-						expires_at?: null | components["schemas"]["Time"];
+						expires_at?: components["schemas"]["Time"] | null;
 						/** @description if this invite's code is custom (instead of random) */
 						is_vanity: boolean;
 						/** @description where this invite leads */
@@ -27266,7 +27197,7 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					expires_at?: null | components["schemas"]["Time"];
+					expires_at?: components["schemas"]["Time"] | null;
 				};
 			};
 		};
@@ -27278,11 +27209,11 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						avatar?: null | components["schemas"]["Id"];
-						banner?: null | components["schemas"]["Id"];
+						avatar?: components["schemas"]["Id"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/** @description whether this user is a bot */
 						bot: boolean;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						emails?: components["schemas"]["EmailInfo"][] | null;
 						/**
@@ -27293,16 +27224,16 @@ export interface operations {
 						has_mfa?: boolean | null;
 						id: components["schemas"]["Id"];
 						name: string;
-						preferences?: null | components["schemas"]["PreferencesUser"];
+						preferences?: components["schemas"]["PreferencesUser"] | null;
 						presence: components["schemas"]["Presence"];
-						puppet?: null | components["schemas"]["Puppet"];
-						registered_at?: null | components["schemas"]["Time"];
-						remote?: null | components["schemas"]["Remote_Id"];
-						suspended?: null | components["schemas"]["Suspended"];
+						puppet?: components["schemas"]["Puppet"] | null;
+						registered_at?: components["schemas"]["Time"] | null;
+						remote?: components["schemas"]["Remote_Id"] | null;
+						suspended?: components["schemas"]["Suspended"] | null;
 						/** @description whether this user is an official system user */
 						system: boolean;
 						version_id: components["schemas"]["Id"];
-						webhook?: null | components["schemas"]["UserWebhook"];
+						webhook?: components["schemas"]["UserWebhook"] | null;
 					};
 				};
 			};
@@ -27326,11 +27257,11 @@ export interface operations {
 				};
 				content: {
 					"application/json": {
-						avatar?: null | components["schemas"]["Id"];
-						banner?: null | components["schemas"]["Id"];
+						avatar?: components["schemas"]["Id"] | null;
+						banner?: components["schemas"]["Id"] | null;
 						/** @description whether this user is a bot */
 						bot: boolean;
-						deleted_at?: null | components["schemas"]["Time"];
+						deleted_at?: components["schemas"]["Time"] | null;
 						description?: string | null;
 						emails?: components["schemas"]["EmailInfo"][] | null;
 						/**
@@ -27341,16 +27272,16 @@ export interface operations {
 						has_mfa?: boolean | null;
 						id: components["schemas"]["Id"];
 						name: string;
-						preferences?: null | components["schemas"]["PreferencesUser"];
+						preferences?: components["schemas"]["PreferencesUser"] | null;
 						presence: components["schemas"]["Presence"];
-						puppet?: null | components["schemas"]["Puppet"];
-						registered_at?: null | components["schemas"]["Time"];
-						remote?: null | components["schemas"]["Remote_Id"];
-						suspended?: null | components["schemas"]["Suspended"];
+						puppet?: components["schemas"]["Puppet"] | null;
+						registered_at?: components["schemas"]["Time"] | null;
+						remote?: components["schemas"]["Remote_Id"] | null;
+						suspended?: components["schemas"]["Suspended"] | null;
 						/** @description whether this user is an official system user */
 						system: boolean;
 						version_id: components["schemas"]["Id"];
-						webhook?: null | components["schemas"]["UserWebhook"];
+						webhook?: components["schemas"]["UserWebhook"] | null;
 					};
 				};
 			};
@@ -27395,7 +27326,7 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["CallMetadata"] & {
 						channel_id: components["schemas"]["Id"];
-						room_id?: null | components["schemas"]["Id"];
+						room_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -27431,7 +27362,7 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["CallMetadata"] & {
 						channel_id: components["schemas"]["Id"];
-						room_id?: null | components["schemas"]["Id"];
+						room_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -27494,7 +27425,7 @@ export interface operations {
 				content: {
 					"application/json": components["schemas"]["CallMetadata"] & {
 						channel_id: components["schemas"]["Id"];
-						room_id?: null | components["schemas"]["Id"];
+						room_id?: components["schemas"]["Id"] | null;
 					};
 				};
 			};
@@ -27569,23 +27500,23 @@ export interface operations {
 					"application/json": {
 						/** @description the channel this user is connected to */
 						channel_id: components["schemas"]["Id"];
-						connection_id?: null | components["schemas"]["Id"];
+						connection_id?: components["schemas"]["Id"] | null;
 						/** @description whether this user is deafened by a moderator */
 						deaf: boolean;
 						/** @description when this user joined the call */
 						joined_at: components["schemas"]["Time"];
 						/** @description whether this user is muted by a moderator */
 						mute: boolean;
-						requested_to_speak_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						screenshare?: null | components["schemas"]["VoiceStateScreenshare"];
+						requested_to_speak_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						screenshare?: components["schemas"]["VoiceStateScreenshare"] | null;
 						/** @description whether this user has deafened themselves */
 						self_deaf: boolean;
 						/** @description whether this user has muted themselves */
 						self_mute: boolean;
 						/** @description whether this user has enabled their camera */
 						self_video: boolean;
-						session_id?: null | components["schemas"]["Id"];
+						session_id?: components["schemas"]["Id"] | null;
 						/** @description whether this user is suppressed, similar to a transient `mute: true` */
 						suppress: boolean;
 						/** @description the user this state belongs to */
@@ -27629,12 +27560,12 @@ export interface operations {
 		requestBody: {
 			content: {
 				"application/json": {
-					channel_id?: null | components["schemas"]["Id"];
+					channel_id?: components["schemas"]["Id"] | null;
 					/** @description same as room member deaf */
 					deaf?: boolean | null;
 					/** @description same as room member mute */
 					mute?: boolean | null;
-					requested_to_speak_at?: null | components["schemas"]["Time"];
+					requested_to_speak_at?: components["schemas"]["Time"] | null;
 					/**
 					 * @description allow this user to speak in the current channel
 					 *
@@ -27654,23 +27585,23 @@ export interface operations {
 					"application/json": {
 						/** @description the channel this user is connected to */
 						channel_id: components["schemas"]["Id"];
-						connection_id?: null | components["schemas"]["Id"];
+						connection_id?: components["schemas"]["Id"] | null;
 						/** @description whether this user is deafened by a moderator */
 						deaf: boolean;
 						/** @description when this user joined the call */
 						joined_at: components["schemas"]["Time"];
 						/** @description whether this user is muted by a moderator */
 						mute: boolean;
-						requested_to_speak_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						screenshare?: null | components["schemas"]["VoiceStateScreenshare"];
+						requested_to_speak_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						screenshare?: components["schemas"]["VoiceStateScreenshare"] | null;
 						/** @description whether this user has deafened themselves */
 						self_deaf: boolean;
 						/** @description whether this user has muted themselves */
 						self_mute: boolean;
 						/** @description whether this user has enabled their camera */
 						self_video: boolean;
-						session_id?: null | components["schemas"]["Id"];
+						session_id?: components["schemas"]["Id"] | null;
 						/** @description whether this user is suppressed, similar to a transient `mute: true` */
 						suppress: boolean;
 						/** @description the user this state belongs to */
@@ -27707,23 +27638,23 @@ export interface operations {
 					"application/json": {
 						/** @description the channel this user is connected to */
 						channel_id: components["schemas"]["Id"];
-						connection_id?: null | components["schemas"]["Id"];
+						connection_id?: components["schemas"]["Id"] | null;
 						/** @description whether this user is deafened by a moderator */
 						deaf: boolean;
 						/** @description when this user joined the call */
 						joined_at: components["schemas"]["Time"];
 						/** @description whether this user is muted by a moderator */
 						mute: boolean;
-						requested_to_speak_at?: null | components["schemas"]["Time"];
-						room_id?: null | components["schemas"]["Id"];
-						screenshare?: null | components["schemas"]["VoiceStateScreenshare"];
+						requested_to_speak_at?: components["schemas"]["Time"] | null;
+						room_id?: components["schemas"]["Id"] | null;
+						screenshare?: components["schemas"]["VoiceStateScreenshare"] | null;
 						/** @description whether this user has deafened themselves */
 						self_deaf: boolean;
 						/** @description whether this user has muted themselves */
 						self_mute: boolean;
 						/** @description whether this user has enabled their camera */
 						self_video: boolean;
-						session_id?: null | components["schemas"]["Id"];
+						session_id?: components["schemas"]["Id"] | null;
 						/** @description whether this user is suppressed, similar to a transient `mute: true` */
 						suppress: boolean;
 						/** @description the user this state belongs to */
@@ -27934,7 +27865,7 @@ export interface operations {
 					[name: string]: unknown;
 				};
 				content: {
-					"application/json": components["schemas"]["Webhook"];
+					"application/json": components["schemas"]["WebhookInfo"];
 				};
 			};
 		};
@@ -28195,7 +28126,7 @@ export interface operations {
 				/** @description maximum number of documents to return */
 				limit: number;
 				/** @description feature/center on this document */
-				document_id?: null | components["schemas"]["Id"];
+				document_id?: components["schemas"]["Id"] | null;
 			};
 			header?: never;
 			path: {
