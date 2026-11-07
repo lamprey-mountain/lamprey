@@ -10,18 +10,18 @@ keywords.workspace = true
 build = "build.rs"
 
 [build-dependencies]
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres"] }
+sqlx = { workspace = true, features = ["runtime-tokio", "postgres"] }
 
 [dependencies]
-async-trait = "0.1.92"
-common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
-lamprey-backend-core = { version = "0.1.1", path = "../crate-backend-core" }
+async-trait = { workspace = true }
+common = { workspace = true }
+lamprey-backend-core = { workspace = true }
 nanoid = "0.4.0"
-serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "postgres", "uuid", "time", "ipnetwork", "migrate"] }
-thiserror = "2.0.20"
-time = { version = "0.3.55", features = ["serde"] }
-tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
-tracing = "0.1.44"
-uuid = { version = "1.24.1", features = ["v7", "serde", "v4", "fast-rng", "macro-diagnostics"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sqlx = { workspace = true, features = ["runtime-tokio", "postgres", "uuid", "time", "ipnetwork", "migrate"] }
+thiserror = { workspace = true }
+time = { workspace = true, features = ["serde"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+tracing = { workspace = true }
+uuid = { workspace = true, features = ["v7", "serde", "v4", "fast-rng", "macro-diagnostics"] }

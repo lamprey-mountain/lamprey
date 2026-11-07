@@ -12,13 +12,13 @@ keywords.workspace = true
 proc-macro = true
 
 [dependencies]
-darling = "0.23.0"
-lamprey = { package = "lamprey-common", version = "0.1.1", path = "../crate-common" }
-proc-macro-crate = "3.5.0"
-proc-macro2 = "1.0"
-quote = "1.0"
-syn = { version = "2.0", features = ["full", "extra-traits"] }
-uuid = { version = "1.24.1", features = ["v7", "macro-diagnostics"] }
+darling = { workspace = true }
+lamprey = { workspace = true }
+proc-macro-crate = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { workspace = true, features = ["full", "extra-traits"] }
+uuid = { workspace = true, features = ["v7", "macro-diagnostics"] }
 
 [dev-dependencies]
-macrotest = "1"
+macrotest = { workspace = true }

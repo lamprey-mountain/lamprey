@@ -11,32 +11,32 @@ name = "bridge"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.104"
-async-trait = "0.1.92"
-common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
-dashmap = "6.2.1"
-dotenvy = "0.15.7"
-figment = { version = "0.10.19", features = ["env", "toml"] }
-futures = "0.3"
-kameo = "0.19"
-lamprey-markdown = { version = "0.1", path = "../crate-markdown" }
-once_cell = "1.21"
-opentelemetry = "0.33.1"
-opentelemetry-otlp = { version = "0.33.1", features = ["grpc-tonic", "logs", "metrics", "trace"], default-features = false }
-opentelemetry_sdk = { version = "0.33.1", features = ["rt-tokio", "tokio"] }
-regex = "1.13"
-reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots", "json"] }
-rustls = { version = "0.23", default-features = false, features = ["ring"] }
-sdk = { package = "lamprey-sdk", version = "0.1.0", path = "../crate-sdk" }
-serde = "1.0.229"
-serenity = "0.12.5"
-sqlx = { version = "0.8.6", features = ["runtime-tokio", "sqlite", "uuid"] }
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+common = { workspace = true }
+dashmap = { workspace = true }
+dotenvy = { workspace = true }
+figment = { workspace = true, features = ["env", "toml"] }
+futures = { workspace = true }
+kameo = { workspace = true }
+lamprey-markdown = { workspace = true }
+once_cell = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true, features = ["grpc-tonic", "logs", "metrics", "trace"] }
+opentelemetry_sdk = { workspace = true, features = ["rt-tokio", "tokio"] }
+regex = { workspace = true }
+reqwest = { workspace = true, features = ["rustls-tls-native-roots", "json"] }
+rustls = { workspace = true, features = ["ring"] }
+sdk = { workspace = true }
+serde = { workspace = true }
+serenity = { workspace = true }
+sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "uuid"] }
 strum = { version = "0.28.0", features = ["derive"] }
-time = { version = "0.3", features = ["serde-human-readable", "macros"] }
-tokio = { version = "1.53.1", features = ["rt-multi-thread"] }
-tokio-util = { version = "0.7.19", features = ["time"] }
-tracing = "0.1.44"
-tracing-opentelemetry = "0.34.0"
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-url = "2.5.8"
-uuid = "1.24.1"
+time = { workspace = true, features = ["serde-human-readable", "macros"] }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+tokio-util = { workspace = true, features = ["time"] }
+tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+url = { workspace = true }
+uuid = { workspace = true }
