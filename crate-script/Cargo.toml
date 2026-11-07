@@ -9,23 +9,23 @@ repository.workspace = true
 keywords.workspace = true
 
 [dependencies]
-async-trait = "0.1.92"
-bytes = "1.12.1"
-common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common", features = ["utoipa", "validator"] }
+async-trait = { workspace = true }
+bytes = { workspace = true }
+common = { workspace = true, features = ["utoipa", "validator"] }
 cpu-time = "1.0.0"
-dashmap = "6.2.1"
-futures = "0.3.34"
-http = "1.5.0"
+dashmap = { workspace = true }
+futures = { workspace = true }
+http = { workspace = true }
 nanoid = "0.5.0"
 rquickjs = { version = "0.12.2", features = ["futures", "loader", "macro", "parallel"], optional = true }
 rquickjs-serde = "0.6.1"
-serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
-thiserror = "2.0.20"
-tokio = { version = "1.53.1", features = ["macros", "time"] }
-tracing = "0.1.44"
-url = "2.5.8"
-validator = "0.20.0"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["macros", "time"] }
+tracing = { workspace = true }
+url = { workspace = true }
+validator = { workspace = true }
 wasmtime = { version = "44.0.3", optional = true }
 
 [features]

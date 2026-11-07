@@ -9,28 +9,28 @@ repository.workspace = true
 keywords.workspace = true
 
 [dependencies]
-async-trait = "0.1.92"
-axum = "0.8.9"
-bitflags = "2.13.2"
-bytes = { version = "1.12.1", features = ["serde"] }
-crc32fast = "1.5.2"
-http = "1.5.0"
-ipnet = { version = "2.12.2", features = ["serde"] }
-lamprey = { package = "lamprey-common", version = "0.1.1", path = "../crate-common" }
-opentelemetry = "0.33.1"
-opentelemetry-otlp = { version = "0.33.1", features = ["grpc-tonic", "logs", "metrics", "trace"], default-features = false }
-opentelemetry_sdk = { version = "0.33.1", features = ["rt-tokio", "tokio"] }
-serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
+async-trait = { workspace = true }
+axum = { workspace = true }
+bitflags = { workspace = true }
+bytes = { workspace = true, features = ["serde"] }
+crc32fast = { workspace = true }
+http = { workspace = true }
+ipnet = { workspace = true, features = ["serde"] }
+lamprey = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true, features = ["grpc-tonic", "logs", "metrics", "trace"] }
+opentelemetry_sdk = { workspace = true, features = ["rt-tokio", "tokio"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 strum = { version = "0.27.2", features = ["derive"] }
-thiserror = "2.0.20"
-time = "0.3.55"
-tokio = { version = "1.53.1", features = ["process"] }
-tracing = "0.1.44"
-tracing-opentelemetry = "0.34.0"
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-unicode-properties = "0.1.4"
-unicode-segmentation = "1.13.3"
-url = "2.5.8"
-utoipa = { version = "5.5.0", features = ["axum_extras", "url", "uuid"] }
-uuid = "1.27.0"
+thiserror = { workspace = true }
+time = { workspace = true }
+tokio = { workspace = true, features = ["process"] }
+tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+unicode-properties = { workspace = true }
+unicode-segmentation = { workspace = true }
+url = { workspace = true }
+utoipa = { workspace = true, features = ["axum_extras", "url", "uuid"] }
+uuid = { workspace = true }

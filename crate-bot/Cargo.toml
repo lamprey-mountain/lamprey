@@ -11,26 +11,26 @@ name = "bot"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.104"
-chrono = { version = "0.4", features = ["serde"] }
-clap = { version = "4.6.6", features = ["derive"] }
-common = { package = "lamprey-common", version = "0.1.0", path = "../crate-common" }
-dotenvy = "0.15.7"
-figment = { version = "0.10.19", features = ["env", "toml"] }
-futures = "0.3.34"
-futures-util = "0.3.34"
-reqwest = { version = "0.12.28", default-features = false, features = ["rustls-tls-native-roots", "json"] }
-rustls = { version = "0.23", default-features = false, features = ["ring"] }
-sdk = { package = "lamprey-sdk", version = "0.1.0", path = "../crate-sdk", features = ["voice"] }
-serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
-sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite"] }
-str0m = "0.20.0"
-stunclient = "0.4.2"
-symphonia = "0.5.5"
-systemstat = "0.2.7"
-tokio = { version = "1.53.1", features = ["macros", "net", "rt-multi-thread"] }
-tokio-util = { version = "0.7.19", features = ["codec", "time"] }
-tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-url = "2.5.8"
+anyhow = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+clap = { workspace = true, features = ["derive"] }
+common = { workspace = true }
+dotenvy = { workspace = true }
+figment = { workspace = true, features = ["env", "toml"] }
+futures = { workspace = true }
+futures-util = { workspace = true }
+reqwest = { workspace = true, features = ["rustls-tls-native-roots", "json"] }
+rustls = { workspace = true, features = ["ring"] }
+sdk = { workspace = true, features = ["voice"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sqlx = { workspace = true, features = ["runtime-tokio", "sqlite"] }
+str0m = { workspace = true }
+stunclient = { workspace = true }
+symphonia = { workspace = true }
+systemstat = { workspace = true }
+tokio = { workspace = true, features = ["macros", "net", "rt-multi-thread"] }
+tokio-util = { workspace = true, features = ["codec", "time"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+url = { workspace = true }

@@ -7,35 +7,35 @@ description.workspace = true
 license.workspace = true
 
 [dependencies]
-base64 = "0.22.1"
-bitflags = { version = "2.13.1", features = ["serde"] }
-bytes = { version = "1.12.1", features = ["serde"] }
-ed25519-dalek = "2.2.0"
-futures = "0.3.34"
-headers = "0.4.1"
-http = "1.5.0"
+base64 = { workspace = true }
+bitflags = { workspace = true, features = ["serde"] }
+bytes = { workspace = true, features = ["serde"] }
+ed25519-dalek = { workspace = true }
+futures = { workspace = true }
+headers = { workspace = true }
+http = { workspace = true }
 http-body = "1.1.0"
 http-body-util = "0.1.5"
-jsonwebkey = { version = "0.4.0", features = [] }
-lamprey-macros = { version = "0.1", path = "../crate-macros" }
-mediatype = { version = "0.20.0", features = ["serde"] }
+jsonwebkey = { workspace = true }
+lamprey-macros = { workspace = true }
+mediatype = { workspace = true, features = ["serde"] }
 pastey = "0.1.1"
-percent-encoding = "2.3.2"
+percent-encoding = { workspace = true }
 rand = "0.10.2"
-regex = "1.13.1"
-serde = { version = "1.0.229", features = ["derive"], optional = true }
-serde_json = { version = "1.0.151", optional = true }
-serde_urlencoded = "0.7.1"
-str0m = { version = "0.20.0", optional = true }
+regex = { workspace = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+serde_json = { workspace = true, optional = true }
+serde_urlencoded = { workspace = true }
+str0m = { workspace = true, optional = true }
 strum = { version = "0.27.2", features = ["derive"] }
-thiserror = "2.0.20"
-time = { version = "0.3.55", features = ["formatting", "macros", "parsing", "serde"] }
-unicode-properties = "0.1.4"
-unicode-segmentation = "1.13.3"
-url = { version = "2.5.8", features = ["serde"] }
-utoipa = { version = "5.5.0", features = ["axum_extras", "url", "uuid", "time"], optional = true }
-uuid = { version = "1.24.1", features = ["serde", "v7"] }
-validator = { version = "0.20.0", features = ["derive"], optional = true }
+thiserror = { workspace = true }
+time = { workspace = true, features = ["formatting", "macros", "parsing", "serde"] }
+unicode-properties = { workspace = true }
+unicode-segmentation = { workspace = true }
+url = { workspace = true, features = ["serde"] }
+utoipa = { workspace = true, features = ["axum_extras", "url", "uuid", "time"], optional = true }
+uuid = { workspace = true, features = ["serde", "v7"] }
+validator = { workspace = true, features = ["derive"], optional = true }
 
 [features]
 serde = ["dep:serde", "dep:serde_json"]
