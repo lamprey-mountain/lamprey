@@ -12,8 +12,8 @@
     "check": "tsc --noEmit"
   },
   "devDependencies": {
-    "openapi-typescript": "^7.6.1",
-    "typescript": "^5.7.3"
+    "openapi-typescript": "^7.13.0",
+    "typescript": "^5.9.3"
   },
   "exports": "./mod.ts"
 }
