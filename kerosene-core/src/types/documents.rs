@@ -328,7 +328,7 @@ impl ChangesetChange {
 mod tests {
     use super::*;
     use bytes::Bytes;
-    use common::v1::types::util::Time;
+    use lamprey::v1::types::util::Time;
 
     #[test]
     fn test_changeset_checksum_validation() {

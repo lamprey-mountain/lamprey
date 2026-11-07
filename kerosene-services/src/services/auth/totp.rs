@@ -6,7 +6,7 @@ use common::v1::types::auth::{AuthState, TotpRecoveryCode};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Changes;
 use common::v1::types::{Session, SessionStatus};
-use totp_rs::{Algorithm as TotpAlgorithm, Secret as TotpSecret, TOTP as Totp};
+use totp_rs::Builder as TotpBuilder;
 use uuid::Uuid;
 
 use crate::prelude::*;
@@ -36,19 +36,19 @@ impl ServiceAuth {
         let secret_bytes = base32::decode(base32::Alphabet::Rfc4648 { padding: false }, secret)
             .ok_or_else(|| Error::Internal("failed to decode totp secret".to_owned()))?;
 
-        let totp = Totp::new(
-            TotpAlgorithm::SHA1,
-            6,
-            1,
-            30,
-            TotpSecret::Raw(secret_bytes).to_bytes().unwrap(),
-        )
-        .map_err(|e| {
-            tracing::error!("failed to create totp: {e}");
-            Error::Internal("failed to create totp".to_owned())
-        })?;
+        let totp = TotpBuilder::new()
+            .with_algorithm(totp_rs::Algorithm::SHA1)
+            .with_digits(6)
+            .with_skew(1)
+            .with_step_duration(30)
+            .with_secret(secret_bytes)
+            .build()
+            .map_err(|e| {
+                tracing::error!("failed to create totp: {e}");
+                Error::Internal("failed to create totp".to_owned())
+            })?;
 
-        if totp.check_current(code).unwrap_or(false) {
+        if totp.check_current(code).is_some() {
             Ok(())
         } else {
             Err(ApiError::from_code(ErrorCode::InvalidTotpCode).into())

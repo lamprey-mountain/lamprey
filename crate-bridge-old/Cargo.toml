@@ -15,7 +15,7 @@ async-trait = { workspace = true }
 dashmap = { workspace = true }
 dotenvy = { workspace = true }
 futures = { workspace = true }
-reqwest = { workspace = true, features = ["rustls-tls-native-roots", "json"] }
+reqwest = { workspace = true, features = ["rustls", "json"] }
 rustls = { workspace = true, features = ["ring"] }
 serde = { workspace = true }
 serenity = { workspace = true }

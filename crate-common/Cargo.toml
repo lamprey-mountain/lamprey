@@ -19,15 +19,15 @@ http-body-util = "0.1.5"
 jsonwebkey = { workspace = true }
 lamprey-macros = { workspace = true }
 mediatype = { workspace = true, features = ["serde"] }
-pastey = "0.1.1"
+pastey = "0.2.3"
 percent-encoding = { workspace = true }
-rand = "0.10.2"
+rand = "0.10.3"
 regex = { workspace = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde_json = { workspace = true, optional = true }
 serde_urlencoded = { workspace = true }
 str0m = { workspace = true, optional = true }
-strum = { version = "0.27.2", features = ["derive"] }
+strum = { version = "0.28.0", features = ["derive"] }
 thiserror = { workspace = true }
 time = { workspace = true, features = ["formatting", "macros", "parsing", "serde"] }
 unicode-properties = { workspace = true }

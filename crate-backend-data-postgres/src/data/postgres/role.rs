@@ -208,12 +208,14 @@ impl DataRole for Postgres {
             DbRole,
             r#"
             SELECT
-                r.id, r.version_id, r.room_id, r.name, r.description, r.allow as "allow: _",
-                r.deny as "deny: _", r.is_mentionable, r.is_self_applicable,
+                r.id as "id!", r.version_id as "version_id!", r.room_id as "room_id!",
+                r.name as "name!", r.description, r.allow as "allow!: _",
+                r.deny as "deny!: _", r.is_mentionable as "is_mentionable!",
+                r.is_self_applicable as "is_self_applicable!",
                 coalesce(rm.count, 0) as "member_count!",
-                r.position,
-                r.hoist,
-                r.sticky
+                r.position as "position!",
+                r.hoist as "hoist!",
+                r.sticky as "sticky!"
             FROM role r
             LEFT JOIN (
                 SELECT role_id, count(*) as count

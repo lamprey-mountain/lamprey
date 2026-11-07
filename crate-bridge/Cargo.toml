@@ -25,7 +25,7 @@ opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true, features = ["grpc-tonic", "logs", "metrics", "trace"] }
 opentelemetry_sdk = { workspace = true, features = ["rt-tokio", "tokio"] }
 regex = { workspace = true }
-reqwest = { workspace = true, features = ["rustls-tls-native-roots", "json"] }
+reqwest = { workspace = true, features = ["rustls", "json"] }
 rustls = { workspace = true, features = ["ring"] }
 sdk = { workspace = true }
 serde = { workspace = true }

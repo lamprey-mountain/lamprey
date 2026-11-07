@@ -10,7 +10,7 @@ use axum::{
 use base64::{Engine, engine::general_purpose::STANDARD};
 use common::v1::types::{InviteCode, InviteTarget};
 use minijinja::{Environment, context};
-use rand::RngCore;
+use rand::Rng;
 use serde::Serialize;
 
 use crate::{Error, Result};
@@ -101,8 +101,8 @@ pub async fn frontend_handler(
         .render_str(
             template,
             context! {
-                nonce => nonce,
-                env   => env_json,
+                nonce => &nonce,
+                env   => &env_json,
             },
         )
         .map_err(|e| Error::FrontendTemplate(e.to_string()))?;
@@ -174,8 +174,8 @@ pub async fn invite_meta_handler(
         .render_str(
             template,
             context! {
-                nonce => nonce,
-                env   => env_json,
+                nonce => &nonce,
+                env   => &env_json,
             },
         )
         .map_err(|e| Error::FrontendTemplate(e.to_string()))?;

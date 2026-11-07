@@ -10,6 +10,7 @@ use tantivy::{
         self, FAST, IndexRecordOption, JsonObjectOptions, STORED, STRING, Schema, SchemaBuilder,
         TEXT, TextFieldIndexing, TextOptions,
     },
+    tokenizer::RAW_TOKENIZER_NAME,
 };
 use uuid::Uuid;
 
@@ -144,7 +145,7 @@ impl Default for UnifiedSchema {
         let metadata_fast = sb.add_json_field(
             "metadata_fast",
             JsonObjectOptions::default()
-                .set_fast(None)
+                .set_fast(RAW_TOKENIZER_NAME)
                 .set_indexing_options(
                     TextFieldIndexing::default()
                         .set_tokenizer("raw")

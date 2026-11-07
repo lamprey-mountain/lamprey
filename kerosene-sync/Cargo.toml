@@ -7,7 +7,7 @@ description.workspace = true
 license.workspace = true
 
 [dependencies]
-async-compression = { version = "0.4.50", features = ["deflate", "tokio"] }
+async-compression = { version = "0.4.52", features = ["deflate", "tokio"] }
 async-trait = { workspace = true }
 axum = { workspace = true, features = ["ws"] }
 bytes = { workspace = true, features = ["serde"] }

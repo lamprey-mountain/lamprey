@@ -17,8 +17,8 @@ dashmap = { workspace = true }
 futures = { workspace = true }
 http = { workspace = true }
 nanoid = "0.5.0"
-rquickjs = { version = "0.12.2", features = ["futures", "loader", "macro", "parallel"], optional = true }
-rquickjs-serde = "0.6.1"
+rquickjs = { version = "0.14.0", features = ["futures", "loader", "macro", "parallel"], optional = true }
+rquickjs-serde = "0.8.0"
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -26,7 +26,7 @@ tokio = { workspace = true, features = ["macros", "time"] }
 tracing = { workspace = true }
 url = { workspace = true }
 validator = { workspace = true }
-wasmtime = { version = "44.0.3", optional = true }
+wasmtime = { version = "50.0.1", optional = true }
 
 [features]
 # default = ["javascript"]

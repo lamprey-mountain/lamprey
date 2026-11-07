@@ -4,7 +4,10 @@ use figment::{
     providers::{Env, Format, Toml},
 };
 use kerosene::cli::Args;
-use kerosene_core::{config::Config, error::ServerResult};
+use kerosene_core::{
+    config::Config,
+    error::{InternalError, ServerResult},
+};
 use kerosene_rest::Routes;
 use tracing::info;
 
@@ -15,7 +18,8 @@ async fn main() -> ServerResult<()> {
     let config: Config = Figment::new()
         .merge(Toml::file(args.config))
         .merge(Env::raw())
-        .extract()?;
+        .extract()
+        .map_err(InternalError::new)?;
 
     kerosene_core::observability::init(&config);
 
@@ -29,7 +33,7 @@ async fn main() -> ServerResult<()> {
     // TODO: copy crate-backend/src/serve/mod.rs
     let globals = todo!();
 
-    let router = Routes::new_api()
+    let router: axum::Router = Routes::new_api()
         .into_axum()
         // #[cfg(feature = "embed-frontend")]
         // .layer(frontend) // or .nest? or .fallback?
