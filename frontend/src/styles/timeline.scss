@@ -670,37 +670,60 @@
 		visibility: visible;
 	}
 
+	& > .reply {
+		margin-top: 6px;
+		margin-bottom: 3px;
+
+		& > .content > .avatar {
+			display: none;
+		}
+	}
+
 	&:has(> .aside > .compact-avatar) {
 		grid-template-columns: 80px auto;
 
 		& > .aside {
-			display: grid;
-			grid-template-columns: 1fr auto;
-			grid-template-rows: auto 1fr;
-			align-items: center;
-			column-gap: 6px;
+			flex-direction: row;
+			justify-content: end;
+			gap: 6px;
+			padding-top: 0;
 		}
 
 		& > .aside > .time {
-			justify-self: center;
+			justify-self: right;
+			align-self: start;
 		}
 
 		& > .aside > .thread-spine {
 			grid-column: 1 / -1;
 			grid-row: 2;
 		}
+
+		& > .reply > .spine {
+			width: 24px;
+			min-width: 24px;
+			margin-left: 8px;
+			margin-right: 4px;
+		}
 	}
 
 	& > .aside > .compact-avatar {
-		line-height: 0;
-		margin-right: 4px;
-		margin-top: -2px;
+		margin-right: 6px;
 
 		& > .avatar {
-			height: 1em;
-			width: 1em;
+			height: 18px;
+			width: 18px;
 			margin: 0;
 			border-radius: 4px;
+		}
+	}
+
+	.emoji-only {
+		font-size: unset;
+
+		.emoji {
+			width: 1em;
+			height: 1em;
 		}
 	}
 }
