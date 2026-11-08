@@ -35,7 +35,7 @@ export class RoomsService extends BaseService<Room> {
 		return data;
 	}
 
-	async search(query: string): Promise<any> {
+	async search(query: string): Promise<{ rooms: Room[]; results: string[] }> {
 		const data = await this.retryWithBackoff<{
 			rooms: Room[];
 			results: string[];
@@ -109,6 +109,27 @@ export class RoomsService extends BaseService<Room> {
 			return list.state;
 		} catch (e) {
 			log.error(String(e));
+			list.setError(e);
+			throw e;
+		}
+	}
+
+	/** load the next page of all rooms on this server */
+	async loadListAll(): Promise<ListState> {
+		const list = this.roomListAll;
+		if (list.state.isLoading || !list.state.has_more) return list.state;
+
+		list.setLoading(true);
+		try {
+			const data = await this.fetchListAll(list.state.cursor ?? undefined);
+			this.upsertBulk(data.items);
+			list.appendPage(
+				data.items.map((room) => room.id),
+				data.has_more,
+				data.items.at(-1)?.id,
+			);
+			return list.state;
+		} catch (e) {
 			list.setError(e);
 			throw e;
 		}
