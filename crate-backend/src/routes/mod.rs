@@ -19,7 +19,6 @@ mod document;
 mod e2ee;
 mod federation;
 mod flume;
-mod interaction;
 mod internal;
 mod invite;
 mod media;
@@ -52,7 +51,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(document::routes())
         .merge(federation::routes(Arc::clone(&s)))
         .merge(flume::routes())
-        .merge(interaction::routes())
         .merge(internal::routes())
         .merge(invite::routes())
         .merge(media::routes())
