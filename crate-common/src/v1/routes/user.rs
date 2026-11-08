@@ -209,13 +209,14 @@ pub mod user_presence_set {
 
 /// User list
 ///
-/// Admin only. List all users on this server.
+/// List all users on this server. Requires UserManage or ServerOversee.
 #[endpoint(
     get,
     path = "/user",
     tags = ["user"],
     scopes = [Full],
-    permissions = [MemberBan],
+    permissions_server = [UserManage],
+    permissions_server_optional = [ServerOversee],
     response(OK, body = PaginationResponse<User>, description = "success"),
 )]
 pub mod user_list {
@@ -233,12 +234,15 @@ pub mod user_list {
 }
 
 /// User search
+///
+/// Requires UserManage or ServerOversee.
 #[endpoint(
     post,
     path = "/user/search",
     tags = ["user"],
     scopes = [Full],
-    permissions = [Admin],
+    permissions_server = [UserManage],
+    permissions_server_optional = [ServerOversee],
     response(OK, body = UserSearch, description = "success"),
 )]
 pub mod user_search {

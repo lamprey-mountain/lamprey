@@ -525,13 +525,16 @@ pub async fn list(req: Req<routes::user_list::Endpoint>) -> Result<routes::user_
     auth_user.ensure_unsuspended()?;
     let auth_user_id = auth_user.id;
 
-    srv.perms
+    let mut perms = srv
+        .perms
         .for_room3(Some(auth_user_id), SERVER_ROOM_ID)
         .await
         .cast_internal()?
-        .ensure_view()?
-        .needs(Permission::MemberBan)
-        .check()?;
+        .ensure_view()?;
+    if !perms.has_any(&[Permission::UserManage, Permission::ServerOversee]) {
+        perms.needs(Permission::UserManage);
+    }
+    perms.check()?;
 
     let (pagination, filter) = req.into_inner().query.into_parts();
     let mut data = globals.begin_read().await.cast_internal()?;
@@ -551,13 +554,16 @@ pub async fn search(
     let srv = req.services();
     let auth_user = req.identity().ensure_user()?;
 
-    srv.perms
+    let mut perms = srv
+        .perms
         .for_room3(Some(auth_user.id), SERVER_ROOM_ID)
         .await
         .cast_internal()?
-        .ensure_view()?
-        .needs(Permission::UserManage)
-        .check()?;
+        .ensure_view()?;
+    if !perms.has_any(&[Permission::UserManage, Permission::ServerOversee]) {
+        perms.needs(Permission::UserManage);
+    }
+    perms.check()?;
 
     let body = req.into_inner();
     let results = srv.search.search_users(body.search).await.cast_internal()?;
