@@ -13,6 +13,49 @@ declare global {
     error: LogFn;
   }
 
+  interface AbortSignalEvent {
+    readonly type: "abort";
+    readonly target: AbortSignal;
+    readonly currentTarget: AbortSignal;
+    readonly bubbles: false;
+    readonly cancelable: false;
+    readonly defaultPrevented: boolean;
+    readonly timeStamp: number;
+  }
+
+  type AbortSignalEventListener = (this: AbortSignal, event: AbortSignalEvent) => void;
+  type AbortSignalEventListenerObject = {
+    handleEvent(event: AbortSignalEvent): void;
+  };
+
+  class AbortSignal {
+    static abort(reason?: unknown): AbortSignal;
+    static timeout(milliseconds: number): AbortSignal;
+    static any(signals: Iterable<AbortSignal>): AbortSignal;
+
+    readonly aborted: boolean;
+    readonly reason: unknown;
+    onabort: AbortSignalEventListener | null;
+
+    addEventListener(
+      type: "abort",
+      callback: AbortSignalEventListener | AbortSignalEventListenerObject,
+      options?: boolean | { once?: boolean },
+    ): void;
+    removeEventListener(
+      type: "abort",
+      callback: AbortSignalEventListener | AbortSignalEventListenerObject,
+    ): void;
+    dispatchEvent(event: AbortSignalEvent): boolean;
+    throwIfAborted(): void;
+  }
+
+  class AbortController {
+    constructor();
+    readonly signal: AbortSignal;
+    abort(reason?: unknown): void;
+  }
+
   class Blob {
     constructor(
       parts?: (Blob | ArrayBuffer | ArrayBufferView | string)[],

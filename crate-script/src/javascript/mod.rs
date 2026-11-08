@@ -314,6 +314,7 @@ fn setup_environment(
         file.set_prototype(Some(&blob))?;
     }
 
+    glue::abort::setup(ctx)?;
     glue::streams::setup(ctx)?;
     glue::encoding::setup(ctx)?;
 

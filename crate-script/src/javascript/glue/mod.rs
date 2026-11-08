@@ -1,5 +1,5 @@
 // web standard apis (available globally)
-// pub mod abort;
+pub mod abort;
 pub mod blob;
 // pub mod compression;
 pub mod encoding;
