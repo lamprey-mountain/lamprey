@@ -40,6 +40,7 @@ import {
 	AppLayoutMain,
 	RouteAuthorize,
 	RouteChannel,
+	RouteDevice,
 	RouteFriends,
 	RouteHome,
 	RouteInbox,
@@ -126,6 +127,7 @@ const App: Component = () => {
 				</Route>
 				<Route path="/verify-email" component={RouteVerifyEmail} />
 				<Route path="/authorize" component={RouteAuthorize} />
+				<Route path="/authorize-device" component={RouteDevice} />
 				<Route path="*404" component={RouteNotFound} />
 			</MemoryRouter>
 		</RouterProvider>

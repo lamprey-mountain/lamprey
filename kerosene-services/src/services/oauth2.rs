@@ -12,6 +12,10 @@ use uuid::Uuid;
 
 use crate::prelude::*;
 
+pub mod device_authorization;
+
+use device_authorization::DeviceAuthorizations;
+
 // TODO: refactor and use RevokeForm in crate-common/src/v1/routes/oauth.rs (rename to OauthTokenRevoke, add field, etc)
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OauthTokenRevoke {
@@ -104,6 +108,7 @@ impl OauthState {
 pub struct ServiceOauth {
     state: Globals,
     oauth_states: Arc<DashMap<Uuid, OauthState>>,
+    pub device_authorizations: DeviceAuthorizations,
 }
 
 // TODO: use pkce/code_verifier s256 for oidc (and other oauth providers too?)
@@ -112,14 +117,17 @@ impl ServiceOauth {
         let s = Self {
             state,
             oauth_states: Arc::new(DashMap::new()),
+            device_authorizations: DeviceAuthorizations::new(),
         };
 
-        // clean up expired oauth states
-        let s_clone = s.oauth_states.clone();
+        // clean up expired oauth states and device authorizations
+        let oauth_states = s.oauth_states.clone();
+        let device_authorizations = s.device_authorizations.clone();
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(Duration::from_secs(60)).await;
-                s_clone.retain(|_, state| !state.is_expired(Duration::from_secs(60 * 5)));
+                oauth_states.retain(|_, state| !state.is_expired(Duration::from_secs(60 * 5)));
+                device_authorizations.cleanup_expired();
             }
         });
 
@@ -210,6 +218,7 @@ impl ServiceOauth {
                     client_secret: Some(client_secret.clone()),
                     refresh_token: None,
                     code_verifier: None,
+                    device_code: None,
                     scope: None,
                 },
             ),
@@ -226,6 +235,7 @@ impl ServiceOauth {
                     client_secret: None,
                     refresh_token: None,
                     code_verifier: None,
+                    device_code: None,
                     scope: None,
                 },
             ),

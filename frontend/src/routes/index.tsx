@@ -67,6 +67,7 @@ import type { RoomT } from "@/types";
 import { channelDisplayName } from "@/utils/channel";
 import { icMore } from "@/utils/icons";
 
+export { RouteDevice } from "@/components/shared/AuthorizeDevice";
 export { RouteInvite } from "@/components/shared/Invite";
 export { RouteAuthorize } from "@/components/shared/Oauth";
 export { RouteUser } from "@/components/shared/UserPage";

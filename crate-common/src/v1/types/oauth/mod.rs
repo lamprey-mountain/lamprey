@@ -24,6 +24,7 @@ pub struct AuthServerMetadata {
     /// whether the `iss` parameter is included in authorization responses (RFC 9207)
     pub authorization_response_iss_parameter_supported: bool,
     pub authorization_endpoint: Url,
+    pub device_authorization_endpoint: Url,
     pub token_endpoint: Url,
     pub jwks_uri: Url,
     pub scopes_supported: Vec<String>,
@@ -40,6 +41,7 @@ pub struct OidcDiscovery {
     /// whether the `iss` parameter is included in authorization responses (RFC 9207)
     pub authorization_response_iss_parameter_supported: bool,
     pub authorization_endpoint: Url,
+    pub device_authorization_endpoint: Url,
     pub token_endpoint: Url,
     pub userinfo_endpoint: Url,
     pub jwks_uri: Url,
@@ -198,6 +200,58 @@ pub struct OauthAuthorizeResponse {
     pub redirect_uri: Url,
 }
 
+/// device authorization request (RFC 8628)
+#[record]
+pub struct OauthDeviceAuthorizationRequest {
+    pub client_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_secret: Option<String>,
+    /// space-separated scopes to request
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
+}
+
+/// device authorization response (RFC 8628)
+#[record]
+pub struct OauthDeviceAuthorizationResponse {
+    pub device_code: String,
+    pub user_code: String,
+    pub verification_uri: Url,
+    pub verification_uri_complete: Url,
+    pub expires_in: u64,
+    pub interval: u64,
+}
+
+/// information about a pending device authorization
+#[record]
+pub struct OauthDeviceInfo {
+    /// the application requesting access
+    pub application: Application,
+
+    /// if the application is a bot, this is the bot user
+    pub bot_user: User,
+
+    /// the user who requested this info
+    pub auth_user: User,
+
+    /// the scopes the application is requesting
+    pub scopes: Scopes,
+}
+
+/// query for a pending device authorization
+#[record(params)]
+pub struct OauthDeviceQuery {
+    pub user_code: String,
+}
+
+/// approve or deny a pending device authorization
+#[record]
+pub struct OauthDeviceDecision {
+    pub user_code: String,
+    #[serde(default)]
+    pub approve: bool,
+}
+
 #[record]
 #[derive(Copy, PartialEq, Eq, strum::EnumString)]
 #[serde(rename_all = "snake_case")]
@@ -218,9 +272,12 @@ pub enum OauthGrantType {
     #[strum(serialize = "client_credentials")]
     ClientCredentials,
 
+    #[serde(rename = "urn:ietf:params:oauth:grant-type:device_code")]
+    #[strum(serialize = "urn:ietf:params:oauth:grant-type:device_code")]
+    DeviceCode,
+
     #[strum(serialize = "refresh_token")]
     RefreshToken,
-    // device code(?)
 }
 
 #[record]
@@ -243,6 +300,8 @@ pub struct OauthTokenRequest {
     pub refresh_token: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_verifier: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_code: Option<String>,
 
     /// space-separated scopes to request
     ///
@@ -301,6 +360,11 @@ export_models!(
     OauthAuthorizeInfo,
     OauthAuthorizeParams,
     OauthAuthorizeResponse,
+    OauthDeviceAuthorizationRequest,
+    OauthDeviceAuthorizationResponse,
+    OauthDeviceInfo,
+    OauthDeviceQuery,
+    OauthDeviceDecision,
     OauthResponseType,
     OauthGrantType,
     OauthTokenRequest,

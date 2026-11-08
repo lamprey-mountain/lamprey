@@ -128,7 +128,7 @@ export const OauthAuthorizePrompt = (p: VoidProps<OauthInfo>) => {
 	);
 };
 
-function getScopeDescription(s: string) {
+export function getScopeDescription(s: string) {
 	switch (s) {
 		case "openid":
 		case "identify":

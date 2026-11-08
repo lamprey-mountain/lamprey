@@ -7,7 +7,7 @@ use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use common::v1::routes;
 use common::v1::types::oauth::{
     AuthServerMetadata, Jwk, OauthAuthMethod, OauthAuthorizeParams, OauthCodeChallengeMethod,
-    OauthGrantType, OauthResponseType,
+    OauthDeviceAuthorizationResponse, OauthDeviceInfo, OauthGrantType, OauthResponseType,
 };
 use common::v1::types::{
     ApplicationId, AuditLogEntryType, SessionStatus, SessionToken, SessionType, UserId,
@@ -20,6 +20,9 @@ use common::v1::types::{
 };
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
+use kerosene_services::services::oauth2::device_authorization::{
+    DEVICE_CODE_EXPIRATION, DEVICE_CODE_INTERVAL, DeviceAuthorizationPoll,
+};
 use lamprey_macros::handler;
 use sha2::{Digest, Sha256};
 use strum::IntoEnumIterator;
@@ -102,6 +105,70 @@ async fn oauth_authorize(
     Ok(Json(OauthAuthorizeResponse { redirect_uri }))
 }
 
+fn parse_client_credentials(
+    headers: &HeaderMap,
+    client_id: Option<String>,
+    client_secret: Option<String>,
+) -> Result<(ApplicationId, Option<String>)> {
+    let credentials: Option<headers::Authorization<headers::authorization::Basic>> =
+        headers.typed_get();
+
+    let client_id = if let Some(client_id) = client_id {
+        client_id
+    } else if let Some(credentials) = &credentials {
+        credentials.username().to_string()
+    } else {
+        return Err(Error::InvalidCredentials);
+    };
+    let client_id = client_id
+        .parse()
+        .map_err(|_| ApiError::from_code(ErrorCode::InvalidClientId))?;
+    let client_secret = client_secret.or_else(|| credentials.map(|c| c.password().to_string()));
+
+    Ok((client_id, client_secret))
+}
+
+fn verify_client_secret(app: &Application, client_secret: Option<String>) -> Result<()> {
+    if app.oauth_confidential {
+        let client_secret = client_secret.ok_or(Error::InvalidCredentials)?;
+        let stored_secret = app
+            .oauth_secret
+            .clone()
+            .ok_or(Error::Internal("confidential app missing secret".into()))?;
+        let secrets_match = client_secret.as_bytes().ct_eq(stored_secret.as_bytes());
+        if !bool::from(secrets_match) {
+            return Err(Error::InvalidCredentials);
+        }
+    }
+    Ok(())
+}
+
+fn parse_scopes(scope: &str) -> Result<Scopes> {
+    let mut scopes = HashSet::new();
+    for scope in scope.split_whitespace() {
+        scopes.insert(
+            Scope::from_str(scope).map_err(|_| ApiError::from_code(ErrorCode::InvalidScope))?,
+        );
+    }
+    Ok(Scopes(scopes.into_iter().collect()))
+}
+
+fn oauth_error(error: &'static str, description: &'static str) -> Error {
+    let body = serde_json::json!({
+        "error": error,
+        "error_description": description,
+    });
+    Error::Response(
+        http::Response::builder()
+            .status(StatusCode::BAD_REQUEST)
+            .header(http::header::CONTENT_TYPE, "application/json")
+            .body(bytes::Bytes::from(
+                serde_json::to_vec(&body).expect("oauth error should serialize"),
+            ))
+            .expect("oauth error response should build"),
+    )
+}
+
 async fn validate_authorize(
     s: &Arc<ServerState>,
     auth: &Auth,
@@ -140,6 +207,128 @@ async fn validate_authorize(
     Ok((app.strip_private(), redirect_uri, scopes))
 }
 
+/// Oauth device authorization
+#[handler(routes::oauth_device_authorization)]
+async fn oauth_device_authorization(
+    State(s): State<Arc<ServerState>>,
+    headers: HeaderMap,
+    req: routes::oauth_device_authorization::Request,
+) -> Result<impl IntoResponse> {
+    let (client_id, client_secret) =
+        parse_client_credentials(&headers, Some(req.form.client_id), req.form.client_secret)?;
+
+    let mut data = s.data();
+    let app = data.application_get(client_id).await?;
+    verify_client_secret(&app, client_secret)?;
+
+    let scopes = match req.form.scope.as_deref() {
+        Some(scope) if !scope.is_empty() => parse_scopes(scope)?,
+        _ => Scopes(vec![Scope::Identify]),
+    };
+
+    let (device_code, authorization) = s
+        .services()
+        .oauth
+        .device_authorizations
+        .create(app.id, scopes);
+
+    let verification_uri = s.config.html_url.join("/authorize-device")?;
+    let mut verification_uri_complete = verification_uri.clone();
+    verification_uri_complete
+        .query_pairs_mut()
+        .append_pair("user_code", &authorization.user_code);
+
+    Ok(Json(OauthDeviceAuthorizationResponse {
+        device_code,
+        user_code: authorization.user_code,
+        verification_uri,
+        verification_uri_complete,
+        expires_in: DEVICE_CODE_EXPIRATION.as_secs(),
+        interval: DEVICE_CODE_INTERVAL.as_secs(),
+    }))
+}
+
+/// Oauth device info
+#[handler(routes::oauth_device_info)]
+async fn oauth_device_info(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::oauth_device_info::Request,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let authorization = srv
+        .oauth
+        .device_authorizations
+        .get_by_user_code(&req.query.user_code)
+        .ok_or_else(|| {
+            ApiError::with_message(
+                ErrorCode::InvalidData,
+                "invalid or expired user code".to_string(),
+            )
+        })?;
+
+    let mut data = s.data();
+    let app = data.application_get(authorization.application_id).await?;
+    if app.owner_id != auth.user.id && !app.public {
+        return Err(ApiError::from_code(ErrorCode::UnknownApplication).into());
+    }
+
+    let auth_user = srv.users.get(auth.user.id, None).await?;
+    let bot_user = srv.users.get(app.id.into_inner().into(), None).await?;
+
+    Ok(Json(OauthDeviceInfo {
+        application: app.strip_private(),
+        bot_user,
+        auth_user,
+        scopes: authorization.scopes,
+    }))
+}
+
+/// Oauth device authorize
+#[handler(routes::oauth_device_authorize)]
+async fn oauth_device_authorize(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::oauth_device_authorize::Request,
+) -> Result<impl IntoResponse> {
+    let srv = s.services();
+    let authorization = srv
+        .oauth
+        .device_authorizations
+        .get_by_user_code(&req.decision.user_code)
+        .ok_or_else(|| {
+            ApiError::with_message(
+                ErrorCode::InvalidData,
+                "invalid or expired user code".to_string(),
+            )
+        })?;
+
+    let mut data = s.data();
+    let app = data.application_get(authorization.application_id).await?;
+    if app.owner_id != auth.user.id && !app.public {
+        return Err(ApiError::from_code(ErrorCode::UnknownApplication).into());
+    }
+
+    if req.decision.approve {
+        data.connection_create(auth.user.id, app.id, authorization.scopes.clone())
+            .await?;
+        let al = auth.audit_log(auth.user.id.into_inner().into());
+        al.commit_success(AuditLogEntryType::ConnectionCreate {
+            application_id: app.id,
+            scopes: authorization.scopes.clone(),
+        })
+        .await?;
+    }
+
+    srv.oauth.device_authorizations.authorize(
+        &req.decision.user_code,
+        auth.user.id,
+        req.decision.approve,
+    )?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Oauth exchange token
 ///
 /// exchange an authorization token for an access token
@@ -153,28 +342,8 @@ async fn oauth_token(
         .get("user-agent")
         .and_then(|h| h.to_str().ok())
         .map(ToString::to_string);
-    let credentials: Option<headers::Authorization<headers::authorization::Basic>> =
-        headers.typed_get();
-    let client_id: ApplicationId = if let Some(client_id) = req.token.client_id {
-        client_id
-            .parse()
-            .map_err(|_| ApiError::from_code(ErrorCode::InvalidClientId))?
-    } else if let Some(creds) = &credentials {
-        creds
-            .username()
-            .parse()
-            .map_err(|_| ApiError::from_code(ErrorCode::InvalidClientId))?
-    } else {
-        return Err(Error::InvalidCredentials);
-    };
-
-    let client_secret = if let Some(client_secret) = req.token.client_secret {
-        client_secret
-    } else if let Some(creds) = &credentials {
-        creds.password().to_string()
-    } else {
-        return Err(Error::InvalidCredentials);
-    };
+    let (client_id, client_secret) =
+        parse_client_credentials(&headers, req.token.client_id, req.token.client_secret)?;
 
     let mut data = s.data();
     let app = data.application_get(client_id).await?;
@@ -182,15 +351,7 @@ async fn oauth_token(
         return Err(Error::InvalidCredentials);
     }
 
-    if app.oauth_confidential {
-        let stored_secret = app
-            .oauth_secret
-            .ok_or(Error::Internal("confidential app missing secret".into()))?;
-        let secrets_match = client_secret.as_bytes().ct_eq(stored_secret.as_bytes());
-        if !bool::from(secrets_match) {
-            return Err(Error::InvalidCredentials);
-        }
-    }
+    verify_client_secret(&app, client_secret)?;
 
     // TODO: deduplicate/dry up this code
     // maybe extract this logic into a service? (reuse oauth service?)
@@ -298,16 +459,7 @@ async fn oauth_token(
             }
 
             let scopes = match req.token.scope.as_deref() {
-                Some(scope) if !scope.is_empty() => {
-                    let mut scopes = HashSet::new();
-                    for scope in scope.split_whitespace() {
-                        scopes.insert(
-                            Scope::from_str(scope)
-                                .map_err(|_| ApiError::from_code(ErrorCode::InvalidScope))?,
-                        );
-                    }
-                    Scopes(scopes.into_iter().collect())
-                }
+                Some(scope) if !scope.is_empty() => parse_scopes(scope)?,
                 _ => Scopes(vec![Scope::Full]),
             };
 
@@ -352,6 +504,111 @@ async fn oauth_token(
             };
 
             Ok(Json(response))
+        }
+        OauthGrantType::DeviceCode => {
+            let device_code = req
+                .token
+                .device_code
+                .ok_or_else(|| oauth_error("invalid_request", "missing device_code"))?;
+
+            match s.services().oauth.device_authorizations.poll(&device_code) {
+                DeviceAuthorizationPoll::Pending => {
+                    return Err(oauth_error(
+                        "authorization_pending",
+                        "the user has not approved the request yet",
+                    ));
+                }
+                DeviceAuthorizationPoll::SlowDown => {
+                    return Err(oauth_error("slow_down", "polling too frequently"));
+                }
+                DeviceAuthorizationPoll::Denied => {
+                    return Err(oauth_error("access_denied", "the user denied the request"));
+                }
+                DeviceAuthorizationPoll::Expired => {
+                    return Err(oauth_error("expired_token", "the device code has expired"));
+                }
+                DeviceAuthorizationPoll::Invalid => {
+                    return Err(oauth_error("invalid_grant", "invalid device code"));
+                }
+                DeviceAuthorizationPoll::Approved {
+                    application_id,
+                    user_id,
+                    scopes,
+                } => {
+                    let result: Result<OauthTokenResponse> = async {
+                        if application_id != app.id {
+                            return Err(oauth_error(
+                                "invalid_grant",
+                                "device code belongs to another client",
+                            ));
+                        }
+
+                        data.connection_create(user_id, app.id, scopes.clone())
+                            .await?;
+
+                        let token = SessionToken(Uuid::new_v4().to_string());
+                        let expires_in = 3600;
+                        let expires_at = Time::now_utc() + Duration::from_secs(expires_in);
+                        let session = data
+                            .session_create(DbSessionCreate {
+                                token: token.clone(),
+                                name: Some(app.name.clone()),
+                                expires_at: Some(expires_at),
+                                ty: SessionType::Access,
+                                application_id: Some(app.id),
+                                ip_addr: None,
+                                user_agent: user_agent.clone(),
+                            })
+                            .await?;
+                        data.session_set_status(session.id, SessionStatus::Authorized { user_id })
+                            .await?;
+
+                        let refresh_token_string = Uuid::new_v4().to_string();
+                        data.oauth_refresh_token_create(refresh_token_string.clone(), session.id)
+                            .await?;
+
+                        let mut id_token = None;
+                        if scopes.has(&Scope::Openid) {
+                            let srv = s.services();
+                            let claims = OidcClaims {
+                                iss: s.config.api_url.to_string(),
+                                sub: user_id.to_string(),
+                                aud: client_id.to_string(),
+                                exp: expires_at.unix_timestamp() as u64,
+                                iat: Time::now_utc().unix_timestamp() as u64,
+                                nonce: None,
+                            };
+                            id_token = Some(srv.oauth_provider.sign_oidc_claims(&claims).await?);
+                        }
+
+                        Ok(OauthTokenResponse {
+                            access_token: token.0,
+                            token_type: "Bearer".to_string(),
+                            expires_in: Some(expires_in),
+                            refresh_token: Some(refresh_token_string),
+                            scope: scopes
+                                .into_iter()
+                                .map(|s| s.to_string())
+                                .collect::<Vec<_>>()
+                                .join(" "),
+                            id_token,
+                        })
+                    }
+                    .await;
+
+                    let devices = s.services().oauth.device_authorizations.clone();
+                    match result {
+                        Ok(response) => {
+                            devices.consume(&device_code);
+                            Ok(Json(response))
+                        }
+                        Err(error) => {
+                            devices.release(&device_code);
+                            Err(error)
+                        }
+                    }
+                }
+            }
         }
         OauthGrantType::RefreshToken => {
             let refresh_token = req
@@ -477,6 +734,7 @@ async fn oauth_autoconfig_auth_server(
         issuer: s.config.api_url.clone(),
         authorization_response_iss_parameter_supported: true,
         authorization_endpoint: s.config.html_url.join("/authorize")?,
+        device_authorization_endpoint: s.config.api_url.join("/api/v1/oauth/device/start")?,
         token_endpoint: s.config.api_url.join("/api/v1/oauth/token")?,
         jwks_uri: s.config.api_url.join("/api/v1/.well-known/jwks.json")?,
         scopes_supported: Scope::iter().map(|a| a.to_string()).collect(),
@@ -484,6 +742,7 @@ async fn oauth_autoconfig_auth_server(
         grant_types_supported: vec![
             OauthGrantType::AuthorizationCode,
             OauthGrantType::ClientCredentials,
+            OauthGrantType::DeviceCode,
         ],
         token_endpoint_auth_methods_supported: vec![
             OauthAuthMethod::ClientSecretPost,
@@ -507,6 +766,7 @@ async fn oauth_autoconfig_openid(
         issuer: s.config.api_url.clone(),
         authorization_response_iss_parameter_supported: true,
         authorization_endpoint: s.config.html_url.join("/authorize")?,
+        device_authorization_endpoint: s.config.api_url.join("/api/v1/oauth/device/start")?,
         token_endpoint: s.config.api_url.join("/api/v1/oauth/token")?,
         userinfo_endpoint: s.config.api_url.join("/api/v1/oauth/userinfo")?,
         jwks_uri: s.config.api_url.join("/api/v1/.well-known/jwks.json")?,
@@ -515,6 +775,7 @@ async fn oauth_autoconfig_openid(
         grant_types_supported: vec![
             OauthGrantType::AuthorizationCode,
             OauthGrantType::ClientCredentials,
+            OauthGrantType::DeviceCode,
         ],
         subject_types_supported: vec!["public".to_string()],
         id_token_signing_alg_values_supported: vec!["ES256".to_string()],
@@ -601,6 +862,9 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(oauth_info))
         .routes(routes2!(oauth_authorize))
+        .routes(routes2!(oauth_device_authorization))
+        .routes(routes2!(oauth_device_info))
+        .routes(routes2!(oauth_device_authorize))
         .routes(routes2!(oauth_token))
         .routes(routes2!(oauth_introspect))
         .routes(routes2!(oauth_revoke))

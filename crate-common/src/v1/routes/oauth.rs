@@ -48,6 +48,76 @@ pub mod oauth_authorize {
     }
 }
 
+/// Oauth device authorization
+///
+/// Start the device authorization flow.
+#[endpoint(
+    post,
+    path = "/oauth/device/start",
+    tags = ["oauth"],
+    response(OK, body = OauthDeviceAuthorizationResponse, description = "success"),
+)]
+pub mod oauth_device_authorization {
+    use crate::v1::types::oauth::{
+        OauthDeviceAuthorizationRequest, OauthDeviceAuthorizationResponse,
+    };
+
+    pub struct Request {
+        #[form]
+        pub form: OauthDeviceAuthorizationRequest,
+    }
+
+    pub struct Response {
+        #[json]
+        pub device: OauthDeviceAuthorizationResponse,
+    }
+}
+
+/// Oauth device info
+///
+/// Fetch information about a pending device authorization.
+#[endpoint(
+    get,
+    path = "/oauth/device",
+    tags = ["oauth"],
+    scopes = [Identify],
+    response(OK, body = OauthDeviceInfo, description = "success"),
+)]
+pub mod oauth_device_info {
+    use crate::v1::types::oauth::{OauthDeviceInfo, OauthDeviceQuery};
+
+    pub struct Request {
+        #[query]
+        pub query: OauthDeviceQuery,
+    }
+
+    pub struct Response {
+        #[json]
+        pub info: OauthDeviceInfo,
+    }
+}
+
+/// Oauth device authorize
+///
+/// Approve or deny a pending device authorization.
+#[endpoint(
+    post,
+    path = "/oauth/device/authorize",
+    tags = ["oauth"],
+    scopes = [Identify],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod oauth_device_authorize {
+    use crate::v1::types::oauth::OauthDeviceDecision;
+
+    pub struct Request {
+        #[json]
+        pub decision: OauthDeviceDecision,
+    }
+
+    pub struct Response {}
+}
+
 /// Oauth token
 ///
 /// Exchange an authorization token for an access token.
