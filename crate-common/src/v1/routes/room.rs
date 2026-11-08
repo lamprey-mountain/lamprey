@@ -50,6 +50,9 @@ pub mod room_get {
     pub struct Response {
         #[json]
         pub room: Room,
+
+        #[status]
+        pub status: http::StatusCode,
     }
 }
 
@@ -85,17 +88,20 @@ pub mod room_list {
     tags = ["room"],
     scopes = [Full],
     permissions = [RoomManage],
-    response(OK, description = "success"),
+    response(OK, body = RoomSearch, description = "success"),
 )]
 pub mod room_search {
-    use crate::v1::types::search::RoomSearchRequest;
+    use crate::v1::types::search::{RoomSearch, RoomSearchRequest};
 
     pub struct Request {
         #[json]
         pub search: RoomSearchRequest,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[json]
+        pub results: RoomSearch,
+    }
 }
 
 /// Room edit

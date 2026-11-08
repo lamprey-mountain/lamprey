@@ -22,7 +22,7 @@ impl PaginationKey for u64 {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct PaginationQuery<K: PaginationKey> {

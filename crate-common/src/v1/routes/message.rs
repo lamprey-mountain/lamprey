@@ -80,10 +80,10 @@ pub mod message_context {
     tags = ["message", "badge.public"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = MessageList, description = "List thread messages success"),
+    response(OK, body = PaginationResponse<Message>, description = "List thread messages success"),
 )]
 pub mod message_list {
-    use crate::v1::types::{ChannelId, MessageId, MessageList, PaginationQuery};
+    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse};
 
     pub struct Request {
         #[path]
@@ -95,7 +95,7 @@ pub mod message_list {
 
     pub struct Response {
         #[json]
-        pub body: MessageList,
+        pub messages: PaginationResponse<Message>,
     }
 }
 
@@ -221,10 +221,10 @@ pub mod message_version_list {
     tags = ["message"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = Message, description = "success"),
+    response(OK, body = MessageVersion, description = "success"),
 )]
 pub mod message_version_get {
-    use crate::v1::types::{ChannelId, Message, MessageId, MessageVerId};
+    use crate::v1::types::{ChannelId, MessageId, MessageVerId, MessageVersion};
 
     pub struct Request {
         #[path]
@@ -239,7 +239,7 @@ pub mod message_version_get {
 
     pub struct Response {
         #[json]
-        pub message: Message,
+        pub message: MessageVersion,
     }
 }
 
@@ -376,11 +376,11 @@ pub mod message_unpin {
     tags = ["message", "badge.public"],
     scopes = [Full],
     permissions = [ChannelView],
-    response(OK, body = PaginationResponse<MessagePin>, description = "success"),
+    response(OK, body = PaginationResponse<Message>, description = "success"),
 )]
 // TODO: rename to pin_list
 pub mod message_pins_list {
-    use crate::v1::types::{ChannelId, MessageId, MessagePin, PaginationQuery, PaginationResponse};
+    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse};
 
     pub struct Request {
         #[path]
@@ -392,7 +392,7 @@ pub mod message_pins_list {
 
     pub struct Response {
         #[json]
-        pub pins: PaginationResponse<MessagePin>,
+        pub pins: PaginationResponse<Message>,
     }
 }
 
@@ -494,9 +494,7 @@ pub mod message_reply_list {
     response(OK, body = PaginationResponse<Message>, description = "success"),
 )]
 pub mod message_list_deleted {
-    use crate::v1::types::{
-        ChannelId, Message, MessageId, MessageList, PaginationQuery, PaginationResponse,
-    };
+    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse};
 
     pub struct Request {
         #[path]
@@ -508,7 +506,7 @@ pub mod message_list_deleted {
 
     pub struct Response {
         #[json]
-        pub messages: MessageList,
+        pub messages: PaginationResponse<Message>,
     }
 }
 
@@ -521,10 +519,10 @@ pub mod message_list_deleted {
     tags = ["message"],
     scopes = [Full],
     permissions = [MessageRemove],
-    response(OK, body = MessageList, description = "success"),
+    response(OK, body = PaginationResponse<Message>, description = "success"),
 )]
 pub mod message_list_removed {
-    use crate::v1::types::{ChannelId, MessageId, MessageList, PaginationQuery};
+    use crate::v1::types::{ChannelId, Message, MessageId, PaginationQuery, PaginationResponse};
 
     pub struct Request {
         #[path]
@@ -536,7 +534,7 @@ pub mod message_list_removed {
 
     pub struct Response {
         #[json]
-        pub messages: MessageList,
+        pub messages: PaginationResponse<Message>,
     }
 }
 
@@ -570,6 +568,7 @@ pub mod message_list_atom {
     path = "/channel/{channel_id}/nudge",
     tags = ["message"],
     scopes = [Full],
+    response(CREATED, body = Message, description = "success"),
 )]
 pub mod message_nudge {
     use crate::v1::types::{ChannelId, Message};
@@ -585,5 +584,8 @@ pub mod message_nudge {
     pub struct Response {
         #[json]
         pub message: Message,
+
+        #[status]
+        pub status: http::StatusCode,
     }
 }

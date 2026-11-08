@@ -59,6 +59,9 @@ pub mod channel_create_dm {
     pub struct Response {
         #[json]
         pub channel: Channel,
+
+        #[status]
+        pub status: http::StatusCode,
     }
 }
 
