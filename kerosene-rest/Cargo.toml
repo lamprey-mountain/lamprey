@@ -43,3 +43,4 @@ validator = { workspace = true }
 [features]
 default = []
 frontend = ["dep:base64", "dep:minijinja", "dep:rand", "dep:rust-embed"]
+webtransport = ["lamprey-backend-services/webtransport"]

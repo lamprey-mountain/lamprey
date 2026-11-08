@@ -15,6 +15,7 @@ pub mod room_analytics;
 pub mod room_member;
 pub mod room_template;
 pub mod search;
+pub mod server;
 pub mod thread;
 pub mod unfurler;
 pub mod user;
@@ -34,6 +35,7 @@ pub fn register(r: &mut Routes) {
         room_analytics::register(r);
         room_template::register(r);
         search::register(r);
+        server::register(r);
         room_member::register(r);
         thread::register(r);
         unfurler::register(r);

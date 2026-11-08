@@ -111,4 +111,4 @@ vergen-gitcl = { version = "10.0.3", features = ["build", "cargo", "rustc"] }
 default = ["webtransport"]
 debug = []
 e2ee = []
-webtransport = ["dep:wtransport", "dep:matchit", "kerosene-services/webtransport"]
+webtransport = ["dep:wtransport", "dep:matchit", "kerosene-services/webtransport", "kerosene-rest/webtransport"]
