@@ -237,10 +237,9 @@ pub async fn delete(
         .cast_internal()?
         .ensure_view()?;
 
-    let message = globals
-        .begin_read()
-        .await
-        .cast_internal()?
+    let mut data = globals.begin().await.cast_internal()?;
+
+    let message = data
         .message_get(body.channel_id, body.message_id)
         .await
         .cast_internal()?;
@@ -258,7 +257,6 @@ pub async fn delete(
                 .await
                 .cast_internal()?;
             if room.security.require_mfa {
-                let mut data = globals.begin_read().await.cast_internal()?;
                 let totp = data.auth_totp_get(auth_user.id).await.cast_internal()?;
                 if !totp.map(|(_, enabled)| enabled).unwrap_or(false) {
                     return Err(ApiError::from_code(ErrorCode::MfaRequired).into());
@@ -273,7 +271,6 @@ pub async fn delete(
     perms.needs_unlocked();
     perms.check()?;
 
-    let mut data = globals.begin().await.cast_internal()?;
     data.message_delete(body.channel_id, body.message_id)
         .await
         .cast_internal()?;
@@ -1128,7 +1125,7 @@ pub async fn list_deleted(
         .await
         .cast_internal()?
         .ensure_view()?;
-    perms.needs(Permission::MessageDelete);
+    perms.needs(Permission::MessageDelete).check()?;
 
     let messages = srv
         .messages
@@ -1163,7 +1160,7 @@ pub async fn list_removed(
         .await
         .cast_internal()?
         .ensure_view()?;
-    perms.needs(Permission::MessageRemove);
+    perms.needs(Permission::MessageRemove).check()?;
 
     let messages = srv
         .messages
