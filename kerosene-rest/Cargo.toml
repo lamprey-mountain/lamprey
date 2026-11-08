@@ -8,6 +8,7 @@ license.workspace = true
 
 [dependencies]
 axum = { workspace = true, features = ["macros", "multipart"] }
+base64 = { workspace = true, optional = true }
 bytes = { workspace = true, features = ["serde"] }
 common = { workspace = true, features = ["utoipa", "validator"] }
 futures = { workspace = true }
@@ -18,9 +19,12 @@ lamprey-backend-core = { workspace = true }
 lamprey-backend-services = { package = "kerosene-services", version = "0.1.1", path = "../kerosene-services" } # TODO: rename imports
 lamprey-macros = { workspace = true }
 lamprey-unfurl = { workspace = true }
+minijinja = { version = "3.0.5", optional = true }
 multer = { workspace = true }
 percent-encoding = { workspace = true }
+rand = { version = "0.10.3", optional = true }
 rmp-serde = { workspace = true }
+rust-embed = { version = "8.13.0", optional = true, features = ["interpolate-folder-path"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 serde_path_to_error = { workspace = true }
@@ -28,10 +32,15 @@ serde_urlencoded = { workspace = true }
 subtle = { workspace = true }
 thiserror = { workspace = true }
 time = { workspace = true }
-tokio = { workspace = true, features = ["sync"] }
+tokio = { workspace = true, features = ["fs", "sync"] }
 tower-http = { workspace = true, features = ["catch-panic", "cors", "limit", "propagate-header", "sensitive-headers", "trace"] }
 tracing = { workspace = true }
 url = { workspace = true }
 utoipa = { workspace = true }
 utoipa-axum = { workspace = true }
 validator = { workspace = true }
+
+[features]
+default = []
+frontend = ["dep:base64", "dep:minijinja", "dep:rand"]
+embed-frontend = ["frontend", "dep:rust-embed"]

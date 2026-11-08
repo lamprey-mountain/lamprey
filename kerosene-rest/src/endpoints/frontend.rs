@@ -1,19 +1,18 @@
-use std::sync::Arc;
-
-use crate::ServerState;
 use axum::{
     body::Body,
     extract::{Path, State},
     http::{Uri, header},
     response::{IntoResponse, Response},
+    routing::get,
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
 use common::v1::types::{InviteCode, InviteTarget};
+use lamprey_backend_core::error::{Error, Result};
 use minijinja::{Environment, context};
 use rand::Rng;
 use serde::Serialize;
 
-use crate::{Error, Result};
+use crate::{Routes, util::Globals};
 
 #[cfg(feature = "embed-frontend")]
 use rust_embed::RustEmbed;
@@ -31,10 +30,16 @@ struct WebuiConfig {
     cdn_url: String,
 }
 
+pub fn register(r: &mut Routes) {
+    r.route("/invite/{code}", get(invite_meta_handler));
+    r.fallback(frontend_handler);
+}
+
 pub async fn frontend_handler(
     uri: Uri,
-    State(s): State<Arc<ServerState>>,
+    State(globals): State<Globals>,
 ) -> Result<impl IntoResponse> {
+    let config = globals.config();
     let mut path = uri.path().trim_start_matches('/').to_string();
     if path.is_empty() {
         path = "index.html".to_string();
@@ -43,7 +48,7 @@ pub async fn frontend_handler(
     if path != "index.html" {
         let mut content_data = None;
 
-        if let Some(fs_path) = &s.config.ui.path {
+        if let Some(fs_path) = &config.ui.path {
             let full_path = fs_path.join(&path);
             if let Ok(content) = tokio::fs::read(&full_path).await {
                 content_data = Some(content);
@@ -68,17 +73,16 @@ pub async fn frontend_handler(
     let nonce = make_nonce();
 
     let webui_config = WebuiConfig {
-        api_url: s.config.api_url.to_string(),
-        sync_url: s.config.api_url.join("/api/v1/sync")?.to_string(),
-        html_url: s.config.html_url.to_string(),
-        cdn_url: s.config.cdn_url.to_string(),
+        api_url: config.api_url.to_string(),
+        sync_url: config.api_url.join("/api/v1/sync")?.to_string(),
+        html_url: config.html_url.to_string(),
+        cdn_url: config.cdn_url.to_string(),
     };
 
     let env_json = serde_json::to_string(&webui_config)?;
-
     let env = Environment::new();
 
-    let tpl_data = if let Some(fs_path) = &s.config.ui.path {
+    let tpl_data = if let Some(fs_path) = &config.ui.path {
         tokio::fs::read(fs_path.join("index.html"))
             .await
             .map_err(|_| Error::FrontendAssetNotFound("index.html".to_string()))?
@@ -120,9 +124,13 @@ pub async fn frontend_handler(
 
 pub async fn invite_meta_handler(
     Path(code): Path<String>,
-    State(s): State<Arc<ServerState>>,
+    State(globals): State<Globals>,
 ) -> Result<impl IntoResponse> {
-    let mut d = s.data();
+    let config = globals.config();
+    let mut d = globals
+        .begin_read()
+        .await
+        .map_err(|e| Error::Internal(e.to_string()))?;
     let invite = d.invite_get(InviteCode(code.clone())).await?;
 
     let title = match &invite.invite.target {
@@ -141,17 +149,16 @@ pub async fn invite_meta_handler(
     let nonce = make_nonce();
 
     let webui_config = WebuiConfig {
-        api_url: s.config.api_url.to_string(),
-        sync_url: s.config.api_url.join("/api/v1/sync")?.to_string(),
-        html_url: s.config.html_url.to_string(),
-        cdn_url: s.config.cdn_url.to_string(),
+        api_url: config.api_url.to_string(),
+        sync_url: config.api_url.join("/api/v1/sync")?.to_string(),
+        html_url: config.html_url.to_string(),
+        cdn_url: config.cdn_url.to_string(),
     };
 
     let env_json = serde_json::to_string(&webui_config)?;
-
     let env = Environment::new();
 
-    let tpl_data = if let Some(fs_path) = &s.config.ui.path {
+    let tpl_data = if let Some(fs_path) = &config.ui.path {
         tokio::fs::read(fs_path.join("index.html"))
             .await
             .map_err(|_| Error::FrontendAssetNotFound("index.html".to_string()))?
@@ -227,25 +234,3 @@ fn make_nonce() -> String {
     rand::rng().fill_bytes(&mut bytes);
     STANDARD.encode(bytes)
 }
-
-// let csp = format!(
-//     "default-src 'self'; \
-//      script-src 'self' 'nonce-{}'; \
-//      style-src 'self' 'unsafe-inline'; \
-//      img-src 'self' data:; \
-//      connect-src 'self' {}; \
-//      font-src 'self'; \
-//      object-src 'none'; \
-//      base-uri 'none'; \
-//      frame-ancestors 'none'",
-//     nonce,
-//     s.config.api_url,
-// );
-
-// Response::builder()
-//     .status(StatusCode::OK)
-//     .header(header::CONTENT_TYPE, "text/html")
-//     .header("Content-Security-Policy", csp)
-//     .body(Body::from(rendered))
-//     .unwrap()
-// }

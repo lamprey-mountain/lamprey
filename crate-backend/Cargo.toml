@@ -46,7 +46,7 @@ jsonwebkey = { workspace = true, features = ["generate", "pkcs-convert"] }
 jsonwebtoken = { workspace = true, features = ["rust_crypto"] }
 kameo = { workspace = true }
 kerosene-core = { workspace = true }
-kerosene-rest = { workspace = true }
+kerosene-rest = { workspace = true, features = ["frontend"] }
 kerosene-services = { workspace = true }
 kerosene-sync = { workspace = true }
 lamprey-backend-core = { workspace = true }
@@ -71,13 +71,11 @@ opentelemetry_sdk = { workspace = true, features = ["rt-tokio", "tokio"] }
 p256 = { workspace = true, features = ["pkcs8"] }
 pastey = "0.2.3"
 prometheus = { version = "0.14.0", features = ["process"] }
-rand = "0.10.3"
 regex = { workspace = true }
 reqwest = { workspace = true, features = ["rustls", "json"] }
 rmp-serde = { workspace = true }
 rrule = { workspace = true }
 rust-argon2 = { workspace = true }
-rust-embed = { version = "8.13.0", optional = true, features = ["interpolate-folder-path"] }
 rustls = { workspace = true, features = ["ring"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -111,8 +109,7 @@ vergen-gitcl = { version = "10.0.3", features = ["build", "cargo", "rustc"] }
 
 [features]
 default = ["webtransport"]
-embed-frontend = ["rust-embed"]
-rust-embed = ["dep:rust-embed"]
+embed-frontend = ["kerosene-rest/embed-frontend"]
 debug = []
 e2ee = []
 webtransport = ["dep:wtransport", "dep:matchit", "kerosene-services/webtransport"]

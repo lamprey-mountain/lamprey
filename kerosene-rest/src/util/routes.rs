@@ -2,6 +2,7 @@ use std::mem;
 
 use axum::{
     Json, Router,
+    handler::Handler,
     routing::{MethodRouter, get},
 };
 use common::util::registry::Registry;
@@ -94,6 +95,8 @@ impl Routes {
         };
 
         crate::endpoints::api::register(&mut me);
+        #[cfg(feature = "frontend")]
+        crate::endpoints::frontend::register(&mut me);
 
         me
     }
@@ -208,5 +211,15 @@ impl Routes {
         let r = self.router.take().unwrap();
         self.router = Some(r.route(&full_path, method_router));
         self.last_path = Some(full_path);
+    }
+
+    /// register a fallback handler
+    pub(crate) fn fallback<H, T>(&mut self, handler: H)
+    where
+        H: Handler<T, Globals>,
+        T: 'static,
+    {
+        let r = self.router.take().unwrap();
+        self.router = Some(r.fallback(handler));
     }
 }
