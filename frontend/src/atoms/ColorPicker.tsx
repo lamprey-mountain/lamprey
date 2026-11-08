@@ -419,6 +419,16 @@ export type ColorPickerButtonProps = ColorPickerProps & {
 
 export const ColorPickerButton = (props: ColorPickerButtonProps) => {
 	const [menuOpen, setMenuOpen] = createSignal(false);
+
+	const iconColor = createMemo(() => {
+		if (!props.value) return undefined;
+		try {
+			const lightness = new Color(props.value).to("oklch").coords[0] ?? 0;
+			return lightness > 0.6 ? "oklch(0.2 0 0)" : "oklch(0.95 0 0)";
+		} catch {
+			return undefined;
+		}
+	});
 	const [referenceEl, setReferenceEl] = createSignal<HTMLElement>();
 	const [floatingEl, setFloatingEl] = createSignal<HTMLElement>();
 
@@ -429,7 +439,6 @@ export const ColorPickerButton = (props: ColorPickerButtonProps) => {
 	});
 
 	// TODO: animate color picker
-	// TODO: make icEdit edit icon change color depending on if selected color is light or dark
 
 	createEffect(() => {
 		if (menuOpen()) {
@@ -437,6 +446,7 @@ export const ColorPickerButton = (props: ColorPickerButtonProps) => {
 				const target = e.target as HTMLElement;
 				const ref = referenceEl();
 				const float = floatingEl();
+				if (target.closest(".contextmenu, .dropdown-items")) return;
 				if (ref && float && !ref.contains(target) && !float.contains(target)) {
 					setMenuOpen(false);
 				}
@@ -449,10 +459,15 @@ export const ColorPickerButton = (props: ColorPickerButtonProps) => {
 			};
 
 			const onFocusOut = (e: FocusEvent) => {
-				const target = e.relatedTarget as HTMLElement;
+				const target = e.relatedTarget as HTMLElement | null;
 				const ref = referenceEl();
 				const float = floatingEl();
-				if (ref && float && !ref.contains(target) && !float.contains(target)) {
+				if (target?.closest(".contextmenu, .dropdown-items")) return;
+				if (
+					ref &&
+					float &&
+					(!target || (!ref.contains(target) && !float.contains(target)))
+				) {
 					setMenuOpen(false);
 				}
 			};
@@ -472,6 +487,7 @@ export const ColorPickerButton = (props: ColorPickerButtonProps) => {
 	return (
 		<>
 			<button
+				type="button"
 				class="button color-picker-button"
 				ref={setReferenceEl}
 				onClick={() => setMenuOpen(!menuOpen())}
@@ -484,10 +500,10 @@ export const ColorPickerButton = (props: ColorPickerButtonProps) => {
 					wide: props.wide,
 				}}
 			>
-				<Icon src={icEdit} />
+				<Icon src={icEdit} color={iconColor() ?? null} />
 				<Show when={props.wide}>{props.value}</Show>
 			</button>
-			<Portal>
+			<Portal mount={document.getElementById("overlay")!}>
 				<Show when={menuOpen()}>
 					<div
 						ref={setFloatingEl}
@@ -496,7 +512,7 @@ export const ColorPickerButton = (props: ColorPickerButtonProps) => {
 							top: 0,
 							left: 0,
 							translate: `${position.x ?? 0}px ${position.y ?? 0}px`,
-							"z-index": 1000,
+							"z-index": 998,
 						}}
 						tabindex="-1"
 					>
