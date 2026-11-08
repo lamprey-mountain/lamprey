@@ -160,9 +160,12 @@ export class RoomsService extends BaseService<Room> {
 		return this.roomListAll.state;
 	}
 
+	/** mark all channels in a room as read, using a single bulk ack */
 	async markRead(room_id: string) {
+		const acks: Array<{ channel_id: string; message_id: string }> = [];
 		let has_more = true;
 		let from: string | undefined;
+
 		while (has_more) {
 			let data: Pagination<Channel> | undefined;
 			try {
@@ -185,17 +188,20 @@ export class RoomsService extends BaseService<Room> {
 
 			if (!data?.items) break;
 
-			for (const thread of data.items) {
-				if (thread.last_version_id) {
-					await this.client.http.PUT("/api/v1/channel/{channel_id}/ack", {
-						params: { path: { channel_id: thread.id } },
-						body: { version_id: thread.last_version_id },
+			for (const channel of data.items) {
+				if (channel.last_message_id) {
+					acks.push({
+						channel_id: channel.id,
+						message_id: channel.last_message_id,
 					});
 				}
 			}
 			has_more = data.has_more;
 			from = data.items.at(-1)?.id;
 		}
+
+		if (acks.length === 0) return;
+		await this.store.channels.ackBulk(acks);
 	}
 
 	protected afterDelete(id: string): void {

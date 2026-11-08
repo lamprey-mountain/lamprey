@@ -11,6 +11,8 @@ import type {
 import { batch } from "solid-js";
 import { BaseService } from "../core/Service";
 
+const ACK_BULK_MAX = 1024;
+
 export class ChannelsService extends BaseService<Channel> {
 	protected cacheName = "channel";
 
@@ -155,25 +157,30 @@ export class ChannelsService extends BaseService<Channel> {
 			mention_count?: number;
 		}>,
 	): Promise<void> {
-		await this.retryWithBackoff(() =>
-			this.client.http.POST("/api/v1/ack", {
-				body: {
-					acks: acks.map((ack) => ({ ...ack, type: "Message" as const })),
-				},
-			}),
-		);
+		// the server rejects bulk acks larger than ACK_BULK_MAX
+		for (let i = 0; i < acks.length; i += ACK_BULK_MAX) {
+			const chunk = acks.slice(i, i + ACK_BULK_MAX);
 
-		// Update cache in batch
-		for (const ack of acks) {
-			const t = this.cache.get(ack.channel_id);
-			if (t) {
-				const mention_count = ack.mention_count ?? 0;
-				this.cache.set(ack.channel_id, {
-					...t,
-					last_read_id: ack.message_id,
-					mention_count,
-					is_unread: false,
-				} as Channel);
+			await this.retryWithBackoff(() =>
+				this.client.http.POST("/api/v1/ack", {
+					body: {
+						acks: chunk.map((ack) => ({ ...ack, type: "Message" as const })),
+					},
+				}),
+			);
+
+			// Update cache in batch
+			for (const ack of chunk) {
+				const t = this.cache.get(ack.channel_id);
+				if (t) {
+					const mention_count = ack.mention_count ?? 0;
+					this.cache.set(ack.channel_id, {
+						...t,
+						last_read_id: ack.message_id,
+						mention_count,
+						is_unread: false,
+					} as Channel);
+				}
 			}
 		}
 	}
