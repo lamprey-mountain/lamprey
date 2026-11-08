@@ -17,7 +17,6 @@ mod dm;
 mod document;
 #[cfg(feature = "e2ee")]
 mod e2ee;
-mod emoji;
 mod federation;
 mod flume;
 mod interaction;
@@ -56,7 +55,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(debug::routes())
         .merge(dm::routes())
         .merge(document::routes())
-        .merge(emoji::routes())
         .merge(federation::routes(Arc::clone(&s)))
         .merge(flume::routes())
         .merge(interaction::routes())
