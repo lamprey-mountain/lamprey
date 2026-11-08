@@ -10,7 +10,7 @@ use tantivy::{
     space_usage::SearcherSpaceUsage,
 };
 use tokio::sync::{mpsc, oneshot};
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::{
     prelude::*,
@@ -155,24 +155,64 @@ impl AsyncIndexHandle {
 }
 
 impl AsyncIndex {
-    pub async fn open<T: IndexDefinition>(s: Globals, def: T) -> Result<AsyncIndexHandle> {
-        let name_clone = def.name();
+    /// open (or create) an index
+    ///
+    /// returns the index handle and whether the index was dropped and recreated
+    /// because the schema version changed (in which case the caller should queue
+    /// a full reindex)
+    pub async fn open<T: IndexDefinition>(s: Globals, def: T) -> Result<(AsyncIndexHandle, bool)> {
+        let name = def.name();
+        let schema_version = def.version();
         let schema = def.schema().to_owned();
         let config = s.config().search.clone();
+        let blobs = s.blobs().clone();
 
+        let cache_path = config
+            .cache_dir
+            .clone()
+            .map(|p| p.join(&name))
+            .unwrap_or_else(|| PathBuf::from(format!("/tmp/tantivy/{name}")));
+        let blob_path = format!("tantivy/{name}");
+        let version_path = format!("{blob_path}/schema_version");
+
+        // check the stored schema version and drop the index if it does not match
+        let stored_version = match blobs.read(&version_path).await {
+            Ok(buf) => String::from_utf8_lossy(&buf.to_bytes()).parse::<u64>().ok(),
+            Err(e) if e.kind() == opendal::ErrorKind::NotFound => None,
+            Err(e) => {
+                return Err(Error::Internal(format!(
+                    "Failed to read index schema version: {e}"
+                )));
+            }
+        };
+
+        let recreated = stored_version != Some(schema_version);
+        if recreated {
+            warn!(
+                index = name,
+                stored_version = ?stored_version,
+                expected_version = schema_version,
+                "search index schema version changed, recreating index"
+            );
+
+            blobs
+                .delete_with(&blob_path)
+                .recursive(true)
+                .await
+                .map_err(|e| Error::Internal(format!("Failed to drop index: {e}")))?;
+        }
+
+        let blobs_for_index = blobs.clone();
         let (index, writer, reader) = tokio::task::spawn_blocking(move || {
-            let cache_path = s
-                .config()
-                .search
-                .cache_dir
-                .clone()
-                .map(|p| p.join(&name_clone))
-                .unwrap_or_else(|| PathBuf::from(format!("/tmp/tantivy/{name_clone}")));
+            // remove the local cache, it may contain data from the dropped index
+            if recreated {
+                let _ = std::fs::remove_dir_all(&cache_path);
+            }
 
             let dir = ObjectDirectory::new(
-                s.blobs().clone(),
+                blobs_for_index,
                 tokio::runtime::Handle::current(),
-                PathBuf::from(format!("tantivy/{name_clone}")),
+                PathBuf::from(format!("tantivy/{name}")),
                 cache_path,
             );
 
@@ -195,6 +235,14 @@ impl AsyncIndex {
         })
         .await
         .map_err(|e| Error::Internal(format!("Task join error: {e}")))??;
+
+        // only record the schema version once the index was created successfully
+        if recreated {
+            blobs
+                .write(&version_path, schema_version.to_string())
+                .await
+                .map_err(|e| Error::Internal(format!("Failed to write index version: {e}")))?;
+        }
 
         let (tx, rx) = mpsc::channel(1024);
 
@@ -224,7 +272,7 @@ impl AsyncIndex {
             }
         });
 
-        Ok(handle)
+        Ok((handle, recreated))
     }
 
     fn spawn(mut self) {

@@ -16,6 +16,12 @@ use uuid::Uuid;
 
 pub static SCHEMA: Lazy<UnifiedSchema> = Lazy::new(|| UnifiedSchema::default());
 
+/// version of the unified index schema
+///
+/// bump this whenever the schema or the way documents are indexed changes in a
+/// way that requires the index to be dropped and fully reindexed
+pub const SCHEMA_VERSION: u64 = 1;
+
 #[derive(Debug, Clone)]
 pub struct UnifiedSchema {
     /// the tantivy schema itself

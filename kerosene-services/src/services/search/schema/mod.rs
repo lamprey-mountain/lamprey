@@ -8,6 +8,11 @@ pub trait IndexDefinition {
 
     /// the name of this index (path where it should be created)
     fn name(&self) -> String;
+
+    /// the version of this index' schema
+    ///
+    /// bumping this drops the existing index and queues a full reindex
+    fn version(&self) -> u64;
 }
 
 mod doctype;
