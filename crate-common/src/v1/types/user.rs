@@ -15,13 +15,20 @@ use crate::v1::types::util::some_option;
 
 use super::email::EmailInfo;
 use super::preferences::PreferencesGlobal;
-use super::{ApplicationId, ChannelId, RoomId, UserId, UserVerId};
+use super::{ApplicationId, ChannelId, InviteCode, RoomId, UserId, UserVerId};
 
 // TODO: dedicated user.created_at field instead of parsing user.id
 #[record]
 pub struct User {
     pub id: UserId,
     pub version_id: UserVerId,
+
+    /// the user who created this user, if any
+    ///
+    /// only returned if the caller has the server permission `UserManage`
+    /// or if this user is a bot or puppet
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_id: Option<UserId>,
 
     #[schema(min_length = 1, max_length = 64)]
     #[validate(length(min = 1, max = 64))]
@@ -139,7 +146,6 @@ pub struct UserWithPrivate {
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct UserCreate {
     #[schema(min_length = 1, max_length = 64)]
     #[validate(length(min = 1, max = 64))]
@@ -148,6 +154,12 @@ pub struct UserCreate {
     #[schema(required = false, min_length = 1, max_length = 8192)]
     #[validate(length(min = 1, max = 8192))]
     pub description: Option<String>,
+
+    // TODO: trust levels for users, depending on why a user was created should affect trust/reputation
+    // eg. if someone is joining an invite, the invite creator is "vouching" for them in a way vs a user coming out of nowhere
+    // it also makes moderation easier to know where a user came from
+    #[schema(required = false)]
+    pub invite_code: Option<InviteCode>,
 }
 
 #[record]

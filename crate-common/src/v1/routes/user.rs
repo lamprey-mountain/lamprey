@@ -102,20 +102,16 @@ pub mod user_undelete {
 
 pub use crate::v1::routes::audit_log::user_audit_logs;
 
-/// Guest create
+/// User create
 ///
-/// Create a guest account, with limited access to the platform.
-///
-/// - guests can read but not write public rooms, threads, messages, etc
-/// - when using an invite, they can act like a standard account in that one specific room/thread
-/// - they can be given an invite to a public room to bypass
+/// Create a new user
 #[endpoint(
     post,
-    path = "/guest",
+    path = "/user",
     tags = ["user"],
-    response(CREATED, body = User, description = "guest account created"),
+    response(CREATED, body = User, description = "user created"),
 )]
-pub mod guest_create {
+pub mod user_create {
     use crate::v1::types::{User, UserCreate};
 
     pub struct Request {

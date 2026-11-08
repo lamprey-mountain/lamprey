@@ -1031,6 +1031,7 @@ impl From<DbUser> for User {
         Self {
             id: row.id,
             version_id: row.version_id,
+            parent_id: row.parent_id.map(Into::into),
             name: row.name,
             description: row.description,
             avatar: row.avatar.map(Into::into),

@@ -21,7 +21,13 @@ pub async fn get(req: Req<routes::user_get::Endpoint>) -> Result<routes::user_ge
     let identity = req.identity();
 
     let mut user = match &req.inner().user_id {
-        UserIdReq::UserSelf => identity.ensure_user()?.clone(),
+        UserIdReq::UserSelf => {
+            let auth_user = identity.ensure_user()?;
+            srv.users
+                .get(auth_user.id, identity.user_id())
+                .await
+                .cast_internal()?
+        }
         UserIdReq::UserId(target_user_id) => srv
             .users
             .get(*target_user_id, identity.user_id())
@@ -325,10 +331,10 @@ pub async fn audit_logs(
     Ok(routes::user_audit_logs::Response { logs })
 }
 
-#[handler(routes::guest_create)]
+#[handler(routes::user_create)]
 pub async fn create(
-    req: Req<routes::guest_create::Endpoint>,
-) -> Result<routes::guest_create::Response> {
+    req: Req<routes::user_create::Endpoint>,
+) -> Result<routes::user_create::Response> {
     let globals = req.globals();
     let srv = req.services();
     let session = req.identity().ensure_session()?.clone();
@@ -340,11 +346,20 @@ pub async fn create(
         Some(Time::now_utc())
     };
 
+    let parent_id = match &create.invite_code {
+        Some(invite_code) => {
+            let mut data = globals.begin_read().await.cast_internal()?;
+            let invite = data.invite_get(invite_code.clone()).await.cast_internal()?;
+            Some(invite.invite.creator_id)
+        }
+        None => None,
+    };
+
     let mut data = globals.begin().await.cast_internal()?;
-    let user = data
+    let mut user = data
         .user_create(DbUserCreate {
             id: None,
-            parent_id: None,
+            parent_id,
             name: create.name,
             description: create.description,
             puppet: None,
@@ -354,6 +369,10 @@ pub async fn create(
         })
         .await
         .cast_internal()?;
+    // parent is only visible to managers, which this new user is not
+    // NOTE: maybe i want to expose parent_id to users anyways? ie. make it semi-public?
+    // or i could make it more restricted, ie. don't let people see who created an application?
+    user.parent_id = None;
 
     data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
         .await
@@ -385,7 +404,7 @@ pub async fn create(
         )
         .success();
 
-    Ok(routes::guest_create::Response { user })
+    Ok(routes::user_create::Response { user })
 }
 
 #[handler(routes::user_suspend)]
@@ -535,6 +554,7 @@ pub async fn list(req: Req<routes::user_list::Endpoint>) -> Result<routes::user_
         perms.needs(Permission::UserManage);
     }
     perms.check()?;
+    let can_manage = perms.has(Permission::UserManage);
 
     let (pagination, filter) = req.into_inner().query.into_parts();
     let mut data = globals.begin_read().await.cast_internal()?;
@@ -542,6 +562,9 @@ pub async fn list(req: Req<routes::user_list::Endpoint>) -> Result<routes::user_
 
     for user in &mut users.items {
         user.emails = Some(data.user_email_list(user.id).await.cast_internal()?);
+        if !can_manage && !user.bot && user.puppet.is_none() {
+            user.parent_id = None;
+        }
     }
 
     Ok(routes::user_list::Response { users })

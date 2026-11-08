@@ -73,6 +73,7 @@ impl From<DbUser> for User {
         User {
             id: row.id,
             version_id: row.version_id,
+            parent_id: row.parent_id.map(Into::into),
             name: row.name,
             description: row.description,
             presence: types::presence::Presence::offline(),
@@ -102,6 +103,7 @@ impl DataUser for Postgres {
         let user = User {
             id: user_id,
             version_id: user_id.into_inner().into(),
+            parent_id: patch.parent_id,
             name: patch.name,
             description: patch.description,
             avatar: None,

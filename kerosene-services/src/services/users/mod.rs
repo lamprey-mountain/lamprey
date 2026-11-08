@@ -46,17 +46,29 @@ impl ServiceUsers {
         let mut usr = (*usr).clone();
 
         let srv = self.globals.services();
+        // NOTE: do i want to reveal email addrs to people with UserManage?
+        let perms = match viewer_id {
+            Some(viewer_id) => {
+                usr.preferences = Some(srv.cache.preferences_user_get(viewer_id, user_id).await?);
+                srv.perms.for_server(viewer_id).await.ok()
+            }
+            None => None,
+        };
+        let is_admin = perms.as_ref().is_some_and(|p| p.has(Permission::Admin));
+        let can_manage = perms
+            .as_ref()
+            .is_some_and(|p| p.has(Permission::UserManage));
+
         if let Some(viewer_id) = viewer_id {
-            usr.preferences = Some(srv.cache.preferences_user_get(viewer_id, user_id).await?);
-
-            let perms = self.globals.services().perms.for_server(viewer_id).await;
-            // NOTE: do i want to reveal email addrs to people with UserManage?
-            let is_admin = perms.is_ok_and(|p| p.has(Permission::Admin));
-
             if viewer_id == user_id || is_admin {
                 let mut data = self.globals.begin_read().await?;
                 usr.emails = Some(data.user_email_list(user_id).await?);
             }
+        }
+
+        // parent is only visible to managers, and for bots/puppets
+        if !can_manage && !usr.bot && usr.puppet.is_none() {
+            usr.parent_id = None;
         }
 
         // FIXME: populate has_mfa
@@ -79,6 +91,10 @@ impl ServiceUsers {
             if let Some(user) = self.cache.get(user_id).await {
                 let mut user = (*user).clone();
                 user.presence = srv.presence.get(*user_id);
+                // parent is only visible for bots/puppets here since there is no viewer
+                if !user.bot && user.puppet.is_none() {
+                    user.parent_id = None;
+                }
                 out.push(user);
             } else {
                 missing.push(*user_id);
@@ -92,6 +108,10 @@ impl ServiceUsers {
             for mut user in users {
                 user.presence = srv.presence.get(user.id);
                 self.cache.insert(user.id, Arc::new(user.clone())).await;
+                // parent is only visible for bots/puppets here since there is no viewer
+                if !user.bot && user.puppet.is_none() {
+                    user.parent_id = None;
+                }
                 out.push(user);
             }
         }
