@@ -3,6 +3,7 @@ import { type Component, For, Match, Show, Switch } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { useApi } from "@/api";
 import {
+	AuditLog,
 	Info,
 	Invites,
 	Permissions,
@@ -61,6 +62,12 @@ const tabs: Array<{
 		// i'll probably require webhooks to be created on top level channels, use ?thread_id or similar (copied from disccord) to send messages in threads
 		// TODO: do i allow webhooks in gdms? ["Gdm"]
 		permissionCheck: (p) => p.has("IntegrationsManage"),
+	},
+	{
+		name: "audit log",
+		path: "logs",
+		component: AuditLog,
+		permissionCheck: (p) => p.has("AuditLogView"),
 	},
 	{
 		name: "remove channel",

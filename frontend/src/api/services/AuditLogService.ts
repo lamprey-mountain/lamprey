@@ -28,7 +28,7 @@ interface AuditLogPaginationResponse {
 export class AuditLogService extends BaseService<AuditLogEntry> {
 	protected cacheName = "audit_log";
 
-	private _roomLists = new Map<string, PaginatedList>();
+	private _lists = new Map<string, PaginatedList>();
 
 	getKey(item: AuditLogEntry): string {
 		return item.id;
@@ -42,6 +42,7 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 		room_id: string,
 		list: PaginatedList,
 		cursor?: string,
+		channel_id?: string,
 	): Promise<void> {
 		if (list.state.isLoading || !list.state.has_more) return;
 		list.setLoading(true);
@@ -56,6 +57,7 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 								dir: "b",
 								limit: 100,
 								from: cursor,
+								channel_id: channel_id ? [channel_id] : undefined,
 							},
 						},
 					}),
@@ -104,31 +106,45 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 
 	useList(
 		room_id: () => string | undefined,
+		channel_id?: () => string | undefined,
 	): Resource<PaginatedList | undefined> {
-		const [resource] = createResource(room_id, async (rid) => {
-			if (!rid) return undefined;
+		const [resource] = createResource(
+			() => {
+				const rid = room_id();
+				if (!rid) return undefined;
+				return { room_id: rid, channel_id: channel_id?.() };
+			},
+			async (ids) => {
+				if (!ids) return undefined;
 
-			let list = this._roomLists.get(rid);
-			if (!list) {
-				list = new PaginatedList();
-				this._roomLists.set(rid, list);
-			}
+				const key = `${ids.room_id}:${ids.channel_id ?? ""}`;
+				let list = this._lists.get(key);
+				if (!list) {
+					list = new PaginatedList();
+					this._lists.set(key, list);
+				}
 
-			if (list.state.ids.length === 0 && !list.state.isLoading) {
-				await this.fetchRoomPage(rid, list);
-			}
+				if (list.state.ids.length === 0 && !list.state.isLoading) {
+					await this.fetchRoomPage(
+						ids.room_id,
+						list,
+						undefined,
+						ids.channel_id,
+					);
+				}
 
-			return list;
-		});
+				return list;
+			},
+		);
 
 		return resource;
 	}
 
 	clear() {
 		super.clear();
-		for (const list of this._roomLists.values()) {
+		for (const list of this._lists.values()) {
 			list.clear();
 		}
-		this._roomLists.clear();
+		this._lists.clear();
 	}
 }

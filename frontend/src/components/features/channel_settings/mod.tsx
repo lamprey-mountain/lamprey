@@ -1,3 +1,4 @@
+export * from "./AuditLog.tsx";
 export * from "./Info.tsx";
 export * from "./Invites.tsx";
 export * from "./Permissions.tsx";

@@ -21870,6 +21870,10 @@ export interface operations {
                 limit?: number;
                 /** @description only return audit log entries from these users */
                 user_id?: components["schemas"]["Id"][];
+                /** @description only return audit log entries from these channels */
+                channel_id?: components["schemas"]["Id"][];
+                /** @description only return audit log entries targeting these users */
+                target_user_id?: components["schemas"]["Id"][];
                 /** @description only return audit log entries with these types */
                 type?: string[];
                 /**
@@ -25957,6 +25961,10 @@ export interface operations {
                 limit?: number;
                 /** @description only return audit log entries from these users */
                 user_id?: components["schemas"]["Id"][];
+                /** @description only return audit log entries from these channels */
+                channel_id?: components["schemas"]["Id"][];
+                /** @description only return audit log entries targeting these users */
+                target_user_id?: components["schemas"]["Id"][];
                 /** @description only return audit log entries with these types */
                 type?: string[];
                 /**

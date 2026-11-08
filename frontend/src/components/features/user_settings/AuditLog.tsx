@@ -1,25 +1,11 @@
-import { ReactiveSet } from "@solid-primitives/set";
-import { getTimestampFromUUID, type User } from "sdk";
-import {
-	createResource,
-	createSignal,
-	For,
-	Show,
-	type VoidProps,
-} from "solid-js";
+import type { User } from "sdk";
+import { createResource, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown";
-import { Time } from "@/atoms/Time.tsx";
-import {
-	formatAuditLogEntry,
-	formatChanges,
-	mergeAuditLogEntries,
-} from "@/lib/audit-log-util";
+import { AuditLogList } from "@/components/features/audit_log/AuditLogList";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
 	const api = useApi();
-	const [isExpanded, setIsExpanded] = createSignal(false);
-	const expanded = new ReactiveSet();
 
 	// FIXME: return newest records first
 	// TODO: move logic to audit logs service
@@ -32,27 +18,6 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 		);
 		return data;
 	});
-
-	const toggleAll = () => {
-		if (isExpanded()) {
-			collapseAll();
-		} else {
-			expandAll();
-		}
-		setIsExpanded((b) => !b);
-	};
-
-	const expandAll = () => {
-		const l = log();
-		if (!l) return;
-		for (const mergedEntry of mergeAuditLogEntries(l.audit_log_entries)) {
-			expanded.add(mergedEntry.entries[0].id);
-		}
-	};
-
-	const collapseAll = () => {
-		expanded.clear();
-	};
 
 	return (
 		<>
@@ -71,62 +36,14 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 						]}
 					/>
 				</div>
-				<div>
-					<div class="dim">&nbsp;</div>
-					<button type="button" class="button" onClick={toggleAll}>
-						{isExpanded() ? "collapse" : "expand"} all
-					</button>
-				</div>
 			</div>
 			<Show when={log()}>
-				<ul class="room-settings-audit-log">
-					<For
-						each={(() => {
-							const l = log();
-							if (!l) return [];
-							return mergeAuditLogEntries(l.audit_log_entries);
-						})()}
-					>
-						{(mergedEntry) => {
-							const firstEntry = mergedEntry.entries[0];
-							const ts = () => getTimestampFromUUID(firstEntry.id);
-							const entryDescription = () =>
-								formatAuditLogEntry(props.user.id, mergedEntry);
-
-							return (
-								<li data-id={firstEntry.id}>
-									<div
-										class="info"
-										onClick={() =>
-											expanded.has(firstEntry.id)
-												? expanded.delete(firstEntry.id)
-												: expanded.add(firstEntry.id)
-										}
-									>
-										<div style="display:flex;gap:4px">
-											<h3>{entryDescription()}</h3>
-										</div>
-										<Time date={ts()} />
-									</div>
-									<Show
-										when={
-											(formatChanges(props.user.id, mergedEntry).length !== 0 ||
-												mergedEntry.reason) &&
-											expanded.has(firstEntry.id)
-										}
-									>
-										<ul class="metadata">
-											<Show when={mergedEntry.reason}>
-												<li>reason: {mergedEntry.reason}</li>
-											</Show>
-											{formatChanges(props.user.id, mergedEntry)}
-										</ul>
-									</Show>
-								</li>
-							);
-						}}
-					</For>
-				</ul>
+				{(l) => (
+					<AuditLogList
+						room_id={props.user.id}
+						entries={l().audit_log_entries}
+					/>
+				)}
 			</Show>
 		</>
 	);
