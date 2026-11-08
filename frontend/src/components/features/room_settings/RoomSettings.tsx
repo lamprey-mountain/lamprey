@@ -168,18 +168,35 @@ const adminTabs: TabItem[] = [
 
 	// manage data/content/resources on this server
 	{ category: "resources" },
-	{ name: "users", path: "users", component: Admin.Users },
-	{ name: "rooms", path: "rooms", component: Admin.Rooms },
-	{ name: "media", path: "media", component: Admin.Media },
+	{
+		name: "users",
+		path: "users",
+		component: Admin.Users,
+		permissionCheck: (p) => p.has("UserManage") || p.has("ServerOversee"),
+	},
+	{
+		name: "rooms",
+		path: "rooms",
+		component: Admin.Rooms,
+		permissionCheck: (p) => p.has("RoomManage"),
+	},
+	{
+		name: "media",
+		path: "media",
+		component: Admin.Media,
+		permissionCheck: (p) => p.has("Admin"),
+	},
 	{
 		name: "applications",
 		path: "applications",
 		component: todo("query and manage applications"),
+		permissionCheck: (p) => p.has("Admin"),
 	},
 	{
 		name: "channels",
 		path: "channels",
 		component: todo("query and manage channels"),
+		permissionCheck: (p) => p.has("Admin"),
 	},
 	{
 		name: "servers",
