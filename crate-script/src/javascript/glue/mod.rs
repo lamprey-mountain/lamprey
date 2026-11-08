@@ -2,7 +2,7 @@
 // pub mod abort;
 pub mod blob;
 // pub mod compression;
-// pub mod encoding;
+pub mod encoding;
 pub mod http;
 pub mod streams;
 pub mod url;

@@ -315,6 +315,7 @@ fn setup_environment(
     }
 
     glue::streams::setup(ctx)?;
+    glue::encoding::setup(ctx)?;
 
     globals.set("log", glue::log::Logger::new(sender, script_id))?;
 

@@ -40,6 +40,50 @@ declare global {
     readonly lastModified: number;
   }
 
+  interface TextEncoderEncodeIntoResult {
+    read: number;
+    written: number;
+  }
+
+  interface TextDecoderOptions {
+    fatal?: boolean;
+    ignoreBOM?: boolean;
+  }
+
+  interface TextDecoderDecodeOptions {
+    stream?: boolean;
+  }
+
+  class TextEncoder {
+    constructor();
+    readonly encoding: "utf-8";
+    encode(input?: string): Uint8Array;
+    encodeInto(source: string, destination: Uint8Array): TextEncoderEncodeIntoResult;
+  }
+
+  class TextDecoder {
+    constructor(label?: string, options?: TextDecoderOptions);
+    readonly encoding: string;
+    readonly fatal: boolean;
+    readonly ignoreBOM: boolean;
+    decode(
+      input?: ArrayBuffer | ArrayBufferView,
+      options?: TextDecoderDecodeOptions,
+    ): string;
+  }
+
+  class TextEncoderStream extends TransformStream<string, Uint8Array> {
+    constructor();
+    readonly encoding: "utf-8";
+  }
+
+  class TextDecoderStream extends TransformStream<ArrayBufferView, string> {
+    constructor(label?: string, options?: TextDecoderOptions);
+    readonly encoding: string;
+    readonly fatal: boolean;
+    readonly ignoreBOM: boolean;
+  }
+
   interface QueuingStrategy<T = unknown> {
     highWaterMark?: number;
     size?(chunk: T): number;
