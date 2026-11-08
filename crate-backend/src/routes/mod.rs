@@ -42,7 +42,6 @@ mod server;
 mod session;
 mod sync;
 mod tag;
-mod thread;
 mod user_connection;
 mod user_email;
 mod voice;
@@ -85,7 +84,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(session::routes())
         .merge(sync::routes())
         .merge(tag::routes())
-        .merge(thread::routes())
         .merge(preferences::routes())
         .merge(user_connection::routes())
         .merge(user_email::routes())

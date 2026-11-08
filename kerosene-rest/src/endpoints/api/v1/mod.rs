@@ -9,6 +9,7 @@ pub mod message;
 pub mod permission_overwrite;
 pub mod relationship;
 pub mod room;
+pub mod thread;
 pub mod unfurler;
 pub mod user;
 
@@ -22,6 +23,7 @@ pub fn register(r: &mut Routes) {
         channel::register(r);
         message::register(r);
         room::register(r);
+        thread::register(r);
         unfurler::register(r);
         user::register(r);
     });
