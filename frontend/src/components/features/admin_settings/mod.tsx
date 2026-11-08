@@ -2,6 +2,7 @@ export * from "./AuditLog.tsx";
 export * from "./Invites.tsx";
 export * from "./Media.tsx";
 export * from "./Overview.tsx";
+export * from "./ResourceList.tsx";
 export * from "./Rooms.tsx";
 export * from "./Search.tsx";
 export * from "./Todo.tsx";
