@@ -1,31 +1,29 @@
 use lamprey_macros::record;
 
 use crate::util::registry::export_models;
-use crate::v1::types::{UserId, WebauthnAuthenticatorId, email::EmailAddr, util::Time};
+use crate::v1::types::{
+    UserId, WebauthnAuthenticatorId, email::EmailAddr, misc::binary::Binary, util::Time,
+};
 
 /// response to a totp init request
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct TotpInit {
     pub secret: String,
 }
 
 /// request body for totp_validate or totp_exec
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct TotpVerificationRequest {
     /// the totp code or recovery code
     pub code: String,
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct TotpRecoveryCodes {
     pub codes: Vec<TotpRecoveryCode>,
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct TotpRecoveryCode {
     pub code: String,
 
@@ -35,20 +33,17 @@ pub struct TotpRecoveryCode {
 
 /// Request body for email authentication completion
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct AuthEmailComplete {
     pub code: String,
 }
 
 // TODO(#267): look into zeroing out/erasing passwords after handling
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct PasswordSet {
     pub password: String,
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct PasswordExec {
     pub password: String,
 
@@ -58,7 +53,6 @@ pub struct PasswordExec {
 
 /// who's logging in
 #[record]
-#[derive(PartialEq, Eq)]
 #[cfg_attr(feature = "serde", serde(tag = "type"))]
 pub enum PasswordExecIdent {
     UserId { user_id: UserId },
@@ -66,19 +60,16 @@ pub enum PasswordExecIdent {
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct CaptchaChallenge {
     pub code: String,
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct CaptchaResponse {
     pub code: String,
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct WebauthnChallenge {
     /// public key credentials request as stringified json
     pub challenge: String,
@@ -86,28 +77,31 @@ pub struct WebauthnChallenge {
 
 /// request body for a webauthn ceremony response
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct WebauthnCredential {
     /// public key credentials response as stringified json
     pub credential: String,
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct WebauthnAuthenticator {
     pub id: WebauthnAuthenticatorId,
     pub name: String,
+
+    /// the raw webauthn credential id
+    pub credential_id: Binary<1023>,
+
     pub created_at: Time,
+
+    /// when this authenticator was last used to authenticate
+    pub last_used: Option<Time>,
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct WebauthnPatch {
     pub name: Option<String>,
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
 pub struct AuthState {
     /// if there is at least one verified and primary email address
     ///

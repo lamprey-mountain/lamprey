@@ -13,7 +13,11 @@ export interface AuthState {
 export interface WebauthnAuthenticator {
 	id: string;
 	name: string;
+	/** the raw webauthn credential id */
+	credential_id: string;
 	created_at: string;
+	/** when this authenticator was last used to authenticate */
+	last_used?: string | null;
 }
 
 export interface TotpRecoveryCode {

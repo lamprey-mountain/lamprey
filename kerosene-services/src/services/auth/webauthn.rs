@@ -7,6 +7,7 @@ use common::v1::types::UserId;
 use common::v1::types::WebauthnAuthenticatorId;
 use common::v1::types::auth::{AuthState, WebauthnAuthenticator};
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::misc::binary::Binary;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{Session, SessionId, SessionStatus, User};
 use webauthn_rs::prelude::{
@@ -61,12 +62,16 @@ impl ServiceAuth {
             .webauthn_credential_list(user_id)
             .await?
             .into_iter()
-            .map(|credential| WebauthnAuthenticator {
-                id: credential.id.into(),
-                name: credential.name,
-                created_at: credential.created_at.into(),
+            .map(|credential| {
+                Ok(WebauthnAuthenticator {
+                    id: credential.id.into(),
+                    name: credential.name,
+                    credential_id: Binary::new(credential.credential_id)?,
+                    created_at: credential.created_at.into(),
+                    last_used: credential.last_used_at.map(Into::into),
+                })
             })
-            .collect())
+            .collect::<Result<Vec<_>>>()?)
     }
 
     /// rename a webauthn authenticator
@@ -191,7 +196,7 @@ impl ServiceAuth {
                 ))
             })?;
 
-        let credential_id = passkey.cred_id().clone();
+        let credential_id = Binary::new(passkey.cred_id().clone())?;
         let passkey_json = serde_json::to_string(&passkey)
             .map_err(|err| Error::Internal(format!("failed to serialize passkey: {err}")))?;
         let name = "passkey".to_owned();
@@ -207,7 +212,9 @@ impl ServiceAuth {
         Ok(WebauthnAuthenticator {
             id: id.into(),
             name,
+            credential_id,
             created_at: Time::now_utc(),
+            last_used: None,
         })
     }
 

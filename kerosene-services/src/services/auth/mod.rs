@@ -7,6 +7,7 @@ use common::v1::types::UserId;
 use common::v1::types::auth::{AuthState, PasswordExecIdent, WebauthnAuthenticator};
 use common::v1::types::email::EmailAddr;
 use common::v1::types::error::{ApiError, ErrorCode};
+use common::v1::types::misc::binary::Binary;
 use common::v1::types::util::{Changes, Time};
 use common::v1::types::{MessageSync, Session, SessionId, SessionStatus};
 use dashmap::DashMap;
@@ -116,12 +117,16 @@ impl ServiceAuth {
             .webauthn_credential_list(user_id)
             .await?
             .into_iter()
-            .map(|credential| WebauthnAuthenticator {
-                id: credential.id.into(),
-                name: credential.name,
-                created_at: credential.created_at.into(),
+            .map(|credential| {
+                Ok(WebauthnAuthenticator {
+                    id: credential.id.into(),
+                    name: credential.name,
+                    credential_id: Binary::new(credential.credential_id)?,
+                    created_at: credential.created_at.into(),
+                    last_used: credential.last_used_at.map(Into::into),
+                })
             })
-            .collect();
+            .collect::<Result<Vec<_>>>()?;
 
         Ok(AuthState {
             has_email,
