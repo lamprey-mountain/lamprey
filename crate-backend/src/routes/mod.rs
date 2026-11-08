@@ -32,7 +32,6 @@ mod public;
 mod push;
 mod reaction;
 mod redex;
-mod search;
 mod server;
 mod session;
 mod sync;
@@ -69,7 +68,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(push::routes())
         .merge(reaction::routes())
         .merge(redex::routes())
-        .merge(search::routes())
         .merge(server::routes())
         .merge(session::routes())
         .merge(sync::routes())
