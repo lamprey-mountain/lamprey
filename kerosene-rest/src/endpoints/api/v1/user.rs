@@ -2,7 +2,7 @@ use common::{
     util::Diff,
     v1::types::{
         AuditLogEntryType, MessageSync, Permission, SERVER_ROOM_ID, SessionStatus, Suspended,
-        UserPatch, UserWithRelationship,
+        UserWithRelationship,
         oauth::Scope,
         util::{Changes, Time},
     },
@@ -12,7 +12,6 @@ use lamprey_backend_services::{
     compat::types::{DbUserCreate, RoomMemberPut, UserIdReq},
     services::media::MediaLinker,
 };
-use tracing::warn;
 
 use crate::prelude::*;
 
@@ -224,17 +223,9 @@ pub async fn delete(
         .await
         .cast_internal()?;
 
+    // keep the user's avatar/banner media linked so it can be restored on undelete
     let mut data = req.globals().begin().await.cast_internal()?;
     data.user_delete(target_user_id).await.cast_internal()?;
-    MediaLinker::new_without_user()
-        .delete(MediaLinkType::UserAvatar {
-            user_id: target_user_id,
-        })
-        .delete(MediaLinkType::UserBanner {
-            user_id: target_user_id,
-        })
-        .write(&mut *data)
-        .await?;
     data.commit().await.cast_internal()?;
 
     srv.users.invalidate(target_user_id).await;
@@ -280,67 +271,8 @@ pub async fn undelete(
         .needs(Permission::UserManage)
         .check()?;
 
-    let user = srv
-        .users
-        .get(target_user_id, Some(auth_user.id))
-        .await
-        .cast_internal()?;
-
     let mut data = req.globals().begin().await.cast_internal()?;
     data.user_undelete(target_user_id).await.cast_internal()?;
-
-    if let Some(media_id) = user.avatar {
-        let linked = match data.media_select(media_id).await {
-            Ok(media) => MediaLinker::new_without_user()
-                .create(MediaLinkType::UserAvatar {
-                    user_id: target_user_id,
-                })
-                .media(&media)
-                .write(&mut *data)
-                .await
-                .is_ok(),
-            Err(_) => false,
-        };
-        if !linked {
-            warn!("failed to re-link avatar for user {target_user_id}");
-            data.user_update(
-                target_user_id,
-                UserPatch {
-                    avatar: Some(None),
-                    ..Default::default()
-                },
-            )
-            .await
-            .cast_internal()?;
-        }
-    }
-
-    if let Some(media_id) = user.banner {
-        let linked = match data.media_select(media_id).await {
-            Ok(media) => MediaLinker::new_without_user()
-                .create(MediaLinkType::UserBanner {
-                    user_id: target_user_id,
-                })
-                .media(&media)
-                .write(&mut *data)
-                .await
-                .is_ok(),
-            Err(_) => false,
-        };
-        if !linked {
-            warn!("failed to re-link banner for user {target_user_id}");
-            data.user_update(
-                target_user_id,
-                UserPatch {
-                    banner: Some(None),
-                    ..Default::default()
-                },
-            )
-            .await
-            .cast_internal()?;
-        }
-    }
-
     data.commit().await.cast_internal()?;
 
     srv.users.invalidate(target_user_id).await;
