@@ -4,13 +4,12 @@ pub mod blob;
 // pub mod compression;
 // pub mod encoding;
 pub mod http;
+pub mod streams;
 pub mod url;
-// pub mod streams;
 
 // TODO: maybe impl more standard apis?
 // - performance
 // - crypto
-// - File
 // - dom interfaces like Event, EventTarget
 // - webassembly
 // - web workers? this can possibly be done via redexes

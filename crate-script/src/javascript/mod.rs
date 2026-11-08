@@ -314,6 +314,8 @@ fn setup_environment(
         file.set_prototype(Some(&blob))?;
     }
 
+    glue::streams::setup(ctx)?;
+
     globals.set("log", glue::log::Logger::new(sender, script_id))?;
 
     Ok(())

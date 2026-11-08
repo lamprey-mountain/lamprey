@@ -143,7 +143,10 @@ impl Blob {
         Self { data, ty }
     }
 
-    // TODO: stream() once ReadableStream is implemented
+    /// returns a ReadableStream of the blob contents
+    fn stream<'js>(&self, ctx: Ctx<'js>) -> JsResult<Value<'js>> {
+        super::streams::readable_from_bytes(&ctx, &self.data)
+    }
 }
 
 #[rquickjs::methods]
@@ -210,7 +213,10 @@ impl File {
         self.blob.slice(start, end, content_type)
     }
 
-    // TODO: stream() once ReadableStream is implemented
+    /// returns a ReadableStream of the file contents
+    fn stream<'js>(&self, ctx: Ctx<'js>) -> JsResult<Value<'js>> {
+        self.blob.stream(ctx)
+    }
 }
 
 fn parse_file_options<'js>(ctx: &Ctx<'js>, options: Opt<Value<'js>>) -> JsResult<(String, i64)> {
