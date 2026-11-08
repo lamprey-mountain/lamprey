@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 
 use crate::util::registry::export_models;
 use crate::v1::types::{
-    ChannelId, MediaId, Permission, UserId,
+    ChannelId, MediaId, Permission, RoomMember, UserId,
     error::{ApiError, ApiResult, ErrorCode},
     federation::Remote,
     notifications::preferences::NotifsRoom,
@@ -162,6 +162,13 @@ pub struct RoomPrivate {
     /// resolved notifications for you
     pub permissions: Vec<Permission>,
     // TODO(?): room_member?
+}
+
+/// a list of rooms, along with the auth user's member object for each room
+#[record]
+pub struct RoomList {
+    pub rooms: Vec<Room>,
+    pub members: Vec<RoomMember>,
 }
 
 /// Data required to create a room
@@ -355,5 +362,6 @@ export_models!(
     RoomType,
     RoomFeature,
     RoomFeatures,
+    RoomList,
     TransferOwnership,
 );

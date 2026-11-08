@@ -2,18 +2,25 @@ use lamprey_macros::endpoint;
 
 /// Friend list
 ///
-/// List (mutual) friends.
+/// List a user's friends.
+///
+/// Events include the auth user's relationship with each friend, not the target user's.
 #[endpoint(
     get,
-    path = "/user/@self/friend",
+    path = "/user/{user_id}/friend",
     tags = ["relationship"],
     scopes = [Full],
     response(OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
 )]
 pub mod friend_list {
-    use crate::v1::types::{PaginationQuery, PaginationResponse, RelationshipWithUserId, UserId};
+    use crate::v1::types::{
+        PaginationQuery, PaginationResponse, RelationshipWithUserId, UserId, misc::UserIdReq,
+    };
 
     pub struct Request {
+        #[path]
+        pub user_id: UserIdReq,
+
         #[query]
         pub pagination: PaginationQuery<UserId>,
     }
@@ -26,18 +33,25 @@ pub mod friend_list {
 
 /// Friend list pending
 ///
-/// List pending friend requests (both incoming and outgoing).
+/// List the auth user's pending friend requests (both incoming and outgoing).
+///
+/// Only works for the auth user.
 #[endpoint(
     get,
-    path = "/user/@self/friend/pending",
+    path = "/user/{user_id}/friend/pending",
     tags = ["relationship"],
     scopes = [Full],
     response(OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
 )]
 pub mod friend_list_pending {
-    use crate::v1::types::{PaginationQuery, PaginationResponse, RelationshipWithUserId, UserId};
+    use crate::v1::types::{
+        PaginationQuery, PaginationResponse, RelationshipWithUserId, UserId, misc::UserIdReq,
+    };
 
     pub struct Request {
+        #[path]
+        pub user_id: UserIdReq,
+
         #[query]
         pub pagination: PaginationQuery<UserId>,
     }
@@ -94,18 +108,25 @@ pub mod friend_remove {
 
 /// Block list
 ///
-/// List blocked users.
+/// List the auth user's blocked users.
+///
+/// Only works for the auth user.
 #[endpoint(
     get,
-    path = "/user/@self/block",
+    path = "/user/{user_id}/block",
     tags = ["relationship"],
     scopes = [Full],
     response(OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
 )]
 pub mod block_list {
-    use crate::v1::types::{PaginationQuery, PaginationResponse, RelationshipWithUserId, UserId};
+    use crate::v1::types::{
+        PaginationQuery, PaginationResponse, RelationshipWithUserId, UserId, misc::UserIdReq,
+    };
 
     pub struct Request {
+        #[path]
+        pub user_id: UserIdReq,
+
         #[query]
         pub pagination: PaginationQuery<UserId>,
     }
@@ -162,18 +183,25 @@ pub mod block_remove {
 
 /// Ignore list
 ///
-/// List ignored users.
+/// List the auth user's ignored users.
+///
+/// Only works for the auth user.
 #[endpoint(
     get,
-    path = "/user/@self/ignore",
+    path = "/user/{user_id}/ignore",
     tags = ["relationship"],
     scopes = [Full],
     response(OK, body = PaginationResponse<RelationshipWithUserId>, description = "success"),
 )]
 pub mod ignore_list {
-    use crate::v1::types::{PaginationQuery, PaginationResponse, RelationshipWithUserId, UserId};
+    use crate::v1::types::{
+        PaginationQuery, PaginationResponse, RelationshipWithUserId, UserId, misc::UserIdReq,
+    };
 
     pub struct Request {
+        #[path]
+        pub user_id: UserIdReq,
+
         #[query]
         pub pagination: PaginationQuery<UserId>,
     }
@@ -230,4 +258,33 @@ pub mod ignore_remove {
     }
 
     pub struct Response {}
+}
+
+/// User rooms list
+///
+/// List rooms a user is in. If you are not the user, lists mutual rooms.
+///
+/// Includes the auth user's member object for each room.
+#[endpoint(
+    get,
+    path = "/user/{user_id}/room",
+    tags = ["relationship"],
+    scopes = [Rooms],
+    response(OK, body = RoomList, description = "success"),
+)]
+pub mod user_room_list {
+    use crate::v1::types::{PaginationQuery, RoomId, RoomList, misc::UserIdReq};
+
+    pub struct Request {
+        #[path]
+        pub user_id: UserIdReq,
+
+        #[query]
+        pub pagination: PaginationQuery<RoomId>,
+    }
+
+    pub struct Response {
+        #[json]
+        pub room_list: RoomList,
+    }
 }

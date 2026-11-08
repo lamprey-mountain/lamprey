@@ -100,33 +100,6 @@ pub mod user_undelete {
     pub struct Response {}
 }
 
-/// User rooms list
-///
-/// List rooms a user is in. If you are not the user, lists mutual rooms.
-#[endpoint(
-    get,
-    path = "/user/{user_id}/room",
-    tags = ["user"],
-    scopes = [Rooms],
-    response(OK, body = PaginationResponse<Room>, description = "success"),
-)]
-pub mod user_room_list {
-    use crate::v1::types::{PaginationResponse, Room, RoomId, misc::UserIdReq};
-
-    pub struct Request {
-        #[path]
-        pub user_id: UserIdReq,
-
-        #[query]
-        pub pagination: crate::v1::types::PaginationQuery<RoomId>,
-    }
-
-    pub struct Response {
-        #[json]
-        pub rooms: PaginationResponse<Room>,
-    }
-}
-
 pub use crate::v1::routes::audit_log::user_audit_logs;
 
 /// Guest create

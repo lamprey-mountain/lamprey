@@ -299,43 +299,6 @@ pub async fn undelete(
     Ok(routes::user_undelete::Response {})
 }
 
-#[handler(routes::user_room_list)]
-pub async fn room_list(
-    req: Req<routes::user_room_list::Endpoint>,
-) -> Result<routes::user_room_list::Response> {
-    let globals = req.globals();
-    let srv = req.services();
-    let auth_user = req.identity().ensure_user()?;
-    let auth_user_id = auth_user.id;
-
-    let body = req.into_inner();
-    let target_user_id = body.user_id.local_unwrap_or(auth_user_id)?;
-
-    let mut data = globals.begin_read().await.cast_internal()?;
-    let mut rooms = if auth_user_id == target_user_id {
-        data.room_list(auth_user_id, body.pagination, false)
-            .await
-            .cast_internal()?
-    } else {
-        data.room_list_mutual(auth_user_id, target_user_id, body.pagination)
-            .await
-            .cast_internal()?
-    };
-
-    let mut new_rooms = Vec::with_capacity(rooms.items.len());
-    for room in rooms.items {
-        new_rooms.push(
-            srv.rooms
-                .get(room.id, Some(auth_user_id))
-                .await
-                .cast_internal()?,
-        );
-    }
-    rooms.items = new_rooms;
-
-    Ok(routes::user_room_list::Response { rooms })
-}
-
 #[handler(routes::user_audit_logs)]
 pub async fn audit_logs(
     req: Req<routes::user_audit_logs::Endpoint>,
@@ -610,7 +573,6 @@ export_routes!(
     update,
     delete,
     undelete,
-    room_list,
     audit_logs,
     create,
     suspend,
