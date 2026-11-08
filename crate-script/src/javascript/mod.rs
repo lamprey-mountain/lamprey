@@ -303,6 +303,16 @@ fn setup_environment(
     rquickjs::Class::<glue::register::ScriptRegister>::define(&globals)?;
     rquickjs::Class::<glue::register::InputBuilder>::define(&globals)?;
     rquickjs::Class::<glue::url::JsUrl>::define(&globals)?;
+    rquickjs::Class::<glue::blob::Blob>::define(&globals)?;
+    rquickjs::Class::<glue::blob::File>::define(&globals)?;
+
+    // File extends Blob in the web spec
+    if let (Some(blob), Some(file)) = (
+        rquickjs::Class::<glue::blob::Blob>::prototype(ctx)?,
+        rquickjs::Class::<glue::blob::File>::prototype(ctx)?,
+    ) {
+        file.set_prototype(Some(&blob))?;
+    }
 
     globals.set("log", glue::log::Logger::new(sender, script_id))?;
 

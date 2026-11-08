@@ -1,5 +1,6 @@
 // web standard apis (available globally)
 // pub mod abort;
+pub mod blob;
 // pub mod compression;
 // pub mod encoding;
 pub mod http;
@@ -9,7 +10,7 @@ pub mod url;
 // TODO: maybe impl more standard apis?
 // - performance
 // - crypto
-// - Blob, File
+// - File
 // - dom interfaces like Event, EventTarget
 // - webassembly
 // - web workers? this can possibly be done via redexes
