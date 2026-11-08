@@ -431,7 +431,7 @@ impl ContentSearcher {
                 let top_docs = TopDocs::with_limit(limit)
                     .and_offset(cursor)
                     .order_by_fast_field::<tantivy::DateTime>(
-                        "created_at",
+                        "metadata_fast.registered_at",
                         msg.req.inner.sort_order.tantivy(),
                     );
                 let (docs, count): (Vec<(Option<tantivy::DateTime>, DocAddress)>, usize) =
@@ -498,10 +498,12 @@ impl ContentSearcher {
                 )
             }
             MediaSearchOrderField::Name => {
-                // FIXME: order by json filename
                 let top_docs = TopDocs::with_limit(limit)
                     .and_offset(cursor)
-                    .order_by_string_fast_field("name", msg.req.inner.sort_order.tantivy());
+                    .order_by_string_fast_field(
+                        "metadata_fast.media_filename",
+                        msg.req.inner.sort_order.tantivy(),
+                    );
                 let (docs, count): (Vec<(Option<String>, DocAddress)>, usize) =
                     self.searcher.search(&query, &(top_docs, Count)).await?;
                 (
