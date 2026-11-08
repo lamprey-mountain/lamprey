@@ -8,6 +8,7 @@ pub mod harvest;
 // pub mod media;
 pub mod message;
 pub mod permission_overwrite;
+pub mod reaction;
 pub mod relationship;
 pub mod role;
 pub mod room;
@@ -26,6 +27,7 @@ pub fn register(r: &mut Routes) {
         auth::register(r);
         harvest::register(r);
         permission_overwrite::register(r);
+        reaction::register(r);
         relationship::register(r);
         channel::register(r);
         emoji::register(r);

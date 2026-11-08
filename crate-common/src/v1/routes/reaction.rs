@@ -66,7 +66,10 @@ pub mod reaction_add {
         pub user_id: UserIdReq,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[status]
+        pub status: http::StatusCode,
+    }
 }
 
 /// Reaction remove
