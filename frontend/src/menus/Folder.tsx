@@ -1,7 +1,7 @@
 import { useRooms } from "@/api";
 import { useCtx } from "@/app/context";
-import type { RoomNavItem } from "@/components/shared/RoomNav";
 import { useModals } from "@/contexts/modal";
+import type { RoomNavItem } from "@/types/room-nav";
 import { Item, Menu, Separator } from "./Parts.tsx";
 
 type FolderMenuProps = {
@@ -34,27 +34,8 @@ export function FolderMenu(props: FolderMenuProps) {
 		}
 	};
 
-	const renameFolder = () => {
-		modalctl.prompt("new folder name", (name) => {
-			if (!name) return;
-
-			const currentConfig = ctx.preferences().frontend.roomNav as RoomNavItem[];
-			const newConfig = currentConfig.map((item: RoomNavItem) => {
-				if (item.type === "folder" && item.id === props.folder_id) {
-					return { ...item, name };
-				}
-				return item;
-			});
-
-			const c = ctx.preferences();
-			ctx.setPreferences({
-				...c,
-				frontend: {
-					...c.frontend,
-					roomNav: newConfig,
-				},
-			});
-		});
+	const editFolder = () => {
+		modalctl.open({ type: "folder_edit", folder_id: props.folder_id });
 	};
 
 	const logToConsole = () => {
@@ -65,7 +46,7 @@ export function FolderMenu(props: FolderMenuProps) {
 	return (
 		<Menu>
 			<Item onClick={markAsRead}>mark as read</Item>
-			<Item onClick={renameFolder}>rename</Item>
+			<Item onClick={editFolder}>edit...</Item>
 			<Separator />
 			<Item onClick={logToConsole}>log to console</Item>
 		</Menu>

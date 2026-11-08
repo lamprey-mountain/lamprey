@@ -10,6 +10,7 @@ import { ModalChannelSettings } from "./ModalChannelSettings.tsx";
 import { ModalChannelTopic } from "./ModalChannelTopic.tsx";
 import { ModalEmojiUpload } from "./ModalEmojiUpload.tsx";
 import { ModalExportData } from "./ModalExportData.tsx";
+import { ModalFolderEdit } from "./ModalFolderEdit.tsx";
 import { ModalInviteCreate } from "./ModalInviteCreate.tsx";
 import { ModalKick } from "./ModalKick.tsx";
 import { ModalLink } from "./ModalLink.tsx";
@@ -251,6 +252,12 @@ function isChannelSettings(
 	return modal.type === "channel_settings";
 }
 
+function isFolderEdit(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "folder_edit" }> {
+	return modal.type === "folder_edit";
+}
+
 export function getModal(modal: ModalType) {
 	const api2 = useApi();
 	if (isAlert(modal)) {
@@ -387,6 +394,9 @@ export function getModal(modal: ModalType) {
 				cont={modal.cont}
 			/>
 		);
+	}
+	if (isFolderEdit(modal)) {
+		return <ModalFolderEdit folder_id={modal.folder_id} />;
 	}
 	if (isUserSettings(modal)) {
 		return <ModalUserSettings page={modal.page} />;

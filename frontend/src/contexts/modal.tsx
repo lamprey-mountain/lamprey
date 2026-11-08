@@ -151,6 +151,10 @@ export type Modal =
 			initial: string;
 			placeholder: string;
 			cont: (nickname: string) => void;
+	  }
+	| {
+			type: "folder_edit";
+			folder_id: string;
 	  };
 
 export type ModalsController = {

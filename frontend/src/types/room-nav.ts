@@ -17,13 +17,20 @@ export type RoomNavItem =
 			type: "folder";
 			id: string;
 			name: string;
+			color?: string;
 			items: { type: "room"; room_id: string }[];
 	  }
 	| RoomNavView;
 
 export type RoomNavMappedItem =
 	| { type: "room"; room: Room }
-	| { type: "folder"; id: string; name: string; items: Room[] }
+	| {
+			type: "folder";
+			id: string;
+			name: string;
+			color?: string;
+			items: Room[];
+	  }
 	| RoomNavView;
 
 export type RoomNavConfig = RoomNavItem[];
