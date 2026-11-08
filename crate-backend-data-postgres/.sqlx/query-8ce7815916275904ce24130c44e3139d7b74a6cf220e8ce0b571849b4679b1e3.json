@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT count(*) FROM audit_log\n                WHERE room_id = $1\n                AND (cardinality($2::uuid[]) = 0 OR user_id = ANY($2))\n                AND (cardinality($3::text[]) = 0 OR data->>'type' = ANY($3))\n                AND (cardinality($4::audit_log_entry_status[]) = 0 OR status = ANY($4))\n                AND (cardinality($5::uuid[]) = 0 OR channel_id = ANY($5))\n                ",
+  "query": "SELECT count(*) FROM audit_log\n                WHERE room_id = $1\n                AND (cardinality($2::uuid[]) = 0 OR user_id = ANY($2))\n                AND (cardinality($3::text[]) = 0 OR data->>'type' = ANY($3))\n                AND (cardinality($4::audit_log_entry_status[]) = 0 OR status = ANY($4))\n                AND (cardinality($5::uuid[]) = 0 OR channel_id = ANY($5))\n                AND (cardinality($6::uuid[]) = 0 OR target_user_id = ANY($6))\n                ",
   "describe": {
     "columns": [
       {
@@ -33,6 +33,7 @@
             }
           }
         },
+        "UuidArray",
         "UuidArray"
       ]
     },
@@ -40,5 +41,5 @@
       null
     ]
   },
-  "hash": "b85e54497efff3da49ffaa444cce3b60b9f16599cce88372c8c01b94ff3cc664"
+  "hash": "8ce7815916275904ce24130c44e3139d7b74a6cf220e8ce0b571849b4679b1e3"
 }

@@ -667,6 +667,10 @@ pub struct AuditLogFilter {
     #[serde(default)]
     pub channel_id: Vec<ChannelId>,
 
+    /// only return audit log entries targeting these users
+    #[serde(default)]
+    pub target_user_id: Vec<UserId>,
+
     /// only return audit log entries with these types
     #[serde(default, rename = "type")]
     pub ty: Vec<String>,
@@ -683,6 +687,7 @@ impl Default for AuditLogFilter {
         Self {
             user_id: Default::default(),
             channel_id: Default::default(),
+            target_user_id: Default::default(),
             ty: Default::default(),
             status: default_audit_log_status_filter(),
         }
@@ -817,6 +822,55 @@ impl AuditLogEntryType {
             ThreadMemberAdd { thread_id, .. } | ThreadMemberRemove { thread_id, .. } => {
                 Some(*thread_id)
             }
+            _ => None,
+        }
+    }
+
+    /// the user this entry targets, if any
+    pub fn target_user_id(&self) -> Option<UserId> {
+        use AuditLogEntryType::*;
+        match self {
+            ReactionDeleteUser { user_id, .. }
+            | MemberKick { user_id, .. }
+            | MemberBan { user_id, .. }
+            | MemberUnban { user_id, .. }
+            | MemberUpdate { user_id, .. }
+            | MemberDisconnect { user_id, .. }
+            | MemberMove { user_id, .. }
+            | RoleApply { user_id, .. }
+            | RoleUnapply { user_id, .. }
+            | ThreadMemberAdd { user_id, .. }
+            | ThreadMemberRemove { user_id, .. }
+            | UserSuspend { user_id, .. }
+            | UserUnsuspend { user_id, .. }
+            | FriendRequest { user_id }
+            | FriendAccept { user_id }
+            | FriendDelete { user_id }
+            | BlockCreate { user_id }
+            | BlockDelete { user_id }
+            | IgnoreAdd { user_id }
+            | IgnoreRemove { user_id }
+            | SessionLogin { user_id, .. }
+            | UserRegistered { user_id }
+            | UserDelete { user_id, .. }
+            | UserUndelete { user_id }
+            | AdminWhisper { user_id, .. }
+            | CalendarRsvpDelete { user_id, .. }
+            | RatelimitUpdate { user_id, .. }
+            | RatelimitDelete { user_id, .. } => Some(*user_id),
+            BotAdd { bot_id } => Some(*bot_id),
+            PermissionOverwriteCreate {
+                overwrite_id, ty, ..
+            }
+            | PermissionOverwriteUpdate {
+                overwrite_id, ty, ..
+            }
+            | PermissionOverwriteDelete {
+                overwrite_id, ty, ..
+            } => match ty {
+                PermissionOverwriteType::User => Some((*overwrite_id).into()),
+                PermissionOverwriteType::Role => None,
+            },
             _ => None,
         }
     }

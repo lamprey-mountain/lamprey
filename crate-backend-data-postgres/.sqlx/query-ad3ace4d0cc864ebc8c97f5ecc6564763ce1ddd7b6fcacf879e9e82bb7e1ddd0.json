@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n            insert into audit_log (id, room_id, user_id, session_id, reason, data, status, started_at, ended_at, ip_addr, user_agent, application_id, channel_id)\n            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::text::inet, $11, $12, $13)\n            ",
+  "query": "\n            insert into audit_log (id, room_id, user_id, session_id, reason, data, status, started_at, ended_at, ip_addr, user_agent, application_id, channel_id, target_user_id)\n            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::text::inet, $11, $12, $13, $14)\n            ",
   "describe": {
     "columns": [],
     "parameters": {
@@ -28,10 +28,11 @@
         "Text",
         "Text",
         "Uuid",
+        "Uuid",
         "Uuid"
       ]
     },
     "nullable": []
   },
-  "hash": "5fef0c93d73c718ff72f580631453e79480b8bc2c330fa94ed574dee4cf0eee5"
+  "hash": "ad3ace4d0cc864ebc8c97f5ecc6564763ce1ddd7b6fcacf879e9e82bb7e1ddd0"
 }
