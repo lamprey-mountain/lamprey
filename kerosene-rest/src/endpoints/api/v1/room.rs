@@ -318,6 +318,13 @@ pub async fn delete(
         return Err(ApiError::from_code(ErrorCode::NotRoomOwner).into());
     }
 
+    let mut data = globals.begin().await.cast_internal()?;
+    data.room_delete(body.room_id).await.cast_internal()?;
+    data.commit().await.cast_internal()?;
+
+    srv.rooms.invalidate(body.room_id).await;
+    srv.perms.invalidate_room_all(body.room_id).await;
+
     globals
         .messaging()
         .broadcast_room(
@@ -328,13 +335,6 @@ pub async fn delete(
         )
         .await
         .cast_internal()?;
-
-    let mut data = globals.begin().await.cast_internal()?;
-    data.room_delete(body.room_id).await.cast_internal()?;
-    data.commit().await.cast_internal()?;
-
-    srv.rooms.invalidate(body.room_id).await;
-    srv.perms.invalidate_room_all(body.room_id).await;
 
     let changes = Changes::new()
         .remove("name", &room.name)
