@@ -32,12 +32,13 @@ pub async fn user_create(
         ensure_server_permission(&req.globals(), auth_user.id, Permission::UserManage).await?;
     }
 
-    srv.harvest
+    let harvest = srv
+        .harvest
         .create_user(target_user_id, &req.inner().harvest, auth_user.id)
         .await
         .cast_internal()?;
 
-    Ok(routes::harvest_user_create::Response {})
+    Ok(routes::harvest_user_create::Response { harvest })
 }
 
 #[handler(routes::harvest_get)]
@@ -92,12 +93,13 @@ pub async fn room_create(
     auth_user.ensure_unsuspended()?;
     ensure_server_permission(&req.globals(), auth_user.id, Permission::RoomManage).await?;
 
-    srv.harvest
+    let harvest = srv
+        .harvest
         .create_room(req.inner().room_id, &req.inner().harvest, auth_user.id)
         .await
         .cast_internal()?;
 
-    Ok(routes::harvest_room_create::Response {})
+    Ok(routes::harvest_room_create::Response { harvest })
 }
 
 /// ensure the request is made by a user that can manage their own harvests

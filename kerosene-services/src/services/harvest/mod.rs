@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use crate::prelude::*;
 use common::v1::types::{
-    HarvestId, RoomId, UserId,
+    HarvestId, MessageSync, RoomId, UserId,
     error::{ApiError, ErrorCode},
     harvest::{Harvest, HarvestCreateRoom, HarvestCreateUser, HarvestStatus, HarvestType},
     util::Time,
@@ -138,6 +138,8 @@ impl ServiceHarvest {
         txn.harvest_put(&harvest).await?;
         txn.commit().await?;
 
+        self.broadcast_update(&harvest).await?;
+
         Ok(harvest)
     }
 
@@ -170,7 +172,22 @@ impl ServiceHarvest {
         txn.harvest_put(&harvest).await?;
         txn.commit().await?;
 
+        self.broadcast_update(&harvest).await?;
+
         Ok(harvest)
+    }
+
+    /// broadcast a harvest update to the user that requested it
+    async fn broadcast_update(&self, harvest: &Harvest) -> Result<()> {
+        self.globals
+            .messaging()
+            .broadcast_user(
+                harvest.requester_id,
+                MessageSync::HarvestUpdate {
+                    harvest: Box::new(harvest.clone()),
+                },
+            )
+            .await
     }
 
     /// get a harvest

@@ -30,10 +30,13 @@ pub mod harvest_user_get {
     tags = ["harvest"],
     scopes = [Full],
     audit_log_events = ["HarvestCreate"],
-    response(ACCEPTED, description = "harvest has been queued"),
+    response(ACCEPTED, body = Harvest, description = "harvest has been queued"),
 )]
 pub mod harvest_user_create {
-    use crate::v1::types::{harvest::HarvestCreateUser, misc::UserIdReq};
+    use crate::v1::types::{
+        harvest::{Harvest, HarvestCreateUser},
+        misc::UserIdReq,
+    };
 
     pub struct Request {
         #[path]
@@ -43,7 +46,10 @@ pub mod harvest_user_create {
         pub harvest: HarvestCreateUser,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[json]
+        pub harvest: Harvest,
+    }
 }
 
 /// Harvest room get
@@ -78,10 +84,13 @@ pub mod harvest_room_get {
     scopes = [Full],
     permissions = [Admin],
     audit_log_events = ["HarvestCreate"],
-    response(ACCEPTED, description = "harvest has been queued"),
+    response(ACCEPTED, body = Harvest, description = "harvest has been queued"),
 )]
 pub mod harvest_room_create {
-    use crate::v1::types::{RoomId, harvest::HarvestCreateRoom};
+    use crate::v1::types::{
+        RoomId,
+        harvest::{Harvest, HarvestCreateRoom},
+    };
 
     pub struct Request {
         #[path]
@@ -91,7 +100,10 @@ pub mod harvest_room_create {
         pub harvest: HarvestCreateRoom,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[json]
+        pub harvest: Harvest,
+    }
 }
 
 /// Harvest get
