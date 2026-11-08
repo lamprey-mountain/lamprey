@@ -6,7 +6,7 @@ use rquickjs::{
     prelude::Opt,
 };
 
-use crate::javascript::glue::http::Headers;
+use crate::javascript::glue::{blob::Blob, http::Headers};
 
 /// http response object
 #[rquickjs::class]
@@ -190,6 +190,20 @@ impl Response {
         let (promise, resolve, _reject) = ctx.promise()?;
         let ab = rquickjs::ArrayBuffer::new(ctx, self.body.as_ref())?;
         resolve.call::<_, ()>((ab,))?;
+        Ok(promise)
+    }
+
+    /// returns the body as a Blob
+    fn blob<'js>(&self, ctx: Ctx<'js>) -> JsResult<rquickjs::Promise<'js>> {
+        let (promise, resolve, _reject) = ctx.promise()?;
+        let ty = self
+            .headers
+            .get(http::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or_default();
+        let blob = Blob::from_bytes(self.body.clone(), ty);
+        let blob = rquickjs::Class::instance(ctx, blob)?;
+        resolve.call::<_, ()>((blob,))?;
         Ok(promise)
     }
 
