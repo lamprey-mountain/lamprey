@@ -176,10 +176,20 @@ impl ObjectDirectory {
 impl Directory for ObjectDirectory {
     fn get_file_handle(&self, path: &Path) -> Result<Arc<dyn FileHandle>, OpenReadError> {
         let cache_file = self.cache_path.join(path);
-        let metadata = self.metadata(path)?;
+        let cached_len = std::fs::metadata(&cache_file)
+            .ok()
+            .map(|meta| meta.len() as usize);
+
+        // files stay readable from the local cache after they were garbage collected
+        // remotely, tantivy expects open file handles to survive deletes
+        let len = match (self.metadata(path), cached_len) {
+            (Ok(metadata), _) => metadata.len,
+            (Err(OpenReadError::FileDoesNotExist(_)), Some(len)) => len,
+            (Err(err), _) => return Err(err),
+        };
 
         let handle = OnceCell::new();
-        if cache_file.exists() {
+        if cached_len.is_some() {
             if let Ok(f) = std::fs::File::open(&cache_file) {
                 let _ = handle.set(f);
             }
@@ -195,10 +205,10 @@ impl Directory for ObjectDirectory {
             rt: self.rt.clone(),
             blobs: self.blobs.clone(),
             path: self.path_str(path),
-            len: metadata.len,
+            len,
             cache_path: cache_file.clone(),
             cache_ext,
-            fully_cached: cache_file.exists(),
+            fully_cached: cached_len.is_some(),
             handle,
         }))
     }
