@@ -663,6 +663,10 @@ pub struct AuditLogFilter {
     #[serde(default)]
     pub user_id: Vec<UserId>,
 
+    /// only return audit log entries from these channels
+    #[serde(default)]
+    pub channel_id: Vec<ChannelId>,
+
     /// only return audit log entries with these types
     #[serde(default, rename = "type")]
     pub ty: Vec<String>,
@@ -678,6 +682,7 @@ impl Default for AuditLogFilter {
     fn default() -> Self {
         Self {
             user_id: Default::default(),
+            channel_id: Default::default(),
             ty: Default::default(),
             status: default_audit_log_status_filter(),
         }
@@ -775,6 +780,46 @@ impl AuditLogEntryType {
     //         _ => todo!(),
     //     }
     // }
+
+    /// the channel this entry relates to, if any
+    pub fn channel_id(&self) -> Option<ChannelId> {
+        use AuditLogEntryType::*;
+        match self {
+            ChannelCreate { channel_id, .. }
+            | ChannelUpdate { channel_id, .. }
+            | MessageDelete { channel_id, .. }
+            | MessageVersionDelete { channel_id, .. }
+            | MessageDeleteBulk { channel_id, .. }
+            | MessageRemove { channel_id, .. }
+            | MessageRestore { channel_id, .. }
+            | ReactionDeleteAll { channel_id, .. }
+            | ReactionDeleteKey { channel_id, .. }
+            | ReactionDeleteUser { channel_id, .. }
+            | PermissionOverwriteCreate { channel_id, .. }
+            | PermissionOverwriteUpdate { channel_id, .. }
+            | PermissionOverwriteDelete { channel_id, .. }
+            | MemberDisconnect { channel_id, .. }
+            | MemberDisconnectAll { channel_id, .. }
+            | MessagePin { channel_id, .. }
+            | MessageUnpin { channel_id, .. }
+            | MessagePinReorder { channel_id, .. }
+            | RatelimitUpdate { channel_id, .. }
+            | RatelimitDelete { channel_id, .. }
+            | RatelimitDeleteAll { channel_id, .. }
+            | ChannelReindex { channel_id, .. }
+            | TagCreate { channel_id, .. }
+            | TagUpdate { channel_id, .. }
+            | TagDelete { channel_id, .. }
+            | RedexCreate { channel_id, .. }
+            | RedexDelete { channel_id, .. }
+            | RedexVersionCreate { channel_id, .. }
+            | RedexVersionDelete { channel_id, .. } => Some(*channel_id),
+            ThreadMemberAdd { thread_id, .. } | ThreadMemberRemove { thread_id, .. } => {
+                Some(*thread_id)
+            }
+            _ => None,
+        }
+    }
 
     /// if this is a room event
     ///
