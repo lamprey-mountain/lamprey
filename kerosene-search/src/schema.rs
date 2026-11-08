@@ -130,7 +130,8 @@ impl Default for UnifiedSchema {
         let room_id = sb.add_text_field("room_id", STRING | FAST | STORED);
         let tag_id = sb.add_text_field("tag_id", STRING | FAST);
         let branch_id = sb.add_text_field("branch_id", STRING | FAST);
-        let name = sb.add_text_field("name", text_options.clone());
+        // fast (raw tokenizer) so that results can be sorted by name
+        let name = sb.add_text_field("name", text_options.clone().set_fast(RAW_TOKENIZER_NAME));
         let content = sb.add_text_field("content", text_options.clone());
         let ip_addr = sb.add_ip_addr_field("ip_addr", FAST);
         let user_agent = sb.add_text_field("user_agent", TEXT | STORED);
