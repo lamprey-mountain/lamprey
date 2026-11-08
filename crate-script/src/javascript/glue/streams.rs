@@ -177,6 +177,109 @@ mod tests {
     }
 
     #[test]
+    fn byob_enqueue() {
+        let result = run(r#"
+                (async () => {
+                    const stream = new ReadableStream({
+                        type: "bytes",
+                        start(controller) {
+                            controller.enqueue(new Uint8Array([1, 2, 3]));
+                            controller.close();
+                        },
+                    });
+
+                    const reader = stream.getReader({ mode: "byob" });
+                    const first = await reader.read(new Uint8Array(5));
+                    const second = await reader.read(new Uint8Array(5));
+                    return [
+                        first.done,
+                        ...first.value,
+                        second.done,
+                        second.value.byteLength,
+                    ].join(",");
+                })()
+            "#);
+
+        assert_eq!(result, "false,1,2,3,true,0");
+    }
+
+    #[test]
+    fn byte_stream_default_reader() {
+        let result = run(r#"
+                (async () => {
+                    const stream = new ReadableStream({
+                        type: "bytes",
+                        start(controller) {
+                            controller.enqueue(new Uint8Array([1, 2]));
+                            controller.close();
+                        },
+                    });
+
+                    const reader = stream.getReader();
+                    const first = await reader.read();
+                    const second = await reader.read();
+                    return [first.done, ...first.value, second.done].join(",");
+                })()
+            "#);
+
+        assert_eq!(result, "false,1,2,true");
+    }
+
+    #[test]
+    fn byob_respond() {
+        let result = run(r#"
+                (async () => {
+                    let sent = false;
+                    const stream = new ReadableStream({
+                        type: "bytes",
+                        pull(controller) {
+                            if (sent) {
+                                controller.close();
+                                return;
+                            }
+                            sent = true;
+                            controller.byobRequest.view[0] = 42;
+                            controller.byobRequest.view[1] = 43;
+                            controller.byobRequest.respond(2);
+                        },
+                    });
+
+                    const reader = stream.getReader({ mode: "byob" });
+                    const result = await reader.read(new Uint8Array(4));
+                    return [result.done, ...result.value].join(",");
+                })()
+            "#);
+
+        assert_eq!(result, "false,42,43");
+    }
+
+    #[test]
+    fn compatibility_globals() {
+        let result = run(r#"
+                (async () => {
+                    const names = [
+                        "ByteLengthQueuingStrategy",
+                        "CountQueuingStrategy",
+                        "ReadableByteStreamController",
+                        "ReadableStream",
+                        "ReadableStreamBYOBReader",
+                        "ReadableStreamBYOBRequest",
+                        "ReadableStreamDefaultController",
+                        "ReadableStreamDefaultReader",
+                        "TransformStream",
+                        "TransformStreamDefaultController",
+                        "WritableStream",
+                        "WritableStreamDefaultController",
+                        "WritableStreamDefaultWriter",
+                    ];
+                    return names.filter((name) => typeof globalThis[name] !== "function").join(",");
+                })()
+            "#);
+
+        assert!(result.is_empty(), "missing globals: {result}");
+    }
+
+    #[test]
     fn blob_stream() {
         let result = run(r#"
                 (async () => {

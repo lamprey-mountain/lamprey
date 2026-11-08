@@ -48,6 +48,13 @@
         return reason;
     }
 
+    function toBytesView(view) {
+        if (!ArrayBuffer.isView(view)) {
+            throw makeError("TypeError", "expected an ArrayBufferView");
+        }
+        return new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
+    }
+
     class ReadableStreamDefaultController {
         #enqueue;
         #closeStream;
@@ -108,6 +115,92 @@
         }
     }
 
+    class ReadableStreamBYOBRequest {
+        #request;
+
+        constructor(request) {
+            this.#request = request;
+        }
+
+        get view() {
+            return this.#request.view;
+        }
+
+        respond(bytesWritten) {
+            this.#request.respond(bytesWritten);
+        }
+
+        respondWithNewView(view) {
+            this.#request.respondWithNewView(view);
+        }
+    }
+
+    class ReadableStreamBYOBReader {
+        #read;
+        #cancel;
+        #release;
+        #closed;
+
+        constructor(read, cancel, release, closed) {
+            this.#read = read;
+            this.#cancel = cancel;
+            this.#release = release;
+            this.#closed = closed;
+        }
+
+        get closed() {
+            return this.#closed;
+        }
+
+        read(view) {
+            return this.#read(view);
+        }
+
+        cancel(reason) {
+            return this.#cancel(reason);
+        }
+
+        releaseLock() {
+            this.#release();
+        }
+    }
+
+    class ReadableByteStreamController {
+        #enqueue;
+        #closeStream;
+        #error;
+        #desiredSize;
+        #getByobRequest;
+
+        constructor(enqueue, closeStream, error, desiredSize, getByobRequest) {
+            this.#enqueue = enqueue;
+            this.#closeStream = closeStream;
+            this.#error = error;
+            this.#desiredSize = desiredSize;
+            this.#getByobRequest = getByobRequest;
+        }
+
+        get byobRequest() {
+            return this.#getByobRequest();
+        }
+
+        get desiredSize() {
+            return this.#desiredSize();
+        }
+
+        enqueue(chunk) {
+            this.#enqueue(chunk);
+        }
+
+        close() {
+            this.#closeStream();
+        }
+
+        error(error) {
+            this.#error(error);
+        }
+    }
+
     class ReadableStream {
         #source;
         #strategy;
@@ -119,6 +212,9 @@
         #reader = null;
         #readerClosed = null;
         #readRequests = [];
+        #byobRequests = [];
+        #byobRequest = null;
+        #bytes = false;
         #closeRequested = false;
         #pulling = false;
         #pullAgain = false;
@@ -129,12 +225,21 @@
             this.#source = source || {};
             this.#strategy = strategy || {};
             this.#highWaterMark = highWaterMark(this.#strategy, 1);
-            this.#controller = new ReadableStreamDefaultController(
-                (chunk) => this.#enqueue(chunk),
-                () => this.#close(),
-                (error) => this.#error(error),
-                () => this.#highWaterMark - this.#queueTotalSize,
-            );
+            this.#bytes = this.#source.type === "bytes";
+            this.#controller = this.#bytes
+                ? new ReadableByteStreamController(
+                      (chunk) => this.#enqueue(chunk),
+                      () => this.#close(),
+                      (error) => this.#error(error),
+                      () => this.#highWaterMark - this.#queueTotalSize,
+                      () => this.#byobRequest,
+                  )
+                : new ReadableStreamDefaultController(
+                      (chunk) => this.#enqueue(chunk),
+                      () => this.#close(),
+                      (error) => this.#error(error),
+                      () => this.#highWaterMark - this.#queueTotalSize,
+                  );
 
             let startResult;
             try {
@@ -187,17 +292,30 @@
             if (this.#reader) {
                 throw makeError("TypeError", "stream is already locked");
             }
-            if (options && options.mode !== undefined) {
-                throw makeError("TypeError", "BYOB readers are not supported");
+
+            const mode = options && options.mode;
+            if (mode !== undefined && mode !== "byob") {
+                throw makeError("TypeError", "invalid reader mode");
+            }
+            if (mode === "byob" && !this.#bytes) {
+                throw makeError("TypeError", "BYOB readers require a byte stream");
             }
 
             this.#readerClosed = makePromise();
-            const reader = new ReadableStreamDefaultReader(
-                () => this.#read(),
-                (reason) => this.#cancel(reason),
-                () => this.#releaseReader(),
-                this.#readerClosed.promise,
-            );
+            const reader =
+                mode === "byob"
+                    ? new ReadableStreamBYOBReader(
+                          (view) => this.#readBYOB(view),
+                          (reason) => this.#cancel(reason),
+                          () => this.#releaseReader(),
+                          this.#readerClosed.promise,
+                      )
+                    : new ReadableStreamDefaultReader(
+                          () => this.#read(),
+                          (reason) => this.#cancel(reason),
+                          () => this.#releaseReader(),
+                          this.#readerClosed.promise,
+                      );
             this.#reader = reader;
             return reader;
         }
@@ -333,9 +451,58 @@
             });
         }
 
+        #readBYOB(view) {
+            const bytes = toBytesView(view);
+            if (bytes.byteLength === 0) {
+                return Promise.reject(
+                    makeError("TypeError", "BYOB read view must not be empty"),
+                );
+            }
+
+            if (this.#state === "errored") {
+                return Promise.reject(this.#storedError);
+            }
+
+            if (this.#state === "closed" && this.#queue.length === 0) {
+                return Promise.resolve({
+                    value: new Uint8Array(bytes.buffer, bytes.byteOffset, 0),
+                    done: true,
+                });
+            }
+
+            const filled = this.#fillFromQueue(bytes);
+            if (filled > 0) {
+                const value = new Uint8Array(bytes.buffer, bytes.byteOffset, filled);
+                this.#closeIfNeeded();
+                this.#callPullIfNeeded();
+                return Promise.resolve({ value, done: false });
+            }
+
+            if (this.#state === "closed") {
+                return Promise.resolve({
+                    value: new Uint8Array(bytes.buffer, bytes.byteOffset, 0),
+                    done: true,
+                });
+            }
+
+            return new Promise((resolve, reject) => {
+                this.#byobRequests.push({ view: bytes, resolve, reject });
+                this.#updateByobRequest();
+                this.#callPullIfNeeded();
+            });
+        }
+
         #enqueue(chunk) {
             if (this.#state !== "readable" || this.#closeRequested) {
                 throw makeError("TypeError", "cannot enqueue into a closed stream");
+            }
+
+            if (this.#bytes) {
+                if (!ArrayBuffer.isView(chunk)) {
+                    throw makeError("TypeError", "byte streams require an ArrayBufferView");
+                }
+                this.#enqueueBytes(toBytesView(chunk).slice());
+                return;
             }
 
             const size = chunkSize(this.#strategy, chunk);
@@ -344,6 +511,113 @@
             } else {
                 this.#queue.push({ chunk, size });
                 this.#queueTotalSize += size;
+            }
+
+            this.#callPullIfNeeded();
+        }
+
+        #enqueueBytes(bytes) {
+            let remaining = bytes;
+
+            while (remaining.byteLength > 0 && this.#byobRequests.length !== 0) {
+                const request = this.#byobRequests[0];
+                const take = Math.min(request.view.byteLength, remaining.byteLength);
+                request.view.set(remaining.subarray(0, take), 0);
+                this.#byobRequests.shift();
+                this.#updateByobRequest();
+                request.resolve({
+                    value: new Uint8Array(request.view.buffer, request.view.byteOffset, take),
+                    done: false,
+                });
+                remaining = remaining.subarray(take);
+            }
+
+            if (remaining.byteLength !== 0) {
+                this.#queue.push({ chunk: remaining, size: remaining.byteLength });
+                this.#queueTotalSize += remaining.byteLength;
+            }
+
+            while (this.#readRequests.length !== 0 && this.#queue.length !== 0) {
+                const entry = this.#queue.shift();
+                this.#queueTotalSize -= entry.size;
+                this.#readRequests.shift().resolve({ value: entry.chunk, done: false });
+            }
+
+            this.#updateByobRequest();
+            this.#callPullIfNeeded();
+        }
+
+        #fillFromQueue(view) {
+            let filled = 0;
+
+            while (filled < view.byteLength && this.#queue.length !== 0) {
+                const entry = this.#queue[0];
+                const chunk = entry.chunk;
+                const take = Math.min(chunk.byteLength, view.byteLength - filled);
+                view.set(chunk.subarray(0, take), filled);
+                filled += take;
+
+                if (take === chunk.byteLength) {
+                    this.#queue.shift();
+                    this.#queueTotalSize -= entry.size;
+                } else {
+                    entry.chunk = chunk.subarray(take);
+                    entry.size = chunk.byteLength - take;
+                    this.#queueTotalSize -= take;
+                }
+            }
+
+            return filled;
+        }
+
+        #updateByobRequest() {
+            this.#byobRequest =
+                this.#byobRequests.length !== 0
+                    ? this.#makeByobRequest(this.#byobRequests[0])
+                    : null;
+        }
+
+        #makeByobRequest(request) {
+            return {
+                get view() {
+                    return request.view;
+                },
+                respond: (bytesWritten) => {
+                    this.#respondByob(request, bytesWritten);
+                },
+                respondWithNewView: (view) => {
+                    this.#respondByob(request, undefined, view);
+                },
+            };
+        }
+
+        #respondByob(request, bytesWritten, newView) {
+            if (this.#byobRequests[0] !== request) {
+                throw makeError("TypeError", "BYOB request is no longer active");
+            }
+
+            if (newView !== undefined) {
+                const value = toBytesView(newView);
+                this.#byobRequests.shift();
+                this.#updateByobRequest();
+                request.resolve({ value, done: false });
+            } else {
+                if (
+                    !Number.isInteger(bytesWritten) ||
+                    bytesWritten < 0 ||
+                    bytesWritten > request.view.byteLength
+                ) {
+                    throw makeError("RangeError", "invalid bytesWritten value");
+                }
+
+                const value = new Uint8Array(
+                    request.view.buffer,
+                    request.view.byteOffset,
+                    bytesWritten,
+                );
+                this.#byobRequests.shift();
+                this.#updateByobRequest();
+                request.resolve({ value, done: false });
             }
 
             this.#callPullIfNeeded();
@@ -361,6 +635,27 @@
             if (!this.#closeRequested || this.#state !== "readable") {
                 return;
             }
+
+            if (this.#bytes) {
+                while (this.#queue.length !== 0 && this.#byobRequests.length !== 0) {
+                    const request = this.#byobRequests[0];
+                    const filled = this.#fillFromQueue(request.view);
+                    if (filled === 0) {
+                        break;
+                    }
+                    this.#byobRequests.shift();
+                    request.resolve({
+                        value: new Uint8Array(
+                            request.view.buffer,
+                            request.view.byteOffset,
+                            filled,
+                        ),
+                        done: false,
+                    });
+                }
+                this.#updateByobRequest();
+            }
+
             if (this.#queue.length !== 0) {
                 return;
             }
@@ -370,6 +665,15 @@
                 request.resolve({ value: undefined, done: true });
             }
             this.#readRequests = [];
+
+            for (const request of this.#byobRequests) {
+                request.resolve({
+                    value: new Uint8Array(request.view.buffer, request.view.byteOffset, 0),
+                    done: true,
+                });
+            }
+            this.#byobRequests = [];
+            this.#updateByobRequest();
 
             if (this.#readerClosed) {
                 this.#readerClosed.resolve();
@@ -390,6 +694,12 @@
                 request.reject(error);
             }
             this.#readRequests = [];
+
+            for (const request of this.#byobRequests) {
+                request.reject(error);
+            }
+            this.#byobRequests = [];
+            this.#updateByobRequest();
 
             if (this.#readerClosed) {
                 this.#readerClosed.reject(error);
@@ -413,6 +723,15 @@
             }
             this.#readRequests = [];
 
+            for (const request of this.#byobRequests) {
+                request.resolve({
+                    value: new Uint8Array(request.view.buffer, request.view.byteOffset, 0),
+                    done: true,
+                });
+            }
+            this.#byobRequests = [];
+            this.#updateByobRequest();
+
             if (this.#readerClosed) {
                 this.#readerClosed.resolve();
             }
@@ -429,21 +748,32 @@
                 return;
             }
 
+            const error = makeError(
+                "TypeError",
+                "reader released with pending read requests",
+            );
+
             if (this.#readRequests.length !== 0) {
-                const error = makeError(
-                    "TypeError",
-                    "reader released with pending read requests",
-                );
                 for (const request of this.#readRequests) {
                     request.reject(error);
                 }
                 this.#readRequests = [];
-
                 if (this.#readerClosed) {
                     this.#readerClosed.reject(error);
                 }
             }
 
+            if (this.#byobRequests.length !== 0) {
+                for (const request of this.#byobRequests) {
+                    request.reject(error);
+                }
+                this.#byobRequests = [];
+                if (this.#readerClosed) {
+                    this.#readerClosed.reject(error);
+                }
+            }
+
+            this.#updateByobRequest();
             this.#reader = null;
             this.#readerClosed = null;
         }
@@ -457,7 +787,8 @@
                 return;
             }
 
-            const hasPendingRead = this.#readRequests.length !== 0;
+            const hasPendingRead =
+                this.#readRequests.length !== 0 || this.#byobRequests.length !== 0;
             if (!hasPendingRead && this.#queueTotalSize >= this.#highWaterMark) {
                 return;
             }
@@ -890,6 +1221,9 @@
 
     Object.assign(globalThis, {
         ReadableStream,
+        ReadableByteStreamController,
+        ReadableStreamBYOBReader,
+        ReadableStreamBYOBRequest,
         ReadableStreamDefaultController,
         ReadableStreamDefaultReader,
         WritableStream,

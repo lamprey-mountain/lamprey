@@ -57,6 +57,14 @@ declare global {
     cancel?(reason?: unknown): void | PromiseLike<void>;
   }
 
+  interface UnderlyingByteSource {
+    type: "bytes";
+    autoAllocateChunkSize?: number;
+    start?(controller: ReadableByteStreamController): void | PromiseLike<void>;
+    pull?(controller: ReadableByteStreamController): void | PromiseLike<void>;
+    cancel?(reason?: unknown): void | PromiseLike<void>;
+  }
+
   interface UnderlyingSink<W = unknown> {
     start?(controller: WritableStreamDefaultController): void | PromiseLike<void>;
     write?(chunk: W, controller: WritableStreamDefaultController): void | PromiseLike<void>;
@@ -92,7 +100,29 @@ declare global {
     releaseLock(): void;
   }
 
+  class ReadableStreamBYOBRequest {
+    readonly view: Uint8Array;
+    respond(bytesWritten: number): void;
+    respondWithNewView(view: ArrayBufferView): void;
+  }
+
+  class ReadableByteStreamController {
+    readonly byobRequest: ReadableStreamBYOBRequest | null;
+    readonly desiredSize: number | null;
+    enqueue(chunk: ArrayBufferView): void;
+    close(): void;
+    error(reason?: unknown): void;
+  }
+
+  class ReadableStreamBYOBReader {
+    readonly closed: Promise<void>;
+    read<T extends ArrayBufferView>(view: T): Promise<ReadableStreamReadResult<T>>;
+    cancel(reason?: unknown): Promise<void>;
+    releaseLock(): void;
+  }
+
   class ReadableStream<R = unknown> implements AsyncIterable<R> {
+    constructor(underlyingSource: UnderlyingByteSource, strategy?: QueuingStrategy<ArrayBufferView>);
     constructor(
       underlyingSource?: UnderlyingSource<R>,
       strategy?: QueuingStrategy<R>,
@@ -101,6 +131,7 @@ declare global {
     readonly locked: boolean;
     cancel(reason?: unknown): Promise<void>;
     getReader(options?: { mode?: undefined }): ReadableStreamDefaultReader<R>;
+    getReader(options: { mode: "byob" }): ReadableStreamBYOBReader;
     pipeTo(destination: WritableStream<R>, options?: StreamPipeOptions): Promise<void>;
     pipeThrough<T>(
       transform: { readable: ReadableStream<T>; writable: WritableStream<R> },
