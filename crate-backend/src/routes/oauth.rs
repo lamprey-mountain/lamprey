@@ -10,7 +10,7 @@ use common::v1::types::oauth::{
     OauthGrantType, OauthResponseType,
 };
 use common::v1::types::{
-    ApplicationId, AuditLogEntryType, SessionStatus, SessionToken, SessionType,
+    ApplicationId, AuditLogEntryType, SessionStatus, SessionToken, SessionType, UserId,
     application::{Application, Scope, Scopes},
     oauth::{
         Jwks, OauthAuthorizeInfo, OauthAuthorizeResponse, OauthIntrospectResponse,
@@ -290,6 +290,69 @@ async fn oauth_token(
 
             Ok(Json(response))
         }
+        OauthGrantType::ClientCredentials => {
+            if !app.oauth_confidential {
+                return Err(Error::BadStatic(
+                    "client credentials grant requires a confidential client".into(),
+                ));
+            }
+
+            let scopes = match req.token.scope.as_deref() {
+                Some(scope) if !scope.is_empty() => {
+                    let mut scopes = HashSet::new();
+                    for scope in scope.split_whitespace() {
+                        scopes.insert(
+                            Scope::from_str(scope)
+                                .map_err(|_| ApiError::from_code(ErrorCode::InvalidScope))?,
+                        );
+                    }
+                    Scopes(scopes.into_iter().collect())
+                }
+                _ => Scopes(vec![Scope::Full]),
+            };
+
+            // the bot user acts on behalf of the application
+            let bot_user_id = UserId::from(app.id.into_inner());
+            data.connection_create(bot_user_id, app.id, scopes.clone())
+                .await?;
+
+            let token = SessionToken(Uuid::new_v4().to_string());
+            let expires_in = 3600;
+            let expires_at = Time::now_utc() + Duration::from_secs(expires_in);
+            let session = data
+                .session_create(DbSessionCreate {
+                    token: token.clone(),
+                    name: Some(app.name.clone()),
+                    expires_at: Some(expires_at),
+                    ty: SessionType::Access,
+                    application_id: Some(app.id),
+                    ip_addr: None,
+                    user_agent: user_agent.clone(),
+                })
+                .await?;
+            data.session_set_status(
+                session.id,
+                SessionStatus::Authorized {
+                    user_id: bot_user_id,
+                },
+            )
+            .await?;
+
+            let response = OauthTokenResponse {
+                access_token: token.0,
+                token_type: "Bearer".to_string(),
+                expires_in: Some(expires_in),
+                refresh_token: None,
+                scope: scopes
+                    .into_iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(" "),
+                id_token: None,
+            };
+
+            Ok(Json(response))
+        }
         OauthGrantType::RefreshToken => {
             let refresh_token = req
                 .token
@@ -418,7 +481,10 @@ async fn oauth_autoconfig_auth_server(
         jwks_uri: s.config.api_url.join("/api/v1/.well-known/jwks.json")?,
         scopes_supported: Scope::iter().map(|a| a.to_string()).collect(),
         response_types_supported: vec![OauthResponseType::Code],
-        grant_types_supported: vec![OauthGrantType::AuthorizationCode],
+        grant_types_supported: vec![
+            OauthGrantType::AuthorizationCode,
+            OauthGrantType::ClientCredentials,
+        ],
         token_endpoint_auth_methods_supported: vec![
             OauthAuthMethod::ClientSecretPost,
             OauthAuthMethod::ClientSecretBasic,
@@ -446,7 +512,10 @@ async fn oauth_autoconfig_openid(
         jwks_uri: s.config.api_url.join("/api/v1/.well-known/jwks.json")?,
         scopes_supported: Scope::iter().map(|a| a.to_string()).collect(),
         response_types_supported: vec![OauthResponseType::Code],
-        grant_types_supported: vec![OauthGrantType::AuthorizationCode],
+        grant_types_supported: vec![
+            OauthGrantType::AuthorizationCode,
+            OauthGrantType::ClientCredentials,
+        ],
         subject_types_supported: vec!["public".to_string()],
         id_token_signing_alg_values_supported: vec!["ES256".to_string()],
         token_endpoint_auth_methods_supported: vec![

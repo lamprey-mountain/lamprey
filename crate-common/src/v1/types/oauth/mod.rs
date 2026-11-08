@@ -215,9 +215,11 @@ pub enum OauthGrantType {
     #[strum(serialize = "authorization_code")]
     AuthorizationCode,
 
+    #[strum(serialize = "client_credentials")]
+    ClientCredentials,
+
     #[strum(serialize = "refresh_token")]
     RefreshToken,
-    // ClientCredentials,
     // device code(?)
 }
 
@@ -241,6 +243,12 @@ pub struct OauthTokenRequest {
     pub refresh_token: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_verifier: Option<String>,
+
+    /// space-separated scopes to request
+    ///
+    /// only used by the client credentials grant
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
 }
 
 #[record]

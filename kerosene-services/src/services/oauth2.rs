@@ -210,6 +210,7 @@ impl ServiceOauth {
                     client_secret: Some(client_secret.clone()),
                     refresh_token: None,
                     code_verifier: None,
+                    scope: None,
                 },
             ),
             // assume everything else uses http basic auth for now
@@ -225,6 +226,7 @@ impl ServiceOauth {
                     client_secret: None,
                     refresh_token: None,
                     code_verifier: None,
+                    scope: None,
                 },
             ),
         };
