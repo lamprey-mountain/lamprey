@@ -1,21 +1,23 @@
 //! tantivy s3 directory implementation
 
+use std::collections::HashSet;
 use std::fmt;
 use std::io::{Error as IoError, Read, Result as IoResult, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::os::unix::fs::FileExt;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use dashmap::DashMap;
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use opendal::{ErrorKind, Operator};
 use tantivy::{
     Directory, HasLen,
     directory::{
-        FileHandle, OwnedBytes, TerminatingWrite, WatchCallback, WatchCallbackList, WatchHandle,
-        WritePtr,
-        error::{DeleteError, OpenReadError, OpenWriteError},
+        DirectoryLock, FileHandle, Lock, OwnedBytes, TerminatingWrite, WatchCallback,
+        WatchCallbackList, WatchHandle, WritePtr,
+        error::{DeleteError, LockError, OpenReadError, OpenWriteError},
     },
 };
 use tokio::runtime::Handle as TokioHandle;
@@ -30,6 +32,19 @@ const HOT_EXTENSIONS: &[&str] = &["term", "json", "idx", "del", "fieldnorm"];
 
 /// the index meta file, which readers watch for changes
 const META_FILE: &str = "meta.json";
+
+/// how long a blocking lock waits for the current holder before giving up
+const LOCK_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// how long to sleep between attempts at a blocking lock
+const LOCK_RETRY_INTERVAL: Duration = Duration::from_millis(10);
+
+/// locks currently held by this process, keyed by the full object path
+///
+/// this only excludes other directory instances in the same process. a lock that
+/// outlives a crashed process can never be detected as stale over object storage,
+/// so cross-process locks would need a real lease to be safe.
+static HELD_LOCKS: Lazy<Mutex<HashSet<String>>> = Lazy::new(|| Mutex::new(HashSet::new()));
 
 fn is_hot_file(path: &Path) -> bool {
     path.extension()
@@ -59,12 +74,25 @@ pub struct ObjectDirectory {
     watches: Arc<WatchCallbackList>,
 }
 
+/// a lock held in this process, released on drop
+struct HeldLock {
+    key: String,
+}
+
 impl fmt::Debug for ObjectDirectory {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ObjectDirectory")
             .field("base_path", &self.base_path)
             .field("cache_path", &self.cache_path)
             .finish_non_exhaustive()
+    }
+}
+
+impl Drop for HeldLock {
+    fn drop(&mut self) {
+        if let Ok(mut held) = HELD_LOCKS.lock() {
+            held.remove(&self.key);
+        }
     }
 }
 
@@ -173,6 +201,27 @@ impl Directory for ObjectDirectory {
             fully_cached: cache_file.exists(),
             handle,
         }))
+    }
+
+    fn acquire_lock(&self, lock: &Lock) -> Result<DirectoryLock, LockError> {
+        let key = self.path_str(&lock.filepath);
+        let start = Instant::now();
+
+        loop {
+            let acquired = HELD_LOCKS
+                .lock()
+                .map(|mut held| held.insert(key.clone()))
+                .unwrap_or(false);
+            if acquired {
+                return Ok(DirectoryLock::from(Box::new(HeldLock { key })));
+            }
+
+            if !lock.is_blocking || start.elapsed() >= LOCK_TIMEOUT {
+                return Err(LockError::LockBusy);
+            }
+
+            std::thread::sleep(LOCK_RETRY_INTERVAL);
+        }
     }
 
     fn delete(&self, path: &Path) -> Result<(), DeleteError> {
