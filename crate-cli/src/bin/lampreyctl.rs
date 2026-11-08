@@ -73,6 +73,7 @@ async fn main_inner() -> Result<(), anyhow::Error> {
                             AdminCollectGarbageTarget::Media,
                             AdminCollectGarbageTarget::Messages,
                             AdminCollectGarbageTarget::Session,
+                            AdminCollectGarbageTarget::Users,
                             AdminCollectGarbageTarget::AuditLog,
                             AdminCollectGarbageTarget::RoomAnalytics,
                         ]
@@ -83,6 +84,7 @@ async fn main_inner() -> Result<(), anyhow::Error> {
                                 GcTarget::Media => AdminCollectGarbageTarget::Media,
                                 GcTarget::Messages => AdminCollectGarbageTarget::Messages,
                                 GcTarget::Session => AdminCollectGarbageTarget::Session,
+                                GcTarget::Users => AdminCollectGarbageTarget::Users,
                                 GcTarget::AuditLog => AdminCollectGarbageTarget::AuditLog,
                                 GcTarget::RoomAnalytics => AdminCollectGarbageTarget::RoomAnalytics,
                                 GcTarget::All => unreachable!(),
@@ -115,6 +117,7 @@ async fn main_inner() -> Result<(), anyhow::Error> {
                             AdminCollectGarbageTarget::Media => "Media",
                             AdminCollectGarbageTarget::Messages => "Messages",
                             AdminCollectGarbageTarget::Session => "Session",
+                            AdminCollectGarbageTarget::Users => "Users",
                             AdminCollectGarbageTarget::AuditLog => "AuditLog",
                             AdminCollectGarbageTarget::RoomAnalytics => "RoomAnalytics",
                         };

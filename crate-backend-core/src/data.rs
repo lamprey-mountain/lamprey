@@ -1028,6 +1028,14 @@ pub trait DataAdmin {
     /// returns rows affected
     async fn gc_sessions(&mut self, mode: AdminCollectGarbageMode) -> Result<u64>;
 
+    /// garbage collect deleted users
+    ///
+    /// profile media links are removed first; media rows are intentionally left
+    /// untouched and must be handled by the media gc
+    ///
+    /// returns rows affected
+    async fn gc_users(&mut self, mode: AdminCollectGarbageMode) -> Result<u64>;
+
     /// garbage collect audit logs
     ///
     /// returns rows affected

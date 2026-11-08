@@ -157,6 +157,28 @@ impl DataAdmin for Postgres {
         }
     }
 
+    async fn gc_users(&mut self, mode: AdminCollectGarbageMode) -> Result<u64> {
+        let mut conn = self.acquire().await?;
+        match mode {
+            AdminCollectGarbageMode::Dry => {
+                let count = sqlx::query_scalar::<_, i64>(
+                    "select count(*) from usr where deleted_at is not null",
+                )
+                .fetch_one(conn.ext())
+                .await?;
+                Ok(count as u64)
+            }
+            // deleted users are already marked by `user_delete`, so there is nothing to do
+            AdminCollectGarbageMode::Mark => Ok(0),
+            AdminCollectGarbageMode::Sweep => {
+                let result = sqlx::query(include_str!("../../../sql/purge_users.sql"))
+                    .execute(conn.ext())
+                    .await?;
+                Ok(result.rows_affected())
+            }
+        }
+    }
+
     async fn gc_audit_logs(&mut self, mode: AdminCollectGarbageMode) -> Result<u64> {
         let mut conn = self.acquire().await?;
         let interval = Duration::days(crate::consts::RETENTION_AUDIT_LOG as i64);

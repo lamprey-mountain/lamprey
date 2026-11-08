@@ -74,6 +74,11 @@ pub enum AdminCollectGarbageTarget {
     Session,
     AuditLog,
     RoomAnalytics,
+
+    /// delete users marked as deleted
+    ///
+    /// profile media links are removed first; the media itself is left for the `Media` target
+    Users,
     // NOTE: add more targets here as more garbage collectable resources are added!
 }
 

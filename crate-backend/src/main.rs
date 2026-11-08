@@ -60,6 +60,7 @@ async fn main() -> Result<()> {
         cli::Command::GcMedia {} => gc(globals, &[AdminCollectGarbageTarget::Media]).await?,
         cli::Command::GcMessages {} => gc(globals, &[AdminCollectGarbageTarget::Messages]).await?,
         cli::Command::GcSession {} => gc(globals, &[AdminCollectGarbageTarget::Session]).await?,
+        cli::Command::GcUsers {} => gc(globals, &[AdminCollectGarbageTarget::Users]).await?,
         cli::Command::GcAuditLog {} => gc(globals, &[AdminCollectGarbageTarget::AuditLog]).await?,
         cli::Command::GcRoomAnalytics {} => {
             gc(globals, &[AdminCollectGarbageTarget::RoomAnalytics]).await?
@@ -71,6 +72,7 @@ async fn main() -> Result<()> {
                     AdminCollectGarbageTarget::Media,
                     AdminCollectGarbageTarget::Messages,
                     AdminCollectGarbageTarget::Session,
+                    AdminCollectGarbageTarget::Users,
                     AdminCollectGarbageTarget::AuditLog,
                     AdminCollectGarbageTarget::RoomAnalytics,
                 ],

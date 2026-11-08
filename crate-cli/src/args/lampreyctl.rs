@@ -107,6 +107,7 @@ pub enum GcTarget {
     Media,
     Messages,
     Session,
+    Users,
     AuditLog,
     RoomAnalytics,
     All,

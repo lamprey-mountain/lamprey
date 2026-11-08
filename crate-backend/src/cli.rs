@@ -37,6 +37,9 @@ pub enum Command {
     /// garbage collect expired sessions
     GcSession {},
 
+    /// garbage collect deleted users
+    GcUsers {},
+
     /// garbage collect old audit log entries
     GcAuditLog {},
 

@@ -84,6 +84,7 @@ impl ServiceAdmin {
                 }
                 AdminCollectGarbageTarget::Messages => (data.gc_messages(req.mode).await?, None),
                 AdminCollectGarbageTarget::Session => (data.gc_sessions(req.mode).await?, None),
+                AdminCollectGarbageTarget::Users => (data.gc_users(req.mode).await?, None),
                 AdminCollectGarbageTarget::AuditLog => (data.gc_audit_logs(req.mode).await?, None),
                 AdminCollectGarbageTarget::RoomAnalytics => {
                     (data.gc_room_analytics(req.mode).await?, None)
