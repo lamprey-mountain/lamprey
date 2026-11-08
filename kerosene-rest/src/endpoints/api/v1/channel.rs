@@ -168,7 +168,7 @@ pub async fn create_dm(
                     ty: DbChannelType::Gdm,
                     nsfw: create.nsfw,
                     bitrate: create.bitrate.map(|b| b as i32),
-                    user_limit: create.bitrate.map(|u| u as i32),
+                    user_limit: create.user_limit.map(|u| u as i32),
                     parent_id: None,
                     owner_id: Some(*user.id),
                     invitable: create.invitable,
