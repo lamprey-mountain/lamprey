@@ -5,6 +5,7 @@ use lamprey_macros::endpoint;
     post,
     path = "/app",
     tags = ["application"],
+    scopes = [Full],
     permissions = [ApplicationCreate],
     audit_log_events = ["ApplicationCreate"],
     response(CREATED, body = Application, description = "success"),
@@ -28,6 +29,7 @@ pub mod app_create {
     get,
     path = "/app",
     tags = ["application"],
+    scopes = [Full],
     response(OK, body = PaginationResponse<Application>, description = "success"),
 )]
 pub mod app_list {
@@ -50,6 +52,7 @@ pub mod app_list {
     get,
     path = "/app/{app_id}",
     tags = ["application"],
+    scopes = [Full],
     response(OK, body = Application, description = "success"),
 )]
 pub mod app_get {
@@ -72,6 +75,7 @@ pub mod app_get {
     patch,
     path = "/app/{app_id}",
     tags = ["application"],
+    scopes = [Full],
     audit_log_events = ["ApplicationUpdate"],
     response(OK, body = Application, description = "success"),
 )]
@@ -98,6 +102,7 @@ pub mod app_patch {
     delete,
     path = "/app/{app_id}",
     tags = ["application"],
+    scopes = [Full],
     audit_log_events = ["ApplicationDelete"],
     response(NO_CONTENT, description = "success"),
 )]
@@ -117,6 +122,7 @@ pub mod app_delete {
     post,
     path = "/app/{app_id}/session",
     tags = ["application"],
+    scopes = [Full],
     audit_log_events = ["SessionLogin"],
     response(CREATED, body = SessionWithToken, description = "success"),
 )]
@@ -145,6 +151,7 @@ pub mod app_create_session {
     post,
     path = "/app/{app_id}/invite",
     tags = ["application"],
+    scopes = [Full],
     permissions = [IntegrationsManage],
     audit_log_events = ["BotAdd"],
     response(NO_CONTENT, description = "success"),
@@ -168,6 +175,7 @@ pub mod app_invite_bot {
     put,
     path = "/app/{app_id}/puppet/{puppet_id}",
     tags = ["application"],
+    scopes = [Full],
     response(OK, body = User, description = "success"),
     response(CREATED, body = User, description = "created"),
 )]
@@ -197,6 +205,7 @@ pub mod puppet_ensure {
     post,
     path = "/app/{app_id}/rotate-secret",
     tags = ["application"],
+    scopes = [Full],
     audit_log_events = ["ApplicationUpdate"],
     response(OK, body = Application, description = "success"),
 )]

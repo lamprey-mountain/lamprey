@@ -5,6 +5,7 @@ use lamprey_macros::endpoint;
     post,
     path = "/search/message",
     tags = ["search"],
+    scopes = [Full],
     response(OK, body = MessageSearch, description = "success"),
 )]
 pub mod search_messages {
@@ -26,6 +27,7 @@ pub mod search_messages {
     post,
     path = "/search/channels",
     tags = ["search"],
+    scopes = [Full],
     response(OK, body = ChannelSearch, description = "success"),
 )]
 pub mod search_channels {
@@ -47,6 +49,7 @@ pub mod search_channels {
     post,
     path = "/search/room",
     tags = ["search"],
+    scopes = [Full],
     response(OK, body = PaginationResponse<Room>, description = "success"),
 )]
 pub mod search_rooms {

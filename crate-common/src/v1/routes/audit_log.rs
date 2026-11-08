@@ -36,6 +36,7 @@ pub mod room_audit_logs {
     get,
     path = "/user/{user_id}/audit-logs",
     tags = ["user"],
+    scopes = [Full],
     response(OK, body = AuditLogPaginationResponse, description = "success"),
 )]
 pub mod user_audit_logs {

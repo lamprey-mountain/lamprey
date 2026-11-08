@@ -5,6 +5,7 @@ use lamprey_macros::endpoint;
     get,
     path = "/thread/{thread_id}/member",
     tags = ["thread"],
+    scopes = [Full],
     response(OK, body = PaginationResponse<ThreadMember>, description = "success"),
 )]
 pub mod thread_member_list {
@@ -29,6 +30,7 @@ pub mod thread_member_list {
     get,
     path = "/thread/{thread_id}/member/{user_id}",
     tags = ["thread"],
+    scopes = [Full],
     response(OK, body = ThreadMember, description = "success"),
 )]
 pub mod thread_member_get {
@@ -54,6 +56,7 @@ pub mod thread_member_get {
     put,
     path = "/thread/{thread_id}/member/{user_id}",
     tags = ["thread"],
+    scopes = [Full],
     permissions_optional = [MemberKick],
     audit_log_events = ["ThreadMemberAdd"],
     response(OK, body = ThreadMember, description = "success"),
@@ -85,6 +88,7 @@ pub mod thread_member_add {
     delete,
     path = "/thread/{thread_id}/member/{user_id}",
     tags = ["thread"],
+    scopes = [Full],
     permissions_optional = [MemberKick],
     audit_log_events = ["ThreadMemberRemove"],
     response(NO_CONTENT, description = "success"),
@@ -109,6 +113,7 @@ pub mod thread_member_delete {
     get,
     path = "/channel/{channel_id}/thread",
     tags = ["thread"],
+    scopes = [Full],
     permissions = [ChannelView],
     response(OK, body = ThreadList, description = "List channel threads success"),
 )]
@@ -134,6 +139,7 @@ pub mod thread_list {
     get,
     path = "/channel/{channel_id}/thread/archived",
     tags = ["thread"],
+    scopes = [Full],
     permissions = [ChannelView],
     response(OK, body = ThreadList, description = "List archived threads success"),
 )]
@@ -159,6 +165,7 @@ pub mod thread_list_archived {
     get,
     path = "/channel/{channel_id}/thread/removed",
     tags = ["thread"],
+    scopes = [Full],
     permissions = [ThreadManage],
     response(OK, body = ThreadList, description = "List removed threads success"),
 )]
@@ -184,6 +191,7 @@ pub mod thread_list_removed {
     post,
     path = "/channel/{channel_id}/thread",
     tags = ["thread"],
+    scopes = [Full],
     permissions_optional = [ThreadCreatePublic, ThreadCreatePrivate],
     response(CREATED, body = Channel, description = "Create thread success"),
 )]
@@ -209,6 +217,7 @@ pub mod thread_create {
     post,
     path = "/channel/{channel_id}/message/{message_id}/thread",
     tags = ["thread"],
+    scopes = [Full],
     permissions = [ThreadCreatePublic],
     response(CREATED, body = Channel, description = "Create thread success"),
     response(CONFLICT, description = "A thread for this message already exists"),
@@ -240,6 +249,7 @@ pub mod thread_create_from_message {
     get,
     path = "/room/{room_id}/thread",
     tags = ["thread"],
+    scopes = [Full],
     response(OK, body = ThreadList, description = "List room threads success"),
 )]
 pub mod thread_list_room {
@@ -262,6 +272,7 @@ pub mod thread_list_room {
     get,
     path = "/channel/{channel_id}/activity",
     tags = ["thread"],
+    scopes = [Full],
     permissions = [ChannelView],
     response(OK, body = MessageList, description = "List activity success"),
 )]
@@ -289,6 +300,7 @@ pub mod thread_activity {
     get,
     path = "/channel/{channel_id}/member/search",
     tags = ["thread"],
+    scopes = [Full],
     permissions = [ChannelView],
     response(OK, body = ChannelMemberSearchResponse, description = "success"),
 )]
@@ -318,6 +330,8 @@ pub mod channel_member_search {
     get,
     path = "/channel/{channel_id}/thread.atom",
     tags = ["thread"],
+    scopes = [Full],
+    response(OK, description = "success"),
 )]
 pub mod thread_list_atom {
     use crate::v1::types::{ChannelId, PaginationQuery};

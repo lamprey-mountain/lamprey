@@ -546,6 +546,7 @@ pub mod message_list_removed {
     path = "/channel/{channel_id}/message.atom",
     tags = ["message"],
     scopes = [Full],
+    response(OK, description = "success"),
 )]
 pub mod message_list_atom {
     use crate::v1::types::ChannelId;

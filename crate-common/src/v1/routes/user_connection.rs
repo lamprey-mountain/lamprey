@@ -5,6 +5,7 @@ use lamprey_macros::endpoint;
     get,
     path = "/user/{user_id}/connection",
     tags = ["user_connection"],
+    scopes = [Full],
     response(OK, body = PaginationResponse<Connection>, description = "success"),
 )]
 pub mod user_connection_list {
@@ -31,6 +32,7 @@ pub mod user_connection_list {
     patch,
     path = "/user/{user_id}/connection/{app_id}",
     tags = ["user_connection"],
+    scopes = [Full],
     response(OK, body = Connection, description = "success"),
 )]
 pub mod user_connection_update {
@@ -61,6 +63,7 @@ pub mod user_connection_update {
     delete,
     path = "/user/{user_id}/connection/{app_id}",
     tags = ["user_connection"],
+    scopes = [Full],
     audit_log_events = ["ConnectionDelete"],
     response(NO_CONTENT, description = "success"),
 )]
@@ -84,6 +87,7 @@ pub mod user_connection_delete {
     get,
     path = "/user/@self/app/{app_id}/connection-metadata",
     tags = ["user_connection"],
+    scopes = [Full],
     response(OK, body = ConnectionMetadata, description = "success"),
 )]
 pub mod user_connection_metadata_get {
@@ -106,6 +110,7 @@ pub mod user_connection_metadata_get {
     put,
     path = "/user/@self/app/{app_id}/connection-metadata",
     tags = ["user_connection"],
+    scopes = [Full],
     response(OK, body = ConnectionMetadata, description = "success"),
 )]
 pub mod user_connection_metadata_put {

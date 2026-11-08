@@ -5,6 +5,7 @@ use lamprey_macros::endpoint;
     post,
     path = "/media/{media_id}/track",
     tags = ["media"],
+    scopes = [Full],
     response(CREATED, body = Track, description = "Track create success"),
 )]
 pub mod media_track_create {
@@ -32,6 +33,7 @@ pub mod media_track_create {
     get,
     path = "/media/{media_id}/track",
     tags = ["media"],
+    scopes = [Full],
     response(OK, body = Vec<Track>, description = "Track list success"),
 )]
 pub mod media_track_list {
@@ -53,6 +55,7 @@ pub mod media_track_list {
     patch,
     path = "/media/{media_id}/track/{track_id}",
     tags = ["media"],
+    scopes = [Full],
     response(OK, body = Track, description = "Track update success"),
 )]
 pub mod media_track_update {
@@ -83,6 +86,7 @@ pub mod media_track_update {
     delete,
     path = "/media/{media_id}/track/{track_id}",
     tags = ["media"],
+    scopes = [Full],
     response(NO_CONTENT, description = "Track delete success"),
 )]
 pub mod media_track_delete {
@@ -104,6 +108,7 @@ pub mod media_track_delete {
     get,
     path = "/media/{media_id}/track/{track_id}",
     tags = ["media"],
+    scopes = [Full],
     response(OK, body = Track, description = "Track get success"),
 )]
 pub mod media_track_get {

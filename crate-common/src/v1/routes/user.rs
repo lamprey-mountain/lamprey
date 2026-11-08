@@ -60,6 +60,7 @@ pub mod user_update {
     delete,
     path = "/user/{user_id}",
     tags = ["user"],
+    scopes = [Full],
     permissions = [UserManage],
     permissions_optional = [UserManageSelf],
     audit_log_events = ["UserDelete"],
@@ -83,6 +84,7 @@ pub mod user_delete {
     post,
     path = "/user/{user_id}/undelete",
     tags = ["user"],
+    scopes = [Full],
     permissions = [UserManage],
     audit_log_events = ["UserUndelete"],
     response(NO_CONTENT, description = "success"),
@@ -105,6 +107,7 @@ pub mod user_undelete {
     get,
     path = "/user/{user_id}/room",
     tags = ["user"],
+    scopes = [Rooms],
     response(OK, body = PaginationResponse<Room>, description = "success"),
 )]
 pub mod user_room_list {
@@ -158,6 +161,7 @@ pub mod guest_create {
     post,
     path = "/user/{user_id}/suspend",
     tags = ["user"],
+    scopes = [Full],
     permissions = [MemberBan],
     audit_log_events = ["UserSuspend"],
     response(OK, body = User, description = "success"),
@@ -187,6 +191,7 @@ pub mod user_suspend {
     delete,
     path = "/user/{user_id}/suspend",
     tags = ["user"],
+    scopes = [Full],
     permissions = [MemberBan],
     audit_log_events = ["UserUnsuspend"],
     response(OK, body = User, description = "success"),
@@ -212,6 +217,7 @@ pub mod user_unsuspend {
     post,
     path = "/user/{user_id}/presence",
     tags = ["user"],
+    scopes = [Full],
     response(NO_CONTENT, description = "success"),
 )]
 pub mod user_presence_set {
@@ -235,6 +241,7 @@ pub mod user_presence_set {
     get,
     path = "/user",
     tags = ["user"],
+    scopes = [Full],
     permissions = [MemberBan],
     response(OK, body = PaginationResponse<User>, description = "success"),
 )]
@@ -264,6 +271,7 @@ pub mod user_list {
     post,
     path = "/user/search",
     tags = ["user"],
+    scopes = [Full],
     permissions = [Admin],
     response(OK, body = UserSearch, description = "success"),
 )]

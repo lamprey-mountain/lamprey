@@ -5,6 +5,7 @@ use lamprey_macros::endpoint;
     post,
     path = "/media",
     tags = ["media"],
+    scopes = [Full],
     response(CREATED, body = MediaCreated, description = "Media create success"),
 )]
 pub mod media_create {
@@ -32,6 +33,7 @@ pub mod media_create {
     get,
     path = "/media/{media_id}",
     tags = ["media"],
+    scopes = [Full],
     response(OK, body = Media, description = "Media get success"),
 )]
 pub mod media_get {
@@ -53,6 +55,7 @@ pub mod media_get {
     patch,
     path = "/media/{media_id}",
     tags = ["media"],
+    scopes = [Full],
     response(OK, body = Media, description = "Media patch success"),
 )]
 pub mod media_patch {
@@ -80,6 +83,7 @@ pub mod media_patch {
     delete,
     path = "/media/{media_id}",
     tags = ["media"],
+    scopes = [Full],
     response(NO_CONTENT, description = "Media delete success"),
     response(CONFLICT, description = "Media linked to another resource"),
 )]
@@ -99,6 +103,7 @@ pub mod media_delete {
     put,
     path = "/media/{media_id}/done",
     tags = ["media"],
+    scopes = [Full],
     response(OK, body = Media, description = "Media processing finished"),
     response(ACCEPTED, description = "Media processing in background"),
 )]
@@ -129,6 +134,7 @@ pub mod media_done {
     post,
     path = "/media/{media_id}/clone",
     tags = ["media"],
+    scopes = [Full],
     response(OK, body = Media, description = "Media clone success"),
 )]
 pub mod media_clone {
@@ -156,6 +162,7 @@ pub mod media_clone {
     post,
     path = "/media/search",
     tags = ["media"],
+    scopes = [Full],
     response(OK, body = MediaSearch, description = "Media search success"),
 )]
 pub mod media_search {
@@ -182,6 +189,7 @@ pub mod media_search {
     patch,
     path = "/internal/media-upload/{media_id}",
     tags = ["media"], // NOTE: maybe tag this as "internal" instead?
+    scopes = [Full],
     response(NO_CONTENT, description = "Upload success"),
 )]
 pub mod media_upload {
