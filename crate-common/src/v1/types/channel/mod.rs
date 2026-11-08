@@ -48,7 +48,10 @@ pub struct Channel {
     /// only updates when the channel itself is updated, not the stuff in the channel
     pub version_id: ChannelVerId,
 
-    /// the name of this channel. only `None` for dm channels.
+    /// the name of this channel
+    ///
+    /// is `None` for dm channels, can be `None` for threads and document
+    /// branches that have an auto name
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, min_length = 1, max_length = 64)
@@ -593,7 +596,10 @@ pub enum ChannelType {
 #[cfg_attr(feature = "validator", derive(Validate))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ChannelCreate {
-    /// the name of this channel. only optional for dm channels.
+    /// the name of this channel
+    ///
+    /// only optional for dm channels and threads or document branches that have
+    /// an auto name instead.
     #[cfg_attr(
         feature = "utoipa",
         schema(required = false, max_length = 1, min_length = 64)
@@ -686,9 +692,18 @@ pub struct ChannelCreate {
 #[record]
 #[derive(Default)]
 pub struct ChannelPatch {
+    /// the name of this channel
+    ///
+    /// set to `null` to clear it, which is only allowed for threads and
+    /// document branches that have an auto name.
     #[schema(required = false, min_length = 1, max_length = 64)]
     #[validate(length(min = 1, max = 64))]
-    pub name: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "some_option",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub name: Option<Option<String>>,
 
     #[schema(min_length = 1, max_length = 2048)]
     #[validate(length(min = 1, max = 2048))]
@@ -868,9 +883,9 @@ impl Diff for ChannelPatch {
     type Target = Channel;
 
     fn changes(&self, other: &Channel) -> bool {
-        // Option<String> vs Option<String>
+        // Option<Option<String>> vs Option<String>
         if let Some(ref val) = self.name {
-            if Some(val) != other.name.as_ref() {
+            if val != &other.name {
                 return true;
             }
         }
@@ -1009,7 +1024,9 @@ impl Diff for ChannelPatch {
     }
 
     fn apply(self, mut other: Self::Target) -> Self::Target {
-        other.name = self.name.or(other.name);
+        if let Some(val) = self.name {
+            other.name = val;
+        }
         if let Some(val) = self.description {
             other.description = val;
         }
@@ -1241,6 +1258,11 @@ impl ChannelType {
                 | ChannelType::ThreadForum2
                 | ChannelType::DocumentComment
         )
+    }
+
+    /// whether this channel may be nameless, as long as it has an auto name
+    pub fn can_be_nameless(&self) -> bool {
+        self.is_thread() || matches!(self, ChannelType::DocumentBranch)
     }
 
     pub fn ensure_is_thread(&self) -> Result<(), ApiError> {

@@ -959,7 +959,11 @@ pub async fn upgrade(
         .rooms
         .create(
             RoomCreate {
-                name: chan.name.clone().unwrap_or_default(),
+                name: chan
+                    .name
+                    .clone()
+                    .or_else(|| chan.auto_name.clone())
+                    .ok_or_else(|| ApiError::from_code(ErrorCode::FieldMissingName))?,
                 description: chan.description.clone(),
                 icon: chan.icon,
                 banner: None,

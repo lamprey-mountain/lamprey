@@ -328,7 +328,12 @@ impl ServiceChannels {
         // TODO(al2): use this when creating a channel
         let _channel_id = ChannelId::new();
 
-        if json.ty != ChannelType::Dm && json.name.is_none() {
+        // every channel needs a name, except dms and threads/document branches
+        // with an auto name
+        if json.ty != ChannelType::Dm
+            && json.name.is_none()
+            && !(json.ty.can_be_nameless() && json.auto_name.is_some())
+        {
             return Err(ApiError::from_code(ErrorCode::FieldMissingName).into());
         }
 
@@ -810,7 +815,7 @@ impl ServiceChannels {
         json.parent_id = Some(parent_channel_id);
         json.validate()?;
 
-        if json.name.is_none() {
+        if json.name.is_none() && json.auto_name.is_none() {
             return Err(ApiError::from_code(ErrorCode::FieldMissingName).into());
         }
 
@@ -995,6 +1000,22 @@ impl ServiceChannels {
             return Ok(chan_old);
         }
 
+        let name_new = patch.name.clone().unwrap_or_else(|| chan_old.name.clone());
+        let auto_name_new = patch
+            .auto_name
+            .clone()
+            .unwrap_or_else(|| chan_old.auto_name.clone());
+        let ty_new = patch.ty.unwrap_or(chan_old.ty);
+
+        // every channel needs a name, except dms and threads/document branches
+        // with an auto name
+        if ty_new != ChannelType::Dm
+            && name_new.is_none()
+            && !(ty_new.can_be_nameless() && auto_name_new.is_some())
+        {
+            return Err(ApiError::from_code(ErrorCode::FieldMissingName).into());
+        }
+
         if let Some(new_ty) = patch.ty {
             if !chan_old.ty.can_change_to(new_ty) {
                 // TODO: error code for this
@@ -1007,7 +1028,7 @@ impl ServiceChannels {
         }
 
         if patch.parent_id.is_some() || patch.ty.is_some() {
-            let target_ty = patch.ty.unwrap_or(chan_old.ty);
+            let target_ty = ty_new;
             let target_parent_id = match patch.parent_id {
                 Some(Some(id)) => Some(id),
                 Some(None) => None,
@@ -1194,8 +1215,8 @@ impl ServiceChannels {
                     embeds: vec![],
                     components: vec![],
                     message_type: MessageType::ChannelRename(MessageChannelRename {
-                        name_new: chan_new.name.clone(),
-                        name_old: chan_old.name.clone(),
+                        name_new: chan_new.name.clone().or_else(|| chan_new.auto_name.clone()),
+                        name_old: chan_old.name.clone().or_else(|| chan_old.auto_name.clone()),
                     })
                     .into(),
                     created_at: None,

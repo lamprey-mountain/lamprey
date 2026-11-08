@@ -879,7 +879,7 @@ impl ServiceMessages {
                         id: c.id,
                         room_id: c.room_id,
                         ty: c.ty,
-                        name: c.name,
+                        name: c.name.or(c.auto_name),
                     })
                     .collect()
             });

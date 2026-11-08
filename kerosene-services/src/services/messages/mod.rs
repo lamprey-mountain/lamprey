@@ -221,7 +221,7 @@ impl ServiceMessages {
                 id: channel.id,
                 room_id: channel.room_id,
                 ty: channel.ty,
-                name: channel.name,
+                name: channel.name.or(channel.auto_name),
             });
         }
 

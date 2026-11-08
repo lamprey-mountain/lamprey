@@ -61,10 +61,13 @@ impl DiscordRealm {
                             let http = self.http.clone();
                             let bridge = self.handle.bridge.clone();
 
-                            let create_channel = CreateChannel::new(
-                                channel.name.clone().unwrap_or_default(),
-                            )
-                            .kind(match channel.ty {
+                            let name = channel
+                                .name
+                                .clone()
+                                .or_else(|| channel.auto_name.clone())
+                                .unwrap_or_default();
+
+                            let create_channel = CreateChannel::new(name).kind(match channel.ty {
                                     lamprey::ChannelType::Text => ChannelType::Text,
                                     lamprey::ChannelType::ThreadPublic
                                     | lamprey::ChannelType::ThreadPrivate => {

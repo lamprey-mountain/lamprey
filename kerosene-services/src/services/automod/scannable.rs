@@ -196,7 +196,7 @@ impl Scannable for ChannelCreate {
 
 impl Scannable for ChannelPatch {
     fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
-        if let Some(name) = &self.name {
+        if let Some(Some(name)) = self.name.as_ref() {
             visitor.visit_text(name, AutomodTextLocation::ThreadTitle);
         }
         if let Some(auto_name) = self.auto_name.as_ref().and_then(|name| name.as_ref()) {
