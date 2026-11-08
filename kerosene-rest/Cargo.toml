@@ -19,7 +19,7 @@ lamprey-backend-core = { workspace = true }
 lamprey-backend-services = { package = "kerosene-services", version = "0.1.1", path = "../kerosene-services" } # TODO: rename imports
 lamprey-macros = { workspace = true }
 lamprey-unfurl = { workspace = true }
-minijinja = { version = "3.0.5", optional = true }
+minijinja = { version = "3.0.5", optional = true, features = ["serde"] }
 multer = { workspace = true }
 percent-encoding = { workspace = true }
 rand = { version = "0.10.3", optional = true }
@@ -42,5 +42,4 @@ validator = { workspace = true }
 
 [features]
 default = []
-frontend = ["dep:base64", "dep:minijinja", "dep:rand"]
-embed-frontend = ["frontend", "dep:rust-embed"]
+frontend = ["dep:base64", "dep:minijinja", "dep:rand", "dep:rust-embed"]

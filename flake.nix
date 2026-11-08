@@ -122,7 +122,7 @@
             };
           });
 
-        backendFeatures = [ "lamprey-backend/embed-frontend" ];
+        backendFeatures = [ ];
         backendDeps = depsFor "lamprey-backend" backendFeatures;
 
         backend = craneLib.buildPackage (common // {

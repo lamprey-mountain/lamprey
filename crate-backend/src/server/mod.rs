@@ -62,10 +62,8 @@ impl Server {
         if has_api {
             if let Some(path) = &globals.config().ui.path {
                 info!("serving ui from {}", path.display());
-            } else if cfg!(feature = "embed-frontend") {
-                info!("serving embedded ui");
             } else {
-                info!("ui is not being served");
+                info!("serving embedded ui");
             }
         }
 

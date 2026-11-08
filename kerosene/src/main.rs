@@ -35,7 +35,7 @@ async fn main() -> ServerResult<()> {
 
     let router: axum::Router = Routes::new_api()
         .into_axum()
-        // #[cfg(feature = "embed-frontend")]
+        // #[cfg(feature = "frontend")]
         // .layer(frontend) // or .nest? or .fallback?
         // .layer(one)
         // .layer(two)

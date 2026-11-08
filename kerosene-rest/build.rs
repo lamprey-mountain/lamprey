@@ -1,5 +1,5 @@
 fn main() {
-    if std::env::var("CARGO_FEATURE_EMBED_FRONTEND").is_ok() {
+    if std::env::var("CARGO_FEATURE_FRONTEND").is_ok() {
         println!("cargo:rerun-if-env-changed=FRONTEND_DIST");
         let frontend_dist =
             std::env::var("FRONTEND_DIST").unwrap_or_else(|_| "../frontend/dist".to_string());
