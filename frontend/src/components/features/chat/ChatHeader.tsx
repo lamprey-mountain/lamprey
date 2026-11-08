@@ -5,6 +5,7 @@ import { useCtx } from "@/app/context";
 import icCall from "@/assets/call.png";
 import icDelete from "@/assets/delete.png";
 import icRemove from "@/assets/emoji-symbols.png"; // TEMP: get a better icon
+import icInbox from "@/assets/inbox.png";
 import icMembers from "@/assets/members.png";
 import icPin from "@/assets/pin.png";
 import icThreads from "@/assets/threads.png";
@@ -38,7 +39,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	const messagesService = useMessages();
 	const [channelState, setChannelState] = useChannel()!;
 	const [, modalctl] = useModals();
-	const { setMenu } = useMenu();
+	const { menu, setMenu } = useMenu();
 	const [hovered, setHovered] = createSignal(false);
 	const currentUser = useCurrentUser();
 	const [editingName, setEditingName] = createSignal<string | undefined>();
@@ -53,6 +54,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	const pinnedTooltip = createTooltip({ tip: () => "Show pinned messages" });
 	const membersTooltip = createTooltip({ tip: () => "Show members" });
 	const activityTooltip = createTooltip({ tip: () => "Show activity log" });
+	const notifTooltip = createTooltip({ tip: () => "Notification settings" });
 
 	const selected = () => channelState.selectedMessages;
 	const isSelecting = () => channelState.selectMode;
@@ -122,6 +124,34 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 
 	const togglePinned = () => {
 		setChannelState("pinned_view", (v) => !v);
+	};
+
+	const hasChannelNotifications = () =>
+		props.channel.type !== "Dm" &&
+		props.channel.type !== "Gdm" &&
+		props.channel.type !== "Category";
+
+	const toggleNotifications = (
+		e: MouseEvent & { currentTarget: HTMLButtonElement },
+	) => {
+		const current = menu();
+		if (
+			current?.type === "channel_notifications" &&
+			current.channel_id === props.channel.id
+		) {
+			setMenu(null);
+			return;
+		}
+
+		const rect = e.currentTarget.getBoundingClientRect();
+		setTimeout(() => {
+			setMenu({
+				x: rect.left,
+				y: rect.bottom,
+				type: "channel_notifications",
+				channel_id: props.channel.id,
+			});
+		});
 	};
 
 	const startEditingName = () => {
@@ -328,6 +358,16 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 			<Show when={!isSelecting()}>
 				<SearchInput channel={props.channel} />
 				<menu class="menu">
+					<Show when={hasChannelNotifications()}>
+						<button
+							type="button"
+							class="button icon-button"
+							onClick={toggleNotifications}
+							ref={notifTooltip.content}
+						>
+							<Icon src={icInbox} color={null} />
+						</button>
+					</Show>
 					<Show
 						when={props.channel.type === "Dm" || props.channel.type === "Gdm"}
 					>
