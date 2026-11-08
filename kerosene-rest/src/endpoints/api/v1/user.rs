@@ -1,12 +1,18 @@
 use common::{
     util::Diff,
     v1::types::{
-        AuditLogEntryType, Permission, SERVER_ROOM_ID, UserWithRelationship, oauth::Scope,
-        util::Changes,
+        AuditLogEntryType, MessageSync, Permission, SERVER_ROOM_ID, SessionStatus, Suspended,
+        UserPatch, UserWithRelationship,
+        oauth::Scope,
+        util::{Changes, Time},
     },
     v2::types::media::MediaLinkType,
 };
-use lamprey_backend_services::{compat::types::UserIdReq, services::media::MediaLinker};
+use lamprey_backend_services::{
+    compat::types::{DbUserCreate, RoomMemberPut, UserIdReq},
+    services::media::MediaLinker,
+};
+use tracing::warn;
 
 use crate::prelude::*;
 
@@ -190,4 +196,494 @@ pub async fn update(
     Ok(routes::user_update::Response { user })
 }
 
-export_routes!(get, update);
+#[handler(routes::user_delete)]
+pub async fn delete(
+    req: Req<routes::user_delete::Endpoint>,
+) -> Result<routes::user_delete::Response> {
+    let srv = req.services();
+    let auth_user = req.identity().ensure_user()?;
+
+    let target_user_id = req.inner().user_id.clone().local_unwrap_or(auth_user.id)?;
+
+    let mut perms = srv
+        .perms
+        .for_room3(Some(auth_user.id), SERVER_ROOM_ID)
+        .await
+        .cast_internal()?
+        .ensure_view()?;
+    if auth_user.id != target_user_id {
+        perms.needs(Permission::UserManage);
+    } else {
+        perms.needs(Permission::UserManageSelf);
+    }
+    perms.check()?;
+
+    let user = srv
+        .users
+        .get(target_user_id, Some(auth_user.id))
+        .await
+        .cast_internal()?;
+
+    let mut data = req.globals().begin().await.cast_internal()?;
+    data.user_delete(target_user_id).await.cast_internal()?;
+    MediaLinker::new_without_user()
+        .delete(MediaLinkType::UserAvatar {
+            user_id: target_user_id,
+        })
+        .delete(MediaLinkType::UserBanner {
+            user_id: target_user_id,
+        })
+        .write(&mut *data)
+        .await?;
+    data.commit().await.cast_internal()?;
+
+    srv.users.invalidate(target_user_id).await;
+    req.globals()
+        .messaging()
+        .broadcast_global(MessageSync::UserDelete { id: target_user_id })
+        .await
+        .cast_internal()?;
+
+    req.audit_log()
+        .push(
+            target_user_id.into_inner().into(),
+            AuditLogEntryType::UserDelete {
+                user_id: target_user_id,
+                changes: Changes::new()
+                    .remove("name", &user.name)
+                    .remove("description", &user.description)
+                    .remove("avatar", &user.avatar)
+                    .remove("banner", &user.banner)
+                    .build(),
+            },
+        )
+        .success();
+
+    Ok(routes::user_delete::Response {})
+}
+
+#[handler(routes::user_undelete)]
+pub async fn undelete(
+    req: Req<routes::user_undelete::Endpoint>,
+) -> Result<routes::user_undelete::Response> {
+    let srv = req.services();
+    let auth_user = req.identity().ensure_user()?;
+    auth_user.ensure_unsuspended()?;
+
+    let target_user_id = req.inner().user_id.clone().local_unwrap_or(auth_user.id)?;
+
+    srv.perms
+        .for_room3(Some(auth_user.id), SERVER_ROOM_ID)
+        .await
+        .cast_internal()?
+        .ensure_view()?
+        .needs(Permission::UserManage)
+        .check()?;
+
+    let user = srv
+        .users
+        .get(target_user_id, Some(auth_user.id))
+        .await
+        .cast_internal()?;
+
+    let mut data = req.globals().begin().await.cast_internal()?;
+    data.user_undelete(target_user_id).await.cast_internal()?;
+
+    if let Some(media_id) = user.avatar {
+        let linked = match data.media_select(media_id).await {
+            Ok(media) => MediaLinker::new_without_user()
+                .create(MediaLinkType::UserAvatar {
+                    user_id: target_user_id,
+                })
+                .media(&media)
+                .write(&mut *data)
+                .await
+                .is_ok(),
+            Err(_) => false,
+        };
+        if !linked {
+            warn!("failed to re-link avatar for user {target_user_id}");
+            data.user_update(
+                target_user_id,
+                UserPatch {
+                    avatar: Some(None),
+                    ..Default::default()
+                },
+            )
+            .await
+            .cast_internal()?;
+        }
+    }
+
+    if let Some(media_id) = user.banner {
+        let linked = match data.media_select(media_id).await {
+            Ok(media) => MediaLinker::new_without_user()
+                .create(MediaLinkType::UserBanner {
+                    user_id: target_user_id,
+                })
+                .media(&media)
+                .write(&mut *data)
+                .await
+                .is_ok(),
+            Err(_) => false,
+        };
+        if !linked {
+            warn!("failed to re-link banner for user {target_user_id}");
+            data.user_update(
+                target_user_id,
+                UserPatch {
+                    banner: Some(None),
+                    ..Default::default()
+                },
+            )
+            .await
+            .cast_internal()?;
+        }
+    }
+
+    data.commit().await.cast_internal()?;
+
+    srv.users.invalidate(target_user_id).await;
+    let user = srv
+        .users
+        .get(target_user_id, Some(auth_user.id))
+        .await
+        .cast_internal()?;
+    req.globals()
+        .messaging()
+        .broadcast_global(MessageSync::UserCreate { user: user.clone() })
+        .await
+        .cast_internal()?;
+
+    req.audit_log()
+        .push(
+            SERVER_ROOM_ID.into_inner().into(),
+            AuditLogEntryType::UserUndelete {
+                user_id: target_user_id,
+            },
+        )
+        .success();
+
+    Ok(routes::user_undelete::Response {})
+}
+
+#[handler(routes::user_room_list)]
+pub async fn room_list(
+    req: Req<routes::user_room_list::Endpoint>,
+) -> Result<routes::user_room_list::Response> {
+    let globals = req.globals();
+    let srv = req.services();
+    let auth_user = req.identity().ensure_user()?;
+    let auth_user_id = auth_user.id;
+
+    let body = req.into_inner();
+    let target_user_id = body.user_id.local_unwrap_or(auth_user_id)?;
+
+    let mut data = globals.begin_read().await.cast_internal()?;
+    let mut rooms = if auth_user_id == target_user_id {
+        data.room_list(auth_user_id, body.pagination, false)
+            .await
+            .cast_internal()?
+    } else {
+        data.room_list_mutual(auth_user_id, target_user_id, body.pagination)
+            .await
+            .cast_internal()?
+    };
+
+    let mut new_rooms = Vec::with_capacity(rooms.items.len());
+    for room in rooms.items {
+        new_rooms.push(
+            srv.rooms
+                .get(room.id, Some(auth_user_id))
+                .await
+                .cast_internal()?,
+        );
+    }
+    rooms.items = new_rooms;
+
+    Ok(routes::user_room_list::Response { rooms })
+}
+
+#[handler(routes::user_audit_logs)]
+pub async fn audit_logs(
+    req: Req<routes::user_audit_logs::Endpoint>,
+) -> Result<routes::user_audit_logs::Response> {
+    let srv = req.services();
+    let auth_user_id = req.identity().ensure_user()?.id;
+
+    let body = req.into_inner();
+    let target_user_id = body.user_id.local_unwrap_or(auth_user_id)?;
+    if auth_user_id != target_user_id {
+        return Err(ApiError::from_code(ErrorCode::UnknownUser).into());
+    }
+
+    let logs = srv
+        .audit_logs
+        .list(
+            target_user_id.into_inner().into(),
+            body.pagination,
+            body.filter,
+        )
+        .await
+        .cast_internal()?;
+
+    Ok(routes::user_audit_logs::Response { logs })
+}
+
+#[handler(routes::guest_create)]
+pub async fn create(
+    req: Req<routes::guest_create::Endpoint>,
+) -> Result<routes::guest_create::Response> {
+    let globals = req.globals();
+    let srv = req.services();
+    let session = req.identity().ensure_session()?.clone();
+    let create = req.inner().create.clone();
+
+    let registered_at = if globals.config().require_server_invite {
+        None
+    } else {
+        Some(Time::now_utc())
+    };
+
+    let mut data = globals.begin().await.cast_internal()?;
+    let user = data
+        .user_create(DbUserCreate {
+            id: None,
+            parent_id: None,
+            name: create.name,
+            description: create.description,
+            puppet: None,
+            registered_at,
+            system: false,
+            remote: None,
+        })
+        .await
+        .cast_internal()?;
+
+    data.room_member_put(SERVER_ROOM_ID, user.id, None, RoomMemberPut::default())
+        .await
+        .cast_internal()?;
+    data.session_set_status(session.id, SessionStatus::Authorized { user_id: user.id })
+        .await
+        .cast_internal()?;
+    data.commit().await.cast_internal()?;
+
+    srv.perms.invalidate_room(user.id, SERVER_ROOM_ID).await;
+    srv.sessions.invalidate(session.id).await;
+
+    let updated_session = srv.sessions.get(session.id).await.cast_internal()?;
+    globals
+        .messaging()
+        .broadcast_global(MessageSync::SessionCreate {
+            session: (*updated_session).clone(),
+        })
+        .await
+        .cast_internal()?;
+
+    req.audit_log_as(user.id, &session)
+        .push(
+            user.id.into_inner().into(),
+            AuditLogEntryType::SessionLogin {
+                user_id: user.id,
+                session_id: updated_session.id,
+            },
+        )
+        .success();
+
+    Ok(routes::guest_create::Response { user })
+}
+
+#[handler(routes::user_suspend)]
+pub async fn suspend(
+    req: Req<routes::user_suspend::Endpoint>,
+) -> Result<routes::user_suspend::Response> {
+    let srv = req.services();
+    let auth_user = req.identity().ensure_user()?;
+    auth_user.ensure_unsuspended()?;
+
+    let body = req.inner();
+    let auth_user_id = auth_user.id;
+    let target_user_id = body.user_id.clone().local_unwrap_or(auth_user_id)?;
+
+    if target_user_id != auth_user_id {
+        srv.perms
+            .for_room3(Some(auth_user_id), SERVER_ROOM_ID)
+            .await
+            .cast_internal()?
+            .ensure_view()?
+            .needs(Permission::MemberBan)
+            .check()?;
+    }
+
+    let mut data = req.globals().begin().await.cast_internal()?;
+    data.user_suspended(
+        target_user_id,
+        Some(Suspended {
+            created_at: Time::now_utc(),
+            expires_at: body.suspend.expires_at,
+            reason: body.reason.clone(),
+        }),
+    )
+    .await
+    .cast_internal()?;
+    data.commit().await.cast_internal()?;
+
+    req.audit_log()
+        .push(
+            SERVER_ROOM_ID.into_inner().into(),
+            AuditLogEntryType::UserSuspend {
+                expires_at: body.suspend.expires_at,
+                user_id: target_user_id,
+            },
+        )
+        .success();
+
+    srv.users.invalidate(target_user_id).await;
+    let user = srv
+        .users
+        .get(target_user_id, Some(auth_user_id))
+        .await
+        .cast_internal()?;
+    req.globals()
+        .messaging()
+        .broadcast_global(MessageSync::UserUpdate { user: user.clone() })
+        .await
+        .cast_internal()?;
+
+    Ok(routes::user_suspend::Response { user })
+}
+
+#[handler(routes::user_unsuspend)]
+pub async fn unsuspend(
+    req: Req<routes::user_unsuspend::Endpoint>,
+) -> Result<routes::user_unsuspend::Response> {
+    let srv = req.services();
+    let auth_user = req.identity().ensure_user()?;
+    auth_user.ensure_unsuspended()?;
+
+    let auth_user_id = auth_user.id;
+    let target_user_id = req.inner().user_id.clone().local_unwrap_or(auth_user_id)?;
+
+    srv.perms
+        .for_room3(Some(auth_user_id), SERVER_ROOM_ID)
+        .await
+        .cast_internal()?
+        .ensure_view()?
+        .needs(Permission::MemberBan)
+        .check()?;
+
+    let mut data = req.globals().begin().await.cast_internal()?;
+    data.user_suspended(target_user_id, None)
+        .await
+        .cast_internal()?;
+    data.commit().await.cast_internal()?;
+
+    req.audit_log()
+        .push(
+            SERVER_ROOM_ID.into_inner().into(),
+            AuditLogEntryType::UserUnsuspend {
+                user_id: target_user_id,
+            },
+        )
+        .success();
+
+    srv.users.invalidate(target_user_id).await;
+    let user = srv
+        .users
+        .get(target_user_id, Some(auth_user_id))
+        .await
+        .cast_internal()?;
+    req.globals()
+        .messaging()
+        .broadcast_global(MessageSync::UserUpdate { user: user.clone() })
+        .await
+        .cast_internal()?;
+
+    Ok(routes::user_unsuspend::Response { user })
+}
+
+#[handler(routes::user_presence_set)]
+pub async fn presence_set(
+    req: Req<routes::user_presence_set::Endpoint>,
+) -> Result<routes::user_presence_set::Response> {
+    let srv = req.services();
+    let auth_user = req.identity().ensure_user()?;
+    auth_user.ensure_unsuspended()?;
+
+    let body = req.inner();
+    let target_user_id = body.user_id.clone().local_unwrap_or(auth_user.id)?;
+    if auth_user.id != target_user_id {
+        return Err(ApiError::from_code(ErrorCode::MissingPermissions).into());
+    }
+
+    srv.presence
+        .set_manually(target_user_id, body.presence.clone());
+
+    Ok(routes::user_presence_set::Response {})
+}
+
+#[handler(routes::user_list)]
+pub async fn list(req: Req<routes::user_list::Endpoint>) -> Result<routes::user_list::Response> {
+    let globals = req.globals();
+    let srv = req.services();
+    let auth_user = req.identity().ensure_user()?;
+    auth_user.ensure_unsuspended()?;
+    let auth_user_id = auth_user.id;
+
+    srv.perms
+        .for_room3(Some(auth_user_id), SERVER_ROOM_ID)
+        .await
+        .cast_internal()?
+        .ensure_view()?
+        .needs(Permission::MemberBan)
+        .check()?;
+
+    let body = req.into_inner();
+    let mut data = globals.begin_read().await.cast_internal()?;
+    let mut users = data
+        .user_list(body.query.pagination, body.query.filter)
+        .await
+        .cast_internal()?;
+
+    for user in &mut users.items {
+        user.emails = Some(data.user_email_list(user.id).await.cast_internal()?);
+    }
+
+    Ok(routes::user_list::Response { users })
+}
+
+#[handler(routes::user_search)]
+pub async fn search(
+    req: Req<routes::user_search::Endpoint>,
+) -> Result<routes::user_search::Response> {
+    let srv = req.services();
+    let auth_user = req.identity().ensure_user()?;
+
+    srv.perms
+        .for_room3(Some(auth_user.id), SERVER_ROOM_ID)
+        .await
+        .cast_internal()?
+        .ensure_view()?
+        .needs(Permission::UserManage)
+        .check()?;
+
+    let body = req.into_inner();
+    let results = srv.search.search_users(body.search).await.cast_internal()?;
+
+    Ok(routes::user_search::Response { results })
+}
+
+export_routes!(
+    get,
+    update,
+    delete,
+    undelete,
+    room_list,
+    audit_logs,
+    create,
+    suspend,
+    unsuspend,
+    presence_set,
+    list,
+    search
+);

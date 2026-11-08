@@ -12,7 +12,6 @@ mod application;
 mod auth;
 mod automod;
 mod calendar;
-mod channel;
 mod debug;
 mod dm;
 mod document;
@@ -25,7 +24,6 @@ mod interaction;
 mod internal;
 mod invite;
 mod media;
-mod message;
 mod moderation;
 mod notification;
 mod oauth;
@@ -37,7 +35,6 @@ mod reaction;
 mod redex;
 mod relationship;
 mod role;
-mod room;
 mod room_analytics;
 mod room_member;
 mod room_template;
@@ -47,7 +44,6 @@ mod session;
 mod sync;
 mod tag;
 mod thread;
-mod user;
 mod user_connection;
 mod user_email;
 mod voice;
@@ -63,7 +59,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(auth::routes())
         .merge(automod::routes())
         .merge(calendar::routes())
-        .merge(channel::routes())
         .merge(debug::routes())
         .merge(dm::routes())
         .merge(document::routes())
@@ -74,7 +69,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(internal::routes())
         .merge(invite::routes())
         .merge(media::routes())
-        .merge(message::routes())
         .merge(moderation::routes())
         .merge(notification::routes())
         .merge(oauth::routes())
@@ -84,7 +78,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(reaction::routes())
         .merge(relationship::routes())
         .merge(role::routes())
-        .merge(room::routes())
         .merge(room_analytics::routes())
         .merge(room_member::routes())
         .merge(room_template::routes())
@@ -95,7 +88,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(sync::routes())
         .merge(tag::routes())
         .merge(thread::routes())
-        .merge(user::routes())
         .merge(preferences::routes())
         .merge(user_connection::routes())
         .merge(user_email::routes())
