@@ -533,12 +533,9 @@ pub async fn list(req: Req<routes::user_list::Endpoint>) -> Result<routes::user_
         .needs(Permission::MemberBan)
         .check()?;
 
-    let body = req.into_inner();
+    let (pagination, filter) = req.into_inner().query.into_parts();
     let mut data = globals.begin_read().await.cast_internal()?;
-    let mut users = data
-        .user_list(body.query.pagination, body.query.filter)
-        .await
-        .cast_internal()?;
+    let mut users = data.user_list(pagination, filter).await.cast_internal()?;
 
     for user in &mut users.items {
         user.emails = Some(data.user_email_list(user.id).await.cast_internal()?);

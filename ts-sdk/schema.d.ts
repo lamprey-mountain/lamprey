@@ -25809,8 +25809,11 @@ export interface operations {
 	};
 	user_list: {
 		parameters: {
-			query: {
-				pagination: components["schemas"]["PaginationQuery_Id"];
+			query?: {
+				from?: string | null;
+				to?: string | null;
+				dir?: components["schemas"]["PaginationDirection"] | null;
+				limit?: number | null;
 				filter?: components["schemas"]["UserListFilter"] | null;
 			};
 			header?: never;

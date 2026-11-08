@@ -5,6 +5,7 @@ use crate::util::registry::export_models;
 use crate::v1::types::MediaId;
 use crate::v1::types::error::{ApiError, ErrorCode};
 use crate::v1::types::federation::Remote;
+use crate::v1::types::pagination::{PaginationDirection, PaginationQuery};
 use crate::v1::types::preferences::PreferencesUser;
 use crate::v1::types::presence::Presence;
 use crate::v1::types::util::{Diff, Time};
@@ -268,6 +269,43 @@ pub struct UserListParams {
     pub filter: Option<UserListFilter>,
 }
 
+/// query parameters for the user list endpoint
+///
+/// this is a flat struct (instead of nesting `PaginationQuery`) because
+/// `serde_urlencoded` cannot deserialize nested structs from query strings.
+#[record(params)]
+#[derive(PartialEq, Eq)]
+pub struct UserListQuery {
+    /// the key to start paginating from. not inclusive. optional.
+    pub from: Option<UserId>,
+
+    /// the key to stop paginating at. not inclusive. optional.
+    pub to: Option<UserId>,
+
+    /// whether to paginate forwards or backwards. defaults to forwards.
+    pub dir: Option<PaginationDirection>,
+
+    /// the maximum number of items to return.
+    pub limit: Option<u16>,
+
+    /// only return users matching this filter
+    pub filter: Option<UserListFilter>,
+}
+
+impl UserListQuery {
+    pub fn into_parts(self) -> (PaginationQuery<UserId>, Option<UserListFilter>) {
+        (
+            PaginationQuery {
+                from: self.from,
+                to: self.to,
+                dir: self.dir,
+                limit: self.limit,
+            },
+            self.filter,
+        )
+    }
+}
+
 #[record]
 #[derive(PartialEq, Eq)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::IntoParams))]
@@ -343,5 +381,6 @@ export_models!(
     RelationshipType,
     UserListFilter,
     UserListParams,
+    UserListQuery,
     SuspendRequest,
 );

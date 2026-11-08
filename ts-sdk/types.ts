@@ -57,6 +57,7 @@ export type Relationship = components["schemas"]["Relationship"] & {
 	petname?: string | null;
 };
 export type Ignore = components["schemas"]["Ignore"];
+export type UserListFilter = components["schemas"]["UserListFilter"];
 export type UserWithRelationship =
 	components["schemas"]["UserWithRelationship"] & {
 		/** @description relationship with current user (with client-side extensions) */
