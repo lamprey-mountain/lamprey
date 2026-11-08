@@ -92,7 +92,8 @@ export function Users() {
 			.map((id) => users2.cache.get(id))
 			.filter((user) => user !== undefined);
 
-	const items = () => (query().length > 0 ? (searchResults() ?? []) : pagedUsers());
+	const items = () =>
+		query().length > 0 ? (searchResults() ?? []) : pagedUsers();
 
 	const hasMore = () => query().length === 0 && users2.userList.state.has_more;
 

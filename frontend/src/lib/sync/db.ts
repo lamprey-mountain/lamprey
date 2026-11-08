@@ -237,7 +237,21 @@ export const migrations: Array<Migration> = [
 	},
 ];
 
-export function openApiDb() {
+export async function openApiDb() {
+	try {
+		return await openApiDbInner();
+	} catch (error) {
+		console.error("failed to open api database, resetting", error);
+		await deleteDB("api", {
+			blocked() {
+				console.warn("api database reset blocked by open connections");
+			},
+		});
+		return openApiDbInner();
+	}
+}
+
+function openApiDbInner() {
 	return openDB<ApiDB>("api", migrations.length, {
 		upgrade(db, oldVersion, _newVersion, txn) {
 			for (let i = oldVersion; i < migrations.length; i++) {

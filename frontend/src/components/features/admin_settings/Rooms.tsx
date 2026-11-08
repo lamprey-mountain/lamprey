@@ -49,7 +49,8 @@ export function Rooms() {
 			.map((id) => rooms2.cache.get(id))
 			.filter((room) => room !== undefined);
 
-	const items = () => (query().length > 0 ? (searchResults() ?? []) : pagedRooms());
+	const items = () =>
+		query().length > 0 ? (searchResults() ?? []) : pagedRooms();
 
 	const hasMore = () => query().length === 0 && list.has_more;
 
