@@ -169,6 +169,29 @@ fn oauth_error(error: &'static str, description: &'static str) -> Error {
     )
 }
 
+fn validate_pkce(app: &Application, q: &OauthAuthorizeParams) -> Result<()> {
+    let has_challenge = q
+        .code_challenge
+        .as_deref()
+        .is_some_and(|challenge| !challenge.is_empty());
+    if !has_challenge {
+        if app.oauth_confidential {
+            return Ok(());
+        }
+        return Err(ApiError::from_code(ErrorCode::MissingCodeChallenge).into());
+    }
+
+    let method =
+        OauthCodeChallengeMethod::from_str(q.code_challenge_method.as_deref().unwrap_or("plain"))
+            .map_err(|_| ApiError::from_code(ErrorCode::UnsupportedCodeChallengeMethod))?;
+
+    if !app.oauth_confidential && method != OauthCodeChallengeMethod::S256 {
+        return Err(ApiError::from_code(ErrorCode::UnsupportedCodeChallengeMethod).into());
+    }
+
+    Ok(())
+}
+
 async fn validate_authorize(
     s: &Arc<ServerState>,
     auth: &Auth,
@@ -184,6 +207,8 @@ async fn validate_authorize(
     if q.response_type != OauthResponseType::Code {
         return Err(ApiError::from_code(ErrorCode::UnknownResponseType).into());
     }
+
+    validate_pkce(&app, q)?;
 
     let redirect_uri = if let Some(uri) = &q.redirect_uri {
         if !app.oauth_redirect_uris.iter().any(|u| u == uri.as_str()) {
@@ -394,8 +419,10 @@ async fn oauth_token(
                     OauthCodeChallengeMethod::Plain => code_verifier == code_challenge,
                 };
                 if !valid {
-                    return Err(Error::InvalidCredentials);
+                    return Err(ApiError::from_code(ErrorCode::InvalidCodeVerifier).into());
                 }
+            } else if !app.oauth_confidential {
+                return Err(ApiError::from_code(ErrorCode::MissingCodeChallenge).into());
             }
 
             let token = SessionToken(Uuid::new_v4().to_string());

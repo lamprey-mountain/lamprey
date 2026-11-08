@@ -524,9 +524,17 @@ pub enum ErrorCode {
     #[error("missing redirect uri")]
     MissingRedirectUri,
 
+    /// missing code challenge
+    #[error("missing code challenge")]
+    MissingCodeChallenge,
+
     /// missing code verifier
     #[error("missing code verifier")]
     MissingCodeVerifier,
+
+    /// invalid code verifier
+    #[error("invalid code verifier")]
+    InvalidCodeVerifier,
 
     /// unsupported code challenge method
     #[error("unsupported code challenge method")]
