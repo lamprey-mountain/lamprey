@@ -58,6 +58,9 @@ pub mod role_update {
     pub struct Response {
         #[json]
         pub role: Role,
+
+        #[status]
+        pub status: http::StatusCode,
     }
 }
 
@@ -70,6 +73,7 @@ pub mod role_update {
     permissions = [RoleManage],
     audit_log_events = ["RoleDelete"],
     response(NO_CONTENT, description = "success"),
+    response(CONFLICT, description = "role still has members and no fallback role was provided"),
 )]
 pub mod role_delete {
     use crate::v1::types::role::RoleDeleteQuery;
@@ -86,7 +90,10 @@ pub mod role_delete {
         pub query: RoleDeleteQuery,
     }
 
-    pub struct Response {}
+    pub struct Response {
+        #[status]
+        pub status: http::StatusCode,
+    }
 }
 
 /// Role list

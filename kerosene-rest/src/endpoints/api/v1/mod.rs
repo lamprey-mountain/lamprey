@@ -8,6 +8,7 @@ pub mod harvest;
 pub mod message;
 pub mod permission_overwrite;
 pub mod relationship;
+pub mod role;
 pub mod room;
 pub mod thread;
 pub mod unfurler;
@@ -22,6 +23,7 @@ pub fn register(r: &mut Routes) {
         relationship::register(r);
         channel::register(r);
         message::register(r);
+        role::register(r);
         room::register(r);
         thread::register(r);
         unfurler::register(r);

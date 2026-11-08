@@ -33,7 +33,6 @@ mod public;
 mod push;
 mod reaction;
 mod redex;
-mod role;
 mod room_analytics;
 mod room_member;
 mod room_template;
@@ -74,7 +73,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(public::routes())
         .merge(push::routes())
         .merge(reaction::routes())
-        .merge(role::routes())
         .merge(room_analytics::routes())
         .merge(room_member::routes())
         .merge(room_template::routes())
