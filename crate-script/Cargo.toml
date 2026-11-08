@@ -22,7 +22,7 @@ rquickjs-serde = "0.8.0"
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["macros", "time"] }
+tokio = { workspace = true, features = ["macros", "time", "rt", "sync"] }
 tracing = { workspace = true }
 url = { workspace = true }
 validator = { workspace = true }
