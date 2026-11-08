@@ -464,7 +464,7 @@
 		}
 
 		.icon2 {
-			background-color: $fg-200;
+			background-color: var(--icon-color, #{$fg-200});
 
 			// shrink icon instead of adding padding
 			height: 32px;
@@ -496,6 +496,27 @@
 
 			&:active .icon2 {
 				translate: 0 2px;
+			}
+		}
+
+		&.custom-color {
+			background-color: oklch(from var(--folder-color) calc(l * 0.55) c h /
+				0.25);
+
+			.tile {
+				background-color: oklch(
+					from var(--folder-color) calc(l * 0.8) c h / 0.5
+				);
+
+				&:hover {
+					background-color: oklch(
+						from var(--folder-color) calc(l * 0.95) c h / 0.6
+					);
+
+					.icon2 {
+						filter: brightness(1.2);
+					}
+				}
 			}
 		}
 

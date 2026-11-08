@@ -221,7 +221,12 @@ export const useRoomDnd = (props: RoomDndProps) => {
 				cached.items.length === items.length &&
 				cached.items.every((room, index) => room === items[index]);
 
-			if (cached?.type === "folder" && cached.name === item.name && sameItems) {
+			if (
+				cached?.type === "folder" &&
+				cached.name === item.name &&
+				cached.color === item.color &&
+				sameItems
+			) {
 				result.push(cached);
 				continue;
 			}
@@ -230,6 +235,7 @@ export const useRoomDnd = (props: RoomDndProps) => {
 				type: "folder",
 				id: item.id,
 				name: item.name,
+				color: item.color,
 				items,
 			};
 			itemCache.set(key, mapped);

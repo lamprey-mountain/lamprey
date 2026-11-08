@@ -310,6 +310,7 @@ export const RoomNav = () => {
 												onDragLeave={dnd.handle}
 												onDragEnd={dnd.handle}
 												classList={{
+													"custom-color": !!folder.color,
 													dragging: dnd.dragging()?.id === folder.id,
 													target:
 														dnd.target()?.id === folder.id &&
@@ -317,6 +318,11 @@ export const RoomNav = () => {
 													collapsed: collapsedFolders().has(folder.id),
 													unread: !!getFolderUnread(folder),
 												}}
+												style={
+													folder.color
+														? { "--folder-color": folder.color }
+														: undefined
+												}
 											>
 												<div
 													class="item folder-item"
@@ -343,7 +349,11 @@ export const RoomNav = () => {
 															});
 														}}
 													>
-														<Icon src={icFolder1} alt="folder" />
+														<Icon
+															src={icFolder1}
+															alt="folder"
+															color={folder.color ?? null}
+														/>
 													</div>
 												</div>
 												<Show when={!collapsedFolders().has(folder.id)}>
