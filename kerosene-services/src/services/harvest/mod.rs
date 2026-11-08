@@ -85,6 +85,7 @@ impl ServiceHarvest {
 
                 match txn.harvest_claim().await {
                     Ok(Some(harvest)) => {
+                        info!(harvest_id = %harvest.id, "claimed harvest for generation");
                         let _ = txn.commit().await;
                         let globals2 = globals.clone();
                         tokio::spawn(async move {

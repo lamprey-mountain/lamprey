@@ -3,7 +3,6 @@ use std::str::FromStr;
 
 use async_tempfile::TempFile;
 use common::v1::types::MediaId;
-use common::v1::types::MessageSync;
 use common::v1::types::{
     AuditLogEntry, AuditLogFilter, Channel, ChannelId, HarvestId, MessageId, PaginationDirection,
     PaginationKey, PaginationQuery, PaginationResponse, Permission, Relationship, Role, Room,
@@ -24,7 +23,7 @@ use common::v1::types::{
 use lamprey_backend_data_postgres::data::AnyData;
 use serde::Serialize;
 use serde_json::json;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 use crate::prelude::*;
 use crate::services::harvest::EXPIRES_AFTER;
@@ -67,6 +66,7 @@ impl super::ServiceHarvest {
     /// 5. broadcast harvest update
     ///
     /// on any failure, update status to failed
+    #[tracing::instrument(level = "info", skip(self), fields(harvest_id = %harvest.id))]
     pub(super) async fn generate(&self, mut harvest: Harvest) -> Result<()> {
         let started_at = Time::now_utc();
 
@@ -75,9 +75,13 @@ impl super::ServiceHarvest {
             eta_at: None,
         };
         put_harvest(&self.globals, &harvest).await?;
+        info!(requester_id = %harvest.requester_id, "started harvest generation");
 
         match run(&self.globals, &harvest, started_at).await {
-            Ok(completed) => harvest = completed,
+            Ok(completed) => {
+                info!("finished harvest generation");
+                harvest = completed;
+            }
             Err(e) => {
                 error!("failed to generate harvest {}: {e}", harvest.id);
 
@@ -90,15 +94,8 @@ impl super::ServiceHarvest {
             }
         }
 
-        self.globals
-            .messaging()
-            .broadcast_user(
-                harvest.requester_id,
-                MessageSync::HarvestUpdate {
-                    harvest: Box::new(harvest.clone()),
-                },
-            )
-            .await?;
+        self.broadcast_update(&harvest).await?;
+        info!("broadcast harvest update");
 
         Ok(())
     }
@@ -154,6 +151,7 @@ async fn run(globals: &Globals, harvest: &Harvest, started_at: Time) -> Result<H
     let hashes = hash_file(&file).await?;
 
     upload(globals, &url, &file).await?;
+    info!(harvest_id = %harvest.id, size, "uploaded harvest archive");
 
     let mut updated = harvest.clone();
     updated.status = HarvestStatus::Completed {
