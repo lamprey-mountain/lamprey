@@ -265,6 +265,9 @@ pub struct PreferencesChannelFrontend {
     /// show all active threads in the channel nav, instead of only joined ones
     pub show_all_threads: bool,
 
+    /// whether the channel nav category is collapsed
+    pub collapsed: bool,
+
     /// extra implementation defined config (TEMPORARY?)
     #[serde(flatten)]
     pub extra: HashMap<String, serde_json::Value>,
@@ -372,6 +375,7 @@ impl Default for PreferencesChannelFrontend {
             grid_view: false,
             show_people_without_video: true,
             show_all_threads: false,
+            collapsed: false,
             extra: HashMap::new(),
         }
     }

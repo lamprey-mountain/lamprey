@@ -1,6 +1,6 @@
 import { Key } from "@solid-primitives/keyed";
 import { useParams } from "@solidjs/router";
-import type { api, Channel, ChannelType } from "sdk";
+import type { api, Channel, ChannelType, PreferencesChannel } from "sdk";
 import {
 	createEffect,
 	createMemo,
@@ -184,11 +184,60 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 		for (const rid of roomIds) api2.channels.fetchRoomList(rid);
 	});
 
-	// track collapsed categories
-	// TODO: persist in user preferences
-	const [collapsedCategories, setCollapsedCategories] = createSignal<
-		Set<string>
-	>(new Set());
+	// TODO: save collapse state for categories defined by a view
+	const [localCollapsed, setLocalCollapsed] = createSignal<Set<string>>(
+		new Set(),
+	);
+
+	const isCategoryCollapsed = (categoryId: string | null) => {
+		if (!categoryId) return false;
+
+		const channel = channels2.cache.get(categoryId);
+		if (channel) {
+			const frontend = channel.preferences?.frontend as
+				| { collapsed?: boolean }
+				| undefined;
+			return frontend?.collapsed ?? false;
+		}
+
+		return localCollapsed().has(categoryId);
+	};
+
+	const setCategoryCollapsed = (categoryId: string, collapsed: boolean) => {
+		const channel = channels2.cache.get(categoryId);
+		if (!channel) {
+			setLocalCollapsed((prev) => {
+				const newSet = new Set(prev);
+				if (collapsed) newSet.add(categoryId);
+				else newSet.delete(categoryId);
+				return newSet;
+			});
+			return;
+		}
+
+		const current = channel.preferences;
+		const newConfig: PreferencesChannel = {
+			notifs: current?.notifs ?? {},
+			frontend: {
+				...(current?.frontend ?? {}),
+				collapsed,
+			} as PreferencesChannel["frontend"],
+		};
+
+		channels2.cache.set(channel.id, { ...channel, preferences: newConfig });
+		ctx.client.http
+			.PUT("/api/v1/preferences/channel/{channel_id}", {
+				params: { path: { channel_id: channel.id } },
+				body: newConfig,
+			})
+			.catch((e) => {
+				console.error("Failed to update channel preferences", e);
+			});
+	};
+
+	const toggleCategory = (categoryId: string) => {
+		setCategoryCollapsed(categoryId, !isCategoryCollapsed(categoryId));
+	};
 
 	// load dms
 	createEffect(() => {
@@ -467,7 +516,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 					channelId: null,
 				});
 			}
-			const collapsed = cat ? collapsedCategories().has(cat.id) : false;
+			const collapsed = cat ? isCategoryCollapsed(cat.id) : false;
 			for (const channel of channels) {
 				// a collapsed category still shows the channel that's currently open
 				const isCurrent =
@@ -511,17 +560,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 		items: navItems,
 		categories: categories,
 		selectedId: selectedNavId,
-		onToggleCategory: (id) => {
-			setCollapsedCategories((prev) => {
-				const newSet = new Set(prev);
-				if (newSet.has(id)) {
-					newSet.delete(id);
-				} else {
-					newSet.add(id);
-				}
-				return newSet;
-			});
-		},
+		onToggleCategory: toggleCategory,
 		onSelectChannel: (id) => {
 			switch (id) {
 				case "home":
@@ -577,7 +616,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 			!!chan.archived_at;
 		if (isArchivedThread && !isFocused) return false;
 
-		const isCollapsed = collapsedCategories().has(categoryId ?? "");
+		const isCollapsed = isCategoryCollapsed(categoryId);
 		return !isCollapsed || isFocused;
 	};
 
@@ -716,7 +755,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 										<div
 											class="category-header"
 											classList={{
-												collapsed: collapsedCategories().has(cat().id),
+												collapsed: isCategoryCollapsed(cat().id),
 											}}
 											data-dnd-placement={
 												view()
@@ -742,17 +781,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 											}
 											onDrop={view() ? viewDnd.handleDrop : dnd.handle}
 											onDragEnd={view() ? viewDnd.handleEnd : dnd.handle}
-											onClick={() => {
-												setCollapsedCategories((prev) => {
-													const newSet = new Set(prev);
-													if (newSet.has(cat().id)) {
-														newSet.delete(cat().id);
-													} else {
-														newSet.add(cat().id);
-													}
-													return newSet;
-												});
-											}}
+											onClick={() => toggleCategory(cat().id)}
 											onContextMenu={(e) => {
 												const channel = cat().channel;
 												if (!channel) return;
@@ -771,7 +800,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 											<span
 												class="category-toggle"
 												classList={{
-													collapsed: collapsedCategories().has(cat().id),
+													collapsed: isCategoryCollapsed(cat().id),
 												}}
 											>
 												<Icon src={icChevron} />
