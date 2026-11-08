@@ -24,7 +24,6 @@ mod internal;
 mod invite;
 mod media;
 mod moderation;
-mod notification;
 mod oauth;
 mod preferences;
 mod public;
@@ -58,7 +57,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(invite::routes())
         .merge(media::routes())
         .merge(moderation::routes())
-        .merge(notification::routes())
         .merge(oauth::routes())
         .merge(public::routes())
         .merge(push::routes())
