@@ -169,10 +169,13 @@ export function UserMenu(props: UserMenuProps) {
 		});
 	};
 
-	const openDm = () => {
-		api2.client.http.POST("/api/v1/user/@self/dm/{target_id}", {
-			params: { path: { target_id: props.user_id } },
-		});
+	const openDm = async () => {
+		const { data } = await api2.client.http.POST(
+			"/api/v1/user/@self/dm/{target_id}",
+			{ params: { path: { target_id: props.user_id } } },
+		);
+		if (data && "id" in data) navigate(`/channel/${data.id}`);
+		setMenu(null);
 	};
 
 	const mute = () => {

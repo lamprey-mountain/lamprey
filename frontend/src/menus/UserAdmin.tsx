@@ -1,6 +1,8 @@
 import { Show } from "solid-js";
 import { useApi } from "@/api";
+import { useMenu } from "@/contexts/mod.tsx";
 import { useModals } from "@/contexts/modal";
+import { useNavigate } from "@/contexts/router";
 import { Item, Menu, Separator } from "./Parts.tsx";
 
 type UserAdminMenuProps = {
@@ -10,15 +12,20 @@ type UserAdminMenuProps = {
 export function UserAdminMenu(props: UserAdminMenuProps) {
 	const api2 = useApi();
 	const user = api2.users.use(() => props.user_id);
+	const navigate = useNavigate();
+	const { setMenu } = useMenu();
 	const [, modalCtl] = useModals();
 
 	const copyUserId = () => navigator.clipboard.writeText(props.user_id);
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(user())));
 
-	const openDm = () => {
-		api2.client.http.POST("/api/v1/user/@self/dm/{target_id}", {
-			params: { path: { target_id: props.user_id } },
-		});
+	const openDm = async () => {
+		const { data } = await api2.client.http.POST(
+			"/api/v1/user/@self/dm/{target_id}",
+			{ params: { path: { target_id: props.user_id } } },
+		);
+		if (data && "id" in data) navigate(`/channel/${data.id}`);
+		setMenu(null);
 	};
 
 	const suspendUser = () => {
