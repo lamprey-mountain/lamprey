@@ -144,7 +144,7 @@ impl ServiceUsers {
             .channel_create(DbChannelCreate {
                 room_id: None,
                 creator_id: user_id,
-                name: "dm".to_string(),
+                name: None,
                 description: None,
                 auto_name: None,
                 auto_description: None,

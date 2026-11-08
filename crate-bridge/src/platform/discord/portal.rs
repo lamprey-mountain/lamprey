@@ -562,14 +562,15 @@ impl DiscordPortal {
                             None
                         };
 
-                        let create = serenity::all::CreateThread::new(&channel.name).kind(
-                            match channel.ty {
-                                lamprey::ChannelType::ThreadPublic => ChannelType::PublicThread,
-                                lamprey::ChannelType::ThreadPrivate => ChannelType::PrivateThread,
-                                // TODO: create NewsThread in News (announcement) channels
-                                _ => return Ok(()),
-                            },
-                        );
+                        let create = serenity::all::CreateThread::new(
+                            channel.name.as_deref().unwrap_or_default(),
+                        )
+                        .kind(match channel.ty {
+                            lamprey::ChannelType::ThreadPublic => ChannelType::PublicThread,
+                            lamprey::ChannelType::ThreadPrivate => ChannelType::PrivateThread,
+                            // TODO: create NewsThread in News (announcement) channels
+                            _ => return Ok(()),
+                        });
                         (create, channel, source_message_id)
                     }
                 };

@@ -328,6 +328,10 @@ impl ServiceChannels {
         // TODO(al2): use this when creating a channel
         let _channel_id = ChannelId::new();
 
+        if json.ty != ChannelType::Dm && json.name.is_none() {
+            return Err(ApiError::from_code(ErrorCode::FieldMissingName).into());
+        }
+
         let srv = self.globals.services();
         let mut data = self.globals.begin().await?;
         let user = auth.ensure_user()?;
@@ -806,6 +810,10 @@ impl ServiceChannels {
         json.parent_id = Some(parent_channel_id);
         json.validate()?;
 
+        if json.name.is_none() {
+            return Err(ApiError::from_code(ErrorCode::FieldMissingName).into());
+        }
+
         let create = DbChannelCreate {
             room_id: room_id.map(|id| id.into_inner()),
             creator_id: user.id,
@@ -1187,7 +1195,7 @@ impl ServiceChannels {
                     components: vec![],
                     message_type: MessageType::ChannelRename(MessageChannelRename {
                         name_new: chan_new.name.clone(),
-                        name_old: chan_old.name,
+                        name_old: chan_old.name.clone(),
                     })
                     .into(),
                     created_at: None,

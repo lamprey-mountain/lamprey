@@ -59,7 +59,7 @@ impl LampreyRealm {
                             webhook,
                         } => {
                             let create = ChannelCreate {
-                                name: chan.name.clone(),
+                                name: Some(chan.name.clone()),
                                 description: chan.topic.clone(),
                                 ty: match chan.kind {
                                     discord::ChannelType::Text => ChannelType::Text,

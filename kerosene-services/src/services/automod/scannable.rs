@@ -181,7 +181,12 @@ impl Scannable for MessagePatch {
 
 impl Scannable for ChannelCreate {
     fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
-        visitor.visit_text(&self.name, AutomodTextLocation::ThreadTitle);
+        if let Some(name) = &self.name {
+            visitor.visit_text(name, AutomodTextLocation::ThreadTitle);
+        }
+        if let Some(auto_name) = &self.auto_name {
+            visitor.visit_text(auto_name, AutomodTextLocation::ThreadTitle);
+        }
 
         if let Some(t) = &self.description {
             visitor.visit_text(t, AutomodTextLocation::ThreadTopic);
@@ -193,6 +198,9 @@ impl Scannable for ChannelPatch {
     fn scan<'a, S: Scanner<'a>>(&'a self, visitor: &mut S) {
         if let Some(name) = &self.name {
             visitor.visit_text(name, AutomodTextLocation::ThreadTitle);
+        }
+        if let Some(auto_name) = self.auto_name.as_ref().and_then(|name| name.as_ref()) {
+            visitor.visit_text(auto_name, AutomodTextLocation::ThreadTitle);
         }
         if let Some(Some(t)) = self.description.as_ref() {
             visitor.visit_text(t, AutomodTextLocation::ThreadTopic);

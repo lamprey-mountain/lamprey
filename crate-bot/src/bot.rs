@@ -507,7 +507,7 @@ impl Bot {
                         channel_id,
                         message_id,
                         &ChannelCreate {
-                            name: "llm thread".to_string(),
+                            name: Some("llm thread".to_string()),
                             description: Some(format!("with model: {model}")),
                             ty: ChannelType::ThreadPublic,
                             ..Default::default()

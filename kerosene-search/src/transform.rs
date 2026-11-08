@@ -374,7 +374,14 @@ impl SearchDocument for SearchChannel<'_> {
             .or_else(|| channel.id.try_into().ok())
             .unwrap();
         doc.add_date(s.updated_at, TantivyDT::from_utc(*last_activity));
-        doc.add_text(s.name, channel.name.clone());
+        doc.add_text(
+            s.name,
+            channel
+                .name
+                .clone()
+                .or_else(|| channel.auto_name.clone())
+                .unwrap_or_default(),
+        );
 
         if let Some(description) = &channel.description {
             doc.add_text(s.content, description.clone());

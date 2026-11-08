@@ -650,7 +650,7 @@ impl LampreyPortal {
                         }
 
                         let create = ChannelCreate {
-                            name: discord_chan.name.clone(),
+                            name: Some(discord_chan.name.clone()),
                             description: discord_chan.topic.clone(),
                             ty: match discord_chan.kind {
                                 discord::ChannelType::PublicThread => ChannelType::ThreadPublic,

@@ -193,13 +193,8 @@ async fn document_branch_update(
     if branch_before.name != branch.name {
         let _ = async {
             let channel_id: ChannelId = (*branch.id).into();
-            let name_old = branch_before
-                .name
-                .unwrap_or_else(|| "unnamed branch".to_string());
-            let name_new = branch
-                .name
-                .clone()
-                .unwrap_or_else(|| "unnamed branch".to_string());
+            let name_old = branch_before.name;
+            let name_new = branch.name.clone();
 
             let mut txn = s.globals.begin().await?;
             let message_id = txn
@@ -365,11 +360,7 @@ async fn document_branch_fork(
                 room_id: document_channel.room_id.map(|id| id.into_inner()),
                 creator_id: user_id,
                 owner_id: None,
-                name: req
-                    .branch
-                    .name
-                    .clone()
-                    .unwrap_or_else(|| "Branch".to_string()),
+                name: req.branch.name.clone(),
                 description: None,
                 auto_name: req.branch.name.is_none().then(|| "Branch".to_string()),
                 auto_description: None,

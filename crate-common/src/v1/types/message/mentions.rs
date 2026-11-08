@@ -76,7 +76,8 @@ pub struct MentionsChannel {
     pub ty: ChannelType,
 
     /// the name of this channel
-    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
 }
 
 /// a custom emoji used in the message

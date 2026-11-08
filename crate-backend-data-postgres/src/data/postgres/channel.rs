@@ -364,7 +364,7 @@ impl DataChannel for Postgres {
         "#,
             thread_id.into_inner(),
             version_id.into_inner(),
-            patch.name.unwrap_or(thread.name),
+            patch.name.or(thread.name),
             patch.description.unwrap_or(thread.description),
             patch.nsfw.unwrap_or(thread.nsfw),
             patch.bitrate.unwrap_or(thread.bitrate).map(|i| i as i32),

@@ -160,7 +160,11 @@ impl ServiceDocuments {
             nodes.insert(
                 doc_id,
                 Node {
-                    title: doc.name.clone(),
+                    title: doc
+                        .name
+                        .clone()
+                        .or_else(|| doc.auto_name.clone())
+                        .unwrap_or_default(),
                 },
             );
 

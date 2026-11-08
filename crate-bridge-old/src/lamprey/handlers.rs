@@ -215,7 +215,7 @@ pub(super) async fn handle_lamprey_message(
                 .channel_create_room(
                     room_id,
                     &types::ChannelCreate {
-                        name,
+                        name: Some(name),
                         description: topic,
                         ty,
                         parent_id,

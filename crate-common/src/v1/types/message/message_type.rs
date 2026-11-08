@@ -176,11 +176,11 @@ pub struct MessageAutomodExecution {
 /// Information about a thread being renamed
 #[record]
 pub struct MessageChannelRename {
-    #[serde(alias = "new")]
-    pub name_new: String,
+    #[serde(alias = "new", skip_serializing_if = "Option::is_none")]
+    pub name_new: Option<String>,
 
-    #[serde(alias = "old")]
-    pub name_old: String,
+    #[serde(alias = "old", skip_serializing_if = "Option::is_none")]
+    pub name_old: Option<String>,
 }
 
 /// Information about a thread being moved
@@ -456,7 +456,11 @@ impl MessageType {
                 }
             }
             MessageType::ChannelRename(rename) => {
-                write!(f, "channel renamed from to \"{}\"", rename.name_new)
+                write!(
+                    f,
+                    "channel renamed from to \"{}\"",
+                    rename.name_new.as_deref().unwrap_or_default()
+                )
             }
             MessageType::ChannelPingback(_) => {
                 write!(f, "channel pingback")

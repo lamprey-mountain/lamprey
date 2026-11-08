@@ -110,6 +110,10 @@ pub async fn create_dm(
             });
         }
         ChannelType::Gdm => {
+            if create.name.is_none() {
+                return Err(ApiError::from_code(ErrorCode::FieldMissingName).into());
+            }
+
             let mut recipients = create.recipients.clone().unwrap_or_default();
             recipients.push(user.id);
 
@@ -955,7 +959,7 @@ pub async fn upgrade(
         .rooms
         .create(
             RoomCreate {
-                name: chan.name.clone(),
+                name: chan.name.clone().unwrap_or_default(),
                 description: chan.description.clone(),
                 icon: chan.icon,
                 banner: None,

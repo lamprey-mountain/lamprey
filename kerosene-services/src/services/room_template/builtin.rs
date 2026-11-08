@@ -47,7 +47,7 @@ fn room_snapshot(public: bool) -> RoomTemplateSnapshot {
         channels: vec![RoomTemplateChannel {
             id: general_id,
             inner: ChannelCreate {
-                name: "general".to_string(),
+                name: Some("general".to_string()),
                 ty: ChannelType::Text,
                 ..Default::default()
             },

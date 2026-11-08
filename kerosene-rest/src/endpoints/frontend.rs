@@ -159,7 +159,7 @@ async fn invite_meta_handler(
             room.icon.or(room.banner),
         ),
         InviteTarget::Gdm { channel } => (
-            format!("you have been invited to #{}", channel.name),
+            format!("you have been invited to #{}", channel_name(channel)),
             invite.invite.description.clone(),
             channel.icon,
         ),
@@ -564,13 +564,13 @@ async fn render_index(globals: &Globals, meta: &PageMeta) -> Result<Response> {
 }
 
 fn channel_name(channel: &Channel) -> String {
-    if channel.name.is_empty() {
+    if channel.name.as_deref().is_none_or(str::is_empty) {
         channel
             .auto_name
             .clone()
             .unwrap_or_else(|| "unknown-channel".to_string())
     } else {
-        channel.name.clone()
+        channel.name.clone().unwrap_or_default()
     }
 }
 

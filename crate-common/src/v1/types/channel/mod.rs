@@ -48,9 +48,13 @@ pub struct Channel {
     /// only updates when the channel itself is updated, not the stuff in the channel
     pub version_id: ChannelVerId,
 
-    #[cfg_attr(feature = "utoipa", schema(min_length = 1, max_length = 64))]
+    /// the name of this channel. only `None` for dm channels.
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, min_length = 1, max_length = 64)
+    )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
-    pub name: String,
+    pub name: Option<String>,
 
     // TODO: maybe rename this to topic? since most other platforms call it topic.
     // i guess i could also have topic and description be separate (short vs long)
@@ -238,7 +242,8 @@ impl Serialize for Channel {
             #[serde(skip_serializing_if = "Option::is_none")]
             owner_id: Option<UserId>,
             version_id: ChannelVerId,
-            name: &'a str,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            name: Option<&'a str>,
             #[serde(skip_serializing_if = "Option::is_none")]
             description: Option<&'a str>,
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -354,7 +359,7 @@ impl Serialize for Channel {
             creator_id: self.creator_id,
             owner_id: self.owner_id,
             version_id: self.version_id.clone(),
-            name: &self.name,
+            name: self.name.as_deref(),
             description: self.description.as_deref(),
             auto_name: self.auto_name.as_deref(),
             auto_description: self.auto_description.as_deref(),
@@ -588,9 +593,13 @@ pub enum ChannelType {
 #[cfg_attr(feature = "validator", derive(Validate))]
 #[cfg_attr(feature = "utoipa", derive(ToSchema))]
 pub struct ChannelCreate {
-    #[cfg_attr(feature = "utoipa", schema(max_length = 1, min_length = 64))]
+    /// the name of this channel. only optional for dm channels.
+    #[cfg_attr(
+        feature = "utoipa",
+        schema(required = false, max_length = 1, min_length = 64)
+    )]
     #[cfg_attr(feature = "validator", validate(length(min = 1, max = 64)))]
-    pub name: String,
+    pub name: Option<String>,
 
     #[cfg_attr(
         feature = "utoipa",
@@ -859,9 +868,9 @@ impl Diff for ChannelPatch {
     type Target = Channel;
 
     fn changes(&self, other: &Channel) -> bool {
-        // Option<String> vs String
+        // Option<String> vs Option<String>
         if let Some(ref val) = self.name {
-            if val != &other.name {
+            if Some(val) != other.name.as_ref() {
                 return true;
             }
         }
@@ -1000,7 +1009,7 @@ impl Diff for ChannelPatch {
     }
 
     fn apply(self, mut other: Self::Target) -> Self::Target {
-        other.name = self.name.unwrap_or(other.name);
+        other.name = self.name.or(other.name);
         if let Some(val) = self.description {
             other.description = val;
         }
