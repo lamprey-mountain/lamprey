@@ -1,5 +1,6 @@
 //! tantivy s3 directory implementation
 
+use std::fmt;
 use std::io::{Error as IoError, Read, Result as IoResult, Seek, SeekFrom, Write};
 use std::ops::Range;
 use std::os::unix::fs::FileExt;
@@ -12,7 +13,8 @@ use opendal::{ErrorKind, Operator};
 use tantivy::{
     Directory, HasLen,
     directory::{
-        FileHandle, OwnedBytes, TerminatingWrite, WatchCallback, WatchHandle, WritePtr,
+        FileHandle, OwnedBytes, TerminatingWrite, WatchCallback, WatchCallbackList, WatchHandle,
+        WritePtr,
         error::{DeleteError, OpenReadError, OpenWriteError},
     },
 };
@@ -26,6 +28,9 @@ const BLOCK_SIZE: usize = 1024 * 1024;
 /// file extensions that are considered "hot" and should be eagerly downloaded in full
 const HOT_EXTENSIONS: &[&str] = &["term", "json", "idx", "del", "fieldnorm"];
 
+/// the index meta file, which readers watch for changes
+const META_FILE: &str = "meta.json";
+
 fn is_hot_file(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
@@ -33,7 +38,7 @@ fn is_hot_file(path: &Path) -> bool {
 }
 
 /// a directory on object storage using a local filesystem cache
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct ObjectDirectory {
     /// opendal operator to access s3
     blobs: Operator,
@@ -49,6 +54,18 @@ pub struct ObjectDirectory {
 
     /// cache of object metadata
     cache_metadata: Arc<DashMap<PathBuf, ObjectMetadata>>,
+
+    /// callbacks to fire when the index meta file changes
+    watches: Arc<WatchCallbackList>,
+}
+
+impl fmt::Debug for ObjectDirectory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ObjectDirectory")
+            .field("base_path", &self.base_path)
+            .field("cache_path", &self.cache_path)
+            .finish_non_exhaustive()
+    }
 }
 
 /// metadata for a file
@@ -92,6 +109,7 @@ impl ObjectDirectory {
             base_path,
             cache_path,
             cache_metadata: Arc::new(DashMap::new()),
+            watches: Arc::new(WatchCallbackList::default()),
         }
     }
 
@@ -313,6 +331,12 @@ impl Directory for ObjectDirectory {
 
         self.cache_metadata
             .insert(path.to_path_buf(), ObjectMetadata { len: data.len() });
+
+        if path == Path::new(META_FILE) {
+            // readers reload themselves through this callback
+            drop(self.watches.broadcast());
+        }
+
         Ok(())
     }
 
@@ -320,8 +344,8 @@ impl Directory for ObjectDirectory {
         Ok(())
     }
 
-    fn watch(&self, _watch_callback: WatchCallback) -> tantivy::Result<WatchHandle> {
-        Ok(WatchHandle::empty())
+    fn watch(&self, callback: WatchCallback) -> tantivy::Result<WatchHandle> {
+        Ok(self.watches.subscribe(callback))
     }
 }
 

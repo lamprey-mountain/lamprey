@@ -286,11 +286,12 @@ impl AsyncIndex {
             match op {
                 Message::CommitIndex(resp) => _ = resp.send(self.commit()),
                 Message::LazyCommit(resp) => {
-                    if self.should_commit() == ShouldCommit::Yes {
-                        _ = resp.send(self.commit());
+                    let result = if self.should_commit() == ShouldCommit::Yes {
+                        self.commit()
                     } else {
-                        _ = resp.send(Ok(()));
-                    }
+                        self.reload_if_changed()
+                    };
+                    _ = resp.send(result);
                 }
                 Message::AddDocument(doc, resp) => _ = resp.send(self.add_document(doc)),
                 Message::DeleteTerm(term, resp) => _ = resp.send(self.delete_term(term)),
@@ -331,7 +332,7 @@ impl AsyncIndex {
 
     fn commit(&mut self) -> Result<()> {
         if self.uncommitted_count == 0 {
-            return Ok(());
+            return self.reload_if_changed();
         }
 
         debug!(change_count = %self.uncommitted_count, "Tantivy commit");
@@ -339,6 +340,30 @@ impl AsyncIndex {
         self.reader.reload()?;
         self.uncommitted_count = 0;
         self.last_commit = Instant::now();
+        Ok(())
+    }
+
+    /// reload the reader if the index meta changed since the current searcher was built
+    ///
+    /// background merges commit new metas without going through `commit`, and the watch
+    /// callback that normally reloads for us is not retried when it fails, so the
+    /// periodic tick checks it as a cheap fallback.
+    fn reload_if_changed(&mut self) -> Result<()> {
+        let searcher = self.reader.searcher();
+        let current = searcher.generation().segments();
+        let metas = self.index.load_metas()?;
+
+        let changed = metas.segments.len() != current.len()
+            || metas
+                .segments
+                .iter()
+                .any(|segment| !current.contains_key(&segment.id()));
+
+        if changed {
+            debug!("reloading search reader, index meta changed");
+            self.reader.reload()?;
+        }
+
         Ok(())
     }
 
