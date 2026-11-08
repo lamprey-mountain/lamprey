@@ -6,7 +6,6 @@ export * from "./Blocked.tsx";
 export * from "./BuildInfo.tsx";
 export * from "./Chat.tsx";
 export * from "./Connections.tsx";
-export * from "./Data.tsx";
 export * from "./EmbedDebugger.tsx";
 export * from "./Keybinds.tsx";
 export * from "./Language.tsx";

@@ -14,6 +14,11 @@ export type {
 } from "./services/DocumentsService";
 export type { DocumentTagService } from "./services/DocumentTagService";
 export type { FlumeService } from "./services/FlumeService";
+export type {
+	Harvest,
+	HarvestCreateUser,
+	HarvestService,
+} from "./services/HarvestService";
 // Re-export service types
 export type { InboxService } from "./services/InboxService";
 // Re-export other types
@@ -117,6 +122,10 @@ export function useRoomAnalytics() {
 
 export function useRoomBans() {
 	return useApi().roomBans;
+}
+
+export function useHarvest() {
+	return useApi().harvest;
 }
 
 export function useTags() {

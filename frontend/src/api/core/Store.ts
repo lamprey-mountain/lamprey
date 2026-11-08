@@ -47,6 +47,7 @@ import { DocumentsService } from "../services/DocumentsService";
 import { DocumentTagService } from "../services/DocumentTagService";
 import { EmojiService } from "../services/EmojiService";
 import { FlumeService } from "../services/FlumeService";
+import { HarvestService } from "../services/HarvestService";
 import { InboxService } from "../services/InboxService";
 import { InvitesService } from "../services/InvitesService";
 import { MediaService } from "../services/MediaService";
@@ -108,6 +109,7 @@ export class RootStore {
 	documentBranches: DocumentBranchService;
 	documentTags: DocumentTagService;
 	preferences: PreferencesService;
+	harvest: HarvestService;
 	flumes: FlumeService;
 	scripts: RedexesService;
 	scriptRuns: RedexEvalsService;
@@ -194,6 +196,7 @@ export class RootStore {
 		this.messages = new MessagesService(this, getDb);
 		this.notifications = new NotificationService(this);
 		this.preferences = new PreferencesService(this);
+		this.harvest = new HarvestService(this, getDb);
 		this.push = new PushService(this, getDb);
 		this.reactions = new ReactionsService(this, getDb);
 		this.roles = new RolesService(this, getDb);
@@ -553,6 +556,10 @@ export class RootStore {
 			if (msg.user_id === sessionUserId) {
 				this.preferences.cache.set("@self", msg.config);
 				this.preferences._loaded = true;
+			}
+		} else if (msg.type === "HarvestUpdate") {
+			if (msg.harvest.type === "User") {
+				this.harvest.upsert(msg.harvest);
 			}
 		} else if (msg.type === "MemberListSync") {
 			this.memberLists.handleSync(msg as MemberListSyncMessage);

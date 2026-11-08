@@ -1,20 +1,38 @@
-import { createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import { useApi } from "@/api";
+import { ApiErrorDisplay, isApiError } from "@/atoms/ApiErrorDisplay";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Checkbox } from "@/atoms/icons";
 import { useModals } from "@/contexts/modal";
 import { Modal } from "./mod";
 
 export const ModalExportData = () => {
+	const api = useApi();
 	const [, modalCtl] = useModals();
 	const [includeMessages, setIncludeMessages] = createSignal(true);
-
-	const handleExport = () => {
-		// TODO: exporting data
-		modalCtl.close();
+	const [includeReactions, setIncludeReactions] = createSignal(false);
+	const [exporting, setExporting] = createSignal(false);
+	const [error, setError] = createSignal<unknown>(null);
+	const apiError = () => {
+		const err = error();
+		return isApiError(err) ? err : null;
 	};
 
-	const handleCancel = () => {
-		modalCtl.close();
+	const handleExport = async () => {
+		setError(null);
+		setExporting(true);
+
+		try {
+			await api.harvest.create({
+				include_messages: includeMessages(),
+				include_reactions: includeReactions(),
+			});
+			modalCtl.close();
+		} catch (err) {
+			setError(err);
+		} finally {
+			setExporting(false);
+		}
 	};
 
 	return (
@@ -24,7 +42,7 @@ export const ModalExportData = () => {
 				class="export-data-form"
 				onSubmit={(e) => {
 					e.preventDefault();
-					handleExport();
+					void handleExport();
 				}}
 			>
 				<CheckboxOption
@@ -42,11 +60,38 @@ export const ModalExportData = () => {
 					</div>
 				</CheckboxOption>
 
+				<CheckboxOption
+					id="modal-export-data-include-reactions"
+					checked={includeReactions()}
+					onChange={setIncludeReactions}
+					seed="modal-export-data-include-reactions"
+				>
+					<Checkbox
+						checked={includeReactions()}
+						seed="modal-export-data-include-reactions"
+					/>
+					<div>
+						<div>Include reactions</div>
+					</div>
+				</CheckboxOption>
+
+				<Show when={apiError()}>
+					{(err) => <ApiErrorDisplay error={err()} />}
+				</Show>
+				<Show when={error() && !apiError()}>
+					<p class="error">failed to start export</p>
+				</Show>
+
 				<div class="bottom">
-					<button type="button" class="button" onClick={handleCancel}>
+					<button
+						type="button"
+						class="button"
+						disabled={exporting()}
+						onClick={() => modalCtl.close()}
+					>
 						Cancel
 					</button>
-					<button type="submit" class="button primary">
+					<button type="submit" class="button primary" disabled={exporting()}>
 						Export
 					</button>
 				</div>

@@ -31,7 +31,7 @@ export default {
 		reduced_motion_sync: "Sync reduced motion with system settings",
 		autoplay_gifs: "Autoplay GIFs in messages",
 		autoplay_emoji: "Autoplay animated emoji",
-		privacy: "Privacy",
+		privacy: "Data & Privacy",
 		privacy_friends: "Friend Requests",
 		privacy_allow_everyone: "Allow friend requests from everyone",
 		privacy_allow_mutual_room: "Allow friend requests from mutual room members",
@@ -44,6 +44,8 @@ export default {
 		privacy_exif: "Retain EXIF metadata",
 		privacy_exif_description:
 			"Retain potentially sensitive exif metadata (ie. camera model or location) for images you upload.",
+		data_export: "Export my data",
+		data_export_description: "Export all of your data in one big data dump",
 		notifications: "Notifications",
 		notifications_permission_text:
 			"You haven't given lamprey permission to send notifications",
