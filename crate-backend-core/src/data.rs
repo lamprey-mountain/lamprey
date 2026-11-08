@@ -487,6 +487,7 @@ pub trait DataSearchQueue {
     // bulk queue updates
     async fn search_reindex_queue_reset_all_messages(&mut self) -> Result<()>;
     async fn search_reindex_queue_reset_all_audit_logs(&mut self) -> Result<()>;
+    async fn search_reindex_queue_reset_all_room_members(&mut self) -> Result<()>;
     async fn search_reindex_queue_reset_room(&mut self, room_id: RoomId) -> Result<()>;
 
     // dead letter queue stuff

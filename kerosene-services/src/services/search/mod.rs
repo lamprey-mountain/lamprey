@@ -75,6 +75,7 @@ impl ServiceSearch {
                         Doctype::Channel,
                         Doctype::User,
                         Doctype::Media,
+                        Doctype::RoomMember,
                     ],
                     room_ids: Vec::new(),
                     channel_ids: Vec::new(),

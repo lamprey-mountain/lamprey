@@ -206,7 +206,13 @@ impl AsyncIndex {
         let (index, writer, reader) = tokio::task::spawn_blocking(move || {
             // remove the local cache, it may contain data from the dropped index
             if recreated {
-                let _ = std::fs::remove_dir_all(&cache_path);
+                match std::fs::remove_dir_all(&cache_path) {
+                    Ok(()) => {}
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                    Err(e) => {
+                        return Err(Error::Internal(format!("Failed to clear index cache: {e}")));
+                    }
+                }
             }
 
             let dir = ObjectDirectory::new(
@@ -324,6 +330,10 @@ impl AsyncIndex {
     }
 
     fn commit(&mut self) -> Result<()> {
+        if self.uncommitted_count == 0 {
+            return Ok(());
+        }
+
         debug!(change_count = %self.uncommitted_count, "Tantivy commit");
         self.writer.commit()?;
         self.reader.reload()?;

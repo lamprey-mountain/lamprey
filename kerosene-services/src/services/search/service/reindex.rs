@@ -31,6 +31,9 @@ impl ServiceSearch {
                 .await?;
         }
 
+        // flush the pending deletes before queueing the reindex
+        index.commit().await?;
+
         // 2. Update db
         if reindex.doctypes.contains(&Doctype::Message) {
             if reindex.channel_ids.is_empty() {
@@ -62,6 +65,20 @@ impl ServiceSearch {
                 for room_id in &reindex.room_ids {
                     data.search_reindex_queue_upsert(
                         SearchReindexQueueTarget::AuditLogEntries(*room_id),
+                        None,
+                    )
+                    .await?;
+                }
+            }
+        }
+
+        if reindex.doctypes.contains(&Doctype::RoomMember) {
+            if reindex.room_ids.is_empty() {
+                data.search_reindex_queue_reset_all_room_members().await?;
+            } else {
+                for room_id in &reindex.room_ids {
+                    data.search_reindex_queue_upsert(
+                        SearchReindexQueueTarget::RoomMembers(*room_id),
                         None,
                     )
                     .await?;

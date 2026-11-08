@@ -178,7 +178,7 @@ impl BackfillEtlInner {
             tokio::task::yield_now().await;
         }
 
-        let _ = self.index.commit().await;
+        let _ = self.index.lazy_commit().await;
     }
 
     async fn spawn_users(&self) {
@@ -241,7 +241,7 @@ impl BackfillEtlInner {
             tokio::task::yield_now().await;
         }
 
-        let _ = self.index.commit().await;
+        let _ = self.index.lazy_commit().await;
     }
 
     async fn spawn_media(&self) {
@@ -293,7 +293,7 @@ impl BackfillEtlInner {
             tokio::task::yield_now().await;
         }
 
-        let _ = self.index.commit().await;
+        let _ = self.index.lazy_commit().await;
     }
 
     async fn spawn_messages(&self, channel_id: ChannelId) {
@@ -358,7 +358,7 @@ impl BackfillEtlInner {
             tokio::task::yield_now().await;
         }
 
-        let _ = self.index.commit().await;
+        let _ = self.index.lazy_commit().await;
     }
 
     async fn spawn_channels(&self) {
@@ -425,7 +425,7 @@ impl BackfillEtlInner {
             tokio::task::yield_now().await;
         }
 
-        let _ = self.index.commit().await;
+        let _ = self.index.lazy_commit().await;
     }
 
     async fn spawn_rooms(&self) {
@@ -484,7 +484,7 @@ impl BackfillEtlInner {
             tokio::task::yield_now().await;
         }
 
-        let _ = self.index.commit().await;
+        let _ = self.index.lazy_commit().await;
     }
 
     async fn spawn_room_members(&self, room_id: RoomId) {
@@ -567,6 +567,6 @@ impl BackfillEtlInner {
             tokio::task::yield_now().await;
         }
 
-        let _ = self.index.commit().await;
+        let _ = self.index.lazy_commit().await;
     }
 }

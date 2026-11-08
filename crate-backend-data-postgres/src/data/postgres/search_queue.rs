@@ -114,6 +114,16 @@ impl DataSearchQueue for Postgres {
         Ok(())
     }
 
+    async fn search_reindex_queue_reset_all_room_members(&mut self) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        query!(
+            r#"INSERT INTO search_reindex_queue (target_id, target_type) SELECT id, 'room_members' FROM room WHERE deleted_at IS NULL ON CONFLICT (target_id, target_type) DO NOTHING"#,
+        )
+        .execute(conn.ext())
+        .await?;
+        Ok(())
+    }
+
     async fn search_reindex_queue_reset_room(&mut self, room_id: RoomId) -> Result<()> {
         let mut conn = self.begin_tx().await?;
         query!(
