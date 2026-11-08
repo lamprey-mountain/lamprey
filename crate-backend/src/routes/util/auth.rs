@@ -67,6 +67,11 @@ impl Auth4 {
         self.user().map(|u| u.id)
     }
 
+    /// the user supplied audit log reason
+    pub fn reason(&self) -> Option<&str> {
+        self.reason.as_deref()
+    }
+
     /// attempt to get the session, if known
     pub fn session(&self) -> Option<&Session> {
         match &self.identity {

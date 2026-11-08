@@ -6,8 +6,9 @@ use common::{
     v1::types::{
         MediaId,
         error::{ApiError, ErrorCode},
+        util::Time,
     },
-    v2::types::media::MediaPatch,
+    v2::types::media::{Media, MediaPatch, MediaQuarantine},
 };
 use dashmap::DashMap;
 use lamprey_backend_core::ffmpeg::Ffmpeg;
@@ -140,6 +141,39 @@ impl ServiceMedia {
         // })?;
 
         Ok(item)
+    }
+
+    /// quarantine a piece of media
+    pub async fn quarantine(&self, media_id: MediaId, reason: Option<String>) -> Result<Media> {
+        self.set_quarantine(
+            media_id,
+            Some(MediaQuarantine {
+                time: Time::now_utc(),
+                reason,
+            }),
+        )
+        .await
+    }
+
+    /// remove a quarantine from a piece of media
+    pub async fn unquarantine(&self, media_id: MediaId) -> Result<Media> {
+        self.set_quarantine(media_id, None).await
+    }
+
+    async fn set_quarantine(
+        &self,
+        media_id: MediaId,
+        quarantine: Option<MediaQuarantine>,
+    ) -> Result<Media> {
+        self.get(media_id).await?;
+
+        let mut txn = self.state.begin().await?;
+        txn.media_set_quarantine(media_id, quarantine).await?;
+        let media = txn.media_select(media_id).await?;
+        txn.commit().await?;
+
+        self.cache.invalidate(&media_id).await;
+        Ok(media)
     }
 
     /// attempt to delete a piece of media

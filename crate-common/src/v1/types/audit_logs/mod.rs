@@ -5,10 +5,10 @@ use uuid::Uuid;
 use crate::util::registry::export_models;
 use crate::v1::types::{
     ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId, Channel, ChannelId,
-    ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MessageId, MessageVerId,
-    PermissionOverwriteType, RedexId, RedexVerId, RoleId, RoomId, RoomMember, SessionId, TagId,
-    User, UserId, WebhookId, application::Scopes, email::EmailAddr, reaction::ReactionKeyParam,
-    role::RoleReorderItem, tag::Tag, util::Time, webhook::Webhook,
+    ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MediaId, MessageId,
+    MessageVerId, PermissionOverwriteType, RedexId, RedexVerId, RoleId, RoomId, RoomMember,
+    SessionId, TagId, User, UserId, WebhookId, application::Scopes, email::EmailAddr,
+    reaction::ReactionKeyParam, role::RoleReorderItem, tag::Tag, util::Time, webhook::Webhook,
 };
 
 pub mod resolve;
@@ -472,6 +472,14 @@ pub enum AuditLogEntryType {
 
     RoomUnquarantine {
         room_id: RoomId,
+    },
+
+    MediaQuarantine {
+        media_id: MediaId,
+    },
+
+    MediaUnquarantine {
+        media_id: MediaId,
     },
 
     MessagePin {

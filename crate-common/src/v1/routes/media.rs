@@ -98,6 +98,54 @@ pub mod media_delete {
     pub struct Response {}
 }
 
+/// Media quarantine
+#[endpoint(
+    post,
+    path = "/media/{media_id}/quarantine",
+    tags = ["media"],
+    scopes = [Full],
+    server_permissions = [Admin],
+    audit_log_events = ["MediaQuarantine"],
+    response(OK, body = Media, description = "Media quarantine success"),
+)]
+pub mod media_quarantine {
+    use crate::{v1::types::MediaId, v2::types::media::Media};
+
+    pub struct Request {
+        #[path]
+        pub media_id: MediaId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub media: Media,
+    }
+}
+
+/// Media unquarantine
+#[endpoint(
+    delete,
+    path = "/media/{media_id}/quarantine",
+    tags = ["media"],
+    scopes = [Full],
+    server_permissions = [Admin],
+    audit_log_events = ["MediaUnquarantine"],
+    response(OK, body = Media, description = "Media unquarantine success"),
+)]
+pub mod media_unquarantine {
+    use crate::{v1::types::MediaId, v2::types::media::Media};
+
+    pub struct Request {
+        #[path]
+        pub media_id: MediaId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub media: Media,
+    }
+}
+
 /// Media done
 #[endpoint(
     put,

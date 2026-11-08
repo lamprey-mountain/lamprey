@@ -5,7 +5,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::federation::{FederationEpoch, Hostname, Remote};
 use common::v1::types::{MediaTrack as MediaTrackV1, MediaV0 as MediaV1};
 use common::v2::types::media::{
-    Media as MediaV2, MediaErrorReason, MediaPatch as MediaPatchV2, MediaStatus,
+    Media as MediaV2, MediaErrorReason, MediaPatch as MediaPatchV2, MediaQuarantine, MediaStatus,
 };
 use common::v2::types::{ChannelId, RoomId};
 use serde::{Deserialize, Serialize};
@@ -483,6 +483,55 @@ impl DataMedia for Postgres {
         .await?;
         tx.commit().await?;
         Ok(())
+    }
+
+    async fn media_set_quarantine(
+        &mut self,
+        media_id: MediaId,
+        quarantine: Option<MediaQuarantine>,
+    ) -> Result<MediaVerId> {
+        let mut tx = self.begin_tx().await?;
+        let media = query_as!(
+            DbMediaWithId,
+            r#"
+            SELECT id, user_id, deleted_at, data, version_id, remote_origin_id, remote_hostname
+            FROM media
+            WHERE id = $1
+            FOR UPDATE
+        "#,
+            *media_id,
+        )
+        .fetch_one(tx.ext())
+        .await?;
+
+        if media.deleted_at.is_some() {
+            tx.rollback().await?;
+            return Err(Error::ApiError(ApiError::from_code(
+                ErrorCode::UnknownMedia,
+            )));
+        }
+
+        let mut media_data: MediaV2 = media.parse();
+        media_data.quarantine = quarantine;
+
+        let data =
+            serde_json::to_value(&DbMediaData::V2(media_data)).expect("failed to serialize media");
+        let version_id = Uuid::now_v7();
+
+        query!(
+            r#"
+            UPDATE media SET
+                data = $2, version_id = $3
+            WHERE id = $1
+        "#,
+            *media_id,
+            data,
+            version_id,
+        )
+        .execute(tx.ext())
+        .await?;
+        tx.commit().await?;
+        Ok(version_id.into())
     }
 
     async fn media_replace(&mut self, media: MediaV2) -> Result<()> {

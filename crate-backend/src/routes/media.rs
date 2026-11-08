@@ -10,7 +10,7 @@ use axum::{
 };
 use common::v1::{
     routes,
-    types::{federation::RemoteReq, misc::MediaIdReq},
+    types::{AuditLogEntryType, MessageSync, federation::RemoteReq, misc::MediaIdReq},
 };
 use common::v2::types::media::{MediaCreateSource, MediaCreated};
 use common::{
@@ -166,6 +166,97 @@ async fn media_get(
             )));
         }
     }
+
+    Ok(Json(media))
+}
+
+#[handler(routes::media_quarantine)]
+async fn media_quarantine(
+    auth: Auth4,
+    State(globals): State<Globals>,
+    req: routes::media_quarantine::Request,
+) -> Result<impl IntoResponse> {
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+
+    let srv = globals.services();
+    srv.perms
+        .for_room3(Some(user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::Admin)
+        .check()?;
+
+    let media = srv.media.get(req.media_id).await?.media();
+    if media.quarantine.is_some() {
+        return Ok(Json((*media).clone()));
+    }
+
+    let media = srv
+        .media
+        .quarantine(req.media_id, auth.reason().map(str::to_string))
+        .await?;
+
+    auth.begin_audit_log(
+        SERVER_ROOM_ID,
+        AuditLogEntryType::MediaQuarantine {
+            media_id: req.media_id,
+        },
+    )
+    .await?
+    .success();
+
+    globals
+        .messaging()
+        .broadcast_global(MessageSync::MediaUpdate {
+            media: media.clone(),
+        })
+        .await?;
+
+    Ok(Json(media))
+}
+
+#[handler(routes::media_unquarantine)]
+async fn media_unquarantine(
+    auth: Auth4,
+    State(globals): State<Globals>,
+    req: routes::media_unquarantine::Request,
+) -> Result<impl IntoResponse> {
+    let user = auth.ensure_user()?;
+    user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+
+    let srv = globals.services();
+    srv.perms
+        .for_room3(Some(user.id), SERVER_ROOM_ID)
+        .await?
+        .ensure_view()?
+        .needs(Permission::Admin)
+        .check()?;
+
+    let media = srv.media.get(req.media_id).await?.media();
+    if media.quarantine.is_none() {
+        return Ok(Json((*media).clone()));
+    }
+
+    let media = srv.media.unquarantine(req.media_id).await?;
+
+    auth.begin_audit_log(
+        SERVER_ROOM_ID,
+        AuditLogEntryType::MediaUnquarantine {
+            media_id: req.media_id,
+        },
+    )
+    .await?
+    .success();
+
+    globals
+        .messaging()
+        .broadcast_global(MessageSync::MediaUpdate {
+            media: media.clone(),
+        })
+        .await?;
 
     Ok(Json(media))
 }
@@ -326,6 +417,8 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(media_patch))
         .routes(routes2!(media_get))
         .routes(routes2!(media_delete))
+        .routes(routes2!(media_quarantine))
+        .routes(routes2!(media_unquarantine))
         .routes(routes2!(media_done))
         .routes(routes2!(media_clone))
         .routes(routes2!(media_search))

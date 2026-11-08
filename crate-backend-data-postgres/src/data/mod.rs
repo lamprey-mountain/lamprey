@@ -25,7 +25,7 @@ use common::v1::types::{
 };
 use common::v1::types::{ChannelSeq, RoomFeature};
 use common::v2::types::HarvestId;
-use common::v2::types::media::{Media, MediaPatch};
+use common::v2::types::media::{Media, MediaPatch, MediaQuarantine};
 use lamprey_backend_core::data::DataScript;
 pub use lamprey_backend_core::data::{
     DataAdmin, DataApplication, DataAuditLogs, DataAutomod, DataCalendar, DataConfigInternal,
@@ -183,6 +183,11 @@ pub trait DataMedia {
     async fn media_insert(&mut self, media: Media) -> Result<()>;
     async fn media_select(&mut self, media_id: MediaId) -> Result<Media>;
     async fn media_update(&mut self, media_id: MediaId, patch: MediaPatch) -> Result<()>;
+    async fn media_set_quarantine(
+        &mut self,
+        media_id: MediaId,
+        quarantine: Option<MediaQuarantine>,
+    ) -> Result<MediaVerId>;
     async fn media_replace(&mut self, media: Media) -> Result<()>;
     async fn media_delete(&mut self, media_id: MediaId) -> Result<()>;
     async fn media_link_insert(
