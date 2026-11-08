@@ -29,16 +29,19 @@ export const Friends = () => {
 	// TODO: add relationship service
 
 	const [friends] = createResource(async () => {
-		const { data } = await api2.client.http.GET("/api/v1/user/@self/friend", {
-			params: { query: {} },
-		});
+		const { data } = await api2.client.http.GET(
+			"/api/v1/user/{user_id}/friend",
+			{
+				params: { path: { user_id: "@self" }, query: {} },
+			},
+		);
 		return data;
 	});
 
 	const [pending] = createResource(async () => {
 		const { data } = await api2.client.http.GET(
-			"/api/v1/user/@self/friend/pending",
-			{ params: { query: {} } },
+			"/api/v1/user/{user_id}/friend/pending",
+			{ params: { path: { user_id: "@self" }, query: {} } },
 		);
 		return data;
 	});

@@ -234,7 +234,7 @@ export const useAutocompleteData = () => {
 						type: "channel" as const,
 						channel: r.obj,
 						channel_id: r.obj.id,
-						name: r.obj.name,
+						name: r.obj.name ?? r.obj.auto_name ?? "",
 					},
 					score: r.score,
 					hits: (r as { hits?: Array<{ value: string }> }).hits ?? [],

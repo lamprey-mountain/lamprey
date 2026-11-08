@@ -89,7 +89,7 @@ export const Authenticate = () => {
 		ctx.setPopout(null);
 		modals.prompt("name?").then((name) => {
 			if (!name) return;
-			api.users.createGuest(name);
+			api.users.createUser(name);
 		});
 	}
 

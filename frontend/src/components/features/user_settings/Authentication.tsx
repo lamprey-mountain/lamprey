@@ -437,14 +437,7 @@ function Oauth() {
 	// add something to sync i guess
 	const [oauthProviders] = createResource(async () => {
 		const { data } = await api.client.http.GET("/api/v1/debug/info");
-		return data &&
-			"features" in data &&
-			data.features &&
-			"oauth" in data.features &&
-			data.features.oauth &&
-			"providers" in data.features.oauth
-			? data.features.oauth.providers
-			: undefined;
+		return data?.features?.auth?.oauth_providers;
 	});
 
 	const [enabledOauthProviders, { refetch: refetchOauthProviders }] =

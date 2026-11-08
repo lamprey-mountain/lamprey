@@ -703,7 +703,7 @@ export const RouteChannel = (
 		<Show when={channelCtx()} fallback={<div>Loading channel...</div>}>
 			{(cc) => (
 				<ChannelContext.Provider value={cc()}>
-					<Title title={title()} />
+					<Title title={title() ?? undefined} />
 					<Show when={channel()}>
 						{(ch) => (
 							<>

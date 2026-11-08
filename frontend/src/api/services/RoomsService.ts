@@ -63,19 +63,24 @@ export class RoomsService extends BaseService<Room> {
 		return data;
 	}
 
-	async fetchList(cursor?: string): Promise<Pagination<Room>> {
-		return this.retryWithBackoff(() =>
+	async fetchList(_cursor?: string): Promise<Pagination<Room>> {
+		const data = await this.retryWithBackoff(() =>
 			this.client.http.GET("/api/v1/user/{user_id}/room", {
 				params: {
 					path: { user_id: "@self" },
-					query: {
-						dir: "f",
-						limit: 100,
-						from: cursor,
-					},
 				},
 			}),
 		);
+
+		for (const room of data.rooms) {
+			this.upsert(room);
+		}
+
+		return {
+			items: data.rooms,
+			total: data.rooms.length,
+			has_more: false,
+		};
 	}
 
 	public async fetchListAll(cursor?: string): Promise<Pagination<Room>> {

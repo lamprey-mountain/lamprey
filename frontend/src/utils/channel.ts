@@ -6,7 +6,7 @@ export function channelDisplayName(channel: Channel): string {
 	if (channel.name === "thread" && channel.auto_name) {
 		return channel.auto_name;
 	}
-	return channel.name;
+	return channel.name ?? channel.auto_name ?? "unknown-channel";
 }
 
 export function channelDescription(

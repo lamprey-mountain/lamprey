@@ -283,7 +283,7 @@ export const InviteView = (props: { invite: Invite }) => {
 		const name = await modals.prompt("name?");
 		if (!name) return;
 		// FIXME: race condition: page reloads after guest is created, possibly before join() is called
-		await api.users.createGuest(name);
+		await api.users.createUser(name);
 		await join();
 	};
 

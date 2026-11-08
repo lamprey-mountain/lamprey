@@ -234,15 +234,18 @@ export const DocumentHeader = (props: DocumentHeaderProps) => {
 	const handleExportMarkdown = () => {
 		const view = doc.editor();
 		if (!view) return;
-		const filename = generateFilename(props.channel.name, "md");
+		const filename = generateFilename(channelDisplayName(props.channel), "md");
 		exportAsMarkdown(view, filename);
 	};
 
 	const handleExportHtml = () => {
 		const view = doc.editor();
 		if (!view) return;
-		const filename = generateFilename(props.channel.name, "html");
-		exportAsHtml(view, filename, props.channel.name);
+		const filename = generateFilename(
+			channelDisplayName(props.channel),
+			"html",
+		);
+		exportAsHtml(view, filename, channelDisplayName(props.channel));
 	};
 
 	const handleMergeFull = async () => {

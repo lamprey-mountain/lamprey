@@ -226,7 +226,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 				result.push({
 					category: {
 						id: viewCategoryKey(currentView.id, index),
-						name: category.name,
+						name: category.name ?? "",
 						channel: null,
 					},
 					channels: category.channels
@@ -243,7 +243,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 				result.push({
 					category: {
 						id: channel.id,
-						name: channel.name,
+						name: channelDisplayName(channel),
 						channel,
 					},
 					channels: [],
@@ -380,7 +380,7 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 					const channel = cid ? (channels2.cache.get(cid) ?? null) : null;
 					return {
 						category: channel
-							? { id: channel.id, name: channel.name, channel }
+							? { id: channel.id, name: channelDisplayName(channel), channel }
 							: null,
 						channels: cs,
 					};

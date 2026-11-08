@@ -151,14 +151,15 @@ export class ChannelsService extends BaseService<Channel> {
 	async ackBulk(
 		acks: Array<{
 			channel_id: string;
-			message_id?: string;
-			version_id: string;
+			message_id: string;
 			mention_count?: number;
 		}>,
 	): Promise<void> {
 		await this.retryWithBackoff(() =>
 			this.client.http.POST("/api/v1/ack", {
-				body: { acks },
+				body: {
+					acks: acks.map((ack) => ({ ...ack, type: "Message" as const })),
+				},
 			}),
 		);
 
@@ -166,13 +167,12 @@ export class ChannelsService extends BaseService<Channel> {
 		for (const ack of acks) {
 			const t = this.cache.get(ack.channel_id);
 			if (t) {
-				const is_unread = ack.version_id < (t.last_version_id ?? "");
 				const mention_count = ack.mention_count ?? 0;
 				this.cache.set(ack.channel_id, {
 					...t,
-					last_read_id: ack.version_id,
+					last_read_id: ack.message_id,
 					mention_count,
-					is_unread,
+					is_unread: false,
 				} as Channel);
 			}
 		}

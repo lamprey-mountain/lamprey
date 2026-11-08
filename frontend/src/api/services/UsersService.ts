@@ -52,9 +52,9 @@ export class UsersService extends BaseService<UserWithRelationship> {
 		}
 	}
 
-	async createGuest(name: string): Promise<void> {
+	async createUser(name: string): Promise<void> {
 		await this.retryWithBackoff(() =>
-			this.client.http.POST("/api/v1/guest", { body: { name } }),
+			this.client.http.POST("/api/v1/user", { body: { name } }),
 		);
 	}
 

@@ -5,6 +5,7 @@ import { useApi, useChannels, useRoles } from "@/api";
 import { CheckboxOptionWithLabel } from "@/atoms/CheckboxOption";
 import { Dropdown, MultiDropdown } from "@/atoms/Dropdown";
 import { Editable } from "@/atoms/Editable";
+import { channelDisplayName } from "@/utils/channel";
 import {
 	ActionBlock,
 	ActionRemove,
@@ -404,7 +405,7 @@ export const AutomodRuleEditor = (props: AutomodRuleProps) => {
 							}
 							options={[...api.channels.cache.values()]
 								.filter((c) => c.type === "Text")
-								.map((c) => ({ item: c.id, label: c.name }))}
+								.map((c) => ({ item: c.id, label: channelDisplayName(c) }))}
 							placeholder="Select channels..."
 						/>
 					</label>

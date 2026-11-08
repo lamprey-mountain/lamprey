@@ -51,7 +51,7 @@ export const ModalPalette = () => {
 			.map((thread) => ({
 				type: "thread" as const,
 				id: thread.id,
-				name: thread.name,
+				name: channelDisplayName(thread),
 				action: () => navigate(`/channel/${thread.id}`),
 				channel: thread,
 			}));
@@ -95,7 +95,7 @@ export const ModalPalette = () => {
 			.map((thread) => ({
 				type: "thread" as const,
 				id: thread.id,
-				name: thread.name,
+				name: channelDisplayName(thread),
 				action: () => navigate(`/thread/${thread.id}`),
 				channel: thread,
 			}));

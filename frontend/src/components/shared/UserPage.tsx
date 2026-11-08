@@ -362,7 +362,7 @@ export const RouteUserInner = (props: { user: UserWithRelationship }) => {
 					<ul class="mutual-rooms">
 						{/* TODO: use actual store/live update */}
 						<For
-							each={mutualRooms()?.items ?? []}
+							each={mutualRooms()?.rooms ?? []}
 							fallback="no mutual rooms :("
 						>
 							{(room) => {

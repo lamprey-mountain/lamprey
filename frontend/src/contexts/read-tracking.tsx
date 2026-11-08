@@ -107,9 +107,9 @@ export function createReadTrackingProvider(
 
 		const acks = childChannels
 			.map((c) => {
-				const version_id = c.last_version_id;
-				if (!version_id) return null;
-				return { channel_id: c.id, version_id };
+				const message_id = c.last_message_id;
+				if (!message_id) return null;
+				return { channel_id: c.id, message_id };
 			})
 			.filter((ack): ack is NonNullable<typeof ack> => ack !== null);
 

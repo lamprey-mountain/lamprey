@@ -63,7 +63,7 @@ type Draft = {
 };
 
 const toDraft = (c: Channel): Draft => ({
-	name: c.name,
+	name: c.name ?? c.auto_name ?? "",
 	nsfw: c.nsfw ?? false,
 	autoArchive: c.auto_archive_duration ?? null,
 	defaultAutoArchive: c.default_auto_archive_duration ?? null,

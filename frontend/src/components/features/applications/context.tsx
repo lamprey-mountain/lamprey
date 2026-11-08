@@ -1,4 +1,4 @@
-import type { Application, ApplicationCreate, ApplicationUpdate } from "sdk";
+import type { Application, ApplicationCreate, ApplicationPatch } from "sdk";
 import {
 	createContext,
 	createEffect,
@@ -13,7 +13,7 @@ import { deepEqual } from "@/utils/deepEqual";
 
 export type ApplicationDraft =
 	| { state: "create"; nonce: string; create: ApplicationCreate }
-	| { state: "update"; data: Application; update: ApplicationUpdate }
+	| { state: "update"; data: Application; update: ApplicationPatch }
 	| { state: "clean"; data: Application }
 	| { state: "delete"; data: Application };
 
@@ -25,7 +25,7 @@ export type ApplicationsState = {
 	reset: () => void;
 	save: () => Promise<void>;
 	refetch: () => Promise<void>;
-	updateDraft: (id: string, newFields: Partial<ApplicationUpdate>) => void;
+	updateDraft: (id: string, newFields: Partial<ApplicationPatch>) => void;
 
 	/** whether any changes have been made to these applications */
 	readonly dirty: boolean;
@@ -149,7 +149,7 @@ export const ApplicationsProvider = (props: ParentProps) => {
 		});
 	};
 
-	const updateDraft = (id: string, newFields: Partial<ApplicationUpdate>) => {
+	const updateDraft = (id: string, newFields: Partial<ApplicationPatch>) => {
 		update(
 			(a) => (a.state === "create" ? a.nonce === id : a.data.id === id),
 			(draft) => {
@@ -162,7 +162,7 @@ export const ApplicationsProvider = (props: ParentProps) => {
 						? draft.data
 						: draft.data;
 
-				const finalUpdate: Partial<ApplicationUpdate> =
+				const finalUpdate: Partial<ApplicationPatch> =
 					draft.state === "update" ? { ...draft.update } : {};
 				for (const [key, value] of Object.entries(newFields)) {
 					(finalUpdate as any)[key] = value;

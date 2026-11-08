@@ -149,15 +149,15 @@ export const channelFilter: SearchFilterDef = {
 		const threads = ctx.roomThreads();
 		const q = query.toLowerCase();
 		const filtered = q
-			? threads.filter(
-					(t) =>
-						t.name.toLowerCase().includes(q) || t.id.toLowerCase().includes(q),
-				)
+			? threads.filter((t) => {
+					const name = (t.name ?? t.auto_name ?? "").toLowerCase();
+					return name.includes(q) || t.id.toLowerCase().includes(q);
+				})
 			: threads;
 
 		return filtered.slice(0, 10).map((t) => ({
 			id: `channel-${t.id}`,
-			label: t.name,
+			label: t.name ?? t.auto_name ?? "unknown-channel",
 			channel: t,
 			onSelect: () => {},
 		}));
