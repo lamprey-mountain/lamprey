@@ -10,6 +10,7 @@ pub mod permission_overwrite;
 pub mod relationship;
 pub mod role;
 pub mod room;
+pub mod room_analytics;
 pub mod room_member;
 pub mod thread;
 pub mod unfurler;
@@ -26,6 +27,7 @@ pub fn register(r: &mut Routes) {
         message::register(r);
         role::register(r);
         room::register(r);
+        room_analytics::register(r);
         room_member::register(r);
         thread::register(r);
         unfurler::register(r);
