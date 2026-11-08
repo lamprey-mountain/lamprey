@@ -637,11 +637,6 @@
 }
 
 .root[data-message-style="compact"] .message:not(.oneline) {
-	& > .reply {
-		margin-left: 32px;
-		margin-bottom: 0;
-	}
-
 	& > .content {
 		display: inline;
 		text-indent: -2em;
@@ -683,26 +678,31 @@
 		grid-template-columns: 80px auto;
 
 		& > .aside {
-			flex-direction: row;
-			justify-content: end;
-			gap: 6px;
+			display: grid;
+			grid-template-columns: 1fr auto;
+			grid-template-rows: auto 1fr;
+			align-items: start;
+			column-gap: 6px;
 			padding-top: 0;
 		}
 
 		& > .aside > .time {
-			justify-self: right;
+			justify-self: end;
 			align-self: start;
 		}
 
 		& > .aside > .thread-spine {
 			grid-column: 1 / -1;
 			grid-row: 2;
+			align-self: stretch;
+			// align with the reply spine
+			margin-left: 40px;
 		}
 
 		& > .reply > .spine {
-			width: 24px;
-			min-width: 24px;
-			margin-left: 8px;
+			width: 40px;
+			min-width: 40px;
+			margin-left: 40px;
 			margin-right: 4px;
 		}
 	}
