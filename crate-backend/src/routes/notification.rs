@@ -65,6 +65,23 @@ async fn inbox_post(
         .message_get(req.notification.channel_id, req.notification.message_id)
         .await?;
 
+    let mention_role = match room_id {
+        Some(room_id) if !message.latest_version.mentions.roles.is_empty() => s
+            .data()
+            .room_member_get(room_id, auth.user.id)
+            .await
+            .ok()
+            .map_or(false, |member| {
+                message
+                    .latest_version
+                    .mentions
+                    .roles
+                    .iter()
+                    .any(|role| member.roles.contains(&role.id))
+            }),
+        _ => false,
+    };
+
     let notif = Notification {
         id: NotificationId::new(),
         ty: NotificationType::Message {
@@ -79,7 +96,7 @@ async fn inbox_post(
                 .iter()
                 .any(|u| u.id == auth.user.id),
             mention_everyone: message.latest_version.mentions.everyone,
-            mention_role: false, // FIXME
+            mention_role,
             reply: message.reply_id().is_some(),
         },
         added_at: req.notification.added_at.unwrap_or_else(Time::now_utc),
