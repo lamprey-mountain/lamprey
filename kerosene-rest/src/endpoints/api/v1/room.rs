@@ -4,7 +4,8 @@ use common::v1::types::{
     application::Scope,
     util::Changes,
 };
-use http::StatusCode;
+use headers::{ETag, HeaderMapExt, LastModified};
+use http::{HeaderMap, StatusCode};
 use lamprey_backend_services::{
     compat::types::DbRoomCreate, services::search::SearchRoomsVisibility,
 };
@@ -104,9 +105,24 @@ pub async fn get(req: Req<routes::room_get::Endpoint>) -> Result<routes::room_ge
         .ensure_view()?
         .check()?;
 
-    let status = cache_status(&body.if_none_match, &room.version_id);
+    let version_id = room.version_id;
+    let status = cache_status(&body.if_none_match, &version_id);
 
-    Ok(routes::room_get::Response { room, status })
+    let mut headers = HeaderMap::new();
+    let etag: ETag = format!(r#"W/"{version_id}""#).parse().unwrap();
+    headers.typed_insert(etag);
+
+    let timestamp: std::time::SystemTime = version_id
+        .get_timestamp()
+        .expect("all uuids are uuidv7")
+        .into();
+    headers.typed_insert(LastModified::from(timestamp));
+
+    Ok(routes::room_get::Response {
+        room,
+        status,
+        headers,
+    })
 }
 
 #[handler(routes::room_list)]

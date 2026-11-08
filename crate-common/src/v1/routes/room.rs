@@ -53,6 +53,9 @@ pub mod room_get {
 
         #[status]
         pub status: http::StatusCode,
+
+        #[headers]
+        pub headers: http::HeaderMap,
     }
 }
 
