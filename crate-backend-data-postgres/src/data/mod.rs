@@ -666,6 +666,7 @@ pub trait DataAuth {
         scopes: Scopes,
         code_challenge: Option<String>,
         code_challenge_method: Option<String>,
+        auth_time: Option<Time>,
     ) -> Result<()>;
     async fn oauth_auth_code_use(
         &mut self,
@@ -677,6 +678,7 @@ pub trait DataAuth {
         Scopes,
         Option<String>,
         Option<String>,
+        Option<Time>,
     )>;
     async fn oauth_refresh_token_create(
         &mut self,

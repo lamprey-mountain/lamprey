@@ -168,12 +168,13 @@ impl DataAuth for Postgres {
         scopes: Scopes,
         code_challenge: Option<String>,
         code_challenge_method: Option<String>,
+        auth_time: Option<Time>,
     ) -> Result<()> {
         let mut conn = self.acquire().await?;
         query!(
             r#"
-            INSERT INTO oauth_authorization_code (code, application_id, user_id, redirect_uri, scopes, expires_at, code_challenge, code_challenge_method)
-            VALUES ($1, $2, $3, $4, $5, now() + '10 minutes', $6, $7)
+            INSERT INTO oauth_authorization_code (code, application_id, user_id, redirect_uri, scopes, expires_at, code_challenge, code_challenge_method, auth_time)
+            VALUES ($1, $2, $3, $4, $5, now() + '10 minutes', $6, $7, $8)
             "#,
             code,
             *application_id,
@@ -182,6 +183,7 @@ impl DataAuth for Postgres {
             serde_json::to_value(scopes).unwrap(),
             code_challenge,
             code_challenge_method,
+            auth_time.map(time::PrimitiveDateTime::from),
         )
         .execute(conn.ext())
         .await?;
@@ -198,10 +200,11 @@ impl DataAuth for Postgres {
         Scopes,
         Option<String>,
         Option<String>,
+        Option<Time>,
     )> {
         let mut conn = self.acquire().await?;
         let row = query!(
-            "DELETE FROM oauth_authorization_code WHERE code = $1 AND expires_at > now() RETURNING application_id, user_id, redirect_uri, scopes, code_challenge, code_challenge_method",
+            "DELETE FROM oauth_authorization_code WHERE code = $1 AND expires_at > now() RETURNING application_id, user_id, redirect_uri, scopes, code_challenge, code_challenge_method, auth_time",
             code,
         )
         .fetch_one(conn.ext())
@@ -216,6 +219,7 @@ impl DataAuth for Postgres {
             scopes,
             row.code_challenge,
             row.code_challenge_method,
+            row.auth_time.map(Into::into),
         ))
     }
 

@@ -90,6 +90,7 @@ async fn oauth_authorize(
         scopes,
         req.params.code_challenge,
         req.params.code_challenge_method,
+        auth.session.authorized_at,
     )
     .await?;
 
@@ -209,6 +210,17 @@ async fn validate_authorize(
     }
 
     validate_pkce(&app, q)?;
+
+    if let Some(max_age) = q.max_age {
+        let authorized_at = auth
+            .session
+            .authorized_at
+            .ok_or_else(|| ApiError::from_code(ErrorCode::LoginRequired))?;
+        let age = Time::now_utc() - authorized_at;
+        if max_age == 0 || age.whole_seconds() > max_age as i64 {
+            return Err(ApiError::from_code(ErrorCode::LoginRequired).into());
+        }
+    }
 
     let redirect_uri = if let Some(uri) = &q.redirect_uri {
         if !app.oauth_redirect_uris.iter().any(|u| u == uri.as_str()) {
@@ -391,8 +403,15 @@ async fn oauth_token(
                 .redirect_uri
                 .ok_or(ApiError::from_code(ErrorCode::MissingRedirectUri))?;
 
-            let (_app_id, user_id, db_redirect_uri, scopes, code_challenge, code_challenge_method) =
-                data.oauth_auth_code_use(code).await?;
+            let (
+                _app_id,
+                user_id,
+                db_redirect_uri,
+                scopes,
+                code_challenge,
+                code_challenge_method,
+                auth_time,
+            ) = data.oauth_auth_code_use(code).await?;
 
             if redirect_uri.as_str() != db_redirect_uri {
                 return Err(Error::InvalidCredentials);
@@ -457,6 +476,7 @@ async fn oauth_token(
                     aud: client_id.to_string(),
                     exp: expires_at.unix_timestamp() as u64,
                     iat: Time::now_utc().unix_timestamp() as u64,
+                    auth_time: auth_time.map(|time| time.unix_timestamp() as u64),
                     nonce: None,
                 };
 
@@ -603,6 +623,7 @@ async fn oauth_token(
                                 aud: client_id.to_string(),
                                 exp: expires_at.unix_timestamp() as u64,
                                 iat: Time::now_utc().unix_timestamp() as u64,
+                                auth_time: None,
                                 nonce: None,
                             };
                             id_token = Some(srv.oauth_provider.sign_oidc_claims(&claims).await?);
@@ -691,6 +712,7 @@ async fn oauth_token(
                     aud: app.id.to_string(),
                     exp: expires_at.unix_timestamp() as u64,
                     iat: Time::now_utc().unix_timestamp() as u64,
+                    auth_time: None,
                     nonce: None,
                 };
 
@@ -813,6 +835,7 @@ async fn oauth_autoconfig_openid(
         claims_supported: vec![
             "iss".to_string(),
             "sub".to_string(),
+            "auth_time".to_string(),
             "name".to_string(),
             "email".to_string(),
             "email_verified".to_string(),

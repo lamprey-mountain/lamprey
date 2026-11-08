@@ -120,6 +120,7 @@ impl ErrorCode {
             ErrorCode::MissingCode => StatusCode::BAD_REQUEST,
             ErrorCode::MissingRedirectUri => StatusCode::BAD_REQUEST,
             ErrorCode::MissingCodeChallenge => StatusCode::BAD_REQUEST,
+            ErrorCode::LoginRequired => StatusCode::UNAUTHORIZED,
             ErrorCode::MissingCodeVerifier => StatusCode::BAD_REQUEST,
             ErrorCode::InvalidCodeVerifier => StatusCode::BAD_REQUEST,
             ErrorCode::UnsupportedCodeChallengeMethod => StatusCode::BAD_REQUEST,

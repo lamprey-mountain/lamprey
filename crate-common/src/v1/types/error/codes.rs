@@ -528,6 +528,10 @@ pub enum ErrorCode {
     #[error("missing code challenge")]
     MissingCodeChallenge,
 
+    /// login required to satisfy max_age
+    #[error("login required")]
+    LoginRequired,
+
     /// missing code verifier
     #[error("missing code verifier")]
     MissingCodeVerifier,

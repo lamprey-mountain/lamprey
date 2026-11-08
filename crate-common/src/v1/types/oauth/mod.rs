@@ -14,6 +14,8 @@ pub struct OidcClaims {
     pub aud: String,
     pub exp: u64,
     pub iat: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_time: Option<u64>,
     pub nonce: Option<String>,
 }
 
@@ -193,6 +195,8 @@ pub struct OauthAuthorizeParams {
     pub code_challenge: Option<String>,
     pub code_challenge_method: Option<String>,
     pub nonce: Option<String>,
+    /// maximum allowed time since the user last authenticated, in seconds
+    pub max_age: Option<u64>,
 }
 
 #[record]
