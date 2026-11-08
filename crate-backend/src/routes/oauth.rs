@@ -95,6 +95,9 @@ async fn oauth_authorize(
     if let Some(state) = req.params.state {
         redirect_uri.query_pairs_mut().append_pair("state", &state);
     }
+    redirect_uri
+        .query_pairs_mut()
+        .append_pair("iss", s.config.api_url.as_str());
 
     Ok(Json(OauthAuthorizeResponse { redirect_uri }))
 }
@@ -409,6 +412,7 @@ async fn oauth_autoconfig_auth_server(
 ) -> Result<impl IntoResponse> {
     let config = AuthServerMetadata {
         issuer: s.config.api_url.clone(),
+        authorization_response_iss_parameter_supported: true,
         authorization_endpoint: s.config.html_url.join("/authorize")?,
         token_endpoint: s.config.api_url.join("/api/v1/oauth/token")?,
         jwks_uri: s.config.api_url.join("/api/v1/.well-known/jwks.json")?,
@@ -435,6 +439,7 @@ async fn oauth_autoconfig_openid(
 ) -> Result<impl IntoResponse> {
     let config = OidcDiscovery {
         issuer: s.config.api_url.clone(),
+        authorization_response_iss_parameter_supported: true,
         authorization_endpoint: s.config.html_url.join("/authorize")?,
         token_endpoint: s.config.api_url.join("/api/v1/oauth/token")?,
         userinfo_endpoint: s.config.api_url.join("/api/v1/oauth/userinfo")?,

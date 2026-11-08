@@ -21,6 +21,8 @@ pub struct OidcClaims {
 #[record]
 pub struct AuthServerMetadata {
     pub issuer: Url,
+    /// whether the `iss` parameter is included in authorization responses (RFC 9207)
+    pub authorization_response_iss_parameter_supported: bool,
     pub authorization_endpoint: Url,
     pub token_endpoint: Url,
     pub jwks_uri: Url,
@@ -35,6 +37,8 @@ pub struct AuthServerMetadata {
 #[record]
 pub struct OidcDiscovery {
     pub issuer: Url,
+    /// whether the `iss` parameter is included in authorization responses (RFC 9207)
+    pub authorization_response_iss_parameter_supported: bool,
     pub authorization_endpoint: Url,
     pub token_endpoint: Url,
     pub userinfo_endpoint: Url,
