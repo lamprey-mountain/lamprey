@@ -104,7 +104,7 @@ pub mod media_delete {
     path = "/media/{media_id}/quarantine",
     tags = ["media"],
     scopes = [Full],
-    server_permissions = [Admin],
+    permissions_server = [Admin],
     audit_log_events = ["MediaQuarantine"],
     response(OK, body = Media, description = "Media quarantine success"),
 )]
@@ -128,7 +128,7 @@ pub mod media_quarantine {
     path = "/media/{media_id}/quarantine",
     tags = ["media"],
     scopes = [Full],
-    server_permissions = [Admin],
+    permissions_server = [Admin],
     audit_log_events = ["MediaUnquarantine"],
     response(OK, body = Media, description = "Media unquarantine success"),
 )]
