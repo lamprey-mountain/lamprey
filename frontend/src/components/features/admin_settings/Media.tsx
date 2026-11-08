@@ -2,9 +2,11 @@ import { throttle } from "@solid-primitives/scheduled";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import type { Media as MediaT } from "ts-sdk";
 import { useMedia } from "@/api";
+import { useMenu } from "@/contexts/mod.tsx";
 import { formatBytes, getThumbFromId } from "@/media/util.tsx";
 
 export function Media() {
+	const { setMenu } = useMenu();
 	const media2 = useMedia();
 	const [query, setQuery] = createSignal("");
 	const [searchResults, setSearchResults] = createSignal<MediaT[]>([]);
@@ -26,6 +28,12 @@ export function Media() {
 		throttledSearch(query());
 	});
 
+	// read from cache so deleted media is dropped from the list
+	const items = () =>
+		searchResults()
+			.map((media) => media2.cache.get(media.id))
+			.filter((media) => media !== undefined);
+
 	return (
 		<div class="room-settings-members">
 			<h2>Media</h2>
@@ -37,9 +45,9 @@ export function Media() {
 			<header>
 				<div class="name">filename</div>
 			</header>
-			<Show when={searchResults().length > 0}>
+			<Show when={items().length > 0}>
 				<ul>
-					<For each={searchResults()}>
+					<For each={items()}>
 						{(media) => (
 							<li>
 								<div class="profile" style="flex:1">
@@ -55,7 +63,20 @@ export function Media() {
 										<div class="dim">{media.id}</div>
 									</div>
 								</div>
-								<button type="button" class="button">
+								<button
+									type="button"
+									class="button"
+									onClick={(e) => {
+										e.stopPropagation();
+										setMenu({
+											type: "media",
+											media_id: media.id,
+											x: e.clientX,
+											y: e.clientY,
+											admin: true,
+										});
+									}}
+								>
 									options
 								</button>
 							</li>
@@ -66,5 +87,3 @@ export function Media() {
 		</div>
 	);
 }
-
-// TODO: media admin context menu

@@ -52,11 +52,14 @@ import {
 	EmojiMenu,
 	FolderMenu,
 	InviteApplicationMenu,
+	MediaAdminMenu,
 	MessageMenu,
 	PermissionOverwriteMenu,
+	RoomAdminMenu,
 	RoomMenu,
 	SettingsMenu,
 	TopicMenu,
+	UserAdminMenu,
 	UserMenu,
 	ViewChannelMenu,
 	ViewMenu,
@@ -423,7 +426,14 @@ export function OverlayProvider(props: ParentProps) {
 		const channels = useChannels();
 		switch (menu.type) {
 			case "room": {
-				return <RoomMenu room_id={menu.room_id} />;
+				return menu.admin ? (
+					<RoomAdminMenu room_id={menu.room_id} />
+				) : (
+					<RoomMenu room_id={menu.room_id} />
+				);
+			}
+			case "media": {
+				return <MediaAdminMenu media_id={menu.media_id} />;
 			}
 			case "channel": {
 				return <ChannelMenu channel_id={menu.channel_id} />;
@@ -456,6 +466,10 @@ export function OverlayProvider(props: ParentProps) {
 				);
 			}
 			case "user": {
+				// server admin panel: no room context
+				if (menu.admin && !menu.room_id) {
+					return <UserAdminMenu user_id={menu.user_id} />;
+				}
 				return (
 					<UserMenu
 						user_id={menu.user_id}

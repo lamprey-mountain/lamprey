@@ -124,6 +124,7 @@ export function Rooms() {
 								room_id: room.id,
 								x: e.clientX,
 								y: e.clientY,
+								admin: true,
 							});
 						}}
 					>

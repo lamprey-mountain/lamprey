@@ -15,6 +15,12 @@ export function UserAdminMenu(props: UserAdminMenuProps) {
 	const copyUserId = () => navigator.clipboard.writeText(props.user_id);
 	const logToConsole = () => console.log(JSON.parse(JSON.stringify(user())));
 
+	const openDm = () => {
+		api2.client.http.POST("/api/v1/user/@self/dm/{target_id}", {
+			params: { path: { target_id: props.user_id } },
+		});
+	};
+
 	const suspendUser = () => {
 		modalCtl.prompt("suspend reason", (reason: string | null) => {
 			if (!reason) return;
@@ -66,6 +72,7 @@ export function UserAdminMenu(props: UserAdminMenuProps) {
 
 	return (
 		<Menu>
+			<Item onClick={openDm}>dm</Item>
 			<Show when={user()?.suspended}>
 				<Item onClick={unsuspendUser}>unsuspend user</Item>
 			</Show>

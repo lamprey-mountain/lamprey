@@ -15,7 +15,8 @@ export type Menu = {
 	x: number;
 	y: number;
 } & (
-	| { type: "room"; room_id: string }
+	| { type: "room"; room_id: string; admin?: boolean }
+	| { type: "media"; media_id: string; admin?: boolean }
 	| { type: "channel"; channel_id: string }
 	| { type: "channel_notifications"; channel_id: string }
 	| {
