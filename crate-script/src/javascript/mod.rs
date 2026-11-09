@@ -314,6 +314,8 @@ fn setup_environment(
         file.set_prototype(Some(&blob))?;
     }
 
+    #[cfg(feature = "crypto")]
+    glue::crypto::setup(ctx)?;
     glue::abort::setup(ctx)?;
     glue::streams::setup(ctx)?;
     glue::encoding::setup(ctx)?;

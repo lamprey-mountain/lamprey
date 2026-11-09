@@ -1,6 +1,8 @@
 // web standard apis (available globally)
 pub mod abort;
 pub mod blob;
+#[cfg(feature = "crypto")]
+pub mod crypto;
 // pub mod compression;
 pub mod encoding;
 pub mod http;
@@ -9,7 +11,6 @@ pub mod url;
 
 // TODO: maybe impl more standard apis?
 // - performance
-// - crypto
 // - dom interfaces like Event, EventTarget
 // - webassembly
 // - web workers? this can possibly be done via redexes

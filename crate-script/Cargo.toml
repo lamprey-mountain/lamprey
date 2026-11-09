@@ -10,6 +10,7 @@ keywords.workspace = true
 
 [dependencies]
 async-trait = { workspace = true }
+base64 = { workspace = true, optional = true }
 bytes = { workspace = true }
 common = { workspace = true, features = ["utoipa", "validator"] }
 cpu-time = "1.0.0"
@@ -17,6 +18,7 @@ dashmap = { workspace = true }
 futures = { workspace = true }
 http = { workspace = true }
 nanoid = "0.5.0"
+openssl = { version = "0.10.82", optional = true }
 rquickjs = { version = "0.14.0", features = ["futures", "loader", "macro", "parallel"], optional = true }
 rquickjs-serde = "0.8.0"
 serde = { workspace = true, features = ["derive"] }
@@ -30,6 +32,7 @@ wasmtime = { version = "50.0.1", optional = true }
 
 [features]
 # default = ["javascript"]
-default = ["javascript", "wasm"]
+default = ["javascript", "wasm", "crypto"]
+crypto = ["dep:base64", "dep:openssl"]
 javascript = ["dep:rquickjs"]
 wasm = ["dep:wasmtime"]

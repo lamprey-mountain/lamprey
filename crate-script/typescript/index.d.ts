@@ -56,6 +56,117 @@ declare global {
     abort(reason?: unknown): void;
   }
 
+  type AlgorithmIdentifier = string | { name: string };
+  type KeyFormat = "raw" | "spki" | "pkcs8" | "jwk";
+  type KeyType = "secret" | "private" | "public";
+  type KeyUsage =
+    | "encrypt"
+    | "decrypt"
+    | "sign"
+    | "verify"
+    | "deriveKey"
+    | "deriveBits"
+    | "wrapKey"
+    | "unwrapKey";
+
+  interface JsonWebKey {
+    [key: string]: unknown;
+  }
+
+  interface CryptoKeyPair {
+    privateKey: CryptoKey;
+    publicKey: CryptoKey;
+  }
+
+  class CryptoKey {
+    private constructor();
+    readonly algorithm: { name: string; [key: string]: unknown };
+    readonly extractable: boolean;
+    readonly type: KeyType;
+    readonly usages: KeyUsage[];
+  }
+
+  class SubtleCrypto {
+    private constructor();
+    encrypt(
+      algorithm: AlgorithmIdentifier,
+      key: CryptoKey,
+      data: ArrayBuffer | ArrayBufferView,
+    ): Promise<ArrayBuffer>;
+    decrypt(
+      algorithm: AlgorithmIdentifier,
+      key: CryptoKey,
+      data: ArrayBuffer | ArrayBufferView,
+    ): Promise<ArrayBuffer>;
+    sign(
+      algorithm: AlgorithmIdentifier,
+      key: CryptoKey,
+      data: ArrayBuffer | ArrayBufferView,
+    ): Promise<ArrayBuffer>;
+    verify(
+      algorithm: AlgorithmIdentifier,
+      key: CryptoKey,
+      signature: ArrayBuffer | ArrayBufferView,
+      data: ArrayBuffer | ArrayBufferView,
+    ): Promise<boolean>;
+    digest(
+      algorithm: AlgorithmIdentifier,
+      data: ArrayBuffer | ArrayBufferView,
+    ): Promise<ArrayBuffer>;
+    generateKey(
+      algorithm: AlgorithmIdentifier,
+      extractable: boolean,
+      keyUsages: KeyUsage[],
+    ): Promise<CryptoKey | CryptoKeyPair>;
+    deriveKey(
+      algorithm: AlgorithmIdentifier,
+      baseKey: CryptoKey,
+      derivedKeyType: AlgorithmIdentifier,
+      extractable: boolean,
+      keyUsages: KeyUsage[],
+    ): Promise<CryptoKey>;
+    deriveBits(
+      algorithm: AlgorithmIdentifier,
+      baseKey: CryptoKey,
+      length: number,
+    ): Promise<ArrayBuffer>;
+    importKey(
+      format: KeyFormat,
+      keyData: ArrayBuffer | ArrayBufferView | JsonWebKey,
+      algorithm: AlgorithmIdentifier,
+      extractable: boolean,
+      keyUsages: KeyUsage[],
+    ): Promise<CryptoKey>;
+    exportKey(
+      format: KeyFormat,
+      key: CryptoKey,
+    ): Promise<ArrayBuffer | JsonWebKey>;
+    wrapKey(
+      format: KeyFormat,
+      key: CryptoKey,
+      wrappingKey: CryptoKey,
+      wrapAlgorithm: AlgorithmIdentifier,
+    ): Promise<ArrayBuffer>;
+    unwrapKey(
+      format: KeyFormat,
+      wrappedKey: ArrayBuffer | ArrayBufferView,
+      unwrappingKey: CryptoKey,
+      unwrapAlgorithm: AlgorithmIdentifier,
+      unwrappedKeyAlgorithm: AlgorithmIdentifier,
+      extractable: boolean,
+      keyUsages: KeyUsage[],
+    ): Promise<CryptoKey>;
+  }
+
+  class Crypto {
+    private constructor();
+    readonly subtle: SubtleCrypto;
+    getRandomValues<T extends ArrayBufferView>(array: T): T;
+    randomUUID(): string;
+  }
+
+  const crypto: Crypto;
+
   class Blob {
     constructor(
       parts?: (Blob | ArrayBuffer | ArrayBufferView | string)[],
