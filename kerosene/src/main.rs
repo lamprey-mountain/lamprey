@@ -8,7 +8,7 @@ use kerosene_core::{
     config::Config,
     error::{InternalError, ServerResult},
 };
-use kerosene_rest::Routes;
+use kerosene_rest::{Routes, ratelimit};
 use tracing::info;
 
 #[tokio::main]
@@ -33,7 +33,10 @@ async fn main() -> ServerResult<()> {
     // TODO: copy crate-backend/src/serve/mod.rs
     let globals = todo!();
 
+    ratelimit::spawn_gc();
+
     let router: axum::Router = Routes::new_api()
+        .with_ratelimiting()
         .into_axum()
         // #[cfg(feature = "frontend")]
         // .layer(frontend) // or .nest? or .fallback?

@@ -27,14 +27,14 @@ serde = { workspace = true, features = ["derive"], optional = true }
 serde_json = { workspace = true, optional = true }
 serde_urlencoded = { workspace = true }
 str0m = { workspace = true, optional = true }
-strum = { version = "0.28.0", features = ["derive"] }
+strum = { workspace = true }
 thiserror = { workspace = true }
 time = { workspace = true, features = ["formatting", "macros", "parsing", "serde"] }
 unicode-properties = { workspace = true }
 unicode-segmentation = { workspace = true }
 url = { workspace = true, features = ["serde"] }
 utoipa = { workspace = true, features = ["axum_extras", "url", "uuid", "time"], optional = true }
-uuid = { workspace = true, features = ["serde", "v7"] }
+uuid = { workspace = true, features = ["serde", "v4", "v7"] }
 validator = { workspace = true, features = ["derive"], optional = true }
 
 [features]

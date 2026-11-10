@@ -150,15 +150,7 @@ impl HeadersRequest {
         }
 
         // TODO: handle x-real-ip
-
-        // get the first ip address if they are comma separated
-        let ip_addr = parts
-            .headers
-            .get("x-forwarded-for")
-            .and_then(|h| h.to_str().ok())
-            .and_then(|s| s.split(',').next())
-            .map(|s| s.trim())
-            .and_then(|s| s.parse().ok());
+        let ip_addr = client_ip(&parts.headers);
 
         Ok(Self {
             authorization: parts.headers.typed_get(),
@@ -258,4 +250,14 @@ impl From<HeadersResponse> for HeaderMap {
         }
         headers
     }
+}
+
+/// get the first client address from `X-Forwarded-For`
+pub fn client_ip(headers: &HeaderMap) -> Option<IpAddr> {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| s.split(',').next())
+        .map(|s| s.trim())
+        .and_then(|s| s.parse().ok())
 }

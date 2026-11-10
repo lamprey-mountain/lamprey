@@ -1,13 +1,13 @@
 //! api errors
 
+mod codes;
+mod http_conversions;
+
 use lamprey_macros::record;
 use thiserror::Error;
 
 use crate::util::registry::export_models;
 use crate::v1::types::{Permission, application::Scope, redex::error::RedexError};
-
-mod codes;
-mod http_conversions;
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
@@ -158,6 +158,43 @@ pub enum ErrorFieldType {
     Other,
 }
 
+#[record]
+pub struct Ratelimit {
+    /// how many seconds to wait until retrying
+    pub retry_after: f64,
+
+    /// opaque identifier for the bucket that was hit
+    pub bucket: String,
+
+    /// maximum number of requests allowed in this bucket
+    pub limit: u32,
+
+    /// number of requests remaining in this bucket
+    pub remaining: u32,
+
+    /// what this bucket is scoped to
+    pub scope: RatelimitScope,
+}
+
+/// what a ratelimit bucket is scoped to
+#[record]
+#[derive(Copy, PartialEq, Eq, strum::AsRefStr, strum::Display, strum::EnumString)]
+#[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
+pub enum RatelimitScope {
+    /// server-wide
+    Global,
+
+    /// shared between users, eg. per ip address
+    Shared,
+
+    /// per user
+    User,
+
+    /// per session
+    Session,
+}
+
 impl ErrorFieldType {
     /// construct a `ErrorFieldType::Length`
     pub fn length(min: u64, max: u64) -> Self {
@@ -166,17 +203,6 @@ impl ErrorFieldType {
             max: Some(max),
         }
     }
-}
-
-#[record]
-pub struct Ratelimit {
-    /// how many seconds to wait until retrying
-    pub retry_after: f64,
-
-    /// if this is a global ratelimit
-    ///
-    /// if false, this only affects this bucket
-    pub global: bool,
 }
 
 impl ApiError {
@@ -276,5 +302,6 @@ export_models!(
     ErrorField,
     ErrorFieldType,
     Ratelimit,
+    RatelimitScope,
     use codes,
 );

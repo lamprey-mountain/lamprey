@@ -153,6 +153,20 @@ impl Auth4 {
 
 impl Auth4 {
     pub async fn calculate(parts: &Parts, state: &ServerState) -> Result<Self> {
+        let auth = Self::calculate_inner(parts, state).await?;
+
+        let slot = kerosene_rest::ratelimit::slot(parts);
+        kerosene_rest::ratelimit::enforce_identity(
+            &slot,
+            auth.identity.user_id(),
+            auth.identity.session().map(|s| s.id),
+        )
+        .map_err(Error::from)?;
+
+        Ok(auth)
+    }
+
+    async fn calculate_inner(parts: &Parts, state: &ServerState) -> Result<Self> {
         let srv = state.services();
 
         // TEMP: make begin_audit_log work

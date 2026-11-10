@@ -84,6 +84,7 @@ pub fn create_router_api(globals: Globals) -> Router {
             state.clone(),
             routes::util::audit_log_middleware,
         ))
+        .layer(middleware::from_fn(kerosene_rest::ratelimit::middleware))
     // .layer(SetRequestIdLayer)
 }
 
@@ -140,6 +141,7 @@ pub fn create_router_media(globals: Globals) -> Router {
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
         .layer(util::cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
+        .layer(middleware::from_fn(kerosene_rest::ratelimit::middleware))
 }
 
 /// create an axum router for redex http handlers
@@ -150,6 +152,7 @@ pub fn create_router_redexes(globals: Globals) -> Router {
         // .layer(util::cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
         .layer(TraceLayer::new_for_http())
+        .layer(middleware::from_fn(kerosene_rest::ratelimit::middleware))
 }
 
 pub fn apply_default_middleware(_globals: Globals, router: Router) -> Router {

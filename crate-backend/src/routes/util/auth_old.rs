@@ -382,21 +382,24 @@ impl FromRequestParts<Arc<ServerState>> for Auth2Relaxed {
     ) -> Result<Self, Self::Rejection> {
         // try session auth
         if parts.headers.contains_key(http::header::AUTHORIZATION) {
-            let res = AuthRelaxed2::from_request_parts(parts, s).await;
-            if let Ok(relaxed) = res {
-                if let Some(user) = relaxed.user {
-                    return Ok(Auth2Relaxed {
-                        identity: Some(AuthIdentity::Session {
-                            user,
-                            real_user: relaxed.real_user,
-                            session: relaxed.session,
-                            scopes: relaxed.scopes,
-                        }),
-                        reason: relaxed.reason,
-                        audit_log_slot: relaxed.audit_log_slot,
-                        s: Arc::clone(&relaxed.s),
-                    });
+            match AuthRelaxed2::from_request_parts(parts, s).await {
+                Ok(relaxed) => {
+                    if let Some(user) = relaxed.user {
+                        return Ok(Auth2Relaxed {
+                            identity: Some(AuthIdentity::Session {
+                                user,
+                                real_user: relaxed.real_user,
+                                session: relaxed.session,
+                                scopes: relaxed.scopes,
+                            }),
+                            reason: relaxed.reason,
+                            audit_log_slot: relaxed.audit_log_slot,
+                            s: Arc::clone(&relaxed.s),
+                        });
+                    }
                 }
+                Err(err @ Error::ApiError(_)) => return Err(err),
+                Err(_) => {}
             }
         }
 
@@ -576,6 +579,10 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
                 deauthorized_at: None,
             };
 
+            let slot = kerosene_rest::ratelimit::slot(parts);
+            kerosene_rest::ratelimit::enforce_identity(&slot, Some(user.id), Some(session.id))
+                .map_err(Error::from)?;
+
             return Ok(AuthRelaxed2 {
                 user: Some(user),
                 real_user: None,
@@ -735,6 +742,14 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
         };
 
         let audit_log_slot = parts.extensions.get::<AuditLogSlot>().cloned();
+
+        let slot = kerosene_rest::ratelimit::slot(parts);
+        kerosene_rest::ratelimit::enforce_identity(
+            &slot,
+            user.as_ref().map(|u| u.id),
+            Some(session.id),
+        )
+        .map_err(Error::from)?;
 
         Ok(AuthRelaxed2 {
             user,

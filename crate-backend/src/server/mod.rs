@@ -1,3 +1,8 @@
+mod http;
+
+#[cfg(feature = "webtransport")]
+mod webtransport;
+
 use axum::Router;
 use lamprey_backend_core::config::{Config, ListenComponent};
 use tokio::task::JoinSet;
@@ -10,11 +15,6 @@ use crate::{
         serve_transport,
     },
 };
-
-mod http;
-
-#[cfg(feature = "webtransport")]
-mod webtransport;
 
 pub struct Server {
     globals: GlobalsOwned,
@@ -56,6 +56,7 @@ impl Server {
     /// start the server
     pub async fn serve(&mut self) -> Result<()> {
         info!("starting server");
+        kerosene_rest::ratelimit::spawn_gc();
 
         let globals = self.globals();
 

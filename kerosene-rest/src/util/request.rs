@@ -8,6 +8,7 @@ use crate::{
         headers::{ContentType, HeadersRequest},
         multipart::MultipartCollector,
         parse::{parse_form, parse_json, parse_msgpack},
+        ratelimit::{self, RateLimitSlot},
     },
 };
 
@@ -70,6 +71,17 @@ where
         let headers = HeadersRequest::from_parts(&parts)?;
         let identity = super::auth::calculate(&headers, globals).await?;
         let method = parts.method.clone();
+
+        let ratelimit_slot: RateLimitSlot = ratelimit::slot(&parts);
+        if let Err(err) = ratelimit::enforce_identity(
+            &ratelimit_slot,
+            identity.user_id(),
+            identity.session().map(|s| s.id),
+        ) {
+            return Err(ExtractorRejection::ServerError(ServerError::Api(Box::new(
+                err,
+            ))));
+        }
 
         let audit_logger: &AuditLoggerSlot = parts
             .extensions

@@ -1,6 +1,7 @@
 pub mod endpoints;
 mod util;
 
+pub use util::ratelimit;
 pub use util::request::Req;
 pub use util::routes::Routes;
 

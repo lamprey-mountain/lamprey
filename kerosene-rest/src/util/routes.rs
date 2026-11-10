@@ -15,7 +15,10 @@ use utoipa::{
 };
 use utoipa_axum::router::OpenApiRouter;
 
-use crate::{prelude::*, util::audit_log};
+use crate::{
+    prelude::*,
+    util::{audit_log, ratelimit},
+};
 
 pub struct Routes {
     openapi: OpenApi,
@@ -136,6 +139,16 @@ impl Routes {
                     globals,
                     audit_log::middleware,
                 )),
+        );
+        self
+    }
+
+    /// init ratelimiting. this **must** be called after `new_api()` or the router will panic.
+    pub fn with_ratelimiting(mut self) -> Self {
+        self.router = Some(
+            self.router
+                .unwrap()
+                .layer(axum::middleware::from_fn(ratelimit::middleware)),
         );
         self
     }
