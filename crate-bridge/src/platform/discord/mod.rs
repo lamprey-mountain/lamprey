@@ -313,6 +313,25 @@ impl Discord {
                     }
                 }
             }
+            DiscordEvent::MessageDeleteBulk(channel_id, message_ids) => {
+                let Some((portal_id, thread)) = self.lookup_portal(channel_id) else {
+                    return;
+                };
+                for message_id in message_ids {
+                    if let Ok(Some(msg)) = self
+                        .bridge
+                        .db
+                        .message_get_by_discord_id(portal_id, message_id)
+                        .await
+                    {
+                        self.send_portal_event(
+                            portal_id,
+                            PortalEvent::MessageDelete(msg.id),
+                            thread,
+                        );
+                    }
+                }
+            }
 
             DiscordEvent::PresenceUpdate(presence) => {
                 let _ = self
