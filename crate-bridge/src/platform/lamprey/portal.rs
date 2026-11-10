@@ -285,6 +285,7 @@ impl LampreyPortal {
                     }
                 }
 
+                let mut attachment_ids = Vec::new();
                 for att in &dm.attachments {
                     let mut import = ImportUrl::from(att.clone());
                     import.user_id = Some(puppet.id);
@@ -298,6 +299,7 @@ impl LampreyPortal {
                             // TODO: set spoiler field
                             spoiler: false,
                         });
+                        attachment_ids.push((media.id, att.id));
                     }
                 }
 
@@ -416,7 +418,7 @@ impl LampreyPortal {
                         bridge_old::Message {
                             id: crate::types::MessageId::new(),
                             source_platform: Platform::Discord,
-                            attachments: vec![], // FIXME: populate from sent_message
+                            attachments: attachment_ids,
                             portal_id: self.portal_id,
                             lamprey_message_id: Some(sent_message.id),
                             discord_message_id: Some(dm.id),
