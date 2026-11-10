@@ -6,7 +6,7 @@ use serenity::all::{
     GatewayIntents,
 };
 use tokio::sync::{mpsc, oneshot};
-use tokio::task::JoinSet;
+use tokio::task::{AbortHandle, JoinSet};
 use tracing::{debug, error, info, warn};
 
 use crate::actor::bridge::BridgeCommand;
@@ -52,6 +52,8 @@ struct Discord {
     rx: mpsc::Receiver<events::DiscordEvent>,
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
     realm_tasks: JoinSet<(RealmId, Result<()>)>,
+    portal_aborts: HashMap<PortalId, AbortHandle>,
+    realm_aborts: HashMap<RealmId, AbortHandle>,
     portal_handles: HashMap<PortalId, PortalHandle>,
     portal_lookup: HashMap<ChannelId, PortalId>,
     portal_data: HashMap<PortalId, Portal>,
@@ -94,6 +96,8 @@ impl Discord {
             rx,
             portal_tasks: JoinSet::new(),
             realm_tasks: JoinSet::new(),
+            portal_aborts: HashMap::new(),
+            realm_aborts: HashMap::new(),
             portal_handles: HashMap::new(),
             portal_lookup: HashMap::new(),
             portal_data: HashMap::new(),
@@ -115,19 +119,21 @@ impl Discord {
     fn spawn_portal_task(&mut self, portal_id: PortalId) {
         let portal = self.portal_data.get(&portal_id).unwrap().clone();
         let handle = self.portal_handles.get(&portal_id).unwrap().clone();
-        self.portal_tasks.spawn(DiscordPortal::spawn(
+        let abort = self.portal_tasks.spawn(DiscordPortal::spawn(
             portal_id,
             portal,
             handle,
             self.http.clone(),
             self.cache.clone(),
         ));
+        self.portal_aborts.insert(portal_id, abort);
     }
 
     fn spawn_realm_task(&mut self, realm_id: RealmId) {
         let realm = self.realm_data.get(&realm_id).unwrap().clone();
         let handle = self.realm_handles.get(&realm_id).unwrap().clone();
-        self.realm_tasks
+        let abort = self
+            .realm_tasks
             .spawn(crate::platform::discord::realm::DiscordRealm::spawn(
                 realm_id,
                 realm,
@@ -135,6 +141,38 @@ impl Discord {
                 self.http.clone(),
                 self.cache.clone(),
             ));
+        self.realm_aborts.insert(realm_id, abort);
+    }
+
+    /// stop and forget a portal, deleting the webhook we created for it
+    fn teardown_portal(&mut self, portal_id: PortalId) {
+        if let Some(abort) = self.portal_aborts.remove(&portal_id) {
+            abort.abort();
+        }
+        let portal = self.portal_data.remove(&portal_id);
+        self.portal_handles.remove(&portal_id);
+        self.portal_lookup.retain(|_, v| *v != portal_id);
+        self.webhook_lookup.retain(|_, v| *v != portal_id);
+
+        let Some(discord) = portal.and_then(|portal| portal.discord) else {
+            return;
+        };
+        if discord.webhook_id.is_none() {
+            return;
+        }
+
+        let http = self.http.clone();
+        let url = discord.webhook_url;
+        tokio::spawn(async move {
+            match serenity::all::Webhook::from_url(&http, url.as_str()).await {
+                Ok(webhook) => {
+                    if let Err(e) = webhook.delete(&http).await {
+                        warn!(?e, "failed to delete webhook for unlinked portal");
+                    }
+                }
+                Err(e) => warn!(?e, "failed to resolve webhook for unlinked portal"),
+            }
+        });
     }
 
     async fn start(
@@ -167,6 +205,7 @@ impl Discord {
                         }
                         Ok((portal_id, Ok(()))) => {
                             debug!(%portal_id, "discord portal task exited cleanly");
+                            self.portal_aborts.remove(&portal_id);
                             self.portal_handles.remove(&portal_id);
                             self.portal_data.remove(&portal_id);
                             self.portal_lookup.retain(|_, v| *v != portal_id);
@@ -185,6 +224,7 @@ impl Discord {
                         }
                         Ok((realm_id, Ok(()))) => {
                             debug!(%realm_id, "discord realm task exited cleanly");
+                            self.realm_aborts.remove(&realm_id);
                             self.realm_handles.remove(&realm_id);
                             self.realm_data.remove(&realm_id);
                             self.realm_lookup.retain(|_, v| *v != realm_id);
@@ -893,7 +933,27 @@ impl Discord {
             BridgeEvent::RealmInit(realm, handle) => {
                 self.realm_handles.insert(realm.id, handle.clone());
                 self.realm_data.insert(realm.id, realm.clone());
-                self.spawn_realm_task(realm.id);
+                if !self.realm_aborts.contains_key(&realm.id) {
+                    self.spawn_realm_task(realm.id);
+                }
+            }
+            BridgeEvent::RealmDeleted(id) => {
+                if let Some(abort) = self.realm_aborts.remove(id) {
+                    abort.abort();
+                }
+                self.realm_handles.remove(id);
+                self.realm_data.remove(id);
+                self.realm_lookup.retain(|_, v| v != id);
+
+                let orphans: Vec<PortalId> = self
+                    .portal_data
+                    .iter()
+                    .filter(|(_, portal)| portal.realm_id == Some(*id))
+                    .map(|(portal_id, _)| *portal_id)
+                    .collect();
+                for portal_id in orphans {
+                    self.teardown_portal(portal_id);
+                }
             }
             BridgeEvent::PortalInit(portal, handle) => {
                 self.init_portal(portal, handle);
@@ -905,9 +965,7 @@ impl Discord {
                 self.send_portal_event(*id, event.clone(), None);
             }
             BridgeEvent::PortalDeleted(id) => {
-                self.portal_lookup.retain(|_, v| v != id);
-                self.portal_handles.remove(id);
-                // TODO: make sure portal tasks exit when their PortalHandle is dropped
+                self.teardown_portal(*id);
             }
             BridgeEvent::PortalLinkResponse {
                 discord_channel_id,

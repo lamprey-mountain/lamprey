@@ -6,7 +6,7 @@ use common::v1::types::{MessageSync, MessageType, PaginationQuery};
 use futures::StreamExt;
 use sdk::syncer::SyncerEvent;
 use tokio::sync::{mpsc, oneshot};
-use tokio::task::JoinSet;
+use tokio::task::{AbortHandle, JoinSet};
 use tracing::{debug, info, trace, warn};
 
 use crate::actor::bridge::BridgeCommand;
@@ -52,6 +52,8 @@ struct Lamprey {
     client: sdk::Client,
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
     realm_tasks: JoinSet<(RealmId, Result<()>)>,
+    portal_aborts: HashMap<PortalId, AbortHandle>,
+    realm_aborts: HashMap<RealmId, AbortHandle>,
     presence_tx: mpsc::UnboundedSender<PresenceEvent>,
     portal_handles: HashMap<PortalId, PortalHandle>,
     portal_lookup: HashMap<ChannelId, PortalId>,
@@ -91,6 +93,8 @@ impl Lamprey {
             client,
             portal_tasks: JoinSet::new(),
             realm_tasks: JoinSet::new(),
+            portal_aborts: HashMap::new(),
+            realm_aborts: HashMap::new(),
             presence_tx,
             portal_handles: HashMap::new(),
             portal_lookup: HashMap::new(),
@@ -107,24 +111,35 @@ impl Lamprey {
     fn spawn_portal_task(&mut self, portal_id: PortalId, channel_id: ChannelId) {
         let portal = self.portal_data.get(&portal_id).unwrap().clone();
         let handle = self.portal_handles.get(&portal_id).unwrap().clone();
-        self.portal_tasks.spawn(LampreyPortal::spawn(
+        let abort = self.portal_tasks.spawn(LampreyPortal::spawn(
             portal_id,
             portal,
             handle,
             self.client.http(),
             channel_id,
         ));
+        self.portal_aborts.insert(portal_id, abort);
     }
 
     fn spawn_realm_task(&mut self, realm_id: RealmId) {
         let realm = self.realm_data.get(&realm_id).unwrap().clone();
         let handle = self.realm_handles.get(&realm_id).unwrap().clone();
-        self.realm_tasks.spawn(LampreyRealm::spawn(
+        let abort = self.realm_tasks.spawn(LampreyRealm::spawn(
             realm_id,
             realm,
             handle,
             self.client.http(),
         ));
+        self.realm_aborts.insert(realm_id, abort);
+    }
+
+    fn teardown_portal(&mut self, portal_id: PortalId) {
+        if let Some(abort) = self.portal_aborts.remove(&portal_id) {
+            abort.abort();
+        }
+        self.portal_handles.remove(&portal_id);
+        self.portal_data.remove(&portal_id);
+        self.portal_lookup.retain(|_, v| *v != portal_id);
     }
 
     async fn start(mut self, ready_tx: oneshot::Sender<()>) {
@@ -158,6 +173,7 @@ impl Lamprey {
                         }
                         Ok((portal_id, Ok(()))) => {
                             debug!(%portal_id, "portal task exited cleanly");
+                            self.portal_aborts.remove(&portal_id);
                             self.portal_handles.remove(&portal_id);
                             self.portal_data.remove(&portal_id);
                             self.portal_lookup.retain(|_, v| *v != portal_id);
@@ -175,6 +191,7 @@ impl Lamprey {
                         }
                         Ok((realm_id, Ok(()))) => {
                             debug!(%realm_id, "realm task exited cleanly");
+                            self.realm_aborts.remove(&realm_id);
                             self.realm_handles.remove(&realm_id);
                             self.realm_data.remove(&realm_id);
                             self.realm_lookup.retain(|_, v| *v != realm_id);
@@ -647,7 +664,30 @@ impl Lamprey {
             BridgeEvent::RealmInit(realm, handle) => {
                 self.realm_handles.insert(realm.id, handle.clone());
                 self.realm_data.insert(realm.id, realm.clone());
-                self.spawn_realm_task(realm.id);
+                if !self.realm_aborts.contains_key(&realm.id) {
+                    self.spawn_realm_task(realm.id);
+                }
+            }
+            BridgeEvent::RealmDeleted(id) => {
+                if let Some(abort) = self.realm_aborts.remove(id) {
+                    abort.abort();
+                }
+                self.realm_handles.remove(id);
+                self.realm_data.remove(id);
+                self.realm_lookup.retain(|_, v| v != id);
+
+                let orphans: Vec<PortalId> = self
+                    .portal_data
+                    .iter()
+                    .filter(|(_, portal)| portal.realm_id == Some(*id))
+                    .map(|(portal_id, _)| *portal_id)
+                    .collect();
+                for portal_id in orphans {
+                    self.teardown_portal(portal_id);
+                }
+            }
+            BridgeEvent::PortalDeleted(id) => {
+                self.teardown_portal(*id);
             }
             BridgeEvent::PortalInit(portal, handle) => {
                 self.init_portal(portal, handle);

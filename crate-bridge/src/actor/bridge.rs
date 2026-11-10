@@ -63,6 +63,12 @@ pub enum BridgeEvent {
     /// load a realm from the database
     RealmInit(bridge_old::Realm, RealmHandle),
 
+    /// a realm has been unlinked
+    ///
+    /// platforms should tear down all of its state. the sender is responsible
+    /// for removing the realm and its portals from the database.
+    RealmDeleted(RealmId),
+
     // TODO: add these
     // RealmCreated,
     // RealmEvent,
@@ -308,7 +314,26 @@ impl BridgeActor {
                 continuous,
             } => {
                 // 1. Check DB for existing link (both sides)
-                // TODO: check realm DB
+                if let Ok(realms) = self.db.realm_list().await {
+                    let existing = realms.iter().any(|realm| {
+                        realm
+                            .discord
+                            .as_ref()
+                            .is_some_and(|d| d.guild_id == discord_guild_id)
+                            || realm
+                                .lamprey
+                                .as_ref()
+                                .is_some_and(|l| l.room_id == lamprey_room_id)
+                    });
+                    if existing {
+                        let _ = self.events.send(Arc::new(BridgeEvent::RealmLinkResponse {
+                            discord_guild_id,
+                            discord_channel_id,
+                            accepted: false,
+                        }));
+                        return;
+                    }
+                }
 
                 // 2. Check self.pending_realm_links
                 if self.pending_realm_links.contains_key(&lamprey_room_id) {
@@ -356,8 +381,10 @@ impl BridgeActor {
                         };
 
                         if self.db.realm_create(realm.clone()).await.is_ok() {
-                            // TODO: broadcast RealmCreated
-                            // let _ = self.events.send(Arc::new(BridgeEvent::RealmCreated(realm)));
+                            let handle = self.bridge_handle.create_realm_handle(realm.id);
+                            let _ = self
+                                .events
+                                .send(Arc::new(BridgeEvent::RealmInit(realm, handle)));
                         }
                     }
 
@@ -370,9 +397,40 @@ impl BridgeActor {
                 }
             }
             BridgeCommand::RealmUnlink { discord_guild_id } => {
-                let _ = self.db.realm_delete_by_guild(discord_guild_id).await;
-                // TODO: broadcast RealmDeleted event
-                // TODO(?): recursively remove portals
+                let Ok(realms) = self.db.realm_list().await else {
+                    return;
+                };
+
+                let Some(realm) = realms.into_iter().find(|realm| {
+                    realm
+                        .discord
+                        .as_ref()
+                        .is_some_and(|d| d.guild_id == discord_guild_id)
+                }) else {
+                    return;
+                };
+
+                if self.db.realm_delete(realm.id).await.is_err() {
+                    return;
+                }
+
+                // portals can't outlive the realm they belong to
+                if let Ok(portals) = self.db.portal_list().await {
+                    for portal in portals
+                        .iter()
+                        .filter(|portal| portal.realm_id == Some(realm.id))
+                    {
+                        if self.db.portal_delete(portal.id).await.is_ok() {
+                            let _ = self
+                                .events
+                                .send(Arc::new(BridgeEvent::PortalDeleted(portal.id)));
+                        }
+                    }
+                }
+
+                let _ = self
+                    .events
+                    .send(Arc::new(BridgeEvent::RealmDeleted(realm.id)));
             }
         }
     }
