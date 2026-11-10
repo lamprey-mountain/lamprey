@@ -4133,8 +4133,11 @@ dependencies = [
  "ipnet",
  "lamprey-common",
  "opentelemetry",
+ "opentelemetry-appender-tracing",
  "opentelemetry-otlp",
+ "opentelemetry-prometheus",
  "opentelemetry_sdk",
+ "prometheus",
  "serde",
  "serde_json",
  "strum",
@@ -4410,6 +4413,7 @@ dependencies = [
  "once_cell",
  "opendal",
  "opentelemetry",
+ "opentelemetry-instrumentation-tower",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "p256 0.14.0",
@@ -6221,6 +6225,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "opentelemetry-appender-tracing"
+version = "0.33.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f01f1c53c46ce80e5fd8cb7a646f13766fd8f315a8a5b75b9bad59a08d2c5c7"
+dependencies = [
+ "opentelemetry",
+ "tracing",
+ "tracing-core",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "opentelemetry-http"
 version = "0.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6231,6 +6247,23 @@ dependencies = [
  "http",
  "opentelemetry",
  "reqwest 0.13.5",
+]
+
+[[package]]
+name = "opentelemetry-instrumentation-tower"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e7006f3b1853d315462a7237c81eec3d7adfa5b70975a02b19e92d045bc22d7"
+dependencies = [
+ "axum",
+ "http",
+ "http-body",
+ "opentelemetry",
+ "opentelemetry-http",
+ "opentelemetry-semantic-conventions",
+ "pin-project-lite",
+ "tower-layer",
+ "tower-service",
 ]
 
 [[package]]
@@ -6254,6 +6287,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "opentelemetry-prometheus"
+version = "0.33.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b9b52a5722eb64d198d6b6f1189e6b75a3c5ddfd224f48ede00c4330e0f11c66"
+dependencies = [
+ "once_cell",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "prometheus",
+ "tracing",
+]
+
+[[package]]
 name = "opentelemetry-proto"
 version = "0.33.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6265,6 +6311,12 @@ dependencies = [
  "tonic",
  "tonic-prost",
 ]
+
+[[package]]
+name = "opentelemetry-semantic-conventions"
+version = "0.33.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a3cf639fefd3e852869114f9925b578da6dd8e99281a2089bb0e773ead46962"
 
 [[package]]
 name = "opentelemetry_sdk"

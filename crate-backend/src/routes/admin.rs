@@ -31,6 +31,14 @@ async fn admin_whisper(
     State(s): State<Arc<ServerState>>,
     req: routes::admin::admin_whisper::Request,
 ) -> Result<impl IntoResponse> {
+    Box::pin(admin_whisper_impl(auth, s, req)).await
+}
+
+async fn admin_whisper_impl(
+    auth: Auth,
+    s: Arc<ServerState>,
+    req: routes::admin::admin_whisper::Request,
+) -> Result<impl IntoResponse> {
     auth.user.ensure_unsuspended()?;
 
     let srv = s.services();

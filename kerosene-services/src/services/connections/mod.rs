@@ -4,7 +4,10 @@ use common::v1::types::{
 };
 use dashmap::DashMap;
 use std::time::Duration;
-use std::{collections::HashMap, sync::atomic::AtomicUsize};
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 use tokio::sync::mpsc;
 use tokio_util::time::{DelayQueue, delay_queue};
 
@@ -25,6 +28,7 @@ enum ConnectionEvent {
 
 struct ConnectionExpiryActor {
     connections: Arc<DashMap<ConnectionId, ConnectionHandle>>,
+    stats: Arc<Stats>,
     queue: DelayQueue<ConnectionId>,
     keys: HashMap<ConnectionId, delay_queue::Key>,
 }
@@ -50,7 +54,9 @@ impl ConnectionExpiryActor {
                 Some(expired) = self.queue.next(), if !self.queue.is_empty() => {
                     let id = expired.into_inner();
                     self.keys.remove(&id);
-                    self.connections.remove(&id);
+                    if self.connections.remove(&id).is_some() {
+                        self.stats.connections.fetch_sub(1, Ordering::Relaxed);
+                    }
                 }
             }
         }
@@ -65,6 +71,7 @@ impl ConnectionExpiryActor {
 pub struct ServiceConnections {
     globals: Globals,
     connections: Arc<DashMap<ConnectionId, ConnectionHandle>>,
+    stats: Arc<Stats>,
     cmd_tx: mpsc::UnboundedSender<ConnectionEvent>,
     // tasks: tokio::task::JoinSet<(ConnectionId, Result<()>)>,
     // user_connection_counts: DashMap<UserId, usize>,
@@ -77,6 +84,9 @@ pub struct Stats {
     /// number of currently open connections
     pub connections: AtomicUsize,
 
+    /// total number of connections opened since startup
+    pub connections_total: AtomicUsize,
+
     /// number of currently open streams
     pub streams: AtomicUsize,
     // TODO: total number of opened connections/streams
@@ -87,10 +97,12 @@ impl ServiceConnections {
     pub fn new(globals: Globals) -> Self {
         let (cmd_tx, cmd_rx) = mpsc::unbounded_channel();
         let connections = Arc::new(DashMap::new());
+        let stats = Arc::new(Stats::default());
 
         tokio::spawn(
             ConnectionExpiryActor {
                 connections: connections.clone(),
+                stats: stats.clone(),
                 queue: DelayQueue::new(),
                 keys: HashMap::new(),
             }
@@ -100,6 +112,7 @@ impl ServiceConnections {
         Self {
             globals,
             connections,
+            stats,
             cmd_tx,
         }
     }
@@ -117,6 +130,8 @@ impl ServiceConnections {
 
         let handle = Connection::create(self.globals.clone(), (*session).clone());
         self.connections.insert(handle.id(), handle.clone());
+        self.stats.connections.fetch_add(1, Ordering::Relaxed);
+        self.stats.connections_total.fetch_add(1, Ordering::Relaxed);
 
         if let (presence, Some(user_id)) = (hello.presence, session.user_id()) {
             let user = srv.users.get(user_id, Some(user_id)).await?;
@@ -130,6 +145,11 @@ impl ServiceConnections {
         }
 
         Ok(handle)
+    }
+
+    /// get a snapshot of the connection statistics
+    pub fn stats(&self) -> Arc<Stats> {
+        self.stats.clone()
     }
 
     /// get a connection actor handle from its connection id

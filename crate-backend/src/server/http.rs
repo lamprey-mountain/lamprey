@@ -70,7 +70,6 @@ pub fn create_router_api(globals: Globals) -> Router {
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
         .layer(util::cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
-        .layer(TraceLayer::new_for_http())
         // .layer(
         //     TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {
         //         let request_id = req
@@ -120,7 +119,6 @@ pub fn create_router_metrics(globals: Globals) -> Router {
         // NOTE: what layers do i actually need here?
         .layer(util::cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
-        .layer(TraceLayer::new_for_http())
 }
 
 /// create an axum router for the media server
@@ -142,7 +140,6 @@ pub fn create_router_media(globals: Globals) -> Router {
         .layer(DefaultBodyLimit::max(1024 * 1024 * 16))
         .layer(util::cors())
         .layer(SetSensitiveHeadersLayer::new([header::AUTHORIZATION]))
-        .layer(TraceLayer::new_for_http())
 }
 
 /// create an axum router for redex http handlers
@@ -176,6 +173,7 @@ pub fn apply_default_middleware(_globals: Globals, router: Router) -> Router {
             "x-trace-id",
         )))
         .layer(CatchPanicLayer::new())
+        .layer(opentelemetry_instrumentation_tower::http::server::Layer::new())
 }
 
 async fn api_fallback() -> impl IntoResponse {

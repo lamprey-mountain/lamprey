@@ -18,8 +18,11 @@ http = { workspace = true }
 ipnet = { workspace = true, features = ["serde"] }
 lamprey = { workspace = true }
 opentelemetry = { workspace = true }
+opentelemetry-appender-tracing = { workspace = true }
 opentelemetry-otlp = { workspace = true, features = ["grpc-tonic", "logs", "metrics", "trace"] }
+opentelemetry-prometheus = { workspace = true }
 opentelemetry_sdk = { workspace = true, features = ["rt-tokio", "tokio"] }
+prometheus = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 strum = { version = "0.28.0", features = ["derive"] }

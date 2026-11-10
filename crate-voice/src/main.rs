@@ -55,16 +55,27 @@ async fn main() -> Result<()> {
 }
 
 pub fn setup_otel(config: &Config) -> Result<()> {
-    if let Some(endpoint) = &config.otel_trace_endpoint {
-        let exporter = opentelemetry_otlp::SpanExporter::builder()
-            .with_tonic()
-            .with_endpoint(endpoint)
-            .build()?;
+    if config.otel.enabled {
+        let endpoint = config
+            .otel
+            .traces
+            .as_deref()
+            .or(config.otel_trace_endpoint.as_deref());
+        let exporter = if let Some(endpoint) = endpoint {
+            opentelemetry_otlp::SpanExporter::builder()
+                .with_tonic()
+                .with_endpoint(endpoint)
+                .build()?
+        } else {
+            opentelemetry_otlp::SpanExporter::builder()
+                .with_tonic()
+                .build()?
+        };
         let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
             .with_batch_exporter(exporter)
             .build();
         use opentelemetry::trace::TracerProvider;
-        let tracer = provider.tracer("lamprey-api");
+        let tracer = provider.tracer("lamprey-voice");
         opentelemetry::global::set_tracer_provider(provider);
         let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
         let subscriber = Registry::default()

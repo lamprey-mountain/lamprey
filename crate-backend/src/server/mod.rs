@@ -27,6 +27,11 @@ impl Server {
     /// setup a server
     pub async fn init_from_config(config: Config) -> Result<Self> {
         let globals = Globals::init_from_config(config).await?;
+        let handle = globals.handle();
+        crate::metrics::register_process_metrics();
+        crate::metrics::register_db_pool_metrics(handle.temp_database_compat().pool.clone());
+        crate::metrics::register_connection_metrics(handle.services().connections.stats());
+        crate::metrics::register_instance_metrics(handle.clone());
         Self::new(globals)
     }
 

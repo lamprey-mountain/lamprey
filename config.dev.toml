@@ -27,3 +27,7 @@ from = "noreply@localhost"
 [media]
 max_size = 104857600 # 100MB
 thumb_sizes = [64, 320, 640]
+
+[otel]
+# endpoints default to OTEL_EXPORTER_OTLP_{LOGS,TRACES,METRICS}_ENDPOINT
+enabled = false

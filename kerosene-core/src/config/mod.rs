@@ -51,6 +51,11 @@ pub struct Config {
 
     pub oauth_provider: HashMap<String, ConfigOauthProvider>,
 
+    #[serde(default)]
+    pub otel: ConfigOtel,
+
+    /// deprecated: use `otel.traces`
+    #[serde(default)]
     pub otel_trace_endpoint: Option<String>,
 
     // TODO: make optional
@@ -222,6 +227,60 @@ impl ConfigOauthProviderKind {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ConfigUrlPreview {
     // does this need anything?
+}
+
+/// open telemetry export configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfigOtel {
+    /// whether to export telemetry
+    ///
+    /// when enabled, endpoints not set in the config fall back to the standard
+    /// `OTEL_EXPORTER_OTLP_*_ENDPOINT` environment variables. if no endpoint is
+    /// set at all, the exporter's default endpoint is used.
+    #[serde(default)]
+    pub enabled: bool,
+
+    /// otlp endpoint for logs
+    #[serde(default = "default_otel_logs_endpoint")]
+    pub logs: Option<String>,
+
+    /// otlp endpoint for traces
+    #[serde(default = "default_otel_traces_endpoint")]
+    pub traces: Option<String>,
+
+    /// otlp endpoint for metrics
+    #[serde(default = "default_otel_metrics_endpoint")]
+    pub metrics: Option<String>,
+}
+
+impl Default for ConfigOtel {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            logs: default_otel_logs_endpoint(),
+            traces: default_otel_traces_endpoint(),
+            metrics: default_otel_metrics_endpoint(),
+        }
+    }
+}
+
+fn default_otel_logs_endpoint() -> Option<String> {
+    otel_endpoint_from_env("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT")
+}
+
+fn default_otel_traces_endpoint() -> Option<String> {
+    otel_endpoint_from_env("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT")
+}
+
+fn default_otel_metrics_endpoint() -> Option<String> {
+    otel_endpoint_from_env("OTEL_EXPORTER_OTLP_METRICS_ENDPOINT")
+}
+
+fn otel_endpoint_from_env(specific: &str) -> Option<String> {
+    std::env::var(specific)
+        .ok()
+        .or_else(|| std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT").ok())
+        .filter(|endpoint| !endpoint.is_empty())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
