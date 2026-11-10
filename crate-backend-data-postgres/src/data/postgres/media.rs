@@ -58,7 +58,13 @@ impl DbMediaWithId {
     pub fn parse(self) -> MediaV2 {
         let mut data = self.data;
         if let serde_json::Value::Object(map) = &mut data {
+            // these columns are authoritative, and older rows may not have them in `data`
+            map.insert("id".to_string(), serde_json::json!(self.id));
             map.insert("user_id".to_string(), serde_json::json!(self.user_id));
+            map.insert(
+                "version_id".to_string(),
+                serde_json::json!(self.version_id),
+            );
         }
 
         let media: DbMediaData = match serde_json::from_value(data) {
@@ -74,6 +80,7 @@ impl DbMediaWithId {
         };
 
         let mut media: MediaV2 = media.into();
+        media.id = self.id.into();
         media.deleted_at = self.deleted_at.map(Into::into);
         media.version_id = self.version_id.into();
 
