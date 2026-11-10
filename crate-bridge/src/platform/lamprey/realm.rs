@@ -58,6 +58,18 @@ impl LampreyRealm {
                             channel: chan,
                             webhook,
                         } => {
+                            // the same channel can be replayed on reconnect
+                            if self
+                                .handle
+                                .bridge
+                                .db
+                                .portal_get_by_discord_channel(chan.id.to_string())
+                                .await?
+                                .is_some()
+                            {
+                                continue;
+                            }
+
                             let create = ChannelCreate {
                                 name: Some(chan.name.clone()),
                                 description: chan.topic.clone(),

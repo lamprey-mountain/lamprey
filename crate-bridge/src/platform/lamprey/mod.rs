@@ -210,6 +210,51 @@ impl Lamprey {
         match event {
             SyncerEvent::Message(_) => {}
             SyncerEvent::Sync(sync) => match &**sync {
+                // everything we can currently see, sent on connect. use it to
+                // bridge channels/threads that existed before we connected
+                MessageSync::Ambient {
+                    channels, threads, ..
+                } => {
+                    for channel in channels.iter().chain(threads.iter()) {
+                        if let Some(portal_id) = self.portal_lookup.get(&channel.id).copied() {
+                            self.send_portal_event(portal_id, PortalEvent::Backfill, None);
+                            continue;
+                        }
+
+                        // threads hang off of their parent channel's portal
+                        if let Some(parent_id) = channel.parent_id {
+                            if self.portal_lookup.contains_key(&parent_id) {
+                                self.route_portal_event(
+                                    &parent_id,
+                                    PortalEvent::ThreadCreate(ChannelData::Lamprey {
+                                        channel: Box::new(channel.clone()),
+                                    }),
+                                );
+                                continue;
+                            }
+                        }
+
+                        let Some(room_id) = channel.room_id else {
+                            continue;
+                        };
+
+                        let Some(realm_id) = self.realm_data.iter().find_map(|(id, realm)| {
+                            let r_lamprey = realm.lamprey.as_ref()?;
+                            (r_lamprey.room_id == room_id && realm.continuous).then_some(*id)
+                        }) else {
+                            continue;
+                        };
+
+                        if let Some(handle) = self.realm_handles.get(&realm_id) {
+                            let _ = handle.events.send(Arc::new(RealmEvent::ChannelCreate(
+                                ChannelData::Lamprey {
+                                    channel: Box::new(channel.clone()),
+                                },
+                            )));
+                        }
+                    }
+                }
+
                 // events relevant to realms
                 // MessageSync::RoomUpdate { room } => todo!(),
                 MessageSync::ChannelCreate { channel } => {

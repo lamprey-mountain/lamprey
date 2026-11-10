@@ -79,7 +79,16 @@ impl DiscordPortal {
     async fn backfill(&self) -> Result<()> {
         // TODO: non-blocking backfill (see LampreyPortal comment)
         let discord_cfg = self.portal.discord.as_ref().unwrap();
-        let mut last_id = discord_cfg.last_id;
+        // prefer the persisted cursor so we catch up after a reconnect
+        let mut last_id = self
+            .handle
+            .bridge
+            .db
+            .portal_get_by_discord_channel(discord_cfg.channel_id.to_string())
+            .await?
+            .and_then(|portal| portal.discord)
+            .map(|discord| discord.last_id)
+            .unwrap_or(discord_cfg.last_id);
 
         debug!(last_id=%last_id, "start backfill");
 
@@ -160,6 +169,9 @@ impl DiscordPortal {
         thread: Option<ThreadId>,
     ) -> Result<()> {
         match event {
+            PortalEvent::Backfill => {
+                self.backfill().await?;
+            }
             PortalEvent::Typing(_) => {
                 // discord doesn't have any good way of bridging typing notifications
                 // NOTE: maybe i could send typing notifs through the bridge bot if anyone is typing on lamprey?

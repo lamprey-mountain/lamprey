@@ -97,7 +97,16 @@ impl LampreyPortal {
     async fn backfill(&self, ly: &LampreyClient) -> Result<()> {
         // TODO: backfill should be a task that doesn't block the portal
         // HOWEVER, the portal should bridge messages until backfilling is done
-        let mut last_id = self.portal.lamprey.as_ref().expect("handle None").last_id;
+        // prefer the persisted cursor so we catch up after a reconnect
+        let mut last_id = self
+            .handle
+            .bridge
+            .db
+            .portal_get_by_lamprey_channel(self.channel_id.to_string())
+            .await?
+            .and_then(|portal| portal.lamprey)
+            .map(|lamprey| lamprey.last_id)
+            .unwrap_or_else(|| self.portal.lamprey.as_ref().expect("handle None").last_id);
 
         debug!(last_id=%last_id, "start backfill");
 
@@ -178,6 +187,9 @@ impl LampreyPortal {
             .unwrap_or(self.channel_id);
 
         match event {
+            PortalEvent::Backfill => {
+                self.backfill(ly).await?;
+            }
             PortalEvent::Typing(user) => {
                 ly.http
                     .for_puppet(user.lamprey_id)?

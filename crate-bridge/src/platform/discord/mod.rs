@@ -422,7 +422,8 @@ impl Discord {
                 } => {
                     // TODO: better error handling
                     // TODO: better task supervision
-                    // TODO: handle backfill: true
+                    // NOTE: portals always backfill from their last known message, so
+                    // the `backfill` option doesn't need any extra handling
                     let http = self.http.clone();
                     let bridge = self.bridge.clone();
 
@@ -734,7 +735,9 @@ impl Discord {
         });
 
         for channel in guild.channels.values().chain(guild.threads.iter()) {
-            if self.portal_lookup.contains_key(&channel.id) {
+            // catch up on anything that was bridged while we were disconnected
+            if let Some(portal_id) = self.portal_lookup.get(&channel.id).copied() {
+                self.send_portal_event(portal_id, PortalEvent::Backfill, None);
                 continue;
             }
 

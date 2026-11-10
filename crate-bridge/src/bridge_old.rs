@@ -108,6 +108,12 @@ pub enum PortalEvent {
     ReactionDeleteAll(MessageId),
 
     Typing(User),
+
+    /// re-run the backfill using the persisted last message id
+    ///
+    /// sent when a platform reconnects, so messages received while the bridge was
+    /// offline are not lost
+    Backfill,
 }
 
 #[derive(Debug, Clone)]

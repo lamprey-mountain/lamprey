@@ -57,6 +57,18 @@ impl DiscordRealm {
                     match chan {
                         ChannelData::Discord { .. } => continue,
                         ChannelData::Lamprey { channel } => {
+                            // the same channel can be replayed on reconnect
+                            if self
+                                .handle
+                                .bridge
+                                .db
+                                .portal_get_by_lamprey_channel(channel.id.to_string())
+                                .await?
+                                .is_some()
+                            {
+                                continue;
+                            }
+
                             let guild_id = self.realm.discord.as_ref().unwrap().guild_id;
                             let http = self.http.clone();
                             let bridge = self.handle.bridge.clone();
