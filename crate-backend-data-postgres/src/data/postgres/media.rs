@@ -71,17 +71,20 @@ impl DbMediaWithId {
             Ok(m) => m,
             Err(err) => {
                 tracing::error!("parsing failed: {err}");
-                return MediaV2::errored(
+                let mut media = MediaV2::errored(
                     self.id.into(),
                     self.version_id.into(),
                     MediaErrorReason::Corrupted,
                 );
+                media.user_id = Some(self.user_id.into());
+                return media;
             }
         };
 
         let mut media: MediaV2 = media.into();
         media.id = self.id.into();
         media.deleted_at = self.deleted_at.map(Into::into);
+        media.user_id = Some(self.user_id.into());
         media.version_id = self.version_id.into();
 
         if let (Some(origin_id), Some(hostname)) = (self.remote_origin_id, self.remote_hostname) {
