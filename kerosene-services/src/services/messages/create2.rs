@@ -385,6 +385,18 @@ impl ServiceMessages {
         }
     }
 
+    #[tracing::instrument(
+        name = "messages.create.v2",
+        skip_all,
+        fields(
+            channel_id = %create.channel_id,
+            user_id = %create.user_id,
+            message_id = %create.id,
+            session_id = ?create.session_id,
+            nonce = ?create.nonce,
+        ),
+        err,
+    )]
     async fn create2(&self, create: Create) -> Result<Message> {
         if let (Some(session_id), Some(nonce)) = (create.session_id, create.nonce.clone()) {
             self.idempotency_keys
@@ -774,6 +786,17 @@ impl ServiceMessages {
         todo!()
     }
 
+    #[tracing::instrument(
+        name = "messages.edit.v2",
+        skip_all,
+        fields(
+            channel_id = %edit.channel_id,
+            user_id = %edit.user_id,
+            message_id = %edit.id,
+            session_id = ?edit.session_id,
+        ),
+        err,
+    )]
     async fn edit2_inner(&self, edit: Edit) -> Result<Message> {
         let srv = self.globals.services();
         let (channel, user, message) = futures::try_join!(

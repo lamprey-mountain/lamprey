@@ -16,7 +16,7 @@ use kerosene_sync::transport::{
 };
 use tokio::{spawn, sync::Mutex, task::JoinSet};
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, info};
+use tracing::{Instrument, debug, info};
 use wtransport::{
     Connection, Endpoint, RecvStream, SendStream, ServerConfig, endpoint::IncomingSession,
 };
@@ -94,7 +94,11 @@ impl WtServer {
     }
 }
 
-#[tracing::instrument(skip(globals, incoming))]
+#[tracing::instrument(
+    name = "sync.webtransport.session",
+    skip_all,
+    fields(sync.version = tracing::field::Empty),
+)]
 async fn handle_session(globals: Globals, incoming: IncomingSession) {
     debug!("accepted session");
     if let Err(err) = handle_session_inner(globals, incoming).await {
@@ -112,6 +116,7 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
     }
 
     let params: SyncParams = serde_urlencoded::from_str(uri.query().unwrap_or_default()).unwrap();
+    tracing::Span::current().record("sync.version", tracing::field::debug(&params.version));
     let connection = req.accept().await.unwrap();
 
     match params.version {
@@ -126,7 +131,8 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
                 tokio::select! {
                     Ok((send, recv)) = connection.accept_bi() => {
                         let state = state.clone();
-                        spawn(handle_stream(send, recv, state));
+                        let span = tracing::Span::current();
+                        spawn(async move { handle_stream(send, recv, state).await }.instrument(span));
                     }
                     reason = connection.closed() => {
                         // TODO: handle reason correctly, return Ok or Err depending on it
@@ -140,6 +146,11 @@ async fn handle_session_inner(globals: Globals, incoming: IncomingSession) -> Re
     }
 }
 
+#[tracing::instrument(
+    name = "sync.webtransport.stream",
+    skip_all,
+    fields(sync.version = ?state.params.version),
+)]
 async fn handle_stream(send: SendStream, recv: RecvStream, state: WtState) {
     if let Err(err) = handle_stream_inner(send, recv, state).await {
         debug!("error while handling stream: {err}");

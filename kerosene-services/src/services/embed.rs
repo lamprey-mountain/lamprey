@@ -110,6 +110,7 @@ impl ServiceEmbed {
         self.cache.invalidate_all();
     }
 
+    #[tracing::instrument(name = "embed.worker", skip_all, err)]
     async fn worker(state: &Globals) -> Result<()> {
         let mut txn = state.begin().await?;
         let Some(job) = txn.url_embed_queue_claim().await? else {
@@ -162,6 +163,16 @@ impl ServiceEmbed {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "embed.queue",
+        skip_all,
+        fields(
+            url.host = url.host_str().unwrap_or(""),
+            url.path = url.path(),
+            user_id = ?user_id,
+        ),
+        err,
+    )]
     pub async fn queue(
         &self,
         message_ref: Option<MessageRef>,
@@ -193,6 +204,12 @@ impl ServiceEmbed {
     }
 
     /// Unfurl a single URL without logging
+    #[tracing::instrument(
+        name = "embed.unfurl",
+        skip_all,
+        fields(url.host = url.host_str().unwrap_or(""), url.path = url.path()),
+        err,
+    )]
     pub async fn unfurl(
         &self,
         url: &Url,
@@ -204,6 +221,12 @@ impl ServiceEmbed {
     }
 
     /// Unfurl a single URL and return logs
+    #[tracing::instrument(
+        name = "embed.unfurl.with_logs",
+        skip_all,
+        fields(url.host = url.host_str().unwrap_or(""), url.path = url.path()),
+        err,
+    )]
     pub async fn unfurl_with_logs(
         &self,
         url: &Url,
@@ -225,7 +248,16 @@ impl ServiceEmbed {
         Ok((generations, layer.take_entries()))
     }
 
-    #[tracing::instrument(level = "info", skip(self))]
+    #[tracing::instrument(
+        name = "embed.generate",
+        skip_all,
+        fields(
+            user_id = %user_id,
+            url.host = url.host_str().unwrap_or(""),
+            url.path = url.path(),
+        ),
+        err,
+    )]
     pub(crate) async fn generate_inner(&self, user_id: UserId, url: Url) -> Result<Embed> {
         // Use unfurler to generate embed
         let mut generations = self.unfurl(&url).await?;

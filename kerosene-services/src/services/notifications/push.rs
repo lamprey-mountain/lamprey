@@ -74,6 +74,12 @@ impl ServiceNotifications {
     ///
     /// pushes the notification to all sessions in parallel
     // NOTE: i may want to make this internal/private?
+    #[tracing::instrument(
+        name = "notifications.push",
+        skip_all,
+        fields(user_id = %user_id),
+        err,
+    )]
     pub async fn push(&self, user_id: UserId, mut payload: NotificationBytes) -> Result<()> {
         let mut data = self.globals.begin_read().await?;
         let subscriptions = data.push_list_for_user(user_id).await?;
@@ -93,6 +99,12 @@ impl ServiceNotifications {
     }
 
     /// send a notification to a session via web push api
+    #[tracing::instrument(
+        name = "notifications.push.inner",
+        skip_all,
+        fields(push.user_id = %sub.user_id, push.session_id = %sub.session_id),
+        err,
+    )]
     async fn push_inner(state: Globals, sub: PushData, payload: Bytes) -> Result<()> {
         let vapid_keys = state.services().notifications.get_vapid_keys().await?;
 

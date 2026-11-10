@@ -194,7 +194,7 @@ impl Connection {
             async move {
                 me.spawn().await;
             }
-            .instrument(tracing::debug_span!("connection", id = %id)),
+            .instrument(tracing::debug_span!("sync.connection", id = %id)),
         );
 
         handle
@@ -437,6 +437,13 @@ impl Connection {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "sync.command",
+        level = "debug",
+        skip_all,
+        fields(connection.id = %self.id),
+        err,
+    )]
     async fn handle_command(&mut self, command: Command) -> Result<()> {
         match command {
             Command::Attach {
@@ -689,6 +696,13 @@ impl Connection {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "sync.client_message",
+        level = "debug",
+        skip_all,
+        fields(connection.id = %self.id),
+        err,
+    )]
     async fn handle_message_client_inner(&mut self, msg: MessageClient) -> Result<()> {
         let (_send, timeout) = {
             let t = self
@@ -934,7 +948,13 @@ impl Connection {
         Ok(())
     }
 
-    #[tracing::instrument(level = "debug", skip(self), fields(id = %self.id))]
+    #[tracing::instrument(
+        name = "sync.queue_message",
+        level = "debug",
+        skip_all,
+        fields(connection.id = %self.id, nonce = ?nonce),
+        err,
+    )]
     pub async fn queue_message(
         &mut self,
         msg: Box<MessageSync>,

@@ -10,6 +10,12 @@ use url::Url;
 // TODO: deduplicate code (eg. for signing, for http requests)
 impl ServiceFederation {
     /// ping a remote server
+    #[tracing::instrument(
+        name = "federation.net.ping",
+        skip_all,
+        fields(hostname = %hostname.0),
+        err,
+    )]
     pub async fn ping(&self, hostname: Hostname) -> Result<bool> {
         let info = self.fetch_server_info(&hostname).await?;
         let ping_url = info
@@ -54,6 +60,12 @@ impl ServiceFederation {
     }
 
     /// connect to a remote server to start syncing
+    #[tracing::instrument(
+        name = "federation.net.connect",
+        skip_all,
+        fields(hostname = %hostname.0),
+        err,
+    )]
     pub async fn connect(&self, hostname: Hostname) -> Result<()> {
         let info = self.fetch_server_info(&hostname).await?;
         let connect_url = info
@@ -97,6 +109,12 @@ impl ServiceFederation {
     }
 
     /// lookup the server info for this hostname
+    #[tracing::instrument(
+        name = "federation.net.server_info",
+        skip_all,
+        fields(hostname = %hostname.0),
+        err,
+    )]
     pub async fn fetch_server_info(&self, hostname: &Hostname) -> Result<ServerInfo> {
         if let Some(info) = self.cache.get(hostname).await {
             return Ok(info);
@@ -173,6 +191,12 @@ impl ServiceFederation {
     }
 
     /// fetch the signing keys for this hostname
+    #[tracing::instrument(
+        name = "federation.net.keys",
+        skip_all,
+        fields(hostname = %hostname.0),
+        err,
+    )]
     pub async fn fetch_keys(&self, hostname: &Hostname) -> Result<Vec<ValidatedKey>> {
         let info = self.fetch_server_info(hostname).await?;
         Ok(info.keys)

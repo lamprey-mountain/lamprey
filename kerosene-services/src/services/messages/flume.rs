@@ -62,6 +62,12 @@ impl ServiceMessages {
     // TODO: handle nonce
     // TODO: handle header_timestamp
     // TODO: allow webhooks to use flumes?
+    #[tracing::instrument(
+        name = "messages.flume.create",
+        skip_all,
+        fields(channel_id = %channel_id, nonce = ?_nonce),
+        err,
+    )]
     pub async fn flume_create<A: Auth5>(
         &self,
         channel_id: ChannelId,
@@ -185,6 +191,12 @@ impl ServiceMessages {
     }
 
     /// apply an update to the flume
+    #[tracing::instrument(
+        name = "messages.flume.update",
+        skip_all,
+        fields(channel_id = %channel_id, message_id = %message_id),
+        err,
+    )]
     pub async fn flume_update(
         &self,
         channel_id: ChannelId,
@@ -286,6 +298,12 @@ impl ServiceMessages {
     }
 
     /// keep the flume alive
+    #[tracing::instrument(
+        name = "messages.flume.ping",
+        skip_all,
+        fields(channel_id = %channel_id, message_id = %message_id),
+        err,
+    )]
     pub async fn flume_ping(
         &self,
         channel_id: ChannelId,
@@ -310,6 +328,12 @@ impl ServiceMessages {
     /// commit the flume
     ///
     /// creates a new message version with everything written so far and no longer allows live updating.
+    #[tracing::instrument(
+        name = "messages.flume.commit",
+        skip_all,
+        fields(channel_id = %channel_id, message_id = %message_id),
+        err,
+    )]
     pub async fn flume_commit(
         &self,
         channel_id: ChannelId,
@@ -329,6 +353,13 @@ impl ServiceMessages {
     }
 
     /// internal commit logic shared by flume_commit and the expiration handler
+    #[tracing::instrument(
+        name = "messages.flume.commit.inner",
+        level = "debug",
+        skip_all,
+        fields(channel_id = %channel_id, message_id = %message_id, flume.state = ?new_state),
+        err,
+    )]
     async fn flume_commit_inner(
         &self,
         channel_id: ChannelId,
@@ -402,6 +433,13 @@ impl ServiceMessages {
     }
 
     /// attempt to lookup a flume, validating and returning errors if needed
+    #[tracing::instrument(
+        name = "messages.flume.lookup",
+        level = "debug",
+        skip_all,
+        fields(channel_id = %channel_id, message_id = %message_id),
+        err,
+    )]
     async fn flume_lookup(
         &self,
         channel_id: ChannelId,

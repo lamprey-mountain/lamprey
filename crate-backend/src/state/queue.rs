@@ -117,8 +117,15 @@ impl JetstreamQueue {
     }
 
     /// publish a message to a jetstream stream
+    #[tracing::instrument(
+        name = "queue.publish",
+        skip_all,
+        fields(queue.subject = %subject, queue.item_id = tracing::field::Empty),
+        err,
+    )]
     async fn publish(&self, subject: &str, payload: impl Serialize) -> Result<Uuid> {
         let id = Uuid::new_v4();
+        tracing::Span::current().record("queue.item_id", tracing::field::display(&id));
         let envelope = QueueEnvelope {
             id,
             payload,
@@ -242,6 +249,12 @@ impl UrlEmbedConsumer {
         Ok(Self { consumer })
     }
 
+    #[tracing::instrument(
+        name = "queue.consume",
+        skip_all,
+        fields(queue.kind = "url_embed", queue.item_id = tracing::field::Empty),
+        err,
+    )]
     pub async fn next(&self) -> Result<Option<(Uuid, UrlEmbedQueueItem)>> {
         use futures_util::StreamExt;
 
@@ -259,6 +272,8 @@ impl UrlEmbedConsumer {
 
             match serde_json::from_slice::<QueueEnvelope<UrlEmbedQueueItem>>(&message.payload) {
                 Ok(envelope) => {
+                    tracing::Span::current()
+                        .record("queue.item_id", tracing::field::display(&envelope.id));
                     // acknowledge the message
                     message.ack().await.map_err(|e| {
                         crate::Error::NatsJetstream(format!("NATS ack failed: {}", e))
@@ -311,6 +326,12 @@ impl EmailConsumer {
         Ok(Self { consumer })
     }
 
+    #[tracing::instrument(
+        name = "queue.consume",
+        skip_all,
+        fields(queue.kind = "email", queue.item_id = tracing::field::Empty),
+        err,
+    )]
     pub async fn next(&self) -> Result<Option<(Uuid, EmailQueueItem)>> {
         use futures_util::StreamExt;
 
@@ -328,6 +349,8 @@ impl EmailConsumer {
 
             match serde_json::from_slice::<QueueEnvelope<EmailQueueItem>>(&message.payload) {
                 Ok(envelope) => {
+                    tracing::Span::current()
+                        .record("queue.item_id", tracing::field::display(&envelope.id));
                     message.ack().await.map_err(|e| {
                         crate::Error::NatsJetstream(format!("NATS ack failed: {}", e))
                     })?;
@@ -349,6 +372,7 @@ impl EmailConsumer {
 
 // Example of how to use the queue in background workers
 #[allow(dead_code)]
+#[tracing::instrument(name = "queue.worker.url_embed", skip_all)]
 async fn example_url_embed_worker(js: JetstreamQueue) {
     let consumer = UrlEmbedConsumer::new(&js).await.unwrap();
 
@@ -361,6 +385,7 @@ async fn example_url_embed_worker(js: JetstreamQueue) {
 }
 
 #[allow(dead_code)]
+#[tracing::instrument(name = "queue.worker.email", skip_all)]
 async fn example_email_worker(js: JetstreamQueue) {
     let consumer = EmailConsumer::new(&js).await.unwrap();
 

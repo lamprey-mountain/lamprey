@@ -63,6 +63,17 @@ impl StateInner {
     }
 }
 
+#[tracing::instrument(
+    name = "sync.webtransport.v2.session",
+    skip_all,
+    fields(
+        sync.version = ?params.version,
+        sync.compression = ?params.compression,
+        sync.encoding = ?params.format,
+        connection_id = tracing::field::Empty,
+    ),
+    err,
+)]
 pub async fn accept(globals: Globals, connection: Connection, params: SyncParams) -> Result<()> {
     let (session_tx, _) = watch::channel(None);
     let state = Arc::new(StateInner {
@@ -75,6 +86,8 @@ pub async fn accept(globals: Globals, connection: Connection, params: SyncParams
         },
         session: session_tx,
     });
+
+    tracing::Span::current().record("connection_id", tracing::field::display(&state.id));
 
     let mut transport = WebtransportTransport::new(connection);
     let mut stream_tasks = JoinSet::new();
@@ -103,11 +116,12 @@ pub async fn accept(globals: Globals, connection: Connection, params: SyncParams
                 };
 
                 let state = state.clone();
+                let span = tracing::Span::current();
                 stream_tasks.spawn(async move {
                     if let Err(err) = handle_stream(s, state).await {
                         debug!("error while handling stream: {err}");
                     }
-                });
+                }.instrument(span));
             }
         }
     }
@@ -115,11 +129,15 @@ pub async fn accept(globals: Globals, connection: Connection, params: SyncParams
     // handle streams
     while let Some(s) = transport.next().await {
         let state = state.clone();
-        stream_tasks.spawn(async move {
-            if let Err(err) = handle_stream(s, state).await {
-                debug!("error while handling stream: {err}");
+        let span = tracing::Span::current();
+        stream_tasks.spawn(
+            async move {
+                if let Err(err) = handle_stream(s, state).await {
+                    debug!("error while handling stream: {err}");
+                }
             }
-        });
+            .instrument(span),
+        );
     }
 
     // TODO: somehow get connection closed reason here?
@@ -135,6 +153,16 @@ pub async fn accept(globals: Globals, connection: Connection, params: SyncParams
     Ok(())
 }
 
+#[tracing::instrument(
+    name = "sync.webtransport.v2.stream",
+    skip_all,
+    fields(
+        sync.version = ?state.params.version,
+        connection_id = %state.id,
+        stream.header = tracing::field::Empty,
+    ),
+    err,
+)]
 async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Result<()> {
     let srv = state.globals.services();
 
@@ -143,6 +171,7 @@ async fn handle_stream<S: TransportStream>(mut stream: S, state: State) -> Resul
         // TODO: better error types? (eg. dedicated sync error type)
         |_| ApiError::with_message(ErrorCode::InvalidData, "unknown header byte".to_string()),
     )?;
+    tracing::Span::current().record("stream.header", tracing::field::debug(header));
 
     match header {
         StreamHeader::Hello => {

@@ -158,7 +158,11 @@ impl ServiceMedia {
     }
 
     /// import media from this url
-    #[instrument(skip(self, import, url), fields(url = %url))]
+    #[instrument(
+        name = "media.import.url",
+        skip_all,
+        fields(url.host = url.host_str().unwrap_or(""), url.path = url.path()),
+    )]
     pub async fn import_from_url(&self, import: Import, url: &Url) -> Result<MediaItem> {
         let server_max_size = self.state.config().media.max_size;
         let max_size = import.max_size;

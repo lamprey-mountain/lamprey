@@ -155,6 +155,13 @@ impl ServiceChannels {
         Ok(())
     }
 
+    #[tracing::instrument(
+        name = "channels.get",
+        level = "debug",
+        skip_all,
+        fields(channel_id = %channel_id, user_id = ?user_id),
+        err,
+    )]
     pub async fn get(&self, channel_id: ChannelId, user_id: Option<UserId>) -> Result<Channel> {
         let mut thread = self
             .cache
@@ -194,6 +201,13 @@ impl ServiceChannels {
         Ok(thread)
     }
 
+    #[tracing::instrument(
+        name = "channels.get_many",
+        level = "debug",
+        skip_all,
+        fields(channel_count = channel_ids.len(), user_id = ?user_id),
+        err,
+    )]
     pub async fn get_many(
         &self,
         channel_ids: &[ChannelId],
@@ -290,6 +304,16 @@ impl ServiceChannels {
     }
 
     // FIXME: does this need to be pinboxed?
+    #[tracing::instrument(
+        name = "channels.create",
+        skip_all,
+        fields(
+            room_id = ?room_id,
+            channel_type = ?json.ty,
+            nonce = ?nonce,
+        ),
+        err,
+    )]
     pub async fn create<A: Auth5>(
         &self,
         auth: &mut A,
@@ -764,6 +788,16 @@ impl ServiceChannels {
         Ok(channel)
     }
 
+    #[tracing::instrument(
+        name = "channels.thread.create",
+        skip_all,
+        fields(
+            parent_channel_id = %parent_channel_id,
+            source_message_id = %source_message_id,
+            channel_type = ?json.ty,
+        ),
+        err,
+    )]
     pub async fn create_thread_from_message<A: Auth5>(
         &self,
         auth: &mut A,
@@ -920,6 +954,12 @@ impl ServiceChannels {
         Ok(channel)
     }
 
+    #[tracing::instrument(
+        name = "channels.update",
+        skip_all,
+        fields(thread_id = %thread_id),
+        err,
+    )]
     pub async fn update<A: Auth5>(
         &self,
         auth: &mut A,

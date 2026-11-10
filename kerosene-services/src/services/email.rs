@@ -43,6 +43,12 @@ impl ServiceEmail {
         }
     }
 
+    #[tracing::instrument(
+        name = "email.send",
+        skip_all,
+        fields(email.subject = %subject),
+        err,
+    )]
     pub async fn send(
         &self,
         to: EmailAddr,
@@ -64,6 +70,7 @@ impl ServiceEmail {
         Ok(())
     }
 
+    #[tracing::instrument(name = "email.worker", skip_all)]
     async fn worker(state: Globals) {
         loop {
             let srv = state.services();
@@ -81,11 +88,18 @@ impl ServiceEmail {
         }
     }
 
+    #[tracing::instrument(
+        name = "email.process",
+        skip_all,
+        fields(email.id = tracing::field::Empty),
+        err,
+    )]
     async fn process_email_queue_item(&self) -> Result<bool> {
         let mut data = self.state.begin().await?;
         let email_item = data.email_queue_claim().await?;
 
         if let Some(item) = email_item {
+            tracing::Span::current().record("email.id", tracing::field::display(&item.id));
             info!("Claimed email with ID: {}", item.id);
             let body = MultiPart::alternative_plain_html(
                 item.plain_text_body.clone(),

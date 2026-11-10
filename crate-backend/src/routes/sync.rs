@@ -33,7 +33,15 @@ async fn sync(
 }
 
 // TODO: move to kerosene-services or kerosene-sync
-#[tracing::instrument(skip(s, ws))]
+#[tracing::instrument(
+    name = "sync.websocket",
+    skip_all,
+    fields(
+        sync.version = ?params.version,
+        sync.resume = tracing::field::Empty,
+        connection_id = tracing::field::Empty,
+    ),
+)]
 async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
     // PERF: requiring boxing is probably fine but technically slower than it could be
     let (mut send, mut recv) = Box::new(WebsocketTransport::new(ws, params)).split();
@@ -57,6 +65,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
             } else {
                 0
             };
+            tracing::Span::current().record("sync.resume", resume.is_some());
 
             let handle = if let Some(resume) = &resume {
                 match srv.connections.get(resume.conn) {
@@ -98,6 +107,7 @@ async fn worker(s: Arc<ServerState>, params: SyncParams, ws: WebSocket) {
                     }
                 }
             };
+            tracing::Span::current().record("connection_id", tracing::field::display(&handle.id()));
 
             let transport = Box::new(WrapperTransport::new(send, recv));
             handle.attach(transport, seq);

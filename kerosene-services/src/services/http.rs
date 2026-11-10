@@ -33,8 +33,19 @@ impl ServiceHttp {
     }
 
     /// make a http GET request to this url
+    #[tracing::instrument(
+        name = "http.client.get",
+        skip_all,
+        fields(
+            url.host = url.host_str().unwrap_or(""),
+            url.path = url.path(),
+            http.response.status_code = tracing::field::Empty,
+        ),
+        err,
+    )]
     pub async fn get(&self, url: Url) -> Result<Response> {
         let res = self.client.get(url).send().await?;
+        tracing::Span::current().record("http.response.status_code", res.status().as_u16());
 
         if let Some(addr) = res.remote_addr() {
             for denied in &self.state.config().http.deny {

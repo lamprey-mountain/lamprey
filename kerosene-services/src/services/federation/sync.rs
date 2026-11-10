@@ -10,12 +10,14 @@ use kerosene_core::compat::authz::AuthCheck;
 
 impl ServiceFederation {
     /// handle a sync from a remote server
+    #[tracing::instrument(name = "federation.sync.handle", skip_all, err)]
     pub async fn handle_sync(&self, _req: ServerSyncRequest) -> Result<()> {
         // TODO: update database
         // TODO: broadcast sync event
         Ok(())
     }
 
+    #[tracing::instrument(name = "federation.sync.update_database", skip_all, err)]
     async fn update_database(&self, msg: MessageSync) -> Result<()> {
         match msg {
             // TODO: handle user events
@@ -31,6 +33,7 @@ impl ServiceFederation {
     }
 
     /// push a sync event to any known remote servers
+    #[tracing::instrument(name = "federation.sync.push", skip_all, err)]
     pub async fn push_sync(&self, _msg: MessageSync) -> Result<()> {
         // PERF: aggregate n sync events and send as a batch instead of sending one at a time
         // TODO: filter visibility with ServerPerspective

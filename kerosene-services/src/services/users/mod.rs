@@ -33,6 +33,13 @@ impl ServiceUsers {
         }
     }
 
+    #[tracing::instrument(
+        name = "users.get",
+        level = "debug",
+        skip_all,
+        fields(user_id = %user_id, viewer_id = ?viewer_id),
+        err,
+    )]
     pub async fn get(&self, user_id: UserId, viewer_id: Option<UserId>) -> Result<User> {
         let usr = self
             .cache
@@ -78,6 +85,13 @@ impl ServiceUsers {
         Ok(usr)
     }
 
+    #[tracing::instrument(
+        name = "users.get_many",
+        level = "debug",
+        skip_all,
+        fields(user_count = user_ids.len()),
+        err,
+    )]
     pub async fn get_many(&self, user_ids: &[UserId]) -> Result<Vec<User>> {
         if user_ids.is_empty() {
             return Ok(vec![]);
@@ -132,6 +146,12 @@ impl ServiceUsers {
         self.cache.invalidate_all();
     }
 
+    #[tracing::instrument(
+        name = "users.dm.init",
+        skip_all,
+        fields(user_id = %user_id, other_id = %other_id, locked = %locked),
+        err,
+    )]
     pub async fn init_dm(
         &self,
         user_id: UserId,

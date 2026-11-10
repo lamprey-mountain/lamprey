@@ -122,7 +122,18 @@ impl ConnectionQueue {
     }
 
     /// drain this queue into this transport
-    #[tracing::instrument(level = "debug", skip(self, transport), fields(id = connection_id.to_string()))]
+    #[tracing::instrument(
+        name = "sync.queue.drain",
+        level = "debug",
+        skip_all,
+        fields(
+            connection_id = %connection_id,
+            queue.len = self.queue.len(),
+            seq.client = self.seq_client,
+            seq.server = self.seq_server,
+        ),
+        err,
+    )]
     pub async fn drain(
         &mut self,
         transport: &mut dyn TransportSink,

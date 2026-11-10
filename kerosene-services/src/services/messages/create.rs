@@ -257,6 +257,12 @@ impl<S> MessageOperation<'_, S> {
 impl ServiceMessages {
     /// create a new system message
     // TODO: deprecate and remove this
+    #[tracing::instrument(
+        name = "messages.create.system",
+        skip_all,
+        fields(channel_id = %channel_id),
+        err,
+    )]
     pub async fn create_system(
         &self,
         channel_id: ChannelId,
@@ -283,6 +289,17 @@ impl ServiceMessages {
         Ok(op.stage.message)
     }
 
+    #[tracing::instrument(
+        name = "messages.create",
+        skip_all,
+        fields(
+            channel_id = %channel_id,
+            message_id = %id,
+            nonce = ?nonce,
+            is_thread_initial = %is_thread_initial,
+        ),
+        err,
+    )]
     async fn create_inner(
         &self,
         channel_id: ChannelId,
@@ -318,6 +335,12 @@ impl ServiceMessages {
     }
 
     /// edit a message
+    #[tracing::instrument(
+        name = "messages.edit",
+        skip_all,
+        fields(channel_id = %channel_id, message_id = %message_id),
+        err,
+    )]
     pub async fn edit<A: Auth5>(
         &self,
         channel_id: ChannelId,
@@ -386,6 +409,12 @@ impl ServiceMessages {
         Ok((StatusCode::OK, op.stage.message))
     }
 
+    #[tracing::instrument(
+        name = "messages.create.webhook",
+        skip_all,
+        fields(channel_id = %channel_id, webhook_user_id = %webhook_user_id),
+        err,
+    )]
     pub async fn create_as_webhook(
         &self,
         channel_id: ChannelId,
@@ -419,6 +448,16 @@ impl ServiceMessages {
         Ok(op.stage.message)
     }
 
+    #[tracing::instrument(
+        name = "messages.edit.webhook",
+        skip_all,
+        fields(
+            channel_id = %channel_id,
+            message_id = %message_id,
+            webhook_user_id = %webhook_user_id,
+        ),
+        err,
+    )]
     pub async fn edit_as_webhook(
         &self,
         channel_id: ChannelId,
@@ -456,6 +495,7 @@ impl ServiceMessages {
         Ok((StatusCode::OK, op.stage.message))
     }
 
+    #[tracing::instrument(name = "messages.authorize", level = "debug", skip_all, err)]
     async fn authorize<'a>(
         &'a self,
         mut op: MessageOperation<'a, New>,
@@ -473,6 +513,7 @@ impl ServiceMessages {
         }))
     }
 
+    #[tracing::instrument(name = "messages.prepare", level = "debug", skip_all, err)]
     async fn prepare<'a>(
         &self,
         mut op: MessageOperation<'a, Authorized>,
@@ -535,6 +576,7 @@ impl ServiceMessages {
         }))
     }
 
+    #[tracing::instrument(name = "messages.commit", level = "debug", skip_all, err)]
     async fn commit<'a>(
         &self,
         mut op: MessageOperation<'a, Prepared>,
@@ -566,6 +608,7 @@ impl ServiceMessages {
         }))
     }
 
+    #[tracing::instrument(name = "messages.finalize", level = "debug", skip_all, err)]
     async fn finalize<'a>(
         &'a self,
         mut op: MessageOperation<'a, Committed>,
@@ -771,6 +814,7 @@ impl ServiceMessages {
         }
     }
 
+    #[tracing::instrument(name = "messages.automod", level = "debug", skip_all, err)]
     async fn enforce_automod(&self, op: &mut MessageOperation<'_, New>) -> Result<Option<Time>> {
         // TODO: skip for ephemeral messages
 
@@ -946,6 +990,7 @@ impl ServiceMessages {
         Ok(components.inner)
     }
 
+    #[tracing::instrument(name = "messages.persist", level = "debug", skip_all, err)]
     async fn persist_to_database(
         &self,
         op: &mut MessageOperation<'_, Prepared>,

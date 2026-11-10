@@ -41,7 +41,7 @@ impl Actor for RoomActor {
         (room_id, state, snapshot_tx): Self::Args,
         actor_ref: ActorRef<Self>,
     ) -> std::result::Result<Self, Self::Error> {
-        let span = tracing::info_span!("room actor");
+        let span = tracing::info_span!("room actor", room_id = %room_id);
 
         let snapshot = Arc::new(RoomSnapshot::loading());
         let mut actor = Self {
@@ -243,6 +243,13 @@ impl RoomActor {
     }
 
     /// Load members for a room that is in WithoutMembers state.
+    #[tracing::instrument(
+        name = "rooms.actor.load_members",
+        level = "debug",
+        skip_all,
+        fields(room_id = %self.room_id),
+        err,
+    )]
     async fn load_members(&mut self) -> Result<()> {
         let mut data = self.state.begin_read().await?;
         let srv = self.state.services();

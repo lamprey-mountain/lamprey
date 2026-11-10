@@ -199,6 +199,13 @@ impl ServiceRooms {
     }
 
     // TODO: make this not require writing room
+    #[tracing::instrument(
+        name = "rooms.get",
+        level = "debug",
+        skip_all,
+        fields(room_id = %room_id, user_id = ?user_id),
+        err,
+    )]
     pub async fn get(&self, room_id: RoomId, user_id: Option<UserId>) -> Result<Room> {
         let snapshot = self.load_snapshot(room_id, false).await?;
         let mut room = (*snapshot.get_data().unwrap().room).clone();
@@ -213,6 +220,13 @@ impl ServiceRooms {
         Ok(room)
     }
 
+    #[tracing::instrument(
+        name = "rooms.get_many",
+        level = "debug",
+        skip_all,
+        fields(room_count = room_ids.len(), user_id = ?user_id),
+        err,
+    )]
     pub async fn get_many(
         &self,
         room_ids: &[RoomId],
@@ -293,6 +307,13 @@ impl ServiceRooms {
     }
 
     /// reload a member from the database and update the cache
+    #[tracing::instrument(
+        name = "rooms.member.reload",
+        level = "debug",
+        skip_all,
+        fields(room_id = %room_id, user_id = %user_id),
+        err,
+    )]
     pub async fn reload_member(&self, room_id: RoomId, user_id: UserId) -> Result<()> {
         let mut data = self.globals.begin_read().await?;
         let member = data.room_member_get(room_id, user_id).await?;
@@ -304,6 +325,12 @@ impl ServiceRooms {
     }
 
     /// remove a member from the cache
+    #[tracing::instrument(
+        name = "rooms.member.remove",
+        level = "debug",
+        skip_all,
+        fields(room_id = %room_id, user_id = %user_id),
+    )]
     pub async fn remove_member(&self, room_id: RoomId, user_id: UserId) {
         let _ = self
             .try_send_sync(room_id, MessageSync::RoomMemberDelete { room_id, user_id })
@@ -311,6 +338,13 @@ impl ServiceRooms {
     }
 
     /// reload a role from the database and update the cache
+    #[tracing::instrument(
+        name = "rooms.role.reload",
+        level = "debug",
+        skip_all,
+        fields(room_id = %room_id, role_id = %role_id),
+        err,
+    )]
     pub async fn reload_role(&self, room_id: RoomId, role_id: RoleId) -> Result<()> {
         let mut data = self.globals.begin_read().await?;
         let role = data.role_select(room_id, role_id).await?;
@@ -321,6 +355,12 @@ impl ServiceRooms {
     }
 
     /// remove a role from the cache
+    #[tracing::instrument(
+        name = "rooms.role.remove",
+        level = "debug",
+        skip_all,
+        fields(room_id = %room_id, role_id = %role_id),
+    )]
     pub async fn remove_role(&self, room_id: RoomId, role_id: RoleId) {
         let _ = self
             .try_send_sync(room_id, MessageSync::RoleDelete { room_id, role_id })
@@ -328,6 +368,13 @@ impl ServiceRooms {
     }
 
     /// reload a channel from the database and update the cache
+    #[tracing::instrument(
+        name = "rooms.channel.reload",
+        level = "debug",
+        skip_all,
+        fields(room_id = %room_id, channel_id = %channel_id),
+        err,
+    )]
     pub async fn reload_channel(&self, room_id: RoomId, channel_id: ChannelId) -> Result<()> {
         let mut data = self.globals.begin_read().await?;
         let channel = data.channel_get(channel_id).await?;
@@ -393,6 +440,12 @@ impl ServiceRooms {
             .await;
     }
 
+    #[tracing::instrument(
+        name = "rooms.update",
+        skip_all,
+        fields(room_id = %room_id),
+        err,
+    )]
     pub async fn update<A: Auth5>(
         &self,
         room_id: RoomId,
@@ -511,6 +564,12 @@ impl ServiceRooms {
         Ok(end)
     }
 
+    #[tracing::instrument(
+        name = "rooms.create",
+        skip_all,
+        fields(public = ?create.public, nonce = ?nonce),
+        err,
+    )]
     pub async fn create<A: Auth5>(
         &self,
         create: RoomCreate,
@@ -532,6 +591,12 @@ impl ServiceRooms {
         }
     }
 
+    #[tracing::instrument(
+        name = "rooms.create.system",
+        skip_all,
+        fields(creator_id = %user_id, public = ?create.public),
+        err,
+    )]
     pub async fn create_system(
         &self,
         create: RoomCreate,
@@ -570,6 +635,13 @@ impl ServiceRooms {
         Ok(handle)
     }
 
+    #[tracing::instrument(
+        name = "rooms.create.inner",
+        level = "debug",
+        skip_all,
+        fields(creator_id = %creator_id, nonce = ?nonce),
+        err,
+    )]
     async fn create_inner_no_auth(
         &self,
         create: RoomCreate,
