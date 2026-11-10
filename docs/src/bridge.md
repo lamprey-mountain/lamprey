@@ -4,8 +4,19 @@ the discord bridge automatically forwards messages between discord and lamprey
 
 ## how to setup your own instance
 
-Create a new config file; look at
-[the example config](./bridge-discord-config.toml).
+Create a new config file:
+
+```toml
+# example config for the discord bridge
+
+rust_log = "debug"
+lamprey_base_url = "https://example.com"
+lamprey_ws_url = "wss://example.com"
+lamprey_cdn_url = "https://example-cdn.com"
+lamprey_token = "secret"
+discord_token = "secret"
+database_url = "sqlite:///data/data.db"
+```
 
 Create a discord bot:
 
@@ -25,7 +36,8 @@ Create a lamprey bot:
 3. create a session and copy it to `lamprey_token`
 
 Currently, the only supported way to run the bot is with docker. See the
-[example docker compose config](./example-docker-compose.yaml).
+[docker compose example](./kerosene/install.md#docker), which also runs the
+bridge.
 
 ## how to use
 
