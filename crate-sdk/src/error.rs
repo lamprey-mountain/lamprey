@@ -5,6 +5,9 @@ pub enum Error {
     #[error("missing required builder field: {0}")]
     MissingBuilderField(String),
 
+    #[error("missing required field: {0}")]
+    MissingField(&'static str),
+
     #[error("invalid header value")]
     InvalidHeader,
 

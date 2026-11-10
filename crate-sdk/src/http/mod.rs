@@ -29,7 +29,7 @@ pub struct Http {
 
 #[derive(Debug)]
 struct HttpConfig {
-    token: SessionToken,
+    token: Option<SessionToken>,
     api_url: Url,
     cdn_url: Url,
 }
@@ -57,31 +57,54 @@ impl HttpBuilder {
         self
     }
 
+    /// build an authenticated client
     pub fn build(self) -> Result<Http> {
-        let token = self
-            .token
-            .ok_or_else(|| Error::MissingBuilderField("token".to_string()))?;
-        let api_url = self
-            .api_url
-            .ok_or_else(|| Error::MissingBuilderField("api_url".to_string()))?;
-        let cdn_url = self
-            .cdn_url
-            .ok_or_else(|| Error::MissingBuilderField("cdn_url".to_string()))?;
-
-        let mut h = HeaderMap::new();
-        h.typed_insert(headers::Authorization::bearer(&token.0).map_err(|_| Error::InvalidHeader)?);
-
-        let client = reqwest::Client::builder().default_headers(h).build()?;
-
-        Ok(Http {
-            config: Arc::new(HttpConfig {
-                token,
-                api_url,
-                cdn_url,
-            }),
-            client,
-        })
+        let Self {
+            token,
+            api_url,
+            cdn_url,
+        } = self;
+        let token = token.ok_or_else(|| Error::MissingBuilderField("token".to_string()))?;
+        build_http(Some(token), api_url, cdn_url)
     }
+
+    /// build a client without an auth token
+    ///
+    /// used for endpoints that don't take a token (session create, password
+    /// login). note that trying to use the standard `build()` without a token
+    /// will cause an error, this specifically must be used if you really want
+    /// an http client without a token.
+    pub fn build_unauthenticated(self) -> Result<Http> {
+        let Self {
+            api_url, cdn_url, ..
+        } = self;
+        build_http(None, api_url, cdn_url)
+    }
+}
+
+fn build_http(
+    token: Option<SessionToken>,
+    api_url: Option<Url>,
+    cdn_url: Option<Url>,
+) -> Result<Http> {
+    let api_url = api_url.ok_or_else(|| Error::MissingBuilderField("api_url".to_string()))?;
+    let cdn_url = cdn_url.ok_or_else(|| Error::MissingBuilderField("cdn_url".to_string()))?;
+
+    let mut h = HeaderMap::new();
+    if let Some(token) = &token {
+        h.typed_insert(headers::Authorization::bearer(&token.0).map_err(|_| Error::InvalidHeader)?);
+    }
+
+    let client = reqwest::Client::builder().default_headers(h).build()?;
+
+    Ok(Http {
+        config: Arc::new(HttpConfig {
+            token,
+            api_url,
+            cdn_url,
+        }),
+        client,
+    })
 }
 
 impl Http {
@@ -97,15 +120,16 @@ impl Http {
         &self.config.cdn_url
     }
 
-    pub fn token(&self) -> &SessionToken {
-        &self.config.token
+    pub fn token(&self) -> Option<&SessionToken> {
+        self.config.token.as_ref()
     }
 
     pub fn for_puppet(&self, id: UserId) -> Result<Self> {
+        let token = self
+            .token()
+            .ok_or_else(|| Error::MissingBuilderField("token".to_string()))?;
         let mut h = HeaderMap::new();
-        h.typed_insert(
-            headers::Authorization::bearer(&self.token().0).map_err(|_| Error::InvalidHeader)?,
-        );
+        h.typed_insert(headers::Authorization::bearer(&token.0).map_err(|_| Error::InvalidHeader)?);
         h.insert(
             "x-puppet-id",
             id.to_string()

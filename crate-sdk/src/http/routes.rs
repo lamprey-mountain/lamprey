@@ -3,6 +3,7 @@
 // TODO: somehow use routes from the common crate? maybe with macros?
 
 use anyhow::{Context, Result};
+use common::v1::types::auth::{AuthState, PasswordExec};
 use common::v1::types::message::flume::FlumeCreate;
 use common::v1::types::misc::ApplicationIdReq;
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
@@ -19,7 +20,8 @@ use common::v1::types::{
     MessagePatch, MessageVerId, PermissionOverwriteSet, PinsReorder, PuppetCreate, Role,
     RoleCreate, RoleId, RoleMemberBulkPatch, RolePatch, RoleReorder, Room, RoomBan,
     RoomBanBulkCreate, RoomCreate, RoomId, RoomMember, RoomMemberPut, RoomMemberUpdate, RoomPatch,
-    ThreadMember, ThreadMemberCreate, User, UserId, UserPatch, UserWithRelationship,
+    Session, SessionCreate, SessionId, SessionPatch, SessionWithToken, ThreadMember,
+    ThreadMemberCreate, User, UserId, UserPatch, UserWithRelationship,
     emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiSearchQuery},
     flume::FlumeDeltaCreate,
     misc::UserIdReq,
@@ -44,7 +46,7 @@ impl Http {
                 target
                     .upload_url
                     .clone()
-                    .expect("TODO: better error handling"),
+                    .ok_or(crate::error::Error::MissingField("upload_url"))?,
             )
             .header("upload-offset", "0")
             .header("content-type", "application/octet-stream")
@@ -141,7 +143,7 @@ macro_rules! route {
         impl Http {
             pub async fn $name(
                 &self,
-                $($param: $param_type),*,
+                $($param: $param_type,)*
             ) -> Result<()> {
                 let url = self.api_url().join(&format!($url))?;
                 let res = self.client
@@ -240,7 +242,7 @@ macro_rules! route {
         impl Http {
             pub async fn $name(
                 &self,
-                $($param: $param_type),*,
+                $($param: $param_type,)*
                 body: &$req,
             ) -> Result<()> {
                 let url = self.api_url().join(&format!($url))?;
@@ -264,7 +266,7 @@ macro_rules! route {
         impl Http {
             pub async fn $name(
                 &self,
-                $($param: $param_type),*,
+                $($param: $param_type,)*
             ) -> Result<()> {
                 let url = self.api_url().join(&format!($url))?;
                 let res = self.client
@@ -380,7 +382,20 @@ route!(post   "/api/v1/voice/{channel_id}/ring"                             => v
 route!(post   "/api/v1/voice/{channel_id}/ring/stop"                        => voice_ring_stop(channel_id: ChannelId), RingStop);
 route!(get    "/api/v1/voice/{channel_id}/ring/eligibility"                 => voice_ring_eligibility(channel_id: ChannelId) -> RingEligibility);
 route!(post   "/api/v1/media"                                     => media_create() -> MediaCreated, MediaCreate);
+route!(get    "/api/v1/media/{media_id}"                          => media_get(media_id: MediaId) -> Media);
 route!(put    "/api/v1/media/{media_id}/done"                     => media_done(media_id: MediaId) -> Option<Media>, MediaDoneParams);
+
+// Session Routes
+route!(post   "/api/v1/session"                                   => session_create() -> SessionWithToken, SessionCreate);
+route!(get    "/api/v1/session"                                   => session_list(, _q: PaginationQuery<SessionId>) -> PaginationResponse<Session>);
+route!(get    "/api/v1/session/{session_id}"                      => session_get(session_id: SessionId) -> Session);
+route!(patch  "/api/v1/session/{session_id}"                      => session_update(session_id: SessionId) -> Session, SessionPatch);
+route!(delete "/api/v1/session/{session_id}"                      => session_delete(session_id: SessionId));
+route!(delete "/api/v1/session/@all"                              => session_delete_all());
+
+// Auth Routes
+route!(post   "/api/v1/auth/password"                             => auth_password_exec(), PasswordExec);
+route!(get    "/api/v1/auth/state"                                => auth_state() -> AuthState);
 
 // Channel Routes
 route!(post   "/api/v1/room/{room_id}/channel"                    => channel_create_room(room_id: RoomId) -> Channel, ChannelCreate);
