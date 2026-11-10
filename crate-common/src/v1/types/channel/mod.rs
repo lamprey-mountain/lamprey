@@ -674,7 +674,14 @@ pub struct ChannelCreate {
     /// default auto archive duration in seconds to copy to threads created in this channel
     ///
     /// if unset, defaults to [`DEFAULT_AUTO_ARCHIVE_DURATION`]. set to `null` to disable.
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "some_option"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            default,
+            deserialize_with = "some_option",
+            skip_serializing_if = "Option::is_none"
+        )
+    )]
     pub default_auto_archive_duration: Option<Option<u64>>,
 
     pub slowmode_thread: Option<u64>,
