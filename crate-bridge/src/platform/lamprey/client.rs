@@ -164,9 +164,12 @@ impl LampreyClient {
                 .for_puppet(puppet.id)?
                 .user_update(UserIdReq::UserSelf, &patch)
                 .await?;
-            self.bridge.db.puppet_create(puppet_db).await?;
             puppet = patch.apply(puppet);
         }
+
+        // always upsert, even if nothing changed: presence/typing/nickname sync and
+        // mention resolution need a row for every known user
+        self.bridge.db.puppet_create(puppet_db).await?;
 
         // TODO: sync guild member nickname -> room member override name
         // probably need to add a new table to support this?
