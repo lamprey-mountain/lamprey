@@ -4367,6 +4367,55 @@ button.round {
 	}
 }
 
+.modal-role-members {
+	.members-list {
+		list-style: none;
+		padding: 0;
+		margin: 8px 0;
+		max-height: min(400px, 50vh);
+		overflow-y: auto;
+
+		.member-item {
+			padding: 2px 4px;
+
+			&:hover {
+				background-color: #fff1;
+			}
+
+			.option {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+
+				&:hover,
+				&:focus-within {
+					background: transparent;
+				}
+
+				&:focus-visible {
+					outline: 1px solid $link-500;
+					outline-offset: -1px;
+				}
+			}
+
+			.avatar {
+				height: 24px;
+				width: 24px;
+			}
+
+			label {
+				cursor: pointer;
+				flex: 1;
+			}
+		}
+
+		.empty {
+			color: $fg-600;
+			padding: 8px 4px;
+		}
+	}
+}
+
 .modal-invite-create {
 	.header {
 		font-size: 1rem;

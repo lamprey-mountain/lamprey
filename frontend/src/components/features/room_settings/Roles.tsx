@@ -433,10 +433,10 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	});
 
 	const addMember = () => {
-		// TODO: make this modal nicer
-		modalCtl.prompt("user id to add", (user_id) => {
-			if (!user_id) return;
-			roles2.addMember(props.room.id, props.edit.role.id!, user_id);
+		modalCtl.open({
+			type: "role_members",
+			room_id: props.room.id,
+			role_id: props.edit.role.id!,
 		});
 	};
 
@@ -587,7 +587,11 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 							value={memberSearch}
 							onInput={setMemberSearch}
 						/>
-						<button type="button" class="button" onClick={addMember}>
+						<button
+							type="button"
+							class="button primary"
+							onClick={addMember}
+						>
 							add member
 						</button>
 					</div>

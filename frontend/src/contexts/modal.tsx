@@ -155,6 +155,11 @@ export type Modal =
 	| {
 			type: "folder_edit";
 			folder_id: string;
+	  }
+	| {
+			type: "role_members";
+			room_id: string;
+			role_id: string;
 	  };
 
 export type ModalsController = {

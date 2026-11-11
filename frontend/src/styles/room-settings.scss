@@ -188,6 +188,15 @@
 			}
 		}
 
+		& .members-header {
+			display: flex;
+			gap: 4px;
+
+			& > .search {
+				flex: 1;
+			}
+		}
+
 		& textarea,
 		input[type="text"] {
 			border: solid $sep-300 1px;

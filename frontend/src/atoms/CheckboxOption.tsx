@@ -9,13 +9,14 @@ type CheckboxOptionProps = {
 	class?: string;
 	disabled?: boolean;
 	style?: JSX.CSSProperties | string;
+	tabIndex?: number;
 };
 
 export const CheckboxOption = (props: ParentProps<CheckboxOptionProps>) => {
 	return (
 		<div
 			class={`option ${props.class ?? ""}`}
-			tabindex="0"
+			tabindex={props.tabIndex ?? 0}
 			style={props.style}
 			onClick={(e) => {
 				if (props.disabled) return;

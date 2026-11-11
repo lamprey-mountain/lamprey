@@ -22,6 +22,7 @@ import { ModalPalette } from "./ModalPalette.tsx";
 import { ModalPrivacy } from "./ModalPrivacy.tsx";
 import { ModalReactions } from "./ModalReactions.tsx";
 import { ModalResetPassword } from "./ModalResetPassword.tsx";
+import { ModalRoleMembers } from "./ModalRoleMembers.tsx";
 import { ModalRoomCreateOrJoin } from "./ModalRoomCreateOrJoin";
 import { ModalRoomSettings } from "./ModalRoomSettings.tsx";
 import { ModalTagEditor } from "./ModalTagEditor.tsx";
@@ -281,6 +282,12 @@ function isFolderEdit(
 	return modal.type === "folder_edit";
 }
 
+function isRoleMembers(
+	modal: ModalType,
+): modal is Extract<ModalType, { type: "role_members" }> {
+	return modal.type === "role_members";
+}
+
 export function getModal(modal: ModalType) {
 	const api2 = useApi();
 	if (isAlert(modal)) {
@@ -420,6 +427,11 @@ export function getModal(modal: ModalType) {
 	}
 	if (isFolderEdit(modal)) {
 		return <ModalFolderEdit folder_id={modal.folder_id} />;
+	}
+	if (isRoleMembers(modal)) {
+		return (
+			<ModalRoleMembers room_id={modal.room_id} role_id={modal.role_id} />
+		);
 	}
 	if (isUserSettings(modal)) {
 		return <ModalUserSettings page={modal.page} />;
