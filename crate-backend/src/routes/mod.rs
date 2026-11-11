@@ -21,7 +21,6 @@ mod federation;
 mod flume;
 mod internal;
 mod invite;
-mod media;
 mod moderation;
 mod oauth;
 mod preferences;
@@ -51,7 +50,6 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(flume::routes())
         .merge(internal::routes())
         .merge(invite::routes())
-        .merge(media::routes())
         .merge(moderation::routes())
         .merge(oauth::routes())
         .merge(public::routes())

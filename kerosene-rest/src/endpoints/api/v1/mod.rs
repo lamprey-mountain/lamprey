@@ -6,7 +6,7 @@ pub mod channel;
 pub mod emoji;
 pub mod harvest;
 pub mod interaction;
-// pub mod media;
+pub mod media;
 pub mod message;
 pub mod notification;
 pub mod pack;
@@ -32,6 +32,7 @@ pub fn register(r: &mut Routes) {
         auth::register(r);
         harvest::register(r);
         interaction::register(r);
+        media::register(r);
         notification::register(r);
         pack::register(r);
         permission_overwrite::register(r);

@@ -20,11 +20,17 @@ pub mod media_create {
         #[json]
         pub media: MediaCreated,
 
+        /// the current upload offset, only set for upload-based media
         #[header]
-        pub upload_offset: u64,
+        pub upload_offset: Option<u64>,
 
+        /// the expected total size of the upload, only set for upload-based media
         #[header]
-        pub content_length: u64,
+        pub upload_length: Option<u64>,
+
+        /// the expected total size of the download, only set for download-based media
+        #[header]
+        pub content_length: Option<u64>,
     }
 }
 
@@ -170,10 +176,17 @@ pub mod media_done {
     }
 
     pub struct Response {
-        // #[status]
-        // pub status: StatusCode,
+        #[status]
+        pub status: http::StatusCode,
+
         #[json]
         pub media: Option<Media>,
+
+        #[header]
+        pub upload_offset: u64,
+
+        #[header]
+        pub upload_length: u64,
     }
 }
 
@@ -262,6 +275,33 @@ pub mod media_upload {
         pub upload_offset: u64,
 
         #[header]
-        pub content_length: u64,
+        pub upload_length: u64,
+    }
+}
+
+/// Media upload check (internal)
+///
+/// Get headers useful for resuming an upload.
+#[endpoint(
+    head,
+    path = "/internal/media-upload/{media_id}",
+    tags = ["media"],
+    scopes = [Full],
+    response(NO_CONTENT, description = "Upload headers"),
+)]
+pub mod media_check {
+    use crate::v1::types::MediaId;
+
+    pub struct Request {
+        #[path]
+        pub media_id: MediaId,
+    }
+
+    pub struct Response {
+        #[header]
+        pub upload_offset: u64,
+
+        #[header]
+        pub upload_length: u64,
     }
 }
