@@ -7,6 +7,7 @@ use lamprey_cli::args::{Args, AuthCommand, ChannelCommand, Command, MediaCommand
 use lamprey_cli::auth;
 use lamprey_cli::channel;
 use lamprey_cli::config::LyConfig;
+use lamprey_cli::events;
 use lamprey_cli::media;
 use lamprey_cli::message;
 use serde::Serialize;
@@ -156,7 +157,14 @@ async fn main() -> Result<()> {
                 Output::Media(media::get(&mut config, login, media_id).await?)
             }
         },
-        Command::Events {} => todo!(),
+        Command::Events {
+            channel,
+            room,
+            event,
+        } => {
+            events::tail(&mut config, login, &channel, &room, &event, json, verbose).await?;
+            return Ok(());
+        }
     };
 
     emit(json, &output)

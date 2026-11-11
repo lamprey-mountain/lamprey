@@ -65,10 +65,17 @@ pub enum Command {
 
     /// tail the event stream
     Events {
-        // TODO: tail everything, room, channel, filter by event type?
-        // TODO: resuming
-        // TODO: output as pretty, ndjson
-        // TODO: maybe handle stdin in some way?
+        /// only show events for these channels
+        #[arg(short, long)]
+        channel: Vec<ChannelId>,
+
+        /// only show events for these rooms
+        #[arg(short, long)]
+        room: Vec<RoomId>,
+
+        /// only show these event types (for example MessageCreate)
+        #[arg(short = 'e', long)]
+        event: Vec<String>,
     },
 }
 
