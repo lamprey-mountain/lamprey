@@ -119,9 +119,15 @@ pub enum SessionStatus {
 
     /// The session exists and belongs to a user, but can't really do anything yet
     ///
-    /// the second factor must be completed before `expires_at`, otherwise the
-    /// session can't authenticate anymore and a new login is required
-    Bound { user_id: UserId, expires_at: Time },
+    /// the second factor must be completed before `bound_expires_at`,
+    /// otherwise the session can't authenticate anymore and a new login is required
+    Bound {
+        user_id: UserId,
+
+        /// the second factor must be completed before this time
+        #[serde(rename = "bound_expires_at")]
+        expires_at: Time,
+    },
 
     /// The session exists and can do non-critical actions
     Authorized { user_id: UserId },
