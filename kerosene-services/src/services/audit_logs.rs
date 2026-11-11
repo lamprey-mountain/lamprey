@@ -1,6 +1,6 @@
 use common::v1::types::{
-    AuditLogEntryId, AuditLogFilter, AuditLogPaginationResponse, PaginationQuery, RoomId,
-    audit_logs::resolve::AuditLogResolve,
+    AuditLogEntryId, AuditLogFilter, AuditLogPaginationResponse, PaginationDirection,
+    PaginationQuery, RoomId, audit_logs::resolve::AuditLogResolve,
 };
 
 use crate::prelude::*;
@@ -17,9 +17,15 @@ impl ServiceAuditLogs {
     pub async fn list(
         &self,
         room_id: RoomId,
-        paginate: PaginationQuery<AuditLogEntryId>,
+        mut paginate: PaginationQuery<AuditLogEntryId>,
         filter: AuditLogFilter,
     ) -> Result<AuditLogPaginationResponse> {
+        // an unpaginated request should start at the newest entries, not the
+        // oldest ones (the generic pagination default is forwards)
+        if paginate.dir.is_none() && paginate.from.is_none() && paginate.to.is_none() {
+            paginate.dir = Some(PaginationDirection::B);
+        }
+
         let mut data = self.state.begin().await?;
 
         let entries = data
