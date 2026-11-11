@@ -3,9 +3,9 @@ import { getTimestampFromUUID, type Room } from "sdk";
 import { createEffect, createSignal, Show } from "solid-js";
 import { useRooms } from "@/api";
 import { Time } from "@/atoms/Time.tsx";
+import { RoomIcon } from "@/avatar/RoomIcon";
 import { useMenu } from "@/contexts/mod.tsx";
 import { useNavigate } from "@/contexts/router";
-import { getThumbFromId } from "@/media/util.tsx";
 import { ResourceList } from "./ResourceList";
 
 export function Rooms() {
@@ -84,12 +84,7 @@ export function Rooms() {
 						style="text-align:start;background:none;border:none;padding:0;cursor:pointer"
 						onClick={() => openRoom(room)}
 					>
-						<Show
-							when={room.icon}
-							fallback={<div class="avatar">{room.name}</div>}
-						>
-							<img src={getThumbFromId(room.icon!, 64)} class="avatar" />
-						</Show>
+						<RoomIcon room={room} />
 						<div>
 							<h3 class="name">{room.name}</h3>
 							<div class="dim">{room.id}</div>
