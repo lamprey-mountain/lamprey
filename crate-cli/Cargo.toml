@@ -8,6 +8,10 @@ license.workspace = true
 repository.workspace = true
 keywords.workspace = true
 
+[[bin]]
+name = "ly"
+path = "src/main.rs"
+
 [dependencies]
 anyhow = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
@@ -15,7 +19,10 @@ common = { workspace = true }
 demand = "2.4.1"
 dirs = "7.0.0"
 lamprey-sdk = { workspace = true }
+rustls = { workspace = true, features = ["ring"] }
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 strum = { version = "0.28.0", features = ["derive"] }
 tokio = { workspace = true, features = ["macros"] }
 toml = "1.2.1"
+url = { workspace = true, features = ["serde"] }

@@ -1,10 +1,3 @@
 pub mod args;
+pub mod auth;
 pub mod config;
-
-#[derive(Debug, strum::Display)]
-pub enum AuthType {
-    Token,
-    PasswordUserId,
-    PasswordEmail,
-    Oauth,
-}
