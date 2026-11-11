@@ -3,7 +3,7 @@
 // TODO: somehow use routes from the common crate? maybe with macros?
 
 use anyhow::{Context, Result};
-use common::v1::types::auth::{AuthState, PasswordExec};
+use common::v1::types::auth::{AuthState, PasswordExec, TotpVerificationRequest};
 use common::v1::types::message::flume::FlumeCreate;
 use common::v1::types::misc::ApplicationIdReq;
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
@@ -24,7 +24,7 @@ use common::v1::types::{
     ThreadMemberCreate, User, UserId, UserPatch, UserWithRelationship,
     emoji::{EmojiCustom, EmojiCustomCreate, EmojiCustomPatch, EmojiSearchQuery},
     flume::FlumeDeltaCreate,
-    misc::UserIdReq,
+    misc::{SessionIdReq, UserIdReq},
     reaction::{ReactionKeyParam, ReactionListItem},
     role::RoleDeleteQuery,
 };
@@ -388,13 +388,14 @@ route!(put    "/api/v1/media/{media_id}/done"                     => media_done(
 // Session Routes
 route!(post   "/api/v1/session"                                   => session_create() -> SessionWithToken, SessionCreate);
 route!(get    "/api/v1/session"                                   => session_list(, _q: PaginationQuery<SessionId>) -> PaginationResponse<Session>);
-route!(get    "/api/v1/session/{session_id}"                      => session_get(session_id: SessionId) -> Session);
-route!(patch  "/api/v1/session/{session_id}"                      => session_update(session_id: SessionId) -> Session, SessionPatch);
-route!(delete "/api/v1/session/{session_id}"                      => session_delete(session_id: SessionId));
+route!(get    "/api/v1/session/{session_id}"                      => session_get(session_id: SessionIdReq) -> Session);
+route!(patch  "/api/v1/session/{session_id}"                      => session_update(session_id: SessionIdReq) -> Session, SessionPatch);
+route!(delete "/api/v1/session/{session_id}"                      => session_delete(session_id: SessionIdReq));
 route!(delete "/api/v1/session/@all"                              => session_delete_all());
 
 // Auth Routes
 route!(post   "/api/v1/auth/password"                             => auth_password_exec(), PasswordExec);
+route!(post   "/api/v1/auth/totp"                                 => auth_totp_exec() -> AuthState, TotpVerificationRequest);
 route!(get    "/api/v1/auth/state"                                => auth_state() -> AuthState);
 
 // Channel Routes
