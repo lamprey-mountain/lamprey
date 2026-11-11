@@ -111,8 +111,9 @@ pub struct SessionPatch {
 }
 
 #[record]
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, strum::Display)]
 #[serde(tag = "status")]
+#[strum(serialize_all = "lowercase")]
 pub enum SessionStatus {
     /// The session exists but can't do anything besides authenticate
     Unauthorized,
