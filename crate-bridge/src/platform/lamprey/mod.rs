@@ -822,13 +822,13 @@ impl Lamprey {
 
                 // TODO: warn!() on err
                 tokio::spawn(async move {
-                    let discord_id = presence.user.id.to_string();
+                    let discord_id = presence.user.id().to_string();
                     let Some(puppet) = bridge
                         .db
                         .puppet_get_by_discord_id(discord_id.clone())
                         .await?
                     else {
-                        trace!(user_id=%presence.user.id, "no puppet found for discord user");
+                        trace!(user_id=%presence.user.id(), "no puppet found for discord user");
                         return Ok(());
                     };
 
@@ -840,7 +840,6 @@ impl Lamprey {
                         discord::OnlineStatus::Invisible | discord::OnlineStatus::Offline => {
                             Status::Offline
                         }
-                        _ => Status::Online,
                     };
 
                     let activities = presence

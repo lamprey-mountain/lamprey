@@ -71,12 +71,12 @@ impl LampreyRealm {
                             }
 
                             let create = ChannelCreate {
-                                name: Some(chan.name.clone()),
+                                name: chan.name.clone(),
                                 description: chan.topic.clone(),
                                 ty: match chan.kind {
-                                    discord::ChannelType::Text => ChannelType::Text,
-                                    discord::ChannelType::News => ChannelType::Text,
-                                    discord::ChannelType::Category => ChannelType::Category,
+                                    discord::ChannelType::GuildText => ChannelType::Text,
+                                    discord::ChannelType::GuildAnnouncement => ChannelType::Text,
+                                    discord::ChannelType::GuildCategory => ChannelType::Category,
 
                                     // TODO: voice bridging
                                     // TODO: thread/forum bridging
@@ -85,7 +85,7 @@ impl LampreyRealm {
                                     // discord::ChannelType::Forum => todo!(),
 
                                     // TODO: handle this
-                                    discord::ChannelType::NewsThread
+                                    discord::ChannelType::AnnouncementThread
                                     | discord::ChannelType::PublicThread => {
                                         warn!(
                                             channel_id = %chan.id,
@@ -105,7 +105,7 @@ impl LampreyRealm {
                                     _ => continue,
                                 },
                                 // parent_id: chan.parent_id, // TODO: map discord channel id to lamprey channel id
-                                nsfw: chan.nsfw,
+                                nsfw: chan.nsfw.unwrap_or(false),
                                 ..Default::default()
                             };
                             (create, chan, webhook)
@@ -136,12 +136,17 @@ impl LampreyRealm {
                             last_id: channel.last_message_id.unwrap_or_default(), // NOTE: this will always be default
                         }),
                         discord: Some(PortalDiscord {
-                            guild_id: chan.guild_id,
+                            guild_id: chan
+                                .guild_id
+                                .expect("channels bridged from discord are always in a guild"),
                             parent_id: chan.parent_id,
                             channel_id: chan.id,
                             webhook_url: webhook_url.clone(),
                             webhook_id: Some(*webhook_id),
-                            last_id: chan.last_message_id.unwrap_or_default(),
+                            last_id: chan
+                                .last_message_id
+                                .map(|id| id.cast())
+                                .unwrap_or(discord::MessageId::new(0)),
                         }),
                     };
 

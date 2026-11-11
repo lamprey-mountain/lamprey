@@ -34,10 +34,14 @@ impl LampreyClient {
                 ApplicationIdReq::AppSelf,
                 message.author.id.to_string(),
                 &PuppetCreate {
-                    name: message.author.display_name().to_owned(),
+                    name: message
+                        .author
+                        .global_name
+                        .clone()
+                        .unwrap_or_else(|| message.author.name.clone()),
                     description: None,
                     bot: message.author.bot,
-                    system: message.author.system,
+                    system: message.author.system.unwrap_or(false),
                 },
             )
             .await?;
@@ -53,7 +57,7 @@ impl LampreyClient {
             // check avatar
             match (
                 puppet_db.discord_avatar_url.as_ref(),
-                message.author.avatar_url(),
+                discord_avatar_url(&message.author),
             ) {
                 (None, None) => {
                     // user doesn't have a pfp
@@ -84,7 +88,7 @@ impl LampreyClient {
             // check banner
             match (
                 puppet_db.discord_banner_url.as_ref(),
-                message.author.banner_url(),
+                discord_banner_url(&message.author),
             ) {
                 (None, None) => {
                     // user doesn't have a banner
@@ -112,12 +116,12 @@ impl LampreyClient {
                 }
             }
 
-            puppet_db.discord_avatar_url = message.author.avatar_url();
-            puppet_db.discord_banner_url = message.author.banner_url();
+            puppet_db.discord_avatar_url = discord_avatar_url(&message.author);
+            puppet_db.discord_banner_url = discord_banner_url(&message.author);
             puppet_db
         } else {
             // upload avatar, banner
-            let avatar = if let Some(url) = message.author.avatar_url() {
+            let avatar = if let Some(url) = discord_avatar_url(&message.author) {
                 let media = self
                     .import_url(ImportUrl {
                         url: url.parse().unwrap(),
@@ -132,7 +136,7 @@ impl LampreyClient {
                 None
             };
 
-            let banner = if let Some(url) = message.author.banner_url() {
+            let banner = if let Some(url) = discord_banner_url(&message.author) {
                 let media = self
                     .import_url(ImportUrl {
                         url: url.parse().unwrap(),
@@ -154,8 +158,8 @@ impl LampreyClient {
                 source_platform: bridge_old::Platform::Discord,
                 lamprey_id: puppet.id,
                 discord_id: message.author.id,
-                discord_avatar_url: message.author.avatar_url(),
-                discord_banner_url: message.author.banner_url(),
+                discord_avatar_url: discord_avatar_url(&message.author),
+                discord_banner_url: discord_banner_url(&message.author),
             }
         };
 
@@ -258,6 +262,20 @@ impl From<discord::Attachment> for ImportUrl {
             user_id: None,
         }
     }
+}
+
+fn discord_avatar_url(user: &discord::User) -> Option<String> {
+    user.avatar.as_ref().map(|hash| {
+        let ext = if hash.is_animated() { "gif" } else { "png" };
+        format!("https://cdn.discordapp.com/avatars/{}/{}.{}", user.id, hash, ext)
+    })
+}
+
+fn discord_banner_url(user: &discord::User) -> Option<String> {
+    user.banner.as_ref().map(|hash| {
+        let ext = if hash.is_animated() { "gif" } else { "png" };
+        format!("https://cdn.discordapp.com/banners/{}/{}.{}", user.id, hash, ext)
+    })
 }
 
 fn empty_to_none(s: String) -> Option<String> {

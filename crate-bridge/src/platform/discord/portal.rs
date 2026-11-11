@@ -2,15 +2,19 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use opentelemetry::trace::FutureExt;
-use serenity::all::{
-    ChannelType, CreateAllowedMentions, CreateEmbed, EditAttachments, ExecuteWebhook, Mentionable,
-};
 use tokio::sync::broadcast;
 use tracing::{Instrument, debug, error, warn};
+use twilight_http::Client as HttpClient;
+use twilight_model::channel::message::embed::{Embed, EmbedImage};
+use twilight_model::channel::message::AllowedMentions;
+use twilight_model::channel::{ChannelType, Message};
+use twilight_model::http::attachment::Attachment as HttpAttachment;
+use twilight_model::id::Id;
 
 use crate::bridge_old::{
     MessageData, Portal, PortalEvent, PortalEventEnvelope, PortalHandle, PortalId, ThreadId,
 };
+use crate::platform::discord::{ChannelId, WebhookId};
 use crate::prelude::*;
 use crate::types::Platform;
 use crate::util::mentions::MessageTransformer;
@@ -19,8 +23,7 @@ pub struct DiscordPortal {
     portal_id: PortalId,
     portal: Portal,
     handle: PortalHandle,
-    http: Arc<serenity::all::Http>,
-    cache: Arc<serenity::all::Cache>,
+    http: Arc<HttpClient>,
 }
 
 impl DiscordPortal {
@@ -28,15 +31,13 @@ impl DiscordPortal {
         portal_id: PortalId,
         portal: Portal,
         handle: PortalHandle,
-        http: Arc<serenity::all::Http>,
-        cache: Arc<serenity::all::Cache>,
+        http: Arc<HttpClient>,
     ) -> (PortalId, Result<()>) {
         let me = Self {
             portal_id,
             portal,
             handle,
             http,
-            cache,
         };
         (portal_id, me.run().await)
     }
@@ -93,15 +94,20 @@ impl DiscordPortal {
         debug!(last_id=%last_id, "start backfill");
 
         loop {
-            let messages = discord_cfg
-                .channel_id
-                .messages(
-                    &self.http,
-                    serenity::all::GetMessages::new().after(last_id).limit(100),
-                )
+            let messages = self
+                .http
+                .channel_messages(discord_cfg.channel_id)
+                .after(last_id)
+                .limit(100)
                 .await;
             let messages = match messages {
-                Ok(m) => m,
+                Ok(r) => match r.model().await {
+                    Ok(m) => m,
+                    Err(e) => {
+                        warn!(%last_id, "failed to fetch messages: {e:?}");
+                        return Ok(());
+                    }
+                },
                 Err(e) => {
                     warn!(%last_id, "failed to fetch messages: {e:?}");
                     return Ok(());
@@ -140,7 +146,7 @@ impl DiscordPortal {
 
     // Message-based thread channel ids equal their starter message id; private
     // threads (created via `thread_create`) have their own portal instead.
-    async fn resolve_thread(&self, thread: Option<ThreadId>) -> Result<Option<discord::ChannelId>> {
+    async fn resolve_thread(&self, thread: Option<ThreadId>) -> Result<Option<ChannelId>> {
         let Some(ThreadId::Lamprey(channel_id)) = thread else {
             return Ok(None);
         };
@@ -153,7 +159,7 @@ impl DiscordPortal {
             .message_get_by_lamprey_id(self.portal_id, message_id)
             .await?
             .and_then(|msg| msg.discord_message_id)
-            .map(|id| discord::ChannelId::new(id.get()));
+            .map(|id| Id::new(id.get()));
 
         if discord_thread_id.is_none() {
             debug!(%channel_id, "no bridged message for thread, falling back to parent channel");
@@ -202,13 +208,10 @@ impl DiscordPortal {
                     return Ok(());
                 }
 
-                // PERF: don't fetch webhook every time, cache it (Webhook::from_url)
                 let discord_cfg = self.portal.discord.as_ref().unwrap();
+                let (webhook_id, webhook_token) = parse_webhook_url(&discord_cfg.webhook_url)?;
                 let thread_id = self.resolve_thread(thread).await?;
                 let channel_id = thread_id.unwrap_or(discord_cfg.channel_id);
-                let webhook_url = &discord_cfg.webhook_url;
-                let webhook =
-                    serenity::all::Webhook::from_url(&self.http, webhook_url.as_str()).await?;
 
                 let msg_inner = match &msg.latest_version.message_type {
                     common::v1::types::MessageType::DefaultMarkdown(m)
@@ -251,14 +254,18 @@ impl DiscordPortal {
                         .await?
                     {
                         if let Some(discord_msg_id) = bridge_msg.discord_message_id {
-                            let discord_msg =
-                                self.http.get_message(channel_id, discord_msg_id).await?;
+                            let discord_msg = self
+                                .http
+                                .message(channel_id, discord_msg_id)
+                                .await?
+                                .model()
+                                .await?;
                             let reply_content = format_discord_reply_content(&discord_msg);
 
                             let author_display = if discord_msg.webhook_id.is_some() {
                                 discord_msg.author.name.clone()
                             } else {
-                                discord_msg.author.mention().to_string()
+                                format!("<@{}>", discord_msg.author.id)
                             };
 
                             let description = format!(
@@ -269,10 +276,10 @@ impl DiscordPortal {
                                 author_display,
                                 reply_content,
                             );
-                            content = format!("{} {}", discord_msg.author.mention(), content);
-                            embeds.push(CreateEmbed::new().description(description));
+                            content = format!("<@{}> {}", discord_msg.author.id, content);
+                            embeds.push(embed_with_description(description));
                             if let Some(att) = discord_msg.attachments.first() {
-                                embeds.push(CreateEmbed::new().image(&att.url));
+                                embeds.push(embed_with_image(att.url.clone()));
                             }
                         } else {
                             // TODO: handle unknown reply
@@ -288,9 +295,11 @@ impl DiscordPortal {
                     let url = format!("{}/media/{}", info.cdn_url, media.id);
                     if let Ok(response) = http_client.get(&url).send().await {
                         if let Ok(bytes) = response.bytes().await {
-                            files.push(serenity::all::CreateAttachment::bytes(
-                                bytes,
+                            let id = files.len() as u64;
+                            files.push(http_attachment(
                                 media.filename.clone(),
+                                bytes.to_vec(),
+                                id,
                             ));
                         }
                     }
@@ -317,57 +326,57 @@ impl DiscordPortal {
                             t.to_discord(&user_mappings, &HashMap::new(), &HashMap::new());
                         (parsed, mentions)
                     }
-                    None => (content, CreateAllowedMentions::new()),
+                    None => (content, AllowedMentions::default()),
                 };
 
-                let mut builder = ExecuteWebhook::new()
-                    .content(parsed_content)
-                    .embeds(embeds)
-                    .username(username)
-                    .add_files(files)
-                    .allowed_mentions(allowed_mentions);
+                let mut builder = self
+                    .http
+                    .execute_webhook(webhook_id, &webhook_token)
+                    .content(&parsed_content)
+                    .embeds(&embeds)
+                    .username(&username)
+                    .attachments(&files)
+                    .allowed_mentions(Some(&allowed_mentions));
 
-                if let Some(avatar_url) = avatar_url {
+                if let Some(ref avatar_url) = avatar_url {
                     builder = builder.avatar_url(avatar_url);
                 }
 
                 if let Some(thread_id) = thread_id {
-                    builder = builder.in_thread(thread_id);
+                    builder = builder.thread_id(thread_id);
                 } else if discord_cfg.parent_id.is_some() {
-                    builder = builder.in_thread(discord_cfg.channel_id);
+                    builder = builder.thread_id(discord_cfg.channel_id);
                 }
 
                 // TODO: handle components (builder.components(components))
 
-                let sent_message = webhook.execute(&self.http, true, builder).await?;
+                let sent_message = builder.wait().await?.model().await?;
 
-                if let Some(msg) = sent_message {
-                    if let MessageData::Lamprey { message, .. } = data {
-                        let mut attachments = vec![];
-                        for (i, attachment) in msg_inner.attachments.iter().enumerate() {
-                            let common::v1::types::MessageAttachmentType::Media { media } =
-                                &attachment.ty;
-                            if let Some(discord_att) = msg.attachments.get(i) {
-                                attachments.push((media.id, discord_att.id));
-                            }
+                if let MessageData::Lamprey { message, .. } = data {
+                    let mut attachments = vec![];
+                    for (i, attachment) in msg_inner.attachments.iter().enumerate() {
+                        let common::v1::types::MessageAttachmentType::Media { media } =
+                            &attachment.ty;
+                        if let Some(discord_att) = sent_message.attachments.get(i) {
+                            attachments.push((media.id, discord_att.id));
                         }
-
-                        let updated_message = crate::bridge_old::Message {
-                            id: crate::types::MessageId::new(),
-                            portal_id: self.portal_id,
-                            source_platform: Platform::Lamprey,
-                            lamprey_message_id: Some(message.id),
-                            discord_message_id: Some(msg.id),
-                            attachments,
-                        };
-
-                        let _ = self
-                            .handle
-                            .bridge
-                            .db
-                            .message_create(self.portal_id, updated_message)
-                            .await;
                     }
+
+                    let updated_message = crate::bridge_old::Message {
+                        id: crate::types::MessageId::new(),
+                        portal_id: self.portal_id,
+                        source_platform: Platform::Lamprey,
+                        lamprey_message_id: Some(message.id),
+                        discord_message_id: Some(sent_message.id),
+                        attachments,
+                    };
+
+                    let _ = self
+                        .handle
+                        .bridge
+                        .db
+                        .message_create(self.portal_id, updated_message)
+                        .await;
                 }
             }
             PortalEvent::MessageUpdate(data) => {
@@ -381,12 +390,9 @@ impl DiscordPortal {
                     MessageData::Discord { .. } => return Ok(()),
                 };
 
-                // PERF: don't fetch webhook every time, cache it (Webhook::from_url)
                 let discord_cfg = self.portal.discord.as_ref().unwrap();
+                let (webhook_id, webhook_token) = parse_webhook_url(&discord_cfg.webhook_url)?;
                 let thread_id = self.resolve_thread(thread).await?;
-                let webhook_url = &discord_cfg.webhook_url;
-                let webhook =
-                    serenity::all::Webhook::from_url(&self.http, webhook_url.as_str()).await?;
 
                 let Some(portal_msg) = self
                     .handle
@@ -424,7 +430,8 @@ impl DiscordPortal {
                     }
                 });
 
-                let mut attachments = EditAttachments::new();
+                let mut keep = vec![];
+                let mut files = vec![];
                 for attachment in &msg_inner.attachments {
                     let common::v1::types::MessageAttachmentType::Media { media } = &attachment.ty;
 
@@ -435,7 +442,7 @@ impl DiscordPortal {
                         .find(|(l_id, _)| l_id == &media.id)
                         .map(|(_, d_id)| *d_id)
                     {
-                        attachments = attachments.keep(discord_id);
+                        keep.push(discord_id);
                         continue;
                     }
 
@@ -443,26 +450,30 @@ impl DiscordPortal {
                     let url = format!("{}/media/{}", info.cdn_url, media.id);
                     if let Ok(response) = http_client.get(&url).send().await {
                         if let Ok(bytes) = response.bytes().await {
-                            attachments = attachments.add(serenity::all::CreateAttachment::bytes(
-                                bytes,
+                            let id = files.len() as u64;
+                            files.push(http_attachment(
                                 media.filename.clone(),
+                                bytes.to_vec(),
+                                id,
                             ));
                         }
                     }
                 }
 
-                let mut edit_builder = serenity::all::EditWebhookMessage::new()
-                    .content(content)
-                    .attachments(attachments)
-                    .allowed_mentions(CreateAllowedMentions::new());
+                let allowed_mentions = AllowedMentions::default();
+                let mut edit_builder = self
+                    .http
+                    .update_webhook_message(webhook_id, &webhook_token, message_id)
+                    .content(Some(&content))
+                    .attachments(&files)
+                    .keep_attachment_ids(&keep)
+                    .allowed_mentions(Some(&allowed_mentions));
                 if let Some(thread_id) = thread_id {
-                    edit_builder = edit_builder.in_thread(thread_id);
+                    edit_builder = edit_builder.thread_id(thread_id);
                 } else if discord_cfg.parent_id.is_some() {
-                    edit_builder = edit_builder.in_thread(discord_cfg.channel_id);
+                    edit_builder = edit_builder.thread_id(discord_cfg.channel_id);
                 }
-                let edited = webhook
-                    .edit_message(&self.http, message_id, edit_builder)
-                    .await?;
+                let edited = edit_builder.await?.model().await?;
 
                 let mut new_attachments = vec![];
                 for (i, attachment) in msg_inner.attachments.iter().enumerate() {
@@ -497,7 +508,7 @@ impl DiscordPortal {
                                 .unwrap_or(discord_cfg.channel_id);
                             let _ = self
                                 .http
-                                .delete_message(channel_id, discord_message_id, None)
+                                .delete_message(channel_id, discord_message_id)
                                 .await;
                             let _ = self
                                 .handle
@@ -542,7 +553,7 @@ impl DiscordPortal {
                 // make sure that only one thread can be created at a time
                 let _guard = self.handle.bridge.channel_lock.lock().await;
 
-                let (create, lamprey_chan, source_message_id) = match chan {
+                let (name, lamprey_chan, source_message_id, kind) = match chan {
                     bridge_old::ChannelData::Discord { .. } => return Ok(()),
                     bridge_old::ChannelData::Lamprey { channel } => {
                         if self
@@ -580,14 +591,13 @@ impl DiscordPortal {
                             .or_else(|| channel.auto_name.clone())
                             .unwrap_or_else(|| "thread".to_string());
 
-                        let create =
-                            serenity::all::CreateThread::new(name).kind(match channel.ty {
-                                lamprey::ChannelType::ThreadPublic => ChannelType::PublicThread,
-                                lamprey::ChannelType::ThreadPrivate => ChannelType::PrivateThread,
-                                // TODO: create NewsThread in News (announcement) channels
-                                _ => return Ok(()),
-                            });
-                        (create, channel, source_message_id)
+                        let kind = match channel.ty {
+                            lamprey::ChannelType::ThreadPublic => ChannelType::PublicThread,
+                            lamprey::ChannelType::ThreadPrivate => ChannelType::PrivateThread,
+                            // TODO: create AnnouncementThread in News (announcement) channels
+                            _ => return Ok(()),
+                        };
+                        (name, channel, source_message_id, kind)
                     }
                 };
 
@@ -599,14 +609,17 @@ impl DiscordPortal {
                             .create_thread_from_message(
                                 discord_cfg.channel_id,
                                 message_id,
-                                &create,
-                                None,
+                                &name,
                             )
+                            .await?
+                            .model()
                             .await?
                     }
                     None => {
                         self.http
-                            .create_thread(discord_cfg.channel_id, &create, None)
+                            .create_thread(discord_cfg.channel_id, &name, kind)
+                            .await?
+                            .model()
                             .await?
                     }
                 };
@@ -626,7 +639,10 @@ impl DiscordPortal {
                         channel_id: thread.id,
                         webhook_url: discord_cfg.webhook_url.clone(),
                         webhook_id: discord_cfg.webhook_id,
-                        last_id: thread.last_message_id.unwrap_or_default(),
+                        last_id: thread
+                            .last_message_id
+                            .map(|id| id.cast())
+                            .unwrap_or(Id::new(0)),
                     }),
                 };
 
@@ -650,7 +666,84 @@ impl DiscordPortal {
     }
 }
 
-fn format_discord_reply_content(discord_msg: &serenity::all::Message) -> String {
+fn parse_webhook_url(url: &url::Url) -> Result<(WebhookId, String)> {
+    let mut segments = url
+        .path_segments()
+        .into_iter()
+        .flatten()
+        .rev();
+    let token = segments
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("invalid webhook url"))?
+        .to_owned();
+    let id: WebhookId = segments
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("invalid webhook url"))?
+        .parse()?;
+    Ok((id, token))
+}
+
+fn http_attachment(filename: String, bytes: Vec<u8>, id: u64) -> HttpAttachment {
+    HttpAttachment {
+        title: None,
+        description: None,
+        file: bytes,
+        filename,
+        id,
+        duration_secs: None,
+        waveform: None,
+        is_spoiler: None,
+    }
+}
+
+fn embed_with_description(description: String) -> Embed {
+    Embed {
+        author: None,
+        color: None,
+        description: Some(description),
+        fields: vec![],
+        flags: None,
+        footer: None,
+        image: None,
+        kind: "rich".to_owned(),
+        provider: None,
+        thumbnail: None,
+        timestamp: None,
+        title: None,
+        url: None,
+        video: None,
+    }
+}
+
+fn embed_with_image(url: String) -> Embed {
+    Embed {
+        author: None,
+        color: None,
+        description: None,
+        fields: vec![],
+        flags: None,
+        footer: None,
+        image: Some(EmbedImage {
+            height: None,
+            proxy_url: None,
+            url,
+            width: None,
+            content_type: None,
+            placeholder: None,
+            placeholder_version: None,
+            flags: None,
+        }),
+        kind: "rich".to_owned(),
+        provider: None,
+        thumbnail: None,
+        timestamp: None,
+        title: None,
+        url: None,
+        video: None,
+    }
+}
+
+fn format_discord_reply_content(discord_msg: &Message) -> String {
     if !discord_msg.content.is_empty() {
         discord_msg.content.to_owned()
     } else if !discord_msg.attachments.is_empty() {

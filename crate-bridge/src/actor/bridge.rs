@@ -118,7 +118,7 @@ pub enum BridgeEvent {
         accepted: bool,
     },
 
-    PresenceUpdate(serenity::all::Presence),
+    PresenceUpdate(discord::Presence),
     // TODO: more events
     // PortalUpdate,
     // UserUpdate,

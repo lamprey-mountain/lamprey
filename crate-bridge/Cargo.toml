@@ -29,7 +29,6 @@ reqwest = { workspace = true, features = ["rustls", "json"] }
 rustls = { workspace = true, features = ["ring"] }
 sdk = { workspace = true }
 serde = { workspace = true }
-serenity = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio", "sqlite", "uuid"] }
 strum = { version = "0.28.0", features = ["derive"] }
 time = { workspace = true, features = ["serde-human-readable", "macros"] }
@@ -38,5 +37,9 @@ tokio-util = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
+twilight-cache-inmemory = { workspace = true }
+twilight-gateway = { workspace = true }
+twilight-http = { workspace = true }
+twilight-model = { workspace = true }
 url = { workspace = true }
 uuid = { workspace = true }

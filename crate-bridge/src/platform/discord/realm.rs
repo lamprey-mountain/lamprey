@@ -2,21 +2,22 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::{error, warn};
 
-use serenity::all::{ChannelType, CreateChannel, CreateWebhook};
+use twilight_http::Client as HttpClient;
 
 use crate::bridge_old::{
     BridgeEvent, Portal, PortalDiscord, PortalId, PortalLamprey, Realm, RealmEvent, RealmHandle,
     RealmId,
 };
+use crate::platform::discord::ChannelType;
 use crate::prelude::*;
 use crate::types::ChannelData;
-use sdk::http::Http;
+use twilight_model::id::Id;
 
 pub struct DiscordRealm {
     realm_id: RealmId,
     realm: Realm,
     handle: RealmHandle,
-    http: Arc<serenity::all::Http>,
+    http: Arc<HttpClient>,
 }
 
 impl DiscordRealm {
@@ -24,8 +25,7 @@ impl DiscordRealm {
         realm_id: RealmId,
         realm: Realm,
         handle: RealmHandle,
-        http: Arc<serenity::all::Http>,
-        _cache: Arc<serenity::all::Cache>,
+        http: Arc<HttpClient>,
     ) -> (RealmId, Result<()>) {
         let me = Self {
             realm_id,
@@ -79,48 +79,66 @@ impl DiscordRealm {
                                 .or_else(|| channel.auto_name.clone())
                                 .unwrap_or_default();
 
-                            let create_channel = CreateChannel::new(name).kind(match channel.ty {
-                                    lamprey::ChannelType::Text => ChannelType::Text,
-                                    lamprey::ChannelType::ThreadPublic
-                                    | lamprey::ChannelType::ThreadPrivate => {
-                                        warn!(
-                                            channel_id = %channel.id,
-                                            "cannot bridge lamprey thread: parent channel id translation is not implemented"
-                                        );
-                                        continue;
-                                    }
-                                    _ => continue,
-                                });
+                            let kind = match channel.ty {
+                                lamprey::ChannelType::Text => ChannelType::GuildText,
+                                lamprey::ChannelType::ThreadPublic
+                                | lamprey::ChannelType::ThreadPrivate => {
+                                    warn!(
+                                        channel_id = %channel.id,
+                                        "cannot bridge lamprey thread: parent channel id translation is not implemented"
+                                    );
+                                    continue;
+                                }
+                                _ => continue,
+                            };
 
                             // TODO: run below code in a tokio task instead of blocking loop
 
                             // TODO: add audit log reason
-                            let discord_channel =
-                                match http.create_channel(guild_id, &create_channel, None).await {
+                            let discord_channel = match http
+                                .create_guild_channel(guild_id, &name)
+                                .kind(kind)
+                                .await
+                            {
+                                Ok(r) => match r.model().await {
                                     Ok(ch) => ch,
                                     Err(e) => {
                                         error!(?e, "failed to create discord channel");
                                         continue;
                                     }
-                                };
+                                },
+                                Err(e) => {
+                                    error!(?e, "failed to create discord channel");
+                                    continue;
+                                }
+                            };
 
                             // TODO: deduplicate this code with `/link`
-                            let webhook = match discord_channel
-                                .create_webhook(&http, CreateWebhook::new("bridge"))
-                                .await
-                            {
-                                Ok(wh) => wh,
+                            let webhook = match http.create_webhook(discord_channel.id, "bridge").await {
+                                Ok(r) => match r.model().await {
+                                    Ok(wh) => wh,
+                                    Err(e) => {
+                                        error!(?e, "failed to create webhook");
+                                        continue;
+                                    }
+                                },
                                 Err(e) => {
                                     error!(?e, "failed to create webhook");
                                     continue;
                                 }
                             };
 
-                            let webhook_url = webhook
-                                .url()
-                                .expect("webhook url")
-                                .parse()
-                                .expect("invalid webhook url");
+                            let Some(webhook_token) = webhook.token.as_deref() else {
+                                error!("webhook response is missing its token");
+                                continue;
+                            };
+
+                            let webhook_url = format!(
+                                "https://discord.com/api/webhooks/{}/{}",
+                                webhook.id, webhook_token
+                            )
+                            .parse()
+                            .expect("invalid webhook url");
 
                             let portal_id = PortalId::new();
                             let portal = Portal {
@@ -137,7 +155,10 @@ impl DiscordRealm {
                                     channel_id: discord_channel.id,
                                     webhook_url,
                                     webhook_id: Some(webhook.id),
-                                    last_id: discord_channel.last_message_id.unwrap_or_default(),
+                                    last_id: discord_channel
+                                        .last_message_id
+                                        .map(|id| id.cast())
+                                        .unwrap_or(Id::new(0)),
                                 }),
                             };
 
@@ -163,14 +184,12 @@ impl DiscordRealm {
                     if puppet.source_platform == crate::types::Platform::Lamprey {
                         if let Some(discord_cfg) = self.realm.discord.as_ref() {
                             let guild_id = discord_cfg.guild_id;
-                            let discord_id: serenity::all::UserId = puppet.discord_id;
+                            let discord_id = puppet.discord_id;
                             let nick = member.nickname.as_deref().unwrap_or("");
-                            let _ = guild_id
-                                .edit_member(
-                                    &self.http,
-                                    discord_id,
-                                    serenity::all::EditMember::new().nickname(nick),
-                                )
+                            let _ = self
+                                .http
+                                .update_guild_member(guild_id, discord_id)
+                                .nick(Some(nick))
                                 .await;
                         }
                     }

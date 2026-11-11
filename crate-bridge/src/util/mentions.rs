@@ -242,10 +242,10 @@ impl MessageTransformer {
         }
         result.push_str(&self.source[last_end..]);
 
-        let allowed_mentions = discord::CreateAllowedMentions::new()
-            .everyone(false)
-            // .roles([])
-            .all_users(true);
+        let allowed_mentions = discord::CreateAllowedMentions {
+            parse: vec![discord::MentionType::Users],
+            ..Default::default()
+        };
 
         (result, allowed_mentions)
     }

@@ -265,9 +265,9 @@ impl LampreyPortal {
                 };
 
                 // populate reply_id
-                if let Some(reference) = &dm.message_reference {
-                    if dm.kind == serenity::all::MessageType::InlineReply
-                        && reference.kind == serenity::all::MessageReferenceKind::Default
+                if let Some(reference) = &dm.reference {
+                    if dm.kind == discord::MessageType::Reply
+                        && reference.kind == discord::MessageReferenceType::Default
                     {
                         if let Some(discord_reply_id) = reference.message_id {
                             if let Some(msg) = self
@@ -344,9 +344,8 @@ impl LampreyPortal {
                         url: embed.url.as_ref().and_then(|u| u.parse().ok()),
                         title: embed.title.clone(),
                         description: embed.description.clone(),
-                        color: embed.colour.map(|c| {
+                        color: embed.color.map(|rgb| {
                             // TODO: move this into a fn for Color or ColorSrgb
-                            let rgb = c.0;
                             Color::Srgb(ColorSrgb {
                                 r: ((rgb >> 16) & 0xFF) as f32 / 255.0,
                                 g: ((rgb >> 8) & 0xFF) as f32 / 255.0,
@@ -401,7 +400,7 @@ impl LampreyPortal {
                         nonce: None,
                         timestamp: Some(
                             OffsetDateTime::from_unix_timestamp_nanos(
-                                dm.timestamp.timestamp_nanos_opt().unwrap() as i128,
+                                dm.timestamp.as_micros() as i128 * 1000,
                             )
                             .unwrap()
                             .into(),
@@ -553,8 +552,8 @@ impl LampreyPortal {
                         let key = match reaction_key {
                             bridge::ReactionKey::Lamprey(_key) => return Ok(()),
                             bridge::ReactionKey::Discord(key) => match key {
-                                discord::ReactionType::Unicode(emoji) => {
-                                    ReactionKeyParam::Text(emoji.to_owned())
+                                discord::ReactionType::Unicode { name } => {
+                                    ReactionKeyParam::Text(name.clone())
                                 }
                                 // TODO: support custom reactions
                                 // discord::ReactionType::Custom { animated, id, name } => todo!(),
@@ -579,8 +578,8 @@ impl LampreyPortal {
                         let key = match reaction_key {
                             bridge::ReactionKey::Lamprey(_key) => return Ok(()),
                             bridge::ReactionKey::Discord(key) => match key {
-                                discord::ReactionType::Unicode(emoji) => {
-                                    ReactionKeyParam::Text(emoji.to_owned())
+                                discord::ReactionType::Unicode { name } => {
+                                    ReactionKeyParam::Text(name.clone())
                                 }
                                 // TODO: support custom reactions
                                 // discord::ReactionType::Custom { animated, id, name } => todo!(),
@@ -605,8 +604,8 @@ impl LampreyPortal {
                         let key = match reaction_key {
                             bridge::ReactionKey::Lamprey(_key) => return Ok(()),
                             bridge::ReactionKey::Discord(key) => match key {
-                                discord::ReactionType::Unicode(emoji) => {
-                                    ReactionKeyParam::Text(emoji.to_owned())
+                                discord::ReactionType::Unicode { name } => {
+                                    ReactionKeyParam::Text(name.clone())
                                 }
                                 // TODO: support custom reactions
                                 // discord::ReactionType::Custom { animated, id, name } => todo!(),
@@ -664,15 +663,15 @@ impl LampreyPortal {
                         }
 
                         let create = ChannelCreate {
-                            name: Some(discord_chan.name.clone()),
+                            name: discord_chan.name.clone(),
                             description: discord_chan.topic.clone(),
                             ty: match discord_chan.kind {
                                 discord::ChannelType::PublicThread => ChannelType::ThreadPublic,
-                                discord::ChannelType::NewsThread => ChannelType::ThreadPublic,
+                                discord::ChannelType::AnnouncementThread => ChannelType::ThreadPublic,
                                 discord::ChannelType::PrivateThread => ChannelType::ThreadPrivate,
                                 _ => return Ok(()),
                             },
-                            nsfw: discord_chan.nsfw,
+                            nsfw: discord_chan.nsfw.unwrap_or(false),
                             // TODO: copy invitable, auto_archive_duration
                             ..Default::default()
                         };
@@ -682,7 +681,8 @@ impl LampreyPortal {
                         // create the lamprey thread from it
                         let source_message_id = if matches!(
                             discord_chan.kind,
-                            discord::ChannelType::PublicThread | discord::ChannelType::NewsThread
+                            discord::ChannelType::PublicThread
+                                | discord::ChannelType::AnnouncementThread
                         ) {
                             self.handle
                                 .bridge
@@ -720,12 +720,17 @@ impl LampreyPortal {
                         last_id: channel.last_message_id.unwrap_or_default(),
                     }),
                     discord: Some(bridge::PortalDiscord {
-                        guild_id: discord_chan.guild_id,
+                        guild_id: discord_chan
+                            .guild_id
+                            .expect("threads are always in a guild"),
                         parent_id: discord_chan.parent_id,
                         channel_id: discord_chan.id,
                         webhook_url: self.portal.discord.as_ref().unwrap().webhook_url.clone(),
                         webhook_id: self.portal.discord.as_ref().unwrap().webhook_id,
-                        last_id: discord_chan.last_message_id.unwrap_or_default(),
+                        last_id: discord_chan
+                            .last_message_id
+                            .map(|id| id.cast())
+                            .unwrap_or(discord::MessageId::new(0)),
                     }),
                 };
 
