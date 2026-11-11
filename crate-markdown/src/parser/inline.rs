@@ -334,6 +334,8 @@ impl<'a> ParseContext<'a> {
                         } else if self.is_timestamp(&tokens) {
                             self.builder
                                 .start_node(NodeKind::Inline(InlineKind::Timestamp).into());
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Syntax).into(), "<");
 
                             let last = tokens.len() - 1;
                             for (i, t) in tokens.iter().enumerate() {
@@ -352,6 +354,8 @@ impl<'a> ParseContext<'a> {
                                 self.builder.token(NodeKind::Text(k).into(), s);
                             }
 
+                            self.builder
+                                .token(NodeKind::Text(TextKind::Syntax).into(), ">");
                             self.builder.finish_node();
 
                             for _ in 0..tokens.len() + 1 {

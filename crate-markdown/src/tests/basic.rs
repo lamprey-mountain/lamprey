@@ -38,6 +38,24 @@ fn test_timestamp_style() {
 }
 
 #[test]
+fn test_timestamp_roundtrip() {
+    let parser = Parser::new();
+
+    for input in [
+        "<t:1618953630>",
+        "<t:1618953630:d>",
+        "<t:1618953630:D>",
+        "<t:1618953630:F>",
+        "<t:1618953630:t>",
+        "<t:1618953630:T>",
+        "<t:1618953630:dt>",
+        "<t:1618953630:r>",
+    ] {
+        assert_eq!(parser.parse(input).to_markdown(), input);
+    }
+}
+
+#[test]
 fn test_emphasis() {
     let parser = Parser::new();
     let parsed = parser.parse("hello *world*");
