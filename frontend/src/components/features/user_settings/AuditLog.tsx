@@ -1,23 +1,12 @@
 import type { User } from "sdk";
-import { createResource, Show, type VoidProps } from "solid-js";
+import { Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown";
 import { AuditLogList } from "@/components/features/audit_log/AuditLogList";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
 	const api = useApi();
-
-	// FIXME: return newest records first
-	// TODO: move logic to audit logs service
-	const [log] = createResource(async () => {
-		const { data } = await api.client.http.GET(
-			"/api/v1/user/{user_id}/audit-logs",
-			{
-				params: { path: { user_id: "@self" } },
-			},
-		);
-		return data;
-	});
+	const log = api.auditLog.useUserList(() => props.user.id);
 
 	return (
 		<>
@@ -41,7 +30,10 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 				{(l) => (
 					<AuditLogList
 						room_id={props.user.id}
-						entries={l().audit_log_entries}
+						entries={l().state.ids.flatMap((id) => {
+							const entry = api.auditLog.cache.get(id);
+							return entry ? [entry] : [];
+						})}
 					/>
 				)}
 			</Show>
