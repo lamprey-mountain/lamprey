@@ -4,7 +4,9 @@ use twilight_model::application::command::{
 use twilight_model::application::interaction::application_command::{
     CommandData, CommandOptionValue,
 };
-use twilight_model::application::interaction::{Interaction, InteractionContextType, InteractionData};
+use twilight_model::application::interaction::{
+    Interaction, InteractionContextType, InteractionData,
+};
 use twilight_model::guild::Permissions;
 use twilight_model::id::Id;
 
@@ -99,8 +101,11 @@ pub fn get_commands(disable_permission_checks: bool) -> Vec<Command> {
     let mut ping = command("ping", "check if the bridge is alive", vec![]);
     ping.default_member_permissions = permissions;
 
-    let mut guild_room_id =
-        option(CommandOptionType::String, "room_id", "the uuid of the room to link to");
+    let mut guild_room_id = option(
+        CommandOptionType::String,
+        "room_id",
+        "the uuid of the room to link to",
+    );
     guild_room_id.required = Some(true);
 
     let guild_backfill = option(
@@ -115,11 +120,18 @@ pub fn get_commands(disable_permission_checks: bool) -> Vec<Command> {
         "whether to create new portals as channels and threads are created (this is bidirectional)",
     );
 
-    let mut guild = option(CommandOptionType::SubCommand, "guild", "link this guild (server)");
+    let mut guild = option(
+        CommandOptionType::SubCommand,
+        "guild",
+        "link this guild (server)",
+    );
     guild.options = Some(vec![guild_room_id, guild_backfill, guild_continuous]);
 
-    let mut channel_channel_id =
-        option(CommandOptionType::String, "channel_id", "the uuid of the channel to link to");
+    let mut channel_channel_id = option(
+        CommandOptionType::String,
+        "channel_id",
+        "the uuid of the channel to link to",
+    );
     channel_channel_id.required = Some(true);
 
     let channel_backfill = option(
@@ -128,7 +140,11 @@ pub fn get_commands(disable_permission_checks: bool) -> Vec<Command> {
         "whether to clone the full history of this channel",
     );
 
-    let mut channel = option(CommandOptionType::SubCommand, "channel", "link this channel");
+    let mut channel = option(
+        CommandOptionType::SubCommand,
+        "channel",
+        "link this channel",
+    );
     channel.options = Some(vec![channel_channel_id, channel_backfill]);
 
     let mut link = command("link", "link something to lamprey", vec![guild, channel]);
@@ -139,8 +155,11 @@ pub fn get_commands(disable_permission_checks: bool) -> Vec<Command> {
         "guild",
         "unlink this guild (server)",
     );
-    let unlink_channel =
-        option(CommandOptionType::SubCommand, "channel", "unlink this channel");
+    let unlink_channel = option(
+        CommandOptionType::SubCommand,
+        "channel",
+        "unlink this channel",
+    );
 
     let mut unlink = command(
         "unlink",

@@ -667,7 +667,9 @@ impl LampreyPortal {
                             description: discord_chan.topic.clone(),
                             ty: match discord_chan.kind {
                                 discord::ChannelType::PublicThread => ChannelType::ThreadPublic,
-                                discord::ChannelType::AnnouncementThread => ChannelType::ThreadPublic,
+                                discord::ChannelType::AnnouncementThread => {
+                                    ChannelType::ThreadPublic
+                                }
                                 discord::ChannelType::PrivateThread => ChannelType::ThreadPrivate,
                                 _ => return Ok(()),
                             },

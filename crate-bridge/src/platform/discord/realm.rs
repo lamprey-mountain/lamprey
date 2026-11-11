@@ -8,7 +8,7 @@ use crate::bridge_old::{
     BridgeEvent, Portal, PortalDiscord, PortalId, PortalLamprey, Realm, RealmEvent, RealmHandle,
     RealmId,
 };
-use crate::platform::discord::{webhook_url, ChannelType};
+use crate::platform::discord::{ChannelType, webhook_url};
 use crate::prelude::*;
 use crate::types::ChannelData;
 use twilight_model::id::Id;
@@ -95,38 +95,36 @@ impl DiscordRealm {
                             // TODO: run below code in a tokio task instead of blocking loop
 
                             // TODO: add audit log reason
-                            let discord_channel = match http
-                                .create_guild_channel(guild_id, &name)
-                                .kind(kind)
-                                .await
-                            {
-                                Ok(r) => match r.model().await {
-                                    Ok(ch) => ch,
+                            let discord_channel =
+                                match http.create_guild_channel(guild_id, &name).kind(kind).await {
+                                    Ok(r) => match r.model().await {
+                                        Ok(ch) => ch,
+                                        Err(e) => {
+                                            error!(?e, "failed to create discord channel");
+                                            continue;
+                                        }
+                                    },
                                     Err(e) => {
                                         error!(?e, "failed to create discord channel");
                                         continue;
                                     }
-                                },
-                                Err(e) => {
-                                    error!(?e, "failed to create discord channel");
-                                    continue;
-                                }
-                            };
+                                };
 
                             // TODO: deduplicate this code with `/link`
-                            let webhook = match http.create_webhook(discord_channel.id, "bridge").await {
-                                Ok(r) => match r.model().await {
-                                    Ok(wh) => wh,
+                            let webhook =
+                                match http.create_webhook(discord_channel.id, "bridge").await {
+                                    Ok(r) => match r.model().await {
+                                        Ok(wh) => wh,
+                                        Err(e) => {
+                                            error!(?e, "failed to create webhook");
+                                            continue;
+                                        }
+                                    },
                                     Err(e) => {
                                         error!(?e, "failed to create webhook");
                                         continue;
                                     }
-                                },
-                                Err(e) => {
-                                    error!(?e, "failed to create webhook");
-                                    continue;
-                                }
-                            };
+                                };
 
                             let Some(webhook_token) = webhook.token.as_deref() else {
                                 error!("webhook response is missing its token");

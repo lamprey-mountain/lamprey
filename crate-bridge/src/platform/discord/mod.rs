@@ -6,13 +6,14 @@ use tokio::sync::{mpsc, oneshot};
 use tokio::task::{AbortHandle, JoinSet};
 use tracing::{debug, error, info, warn};
 use twilight_cache_inmemory::InMemoryCache;
+use twilight_gateway::StreamExt as _;
 use twilight_gateway::{
     ConfigBuilder, Event as GatewayEvent, EventTypeFlags, Intents, Shard, ShardId,
 };
-use twilight_gateway::StreamExt as _;
 use twilight_http::Client as HttpClient;
 use twilight_model::application::interaction::Interaction;
 use twilight_model::channel::Channel;
+use twilight_model::channel::message::MessageFlags;
 use twilight_model::gateway::payload::incoming::GuildCreate;
 use twilight_model::http::interaction::{
     InteractionResponse, InteractionResponseData, InteractionResponseType,
@@ -21,29 +22,28 @@ use twilight_model::id::Id;
 
 use crate::actor::bridge::BridgeCommand;
 use crate::bridge_old as bridge;
+use crate::bridge_old::{BridgeEvent, BridgeHandle, PortalEvent, PortalEventEnvelope, ThreadId};
 use crate::bridge_old::{
     MessageData, PlatformHandle, Portal, PortalHandle, PortalId, Realm, RealmEvent, RealmHandle,
     RealmId,
 };
 use crate::config::{Config, DiscordConfig};
+use crate::platform::discord::interactions::{get_commands, parse_interaction};
 use crate::platform::discord::portal::DiscordPortal;
 use crate::prelude::*;
 use crate::types::ChannelData;
-use crate::{
-    bridge_old::{BridgeEvent, BridgeHandle, PortalEvent, PortalEventEnvelope, ThreadId},
-};
 
 mod interactions;
 mod portal;
 mod realm;
 
 // re export discord (twilight) types
+pub use twilight_model::channel::Attachment;
+pub use twilight_model::channel::ChannelType;
 pub use twilight_model::channel::message::{
     AllowedMentions as CreateAllowedMentions, EmojiReactionType as ReactionType, MentionType,
     Message, MessageReferenceType, MessageType,
 };
-pub use twilight_model::channel::Attachment;
-pub use twilight_model::channel::ChannelType;
 pub use twilight_model::gateway::presence::{
     Activity, ActivityType, Presence, Status as OnlineStatus,
 };
@@ -62,8 +62,6 @@ pub type RoleId = Id<RoleMarker>;
 pub type WebhookId = Id<WebhookMarker>;
 pub type AttachmentId = Id<AttachmentMarker>;
 pub type GuildChannel = Channel;
-
-pub use interactions::{SlashCommand, SlashCommandType, get_commands, parse_interaction};
 
 const RECONNECT_MIN_DELAY: Duration = Duration::from_secs(1);
 const RECONNECT_MAX_DELAY: Duration = Duration::from_secs(60);
@@ -416,7 +414,9 @@ impl Discord {
 
                 let is_supported = matches!(
                     channel.kind,
-                    ChannelType::GuildText | ChannelType::GuildAnnouncement | ChannelType::GuildCategory
+                    ChannelType::GuildText
+                        | ChannelType::GuildAnnouncement
+                        | ChannelType::GuildCategory
                 );
                 if !is_supported {
                     return;
@@ -454,9 +454,7 @@ impl Discord {
             }
             GatewayEvent::InteractionCreate(event) => {
                 let interactions::SlashCommand {
-                    interaction,
-                    inner,
-                    ..
+                    interaction, inner, ..
                 } = match parse_interaction((*event).0) {
                     Ok(command) => command,
                     Err(e) => {
@@ -499,32 +497,28 @@ impl Discord {
                         // check if channel is already linked
                         if self.portal_lookup.contains_key(&discord_channel_id) {
                             tokio::spawn(async move {
-                                let _ = respond(
-                                    &http,
-                                    &interaction,
-                                    "this channel is already linked",
-                                )
-                                .await;
+                                let _ =
+                                    respond(&http, &interaction, "this channel is already linked")
+                                        .await;
                             });
                             return;
                         }
 
                         tokio::spawn(async move {
                             // get channel
-                            let discord_channel =
-                                match http.channel(discord_channel_id).await {
-                                    Ok(r) => match r.model().await {
-                                        Ok(ch) => ch,
-                                        Err(e) => {
-                                            error!(?e, "failed to get channel");
-                                            return;
-                                        }
-                                    },
+                            let discord_channel = match http.channel(discord_channel_id).await {
+                                Ok(r) => match r.model().await {
+                                    Ok(ch) => ch,
                                     Err(e) => {
                                         error!(?e, "failed to get channel");
                                         return;
                                     }
-                                };
+                                },
+                                Err(e) => {
+                                    error!(?e, "failed to get channel");
+                                    return;
+                                }
+                            };
                             let discord_last_id = discord_channel
                                 .last_message_id
                                 .map(|id| id.cast())
@@ -550,24 +544,17 @@ impl Discord {
                                 },
                                 Err(e) => {
                                     error!(?e, "failed to create webhook");
-                                    let _ = respond(
-                                        &http,
-                                        &interaction,
-                                        "failed to create webhook",
-                                    )
-                                    .await;
+                                    let _ =
+                                        respond(&http, &interaction, "failed to create webhook")
+                                            .await;
                                     return;
                                 }
                             };
 
                             let Some(webhook_token) = webhook.token.as_deref() else {
                                 error!("webhook response is missing its token");
-                                let _ = respond(
-                                    &http,
-                                    &interaction,
-                                    "failed to create webhook",
-                                )
-                                .await;
+                                let _ =
+                                    respond(&http, &interaction, "failed to create webhook").await;
                                 return;
                             };
 
@@ -627,8 +614,7 @@ impl Discord {
                                 })
                                 .await;
 
-                            let _ =
-                                respond(&http, &interaction, "guild link initiated").await;
+                            let _ = respond(&http, &interaction, "guild link initiated").await;
                         });
                     }
                     interactions::SlashCommandType::UnlinkGuild { discord_guild_id } => {
@@ -641,8 +627,7 @@ impl Discord {
                                 .send(BridgeCommand::RealmUnlink { discord_guild_id })
                                 .await;
 
-                            let _ =
-                                respond(&http, &interaction, "guild unlinked").await;
+                            let _ = respond(&http, &interaction, "guild unlinked").await;
                         });
                     }
                     interactions::SlashCommandType::UnlinkChannel { discord_channel_id } => {
@@ -655,8 +640,7 @@ impl Discord {
                                 .send(BridgeCommand::PortalUnlink { discord_channel_id })
                                 .await;
 
-                            let _ =
-                                respond(&http, &interaction, "channel unlinked").await;
+                            let _ = respond(&http, &interaction, "channel unlinked").await;
                         });
                     }
                 }
@@ -1147,7 +1131,7 @@ async fn respond(http: &HttpClient, interaction: &Interaction, content: &str) ->
         kind: InteractionResponseType::ChannelMessageWithSource,
         data: Some(InteractionResponseData {
             content: Some(content.to_owned()),
-            flags: Some(twilight_model::channel::message::MessageFlags::EPHEMERAL),
+            flags: Some(MessageFlags::EPHEMERAL),
             ..Default::default()
         }),
     };

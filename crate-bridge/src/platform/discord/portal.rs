@@ -5,8 +5,8 @@ use opentelemetry::trace::FutureExt;
 use tokio::sync::broadcast;
 use tracing::{Instrument, debug, error, warn};
 use twilight_http::Client as HttpClient;
-use twilight_model::channel::message::embed::{Embed, EmbedImage};
 use twilight_model::channel::message::AllowedMentions;
+use twilight_model::channel::message::embed::{Embed, EmbedImage};
 use twilight_model::channel::{ChannelType, Message};
 use twilight_model::http::attachment::Attachment as HttpAttachment;
 use twilight_model::id::Id;
@@ -296,11 +296,7 @@ impl DiscordPortal {
                     if let Ok(response) = http_client.get(&url).send().await {
                         if let Ok(bytes) = response.bytes().await {
                             let id = files.len() as u64;
-                            files.push(http_attachment(
-                                media.filename.clone(),
-                                bytes.to_vec(),
-                                id,
-                            ));
+                            files.push(http_attachment(media.filename.clone(), bytes.to_vec(), id));
                         }
                     }
                 }
@@ -451,11 +447,7 @@ impl DiscordPortal {
                     if let Ok(response) = http_client.get(&url).send().await {
                         if let Ok(bytes) = response.bytes().await {
                             let id = files.len() as u64;
-                            files.push(http_attachment(
-                                media.filename.clone(),
-                                bytes.to_vec(),
-                                id,
-                            ));
+                            files.push(http_attachment(media.filename.clone(), bytes.to_vec(), id));
                         }
                     }
                 }
@@ -606,11 +598,7 @@ impl DiscordPortal {
                 let thread = match source_message_id {
                     Some(message_id) => {
                         self.http
-                            .create_thread_from_message(
-                                discord_cfg.channel_id,
-                                message_id,
-                                &name,
-                            )
+                            .create_thread_from_message(discord_cfg.channel_id, message_id, &name)
                             .await?
                             .model()
                             .await?
