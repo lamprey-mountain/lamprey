@@ -15,6 +15,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     Ok(quote! {
         mod #fn_name {
             use super::*;
+            use ::axum::response::IntoResponse as _;
             use common::util::routes::Endpoint as _;
             use common::util::routes::Response as _;
             use crate::util::MethodExt as _;
@@ -24,10 +25,15 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             pub fn register(r: &mut crate::Routes) {
                 async fn handler_inner(
                     req: crate::util::Req<#ep_type>,
-                ) -> Result<impl ::axum::response::IntoResponse> {
-                    handle(req).await.map(|r| {
-                        r.encode()
-                    })
+                ) -> ::axum::response::Response {
+                    let msgpack =
+                        req.headers().accept == crate::util::headers::Accept::Msgpack;
+
+                    match handle(req).await {
+                        Ok(r) if msgpack => r.encode_msgpack().into_response(),
+                        Ok(r) => r.encode().into_response(),
+                        Err(err) => err.into_response(),
+                    }
                 }
                 let meta = #ep_type::metadata();
                 r.route(

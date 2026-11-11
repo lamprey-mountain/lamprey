@@ -44,6 +44,9 @@ pub struct HeadersRequest {
     /// content-type
     pub content_type: ContentType,
 
+    /// accept
+    pub accept: Accept,
+
     /// user-agent
     pub user_agent: Option<String>,
 
@@ -53,7 +56,6 @@ pub struct HeadersRequest {
     /// range
     pub range: Option<headers::Range>,
     // TODO: handle these headers
-    // accept
     // accept-encoding (probably not, this should be handled by the reverse proxy?)
     // origin
 }
@@ -73,6 +75,21 @@ pub struct HeadersResponse {
     // content-security-policy
     // permissions-policy
     // vary
+}
+
+/// parsed accept header
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum Accept {
+    /// prefer json responses
+    #[default]
+    Json,
+
+    /// prefer msgpack responses
+    ///
+    /// - `application/vnd.msgpack`
+    /// - `application/msgpack`
+    /// - `application/x-msgpack`
+    Msgpack,
 }
 
 /// parsed content type header
@@ -111,6 +128,8 @@ pub enum ContentType {
 impl HeadersRequest {
     pub fn from_parts(parts: &Parts) -> Result<Self> {
         // FIXME: properly parse content-type; handle `application/foobar+json`
+        let accept = parse_accept(&parts.headers);
+
         let content_type = parts
             .headers
             .get(http::header::CONTENT_TYPE)
@@ -177,6 +196,7 @@ impl HeadersRequest {
             if_modified_since: parts.headers.typed_get(),
             if_range: parts.headers.typed_get(),
             content_type,
+            accept,
             user_agent: parts
                 .headers
                 .get("user-agent")
@@ -249,6 +269,49 @@ impl From<HeadersResponse> for HeaderMap {
             headers.typed_insert(content_range);
         }
         headers
+    }
+}
+
+/// parse the accept header, preferring msgpack when it is at least as preferred
+/// as json
+fn parse_accept(headers: &HeaderMap) -> Accept {
+    let Some(value) = headers.get(http::header::ACCEPT).and_then(|h| h.to_str().ok()) else {
+        return Accept::Json;
+    };
+
+    let (mut json_q, mut msgpack_q) = (None::<f32>, None::<f32>);
+
+    for media in value.split(',') {
+        let mut params = media.split(';');
+        let media_type = params.next().unwrap_or_default().trim();
+        let mut q = 1.0f32;
+
+        for param in params {
+            if let Some(value) = param.trim().strip_prefix("q=") {
+                q = value.parse().unwrap_or(0.0);
+            }
+        }
+
+        if q <= 0.0 {
+            continue;
+        }
+
+        let slot = match media_type {
+            "application/json" => &mut json_q,
+            "application/msgpack" | "application/vnd.msgpack" | "application/x-msgpack" => {
+                &mut msgpack_q
+            }
+            _ => continue,
+        };
+
+        let current = slot.unwrap_or(0.0);
+        *slot = Some(current.max(q));
+    }
+
+    match (msgpack_q, json_q) {
+        (Some(msgpack), Some(json)) if msgpack < json => Accept::Json,
+        (Some(_), _) => Accept::Msgpack,
+        _ => Accept::Json,
     }
 }
 
