@@ -263,14 +263,7 @@ impl DispatchChannel {
 }
 
 pub enum DispatchChannelInner {
-    // NOTE: is ChannelAck a channel or a user event?
-    // /// read receipt update
-    // ChannelAck {
-    //     user_id: UserId,
-    //     channel_id: ChannelId,
-    //     message_id: MessageId,
-    //     version_id: MessageVerId,
-    // },
+    // NOTE: read state updates are user-scoped, see DispatchClient::ReadStateUpdate
 
     // unsure about these
     // // ThreadCreate {

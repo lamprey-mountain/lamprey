@@ -1,4 +1,7 @@
-use crate::v1::types::{harvest::Harvest, mirror::seq::ClientSeq, preferences::PreferencesGlobal};
+use crate::v1::types::{
+    harvest::Harvest, mirror::seq::ClientSeq, misc::Time, preferences::PreferencesGlobal,
+};
+use crate::v2::types::{ChannelId, MessageId};
 use lamprey_macros::record;
 
 /// something happened to the client user
@@ -7,6 +10,7 @@ use lamprey_macros::record;
 pub enum DispatchClient {
     HarvestUpdate(HarvestUpdate),
     PreferencesGlobalUpdate(PreferencesGlobalUpdate),
+    ReadStateUpdate(ReadStateUpdate),
 }
 
 #[record]
@@ -21,12 +25,42 @@ pub struct PreferencesGlobalUpdate {
     pub seq: ClientSeq,
 }
 
+/// a user's read states were updated
+#[record]
+pub struct ReadStateUpdate {
+    pub read_states: Vec<ReadState>,
+    pub seq: ClientSeq,
+}
+
+/// a user's read state for a channel
+#[record]
+#[derive(Default)]
+pub struct ReadState {
+    pub channel_id: ChannelId,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_read_id: Option<MessageId>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_read_at: Option<Time>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mention_count: Option<u64>,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unread: Option<bool>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pins_read_at: Option<Time>,
+}
+
 impl DispatchClient {
     /// the client sync sequence number of this event
     pub fn seq(&self) -> ClientSeq {
         match self {
             DispatchClient::HarvestUpdate(a) => a.seq,
             DispatchClient::PreferencesGlobalUpdate(a) => a.seq,
+            DispatchClient::ReadStateUpdate(a) => a.seq,
         }
     }
 }

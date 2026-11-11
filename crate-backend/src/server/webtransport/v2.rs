@@ -2,6 +2,7 @@ use super::*;
 use common::v2::types::sync::dispatch::channel::{
     ChannelCreate, ChannelTyping, ChannelUpdate, DispatchChannel, MessageCreate,
 };
+use common::v2::types::sync::dispatch::client::{DispatchClient, ReadState, ReadStateUpdate};
 use common::v2::types::sync::dispatch::global::{Ambient, DispatchGlobal};
 use common::v2::types::sync::dispatch::room::RoomCreate;
 use common::v2::types::sync::dispatch::{Dispatch, Ready};
@@ -10,9 +11,11 @@ use kerosene_services::globals::messaging::Broadcast;
 use kerosene_sync::util::Timeout;
 use tokio::sync::{broadcast, watch};
 
+use common::v1::types::ack::AckType;
 use common::v1::types::document::DocumentUpdate;
 use common::v1::types::oauth::{Scope, Scopes};
 use common::v1::types::presence::Presence;
+use common::v1::types::util::Time;
 use common::v1::types::voice::messages::SignallingCommand;
 use common::v1::types::{
     ChannelType, MemberListOp, MessageSync, Permission, SERVER_ROOM_ID, Session, UserId,
@@ -994,6 +997,44 @@ async fn broadcast_to_dispatch(
             DispatchChannel::MessageCreate(MessageCreate {
                 message: Box::new(message),
                 seq: 0.into(), // TODO: use actual channel seq
+            })
+            .into()
+        }
+        MessageSync::PassiveAck { ack_states, .. } => {
+            let now = Time::now_utc();
+            let read_states = ack_states
+                .into_iter()
+                .filter_map(|state| match state.ty {
+                    AckType::Message {
+                        channel_id,
+                        message_id,
+                        mention_count,
+                    } => Some(ReadState {
+                        channel_id,
+                        last_read_id: Some(message_id),
+                        last_read_at: Some(now),
+                        mention_count: Some(mention_count),
+                        unread: Some(state.unread),
+                        pins_read_at: None,
+                    }),
+                    AckType::Pins { channel_id } => Some(ReadState {
+                        channel_id,
+                        last_read_id: None,
+                        last_read_at: None,
+                        mention_count: None,
+                        unread: Some(state.unread),
+                        pins_read_at: Some(now),
+                    }),
+                })
+                .collect::<Vec<_>>();
+
+            if read_states.is_empty() {
+                return None;
+            }
+
+            DispatchClient::ReadStateUpdate(ReadStateUpdate {
+                read_states,
+                seq: 0.into(),
             })
             .into()
         }
