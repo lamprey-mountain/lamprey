@@ -1,7 +1,8 @@
-use std::fmt;
+use std::{fmt, io::IsTerminal};
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use clap::Parser;
+use demand::Confirm;
 use lamprey_cli::args::{Args, AuthCommand, Command};
 use lamprey_cli::auth;
 use lamprey_cli::config::LyConfig;
@@ -15,6 +16,7 @@ enum Output {
     Logout(auth::LogoutResult),
     Check(Box<auth::CheckResult>),
     List(auth::ListResult),
+    SetDefault(auth::SetDefaultResult),
 }
 
 impl fmt::Display for Output {
@@ -24,6 +26,7 @@ impl fmt::Display for Output {
             Output::Logout(result) => fmt::Display::fmt(result, f),
             Output::Check(result) => fmt::Display::fmt(result, f),
             Output::List(result) => fmt::Display::fmt(result, f),
+            Output::SetDefault(result) => fmt::Display::fmt(result, f),
         }
     }
 }
@@ -38,6 +41,7 @@ async fn main() -> Result<()> {
         config,
         login,
         json,
+        verbose,
         command,
     } = Args::parse();
     let login = login.as_deref();
@@ -59,14 +63,31 @@ async fn main() -> Result<()> {
                     token,
                     name,
                     register,
-                    scope,
-                    registration_token,
+                    &scope,
+                    registration_token.as_ref(),
+                    verbose,
                 )
                 .await?,
             ),
-            AuthCommand::Logout => Output::Logout(auth::logout(&mut config, login).await?),
+            AuthCommand::Logout { all, yes } => {
+                if all && login.is_some() {
+                    bail!("--all cannot be combined with --login");
+                }
+
+                let action = if all {
+                    "log out of all stored logins"
+                } else {
+                    "log out"
+                };
+                confirm(yes, action)?;
+
+                Output::Logout(auth::logout(&mut config, login, all).await?)
+            }
             AuthCommand::Check => Output::Check(Box::new(auth::check(&mut config, login).await?)),
             AuthCommand::List => Output::List(auth::list(&config)),
+            AuthCommand::SetDefault { name } => {
+                Output::SetDefault(auth::set_default(&mut config, &name)?)
+            }
         },
         Command::Message { .. } => todo!(),
         Command::Channel { .. } => todo!(),
@@ -75,6 +96,23 @@ async fn main() -> Result<()> {
     };
 
     emit(json, &output)
+}
+
+/// confirm a destructive command, unless `--yes` was passed
+fn confirm(yes: bool, action: &str) -> Result<()> {
+    if yes {
+        return Ok(());
+    }
+
+    if !std::io::stdin().is_terminal() {
+        bail!("refusing to {action} without --yes");
+    }
+
+    if Confirm::new(format!("really {action}?")).run()? {
+        Ok(())
+    } else {
+        bail!("aborted")
+    }
 }
 
 fn emit<T: Serialize + fmt::Display>(json: bool, value: &T) -> Result<()> {

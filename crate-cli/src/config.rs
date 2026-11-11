@@ -133,6 +133,16 @@ impl LyConfig {
         Ok(&self.logins[self.position(name)?])
     }
 
+    /// set the default login by name
+    pub fn set_default(&mut self, name: &str) -> Result<()> {
+        let index = self.position(Some(name))?;
+        for (position, login) in self.logins.iter_mut().enumerate() {
+            login.default = position == index;
+        }
+
+        Ok(())
+    }
+
     /// add a login, replacing an existing login with the same name
     ///
     /// the config always has a default login if it has any logins at all

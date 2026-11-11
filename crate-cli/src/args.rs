@@ -1,7 +1,8 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use common::v1::types::{ChannelId, MediaId, MessageId, RedexId};
+use common::v1::types::{ChannelId, MediaId, MessageId, RedexId, SessionToken, oauth::Scope};
+use url::Url;
 
 /// tool to interact with the lamprey api
 #[derive(Debug, Parser)]
@@ -18,6 +19,10 @@ pub struct Args {
     /// Output machine readable json
     #[arg(short, long, global = true)]
     pub json: bool,
+
+    /// Print progress and diagnostic output
+    #[arg(short, long, global = true)]
+    pub verbose: bool,
 
     #[command(subcommand)]
     pub command: Command,
@@ -71,11 +76,11 @@ pub enum AuthCommand {
     Login {
         /// api url to log in to
         #[arg(short = 'u', long)]
-        api_url: Option<String>,
+        api_url: Option<Url>,
 
         /// session token to validate and store instead of authenticating
-        #[arg(short = 't', long)]
-        token: Option<String>,
+        #[arg(short = 't', long, value_parser = parse_session_token)]
+        token: Option<SessionToken>,
 
         /// name to store this login under
         name: Option<String>,
@@ -85,22 +90,42 @@ pub enum AuthCommand {
         register: bool,
 
         /// space-separated scopes to request when registering a dynamic client
-        #[arg(short = 's', long, default_value = "full")]
-        scope: String,
+        #[arg(
+            short = 's',
+            long,
+            value_delimiter = ' ',
+            default_value = "full",
+            value_parser = parse_scope,
+        )]
+        scope: Vec<Scope>,
 
         /// registration token, for servers that require one
-        #[arg(long)]
-        registration_token: Option<String>,
+        #[arg(long, value_parser = parse_session_token)]
+        registration_token: Option<SessionToken>,
     },
 
     /// logout and revoke stored credentials
-    Logout,
+    Logout {
+        /// log out of all stored logins
+        #[arg(long)]
+        all: bool,
+
+        /// skip the confirmation prompt
+        #[arg(short, long)]
+        yes: bool,
+    },
 
     /// check if a stored login is still valid, and print its metadata
     Check,
 
     /// list stored logins
     List,
+
+    /// set the default login
+    SetDefault {
+        /// name of the login to make the default
+        name: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -108,7 +133,6 @@ pub enum MessageCommand {
     /// send a message
     Send {
         /// id of the channel to send to
-        #[arg(short, long)]
         channel_id: ChannelId,
 
         /// message content
@@ -127,7 +151,7 @@ pub enum MessageCommand {
         channel_id: ChannelId,
 
         /// id of the message
-        message_id: String,
+        message_id: MessageId,
     },
 
     /// delete a message
@@ -136,7 +160,11 @@ pub enum MessageCommand {
         channel_id: ChannelId,
 
         /// id of the message
-        message_id: String,
+        message_id: MessageId,
+
+        /// skip the confirmation prompt
+        #[arg(short, long)]
+        yes: bool,
     },
     // TODO: audit reason for delete
     // TODO: fetch multiple messages
@@ -182,6 +210,10 @@ pub enum ChannelCommand {
     Remove {
         /// id of the channel
         channel_id: ChannelId,
+
+        /// skip the confirmation prompt
+        #[arg(short, long)]
+        yes: bool,
     },
 }
 
@@ -228,4 +260,14 @@ pub enum RedexCommand {
         /// id of the trigger
         trigger_id: String,
     },
+}
+
+fn parse_scope(value: &str) -> Result<Scope, String> {
+    value
+        .parse()
+        .map_err(|()| format!("unknown scope `{value}`"))
+}
+
+fn parse_session_token(value: &str) -> Result<SessionToken, std::convert::Infallible> {
+    Ok(SessionToken::from(value.to_owned()))
 }

@@ -13,7 +13,7 @@ use common::v1::types::email::EmailAddr;
 use common::v1::types::misc::SessionIdReq;
 use common::v1::types::oauth::{
     OauthAuthMethod, OauthClientRegistrationRequest, OauthDeviceAuthorizationRequest,
-    OauthGrantType, OauthTokenRequest,
+    OauthGrantType, OauthTokenRequest, Scope,
 };
 use common::v1::types::{
     ApplicationId, Session, SessionCreate, SessionStatus, SessionToken, UserId,
@@ -59,6 +59,18 @@ pub struct LoginResult {
 /// result of `ly auth logout`
 #[derive(Debug, Serialize)]
 pub struct LogoutResult {
+    pub logins: Vec<LoggedOutLogin>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LoggedOutLogin {
+    pub name: String,
+    pub api_url: Url,
+}
+
+/// result of `ly auth set-default`
+#[derive(Debug, Serialize)]
+pub struct SetDefaultResult {
     pub name: String,
     pub api_url: Url,
 }
@@ -96,7 +108,19 @@ impl fmt::Display for LoginResult {
 
 impl fmt::Display for LogoutResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "logged out {} ({})", self.name, self.api_url)
+        let lines: Vec<_> = self
+            .logins
+            .iter()
+            .map(|login| format!("logged out {} ({})", login.name, login.api_url))
+            .collect();
+
+        f.write_str(&lines.join("\n"))
+    }
+}
+
+impl fmt::Display for SetDefaultResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "default login is now {} ({})", self.name, self.api_url)
     }
 }
 
@@ -140,12 +164,13 @@ impl fmt::Display for ListResult {
 /// login and store the resulting credentials
 pub async fn login(
     config: &mut LyConfig,
-    api_url: Option<String>,
-    token: Option<String>,
+    api_url: Option<Url>,
+    token: Option<SessionToken>,
     name: Option<String>,
     register: bool,
-    scope: String,
-    registration_token: Option<String>,
+    scope: &[Scope],
+    registration_token: Option<&SessionToken>,
+    verbose: bool,
 ) -> Result<LoginResult> {
     if register && token.is_some() {
         bail!("--register cannot be combined with --token");
@@ -155,11 +180,11 @@ pub async fn login(
     let name = name.unwrap_or_else(|| "default".to_string());
 
     let credentials = match token {
-        Some(token) => LoginCredentials::Token(SessionToken::from(token)),
+        Some(token) => LoginCredentials::Token(token),
         None if register => LoginCredentials::Dynamic(
-            dynamic_login(config, &api_url, &scope, registration_token.as_deref()).await?,
+            dynamic_login(config, &api_url, scope, registration_token, verbose).await?,
         ),
-        None => prompt_auth(config, &api_url, &scope, registration_token.as_deref()).await?,
+        None => prompt_auth(config, &api_url, scope, registration_token, verbose).await?,
     };
 
     let (token, refresh_token, client_id) = match credentials {
@@ -189,26 +214,44 @@ pub async fn login(
 }
 
 /// revoke the stored session, then remove the login from the config
-pub async fn logout(config: &mut LyConfig, name: Option<&str>) -> Result<LogoutResult> {
-    let login = config.login(name)?.clone();
-
-    let revoke = async {
-        let http = http_client(&login.api_url, Some(&login.token))?;
-        http.session_delete(SessionIdReq::SessionSelf)
-            .await
-            .context("failed to revoke session")
+pub async fn logout(config: &mut LyConfig, name: Option<&str>, all: bool) -> Result<LogoutResult> {
+    let names: Vec<String> = if all {
+        config
+            .logins
+            .iter()
+            .map(|login| login.name.clone())
+            .collect()
+    } else {
+        vec![config.login(name)?.name.clone()]
     };
-    if let Err(err) = revoke.await {
-        eprintln!("warning: {err:#}");
+
+    if names.is_empty() {
+        bail!("no stored logins to log out");
     }
 
-    config.remove(name)?;
+    let mut logins = Vec::with_capacity(names.len());
+    for name in names {
+        let login = config.login(Some(&name))?.clone();
+
+        let revoke = async {
+            let http = http_client(&login.api_url, Some(&login.token))?;
+            http.session_delete(SessionIdReq::SessionSelf)
+                .await
+                .context("failed to revoke session")
+        };
+        if let Err(err) = revoke.await {
+            eprintln!("warning: {err:#}");
+        }
+
+        config.remove(Some(&name))?;
+        logins.push(LoggedOutLogin {
+            name: login.name,
+            api_url: login.api_url,
+        });
+    }
     config.save()?;
 
-    Ok(LogoutResult {
-        name: login.name,
-        api_url: login.api_url,
-    })
+    Ok(LogoutResult { logins })
 }
 
 /// check whether a stored login is still valid, refreshing oauth logins if needed
@@ -272,6 +315,18 @@ async fn refresh_login(login: &Login) -> Result<Option<DynamicLogin>> {
     }))
 }
 
+/// set the default login
+pub fn set_default(config: &mut LyConfig, name: &str) -> Result<SetDefaultResult> {
+    config.set_default(name)?;
+    config.save()?;
+
+    let login = config.login(Some(name))?;
+    Ok(SetDefaultResult {
+        name: login.name.clone(),
+        api_url: login.api_url.clone(),
+    })
+}
+
 /// list the stored logins
 pub fn list(config: &LyConfig) -> ListResult {
     let logins = config
@@ -287,15 +342,17 @@ pub fn list(config: &LyConfig) -> ListResult {
     ListResult { logins }
 }
 
-fn prompt_api_url(api_url: Option<String>) -> Result<Url> {
-    let api_url = match api_url {
-        Some(api_url) => api_url,
-        None => Input::new("api url")
-            .placeholder("http://localhost:4000")
-            .run()?,
-    };
+fn prompt_api_url(api_url: Option<Url>) -> Result<Url> {
+    match api_url {
+        Some(api_url) => Ok(api_url),
+        None => {
+            let api_url = Input::new("api url")
+                .placeholder("http://localhost:4000")
+                .run()?;
 
-    Url::parse(&api_url).context("invalid api url")
+            Url::parse(&api_url).context("invalid api url")
+        }
+    }
 }
 
 fn session_name() -> String {
@@ -325,8 +382,9 @@ fn random_bytes<const N: usize>() -> [u8; N] {
 async fn dynamic_login(
     config: &mut LyConfig,
     api_url: &Url,
-    scope: &str,
-    registration_token: Option<&str>,
+    scope: &[Scope],
+    registration_token: Option<&SessionToken>,
+    verbose: bool,
 ) -> Result<DynamicLogin> {
     let http = http_client(api_url, None)?;
     let metadata = http
@@ -354,15 +412,17 @@ async fn dynamic_login(
         .append_pair("response_type", "code")
         .append_pair("client_id", &client.client_id.to_string())
         .append_pair("redirect_uri", &redirect_uri)
-        .append_pair("scope", scope)
+        .append_pair("scope", &scope_string(scope))
         .append_pair("state", &state)
         .append_pair("code_challenge", &challenge)
         .append_pair("code_challenge_method", "S256");
 
-    println!("opening browser to authorize...");
+    if verbose {
+        eprintln!("opening browser to authorize...");
+    }
     if let Err(err) = webbrowser::open(url.as_str()) {
         eprintln!("warning: failed to open browser: {err}");
-        println!("open this url to continue:\n{url}");
+        eprintln!("open this url to continue:\n{url}");
     }
 
     let code = tokio::task::spawn_blocking(move || wait_for_callback(listener, &state))
@@ -408,11 +468,10 @@ async fn cached_client_is_valid(api_url: &Url, client: &CachedClient) -> bool {
 
 async fn register_client(
     api_url: &Url,
-    scope: &str,
-    registration_token: Option<&str>,
+    scope: &[Scope],
+    registration_token: Option<&SessionToken>,
 ) -> Result<CachedClient> {
-    let token = registration_token.map(|token| SessionToken::from(token.to_string()));
-    let http = http_client(api_url, token.as_ref())?;
+    let http = http_client(api_url, registration_token)?;
     let redirect_uris = callback_uris();
     let client_name = session_name();
 
@@ -426,7 +485,7 @@ async fn register_client(
             ]),
             response_types: None,
             client_name: Some(client_name.clone()),
-            scope: Some(scope.to_string()),
+            scope: Some(scope_string(scope)),
         })
         .await
         .context("failed to register dynamic oauth client")?;
@@ -554,8 +613,9 @@ fn respond(stream: &mut TcpStream, status: &str, message: &str) -> Result<()> {
 async fn prompt_auth(
     config: &mut LyConfig,
     api_url: &Url,
-    scope: &str,
-    registration_token: Option<&str>,
+    scope: &[Scope],
+    registration_token: Option<&SessionToken>,
+    verbose: bool,
 ) -> Result<LoginCredentials> {
     let auth_type = Select::new("auth type")
         .description("how do you want to authenticate to the server")
@@ -574,7 +634,7 @@ async fn prompt_auth(
             password_login(api_url, auth_type).await?,
         )),
         AuthType::DynamicClient => Ok(LoginCredentials::Dynamic(
-            dynamic_login(config, api_url, scope, registration_token).await?,
+            dynamic_login(config, api_url, scope, registration_token, verbose).await?,
         )),
     }
 }
@@ -665,6 +725,15 @@ async fn authenticate_second_factor(http: &Http) -> Result<Session> {
     http.session_get(SessionIdReq::SessionSelf)
         .await
         .context("failed to validate login")
+}
+
+/// render scopes as the space-separated form the oauth endpoints expect
+fn scope_string(scope: &[Scope]) -> String {
+    scope
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(" ")
 }
 
 fn http_client(api_url: &Url, token: Option<&SessionToken>) -> Result<Http> {
