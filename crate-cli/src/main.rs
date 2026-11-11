@@ -3,10 +3,11 @@ use std::{fmt, io::IsTerminal};
 use anyhow::{Result, bail};
 use clap::Parser;
 use demand::Confirm;
-use lamprey_cli::args::{Args, AuthCommand, ChannelCommand, Command, MessageCommand};
+use lamprey_cli::args::{Args, AuthCommand, ChannelCommand, Command, MediaCommand, MessageCommand};
 use lamprey_cli::auth;
 use lamprey_cli::channel;
 use lamprey_cli::config::LyConfig;
+use lamprey_cli::media;
 use lamprey_cli::message;
 use serde::Serialize;
 
@@ -23,6 +24,7 @@ enum Output {
     Delete(message::DeleteResult),
     Channel(channel::ChannelResult),
     ChannelRemove(channel::RemoveResult),
+    Media(media::MediaResult),
 }
 
 impl fmt::Display for Output {
@@ -37,6 +39,7 @@ impl fmt::Display for Output {
             Output::Delete(result) => fmt::Display::fmt(result, f),
             Output::Channel(result) => fmt::Display::fmt(result, f),
             Output::ChannelRemove(result) => fmt::Display::fmt(result, f),
+            Output::Media(result) => fmt::Display::fmt(result, f),
         }
     }
 }
@@ -143,7 +146,16 @@ async fn main() -> Result<()> {
                 Output::ChannelRemove(channel::remove(&mut config, login, channel_id).await?)
             }
         },
-        Command::Media { .. } => todo!(),
+        Command::Media { command } => match command {
+            MediaCommand::Upload {
+                path,
+                alt,
+                strip_exif,
+            } => Output::Media(media::upload(&mut config, login, &path, alt, strip_exif).await?),
+            MediaCommand::Get { media_id } => {
+                Output::Media(media::get(&mut config, login, media_id).await?)
+            }
+        },
         Command::Events {} => todo!(),
     };
 

@@ -227,7 +227,14 @@ pub enum MediaCommand {
     Upload {
         /// path to the file to upload
         path: PathBuf,
-        // TODO: flags to set alt text and stuff
+
+        /// alt text for the uploaded file
+        #[arg(short, long)]
+        alt: Option<String>,
+
+        /// strip sensitive exif metadata before uploading
+        #[arg(long)]
+        strip_exif: bool,
     },
 
     /// get media metadata
