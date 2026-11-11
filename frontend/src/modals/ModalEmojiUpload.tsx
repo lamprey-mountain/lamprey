@@ -2,7 +2,7 @@ import { createSignal } from "solid-js";
 import type { Media } from "ts-sdk";
 import { type Api, useApi } from "@/api";
 import { useModals } from "@/contexts/modal";
-import { getThumb } from "@/media/util";
+import { emojiNameFromFilename, getThumb } from "@/media/util";
 import { Modal } from "./mod";
 
 interface ModalEmojiUploadProps {
@@ -14,7 +14,9 @@ export const ModalEmojiUpload = (props: ModalEmojiUploadProps) => {
 	const api = useApi();
 	const [, modalCtl] = useModals();
 
-	const [name, setName] = createSignal("unknown");
+	const [name, setName] = createSignal(
+		emojiNameFromFilename(props.media.filename),
+	);
 	const [loading, setLoading] = createSignal(false);
 
 	const save = () => {
@@ -41,7 +43,7 @@ export const ModalEmojiUpload = (props: ModalEmojiUploadProps) => {
 				<div class="main">
 					<img
 						class="emoji"
-						src={getThumb(props.media)}
+						src={getThumb(props.media, 64)}
 						alt={`:${name()}:`}
 						title={`:${name()}:`}
 					/>
@@ -59,7 +61,13 @@ export const ModalEmojiUpload = (props: ModalEmojiUploadProps) => {
 								<input
 									type="text"
 									placeholder="monkaw"
-									ref={(el) => queueMicrotask(() => el.focus())}
+									autofocus
+									ref={(el) =>
+										queueMicrotask(() => {
+											el.focus();
+											el.select();
+										})
+									}
 									onInput={(e) => setName(e.target.value)}
 								/>
 							</label>

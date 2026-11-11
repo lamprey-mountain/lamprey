@@ -100,6 +100,11 @@ export const getThumbFromEmojiId = (emoji_id: string, size?: number) => {
 	return url.href;
 };
 
+/** derive a custom emoji name from a filename */
+export function emojiNameFromFilename(filename: string): string {
+	return filename.replace(/\.[^.]+$/, "").replace(/\s+/g, "");
+}
+
 /** get the cdn url for an emoji */
 export const getEmojiUrl = (id: string, size: number = 64) => {
 	const config = useConfig();

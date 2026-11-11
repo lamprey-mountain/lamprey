@@ -1,10 +1,18 @@
-import { createUpload, type EmojiCustom } from "sdk";
-import { createSignal, For, Show, type VoidProps } from "solid-js";
+import { createUpload, type EmojiCustom, type Media } from "sdk";
+import {
+	createSignal,
+	For,
+	onCleanup,
+	onMount,
+	Show,
+	type VoidProps,
+} from "solid-js";
+import { Portal } from "solid-js/web";
 import { useApi, useEmoji } from "@/api";
 import { Icon } from "@/atoms/Icon";
 import { Search } from "@/atoms/Search";
 import { useModals } from "@/contexts/modal";
-import { getEmojiUrl } from "@/media/util";
+import { emojiNameFromFilename, getEmojiUrl } from "@/media/util";
 import type { RoomT } from "@/types";
 import { icDelete } from "@/utils/icons";
 
@@ -18,6 +26,7 @@ export function Emoji(props: VoidProps<{ room: RoomT }>) {
 	const emoji2 = useEmoji();
 	const [, modalCtl] = useModals();
 	const [renaming, setRenaming] = createSignal<string | null>(null);
+	const [dragging, setDragging] = createSignal(false);
 	const emoji = emoji2.useRoomList(() => props.room.id);
 
 	function remove(emoji_id: string) {
@@ -50,19 +59,38 @@ export function Emoji(props: VoidProps<{ room: RoomT }>) {
 	}
 
 	let uploadRef!: HTMLInputElement;
+	let skipModal = false;
 
-	const create = () => {
+	const create = (e: MouseEvent) => {
+		skipModal = e.shiftKey;
 		uploadRef.click();
 	};
 
-	const upload = (e: InputEvent) => {
-		const file = (e.target as HTMLInputElement).files?.[0];
-		if (!file) return;
+	const createEmoji = (media: Media) => {
+		api2.client.http
+			.POST("/api/v1/room/{room_id}/emoji", {
+				params: { path: { room_id: props.room.id } },
+				body: {
+					animated: false,
+					media_id: media.id,
+					name: emojiNameFromFilename(media.filename),
+				},
+			})
+			.catch(console.error);
+	};
+
+	const uploadFile = (file: File, skip = false) => {
 		createUpload({
 			client: api2.client,
 			file,
 			onComplete: (media) => {
-				modalCtl.open({ type: "emoji_upload", room_id: props.room.id, media });
+				if (skip) createEmoji(media);
+				else
+					modalCtl.open({
+						type: "emoji_upload",
+						room_id: props.room.id,
+						media,
+					});
 			},
 			onFail: () => {},
 			onPause: () => {},
@@ -70,6 +98,65 @@ export function Emoji(props: VoidProps<{ room: RoomT }>) {
 			onResume: () => {},
 		});
 	};
+
+	const upload = (e: InputEvent & { currentTarget: HTMLInputElement }) => {
+		for (const file of Array.from(e.currentTarget.files ?? [])) {
+			uploadFile(file, skipModal);
+		}
+		skipModal = false;
+		e.currentTarget.value = "";
+	};
+
+	const hasFiles = (e: DragEvent) =>
+		Array.from(e.dataTransfer?.types ?? []).includes("Files");
+
+	// listen on window so dropping anywhere in the open settings modal works
+	onMount(() => {
+		let dragCounter = 0;
+
+		const onDragEnter = (e: DragEvent) => {
+			if (!hasFiles(e)) return;
+			dragCounter++;
+			setDragging(true);
+		};
+
+		const onDragOver = (e: DragEvent) => {
+			if (!hasFiles(e)) return;
+			e.preventDefault();
+			if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+			setDragging(true);
+		};
+
+		const onDragLeave = () => {
+			dragCounter--;
+			if (dragCounter <= 0) {
+				dragCounter = 0;
+				setDragging(false);
+			}
+		};
+
+		const onDrop = (e: DragEvent) => {
+			if (!hasFiles(e)) return;
+			e.preventDefault();
+			dragCounter = 0;
+			setDragging(false);
+			for (const file of Array.from(e.dataTransfer?.files ?? [])) {
+				uploadFile(file, e.shiftKey);
+			}
+		};
+
+		window.addEventListener("dragenter", onDragEnter);
+		window.addEventListener("dragover", onDragOver);
+		window.addEventListener("dragleave", onDragLeave);
+		window.addEventListener("drop", onDrop);
+
+		onCleanup(() => {
+			window.removeEventListener("dragenter", onDragEnter);
+			window.removeEventListener("dragover", onDragOver);
+			window.removeEventListener("dragleave", onDragLeave);
+			window.removeEventListener("drop", onDrop);
+		});
+	});
 
 	return (
 		<div class="room-settings-emoji">
@@ -82,6 +169,7 @@ export function Emoji(props: VoidProps<{ room: RoomT }>) {
 				<input
 					name="file"
 					type="file"
+					multiple
 					style="display:none"
 					ref={uploadRef}
 					onInput={upload}
@@ -140,6 +228,16 @@ export function Emoji(props: VoidProps<{ room: RoomT }>) {
 					}}
 				</For>
 			</ul>
+			<Portal mount={document.getElementById("overlay")!}>
+				<Show when={dragging()}>
+					<div class="dnd-upload-message">
+						<div class="inner">
+							<div>drop to upload emoji</div>
+							<div class="dim">(hold shift to upload directly)</div>
+						</div>
+					</div>
+				</Show>
+			</Portal>
 		</div>
 	);
 }
