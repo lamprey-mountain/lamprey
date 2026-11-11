@@ -118,11 +118,7 @@ export const ModalRoleMembers = (props: ModalRoleMembersProps) => {
 					if (checked) {
 						await api.roles.addMember(props.room_id, props.role_id, user_id);
 					} else {
-						await api.roles.removeMember(
-							props.room_id,
-							props.role_id,
-							user_id,
-						);
+						await api.roles.removeMember(props.room_id, props.role_id, user_id);
 					}
 				}),
 			);
@@ -160,10 +156,7 @@ export const ModalRoleMembers = (props: ModalRoleMembersProps) => {
 							member.override_name ?? user()?.name ?? member.user_id;
 						const id = `role-member-${props.role_id}-${member.user_id}`;
 						return (
-							<li
-								class="member-item"
-								onFocusIn={() => setActiveIndex(index())}
-							>
+							<li class="member-item" onFocusIn={() => setActiveIndex(index())}>
 								<CheckboxOption
 									id={id}
 									checked={isChecked(member)}

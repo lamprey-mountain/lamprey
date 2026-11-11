@@ -205,7 +205,9 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 															classList={{
 																"state-allow": state() === "allow",
 															}}
-															onClick={() => canChange() && props.onPermChange(p.id, "allow")}
+															onClick={() =>
+																canChange() && props.onPermChange(p.id, "allow")
+															}
 															title="Allow"
 														>
 															<img
@@ -220,7 +222,8 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 																"state-inherit": state() === "inherit",
 															}}
 															onClick={() =>
-																canChange() && props.onPermChange(p.id, "inherit")
+																canChange() &&
+																props.onPermChange(p.id, "inherit")
 															}
 															title="Default"
 														>
@@ -235,7 +238,9 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 															classList={{
 																"state-deny": state() === "deny",
 															}}
-															onClick={() => canChange() && props.onPermChange(p.id, "deny")}
+															onClick={() =>
+																canChange() && props.onPermChange(p.id, "deny")
+															}
 															title="Deny"
 														>
 															<img

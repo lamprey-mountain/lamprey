@@ -429,9 +429,7 @@ export function getModal(modal: ModalType) {
 		return <ModalFolderEdit folder_id={modal.folder_id} />;
 	}
 	if (isRoleMembers(modal)) {
-		return (
-			<ModalRoleMembers room_id={modal.room_id} role_id={modal.role_id} />
-		);
+		return <ModalRoleMembers room_id={modal.room_id} role_id={modal.role_id} />;
 	}
 	if (isUserSettings(modal)) {
 		return <ModalUserSettings page={modal.page} />;

@@ -45,8 +45,7 @@ export function RoleMenu(props: { role_id: string; room_id?: string }) {
 		return rid && uid ? roomMembers2.cache.get(`${rid}:${uid}`) : null;
 	};
 
-	const hasRole = () =>
-		selfMember()?.roles.includes(props.role_id) ?? false;
+	const hasRole = () => selfMember()?.roles.includes(props.role_id) ?? false;
 
 	const copyMention = () =>
 		navigator.clipboard.writeText(`<&${props.role_id}>`);

@@ -453,9 +453,7 @@ const RoleEditor = (props: {
 	const roomMembers2 = useRoomMembers();
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<"role" | "members">("role");
-	const canEdit = createMemo(() =>
-		props.canEditRole(props.edit.role as Role),
-	);
+	const canEdit = createMemo(() => props.canEditRole(props.edit.role as Role));
 	const [memberSearch, setMemberSearch] = createSignal("");
 	const [savingRole, setSavingRole] = createSignal(false);
 
