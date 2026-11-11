@@ -4,7 +4,7 @@ use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use common::v1::types::SessionToken;
+use common::v1::types::{ApplicationId, SessionToken};
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -17,6 +17,19 @@ pub struct LyConfig {
 
     #[serde(default)]
     pub logins: Vec<Login>,
+
+    /// dynamically registered oauth clients, cached to avoid re-registering
+    #[serde(default)]
+    pub clients: Vec<CachedClient>,
+}
+
+/// a dynamically registered oauth client
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CachedClient {
+    pub api_url: Url,
+    pub client_id: ApplicationId,
+    pub client_name: String,
+    pub redirect_uris: Vec<String>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -26,6 +39,14 @@ pub struct Login {
     pub token: SessionToken,
     #[serde(default)]
     pub default: bool,
+
+    /// refresh token from an oauth login, if any
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refresh_token: Option<String>,
+
+    /// oauth client that issued this login, if any
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_id: Option<ApplicationId>,
 }
 
 impl fmt::Debug for Login {
@@ -35,6 +56,11 @@ impl fmt::Debug for Login {
             .field("api_url", &self.api_url)
             .field("token", &"<redacted>")
             .field("default", &self.default)
+            .field(
+                "refresh_token",
+                &self.refresh_token.as_ref().map(|_| "<redacted>"),
+            )
+            .field("client_id", &self.client_id)
             .finish()
     }
 }
@@ -46,6 +72,8 @@ impl Login {
             api_url,
             token,
             default: false,
+            refresh_token: None,
+            client_id: None,
         }
     }
 }
@@ -120,6 +148,25 @@ impl LyConfig {
         }
 
         self.logins.push(login);
+    }
+
+    /// get the cached dynamic client for this api url
+    pub fn client(&self, api_url: &Url) -> Option<&CachedClient> {
+        self.clients
+            .iter()
+            .find(|client| &client.api_url == api_url)
+    }
+
+    /// add or replace the cached dynamic client for this api url
+    pub fn set_client(&mut self, client: CachedClient) {
+        match self
+            .clients
+            .iter_mut()
+            .find(|existing| existing.api_url == client.api_url)
+        {
+            Some(existing) => *existing = client,
+            None => self.clients.push(client),
+        }
     }
 
     /// remove a login by name (or the default login), promoting the first

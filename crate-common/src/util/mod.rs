@@ -1,6 +1,7 @@
 pub mod body;
 pub mod context;
 pub mod member_list;
+pub mod random;
 pub mod registry;
 pub mod routes;
 

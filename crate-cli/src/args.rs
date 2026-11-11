@@ -79,6 +79,18 @@ pub enum AuthCommand {
 
         /// name to store this login under
         name: Option<String>,
+
+        /// register a dynamic oauth client and log in through the browser
+        #[arg(long)]
+        register: bool,
+
+        /// space-separated scopes to request when registering a dynamic client
+        #[arg(short = 's', long, default_value = "full")]
+        scope: String,
+
+        /// registration token, for servers that require one
+        #[arg(long)]
+        registration_token: Option<String>,
     },
 
     /// logout and revoke stored credentials
