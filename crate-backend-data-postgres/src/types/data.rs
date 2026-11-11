@@ -415,6 +415,7 @@ impl From<DbChannel> for Channel {
             is_unread: None,
             last_read_id: None,
             mention_count: None,
+            pins_read_at: None,
             recipients: vec![],
             preferences: None,
             online_count: 0,

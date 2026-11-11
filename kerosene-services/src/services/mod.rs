@@ -44,21 +44,21 @@ use rooms::ServiceRooms;
 use scripts::ServiceScripts;
 use sessions::ServiceSessions;
 use tag::ServiceTags;
+use tracing::error;
 use users::ServiceUsers;
 use webhook::ServiceWebhooks;
 
 use crate::{
     prelude::*,
     services::{
-        ack::ServiceAck, admin::ServiceAdmin, audit_logs::ServiceAuditLogs,
-        automod::ServiceAutomod, calendar::ServiceCalendar, documents::ServiceDocuments,
-        http::ServiceHttp, interactions::ServiceInteractions, member_lists::ServiceMemberLists,
-        notifications::ServiceNotifications, presence::ServicePresence, search::ServiceSearch,
-        voice::ServiceVoice,
+        admin::ServiceAdmin, audit_logs::ServiceAuditLogs, automod::ServiceAutomod,
+        calendar::ServiceCalendar, documents::ServiceDocuments, http::ServiceHttp,
+        interactions::ServiceInteractions, member_lists::ServiceMemberLists,
+        notifications::ServiceNotifications, presence::ServicePresence,
+        read_states::ServiceReadStates, search::ServiceSearch, voice::ServiceVoice,
     },
 };
 
-pub mod ack;
 pub mod admin;
 pub mod audit_logs;
 pub mod auth;
@@ -87,6 +87,7 @@ pub mod oauth2;
 pub mod oauth_provider;
 pub mod permissions;
 pub mod presence;
+pub mod read_states;
 pub mod role;
 pub mod room_analytics;
 pub mod room_template;
@@ -100,7 +101,6 @@ pub mod voice;
 pub mod webhook;
 
 pub struct Services {
-    pub ack: ServiceAck,
     pub admin: ServiceAdmin,
     pub audit_logs: ServiceAuditLogs,
     pub auth: ServiceAuth,
@@ -128,6 +128,7 @@ pub struct Services {
     pub oauth_provider: ServiceOauthProvider,
     pub perms: ServicePermissions,
     pub presence: ServicePresence,
+    pub read_states: ServiceReadStates,
     pub role: ServiceRoles,
     pub room_analytics: ServiceRoomAnalytics,
     pub room_templates: ServiceRoomTemplates,
@@ -145,7 +146,6 @@ pub struct Services {
 impl Services {
     pub fn new(globals: Globals) -> Self {
         Self {
-            ack: ServiceAck::new(globals.clone()),
             admin: ServiceAdmin::new(globals.clone()),
             audit_logs: ServiceAuditLogs::new(globals.clone()),
             auth: ServiceAuth::new(globals.clone()),
@@ -174,6 +174,7 @@ impl Services {
             oauth_provider: ServiceOauthProvider::new(globals.clone()),
             perms: ServicePermissions::new(globals.clone()),
             presence: ServicePresence::new(globals.clone()),
+            read_states: ServiceReadStates::new(globals.clone()),
             role: ServiceRoles::new(globals.clone()),
             room_analytics: ServiceRoomAnalytics::new(globals.clone()),
             rooms: ServiceRooms::new(globals.clone()),
@@ -200,6 +201,7 @@ impl Services {
         self.member_lists.start_background_tasks();
         self.notifications.start_background_tasks();
         self.oauth.start_background_tasks();
+        self.read_states.start_background_tasks();
         self.room_analytics.spawn_snapshot_task();
         self.search.start_background_tasks();
     }
@@ -208,6 +210,9 @@ impl Services {
     pub async fn shutdown(&self) {
         // only shut own the services that need to be shut down
         self.documents.unload_all().await;
+        if let Err(err) = self.read_states.flush().await {
+            error!("failed to flush read states on shutdown: {err}");
+        }
     }
 }
 

@@ -227,7 +227,11 @@ impl ServiceNotifications {
         }
 
         if !incr_mentions.is_empty() {
-            if let Err(err) = srv.ack.increment_mentions(channel.id, &incr_mentions).await {
+            if let Err(err) = srv
+                .read_states
+                .increment_mentions(channel.id, &incr_mentions)
+                .await
+            {
                 warn!("failed to increment unread counts: {err:?}");
             }
         }

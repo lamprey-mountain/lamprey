@@ -480,11 +480,9 @@ pub async fn ack(req: Req<routes::room_ack::Endpoint>) -> Result<routes::room_ac
         .ensure_view()?
         .check()?;
 
-    let acks = globals
-        .begin_read()
-        .await
-        .cast_internal()?
-        .unread_ack_room(auth_user.id, room_id)
+    let acks = srv
+        .read_states
+        .ack_room(auth_user.id, room_id)
         .await
         .cast_internal()?;
 

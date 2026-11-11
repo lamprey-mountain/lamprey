@@ -22,6 +22,7 @@ use validator::Validate;
 use crate::globals::messaging::Broadcast;
 use crate::prelude::*;
 use crate::services::automod::AutomodContext;
+use crate::services::read_states::ReadStateKey;
 use crate::types::{
     DbChannelCreate, DbChannelPrivate, DbChannelType, DbMessageCreate, MediaLinkType,
 };
@@ -36,11 +37,21 @@ mod util;
 // then only invalidate (or directly update) that one part of the cache at a time
 // NOTE: should cache_private be Cache<ChannelId, Cache<UserId, ()>> or Cache<UserId, Cache<ChannelId, ()>>?
 // PERF: return arcs instead of cloning channels in get(), etc
+/// metadata used for tracking channel read state
+#[derive(Debug, Default, Clone, Copy)]
+pub struct ChannelReadMetadata {
+    pub(crate) last_message_id: Option<MessageId>,
+    // TODO: deprecate and remove
+    pub(crate) last_version_id: Option<MessageVerId>,
+    pub(crate) pins_updated_at: Option<Time>,
+}
+
 pub struct ServiceChannels {
     globals: Globals,
     cache: Cache<ChannelId, Arc<Channel>>,
     cache_private: Cache<(ChannelId, UserId), DbChannelPrivate>,
     cache_recipients: Cache<ChannelId, Vec<UserId>>,
+    read_metadata: Cache<ChannelId, Arc<ChannelReadMetadata>>,
     // PERF: remove expired typing entries
     typing: Cache<(ChannelId, UserId), OffsetDateTime>,
     idempotency_keys: Cache<String, Arc<Channel>>,
@@ -62,6 +73,7 @@ impl ServiceChannels {
                 .max_capacity(10_000)
                 .support_invalidation_closures()
                 .build(),
+            read_metadata: Cache::builder().max_capacity(100_000).build(),
             typing: Cache::builder()
                 .max_capacity(100_000)
                 .time_to_live(Duration::from_secs(10))
@@ -102,17 +114,27 @@ impl ServiceChannels {
             .map(|a| (a.id, a))
             .collect();
 
+        let pins_read_at = data.unread_pins_read_at_many(user_id, &channel_ids).await?;
+
         // populate each channel with private data
         for channel in channels {
             if let Some(p) = channel_private.get(&channel.id) {
-                // let srv = self.state.services();
-                // TODO: update ack state
-                // let ack_state = AckStateUserChannel { };
-                // srv.unread.put_user_channel(ack_state);
-                // NOTE: ignore updating self.cache_thread_private...?
                 channel.is_unread = Some(p.is_unread);
                 channel.last_read_id = p.last_read_id.map(Into::into);
                 channel.mention_count = Some(p.mention_count as u64);
+            }
+
+            channel.pins_read_at = pins_read_at.get(&channel.id).copied().flatten();
+
+            // prefer the read state cache, which may contain unflushed updates
+            if let Some(state) = self
+                .globals
+                .services()
+                .read_states
+                .cached(ReadStateKey::channel(user_id, channel.id))
+                .await
+            {
+                state.apply(channel);
             }
 
             if let Some(config) = preferences_map.get(&channel.id) {
@@ -263,6 +285,7 @@ impl ServiceChannels {
 
     pub async fn invalidate(&self, thread_id: ChannelId) {
         self.cache.invalidate(&thread_id).await;
+        self.read_metadata.invalidate(&thread_id).await;
         self.cache_private
             .invalidate_entries_if(move |(t, _), _| *t == thread_id)
             .expect("failed to invalidate");
@@ -293,6 +316,47 @@ impl ServiceChannels {
 
     // TODO: fn update_last_pin_timestamp
 
+    /// get the metadata used for tracking a channel's read state
+    pub async fn read_metadata(&self, channel_id: ChannelId) -> Result<ChannelReadMetadata> {
+        if let Some(metadata) = self.read_metadata.get(&channel_id).await {
+            return Ok(*metadata);
+        }
+
+        let channel = self
+            .globals
+            .begin_read()
+            .await?
+            .channel_get(channel_id)
+            .await?;
+        let metadata = ChannelReadMetadata {
+            last_message_id: channel.last_message_id,
+            last_version_id: channel.last_version_id,
+            pins_updated_at: channel.last_pin_timestamp,
+        };
+        self.read_metadata
+            .insert(channel_id, Arc::new(metadata))
+            .await;
+
+        Ok(metadata)
+    }
+
+    /// update cached channel read metadata
+    pub async fn update_read_metadata(
+        &self,
+        channel_id: ChannelId,
+        update: impl FnOnce(&mut ChannelReadMetadata),
+    ) {
+        let Some(metadata) = self.read_metadata.get(&channel_id).await else {
+            return;
+        };
+
+        let mut metadata = *metadata;
+        update(&mut metadata);
+        self.read_metadata
+            .insert(channel_id, Arc::new(metadata))
+            .await;
+    }
+
     pub async fn invalidate_user(&self, thread_id: ChannelId, user_id: UserId) {
         self.cache_private.invalidate(&(thread_id, user_id)).await
     }
@@ -301,6 +365,7 @@ impl ServiceChannels {
         self.cache.invalidate_all();
         self.cache_private.invalidate_all();
         self.cache_recipients.invalidate_all();
+        self.read_metadata.invalidate_all();
     }
 
     // FIXME: does this need to be pinboxed?

@@ -166,6 +166,7 @@ pub struct Channel {
     pub is_unread: Option<bool>,
     pub last_read_id: Option<MessageId>,
     pub mention_count: Option<u64>,
+    pub pins_read_at: Option<Time>,
     pub preferences: Option<PreferencesChannel>,
 
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
@@ -311,6 +312,8 @@ impl Serialize for Channel {
             #[serde(skip_serializing_if = "Option::is_none")]
             mention_count: Option<u64>,
             #[serde(skip_serializing_if = "Option::is_none")]
+            pins_read_at: Option<Time>,
+            #[serde(skip_serializing_if = "Option::is_none")]
             preferences: Option<&'a PreferencesChannel>,
 
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -418,6 +421,7 @@ impl Serialize for Channel {
             is_unread: self.is_unread,
             last_read_id: self.last_read_id.clone(),
             mention_count: self.mention_count,
+            pins_read_at: self.pins_read_at,
             preferences: self.preferences.as_ref(),
             document: if self.has_document() {
                 self.document.as_ref()
@@ -1112,6 +1116,7 @@ impl Channel {
             is_unread: None,
             last_read_id: None,
             mention_count: None,
+            pins_read_at: None,
             preferences: None,
             ..self
         }

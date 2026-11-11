@@ -1,7 +1,7 @@
 use common::{
     v1::types::{
         AuditLogEntryType, MessagePin, MessageSync, MessageType, ThreadMemberCreate,
-        ack::{AckBulkItem, AckType},
+        ack::{AckBulk, AckBulkItem, AckType},
         oauth::Scope,
         util::Time,
     },
@@ -24,7 +24,6 @@ pub async fn create(
     user.ensure_unsuspended()?;
 
     // grab these before into_innering req
-    let globals = req.globals();
     let srv = req.services();
     let session_id = session.id;
     let user_id = user.id;
@@ -58,22 +57,20 @@ pub async fn create(
     };
     let message_id = message.id;
 
-    // TODO: move this logic to notifications or ack service
     // automatically ack the channel for the user who sent the message
-    let mut txn = globals.begin().await.cast_internal()?;
-    txn.unread_ack_bulk(
-        user_id,
-        &[AckBulkItem {
+    let acks = AckBulk {
+        acks: vec![AckBulkItem {
             ty: AckType::Message {
                 channel_id,
                 message_id,
                 mention_count: 0,
             },
         }],
-    )
-    .await
-    .cast_internal()?;
-    txn.commit().await.cast_internal()?;
+    };
+    srv.read_states
+        .ack_bulk(user_id, &acks)
+        .await
+        .cast_internal()?;
 
     srv.channels.invalidate_user(channel_id, user_id).await;
 
@@ -1180,7 +1177,6 @@ pub async fn nudge(
     user.ensure_unsuspended()?;
     identity.ensure_scopes(&[Scope::Full])?;
 
-    let globals = req.globals();
     let srv = req.services();
     let body = req.inner();
     let user_id = user.id;
@@ -1204,20 +1200,19 @@ pub async fn nudge(
         .await
         .cast_internal()?;
 
-    let mut txn = globals.begin().await.cast_internal()?;
-    txn.unread_ack_bulk(
-        user_id,
-        &[AckBulkItem {
+    let acks = AckBulk {
+        acks: vec![AckBulkItem {
             ty: AckType::Message {
                 channel_id,
                 message_id: message.id,
                 mention_count: 0,
             },
         }],
-    )
-    .await
-    .cast_internal()?;
-    txn.commit().await.cast_internal()?;
+    };
+    srv.read_states
+        .ack_bulk(user_id, &acks)
+        .await
+        .cast_internal()?;
 
     srv.channels.invalidate_user(channel_id, user_id).await;
 

@@ -32,7 +32,7 @@ pub use lamprey_backend_core::data::{
     DataConnection, DataDm, DataEmoji, DataInvite, DataMetrics, DataNotification, DataPermission,
     DataPreferences, DataReaction, DataRoleMember, DataRoomAnalytics, DataRoomMember,
     DataSearchQueue, DataTag, DataThread, DataThreadMember, DataUnread, DataUserEmail,
-    DataUserRelationship, DataWebhook,
+    DataUserRelationship, DataWebhook, DbReadState,
 };
 use lamprey_backend_core::types::documents::EditContextId;
 use uuid::Uuid;

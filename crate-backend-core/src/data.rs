@@ -318,28 +318,46 @@ pub trait DataPermission {
     ) -> Result<bool>;
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DbReadState {
+    pub last_read_id: Option<MessageId>,
+    pub last_read_at: Option<Time>,
+    pub mention_count: u64,
+    pub unread: bool,
+    pub pins_read_at: Option<Time>,
+}
+
 #[async_trait]
 pub trait DataUnread {
     /// apply a batch of acks for a user
     async fn unread_ack_bulk(&mut self, user_id: UserId, acks: &[AckBulkItem]) -> Result<()>;
 
-    /// mark all channels in a room as read
-    async fn unread_ack_room(
+    /// get a user's read state for a channel
+    async fn unread_read_state_get(
         &mut self,
         user_id: UserId,
+        channel_id: ChannelId,
+    ) -> Result<Option<DbReadState>>;
+
+    /// apply a batch of read states for a user
+    async fn unread_read_state_put(
+        &mut self,
+        user_id: UserId,
+        states: &[(ChannelId, DbReadState)],
+    ) -> Result<()>;
+
+    /// get when a user last read each channel's pins
+    async fn unread_pins_read_at_many(
+        &mut self,
+        user_id: UserId,
+        channel_ids: &[ChannelId],
+    ) -> Result<HashMap<ChannelId, Option<Time>>>;
+
+    /// get the last message in every channel in a room
+    async fn unread_room_last_messages(
+        &mut self,
         room_id: RoomId,
     ) -> Result<Vec<(ChannelId, MessageId)>>;
-
-    /// increment unread counters for all of these users in a particular channel
-    ///
-    /// - increment the `mention_count` for all users in `mentioned_user_ids`
-    /// - increment the `unread_count` for all users in `mentioned_user_ids` + `unread_user_ids`
-    async fn unread_increment_counts(
-        &mut self,
-        channel_id: ChannelId,
-        mentioned_user_ids: &[UserId],
-        unread_user_ids: &[UserId],
-    ) -> Result<()>;
 }
 
 #[derive(Debug, Default)]

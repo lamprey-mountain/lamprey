@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use common::v1::types::{
     AuditLogEntryType, ChannelReorderItem, ChannelType, MessageSync, Permission, RelationshipType,
     RoomCreate, RoomMemberOrigin, RoomType, SERVER_ROOM_ID, ThreadMemberCreate,
-    ack::{AckBulkItem, AckState, AckType},
+    ack::{AckBulk, AckBulkItem, AckState, AckType},
     application::Scope,
     pagination::{PaginationQuery, PaginationResponse},
     util::Changes,
@@ -576,11 +576,13 @@ pub async fn ack(req: Req<routes::channel_ack::Endpoint>) -> Result<routes::chan
         mention_count: body.ack.mention_count,
     };
 
-    let mut data = globals.begin().await.cast_internal()?;
-    data.unread_ack_bulk(auth_user.id, &[AckBulkItem { ty: ack_ty.clone() }])
+    let acks = AckBulk {
+        acks: vec![AckBulkItem { ty: ack_ty.clone() }],
+    };
+    srv.read_states
+        .ack_bulk(auth_user.id, &acks)
         .await
         .cast_internal()?;
-    data.commit().await.cast_internal()?;
 
     srv.channels
         .invalidate_user(body.channel_id, auth_user.id)

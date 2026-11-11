@@ -38,11 +38,10 @@ pub async fn bulk(req: Req<routes::ack_bulk::Endpoint>) -> Result<routes::ack_bu
     }
 
     if !req.inner().body.acks.is_empty() {
-        let mut txn = req.globals().begin().await.cast_internal()?;
-        txn.unread_ack_bulk(user.id, &req.inner().body.acks)
+        srv.read_states
+            .ack_bulk(user.id, &req.inner().body)
             .await
             .cast_internal()?;
-        txn.commit().await.cast_internal()?;
 
         for &channel_id in &channel_ids {
             srv.channels.invalidate_user(channel_id, user.id).await;
