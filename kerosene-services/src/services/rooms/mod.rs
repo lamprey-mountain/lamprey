@@ -76,6 +76,7 @@ impl ServiceRooms {
                 puppet: None,
                 registered_at: Some(Time::now_utc()),
                 system: true,
+                bot: false,
                 remote: None,
             })
             .await?;
@@ -89,6 +90,7 @@ impl ServiceRooms {
                 puppet: None,
                 registered_at: Some(Time::now_utc()),
                 system: true,
+                bot: false,
                 remote: None,
             })
             .await?;

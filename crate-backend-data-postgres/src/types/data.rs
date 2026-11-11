@@ -151,6 +151,7 @@ pub struct DbUserCreate {
     pub puppet: Option<Puppet>,
     pub registered_at: Option<Time>,
     pub system: bool,
+    pub bot: bool,
     pub remote: Option<Remote<UserId>>,
 }
 

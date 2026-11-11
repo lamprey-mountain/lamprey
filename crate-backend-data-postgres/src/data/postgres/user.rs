@@ -109,7 +109,7 @@ impl DataUser for Postgres {
             avatar: None,
             banner: None,
             presence: types::presence::Presence::online(),
-            bot: false,
+            bot: patch.bot,
             system: patch.system,
             puppet: patch.puppet,
             webhook: None,
@@ -127,7 +127,7 @@ impl DataUser for Postgres {
         query!(
             r#"
             INSERT INTO usr (id, version_id, parent_id, name, description, avatar, suspended, can_fork, registered_at, system, bot, totp_enabled, remote_origin_id, remote_hostname)
-    	    VALUES ($1, $2, $3, $4, $5, $6, $7, false, $8, $9, false, false, $10, $11)
+    	    VALUES ($1, $2, $3, $4, $5, $6, $7, false, $8, $9, $10, false, $11, $12)
         "#,
             *user.id,
             *user.version_id,
@@ -138,6 +138,7 @@ impl DataUser for Postgres {
             serde_json::to_value(user.suspended)?,
             user.registered_at.map(|t| time::PrimitiveDateTime::from(t)),
             user.system,
+            user.bot,
             user.remote.as_ref().map(|r| *r.origin_id),
             user.remote.as_ref().map(|r| &r.hostname.0),
         )

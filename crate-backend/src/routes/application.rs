@@ -62,6 +62,7 @@ async fn app_create(
             puppet: None,
             registered_at: Some(Time::now_utc()),
             system: false,
+            bot: true,
             remote: None,
         })
         .await?;
@@ -385,6 +386,7 @@ async fn puppet_ensure(
             }),
             registered_at: Some(Time::now_utc()),
             system: false,
+            bot: false,
             remote: None,
         })
         .await?;

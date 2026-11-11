@@ -365,6 +365,7 @@ pub async fn create(
             puppet: None,
             registered_at,
             system: false,
+            bot: false,
             remote: None,
         })
         .await

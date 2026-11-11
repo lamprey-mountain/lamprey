@@ -98,6 +98,7 @@ impl ServiceFederation {
                 puppet: user.puppet.clone(),
                 registered_at: user.registered_at,
                 system: user.system,
+                bot: user.bot,
                 remote: Some(remote.clone()),
             })
             .await?;

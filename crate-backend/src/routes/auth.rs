@@ -145,6 +145,7 @@ async fn auth_oauth_redirect(
                     puppet: None,
                     registered_at,
                     system: false,
+                    bot: false,
                     remote: None,
                 })
                 .await?;
