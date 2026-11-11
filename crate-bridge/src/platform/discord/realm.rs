@@ -8,7 +8,7 @@ use crate::bridge_old::{
     BridgeEvent, Portal, PortalDiscord, PortalId, PortalLamprey, Realm, RealmEvent, RealmHandle,
     RealmId,
 };
-use crate::platform::discord::ChannelType;
+use crate::platform::discord::{webhook_url, ChannelType};
 use crate::prelude::*;
 use crate::types::ChannelData;
 use twilight_model::id::Id;
@@ -133,12 +133,7 @@ impl DiscordRealm {
                                 continue;
                             };
 
-                            let webhook_url = format!(
-                                "https://discord.com/api/webhooks/{}/{}",
-                                webhook.id, webhook_token
-                            )
-                            .parse()
-                            .expect("invalid webhook url");
+                            let webhook_url = webhook_url(webhook.id, webhook_token);
 
                             let portal_id = PortalId::new();
                             let portal = Portal {

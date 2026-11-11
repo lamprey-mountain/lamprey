@@ -667,10 +667,12 @@ impl DiscordPortal {
 }
 
 fn parse_webhook_url(url: &url::Url) -> Result<(WebhookId, String)> {
+    // skip empty segments so trailing slashes and doubled slashes still parse
     let mut segments = url
         .path_segments()
         .into_iter()
         .flatten()
+        .filter(|segment| !segment.is_empty())
         .rev();
     let token = segments
         .next()

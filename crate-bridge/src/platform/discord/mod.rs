@@ -67,6 +67,7 @@ pub use interactions::{SlashCommand, SlashCommandType, get_commands, parse_inter
 
 const RECONNECT_MIN_DELAY: Duration = Duration::from_secs(1);
 const RECONNECT_MAX_DELAY: Duration = Duration::from_secs(60);
+const DISCORD_API_BASE: &str = "https://discord.com/api";
 
 pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -> PlatformHandle {
     let (tx, rx) = oneshot::channel();
@@ -559,12 +560,7 @@ impl Discord {
                                 return;
                             };
 
-                            let webhook_url: url::Url = format!(
-                                "https://discord.com/api/webhooks/{}/{}",
-                                webhook.id, webhook_token
-                            )
-                            .parse()
-                            .expect("invalid webhook url");
+                            let webhook_url = webhook_url(webhook.id, webhook_token);
 
                             // send command to bridge actor
                             let _ = bridge
@@ -885,10 +881,7 @@ impl Discord {
                 return;
             };
 
-            let webhook_url: url::Url =
-                format!("https://discord.com/api/webhooks/{}/{}", webhook.id, webhook_token)
-                    .parse()
-                    .expect("invalid webhook url");
+            let webhook_url = webhook_url(webhook.id, webhook_token);
 
             ChannelData::Discord {
                 channel: Box::new(channel),
@@ -1123,6 +1116,12 @@ async fn run_gateway(token: String, tx: mpsc::Sender<GatewayEvent>) {
         }
         shard = Shard::with_config(ShardId::ONE, config.build());
     }
+}
+
+fn webhook_url(id: WebhookId, token: &str) -> url::Url {
+    format!("{DISCORD_API_BASE}/webhooks/{id}/{token}")
+        .parse()
+        .expect("webhook id and token always form a valid url")
 }
 
 async fn respond(http: &HttpClient, interaction: &Interaction, content: &str) -> Result<()> {
