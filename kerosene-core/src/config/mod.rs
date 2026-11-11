@@ -51,6 +51,10 @@ pub struct Config {
 
     pub oauth_provider: HashMap<String, ConfigOauthProvider>,
 
+    /// configuration for lamprey acting as an oauth authorization server
+    #[serde(default)]
+    pub oauth_server: ConfigOauthServer,
+
     #[serde(default)]
     pub otel: ConfigOtel,
 
@@ -191,6 +195,28 @@ pub struct ConfigOauthProvider {
     /// automatically mark users as registered if they create an account or link their account with this provider
     #[serde(default)]
     pub autoregister: bool,
+}
+
+/// configuration for lamprey's own oauth authorization server
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfigOauthServer {
+    /// allow unauthenticated dynamic client registration (RFC 7591)
+    #[serde(default = "default_true")]
+    pub dynamic_registration: bool,
+
+    /// require this bearer token for dynamic client registration
+    ///
+    /// if unset, registration is open to anyone
+    pub registration_token: Option<Secret>,
+}
+
+impl Default for ConfigOauthServer {
+    fn default() -> Self {
+        Self {
+            dynamic_registration: true,
+            registration_token: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

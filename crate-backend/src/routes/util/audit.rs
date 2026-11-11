@@ -8,7 +8,7 @@ use axum::{
 };
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogEntryStatus, AuditLogEntryType,
-    MessageSync, RoomId, util::Time,
+    MessageSync, RoomId, UserId, util::Time,
 };
 use http::StatusCode;
 use tokio::sync::Mutex;
@@ -44,6 +44,17 @@ pub struct AuditTxnContext {
     pub auth: Auth4,
     pub application_id: Option<ApplicationId>,
     pub ty: AuditLogEntryType,
+}
+
+/// context for an audit log entry from a request without a session
+#[derive(Debug, Clone)]
+pub struct SessionlessAuditContext {
+    pub room_id: RoomId,
+    pub user_id: UserId,
+    pub reason: Option<String>,
+    pub ip_addr: Option<String>,
+    pub user_agent: Option<String>,
+    pub application_id: Option<ApplicationId>,
 }
 
 /// a handle to an [`AuditTxn`]
@@ -137,6 +148,37 @@ impl Drop for AuditTxnHandle {
             }
         }
     }
+}
+
+/// append and broadcast a successful audit log entry for a request without a session
+pub async fn audit_log_sessionless(
+    s: &ServerState,
+    ctx: SessionlessAuditContext,
+    ty: AuditLogEntryType,
+) -> Result<()> {
+    let now = Time::now_utc();
+    let entry = AuditLogEntry {
+        id: AuditLogEntryId::new(),
+        room_id: ctx.room_id,
+        user_id: ctx.user_id,
+        session_id: None,
+        reason: ctx.reason,
+        ty,
+        status: AuditLogEntryStatus::Success,
+        started_at: now,
+        ended_at: now,
+        ip_addr: ctx.ip_addr,
+        user_agent: ctx.user_agent,
+        application_id: ctx.application_id,
+    };
+    s.data().audit_logs_room_append(entry.clone()).await?;
+    s.broadcast_room(
+        entry.room_id,
+        entry.user_id,
+        MessageSync::AuditLogEntryCreate { entry },
+    )
+    .await?;
+    Ok(())
 }
 
 /// middleware to initialize an audit log entry

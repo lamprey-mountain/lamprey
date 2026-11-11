@@ -5,7 +5,7 @@ use crate::{
     v1::types::{RoomMember, User, util::Time},
 };
 
-use super::{ApplicationId, UserId, util::Diff};
+use super::{ApplicationId, DYNAMIC_APP_OWNER_ID, UserId, util::Diff};
 
 #[record]
 #[derive(PartialEq, Eq)]
@@ -208,6 +208,11 @@ pub struct Bridge {
 pub use super::oauth::{Scope, Scopes};
 
 impl Application {
+    /// whether this application was created by dynamic client registration
+    pub fn is_dynamic_oauth_client(&self) -> bool {
+        self.owner_id == DYNAMIC_APP_OWNER_ID
+    }
+
     /// strip all private information from this application
     // TODO: create a separate ApplicationPublic type
     pub fn strip_private(self) -> Self {

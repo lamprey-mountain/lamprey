@@ -359,6 +359,11 @@ pub const SERVER_ROOM_ID: RoomId = room_id!("00000000-0000-7000-0000-73657276657
 /// the raw bytes translate to `automod`
 pub const AUTOMOD_USER_ID: UserId = user_id!("00000000-0000-7000-0061-75746f6d6f64");
 
+/// the owner of dynamically registered oauth applications
+///
+/// the raw bytes translate to `dynamic`
+pub const DYNAMIC_APP_OWNER_ID: UserId = user_id!("00000000-0000-7000-0064-796e616d6963");
+
 /// the session id used for the admin token
 ///
 /// the raw bytes translate to `skeletonkey`

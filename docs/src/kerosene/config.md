@@ -47,6 +47,14 @@ region = "garage" # required even if the store ignores it
 access_key_id = "GK12345"
 secret_access_key = "12345"
 
+# lamprey's own oauth authorization server. dynamic client registration
+# (RFC 7591) is enabled by default and lets anyone register a public client;
+# set `dynamic_registration = false` to disable it. `registration_token`
+# optionally requires a bearer token and accepts the usual secret forms.
+[oauth_server]
+# dynamic_registration = true
+# registration_token = "shared-secret"
+
 # one table per provider; `kind` is "discord", "github", or "oidc"
 [oauth_provider.discord]
 kind = "discord"

@@ -25,6 +25,9 @@ pub struct AuthServerMetadata {
     pub issuer: Url,
     /// whether the `iss` parameter is included in authorization responses (RFC 9207)
     pub authorization_response_iss_parameter_supported: bool,
+    /// endpoint for dynamic client registration (RFC 7591)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub registration_endpoint: Option<Url>,
     pub authorization_endpoint: Url,
     pub device_authorization_endpoint: Url,
     pub token_endpoint: Url,
@@ -42,6 +45,9 @@ pub struct OidcDiscovery {
     pub issuer: Url,
     /// whether the `iss` parameter is included in authorization responses (RFC 9207)
     pub authorization_response_iss_parameter_supported: bool,
+    /// endpoint for dynamic client registration (RFC 7591)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub registration_endpoint: Option<Url>,
     pub authorization_endpoint: Url,
     pub device_authorization_endpoint: Url,
     pub token_endpoint: Url,
@@ -66,6 +72,9 @@ pub enum OauthAuthMethod {
 
     #[strum(serialize = "client_secret_basic")]
     ClientSecretBasic,
+
+    #[strum(serialize = "none")]
+    None,
 }
 
 #[record]
@@ -202,6 +211,45 @@ pub struct OauthAuthorizeParams {
 #[record]
 pub struct OauthAuthorizeResponse {
     pub redirect_uri: Url,
+}
+
+/// dynamic client registration request (RFC 7591)
+#[record]
+pub struct OauthClientRegistrationRequest {
+    /// redirection uris for redirect-based flows
+    ///
+    /// may be empty when the client only uses grant types that do not redirect
+    #[serde(default)]
+    pub redirect_uris: Vec<String>,
+
+    #[serde(default)]
+    pub token_endpoint_auth_method: Option<OauthAuthMethod>,
+
+    #[serde(default)]
+    pub grant_types: Option<Vec<OauthGrantType>>,
+
+    #[serde(default)]
+    pub response_types: Option<Vec<OauthResponseType>>,
+
+    #[serde(default)]
+    pub client_name: Option<String>,
+
+    #[serde(default)]
+    pub scope: Option<String>,
+}
+
+/// dynamic client registration response (RFC 7591)
+#[record]
+pub struct OauthClientRegistrationResponse {
+    pub client_id: ApplicationId,
+    pub client_id_issued_at: u64,
+    pub client_name: String,
+    pub redirect_uris: Vec<String>,
+    pub token_endpoint_auth_method: OauthAuthMethod,
+    pub grant_types: Vec<OauthGrantType>,
+    pub response_types: Vec<OauthResponseType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub scope: Option<String>,
 }
 
 /// device authorization request (RFC 8628)
@@ -364,6 +412,8 @@ export_models!(
     OauthAuthorizeInfo,
     OauthAuthorizeParams,
     OauthAuthorizeResponse,
+    OauthClientRegistrationRequest,
+    OauthClientRegistrationResponse,
     OauthDeviceAuthorizationRequest,
     OauthDeviceAuthorizationResponse,
     OauthDeviceInfo,

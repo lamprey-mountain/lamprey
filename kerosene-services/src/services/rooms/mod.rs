@@ -6,7 +6,7 @@ use common::v1::types::{
     AuditLogEntryType, ChannelId, ChannelType, MessageSync, MessageType, PaginationQuery, RoleId,
     Room, RoomCreate, RoomId, RoomMemberOrigin, RoomMemberPut, RoomPatch, RoomType, UserId,
 };
-use common::v2::types::{AUTOMOD_USER_ID, SERVER_ROOM_ID, SERVER_USER_ID};
+use common::v2::types::{AUTOMOD_USER_ID, DYNAMIC_APP_OWNER_ID, SERVER_ROOM_ID, SERVER_USER_ID};
 use dashmap::{DashMap, DashSet};
 use kerosene_core::error::ServerError;
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
@@ -67,33 +67,25 @@ impl ServiceRooms {
     // TODO: move this to some other setup service or thing?
     pub async fn init_server_room(&self) -> Result<()> {
         let mut txn = self.globals.begin().await?;
-        if txn.user_get(SERVER_USER_ID).await.is_err() {
-            txn.user_create(DbUserCreate {
-                id: Some(SERVER_USER_ID),
-                parent_id: None,
-                name: "root".to_string(),
-                description: None,
-                puppet: None,
-                registered_at: Some(Time::now_utc()),
-                system: true,
-                bot: false,
-                remote: None,
-            })
-            .await?;
-        }
-        if txn.user_get(AUTOMOD_USER_ID).await.is_err() {
-            txn.user_create(DbUserCreate {
-                id: Some(AUTOMOD_USER_ID),
-                parent_id: None,
-                name: "automod".to_string(),
-                description: None,
-                puppet: None,
-                registered_at: Some(Time::now_utc()),
-                system: true,
-                bot: false,
-                remote: None,
-            })
-            .await?;
+        for (id, name) in [
+            (SERVER_USER_ID, "root"),
+            (AUTOMOD_USER_ID, "automod"),
+            (DYNAMIC_APP_OWNER_ID, "dynamic oauth applications"),
+        ] {
+            if txn.user_get(id).await.is_err() {
+                txn.user_create(DbUserCreate {
+                    id: Some(id),
+                    parent_id: None,
+                    name: name.to_string(),
+                    description: None,
+                    puppet: None,
+                    registered_at: Some(Time::now_utc()),
+                    system: true,
+                    bot: false,
+                    remote: None,
+                })
+                .await?;
+            }
         }
         if txn.room_get(SERVER_ROOM_ID).await.is_err() {
             self.create_system(

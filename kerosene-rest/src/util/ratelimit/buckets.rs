@@ -126,7 +126,10 @@ impl Route {
         }
 
         // create user: POST /user (or the legacy admin register route)
-        if method == Method::POST && (path == "/user" || path.ends_with("/register-user")) {
+        // oauth dynamic client registration also creates a user
+        if method == Method::POST
+            && (path == "/user" || path.ends_with("/register-user") || path == "/oauth/register")
+        {
             return Self {
                 bucket: Bucket::UserCreate,
                 scope: None,

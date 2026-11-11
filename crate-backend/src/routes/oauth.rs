@@ -1,4 +1,10 @@
-use std::{collections::HashSet, str::FromStr, sync::Arc, time::Duration};
+use std::{
+    collections::HashSet,
+    net::{Ipv4Addr, Ipv6Addr},
+    str::FromStr,
+    sync::Arc,
+    time::Duration,
+};
 
 use axum::Json;
 use axum::extract::State;
@@ -6,17 +12,19 @@ use axum::response::IntoResponse;
 use base64::{Engine, prelude::BASE64_URL_SAFE_NO_PAD};
 use common::v1::routes;
 use common::v1::types::oauth::{
-    AuthServerMetadata, Jwk, OauthAuthMethod, OauthAuthorizeParams, OauthCodeChallengeMethod,
-    OauthDeviceAuthorizationResponse, OauthDeviceInfo, OauthGrantType, OauthResponseType,
+    AuthServerMetadata, Jwk, OauthAuthMethod, OauthAuthorizeParams, OauthClientRegistrationRequest,
+    OauthCodeChallengeMethod, OauthDeviceAuthorizationResponse, OauthDeviceInfo, OauthGrantType,
+    OauthResponseType,
 };
 use common::v1::types::{
-    ApplicationId, AuditLogEntryType, SessionStatus, SessionToken, SessionType, UserId,
+    ApplicationId, AuditLogEntryType, DYNAMIC_APP_OWNER_ID, SessionStatus, SessionToken,
+    SessionType, UserId,
     application::{Application, Scope, Scopes},
     oauth::{
-        Jwks, OauthAuthorizeInfo, OauthAuthorizeResponse, OauthIntrospectResponse,
-        OauthTokenResponse, OidcClaims, OidcDiscovery, Userinfo,
+        Jwks, OauthAuthorizeInfo, OauthAuthorizeResponse, OauthClientRegistrationResponse,
+        OauthIntrospectResponse, OauthTokenResponse, OidcClaims, OidcDiscovery, Userinfo,
     },
-    util::Time,
+    util::{Changes, Time},
 };
 use headers::HeaderMapExt;
 use http::{HeaderMap, StatusCode};
@@ -32,9 +40,20 @@ use uuid::Uuid;
 
 use crate::error::{Error, Result};
 use crate::routes::util::Auth;
-use crate::types::DbSessionCreate;
+use crate::routes::util::audit::{SessionlessAuditContext, audit_log_sessionless};
+use crate::routes::util::headers::HeadersRequest;
+use crate::types::{DbSessionCreate, DbUserCreate};
 use crate::{ServerState, routes2};
 use common::v1::types::error::{ApiError, ErrorCode};
+
+/// a validated dynamic client registration request
+struct NormalizedRegistration {
+    client_name: String,
+    redirect_uris: Vec<String>,
+    grant_types: Vec<OauthGrantType>,
+    response_types: Vec<OauthResponseType>,
+    scope: Option<String>,
+}
 
 /// Oauth info
 #[handler(routes::oauth_info)]
@@ -60,6 +79,95 @@ async fn oauth_info(
         auth_user,
         authorized,
     }))
+}
+
+/// Oauth register
+#[handler(routes::oauth_register)]
+async fn oauth_register(
+    State(s): State<Arc<ServerState>>,
+    headers: HeadersRequest,
+    req: routes::oauth_register::Request,
+) -> Result<impl IntoResponse> {
+    validate_registration(&s, &headers)?;
+    let NormalizedRegistration {
+        client_name,
+        redirect_uris,
+        grant_types,
+        response_types,
+        scope,
+    } = normalize_registration(req.registration)?;
+
+    let mut txn = s.acquire_data().await?;
+    let user = txn
+        .user_create(DbUserCreate {
+            id: None,
+            parent_id: Some(DYNAMIC_APP_OWNER_ID),
+            name: client_name.clone(),
+            description: None,
+            puppet: None,
+            registered_at: Some(Time::now_utc()),
+            system: false,
+            bot: true,
+            remote: None,
+        })
+        .await?;
+
+    let app = Application {
+        id: user.id.into_inner().into(),
+        owner_id: DYNAMIC_APP_OWNER_ID,
+        name: client_name.clone(),
+        description: None,
+        bridge: None,
+        public: true,
+        oauth_secret: None,
+        oauth_redirect_uris: redirect_uris.clone(),
+        oauth_confidential: false,
+    };
+    txn.application_insert(app.clone()).await?;
+    txn.commit().await?;
+
+    audit_log_sessionless(
+        &s,
+        SessionlessAuditContext {
+            room_id: app.id.into_inner().into(),
+            user_id: DYNAMIC_APP_OWNER_ID,
+            reason: headers.reason.clone(),
+            ip_addr: headers.ip_addr.map(|ip| ip.to_string()),
+            user_agent: headers.user_agent.clone(),
+            application_id: None,
+        },
+        AuditLogEntryType::ApplicationCreate {
+            application_id: app.id,
+            changes: Changes::new()
+                .add("name", &app.name)
+                .add("description", &app.description)
+                .add("public", &app.public)
+                .add("oauth_redirect_uris", &app.oauth_redirect_uris)
+                .add("oauth_confidential", &app.oauth_confidential)
+                .build(),
+        },
+    )
+    .await?;
+
+    let response = OauthClientRegistrationResponse {
+        client_id: app.id,
+        client_id_issued_at: Time::now_utc().unix_timestamp() as u64,
+        client_name,
+        redirect_uris,
+        token_endpoint_auth_method: OauthAuthMethod::None,
+        grant_types,
+        response_types,
+        scope,
+    };
+    let mut response = (StatusCode::CREATED, Json(response)).into_response();
+    response
+        .headers_mut()
+        .typed_insert(headers::CacheControl::new().with_no_store());
+    response.headers_mut().insert(
+        http::header::PRAGMA,
+        http::HeaderValue::from_static("no-cache"),
+    );
+    Ok(response)
 }
 
 /// Oauth authorize
@@ -154,15 +262,23 @@ fn parse_scopes(scope: &str) -> Result<Scopes> {
     Ok(Scopes(scopes.into_iter().collect()))
 }
 
-fn oauth_error(error: &'static str, description: &'static str) -> Error {
+fn oauth_error_with_status(
+    status: StatusCode,
+    error: &'static str,
+    description: &'static str,
+) -> Error {
     let body = serde_json::json!({
         "error": error,
         "error_description": description,
     });
+    let mut builder = http::Response::builder()
+        .status(status)
+        .header(http::header::CONTENT_TYPE, "application/json");
+    if status == StatusCode::UNAUTHORIZED {
+        builder = builder.header(http::header::WWW_AUTHENTICATE, "Bearer");
+    }
     Error::Response(
-        http::Response::builder()
-            .status(StatusCode::BAD_REQUEST)
-            .header(http::header::CONTENT_TYPE, "application/json")
+        builder
             .body(bytes::Bytes::from(
                 serde_json::to_vec(&body).expect("oauth error should serialize"),
             ))
@@ -170,13 +286,186 @@ fn oauth_error(error: &'static str, description: &'static str) -> Error {
     )
 }
 
+fn oauth_error(error: &'static str, description: &'static str) -> Error {
+    oauth_error_with_status(StatusCode::BAD_REQUEST, error, description)
+}
+
+fn validate_registration(s: &Arc<ServerState>, headers: &HeadersRequest) -> Result<()> {
+    let config = &s.config.oauth_server;
+    if !config.dynamic_registration {
+        return Err(oauth_error_with_status(
+            StatusCode::NOT_FOUND,
+            "registration_disabled",
+            "dynamic client registration is disabled",
+        ));
+    }
+
+    if let Some(expected) = &config.registration_token {
+        let expected = expected
+            .load()
+            .map_err(|e| Error::Internal(e.to_string()))?;
+        let valid = headers
+            .authorization
+            .as_ref()
+            .is_some_and(|auth| bool::from(auth.token().as_bytes().ct_eq(expected.as_bytes())));
+        if !valid {
+            return Err(oauth_error_with_status(
+                StatusCode::UNAUTHORIZED,
+                "invalid_token",
+                "a valid registration token is required",
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+fn validate_redirect_uris(uris: &[String]) -> Result<()> {
+    if uris.len() > 8 {
+        return Err(oauth_error(
+            "invalid_redirect_uri",
+            "at most 8 redirect uris are allowed",
+        ));
+    }
+
+    for uri in uris {
+        let url = url::Url::parse(uri).map_err(|_| {
+            oauth_error(
+                "invalid_redirect_uri",
+                "redirect uri must be an absolute url",
+            )
+        })?;
+        if url.fragment().is_some() {
+            return Err(oauth_error(
+                "invalid_redirect_uri",
+                "redirect uri must not contain a fragment",
+            ));
+        }
+
+        match url.scheme() {
+            "https" => {}
+            "http" => {
+                let loopback = match url.host() {
+                    Some(url::Host::Domain("localhost")) => true,
+                    Some(url::Host::Ipv4(ip)) => ip == Ipv4Addr::LOCALHOST,
+                    Some(url::Host::Ipv6(ip)) => ip == Ipv6Addr::LOCALHOST,
+                    _ => false,
+                };
+                if !loopback {
+                    return Err(oauth_error(
+                        "invalid_redirect_uri",
+                        "http redirect uris are only allowed for loopback hosts",
+                    ));
+                }
+            }
+            "javascript" | "data" | "file" | "vbscript" | "about" | "blob" => {
+                return Err(oauth_error(
+                    "invalid_redirect_uri",
+                    "unsupported redirect uri scheme",
+                ));
+            }
+            // private-use scheme for native apps (RFC 8252)
+            _ => {}
+        }
+    }
+
+    Ok(())
+}
+
+fn normalize_registration(req: OauthClientRegistrationRequest) -> Result<NormalizedRegistration> {
+    if req
+        .token_endpoint_auth_method
+        .is_some_and(|method| method != OauthAuthMethod::None)
+    {
+        return Err(oauth_error(
+            "invalid_client_metadata",
+            "only public clients are supported",
+        ));
+    }
+
+    let grant_types = req
+        .grant_types
+        .unwrap_or_else(|| vec![OauthGrantType::AuthorizationCode]);
+    if grant_types.is_empty() {
+        return Err(oauth_error(
+            "invalid_client_metadata",
+            "grant_types must not be empty",
+        ));
+    }
+    for grant_type in &grant_types {
+        if !matches!(
+            grant_type,
+            OauthGrantType::AuthorizationCode
+                | OauthGrantType::RefreshToken
+                | OauthGrantType::DeviceCode
+        ) {
+            return Err(oauth_error(
+                "invalid_client_metadata",
+                "unsupported grant type",
+            ));
+        }
+    }
+
+    let response_types = req
+        .response_types
+        .unwrap_or_else(|| vec![OauthResponseType::Code]);
+    if response_types.is_empty()
+        || response_types
+            .iter()
+            .any(|response_type| *response_type != OauthResponseType::Code)
+    {
+        return Err(oauth_error(
+            "invalid_client_metadata",
+            "only the code response type is supported",
+        ));
+    }
+
+    if grant_types.contains(&OauthGrantType::AuthorizationCode) && req.redirect_uris.is_empty() {
+        return Err(oauth_error(
+            "invalid_redirect_uri",
+            "authorization_code requires at least one redirect uri",
+        ));
+    }
+    validate_redirect_uris(&req.redirect_uris)?;
+
+    let client_name = req
+        .client_name
+        .map(|name| name.trim().to_string())
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| "OAuth Client".to_string());
+    if client_name.chars().count() > 64 {
+        return Err(oauth_error(
+            "invalid_client_metadata",
+            "client_name must be 64 characters or fewer",
+        ));
+    }
+
+    let scope = match req.scope.as_deref().map(str::trim) {
+        Some(scope) if !scope.is_empty() => {
+            parse_scopes(scope)
+                .map_err(|_| oauth_error("invalid_client_metadata", "invalid scope requested"))?;
+            Some(scope.to_string())
+        }
+        _ => None,
+    };
+
+    Ok(NormalizedRegistration {
+        client_name,
+        redirect_uris: req.redirect_uris,
+        grant_types,
+        response_types,
+        scope,
+    })
+}
+
 fn validate_pkce(app: &Application, q: &OauthAuthorizeParams) -> Result<()> {
+    let requires_pkce = app.is_dynamic_oauth_client() || !app.oauth_confidential;
     let has_challenge = q
         .code_challenge
         .as_deref()
         .is_some_and(|challenge| !challenge.is_empty());
     if !has_challenge {
-        if app.oauth_confidential {
+        if !requires_pkce {
             return Ok(());
         }
         return Err(ApiError::from_code(ErrorCode::MissingCodeChallenge).into());
@@ -186,7 +475,7 @@ fn validate_pkce(app: &Application, q: &OauthAuthorizeParams) -> Result<()> {
         OauthCodeChallengeMethod::from_str(q.code_challenge_method.as_deref().unwrap_or("plain"))
             .map_err(|_| ApiError::from_code(ErrorCode::UnsupportedCodeChallengeMethod))?;
 
-    if !app.oauth_confidential && method != OauthCodeChallengeMethod::S256 {
+    if requires_pkce && method != OauthCodeChallengeMethod::S256 {
         return Err(ApiError::from_code(ErrorCode::UnsupportedCodeChallengeMethod).into());
     }
 
@@ -773,6 +1062,13 @@ async fn oauth_revoke(
     Ok(StatusCode::NO_CONTENT)
 }
 
+fn registration_endpoint(s: &ServerState) -> Result<Option<url::Url>> {
+    if !s.config.oauth_server.dynamic_registration {
+        return Ok(None);
+    }
+    Ok(Some(s.config.api_url.join("/api/v1/oauth/register")?))
+}
+
 /// Oauth autoconfig auth server
 #[handler(routes::oauth_autoconfig_auth_server)]
 async fn oauth_autoconfig_auth_server(
@@ -782,6 +1078,7 @@ async fn oauth_autoconfig_auth_server(
     let config = AuthServerMetadata {
         issuer: s.config.api_url.clone(),
         authorization_response_iss_parameter_supported: true,
+        registration_endpoint: registration_endpoint(&s)?,
         authorization_endpoint: s.config.html_url.join("/authorize")?,
         device_authorization_endpoint: s.config.api_url.join("/api/v1/oauth/device/start")?,
         token_endpoint: s.config.api_url.join("/api/v1/oauth/token")?,
@@ -796,6 +1093,7 @@ async fn oauth_autoconfig_auth_server(
         token_endpoint_auth_methods_supported: vec![
             OauthAuthMethod::ClientSecretPost,
             OauthAuthMethod::ClientSecretBasic,
+            OauthAuthMethod::None,
         ],
         code_challenge_methods_supported: vec![
             OauthCodeChallengeMethod::S256,
@@ -814,6 +1112,7 @@ async fn oauth_autoconfig_openid(
     let config = OidcDiscovery {
         issuer: s.config.api_url.clone(),
         authorization_response_iss_parameter_supported: true,
+        registration_endpoint: registration_endpoint(&s)?,
         authorization_endpoint: s.config.html_url.join("/authorize")?,
         device_authorization_endpoint: s.config.api_url.join("/api/v1/oauth/device/start")?,
         token_endpoint: s.config.api_url.join("/api/v1/oauth/token")?,
@@ -831,6 +1130,7 @@ async fn oauth_autoconfig_openid(
         token_endpoint_auth_methods_supported: vec![
             OauthAuthMethod::ClientSecretPost,
             OauthAuthMethod::ClientSecretBasic,
+            OauthAuthMethod::None,
         ],
         claims_supported: vec![
             "iss".to_string(),
@@ -912,6 +1212,7 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(oauth_info))
         .routes(routes2!(oauth_authorize))
+        .routes(routes2!(oauth_register))
         .routes(routes2!(oauth_device_authorization))
         .routes(routes2!(oauth_device_info))
         .routes(routes2!(oauth_device_authorize))
@@ -922,4 +1223,70 @@ pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
         .routes(routes2!(oauth_autoconfig_auth_server))
         .routes(routes2!(oauth_autoconfig_openid))
         .routes(routes2!(oauth_jwks))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use common::v1::types::oauth::OauthClientRegistrationRequest;
+
+    fn registration(redirect_uris: Vec<&str>) -> OauthClientRegistrationRequest {
+        OauthClientRegistrationRequest {
+            redirect_uris: redirect_uris.into_iter().map(ToString::to_string).collect(),
+            token_endpoint_auth_method: None,
+            grant_types: None,
+            response_types: None,
+            client_name: None,
+            scope: None,
+        }
+    }
+
+    #[test]
+    fn redirect_uris_allow_https_and_loopback_http() {
+        assert!(
+            validate_redirect_uris(&[
+                "https://example.com/callback".to_string(),
+                "http://localhost:8080/callback".to_string(),
+                "com.example.app:/callback".to_string(),
+            ])
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn redirect_uris_reject_fragments_and_remote_http() {
+        assert!(
+            validate_redirect_uris(&["https://example.com/callback#fragment".to_string()]).is_err()
+        );
+        assert!(validate_redirect_uris(&["http://example.com/callback".to_string()]).is_err());
+    }
+
+    #[test]
+    fn registration_defaults_to_public_authorization_code() {
+        let normalized =
+            normalize_registration(registration(vec!["https://example.com/callback"])).unwrap();
+        assert_eq!(normalized.client_name, "OAuth Client");
+        assert_eq!(
+            normalized.grant_types,
+            vec![OauthGrantType::AuthorizationCode]
+        );
+        assert_eq!(normalized.response_types, vec![OauthResponseType::Code]);
+    }
+
+    #[test]
+    fn registration_requires_redirect_uri_for_authorization_code() {
+        assert!(normalize_registration(registration(vec![])).is_err());
+    }
+
+    #[test]
+    fn registration_rejects_confidential_auth_method() {
+        let mut request = registration(vec!["https://example.com/callback"]);
+        request.token_endpoint_auth_method = Some(OauthAuthMethod::ClientSecretPost);
+        assert!(normalize_registration(request).is_err());
+    }
+
+    #[test]
+    fn redirect_uris_allow_ipv6_loopback() {
+        assert!(validate_redirect_uris(&["http://[::1]:8080/callback".to_string()]).is_ok());
+    }
 }

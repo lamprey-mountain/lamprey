@@ -48,6 +48,31 @@ pub mod oauth_authorize {
     }
 }
 
+/// Oauth register
+///
+/// Register a new OAuth client (RFC 7591).
+#[endpoint(
+    post,
+    path = "/oauth/register",
+    tags = ["oauth"],
+    response(CREATED, body = OauthClientRegistrationResponse, description = "registered"),
+)]
+pub mod oauth_register {
+    use crate::v1::types::oauth::{
+        OauthClientRegistrationRequest, OauthClientRegistrationResponse,
+    };
+
+    pub struct Request {
+        #[json]
+        pub registration: OauthClientRegistrationRequest,
+    }
+
+    pub struct Response {
+        #[json]
+        pub registration: OauthClientRegistrationResponse,
+    }
+}
+
 /// Oauth device authorization
 ///
 /// Start the device authorization flow.
