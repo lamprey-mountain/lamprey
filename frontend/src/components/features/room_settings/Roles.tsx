@@ -22,6 +22,7 @@ import { Search } from "@/atoms/Search";
 import { PermissionSelector } from "@/components/shared/PermissionSelector";
 import { Avatar } from "@/components/shared/User";
 import { useCurrentUser } from "@/contexts/currentUser";
+import { useMenu } from "@/contexts/menu";
 import { useModals } from "@/contexts/modal";
 import { usePermissions } from "@/hooks/usePermissions";
 import { permissions } from "@/lib/permissions";
@@ -223,6 +224,8 @@ const RoleList = (props: {
 	edit: RoleEditState;
 	canEditRole: (role: Role) => boolean;
 }) => {
+	const { setMenu } = useMenu();
+
 	const filteredRoles = createMemo(() => {
 		return props.roles.filter((i) => i.name.includes(props.search));
 	});
@@ -351,6 +354,17 @@ const RoleList = (props: {
 						onDragEnd={() => {
 							setDragging(null);
 							setTarget(null);
+						}}
+						onContextMenu={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							setMenu({
+								x: e.clientX,
+								y: e.clientY,
+								type: "role",
+								role_id: i.id,
+								room_id: i.room_id,
+							});
 						}}
 						classList={{
 							dragging: dragging() === i.id,

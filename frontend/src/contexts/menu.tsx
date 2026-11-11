@@ -9,7 +9,6 @@ import {
 } from "solid-js";
 
 // TODO: add emoji menu
-// TODO: add role menu
 
 export type Menu = {
 	x: number;
@@ -57,6 +56,7 @@ export type Menu = {
 			overwrite_type: "Role" | "User" | "Everyone";
 			onDelete?: () => void;
 	  }
+	| { type: "role"; role_id: string; room_id?: string }
 	| { type: "channel_nav"; room_id?: string; view_id?: string }
 	| {
 			type: "calendar_event";

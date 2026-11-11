@@ -340,7 +340,23 @@ export function UserProfile(props: UserProps) {
 							<For each={room_member()?.roles}>
 								{(role_id) => {
 									const role = api.roles.cache.get(role_id);
-									return <li>{role?.name ?? "role"}</li>;
+									return (
+										<li
+											onContextMenu={(e) => {
+												e.preventDefault();
+												e.stopPropagation();
+												setMenu({
+													x: e.clientX,
+													y: e.clientY,
+													type: "role",
+													role_id,
+													room_id: props.room_member?.room_id,
+												});
+											}}
+										>
+											{role?.name ?? "role"}
+										</li>
+									);
 								}}
 							</For>
 							<Show when={hasPermission("RoleApply")}>

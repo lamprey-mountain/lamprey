@@ -78,13 +78,28 @@ function UserMention(props: { id: string }) {
 function RoleMention(props: { id: string }) {
 	const ctx = useContext(MarkdownContext);
 	const api = useApi();
+	const { setMenu } = useMenu();
 	const role = createMemo(() => {
 		if (!ctx?.channel?.room_id) return null;
 		return api.roles.cache.get(props.id);
 	});
 
 	return (
-		<span class="mention mention-role menu-role" data-role-id={props.id}>
+		<span
+			class="mention mention-role menu-role"
+			data-role-id={props.id}
+			onContextMenu={(e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				setMenu({
+					x: e.clientX,
+					y: e.clientY,
+					type: "role",
+					role_id: props.id,
+					room_id: ctx?.channel?.room_id ?? role()?.room_id,
+				});
+			}}
+		>
 			@{role()?.name ?? "..."}
 		</span>
 	);

@@ -3,6 +3,7 @@ import type { NodeView, NodeViewConstructor } from "prosemirror-view";
 import { getOwner, runWithOwner, type VoidComponent } from "solid-js";
 import { render } from "solid-js/web";
 import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
+import { useMenu } from "@/contexts/menu";
 import { getEmojiHex } from "@/lib/emoji";
 import { getEmojiUrl } from "@/media/util.tsx";
 
@@ -69,7 +70,24 @@ export const createEditorNodeViews = () => {
 				name: n.attrs.name ?? n.attrs.role ?? "...",
 			}),
 			(props) => {
-				return <span class="mention mention-role">@{props.name}</span>;
+				const { setMenu } = useMenu();
+				return (
+					<span
+						class="mention mention-role"
+						onContextMenu={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							setMenu({
+								x: e.clientX,
+								y: e.clientY,
+								type: "role",
+								role_id: props.id,
+							});
+						}}
+					>
+						@{props.name}
+					</span>
+				);
 			},
 		),
 		mentionEveryone: nv(

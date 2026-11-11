@@ -55,6 +55,7 @@ import {
 	MediaAdminMenu,
 	MessageMenu,
 	PermissionOverwriteMenu,
+	RoleMenu,
 	RoomAdminMenu,
 	RoomMenu,
 	SettingsMenu,
@@ -511,6 +512,11 @@ export function OverlayProvider(props: ParentProps) {
 						content={menu.content}
 						animated={menu.animated}
 					/>
+				);
+			}
+			case "role": {
+				return (
+					<RoleMenu role_id={menu.role_id} room_id={menu.room_id} />
 				);
 			}
 			case "topic": {

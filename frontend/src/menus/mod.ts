@@ -8,6 +8,7 @@ export * from "./InviteApplication.tsx";
 export * from "./MediaAdmin.tsx";
 export * from "./Message.tsx";
 export * from "./PermissionOverwrite.tsx";
+export * from "./Role.tsx";
 export * from "./Room.tsx";
 export * from "./RoomAdmin.tsx";
 export * from "./Settings.tsx";
