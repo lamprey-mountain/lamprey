@@ -6,6 +6,11 @@ use anyhow::{Context, Result};
 use common::v1::types::auth::{AuthState, PasswordExec, TotpVerificationRequest};
 use common::v1::types::message::flume::FlumeCreate;
 use common::v1::types::misc::ApplicationIdReq;
+use common::v1::types::oauth::{
+    AuthServerMetadata, OauthClientRegistrationRequest, OauthClientRegistrationResponse,
+    OauthDeviceAuthorizationRequest, OauthDeviceAuthorizationResponse, OauthTokenRequest,
+    OauthTokenResponse,
+};
 use common::v1::types::pagination::{PaginationQuery, PaginationResponse};
 use common::v1::types::presence::Presence;
 use common::v1::types::server::ServerInfo;
@@ -394,6 +399,8 @@ route!(delete "/api/v1/session/{session_id}"                      => session_del
 route!(delete "/api/v1/session/@all"                              => session_delete_all());
 
 // Auth Routes
+route!(get    "/api/v1/.well-known/oauth-authorization-server"    => oauth_authorization_server() -> AuthServerMetadata);
+route!(post   "/api/v1/oauth/register"                            => oauth_register() -> OauthClientRegistrationResponse, OauthClientRegistrationRequest);
 route!(post   "/api/v1/auth/password"                             => auth_password_exec(), PasswordExec);
 route!(post   "/api/v1/auth/totp"                                 => auth_totp_exec() -> AuthState, TotpVerificationRequest);
 route!(get    "/api/v1/auth/state"                                => auth_state() -> AuthState);
@@ -544,6 +551,49 @@ pub struct MessageCreateOptions {
     // http Idempotency-Key header
     pub nonce: Option<String>,
     pub timestamp: Option<Time>,
+}
+
+impl Http {
+    /// exchange or refresh an oauth token
+    pub async fn oauth_token(&self, body: &OauthTokenRequest) -> Result<OauthTokenResponse> {
+        let url = self.api_url().join("/api/v1/oauth/token")?;
+        let res = self.client.post(url.clone()).form(body).send().await?;
+        let status = res.status();
+        let text = res
+            .text()
+            .await
+            .unwrap_or_else(|_| "failed to read body".to_string());
+        if !status.is_success() {
+            error!(status = %status, url = %url, "oauth token request failed");
+            return Err(anyhow::anyhow!("request failed with status {status}"));
+        }
+        serde_json::from_str(&text).with_context(|| {
+            error!(status = %status, body_len = text.len(), "failed to decode oauth token response");
+            "failed to decode response body for oauth_token"
+        })
+    }
+
+    /// start the oauth device authorization flow
+    pub async fn oauth_device_start(
+        &self,
+        body: &OauthDeviceAuthorizationRequest,
+    ) -> Result<OauthDeviceAuthorizationResponse> {
+        let url = self.api_url().join("/api/v1/oauth/device/start")?;
+        let res = self.client.post(url.clone()).form(body).send().await?;
+        let status = res.status();
+        let text = res
+            .text()
+            .await
+            .unwrap_or_else(|_| "failed to read body".to_string());
+        if !status.is_success() {
+            error!(status = %status, url = %url, "oauth device authorization request failed");
+            return Err(anyhow::anyhow!("request failed with status {status}"));
+        }
+        serde_json::from_str(&text).with_context(|| {
+            error!(status = %status, body_len = text.len(), "failed to decode oauth device response");
+            "failed to decode response body for oauth_device_start"
+        })
+    }
 }
 
 impl Http {
