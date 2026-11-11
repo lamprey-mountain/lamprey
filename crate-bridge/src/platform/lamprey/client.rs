@@ -266,15 +266,21 @@ impl From<discord::Attachment> for ImportUrl {
 
 fn discord_avatar_url(user: &discord::User) -> Option<String> {
     user.avatar.as_ref().map(|hash| {
-        let ext = if hash.is_animated() { "gif" } else { "png" };
-        format!("https://cdn.discordapp.com/avatars/{}/{}.{}", user.id, hash, ext)
+        let ext = if hash.is_animated() { "gif" } else { "webp" };
+        format!(
+            "https://cdn.discordapp.com/avatars/{}/{}.{}?size=1024",
+            user.id, hash, ext
+        )
     })
 }
 
 fn discord_banner_url(user: &discord::User) -> Option<String> {
     user.banner.as_ref().map(|hash| {
-        let ext = if hash.is_animated() { "gif" } else { "png" };
-        format!("https://cdn.discordapp.com/banners/{}/{}.{}", user.id, hash, ext)
+        let ext = if hash.is_animated() { "gif" } else { "webp" };
+        format!(
+            "https://cdn.discordapp.com/banners/{}/{}.{}?size=1024",
+            user.id, hash, ext
+        )
     })
 }
 
