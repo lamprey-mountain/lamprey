@@ -1,11 +1,14 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::{AbortHandle, JoinSet};
 use tracing::{debug, error, info, warn};
 use twilight_cache_inmemory::InMemoryCache;
-use twilight_gateway::{Event as GatewayEvent, EventTypeFlags, Intents, Shard, ShardId};
+use twilight_gateway::{
+    ConfigBuilder, Event as GatewayEvent, EventTypeFlags, Intents, Shard, ShardId,
+};
 use twilight_gateway::StreamExt as _;
 use twilight_http::Client as HttpClient;
 use twilight_model::application::interaction::Interaction;
@@ -62,6 +65,9 @@ pub type GuildChannel = Channel;
 
 pub use interactions::{SlashCommand, SlashCommandType, get_commands, parse_interaction};
 
+const RECONNECT_MIN_DELAY: Duration = Duration::from_secs(1);
+const RECONNECT_MAX_DELAY: Duration = Duration::from_secs(60);
+
 pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -> PlatformHandle {
     let (tx, rx) = oneshot::channel();
     let task = tokio::spawn(Discord::connect(bridge, config_full, config, tx));
@@ -111,19 +117,7 @@ impl Discord {
         let cache = Arc::new(InMemoryCache::new());
 
         let (tx, rx) = mpsc::channel(1024);
-        let mut shard = Shard::new(ShardId::ONE, token, Intents::all());
-        tokio::spawn(async move {
-            while let Some(item) = shard.next_event(EventTypeFlags::all()).await {
-                match item {
-                    Ok(event) => {
-                        if tx.send(event).await.is_err() {
-                            break;
-                        }
-                    }
-                    Err(e) => warn!(?e, "discord gateway error"),
-                }
-            }
-        });
+        tokio::spawn(run_gateway(token, tx));
 
         let me = Self {
             bridge,
@@ -1080,6 +1074,39 @@ impl Discord {
                 }
             }
         }
+    }
+}
+
+async fn run_gateway(token: String, tx: mpsc::Sender<GatewayEvent>) {
+    let mut shard = Shard::new(ShardId::ONE, token.clone(), Intents::all());
+    let mut reconnect_delay = RECONNECT_MIN_DELAY;
+
+    loop {
+        while let Some(item) = shard.next_event(EventTypeFlags::all()).await {
+            reconnect_delay = RECONNECT_MIN_DELAY;
+            match item {
+                Ok(event) => {
+                    if tx.send(event).await.is_err() {
+                        return;
+                    }
+                }
+                Err(e) => warn!(?e, "discord gateway error"),
+            }
+        }
+
+        let state = shard.state();
+        let session = shard.session().cloned();
+        let resume_url = shard.resume_url().map(str::to_owned);
+        error!(?state, "discord gateway disconnected, reconnecting");
+
+        tokio::time::sleep(reconnect_delay).await;
+        reconnect_delay = (reconnect_delay * 2).min(RECONNECT_MAX_DELAY);
+
+        let mut config = ConfigBuilder::new(token.clone(), Intents::all());
+        if let (Some(session), Some(resume_url)) = (session, resume_url) {
+            config = config.session(session).resume_url(resume_url);
+        }
+        shard = Shard::with_config(ShardId::ONE, config.build());
     }
 }
 
