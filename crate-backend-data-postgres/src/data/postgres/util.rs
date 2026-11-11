@@ -58,7 +58,13 @@ macro_rules! gen_paginate {
         if $p.dir == PaginationDirection::B {
             items.reverse();
         }
-        let cursor = items.last().map($id);
+        // items are always chronological (oldest first) here, so continuing a
+        // backwards page must resume from its oldest item, not its newest one
+        let cursor = match $p.dir {
+            PaginationDirection::B => items.first(),
+            PaginationDirection::F => items.last(),
+        }
+        .map($id);
 
         Ok(PaginationResponse {
             items,
