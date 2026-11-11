@@ -7,7 +7,7 @@ use url::Url;
 use async_tempfile::TempFile;
 use common::v1::types::federation::Remote;
 use common::v1::types::misc::hashes::Hashes;
-use common::v1::types::{MediaId, Mime, UserId};
+use common::v1::types::{MediaId, Mime, SessionId, UserId};
 use common::v2::types::media::{Media, MediaCreate, MediaCreateSource, MediaMetadata, MediaStatus};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{OnceCell, watch};
@@ -388,6 +388,11 @@ pub struct Import {
     /// the user who created this media
     pub user_id: UserId,
 
+    /// the session that created this media, if any
+    ///
+    /// used to send a `MediaProcessed` event to that session
+    pub session_id: Option<SessionId>,
+
     /// id of this this piece of media
     pub media_id: MediaId,
 
@@ -407,6 +412,7 @@ impl Import {
     pub fn new_with_id(media_id: MediaId, user_id: UserId) -> Self {
         Self {
             user_id,
+            session_id: None,
             media_id,
             strip_exif: false,
             alt: None,
@@ -479,6 +485,7 @@ impl From<Media> for Import {
     fn from(value: Media) -> Self {
         Self {
             user_id: value.user_id.unwrap_or_default(),
+            session_id: None,
             media_id: value.id,
             strip_exif: value.strip_exif,
             alt: value.alt,

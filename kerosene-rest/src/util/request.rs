@@ -142,7 +142,8 @@ where
 
                     // PERF: import in parallel
                     for (num, file) in files {
-                        let import = Import::new(user.id);
+                        let mut import = Import::new(user.id);
+                        import.session_id = identity.session().map(|s| s.id);
                         let item = srv
                             .media
                             .import_from_multipart(import, file)

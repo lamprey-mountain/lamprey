@@ -21,6 +21,7 @@ pub async fn debug(
     identity.ensure_scopes(&[Scope::Full])?;
     let user = identity.ensure_user()?;
     user.ensure_unsuspended()?;
+    let session_id = identity.session().map(|s| s.id);
 
     let srv = req.services();
     let (generations, log) = srv
@@ -39,7 +40,7 @@ pub async fn debug(
             for pending in g.pending_media() {
                 let srv = srv.clone();
                 media.push(async move {
-                    let import = Import::new(user_id).merge(MediaCreate {
+                    let mut import = Import::new(user_id).merge(MediaCreate {
                         alt: pending.alt,
                         strip_exif: false,
                         source: MediaCreateSource::Download {
@@ -48,6 +49,7 @@ pub async fn debug(
                             source_url: pending.url.clone(),
                         },
                     });
+                    import.session_id = session_id;
                     let mut item = srv
                         .media
                         .import_from_url(import, &pending.url)
@@ -90,6 +92,7 @@ pub async fn unfurl(
     identity.ensure_scopes(&[Scope::Full])?;
     let user = identity.ensure_user()?;
     user.ensure_unsuspended()?;
+    let session_id = identity.session().map(|s| s.id);
 
     req.inner()
         .body
@@ -118,7 +121,7 @@ pub async fn unfurl(
                     for pending in g.pending_media() {
                         let srv = srv.clone();
                         media.push(async move {
-                            let import = Import::new(user_id).merge(MediaCreate {
+                            let mut import = Import::new(user_id).merge(MediaCreate {
                                 alt: pending.alt,
                                 strip_exif: false,
                                 source: MediaCreateSource::Download {
@@ -127,6 +130,7 @@ pub async fn unfurl(
                                     source_url: pending.url.clone(),
                                 },
                             });
+                            import.session_id = session_id;
                             let mut item = srv
                                 .media
                                 .import_from_url(import, &pending.url)

@@ -104,9 +104,10 @@ impl ServiceMedia {
 
         let expire_handle = self.spawn_expiration_task(media_id);
 
+        let session_id = import.session_id;
         let upload = Upload {
             import,
-            session_id: None,
+            session_id,
             writer,
             s: self.state.clone(),
             temp_file,
