@@ -273,7 +273,7 @@ impl MessageTransformer {
                 }
                 MentionType::Role(id) => {
                     if let Some(lamprey_id) = role_mappings.get(id) {
-                        result.push_str(&format!("<@&{}>", Uuid::from(*lamprey_id)));
+                        result.push_str(&format!("<&{}>", Uuid::from(*lamprey_id)));
                     } else {
                         result.push_str(&self.source[span.start..span.end]);
                     }

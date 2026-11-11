@@ -140,7 +140,7 @@ export const schema = new Schema({
 			leafText(node) {
 				return node.attrs.name
 					? `@${node.attrs.name}`
-					: `<@&${node.attrs.role}>`;
+					: `<&${node.attrs.role}>`;
 			},
 			toDOM: (n) => [
 				"span",
@@ -149,7 +149,7 @@ export const schema = new Schema({
 					"data-name": n.attrs.name,
 					class: "mention",
 				},
-				n.attrs.name ? `@${n.attrs.name}` : `<@&${n.attrs.role}>`,
+				n.attrs.name ? `@${n.attrs.name}` : `<&${n.attrs.role}>`,
 			],
 			parseDOM: [
 				{

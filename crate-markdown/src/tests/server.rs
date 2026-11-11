@@ -1,12 +1,13 @@
-use crate::{parser::Parser, query::QueryableExt, transform::StripEmoji};
+use crate::{ast::inline::MentionData, parser::Parser, query::QueryableExt, transform::StripEmoji};
 
 #[test]
 fn parse_mentions() {
     let parser = Parser::new();
-    let source = "<@00000000-0000-0000-0000-000000000000> <&00000000-0000-0000-0000-000000000001> <#00000000-0000-0000-0000-000000000002> <@everyone>";
+    let source = "<@00000000-0000-0000-0000-000000000000> <&00000000-0000-0000-0000-000000000001> <@&00000000-0000-0000-0000-000000000001> <#00000000-0000-0000-0000-000000000002> <@everyone>";
     let parsed = parser.parse(source);
     let mentions: Vec<_> = parsed.tree().iter_mentions().collect();
-    assert_eq!(mentions.len(), 4);
+    assert_eq!(mentions.len(), 5);
+    assert!(matches!(mentions[2].parse(), MentionData::Role(_)));
 }
 
 #[test]

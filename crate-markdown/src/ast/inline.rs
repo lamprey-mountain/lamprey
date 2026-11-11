@@ -55,14 +55,16 @@ impl FromStr for MentionData {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        // `<&id>` is canonical, `<@&id>` is a legacy form
         if s == "@everyone" {
             Ok(MentionData::Everyone)
+        } else if (s.starts_with("<@&") || s.starts_with("<&")) && s.ends_with('>') {
+            let start = if s.starts_with("<@&") { 3 } else { 2 };
+            let uuid = Uuid::parse_str(&s[start..s.len() - 1]).map_err(|e| e.to_string())?;
+            Ok(MentionData::Role(RoleId::from(uuid)))
         } else if s.starts_with("<@") && s.ends_with('>') {
             let uuid = Uuid::parse_str(&s[2..s.len() - 1]).map_err(|e| e.to_string())?;
             Ok(MentionData::User(UserId::from(uuid)))
-        } else if s.starts_with("<&") && s.ends_with('>') {
-            let uuid = Uuid::parse_str(&s[2..s.len() - 1]).map_err(|e| e.to_string())?;
-            Ok(MentionData::Role(RoleId::from(uuid)))
         } else if s.starts_with("<#") && s.ends_with('>') {
             let uuid = Uuid::parse_str(&s[2..s.len() - 1]).map_err(|e| e.to_string())?;
             Ok(MentionData::Channel(ChannelId::from(uuid)))
@@ -314,16 +316,18 @@ impl Mention {
 
     pub fn parse(&self) -> MentionData {
         let text = self.0.text().to_string();
-        if text.starts_with("<@") && text.ends_with('>') {
+        // `<&id>` is canonical, `<@&id>` is a legacy form
+        if (text.starts_with("<@&") || text.starts_with("<&")) && text.ends_with('>') {
+            let start = if text.starts_with("<@&") { 3 } else { 2 };
+            let uuid: Uuid = text[start..text.len() - 1]
+                .parse()
+                .expect("invalid Mention content");
+            MentionData::Role(RoleId::from(uuid))
+        } else if text.starts_with("<@") && text.ends_with('>') {
             let uuid: Uuid = text[2..text.len() - 1]
                 .parse()
                 .expect("invalid Mention content");
             MentionData::User(UserId::from(uuid))
-        } else if text.starts_with("<&") && text.ends_with('>') {
-            let uuid: Uuid = text[2..text.len() - 1]
-                .parse()
-                .expect("invalid Mention content");
-            MentionData::Role(RoleId::from(uuid))
         } else if text.starts_with("<#") && text.ends_with('>') {
             let uuid: Uuid = text[2..text.len() - 1]
                 .parse()

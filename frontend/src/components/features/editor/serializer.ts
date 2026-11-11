@@ -43,7 +43,7 @@ function serializeInline(node: Node): string {
 		}
 		case "mentionRole": {
 			const roleId = node.attrs.role;
-			return `<@&${roleId}>`;
+			return `<&${roleId}>`;
 		}
 		case "mentionEveryone": {
 			return "@everyone";

@@ -413,6 +413,12 @@ impl<'a> ParseContext<'a> {
                 }
                 _ => false,
             },
+            // legacy `<@&id>` form; canonical is `<&id>`
+            [t1, t2, t3] => {
+                t1.kind == TokenKind::At
+                    && t2.kind == TokenKind::Ampersand
+                    && t3.kind == TokenKind::Uuid
+            }
             _ => false,
         }
     }

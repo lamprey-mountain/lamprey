@@ -76,7 +76,7 @@ function serializeInlineToEditorHTML(inline: SerializedInline): string {
 				return `<span data-user-id="${m.id}" class="mention">&lt;@${m.id}&gt;</span>`;
 			}
 			if (m.type === "Role") {
-				return `<span data-role-id="${m.id}" class="mention">&lt;@&amp;${m.id}&gt;</span>`;
+				return `<span data-role-id="${m.id}" class="mention">&lt;&amp;${m.id}&gt;</span>`;
 			}
 			if (m.type === "Channel") {
 				return `<span data-channel-id="${m.id}" class="mention">&lt;#${m.id}&gt;</span>`;

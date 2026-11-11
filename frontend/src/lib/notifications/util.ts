@@ -50,9 +50,9 @@ export async function stripMarkdownAndResolveMentions(
 		},
 	);
 
-	// Replace role mentions <@&role-id> with role names
+	// Replace role mentions <&role-id> with role names
 	const roleMentionRegex =
-		/<@&([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g;
+		/<@?&([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})>/g;
 	const roleMatches = Array.from(processedContent.matchAll(roleMentionRegex));
 	for (const match of roleMatches) {
 		const roleId = match[1];
