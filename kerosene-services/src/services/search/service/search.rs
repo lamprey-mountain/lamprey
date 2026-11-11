@@ -9,21 +9,25 @@ use common::v1::types::message::MessageType;
 use common::v1::types::search::{
     AuditLogSearch, AuditLogSearchRequest, ChannelSearch, ChannelSearchRequest, EverythingSearch,
     EverythingSearchItem, EverythingSearchRequest, MediaSearch, MediaSearchRequest, MessageSearch,
-    MessageSearchRequest, RoomSearch, RoomSearchRequest, UserSearch, UserSearchRequest,
+    MessageSearchRequest, RoomMemberSearchRequest, RoomSearch, RoomSearchRequest, UserSearch,
+    UserSearchRequest,
 };
 use common::v1::types::{
-    AuditLogEntryId, ChannelId, MediaId, MessageId, PaginationQuery, RoomId, UserId,
+    AuditLogEntryId, ChannelId, MediaId, MessageId, PaginationQuery, RoomId, RoomMember,
+    RoomMemberSearchResponse, User, UserId,
 };
 
 use crate::Result;
 use crate::services::search::ServiceSearch;
+use crate::services::search::index::glue::TantivyRoomMember;
 use crate::services::search::index::searcher::{
     ContentSearcher, TantivySearchAuditLogEntries, TantivySearchChannels, TantivySearchEverything,
-    TantivySearchMedia, TantivySearchMessages, TantivySearchRooms, TantivySearchUsers,
+    TantivySearchMedia, TantivySearchMessages, TantivySearchRoomMembers, TantivySearchRooms,
+    TantivySearchUsers,
 };
 use kerosene_search::visibility::{
     SearchAuditLogVisibility, SearchChannelsVisibility, SearchMediaVisibility,
-    SearchMessagesVisibility, SearchRoomsVisibility,
+    SearchMessagesVisibility, SearchRoomMemberVisibility, SearchRoomsVisibility,
 };
 
 // TODO: implement cursor fields (or remove them?)
@@ -321,6 +325,61 @@ impl ServiceSearch {
         })
     }
 
+    pub async fn search_room_members(
+        &self,
+        room_id: RoomId,
+        req: RoomMemberSearchRequest,
+    ) -> Result<RoomMemberSearchResponse> {
+        let index = self.get_index().await?;
+        let searcher = index.searcher().await?;
+        let cs = ContentSearcher::new(searcher);
+
+        let raw_result = cs
+            .search_room_members(TantivySearchRoomMembers {
+                req,
+                visibility: SearchRoomMemberVisibility::Room(room_id),
+            })
+            .await?;
+
+        let pairs = self.hydrate_room_members(room_id, raw_result.items).await?;
+        Ok(room_member_search_response(pairs))
+    }
+
+    async fn hydrate_room_members(
+        &self,
+        room_id: RoomId,
+        items: Vec<TantivyRoomMember>,
+    ) -> Result<Vec<(RoomMember, User)>> {
+        if items.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let user_ids: Vec<UserId> = items.iter().map(|item| item.user_id).collect();
+        let mut data = self.state.begin_read().await?;
+        let room_members = data.room_member_get_many(room_id, &user_ids).await?;
+        drop(data);
+
+        let users = self.state.services().users.get_many(&user_ids).await?;
+        let mut member_map: HashMap<UserId, RoomMember> = room_members
+            .into_iter()
+            .map(|member| (member.user_id, member))
+            .collect();
+        let mut user_map: HashMap<UserId, User> =
+            users.into_iter().map(|user| (user.id, user)).collect();
+
+        let mut pairs = Vec::with_capacity(items.len());
+        for item in items {
+            if let (Some(member), Some(user)) = (
+                member_map.remove(&item.user_id),
+                user_map.remove(&item.user_id),
+            ) {
+                pairs.push((member, user));
+            }
+        }
+
+        Ok(pairs)
+    }
+
     pub async fn search_media(
         &self,
         visibility: SearchMediaVisibility,
@@ -436,5 +495,19 @@ impl ServiceSearch {
             total: raw_result.total,
             cursor: None,
         })
+    }
+}
+
+fn room_member_search_response(pairs: Vec<(RoomMember, User)>) -> RoomMemberSearchResponse {
+    let mut room_members = Vec::with_capacity(pairs.len());
+    let mut users = Vec::with_capacity(pairs.len());
+    for (member, user) in pairs {
+        room_members.push(member);
+        users.push(user);
+    }
+
+    RoomMemberSearchResponse {
+        room_members,
+        users,
     }
 }

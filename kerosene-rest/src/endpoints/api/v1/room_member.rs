@@ -1,8 +1,11 @@
 use std::collections::HashSet;
 
+use common::v1::types::search::{
+    Order, RoomMemberSearchOrderField, RoomMemberSearchRequest, SearchRequest,
+};
 use common::v1::types::{
     AuditLogEntryType, MessageSync, PaginationResponse, Permission, RoleId, RoomMemberOrigin,
-    RoomMemberSearchResponse, SERVER_ROOM_ID, UserId,
+    SERVER_ROOM_ID,
     oauth::Scope,
     util::Changes,
     util::{Diff, Time},
@@ -726,20 +729,22 @@ pub async fn search(
     perms.check()?;
 
     let limit = body.search.limit.unwrap_or(10).min(100);
-    let mut data = req.globals().begin_read().await.cast_internal()?;
-    let room_members = data
-        .room_member_search(body.room_id, body.search.query.clone(), limit)
+    let search = RoomMemberSearchRequest {
+        inner: SearchRequest {
+            query: Some(body.search.query.clone()),
+            sort_order: Order::Descending,
+            limit,
+            offset: 0,
+        },
+        sort_field: RoomMemberSearchOrderField::Joined,
+    };
+    let results = srv
+        .search
+        .search_room_members(body.room_id, search)
         .await
         .cast_internal()?;
-    let user_ids: Vec<UserId> = room_members.iter().map(|m| m.user_id).collect();
-    let users = srv.users.get_many(&user_ids).await.cast_internal()?;
 
-    Ok(routes::room_member_search::Response {
-        results: RoomMemberSearchResponse {
-            room_members,
-            users,
-        },
-    })
+    Ok(routes::room_member_search::Response { results })
 }
 
 #[handler(routes::room_member_search_advanced)]
@@ -770,9 +775,9 @@ pub async fn search_advanced(
     }
     perms.check()?;
 
-    let mut data = req.globals().begin_read().await.cast_internal()?;
-    let results = data
-        .room_member_search_advanced(body.room_id, body.search.clone())
+    let results = srv
+        .search
+        .search_room_members(body.room_id, body.search.clone())
         .await
         .cast_internal()?;
 

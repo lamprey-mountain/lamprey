@@ -177,14 +177,14 @@ pub mod room_member_search {
     response(OK, body = RoomMemberSearchResponse, description = "success"),
 )]
 pub mod room_member_search_advanced {
-    use crate::v1::types::{RoomId, RoomMemberSearchAdvanced, RoomMemberSearchResponse};
+    use crate::v1::types::{RoomId, RoomMemberSearchResponse, search::RoomMemberSearchRequest};
 
     pub struct Request {
         #[path]
         pub room_id: RoomId,
 
         #[json]
-        pub search: RoomMemberSearchAdvanced,
+        pub search: RoomMemberSearchRequest,
     }
 
     pub struct Response {

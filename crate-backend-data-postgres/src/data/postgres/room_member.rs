@@ -3,8 +3,7 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::Time;
 use common::v1::types::{
     ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, RoomBan, RoomMember,
-    RoomMemberOrigin, RoomMemberPut, RoomMemberSearchAdvanced, RoomMemberSearchResponse,
-    RoomMemberUpdate, User,
+    RoomMemberOrigin, RoomMemberPut, RoomMemberUpdate, User,
 };
 use sqlx::{query, query_as, query_file_as, query_scalar};
 use time::PrimitiveDateTime;
@@ -718,90 +717,5 @@ impl DataRoomMember for Postgres {
         .fetch_all(conn.ext())
         .await?;
         Ok(items.into_iter().map(Into::into).collect())
-    }
-
-    async fn room_member_search(
-        &mut self,
-        room_id: RoomId,
-        query: String,
-        limit: u16,
-    ) -> Result<Vec<RoomMember>> {
-        let mut conn = self.acquire().await?;
-        let query = format!("%{}%", query);
-        let items = query_as!(
-            DbRoomMember,
-            r#"
-            with r as (
-                select user_id, array_agg(role_id) as roles from role_member
-                join role on role.room_id = $1 and role_member.role_id = role.id
-                group by user_id
-            )
-            SELECT
-                m.room_id,
-                m.user_id,
-                membership as "membership: _",
-                override_name,
-                override_description,
-                joined_at,
-                origin,
-                mute,
-                deaf,
-                timeout_until,
-                quarantined,
-                coalesce(r.roles, '{}') as "roles!"
-            FROM room_member m
-            JOIN usr u ON m.user_id = u.id
-            left join r on r.user_id = m.user_id
-            WHERE m.room_id = $1 AND m.membership = 'Join' AND (u.name ILIKE $2 OR m.override_name ILIKE $2)
-            ORDER BY u.name
-            LIMIT $3
-            "#,
-            *room_id,
-            query,
-            limit as i64
-        )
-        .fetch_all(conn.ext())
-        .await?;
-
-        Ok(items.into_iter().map(Into::into).collect())
-    }
-
-    async fn room_member_search_advanced(
-        &mut self,
-        room_id: RoomId,
-        search: RoomMemberSearchAdvanced,
-    ) -> Result<RoomMemberSearchResponse> {
-        let mut conn = self.acquire().await?;
-        let limit = search.limit.unwrap_or(10).min(1024);
-        let query = search.query.map(|q| format!("%{}%", q));
-        let role_ids: Vec<Uuid> = search.roles.iter().map(|r| r.into_inner()).collect();
-
-        let rows = query_file_as!(
-            DbRoomMemberWithUser,
-            "sql/room_member_search_advanced.sql",
-            *room_id,
-            query,
-            limit as i64,
-            &role_ids,
-            search.invite.map(|i| i.to_string()),
-            search.timeout,
-            search.mute,
-            search.deaf,
-            search.nickname,
-            search.guest,
-            search.join_before.map(PrimitiveDateTime::from),
-            search.join_after.map(PrimitiveDateTime::from),
-            search.create_before.map(PrimitiveDateTime::from),
-            search.create_after.map(PrimitiveDateTime::from)
-        )
-        .fetch_all(conn.ext())
-        .await?;
-
-        let (room_members, users) = rows.into_iter().map(Into::into).unzip();
-
-        Ok(RoomMemberSearchResponse {
-            room_members,
-            users,
-        })
     }
 }

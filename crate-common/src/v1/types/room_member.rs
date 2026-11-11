@@ -208,52 +208,6 @@ pub struct RoomMemberSearch {
 }
 
 #[record]
-#[derive(Default)]
-pub struct RoomMemberSearchAdvanced {
-    /// user name, override_name, or id
-    #[validate(length(min = 1, max = 64))]
-    pub query: Option<String>,
-
-    /// maximum number of results to return
-    #[validate(range(min = 1, max = 1024))]
-    pub limit: Option<u16>,
-
-    /// has all of these roles
-    #[serde(default)]
-    pub roles: Vec<RoleId>,
-
-    /// joined from this invite
-    pub invite: Option<InviteCode>,
-
-    /// return members who are/aren't timed out
-    pub timeout: Option<bool>,
-
-    /// return members who are/aren't room muted
-    pub mute: Option<bool>,
-
-    /// return members who are/aren't room deafened
-    pub deaf: Option<bool>,
-
-    /// return members who do/don't have a custom nickname
-    pub nickname: Option<bool>,
-
-    /// return members who are/aren't server guests
-    pub guest: Option<bool>,
-
-    /// members who joined the room before this time
-    pub join_before: Option<Time>,
-
-    /// members who joined the room after this time
-    pub join_after: Option<Time>,
-
-    /// users who were created before this time
-    pub create_before: Option<Time>,
-
-    /// users who were created after this time
-    pub create_after: Option<Time>,
-}
-
-#[record]
 pub struct RoomMemberSearchResponse {
     pub room_members: Vec<RoomMember>,
     pub users: Vec<User>,
@@ -308,7 +262,6 @@ export_models!(
     RoomMemberUpdate,
     RoomMemberOrigin,
     RoomMemberSearch,
-    RoomMemberSearchAdvanced,
     RoomMemberSearchResponse,
     RoomMemberDeleteQuery,
     Timeout,

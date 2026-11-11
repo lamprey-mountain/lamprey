@@ -591,7 +591,14 @@ impl ContentSearcher {
 
         if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
-                q.must(self.parse_query(vec![SCHEMA.id, SCHEMA.name, SCHEMA.content], q_str)?);
+                if let Ok(user_id) = q_str.parse::<common::v1::types::UserId>() {
+                    q.must(SCHEMA.query_author_id(user_id));
+                } else {
+                    q.must(self.parse_query(
+                        vec![SCHEMA.id, SCHEMA.author_id, SCHEMA.name, SCHEMA.content],
+                        q_str,
+                    )?);
+                }
             }
         }
 

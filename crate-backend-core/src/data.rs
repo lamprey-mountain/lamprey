@@ -10,9 +10,8 @@ use common::v1::types::{
     Channel, ChannelId, EmojiId, InviteCode, InvitePatch, InviteWithMetadata, MediaId, MessageId,
     MessageVerId, NotificationId, PaginationQuery, PaginationResponse, Permission,
     PermissionOverwriteType, Relationship, RelationshipPatch, RelationshipWithUserId, RoleId,
-    RoomBan, RoomId, RoomMember, RoomMemberOrigin, RoomMemberPut, RoomMemberSearchAdvanced,
-    RoomMemberSearchResponse, RoomMemberUpdate, SearchDlqId, TagId, ThreadMember,
-    ThreadMemberCreate, UserId, WebhookId,
+    RoomBan, RoomId, RoomMember, RoomMemberOrigin, RoomMemberPut, RoomMemberUpdate, SearchDlqId,
+    TagId, ThreadMember, ThreadMemberCreate, UserId, WebhookId,
     application::{Application, Connection, Scopes},
     automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate},
     calendar::{
@@ -228,19 +227,6 @@ pub trait DataRoomMember {
     ) -> Result<PaginationResponse<RoomMember>>;
 
     async fn room_member_list_all(&mut self, room_id: RoomId) -> Result<Vec<RoomMember>>;
-
-    async fn room_member_search(
-        &mut self,
-        room_id: RoomId,
-        query: String,
-        limit: u16,
-    ) -> Result<Vec<RoomMember>>;
-
-    async fn room_member_search_advanced(
-        &mut self,
-        room_id: RoomId,
-        search: RoomMemberSearchAdvanced,
-    ) -> Result<RoomMemberSearchResponse>;
 
     async fn room_ban_create(
         &mut self,
