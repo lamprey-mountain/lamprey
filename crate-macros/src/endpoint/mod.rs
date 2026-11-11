@@ -33,7 +33,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 
     let extract_request_fn = build_extract_request_fn(&args, &req_fields)?;
     let encode_request_fn = build_encode_request_fn(&args, &req_fields)?;
-    let encode_response_fn = build_encode_response_fn(&args, &resp_fields)?;
+    let (encode_response_fn, encode_msgpack_fn) = build_encode_response_fns(&args, &resp_fields)?;
     let extract_response_fn = build_extract_response_fn(&args, &resp_fields)?;
 
     let meta_fn = build_metadata_fn(&args, &module.module)?;
@@ -172,6 +172,7 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             impl crate::util::routes::Response for Response {
                 type Endpoint = Endpoint;
                 #encode_response_fn
+                #encode_msgpack_fn
                 #extract_response_fn
             }
 
@@ -184,10 +185,10 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     Ok(expanded)
 }
 
-fn build_encode_response_fn(
+fn build_encode_response_fns(
     args: &EndpointArgs,
     fields: &[EndpointField],
-) -> syn::Result<TokenStream> {
+) -> syn::Result<(TokenStream, TokenStream)> {
     let status_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Status));
 
     let status_code = if let Some(f) = status_field {
@@ -217,21 +218,35 @@ fn build_encode_response_fn(
 
     if let Some(json_field) = json_field {
         let ident = &json_field.ident;
-        Ok(quote! {
-            fn encode(self) -> ::http::Response<crate::util::body::Body> {
-                let json = ::serde_json::to_string(&self.#ident).unwrap();
-                let mut builder = ::http::Response::builder()
-                    .status(#status_code)
-                    .header(::http::header::CONTENT_TYPE, "application/json");
-                #headers_insertion
-                builder
-                    .body(crate::util::body::Body::from(json))
-                    .unwrap()
-            }
-        })
+        Ok((
+            quote! {
+                fn encode(self) -> ::http::Response<crate::util::body::Body> {
+                    let json = ::serde_json::to_string(&self.#ident).unwrap();
+                    let mut builder = ::http::Response::builder()
+                        .status(#status_code)
+                        .header(::http::header::CONTENT_TYPE, "application/json");
+                    #headers_insertion
+                    builder
+                        .body(crate::util::body::Body::from(json))
+                        .unwrap()
+                }
+            },
+            quote! {
+                fn encode_msgpack(self) -> ::http::Response<crate::util::body::Body> {
+                    let msgpack = ::rmp_serde::to_vec_named(&self.#ident).unwrap();
+                    let mut builder = ::http::Response::builder()
+                        .status(#status_code)
+                        .header(::http::header::CONTENT_TYPE, "application/msgpack");
+                    #headers_insertion
+                    builder
+                        .body(crate::util::body::Body::from(msgpack))
+                        .unwrap()
+                }
+            },
+        ))
     } else if let Some(body_field) = body_field {
         let ident = &body_field.ident;
-        Ok(quote! {
+        let encode = quote! {
             fn encode(self) -> ::http::Response<crate::util::body::Body> {
                 let mut builder = ::http::Response::builder()
                     .status(#status_code);
@@ -240,7 +255,13 @@ fn build_encode_response_fn(
                     .body(crate::util::body::Body::new(self.#ident))
                     .unwrap()
             }
-        })
+        };
+        let encode_msgpack = quote! {
+            fn encode_msgpack(self) -> ::http::Response<crate::util::body::Body> {
+                <Self as crate::util::routes::Response>::encode(self)
+            }
+        };
+        Ok((encode, encode_msgpack))
     } else {
         let status_code = if args.responses.first().is_some() || status_field.is_some() {
             quote! { #status_code }
@@ -248,7 +269,7 @@ fn build_encode_response_fn(
             quote! { ::http::StatusCode::NO_CONTENT }
         };
 
-        Ok(quote! {
+        let encode = quote! {
             fn encode(self) -> ::http::Response<crate::util::body::Body> {
                 let mut builder = ::http::Response::builder()
                     .status(#status_code);
@@ -257,7 +278,13 @@ fn build_encode_response_fn(
                     .body(crate::util::body::Body::empty())
                     .unwrap()
             }
-        })
+        };
+        let encode_msgpack = quote! {
+            fn encode_msgpack(self) -> ::http::Response<crate::util::body::Body> {
+                <Self as crate::util::routes::Response>::encode(self)
+            }
+        };
+        Ok((encode, encode_msgpack))
     }
 }
 

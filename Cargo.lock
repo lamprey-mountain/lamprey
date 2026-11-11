@@ -4671,6 +4671,7 @@ dependencies = [
  "percent-encoding",
  "rand 0.10.3",
  "regex",
+ "rmp-serde",
  "serde",
  "serde_json",
  "serde_urlencoded",

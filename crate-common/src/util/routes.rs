@@ -92,6 +92,9 @@ pub trait Response: Sized {
     /// encode this into an http response
     fn encode(self) -> http::Response<Body>;
 
+    /// encode this into an http response using msgpack
+    fn encode_msgpack(self) -> http::Response<Body>;
+
     /// extract this from an http response
     ///
     /// on failure, returns the original http response
