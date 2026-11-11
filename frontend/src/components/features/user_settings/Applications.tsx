@@ -18,6 +18,7 @@ import {
 	ApplicationsProvider,
 	useApplications,
 } from "../applications/context";
+import { Log } from "../applications/Log";
 import { Oauth } from "../applications/Oauth";
 import { Overview } from "../applications/Overview";
 import { Sessions } from "../applications/Sessions";
@@ -153,7 +154,7 @@ export function ApplicationsInner() {
 	);
 }
 
-type ApplicationTab = "overview" | "oauth" | "sessions";
+type ApplicationTab = "overview" | "oauth" | "sessions" | "log";
 const ApplicationEditor = (props: { draft: ApplicationDraft }) => {
 	const am = useApplications();
 	const [activeTab, setActiveTab] = createSignal<ApplicationTab>("overview");
@@ -169,6 +170,7 @@ const ApplicationEditor = (props: { draft: ApplicationDraft }) => {
 							{ id: "overview", label: "overview" },
 							{ id: "oauth", label: "oauth" },
 							{ id: "sessions", label: "sessions" },
+							{ id: "log", label: "log" },
 						] as Array<{ id: ApplicationTab; label: string }>
 					}
 				>
@@ -194,6 +196,9 @@ const ApplicationEditor = (props: { draft: ApplicationDraft }) => {
 					</Match>
 					<Match when={activeTab() === "sessions"}>
 						<Sessions draft={props.draft} />
+					</Match>
+					<Match when={activeTab() === "log"}>
+						<Log draft={props.draft} />
 					</Match>
 				</Switch>
 			</div>
