@@ -54,7 +54,9 @@ impl ConnectionExpiryActor {
                 Some(expired) = self.queue.next(), if !self.queue.is_empty() => {
                     let id = expired.into_inner();
                     self.keys.remove(&id);
-                    if self.connections.remove(&id).is_some() {
+                    if let Some((_, handle)) = self.connections.remove(&id) {
+                        // the connection never resumed, tear down its resources
+                        handle.shutdown();
                         self.stats.connections.fetch_sub(1, Ordering::Relaxed);
                     }
                 }

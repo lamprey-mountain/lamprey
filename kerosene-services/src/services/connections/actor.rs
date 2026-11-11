@@ -1165,6 +1165,21 @@ impl Connection {
             self.subscriptions.disconnect(user_id).await;
         }
 
+        // disconnect from any voice channels
+        let voice_channels: Vec<_> = self
+            .streams
+            .keys()
+            .filter_map(|s| match s {
+                StreamSubscription::Voice(channel_id) => Some(*channel_id),
+                _ => None,
+            })
+            .collect();
+        for channel_id in voice_channels {
+            let _ = self
+                .handle_voice_dispatch(channel_id, None, SignallingCommand::Disconnect)
+                .await;
+        }
+
         // just to be safe
         self.streams.clear();
     }
@@ -1179,20 +1194,26 @@ impl Connection {
 
     /// handle a transport being disconnected
     async fn handle_disconnect(&mut self, s: StreamSubscription, clean: bool) {
-        match s {
-            StreamSubscription::Sync => {
-                if clean {
-                    self.teardown().await
-                } else {
-                    if let Some(stream) = self.streams.get_mut(&StreamSubscription::Sync) {
-                        stream.transport = None;
-                    }
-                    self.globals
-                        .services()
-                        .connections
-                        .schedule_cleanup(self.id);
-                }
+        // an unclean close doesn't mean the client is gone: it may resume within
+        // the connection resume period. keep streams and their resources around
+        // until the connection expires or is torn down.
+        if !clean {
+            if let StreamSubscription::Sync = s {
+                self.globals
+                    .services()
+                    .connections
+                    .schedule_cleanup(self.id);
             }
+
+            if let Some(stream) = self.streams.get_mut(&s) {
+                stream.transport = None;
+            }
+
+            return;
+        }
+
+        match s {
+            StreamSubscription::Sync => self.teardown().await,
 
             // TODO: check if below is correct
             StreamSubscription::Document(ctx_id) => {
