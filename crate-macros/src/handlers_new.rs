@@ -17,7 +17,6 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             use super::*;
             use ::axum::response::IntoResponse as _;
             use common::util::routes::Endpoint as _;
-            use common::util::routes::Response as _;
             use crate::util::MethodExt as _;
 
             #input
@@ -26,12 +25,10 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
                 async fn handler_inner(
                     req: crate::util::Req<#ep_type>,
                 ) -> ::axum::response::Response {
-                    let msgpack =
-                        req.headers().accept == crate::util::headers::Accept::Msgpack;
+                    let accept = req.headers().accept;
 
                     match handle(req).await {
-                        Ok(r) if msgpack => r.encode_msgpack().into_response(),
-                        Ok(r) => r.encode().into_response(),
+                        Ok(r) => crate::util::response::encode(r, accept).into_response(),
                         Err(err) => err.into_response(),
                     }
                 }

@@ -33,7 +33,16 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 
     let extract_request_fn = build_extract_request_fn(&args, &req_fields)?;
     let encode_request_fn = build_encode_request_fn(&args, &req_fields)?;
-    let (encode_response_fn, encode_msgpack_fn) = build_encode_response_fns(&args, &resp_fields)?;
+    let (encode_response_fn, encode_with_fn) = build_encode_response_fns(&args, &resp_fields)?;
+
+    let body_type = resp_fields
+        .iter()
+        .find(|f| matches!(f.kind, FieldKind::Json))
+        .map(|f| {
+            let ty = &f.ty;
+            quote! { #ty }
+        })
+        .unwrap_or_else(|| quote! { () });
     let extract_response_fn = build_extract_response_fn(&args, &resp_fields)?;
 
     let meta_fn = build_metadata_fn(&args, &module.module)?;
@@ -171,9 +180,15 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 
             impl crate::util::routes::Response for Response {
                 type Endpoint = Endpoint;
+
                 #encode_response_fn
-                #encode_msgpack_fn
                 #extract_response_fn
+            }
+
+            impl crate::util::routes::EncodableResponse for Response {
+                type Body = #body_type;
+
+                #encode_with_fn
             }
 
             #extract_request_impl
@@ -232,14 +247,21 @@ fn build_encode_response_fns(
                 }
             },
             quote! {
-                fn encode_msgpack(self) -> ::http::Response<crate::util::body::Body> {
-                    let msgpack = ::rmp_serde::to_vec_named(&self.#ident).unwrap();
+                fn encode_with<F>(
+                    self,
+                    content_type: &'static str,
+                    encode: F,
+                ) -> ::http::Response<crate::util::body::Body>
+                where
+                    F: FnOnce(&Self::Body) -> Vec<u8>,
+                {
+                    let body = encode(&self.#ident);
                     let mut builder = ::http::Response::builder()
                         .status(#status_code)
-                        .header(::http::header::CONTENT_TYPE, "application/msgpack");
+                        .header(::http::header::CONTENT_TYPE, content_type);
                     #headers_insertion
                     builder
-                        .body(crate::util::body::Body::from(msgpack))
+                        .body(crate::util::body::Body::from(body))
                         .unwrap()
                 }
             },
@@ -256,12 +278,19 @@ fn build_encode_response_fns(
                     .unwrap()
             }
         };
-        let encode_msgpack = quote! {
-            fn encode_msgpack(self) -> ::http::Response<crate::util::body::Body> {
+        let encode_with = quote! {
+            fn encode_with<F>(
+                self,
+                _content_type: &'static str,
+                _encode: F,
+            ) -> ::http::Response<crate::util::body::Body>
+            where
+                F: FnOnce(&Self::Body) -> Vec<u8>,
+            {
                 <Self as crate::util::routes::Response>::encode(self)
             }
         };
-        Ok((encode, encode_msgpack))
+        Ok((encode, encode_with))
     } else {
         let status_code = if args.responses.first().is_some() || status_field.is_some() {
             quote! { #status_code }
@@ -279,12 +308,19 @@ fn build_encode_response_fns(
                     .unwrap()
             }
         };
-        let encode_msgpack = quote! {
-            fn encode_msgpack(self) -> ::http::Response<crate::util::body::Body> {
+        let encode_with = quote! {
+            fn encode_with<F>(
+                self,
+                _content_type: &'static str,
+                _encode: F,
+            ) -> ::http::Response<crate::util::body::Body>
+            where
+                F: FnOnce(&Self::Body) -> Vec<u8>,
+            {
                 <Self as crate::util::routes::Response>::encode(self)
             }
         };
-        Ok((encode, encode_msgpack))
+        Ok((encode, encode_with))
     }
 }
 

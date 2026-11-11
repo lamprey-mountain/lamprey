@@ -9,6 +9,10 @@ use headers::{
 };
 use http::{HeaderMap, HeaderValue, request::Parts};
 use kerosene_core::error::ErrorCode;
+use typed_headers::{
+    Accept as TypedAccept, HeaderMapExt as TypedHeaderMapExt,
+    http::{HeaderMap as TypedHeaderMap, HeaderValue as TypedHeaderValue, header as typed_header},
+};
 
 /// raw request headers for a request
 // PERF: find some way to make this struct smaller?
@@ -92,6 +96,52 @@ pub enum Accept {
     Msgpack,
 }
 
+impl Accept {
+    /// parse the accept header, preferring msgpack when it is at least as
+    /// preferred as json
+    pub(crate) fn from_headers(headers: &HeaderMap) -> Self {
+        // HACK: typed-headers 0.2 depends on http 0.2, so its typed HeaderMap
+        // cannot be used directly with our http 1 HeaderMap
+        let mut typed = TypedHeaderMap::new();
+        for value in headers.get_all(http::header::ACCEPT) {
+            let Ok(value) = TypedHeaderValue::from_bytes(value.as_bytes()) else {
+                continue;
+            };
+            typed.append(typed_header::ACCEPT, value);
+        }
+
+        let Ok(Some(accept)) = TypedHeaderMapExt::typed_get::<TypedAccept>(&typed) else {
+            return Self::Json;
+        };
+
+        let (mut json_q, mut msgpack_q) = (None::<u16>, None::<u16>);
+
+        for item in accept.iter() {
+            let q = item.quality.as_u16();
+            if q == 0 {
+                continue;
+            }
+
+            let slot = match item.item.essence_str() {
+                "application/json" => &mut json_q,
+                "application/msgpack" | "application/vnd.msgpack" | "application/x-msgpack" => {
+                    &mut msgpack_q
+                }
+                _ => continue,
+            };
+
+            let current = slot.unwrap_or(0);
+            *slot = Some(current.max(q));
+        }
+
+        match (msgpack_q, json_q) {
+            (Some(msgpack), Some(json)) if msgpack < json => Self::Json,
+            (Some(_), _) => Self::Msgpack,
+            _ => Self::Json,
+        }
+    }
+}
+
 /// parsed content type header
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ContentType {
@@ -128,7 +178,7 @@ pub enum ContentType {
 impl HeadersRequest {
     pub fn from_parts(parts: &Parts) -> Result<Self> {
         // FIXME: properly parse content-type; handle `application/foobar+json`
-        let accept = parse_accept(&parts.headers);
+        let accept = Accept::from_headers(&parts.headers);
 
         let content_type = parts
             .headers
@@ -269,49 +319,6 @@ impl From<HeadersResponse> for HeaderMap {
             headers.typed_insert(content_range);
         }
         headers
-    }
-}
-
-/// parse the accept header, preferring msgpack when it is at least as preferred
-/// as json
-fn parse_accept(headers: &HeaderMap) -> Accept {
-    let Some(value) = headers.get(http::header::ACCEPT).and_then(|h| h.to_str().ok()) else {
-        return Accept::Json;
-    };
-
-    let (mut json_q, mut msgpack_q) = (None::<f32>, None::<f32>);
-
-    for media in value.split(',') {
-        let mut params = media.split(';');
-        let media_type = params.next().unwrap_or_default().trim();
-        let mut q = 1.0f32;
-
-        for param in params {
-            if let Some(value) = param.trim().strip_prefix("q=") {
-                q = value.parse().unwrap_or(0.0);
-            }
-        }
-
-        if q <= 0.0 {
-            continue;
-        }
-
-        let slot = match media_type {
-            "application/json" => &mut json_q,
-            "application/msgpack" | "application/vnd.msgpack" | "application/x-msgpack" => {
-                &mut msgpack_q
-            }
-            _ => continue,
-        };
-
-        let current = slot.unwrap_or(0.0);
-        *slot = Some(current.max(q));
-    }
-
-    match (msgpack_q, json_q) {
-        (Some(msgpack), Some(json)) if msgpack < json => Accept::Json,
-        (Some(_), _) => Accept::Msgpack,
-        _ => Accept::Json,
     }
 }
 

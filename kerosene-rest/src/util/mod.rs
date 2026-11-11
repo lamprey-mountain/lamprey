@@ -10,6 +10,7 @@ pub mod multipart;
 pub mod parse;
 pub mod ratelimit;
 pub mod request;
+pub mod response;
 pub mod routes;
 
 pub use request::Req;

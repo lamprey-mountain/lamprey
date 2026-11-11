@@ -92,11 +92,26 @@ pub trait Response: Sized {
     /// encode this into an http response
     fn encode(self) -> http::Response<Body>;
 
-    /// encode this into an http response using msgpack
-    fn encode_msgpack(self) -> http::Response<Body>;
-
     /// extract this from an http response
     ///
     /// on failure, returns the original http response
     fn extract(req: http::Response<Body>) -> impl Future<Output = ApiResult<Self>> + Send;
+}
+
+/// a response with a body that can be encoded using a custom serializer
+pub trait EncodableResponse: Response {
+    /// the response body type, or `()` if it has none
+    type Body;
+
+    /// encode this into an http response, serializing its body with `encode`
+    /// and setting `content_type`
+    ///
+    /// responses without a body are encoded normally.
+    fn encode_with<F>(
+        self,
+        content_type: &'static str,
+        encode: F,
+    ) -> http::Response<crate::util::body::Body>
+    where
+        F: FnOnce(&Self::Body) -> Vec<u8>;
 }

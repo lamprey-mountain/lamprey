@@ -37,6 +37,7 @@ time = { workspace = true }
 tokio = { workspace = true, features = ["fs", "sync", "time"] }
 tower-http = { workspace = true, features = ["catch-panic", "cors", "limit", "propagate-header", "sensitive-headers", "trace"] }
 tracing = { workspace = true }
+typed-headers = "0.2.0"
 url = { workspace = true }
 utoipa = { workspace = true }
 utoipa-axum = { workspace = true }
