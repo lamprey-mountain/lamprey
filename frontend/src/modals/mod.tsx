@@ -32,6 +32,9 @@ import { ModalUserSettings } from "./ModalUserSettings.tsx";
 import { ModalViewChannelNickname } from "./ModalViewChannelNickname.tsx";
 import { ModalWebauthnRegister } from "./ModalWebauthnRegister.tsx";
 
+const focusableSelector =
+	'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
+
 export const Modal = (
 	props: ParentProps<{
 		onKeyDown?: (e: KeyboardEvent) => void;
@@ -42,10 +45,30 @@ export const Modal = (
 	}>,
 ) => {
 	const [, modalCtl] = useModals();
+	let root: HTMLDivElement | undefined;
+
+	const handleKeyDown = (e: KeyboardEvent) => {
+		props.onKeyDown?.(e);
+		if (e.key !== "Tab" || e.defaultPrevented || !root) return;
+		const active = document.activeElement as HTMLElement | null;
+		if (!active || !root.contains(active)) return;
+		const focusables = Array.from(
+			root.querySelectorAll<HTMLElement>(focusableSelector),
+		).filter((el) => el.getClientRects().length > 0);
+		if (focusables.length === 0) return;
+		const first = focusables[0];
+		const last = focusables[focusables.length - 1];
+		if (e.shiftKey ? active === first : active === last) {
+			e.preventDefault();
+			(e.shiftKey ? last : first).focus();
+		}
+	};
+
 	return (
 		<div
 			class={`modal ${props.class ?? ""}`}
-			onKeyDown={props.onKeyDown}
+			ref={root}
+			onKeyDown={handleKeyDown}
 			tabindex="-1"
 			autofocus
 		>
