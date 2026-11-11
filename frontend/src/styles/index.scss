@@ -2791,7 +2791,13 @@ button.big {
 }
 
 .palette {
-	width: 300px;
+	width: 400px;
+
+	.items {
+		height: 360px;
+		max-height: 60vh;
+		overflow-y: auto;
+	}
 
 	input {
 		padding: 2px 4px;
