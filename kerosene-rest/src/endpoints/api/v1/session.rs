@@ -1,6 +1,6 @@
 use common::v1::types::{
     AuditLogEntryType, MessageSync, Session, SessionId, SessionToken, SessionType,
-    SessionWithToken,
+    SessionWithToken, UserId,
     misc::SessionIdReq,
     oauth::Scope,
     util::{Changes, Diff},
@@ -96,17 +96,19 @@ pub async fn update(
 
     if let Some(user_id) = session.user_id() {
         let actor_id = req.identity().user_id().unwrap_or(user_id);
-        req.audit_log_as(actor_id, req.identity().ensure_session()?)
-            .push(
-                user_id.into_inner().into(),
-                AuditLogEntryType::SessionUpdate {
-                    session_id: session.id,
-                    changes: Changes::new()
-                        .change("name", &target.name, &session.name)
-                        .build(),
-                },
-            )
-            .success();
+        let al = req.audit_log_as(actor_id, req.identity().ensure_session()?);
+        let ty = AuditLogEntryType::SessionUpdate {
+            session_id: session.id,
+            changes: Changes::new()
+                .change("name", &target.name, &session.name)
+                .build(),
+        };
+        al.push(user_id.into_inner().into(), ty.clone()).success();
+        if let Some(owner_id) = application_owner(&req, user_id).await?
+            && owner_id != user_id
+        {
+            al.push(owner_id.into_inner().into(), ty).success();
+        }
     }
 
     Ok(routes::session_update::Response {
@@ -140,15 +142,17 @@ pub async fn delete(
 
     if let Some(user_id) = target.user_id() {
         let actor_id = req.identity().user_id().unwrap_or(user_id);
-        req.audit_log_as(actor_id, req.identity().ensure_session()?)
-            .push(
-                actor_id.into_inner().into(),
-                AuditLogEntryType::SessionDelete {
-                    session_id: target.id,
-                    changes: Changes::new().remove("name", &target.name).build(),
-                },
-            )
-            .success();
+        let al = req.audit_log_as(actor_id, req.identity().ensure_session()?);
+        let ty = AuditLogEntryType::SessionDelete {
+            session_id: target.id,
+            changes: Changes::new().remove("name", &target.name).build(),
+        };
+        al.push(user_id.into_inner().into(), ty.clone()).success();
+        if let Some(owner_id) = application_owner(&req, user_id).await?
+            && owner_id != user_id
+        {
+            al.push(owner_id.into_inner().into(), ty).success();
+        }
     }
 
     Ok(routes::session_delete::Response {})
@@ -176,12 +180,21 @@ pub async fn delete_all(
         .await
         .cast_internal()?;
 
-    req.audit_log()
-        .push(
-            user.id.into_inner().into(),
+    let al = req.audit_log();
+    al.push(
+        user.id.into_inner().into(),
+        AuditLogEntryType::SessionDeleteAll,
+    )
+    .success();
+    if let Some(owner_id) = application_owner(&req, user.id).await?
+        && owner_id != user.id
+    {
+        al.push(
+            owner_id.into_inner().into(),
             AuditLogEntryType::SessionDeleteAll,
         )
         .success();
+    }
 
     Ok(routes::session_delete_all::Response {})
 }
@@ -238,25 +251,20 @@ async fn is_bot_owner<E: Endpoint>(req: &Req<E>, target: &Session) -> Result<boo
         return Ok(false);
     };
 
-    let target_user = req
-        .services()
-        .users
-        .get(target_user_id, None)
-        .await
-        .cast_internal()?;
-    if !target_user.bot {
-        return Ok(false);
-    }
+    Ok(application_owner(req, target_user_id).await? == Some(auth_user_id))
+}
 
+/// the owner of the application this user belongs to, if it is an application
+async fn application_owner<E: Endpoint>(req: &Req<E>, user_id: UserId) -> Result<Option<UserId>> {
     let app = req
         .globals()
         .begin_read()
         .await
         .cast_internal()?
-        .application_get(target_user_id.into_inner().into())
+        .application_get(user_id.into_inner().into())
         .await;
 
-    Ok(app.is_ok_and(|app| app.owner_id == auth_user_id))
+    Ok(app.ok().map(|app| app.owner_id))
 }
 
 export_routes!(create, list, update, delete, delete_all, get);

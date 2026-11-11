@@ -310,12 +310,27 @@ pub async fn audit_logs(
     req: Req<routes::user_audit_logs::Endpoint>,
 ) -> Result<routes::user_audit_logs::Response> {
     let srv = req.services();
+    let globals = req.globals();
     let auth_user_id = req.identity().ensure_user()?.id;
 
     let body = req.into_inner();
     let target_user_id = body.user_id.local_unwrap_or(auth_user_id)?;
     if auth_user_id != target_user_id {
-        return Err(ApiError::from_code(ErrorCode::UnknownUser).into());
+        let target_user = srv.users.get(target_user_id, None).await;
+        let is_bot_owner = if target_user.is_ok_and(|user| user.bot) {
+            globals
+                .begin_read()
+                .await
+                .cast_internal()?
+                .application_get(target_user_id.into_inner().into())
+                .await
+                .is_ok_and(|app| app.owner_id == auth_user_id)
+        } else {
+            false
+        };
+        if !is_bot_owner {
+            return Err(ApiError::from_code(ErrorCode::UnknownUser).into());
+        }
     }
 
     let logs = srv
