@@ -8,30 +8,13 @@ use twilight_model::application::interaction::{Interaction, InteractionContextTy
 use twilight_model::guild::Permissions;
 use twilight_model::id::Id;
 
-use crate::platform::discord::{ChannelId, GuildId};
-use crate::{config::Config, prelude::*};
+use crate::prelude::*;
 
 /// a slash command from discord
 #[derive(Debug)]
 pub struct SlashCommand {
     pub interaction: Interaction,
     pub inner: SlashCommandType,
-}
-
-impl SlashCommand {
-    pub fn channel_id(&self) -> ChannelId {
-        self.interaction
-            .channel
-            .as_ref()
-            .expect("bridge slash commands are only allowed in guilds")
-            .id
-    }
-
-    pub fn guild_id(&self) -> GuildId {
-        self.interaction
-            .guild_id
-            .expect("bridge slash commands are only allowed in guilds")
-    }
 }
 
 /// a slash command from discord
@@ -82,6 +65,8 @@ fn option(kind: CommandOptionType, name: &str, description: &str) -> CommandOpti
     }
 }
 
+// `Command` has no `Default` impl and its `dm_permission` field is deprecated
+// in favour of `contexts`, so the whole builder needs the lint silenced
 #[allow(deprecated)]
 fn command(name: &str, description: &str, options: Vec<CommandOption>) -> Command {
     Command {
@@ -104,8 +89,8 @@ fn command(name: &str, description: &str, options: Vec<CommandOption>) -> Comman
 }
 
 /// get discord slash commands
-pub fn get_commands(config: &Config) -> Vec<Command> {
-    let permissions = if config.disable_discord_slash_command_permission_checks {
+pub fn get_commands(disable_permission_checks: bool) -> Vec<Command> {
+    let permissions = if disable_permission_checks {
         None
     } else {
         Some(Permissions::from_bits_truncate(536870944))

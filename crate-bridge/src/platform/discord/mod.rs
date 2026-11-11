@@ -81,7 +81,7 @@ pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -
 
 struct Discord {
     bridge: BridgeHandle,
-    config: Config,
+    disable_slash_command_permission_checks: bool,
     rx: mpsc::Receiver<GatewayEvent>,
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
     realm_tasks: JoinSet<(RealmId, Result<()>)>,
@@ -122,7 +122,8 @@ impl Discord {
 
         let me = Self {
             bridge,
-            config: config_full.clone(),
+            disable_slash_command_permission_checks: config_full
+                .disable_discord_slash_command_permission_checks,
             rx,
             portal_tasks: JoinSet::new(),
             realm_tasks: JoinSet::new(),
@@ -259,7 +260,9 @@ impl Discord {
                 if let Err(e) = self
                     .http
                     .interaction(ready.application.id)
-                    .set_global_commands(&get_commands(&self.config))
+                    .set_global_commands(&get_commands(
+                        self.disable_slash_command_permission_checks,
+                    ))
                     .await
                 {
                     error!("error while registering commands: {e:?}");
@@ -481,9 +484,17 @@ impl Discord {
                         // the `backfill` option doesn't need any extra handling
                         let http = self.http.clone();
                         let bridge = self.bridge.clone();
-                        let guild_id = interaction
-                            .guild_id
-                            .expect("bridge slash commands are only allowed in guilds");
+                        let Some(guild_id) = interaction.guild_id else {
+                            tokio::spawn(async move {
+                                let _ = respond(
+                                    &http,
+                                    &interaction,
+                                    "this command can only be used in a guild",
+                                )
+                                .await;
+                            });
+                            return;
+                        };
 
                         // check if channel is already linked
                         if self.portal_lookup.contains_key(&discord_channel_id) {
@@ -592,11 +603,18 @@ impl Discord {
                     } => {
                         let http = self.http.clone();
                         let bridge = self.bridge.clone();
-                        let discord_channel_id = interaction
-                            .channel
-                            .as_ref()
-                            .expect("interaction channel")
-                            .id;
+                        let channel_id = interaction.channel.as_ref().map(|channel| channel.id);
+                        let Some(discord_channel_id) = channel_id else {
+                            tokio::spawn(async move {
+                                let _ = respond(
+                                    &http,
+                                    &interaction,
+                                    "this command can only be used in a channel",
+                                )
+                                .await;
+                            });
+                            return;
+                        };
 
                         tokio::spawn(async move {
                             let _ = bridge
