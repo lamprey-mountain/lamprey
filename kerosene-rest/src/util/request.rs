@@ -89,6 +89,21 @@ where
             .expect("audit logger slot should always exist");
         let audit_logger = Arc::clone(audit_logger);
 
+        if E::Request::RAW_BODY {
+            let inner = E::Request::extract_raw(parts, common::util::body::Body::new(body))
+                .map_err(|err| ExtractorRejection::ServerError(ServerError::Api(Box::new(err))))?;
+
+            return Ok(Self {
+                inner,
+                globals: globals.clone(),
+                identity,
+                media: HashMap::new(),
+                headers: Box::new(headers),
+                method,
+                audit_logger,
+            });
+        }
+
         // FIXME: support federation
         let body = axum::body::to_bytes(body, usize::MAX)
             .await

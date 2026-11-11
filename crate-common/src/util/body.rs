@@ -54,6 +54,13 @@ impl Body {
         let collected = self.0.collect().await.map_err(Into::<BodyError>::into)?;
         Ok(collected.to_bytes())
     }
+
+    /// Convert this body into a stream of data frames
+    pub fn into_data_stream(
+        self,
+    ) -> impl futures::Stream<Item = core::result::Result<Bytes, BodyError>> {
+        BodyExt::into_data_stream(self.0)
+    }
 }
 
 impl Default for Body {

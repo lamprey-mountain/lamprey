@@ -51,6 +51,9 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
     let body_field = req_fields
         .iter()
         .find(|f| matches!(f.kind, FieldKind::Json | FieldKind::Form | FieldKind::Body));
+    let raw_body_field = req_fields
+        .iter()
+        .find(|f| matches!(f.kind, FieldKind::Body));
 
     // TODO: move logic to EndpointDocs
     let (summary, description) = parse_doc_attrs(&module.module.attrs);
@@ -80,6 +83,21 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
 
         let all_idents: Vec<_> = req_fields.iter().map(|f| &f.ident).collect();
 
+        let raw_body_impl = if raw_body_field.is_some() {
+            quote! {
+                const RAW_BODY: bool = true;
+
+                fn extract_raw(
+                    parts: ::http::request::Parts,
+                    body: crate::util::body::Body,
+                ) -> crate::v1::types::error::ApiResult<Self> {
+                    crate::v1::routes::ExtractableRequest::extract(parts, body)
+                }
+            }
+        } else {
+            quote! {}
+        };
+
         if let Some(f) = body_field {
             let ty = &f.ty;
             let ident = &f.ident;
@@ -87,6 +105,8 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             quote! {
                 impl crate::v1::routes::ExtractableRequest for Request {
                     type Body = #ty;
+
+                    #raw_body_impl
 
                     fn extract(
                         parts: ::http::request::Parts,
@@ -111,6 +131,8 @@ pub fn expand(args: TokenStream, item: TokenStream) -> syn::Result<TokenStream> 
             quote! {
                 impl crate::v1::routes::ExtractableRequest for Request {
                     type Body = ();
+
+                    #raw_body_impl
 
                     fn extract(
                         parts: ::http::request::Parts,
@@ -219,8 +241,12 @@ fn build_encode_response_fns(
     let json_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Json));
     let body_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Body));
     let headers_field = fields.iter().find(|f| matches!(f.kind, FieldKind::Headers));
+    let header_fields: Vec<_> = fields
+        .iter()
+        .filter(|f| matches!(f.kind, FieldKind::Header(_)))
+        .collect();
 
-    let headers_insertion = if let Some(h) = headers_field {
+    let headers_field_insertion = if let Some(h) = headers_field {
         let h_ident = &h.ident;
         quote! {
             for (name, value) in &self.#h_ident {
@@ -229,6 +255,31 @@ fn build_encode_response_fns(
         }
     } else {
         quote! {}
+    };
+
+    let header_fields_insertion = header_fields.iter().map(|f| {
+        let ident = &f.ident;
+        let header_name = match &f.kind {
+            FieldKind::Header(Some(n)) => n.clone(),
+            _ => ident.to_string().replace('_', "-"),
+        };
+        let is_option = matches!(&f.ty, syn::Type::Path(tp) if tp.path.segments.last().map(|s| s.ident == "Option").unwrap_or(false));
+        if is_option {
+            quote! {
+                if let Some(value) = &self.#ident {
+                    builder = builder.header(#header_name, ::std::format!("{}", value));
+                }
+            }
+        } else {
+            quote! {
+                builder = builder.header(#header_name, ::std::format!("{}", self.#ident));
+            }
+        }
+    });
+
+    let headers_insertion = quote! {
+        #headers_field_insertion
+        #(#header_fields_insertion)*
     };
 
     if let Some(json_field) = json_field {

@@ -1,5 +1,5 @@
 use crate::util::body::Body;
-use crate::v1::types::error::ApiResult;
+use crate::v1::types::error::{ApiError, ApiResult, ErrorCode};
 
 // export all routes
 
@@ -138,6 +138,20 @@ pub trait ExtractableRequest: Sized {
     /// the request body
     type Body;
 
+    /// whether this request consumes the raw request body instead of a
+    /// deserialized one
+    const RAW_BODY: bool = false;
+
     /// extract full request from parts and deserialized Body
     fn extract(parts: http::request::Parts, body: Self::Body) -> ApiResult<Self>;
+
+    /// extract full request from parts and the raw request body
+    ///
+    /// only called when [`Self::RAW_BODY`] is `true`
+    fn extract_raw(_parts: http::request::Parts, _body: Body) -> ApiResult<Self> {
+        Err(ApiError::with_message(
+            ErrorCode::InvalidData,
+            "this endpoint does not accept a raw body".to_string(),
+        ))
+    }
 }
