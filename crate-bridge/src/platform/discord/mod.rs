@@ -114,7 +114,7 @@ impl Discord {
             .to_string();
 
         let http = Arc::new(HttpClient::new(token.clone()));
-        let cache = Arc::new(InMemoryCache::new());
+        let cache = Arc::new(InMemoryCache::builder().message_cache_size(0).build());
 
         let (tx, rx) = mpsc::channel(1024);
         tokio::spawn(run_gateway(token, tx));
