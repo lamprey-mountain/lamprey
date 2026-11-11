@@ -335,14 +335,18 @@ impl<'a> ParseContext<'a> {
                             self.builder
                                 .start_node(NodeKind::Inline(InlineKind::Timestamp).into());
 
-                            for t in &tokens {
+                            let last = tokens.len() - 1;
+                            for (i, t) in tokens.iter().enumerate() {
                                 let s = self.tokenizer.text(t.span);
                                 let k = match t.kind {
                                     TokenKind::AngleOpen
                                     | TokenKind::AngleClose
                                     | TokenKind::Colon => TextKind::Syntax,
                                     TokenKind::Number => TextKind::TimestampTime,
-                                    TokenKind::Text => TextKind::TimestampStyle,
+                                    // only the trailing `Text` token is a style, the
+                                    // leading one is the `t` marker
+                                    TokenKind::Text if i == last => TextKind::TimestampStyle,
+                                    TokenKind::Text => TextKind::Syntax,
                                     _ => unreachable!(),
                                 };
                                 self.builder.token(NodeKind::Text(k).into(), s);
