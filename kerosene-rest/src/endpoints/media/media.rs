@@ -22,7 +22,13 @@ async fn get(req: Req<routes::media_get::Endpoint>) -> Result<routes::media_get:
         .ready_opt(wait)
         .await
         .ok_or_else(|| ApiError::from_code(ErrorCode::MediaNotReady))?;
-    let meta = calculate_response_metadata(req.headers(), &MediaInfo::Media(&media))?;
+    let meta = calculate_response_metadata(
+        req.headers(),
+        &MediaInfo::Media {
+            media: &media,
+            content_length: None,
+        },
+    )?;
     let body = if meta.unmodified || req.method() == http::Method::HEAD {
         Body::empty()
     } else {
@@ -74,7 +80,13 @@ async fn get_filename(
         return Err(ApiError::from_code(ErrorCode::UnknownMedia).into());
     }
 
-    let meta = calculate_response_metadata(req.headers(), &MediaInfo::Media(&media))?;
+    let meta = calculate_response_metadata(
+        req.headers(),
+        &MediaInfo::Media {
+            media: &media,
+            content_length: None,
+        },
+    )?;
     let body = if meta.unmodified || req.method() == http::Method::HEAD {
         Body::empty()
     } else {

@@ -66,7 +66,10 @@ async fn get(req: Req<routes::emoji_get::Endpoint>) -> Result<routes::emoji_get:
                 animated,
             }
         } else {
-            MediaInfo::Media(&media)
+            MediaInfo::Media {
+                media: &media,
+                content_length: None,
+            }
         },
     )?;
 
@@ -86,11 +89,14 @@ async fn get(req: Req<routes::emoji_get::Endpoint>) -> Result<routes::emoji_get:
             &if query.size.is_some() {
                 MediaInfo::Thumb {
                     media: &media,
-                    content_length: None,
+                    content_length: Some(content_length),
                     animated,
                 }
             } else {
-                MediaInfo::Media(&media)
+                MediaInfo::Media {
+                    media: &media,
+                    content_length: Some(content_length),
+                }
             },
         )?;
 

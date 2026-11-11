@@ -99,8 +99,8 @@ cdn routes:
 | `GET /gifv/{media_id}`                         | a webm transcode of a gif                                         |
 | `GET /harvest/{harvest_id}/{token}/{filename}` | a completed harvest archive (zip)                                 |
 
-all of these support `HEAD`. file, thumb, and gifv routes support single byte
-ranges, weak etags, and `If-None-Match` / `If-Modified-Since` / `If-Range`.
+all of these support `HEAD`, single byte ranges, weak etags, and
+`If-None-Match` / `If-Modified-Since` / `If-Range`.
 
 the file, thumbnail, and emoji routes accept `?wait=true|false` (default
 `true`). with `wait=true`, media that is still being transferred or processed
@@ -117,7 +117,9 @@ the gifv route only works for `image/gif`. the stored blob is webm and the
 response is served as `video/webm`.
 
 harvest routes are public but require the exact id, token, and filename embedded
-in the download url. the link expires with the harvest.
+in the download url. the link expires with the harvest. they also support
+single byte ranges and conditional requests; harvest responses are
+`private, no-store`.
 
 ## managing media
 

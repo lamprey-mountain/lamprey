@@ -1,4 +1,9 @@
-use crate::prelude::*;
+use std::time::SystemTime;
+
+use crate::{
+    endpoints::media::util::{MediaInfo, calculate_response_metadata},
+    prelude::*,
+};
 use common::util::body::Body;
 use common::v1::types::harvest::HarvestStatus;
 use common::v1::types::util::Time;
@@ -21,7 +26,11 @@ async fn get(req: Req<routes::harvest_get::Endpoint>) -> Result<routes::harvest_
         .ok_or_else(|| Error::from(unknown.clone()))?;
 
     let HarvestStatus::Completed {
-        expires_at, url, ..
+        expires_at,
+        completed_at,
+        url,
+        size,
+        ..
     } = harvest.status
     else {
         return Err(unknown.into());
@@ -58,38 +67,42 @@ async fn get(req: Req<routes::harvest_get::Endpoint>) -> Result<routes::harvest_
         return Err(unknown.into());
     }
 
-    let reader = globals
-        .blobs()
-        .reader(path)
-        .await
-        .map_err(|_| Error::from(unknown))?;
-    let stream = reader
-        .into_bytes_stream(..)
-        .await
-        .map_err(|err| ServerError::internal(err))?;
+    let info = MediaInfo::Harvest {
+        id: harvest.id,
+        filename: &req.inner().filename,
+        content_length: size,
+        completed_at: SystemTime::from(completed_at.into_inner()),
+    };
 
-    let mut headers = http::HeaderMap::new();
-    headers.insert(
-        http::header::CONTENT_TYPE,
-        http::HeaderValue::from_static("application/zip"),
-    );
-    headers.insert(
-        http::header::CACHE_CONTROL,
-        http::HeaderValue::from_static("private, no-store"),
-    );
-    headers.insert(
-        http::header::CONTENT_DISPOSITION,
-        http::HeaderValue::from_str(&format!(
-            "attachment; filename=\"{}\"",
-            req.inner().filename
-        ))
-        .map_err(|err| ServerError::internal(err))?,
-    );
+    let meta = calculate_response_metadata(req.headers(), &info)?;
+
+    let body = if meta.unmodified || req.method() == http::Method::HEAD {
+        Body::empty()
+    } else {
+        let reader = globals
+            .blobs()
+            .reader(path)
+            .await
+            .map_err(|_| Error::from(unknown))?;
+        let stream = if let Some(range) = meta.range {
+            reader
+                .into_bytes_stream(range)
+                .await
+                .map_err(|err| ServerError::internal(err))?
+        } else {
+            reader
+                .into_bytes_stream(..)
+                .await
+                .map_err(|err| ServerError::internal(err))?
+        };
+
+        Body::from_stream(stream)
+    };
 
     Ok(routes::harvest_get::Response {
-        status: http::StatusCode::OK,
-        headers,
-        body: Body::from_stream(stream),
+        status: meta.status(),
+        headers: meta.headers.into(),
+        body,
     })
 }
 

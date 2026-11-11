@@ -8,7 +8,7 @@ use crate::{
     prelude::*,
     util::headers::{HeadersRequest, HeadersResponse},
 };
-use common::v2::types::media::Media;
+use common::{v1::types::HarvestId, v2::types::media::Media};
 use headers::{
     AcceptRanges, CacheControl, ContentLength, ContentRange, ContentType, ETag, LastModified,
 };
@@ -18,7 +18,10 @@ use http::StatusCode;
 #[derive(Debug)]
 pub enum MediaInfo<'a> {
     /// a piece of media directly
-    Media(&'a Media),
+    Media {
+        media: &'a Media,
+        content_length: Option<u64>,
+    },
     Thumb {
         media: &'a Media,
         content_length: Option<u64>,
@@ -27,6 +30,13 @@ pub enum MediaInfo<'a> {
     Gifv {
         media: &'a Media,
         content_length: Option<u64>,
+    },
+    /// a completed harvest archive
+    Harvest {
+        id: HarvestId,
+        filename: &'a str,
+        content_length: u64,
+        completed_at: SystemTime,
     },
 }
 
@@ -42,7 +52,7 @@ impl<'a> MediaInfo<'a> {
     /// get the content type for this media
     pub fn content_type(&self) -> ContentType {
         match self {
-            MediaInfo::Media(media) => media.content_type.to_string().parse().unwrap(),
+            MediaInfo::Media { media, .. } => media.content_type.to_string().parse().unwrap(),
             MediaInfo::Thumb { animated, .. } => {
                 if *animated {
                     "image/webp".parse().unwrap()
@@ -51,33 +61,78 @@ impl<'a> MediaInfo<'a> {
                 }
             }
             MediaInfo::Gifv { .. } => "video/webm".parse().unwrap(),
+            MediaInfo::Harvest { .. } => "application/zip".parse().unwrap(),
         }
     }
 
     /// get the filename for this media
     pub fn filename(&self) -> Cow<'a, str> {
         match self {
-            MediaInfo::Media(media) => Cow::Borrowed(&media.filename),
+            MediaInfo::Media { media, .. } => Cow::Borrowed(&media.filename),
             MediaInfo::Thumb { media, .. } => Cow::Owned(format!("{}_thumb", media.filename)),
             MediaInfo::Gifv { media, .. } => Cow::Owned(format!("{}_gifv", media.filename)),
+            MediaInfo::Harvest { filename, .. } => Cow::Borrowed(filename),
         }
     }
 
     /// get the length of this media (if known)
     pub fn len(&self) -> Option<u64> {
         match self {
-            MediaInfo::Media(media) => Some(media.size),
+            MediaInfo::Media {
+                media,
+                content_length,
+            } => content_length.or(Some(media.size)),
             MediaInfo::Thumb { content_length, .. } => *content_length,
             MediaInfo::Gifv { content_length, .. } => *content_length,
+            MediaInfo::Harvest { content_length, .. } => Some(*content_length),
+        }
+    }
+
+    /// get the weak etag for this media
+    pub fn etag(&self) -> ETag {
+        let id = match self {
+            MediaInfo::Harvest { id, .. } => id.to_string(),
+            _ => self.media().id.to_string(),
+        };
+        format!("W/\"{}\"", id).parse().unwrap()
+    }
+
+    /// get the last modified time for this media
+    pub fn last_modified(&self) -> SystemTime {
+        match self {
+            MediaInfo::Harvest { completed_at, .. } => *completed_at,
+            _ => self
+                .media()
+                .id
+                .get_timestamp()
+                .expect("all uuids are uuidv7")
+                .into(),
+        }
+    }
+
+    /// whether the response should be displayed inline
+    pub fn inline(&self) -> bool {
+        !matches!(self, MediaInfo::Harvest { .. })
+    }
+
+    /// get the cache-control header for this media
+    pub fn cache_control(&self) -> CacheControl {
+        match self {
+            MediaInfo::Harvest { .. } => CacheControl::new().with_private().with_no_store(),
+            _ => CacheControl::new()
+                .with_public()
+                .with_immutable()
+                .with_max_age(Duration::from_secs(604800)),
         }
     }
 
     /// get the underlying media data
     pub fn media(&self) -> &'a Media {
         match self {
-            MediaInfo::Media(media) => media,
+            MediaInfo::Media { media, .. } => media,
             MediaInfo::Thumb { media, .. } => media,
             MediaInfo::Gifv { media, .. } => media,
+            MediaInfo::Harvest { .. } => unreachable!("harvests do not have media data"),
         }
     }
 }
@@ -99,25 +154,15 @@ pub fn calculate_response_metadata<'a>(
     headers_req: &HeadersRequest,
     info: &MediaInfo<'a>,
 ) -> Result<ResponseMetadata> {
-    let media = info.media();
     let mut headers = HeadersResponse::default();
 
     // 1. caching headers
-    headers.cache_control = Some(
-        CacheControl::new()
-            .with_public()
-            .with_immutable()
-            .with_max_age(Duration::from_secs(604800)),
-    );
+    headers.cache_control = Some(info.cache_control());
 
-    let etag: ETag = format!("W/\"{}\"", media.id).parse().unwrap();
+    let etag = info.etag();
     headers.etag = Some(etag.clone());
 
-    let id_timestamp: SystemTime = media
-        .id
-        .get_timestamp()
-        .expect("all uuids are uuidv7")
-        .into();
+    let id_timestamp = info.last_modified();
     let lm = LastModified::from(id_timestamp);
     headers.last_modified = Some(lm);
 
@@ -125,7 +170,7 @@ pub fn calculate_response_metadata<'a>(
     headers.accept_ranges = Some(AcceptRanges::bytes());
     headers.content_type = Some(info.content_type());
     headers.content_disposition = Some(
-        content_disposition_attachment(&info.filename(), true)
+        content_disposition_attachment(&info.filename(), info.inline())
             .parse()
             .unwrap(),
     );
