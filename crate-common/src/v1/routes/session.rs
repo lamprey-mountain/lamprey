@@ -68,6 +68,9 @@ pub mod session_update {
     pub struct Response {
         #[json]
         pub session: Session,
+
+        #[status]
+        pub status: http::StatusCode,
     }
 }
 

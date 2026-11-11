@@ -1,5 +1,6 @@
 use lamprey_macros::{Diff, record};
 use std::{fmt, str::FromStr};
+use uuid::Uuid;
 
 use crate::util::registry::export_models;
 use crate::v1::types::{ApplicationId, util::Time};
@@ -130,6 +131,13 @@ pub enum SessionStatus {
         user_id: UserId,
         sudo_expires_at: Time,
     },
+}
+
+impl SessionToken {
+    /// generate a new random session token
+    pub fn generate() -> Self {
+        Self(Uuid::new_v4().to_string())
+    }
 }
 
 impl From<String> for SessionToken {
