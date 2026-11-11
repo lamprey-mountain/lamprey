@@ -3,9 +3,10 @@ use std::{fmt, io::IsTerminal};
 use anyhow::{Result, bail};
 use clap::Parser;
 use demand::Confirm;
-use lamprey_cli::args::{Args, AuthCommand, Command};
+use lamprey_cli::args::{Args, AuthCommand, Command, MessageCommand};
 use lamprey_cli::auth;
 use lamprey_cli::config::LyConfig;
+use lamprey_cli::message;
 use serde::Serialize;
 
 /// output of a command
@@ -17,6 +18,8 @@ enum Output {
     Check(Box<auth::CheckResult>),
     List(auth::ListResult),
     SetDefault(auth::SetDefaultResult),
+    Message(message::MessageResult),
+    Delete(message::DeleteResult),
 }
 
 impl fmt::Display for Output {
@@ -27,6 +30,8 @@ impl fmt::Display for Output {
             Output::Check(result) => fmt::Display::fmt(result, f),
             Output::List(result) => fmt::Display::fmt(result, f),
             Output::SetDefault(result) => fmt::Display::fmt(result, f),
+            Output::Message(result) => fmt::Display::fmt(result, f),
+            Output::Delete(result) => fmt::Display::fmt(result, f),
         }
     }
 }
@@ -89,7 +94,28 @@ async fn main() -> Result<()> {
                 Output::SetDefault(auth::set_default(&mut config, &name)?)
             }
         },
-        Command::Message { .. } => todo!(),
+        Command::Message { command } => match command {
+            MessageCommand::Send {
+                channel_id,
+                content,
+                reply_to,
+            } => Output::Message(
+                message::send(&mut config, login, channel_id, content, reply_to).await?,
+            ),
+            MessageCommand::Get {
+                channel_id,
+                message_id,
+            } => Output::Message(message::get(&mut config, login, channel_id, message_id).await?),
+            MessageCommand::Delete {
+                channel_id,
+                message_id,
+                yes,
+            } => {
+                confirm(yes, "delete this message")?;
+
+                Output::Delete(message::delete(&mut config, login, channel_id, message_id).await?)
+            }
+        },
         Command::Channel { .. } => todo!(),
         Command::Media { .. } => todo!(),
         Command::Events {} => todo!(),

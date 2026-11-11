@@ -327,6 +327,14 @@ pub fn set_default(config: &mut LyConfig, name: &str) -> Result<SetDefaultResult
     })
 }
 
+/// build an authenticated client for a stored login, refreshing it if needed
+pub async fn client(config: &mut LyConfig, name: Option<&str>) -> Result<Http> {
+    check(config, name).await?;
+
+    let login = config.login(name)?;
+    http_client(&login.api_url, Some(&login.token))
+}
+
 /// list the stored logins
 pub fn list(config: &LyConfig) -> ListResult {
     let logins = config
