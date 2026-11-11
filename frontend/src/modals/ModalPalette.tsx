@@ -24,6 +24,7 @@ export const ModalPalette = () => {
 
 	const [query, setQuery] = createSignal("");
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
+	let itemsEl: HTMLDivElement | undefined;
 
 	// try to load all threads
 	const _rooms = rooms2.useList();
@@ -239,20 +240,30 @@ export const ModalPalette = () => {
 		return allItems().filter((item) => item.name?.toLowerCase().includes(q));
 	});
 
+	const visibleItems = createMemo(() => filteredItems().slice(0, 10));
+
 	createEffect(() => {
 		setSelectedIndex(0);
 	});
 
+	createEffect(() => {
+		selectedIndex();
+		itemsEl?.querySelector<HTMLElement>(".item.selected")?.scrollIntoView({
+			block: "nearest",
+		});
+	});
+
 	const handleKeyDown = (e: KeyboardEvent) => {
-		const items = filteredItems();
-		const navigableItems = items.filter((item) => item.type !== "section");
+		const navigableItems = visibleItems().filter(
+			(item) => item.type !== "section",
+		);
 		const len = navigableItems.length;
 		if (len === 0) return;
 
-		if (e.key === "ArrowDown") {
+		if (e.key === "ArrowDown" || (e.key === "Tab" && !e.shiftKey)) {
 			e.preventDefault();
 			setSelectedIndex((i) => (i + 1) % len);
-		} else if (e.key === "ArrowUp") {
+		} else if (e.key === "ArrowUp" || (e.key === "Tab" && e.shiftKey)) {
 			e.preventDefault();
 			setSelectedIndex((i) => (i - 1 + len) % len);
 		} else if (e.key === "Enter") {
@@ -270,7 +281,7 @@ export const ModalPalette = () => {
 	};
 
 	const getNavigableIndex = (index: number) => {
-		const items = filteredItems();
+		const items = visibleItems();
 		let navigableIndex = 0;
 		for (let i = 0; i < index; i++) {
 			if (items[i]?.type !== "section") {
@@ -292,8 +303,8 @@ export const ModalPalette = () => {
 					onInput={(e) => setQuery(e.currentTarget.value)}
 					placeholder="type to search..."
 				/>
-				<div class="items">
-					<For each={filteredItems().slice(0, 10)}>
+				<div class="items" ref={itemsEl}>
+					<For each={visibleItems()}>
 						{(item, i) => (
 							<Show
 								when={item.type !== "section"}
