@@ -98,6 +98,7 @@ pub async fn update(
         let actor_id = req.identity().user_id().unwrap_or(user_id);
         let al = req.audit_log_as(actor_id, req.identity().ensure_session()?);
         let ty = AuditLogEntryType::SessionUpdate {
+            user_id: Some(user_id),
             session_id: session.id,
             changes: Changes::new()
                 .change("name", &target.name, &session.name)
@@ -144,6 +145,7 @@ pub async fn delete(
         let actor_id = req.identity().user_id().unwrap_or(user_id);
         let al = req.audit_log_as(actor_id, req.identity().ensure_session()?);
         let ty = AuditLogEntryType::SessionDelete {
+            user_id: Some(user_id),
             session_id: target.id,
             changes: Changes::new().remove("name", &target.name).build(),
         };
@@ -183,7 +185,9 @@ pub async fn delete_all(
     let al = req.audit_log();
     al.push(
         user.id.into_inner().into(),
-        AuditLogEntryType::SessionDeleteAll,
+        AuditLogEntryType::SessionDeleteAll {
+            user_id: Some(user.id),
+        },
     )
     .success();
     if let Some(owner_id) = application_owner(&req, user.id).await?
@@ -191,7 +195,9 @@ pub async fn delete_all(
     {
         al.push(
             owner_id.into_inner().into(),
-            AuditLogEntryType::SessionDeleteAll,
+            AuditLogEntryType::SessionDeleteAll {
+                user_id: Some(user.id),
+            },
         )
         .success();
     }

@@ -360,18 +360,25 @@ pub enum AuditLogEntryType {
     },
 
     SessionUpdate {
+        #[cfg_attr(feature = "serde", serde(default))]
+        user_id: Option<UserId>,
         session_id: SessionId,
         changes: Vec<AuditLogChange>,
     },
 
     SessionDelete {
+        #[cfg_attr(feature = "serde", serde(default))]
+        user_id: Option<UserId>,
         session_id: SessionId,
 
         #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
     },
 
-    SessionDeleteAll,
+    SessionDeleteAll {
+        #[cfg_attr(feature = "serde", serde(default))]
+        user_id: Option<UserId>,
+    },
 
     /// auth state changed
     AuthUpdate {
@@ -679,6 +686,10 @@ pub struct AuditLogFilter {
     #[serde(default)]
     pub target_user_id: Vec<UserId>,
 
+    /// only return audit log entries targeting these applications
+    #[serde(default)]
+    pub target_application_id: Vec<ApplicationId>,
+
     /// only return audit log entries with these types
     #[serde(default, rename = "type")]
     pub ty: Vec<String>,
@@ -696,6 +707,7 @@ impl Default for AuditLogFilter {
             user_id: Default::default(),
             channel_id: Default::default(),
             target_user_id: Default::default(),
+            target_application_id: Default::default(),
             ty: Default::default(),
             status: default_audit_log_status_filter(),
         }
@@ -866,6 +878,9 @@ impl AuditLogEntryType {
             | CalendarRsvpDelete { user_id, .. }
             | RatelimitUpdate { user_id, .. }
             | RatelimitDelete { user_id, .. } => Some(*user_id),
+            SessionUpdate { user_id, .. }
+            | SessionDelete { user_id, .. }
+            | SessionDeleteAll { user_id } => *user_id,
             BotAdd { bot_id } => Some(*bot_id),
             PermissionOverwriteCreate {
                 overwrite_id, ty, ..
@@ -879,6 +894,17 @@ impl AuditLogEntryType {
                 PermissionOverwriteType::User => Some((*overwrite_id).into()),
                 PermissionOverwriteType::Role => None,
             },
+            _ => None,
+        }
+    }
+
+    /// the application this entry targets, if any
+    pub fn target_application_id(&self) -> Option<ApplicationId> {
+        use AuditLogEntryType::*;
+        match self {
+            ApplicationCreate { application_id, .. }
+            | ApplicationUpdate { application_id, .. }
+            | ApplicationDelete { application_id, .. } => Some(*application_id),
             _ => None,
         }
     }
@@ -1002,7 +1028,7 @@ impl AuditLogEntryType {
                 | SessionLogin { .. }
                 | SessionUpdate { .. }
                 | SessionDelete { .. }
-                | SessionDeleteAll
+                | SessionDeleteAll { .. }
                 | AuthUpdate { .. }
                 | AuthSudo { .. }
                 | EmailCreate { .. }
