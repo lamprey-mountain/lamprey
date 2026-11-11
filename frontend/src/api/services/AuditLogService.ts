@@ -38,7 +38,10 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 		throw new Error("Use fetchByRoom(room_id) and cache lookup");
 	}
 
-	private applyPage(data: AuditLogPaginationResponse, list: PaginatedList): void {
+	private applyPage(
+		data: AuditLogPaginationResponse,
+		list: PaginatedList,
+	): void {
 		// Cache related entities
 		for (const thread of data.threads) {
 			this.store.channels.upsert(thread);
@@ -83,19 +86,18 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<AuditLogPaginationResponse>(
-				() =>
-					this.client.http.GET("/api/v1/room/{room_id}/audit-logs", {
-						params: {
-							path: { room_id },
-							query: {
-								dir: "b",
-								limit: 100,
-								from: cursor,
-								channel_id: channel_id ? [channel_id] : undefined,
-							},
+			const data = await this.retryWithBackoff<AuditLogPaginationResponse>(() =>
+				this.client.http.GET("/api/v1/room/{room_id}/audit-logs", {
+					params: {
+						path: { room_id },
+						query: {
+							dir: "b",
+							limit: 100,
+							from: cursor,
+							channel_id: channel_id ? [channel_id] : undefined,
 						},
-					}),
+					},
+				}),
 			);
 			this.applyPage(data, list);
 		} catch (e) {
@@ -114,14 +116,13 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<AuditLogPaginationResponse>(
-				() =>
-					this.client.http.GET("/api/v1/user/{user_id}/audit-logs", {
-						params: {
-							path: { user_id },
-							query: { dir: "b", limit: 100, from: cursor },
-						},
-					}),
+			const data = await this.retryWithBackoff<AuditLogPaginationResponse>(() =>
+				this.client.http.GET("/api/v1/user/{user_id}/audit-logs", {
+					params: {
+						path: { user_id },
+						query: { dir: "b", limit: 100, from: cursor },
+					},
+				}),
 			);
 			this.applyPage(data, list);
 		} catch (e) {
