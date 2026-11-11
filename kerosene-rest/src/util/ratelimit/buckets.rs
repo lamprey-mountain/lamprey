@@ -14,6 +14,7 @@ use crate::util::fnv::{fnv1a_u32, fnv1a_u64};
 pub enum Bucket {
     DefaultRead,
     DefaultWrite,
+    MediaUpload,
     RoomRead,
     RoomWrite,
     ChannelRead,
@@ -68,15 +69,18 @@ impl Bucket {
     /// per-user quota. ip and session limits are derived from this.
     pub fn quota(self) -> Quota {
         match self {
-            // 50 requests / 5 seconds, with a burst of 50
+            // 100 requests / 5 seconds
             Self::DefaultRead | Self::RoomRead | Self::ChannelRead => {
-                make_quota(50, Duration::from_millis(100))
+                make_quota(100, Duration::from_millis(50))
             }
 
-            // 5 requests / 5 seconds
+            // 20 requests / 5 seconds
             Self::DefaultWrite | Self::RoomWrite | Self::ChannelWrite => {
-                make_quota(5, Duration::from_secs(1))
+                make_quota(20, Duration::from_millis(250))
             }
+
+            // chunk uploads can be frequent; keep them out of the write bucket
+            Self::MediaUpload => make_quota(100, Duration::from_millis(50)),
 
             // 15 requests / 15 seconds
             Self::InitDm => make_quota(15, Duration::from_secs(1)),
@@ -173,6 +177,14 @@ impl Route {
             };
         }
 
+        if !read && path.starts_with("/internal/media-upload/") {
+            return Self {
+                bucket: Bucket::MediaUpload,
+                scope: None,
+                penalty: Penalty::None,
+            };
+        }
+
         if let Some(scope) = scope_from(actual, "/room/") {
             return Self {
                 bucket: if read {
@@ -263,4 +275,36 @@ pub fn scale(quota: Quota, factor: u32) -> Quota {
     let nanos = (quota.replenish_interval().as_nanos() / factor as u128).max(1) as u64;
 
     make_quota(burst, Duration::from_nanos(nanos))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn media_upload_chunks_use_a_separate_bucket() {
+        let route = Route::for_request(
+            &Method::PATCH,
+            "/api/v1/internal/media-upload/{media_id}",
+            "/api/v1/internal/media-upload/x",
+        );
+        assert_eq!(route.bucket, Bucket::MediaUpload);
+    }
+
+    #[test]
+    fn media_create_stays_on_the_default_bucket() {
+        for (method, path) in [
+            (Method::POST, "/api/v1/media"),
+            (Method::PUT, "/api/v1/media/{media_id}/done"),
+        ] {
+            let route = Route::for_request(&method, path, path);
+            assert_eq!(route.bucket, Bucket::DefaultWrite);
+        }
+    }
+
+    #[test]
+    fn media_reads_stay_on_the_default_bucket() {
+        let route = Route::for_request(&Method::GET, "/api/v1/media/{media_id}", "/api/v1/media/x");
+        assert_eq!(route.bucket, Bucket::DefaultRead);
+    }
 }
