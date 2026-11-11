@@ -50,7 +50,7 @@ impl<'a> MediaInfo<'a> {
                     "image/avif".parse().unwrap()
                 }
             }
-            MediaInfo::Gifv { .. } => "video/mp4".parse().unwrap(),
+            MediaInfo::Gifv { .. } => "video/webm".parse().unwrap(),
         }
     }
 

@@ -112,8 +112,8 @@ falling back to the largest configured size. `?animate=false` uses a static
 avif thumbnail; `?animate=true` (the default) allows an animated webp
 thumbnail.
 
-the gifv route only works for `image/gif`. the stored blob is webm; the current
-response advertises it as `video/mp4`.
+the gifv route only works for `image/gif`. the stored blob is webm and the
+response is served as `video/webm`.
 
 harvest routes are public but require the exact id, token, and filename embedded
 in the download url. the link expires with the harvest.
