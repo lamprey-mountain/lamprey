@@ -3,8 +3,9 @@ use std::{fmt, io::IsTerminal};
 use anyhow::{Result, bail};
 use clap::Parser;
 use demand::Confirm;
-use lamprey_cli::args::{Args, AuthCommand, Command, MessageCommand};
+use lamprey_cli::args::{Args, AuthCommand, ChannelCommand, Command, MessageCommand};
 use lamprey_cli::auth;
+use lamprey_cli::channel;
 use lamprey_cli::config::LyConfig;
 use lamprey_cli::message;
 use serde::Serialize;
@@ -20,6 +21,8 @@ enum Output {
     SetDefault(auth::SetDefaultResult),
     Message(message::MessageResult),
     Delete(message::DeleteResult),
+    Channel(channel::ChannelResult),
+    ChannelRemove(channel::RemoveResult),
 }
 
 impl fmt::Display for Output {
@@ -32,6 +35,8 @@ impl fmt::Display for Output {
             Output::SetDefault(result) => fmt::Display::fmt(result, f),
             Output::Message(result) => fmt::Display::fmt(result, f),
             Output::Delete(result) => fmt::Display::fmt(result, f),
+            Output::Channel(result) => fmt::Display::fmt(result, f),
+            Output::ChannelRemove(result) => fmt::Display::fmt(result, f),
         }
     }
 }
@@ -116,7 +121,28 @@ async fn main() -> Result<()> {
                 Output::Delete(message::delete(&mut config, login, channel_id, message_id).await?)
             }
         },
-        Command::Channel { .. } => todo!(),
+        Command::Channel { command } => match command {
+            ChannelCommand::Create {
+                room_id,
+                name,
+                kind,
+            } => Output::Channel(channel::create(&mut config, login, room_id, name, kind).await?),
+            ChannelCommand::Get { channel_id } => {
+                Output::Channel(channel::get(&mut config, login, channel_id).await?)
+            }
+            ChannelCommand::Update {
+                channel_id,
+                name,
+                description,
+            } => Output::Channel(
+                channel::update(&mut config, login, channel_id, name, description).await?,
+            ),
+            ChannelCommand::Remove { channel_id, yes } => {
+                confirm(yes, "remove this channel")?;
+
+                Output::ChannelRemove(channel::remove(&mut config, login, channel_id).await?)
+            }
+        },
         Command::Media { .. } => todo!(),
         Command::Events {} => todo!(),
     };

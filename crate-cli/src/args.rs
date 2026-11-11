@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
-use common::v1::types::{ChannelId, MediaId, MessageId, RedexId, SessionToken, oauth::Scope};
+use common::v1::types::{
+    ChannelId, ChannelType, MediaId, MessageId, RedexId, RoomId, SessionToken, oauth::Scope,
+};
 use url::Url;
 
 /// tool to interact with the lamprey api
@@ -175,15 +177,17 @@ pub enum MessageCommand {
 pub enum ChannelCommand {
     /// create a new channel
     Create {
-        // TODO: room_id, description, etc
-        // TODO: support creating threads with this(?)
+        /// id of the room to create the channel in
+        #[arg(short, long)]
+        room_id: RoomId,
+
         /// name of the channel
         #[arg(short, long)]
         name: String,
 
         /// channel type (text, voice, etc.)
-        #[arg(short, long)]
-        kind: String, // TODO: use enum
+        #[arg(short, long, default_value = "Text", value_parser = parse_channel_kind)]
+        kind: ChannelType,
     },
 
     /// get channel details
@@ -260,6 +264,11 @@ pub enum RedexCommand {
         /// id of the trigger
         trigger_id: String,
     },
+}
+
+fn parse_channel_kind(value: &str) -> Result<ChannelType, String> {
+    serde_json::from_value(serde_json::Value::String(value.to_owned()))
+        .map_err(|_| format!("unknown channel kind `{value}`"))
 }
 
 fn parse_scope(value: &str) -> Result<Scope, String> {
