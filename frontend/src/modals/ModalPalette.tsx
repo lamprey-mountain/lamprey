@@ -5,14 +5,69 @@ import { useCtx } from "@/app/context";
 import icHome from "@/assets/home.png";
 import icInbox from "@/assets/inbox.png";
 import icMembers from "@/assets/members.png";
+import icSearch from "@/assets/search.png";
 import icSettings from "@/assets/settings.png";
+import { Search } from "@/atoms/Search";
 import { ChannelIcon } from "@/components/shared/User";
+import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
-import { autofocus } from "@/lib/autofocus";
+import { parsePaletteLink } from "@/lib/palette-link";
 import { getThumbFromId } from "@/media/util";
 import { channelDisplayName } from "@/utils/channel";
 import { Modal } from "./mod";
+
+type PaletteItem = {
+	type: "room" | "thread" | "link" | "section";
+	id: string;
+	name: string;
+	/** shown when the item has no channel or room attached */
+	icon?: string;
+	/** where the channel lives */
+	meta?: { room?: string; category?: string };
+	action: () => void;
+	channel?: Channel;
+	room?: Room;
+};
+
+const isDm = (channel: Channel) =>
+	channel.type === "Dm" || channel.type === "Gdm";
+
+const isThread = (channel: Channel) => channel.type.startsWith("Thread");
+
+const isUnread = (channel: Channel) =>
+	!!channel.last_read_id && channel.last_read_id !== channel.last_message_id;
+
+const section = (name: string, items: PaletteItem[]): PaletteItem[] =>
+	items.length === 0
+		? []
+		: [
+				{
+					type: "section" as const,
+					id: `section-${name}`,
+					name,
+					action: () => {},
+				},
+				...items,
+			];
+
+/** higher is better, 0 means no match */
+const matchScore = (name: string, query: string) => {
+	const n = name.toLowerCase();
+	if (!query) return 1;
+	if (n === query) return 4;
+	if (n.startsWith(query)) return 3;
+	if (n.includes(` ${query}`)) return 2;
+	if (n.includes(query)) return 1;
+	return 0;
+};
+
+const rank = (items: PaletteItem[], query: string) =>
+	items
+		.map((item) => ({ item, score: matchScore(item.name, query) }))
+		.filter((entry) => entry.score > 0)
+		.sort((a, b) => b.score - a.score)
+		.map((entry) => entry.item);
 
 export const ModalPalette = () => {
 	const channels2 = useChannels();
@@ -20,6 +75,7 @@ export const ModalPalette = () => {
 	const dms2 = useDms();
 	const ctx = useCtx();
 	const navigate = useNavigate();
+	const currentUser = useCurrentUser();
 	const [, modalCtl] = useModals();
 
 	const [query, setQuery] = createSignal("");
@@ -30,96 +86,120 @@ export const ModalPalette = () => {
 	const _rooms = rooms2.useList();
 	dms2.useList();
 
-	type PaletteItem = {
-		type: "room" | "thread" | "link" | "section";
-		id: string;
-		name: string;
-		action: () => void;
-		channel?: Channel;
-		room?: Room;
+	const channelName = (channel: Channel) => {
+		if (channel.type === "Dm") {
+			const selfId = currentUser()?.id;
+			return channel.recipients?.find((i) => i.id !== selfId)?.name ?? "dm";
+		}
+		return channelDisplayName(channel);
 	};
 
-	const allItems = createMemo((): PaletteItem[] => {
-		const rooms = [...rooms2.cache.values()].map((room) => ({
-			type: "room" as const,
-			id: room.id,
-			name: room.name,
-			action: () => navigate(`/room/${room.id}`),
-			room: room,
-		}));
-		const threads = [...channels2.cache.values()]
-			.filter((channel) => channel.type !== "Category")
-			.map((thread) => ({
-				type: "thread" as const,
-				id: thread.id,
-				name: channelDisplayName(thread),
-				action: () => navigate(`/channel/${thread.id}`),
-				channel: thread,
-			}));
+	const findChannel = (id: string) =>
+		channels2.cache.get(id) ?? dms2.cache.get(id);
 
-		const staticItems: PaletteItem[] = [
-			{
-				type: "link" as const,
-				id: "home",
-				name: "home",
-				action: () => navigate("/"),
-			},
-			{
-				type: "link" as const,
-				id: "inbox",
-				name: "inbox",
-				action: () => navigate("/inbox"),
-			},
-			{
-				type: "link" as const,
-				id: "friends",
-				name: "friends",
-				action: () => navigate("/friends"),
-			},
-			{
-				type: "link" as const,
-				id: "settings",
-				name: "settings",
-				action: () => navigate("/settings"),
-			},
-		];
+	const roomChannels = createMemo(() =>
+		[...channels2.cache.values()].filter(
+			(channel) =>
+				channel.type !== "Category" && !isThread(channel) && !isDm(channel),
+		),
+	);
 
-		return [...staticItems, ...rooms, ...threads];
+	const dmChannels = createMemo(() => [...dms2.cache.values()]);
+
+	const allChannels = createMemo(() => [...roomChannels(), ...dmChannels()]);
+
+	const channelRoom = (channel: Channel): Room | undefined => {
+		const room = channel.room_id
+			? rooms2.cache.get(channel.room_id)
+			: undefined;
+		if (room) return room;
+		// threads inherit the room of their parent channel
+		const parent = channel.parent_id
+			? channels2.cache.get(channel.parent_id)
+			: undefined;
+		return parent?.room_id ? rooms2.cache.get(parent.room_id) : undefined;
+	};
+
+	const channelCategory = (channel: Channel): Channel | undefined => {
+		const parent = channel.parent_id
+			? channels2.cache.get(channel.parent_id)
+			: undefined;
+		if (!parent) return undefined;
+		if (parent.type === "Category") return parent;
+		// threads hang off a channel, so the category is one level up
+		const grandparent = parent.parent_id
+			? channels2.cache.get(parent.parent_id)
+			: undefined;
+		return grandparent?.type === "Category" ? grandparent : undefined;
+	};
+
+	const channelMeta = (channel: Channel): PaletteItem["meta"] => {
+		const room = channelRoom(channel)?.name;
+		const category = channelCategory(channel);
+		const categoryName = category ? channelDisplayName(category) : undefined;
+		if (!room && !categoryName) return undefined;
+		return { room, category: categoryName };
+	};
+
+	const channelItem = (channel: Channel): PaletteItem => ({
+		type: "thread",
+		id: channel.id,
+		name: channelName(channel),
+		meta: channelMeta(channel),
+		action: () => navigate(`/channel/${channel.id}`),
+		channel,
 	});
 
-	const recentChannels = createMemo(() => {
-		return ctx
+	const roomItem = (room: Room): PaletteItem => ({
+		type: "room",
+		id: room.id,
+		name: room.name,
+		action: () => navigate(`/room/${room.id}`),
+		room,
+	});
+
+	const staticLinks = (): PaletteItem[] => [
+		{
+			type: "link",
+			id: "home",
+			name: "home",
+			icon: icHome,
+			action: () => navigate("/"),
+		},
+		{
+			type: "link",
+			id: "inbox",
+			name: "inbox",
+			icon: icInbox,
+			action: () => navigate("/inbox"),
+		},
+		{
+			type: "link",
+			id: "friends",
+			name: "friends",
+			icon: icMembers,
+			action: () => navigate("/friends"),
+		},
+		{
+			type: "link",
+			id: "settings",
+			name: "settings",
+			icon: icSettings,
+			action: () => navigate("/settings"),
+		},
+	];
+
+	const recentChannels = createMemo(() =>
+		ctx
 			.recentChannels()
 			.slice(1)
-			.map((i) => channels2.cache.get(i)!)
-			.filter((channel) => channel.type !== "Category")
-			.map((thread) => ({
-				type: "thread" as const,
-				id: thread.id,
-				name: channelDisplayName(thread),
-				action: () => navigate(`/thread/${thread.id}`),
-				channel: thread,
-			}));
-	});
-
-	const channelsWithMentions = createMemo(() => {
-		return [...channels2.cache.values()]
-			.filter((channel) => channel.type !== "Category")
-			.filter((channel) => channel.mention_count && channel.mention_count > 0)
-			.sort((a, b) => {
-				if (b.mention_count !== a.mention_count) {
-					return b.mention_count! - a.mention_count!;
-				}
-				return b.version_id.localeCompare(a.version_id);
-			})
-			.map((channel) => ({
-				type: "thread" as const,
-				id: channel.id,
-				name: channelDisplayName(channel),
-				action: () => navigate(`/channel/${channel.id}`),
-				channel: channel,
-			}));
-	});
+			.map((id) => findChannel(id))
+			.filter(
+				(channel): channel is Channel =>
+					!!channel && channel.type !== "Category",
+			)
+			.map(channelItem),
+	);
 
 	const channelsWithDrafts = createMemo(() => {
 		const draftChannels: Array<{
@@ -127,8 +207,7 @@ export const ModalPalette = () => {
 			draftTimestamp: number;
 		}> = [];
 
-		for (const channel of channels2.cache.values()) {
-			if (channel.type === "Category") continue;
+		for (const channel of allChannels()) {
 			// Check localStorage drafts (Forum2)
 			const draftKey = `editor_draft_${channel.id}`;
 			const draft = localStorage.getItem(draftKey);
@@ -164,83 +243,122 @@ export const ModalPalette = () => {
 
 		return draftChannels
 			.sort((a, b) => b.draftTimestamp - a.draftTimestamp)
-			.map(({ channel }) => ({
-				type: "thread" as const,
-				id: channel.id,
-				name: channelDisplayName(channel),
-				action: () => navigate(`/channel/${channel.id}`),
-				channel: channel,
-			}));
+			.map(({ channel }) => channelItem(channel));
 	});
 
-	const filteredItems = createMemo(() => {
-		const q = query().toLowerCase();
-		if (!q) {
-			const mentions = channelsWithMentions();
-			const drafts = channelsWithDrafts();
-			const recent = recentChannels();
-
-			const seen = new Set<string>();
-			const items: PaletteItem[] = [];
-
-			const mentionItems: PaletteItem[] = [];
-			for (const item of mentions) {
-				if (!seen.has(item.id)) {
-					seen.add(item.id);
-					mentionItems.push(item);
+	const channelsWithMentions = createMemo(() =>
+		allChannels()
+			.filter((channel) => channel.mention_count && channel.mention_count > 0)
+			.sort((a, b) => {
+				if (b.mention_count !== a.mention_count) {
+					return b.mention_count! - a.mention_count!;
 				}
-			}
-			if (mentionItems.length > 0) {
-				items.push({
-					type: "section" as const,
-					id: "section-mentions",
-					name: "recent mentions",
-					action: () => {},
-				});
-				items.push(...mentionItems);
-			}
+				return b.version_id.localeCompare(a.version_id);
+			})
+			.map(channelItem),
+	);
 
-			const draftItems: PaletteItem[] = [];
-			for (const item of drafts) {
-				if (!seen.has(item.id)) {
-					seen.add(item.id);
-					draftItems.push(item);
-				}
-			}
-			if (draftItems.length > 0) {
-				items.push({
-					type: "section" as const,
-					id: "section-drafts",
-					name: "has draft",
-					action: () => {},
-				});
-				items.push(...draftItems);
-			}
+	const unreadChannels = createMemo(() =>
+		allChannels()
+			.filter(isUnread)
+			.sort((a, b) => b.version_id.localeCompare(a.version_id))
+			.map(channelItem),
+	);
 
-			const recentItems: PaletteItem[] = [];
-			for (const item of recent) {
-				if (!seen.has(item.id)) {
-					seen.add(item.id);
-					recentItems.push(item);
-				}
-			}
-			if (recentItems.length > 0) {
-				items.push({
-					type: "section" as const,
-					id: "section-recent",
-					name: "recent channels",
-					action: () => {},
-				});
-				items.push(...recentItems);
-			}
+	const defaultItems = createMemo(() => {
+		const seen = new Set<string>();
+		const unique = (items: PaletteItem[]) =>
+			items.filter((item) => {
+				if (seen.has(item.id)) return false;
+				seen.add(item.id);
+				return true;
+			});
 
-			return items;
-		}
-
-		return allItems().filter((item) => item.name?.toLowerCase().includes(q));
+		return [
+			...section("recent channels", unique(recentChannels())),
+			...section("has draft", unique(channelsWithDrafts())),
+			...section("recent mentions", unique(channelsWithMentions())),
+			...section("unread", unique(unreadChannels())),
+		];
 	});
 
-	const visibleItems = createMemo(() => filteredItems().slice(0, 10));
+	const everything = createMemo(() => [
+		...staticLinks(),
+		...[...rooms2.cache.values()].map(roomItem),
+		...allChannels().map(channelItem),
+	]);
+
+	const pastedLink = createMemo((): PaletteItem | null => {
+		const link = parsePaletteLink(query());
+		if (!link) return null;
+
+		const channel = link.channelId ? findChannel(link.channelId) : undefined;
+		const room = link.roomId ? rooms2.cache.get(link.roomId) : undefined;
+		const name = channel
+			? channelName(channel)
+			: room
+				? room.name
+				: (link.name ?? link.path);
+
+		return {
+			type: channel ? "thread" : room ? "room" : "link",
+			id: `link:${link.path}`,
+			name: link.messageId ? `message in ${name}` : name,
+			meta: channel ? channelMeta(channel) : undefined,
+			channel,
+			room,
+			action: () => navigate(link.path),
+		};
+	});
+
+	const showHelp = createMemo(() => query().trim() === "?");
+
+	const filteredItems = createMemo((): PaletteItem[] => {
+		if (showHelp()) return [];
+
+		const raw = query().trim();
+		const link = pastedLink();
+		const prefix = raw.startsWith("@") ? "@" : raw.startsWith("#") ? "#" : "";
+		const text = (prefix ? raw.slice(1) : raw).toLowerCase().trim();
+
+		const matches = () => {
+			if (prefix === "@") return rank(dmChannels().map(channelItem), text);
+			if (prefix === "#") {
+				return rank(roomChannels().map(channelItem), text);
+			}
+			if (text) return rank(everything(), text);
+
+			const items = defaultItems();
+			return items.length > 0 ? items : everything();
+		};
+
+		const items = matches();
+		const navigable = items.filter((item) => item.type !== "section");
+		// nothing good left to show, offer to search instead
+		const searchItem: PaletteItem[] =
+			text &&
+			!prefix &&
+			(navigable.length < 10 ||
+				items.every((item) => matchScore(item.name, text) < 2))
+				? [
+						{
+							type: "link",
+							id: "search",
+							name: `search for "${raw}"`,
+							icon: icSearch,
+							action: () => navigate(`/search?q=${encodeURIComponent(raw)}`),
+						},
+					]
+				: [];
+
+		return [...(link ? [link] : []), ...items, ...searchItem];
+	});
+
+	const visibleItems = createMemo(() => {
+		const items = filteredItems().slice(0, 10);
+		// don't leave a section header dangling at the end
+		return items.at(-1)?.type === "section" ? items.slice(0, -1) : items;
+	});
 
 	createEffect(() => {
 		setSelectedIndex(0);
@@ -294,80 +412,117 @@ export const ModalPalette = () => {
 	return (
 		<Modal>
 			<div onKeyDown={handleKeyDown} class="palette">
-				<h3 class="dim">palette</h3>
-				<input
-					type="text"
-					use:autofocus
+				<Search
 					ref={(a) => queueMicrotask(() => a.focus())}
-					value={query()}
-					onInput={(e) => setQuery(e.currentTarget.value)}
-					placeholder="type to search..."
+					value={query}
+					onInput={setQuery}
+					placeholder="lets go somewhere"
 				/>
 				<div class="items" ref={itemsEl}>
-					<For each={visibleItems()}>
-						{(item, i) => (
-							<Show
-								when={item.type !== "section"}
-								fallback={
-									<div class="item section-header dim">{item.name}</div>
-								}
-							>
-								<div
-									class="item"
-									classList={{
-										selected: getNavigableIndex(i()) === selectedIndex(),
-									}}
-									onClick={() => {
-										item.action();
-										close();
-									}}
-									onMouseEnter={() => setSelectedIndex(getNavigableIndex(i()))}
-								>
-									<Show when={item.type === "thread" && item.channel} keyed>
-										<div class="item-icon">
-											<ChannelIcon channel={item.channel!} />
-										</div>
-									</Show>
-									<Show when={item.type === "room" && item.room} keyed>
-										<div class="item-icon">
-											<Show
-												when={item.room?.icon}
-												fallback={
-													<div class="avatar fake">
-														{item.room?.name.substring(0, 2)}
-													</div>
-												}
-											>
-												<img
-													src={getThumbFromId(item.room?.icon!, 64)}
-													class="avatar"
-												/>
+					<Show
+						when={!showHelp()}
+						fallback={
+							<div class="help">
+								<div>type to search channels and rooms</div>
+								<div>paste a link to jump somewhere</div>
+								<div>
+									<kbd>@</kbd> dms and groups
+								</div>
+								<div>
+									<kbd>#</kbd> room channels
+								</div>
+								<div>
+									<kbd>?</kbd> this help
+								</div>
+							</div>
+						}
+					>
+						<Show
+							when={visibleItems().length > 0}
+							fallback={<div class="empty dim">no results</div>}
+						>
+							<For each={visibleItems()}>
+								{(item, i) => (
+									<Show
+										when={item.type !== "section"}
+										fallback={
+											<div class="item section-header">{item.name}</div>
+										}
+									>
+										<div
+											class="item"
+											classList={{
+												selected: getNavigableIndex(i()) === selectedIndex(),
+											}}
+											onClick={() => {
+												item.action();
+												close();
+											}}
+											onMouseEnter={() =>
+												setSelectedIndex(getNavigableIndex(i()))
+											}
+										>
+											<Show when={item.type === "thread" && item.channel} keyed>
+												<div class="item-icon">
+													<ChannelIcon channel={item.channel!} />
+												</div>
+											</Show>
+											<Show when={item.type === "room" && item.room} keyed>
+												<div class="item-icon">
+													<Show
+														when={item.room?.icon}
+														fallback={
+															<div class="avatar fake">
+																{item.room?.name.substring(0, 2)}
+															</div>
+														}
+													>
+														<img
+															src={getThumbFromId(item.room?.icon!, 64)}
+															class="avatar"
+														/>
+													</Show>
+												</div>
+											</Show>
+											<Show when={item.type === "link" && item.icon} keyed>
+												<div class="item-icon">
+													<img src={item.icon} class="icon" />
+												</div>
+											</Show>
+											<span>{item.name}</span>
+											<Show when={item.meta}>
+												{(meta) => (
+													<span class="meta">
+														<Show when={meta().room}>
+															<span class="room">{meta().room}</span>
+														</Show>
+														<Show when={meta().room && meta().category}>
+															{/* TODO: use chevron icon */}
+															<span class="chevron">›</span>
+														</Show>
+														<Show when={meta().category}>
+															<span class="category">{meta().category}</span>
+														</Show>
+													</span>
+												)}
 											</Show>
 										</div>
 									</Show>
-									<Show when={item.type === "link"} keyed>
-										<div class="item-icon">
-											<img
-												src={
-													item.id === "home"
-														? icHome
-														: item.id === "inbox"
-															? icInbox
-															: item.id === "settings"
-																? icSettings
-																: item.id === "friends"
-																	? icMembers
-																	: ""
-												}
-												class="icon"
-											/>
-										</div>
-									</Show>
-									<span>{item.name}</span>
-								</div>
-							</Show>
-						)}
-					</For>
+								)}
+							</For>
+						</Show>
+					</Show>
+				</div>
+				<div class="hint dim">
+					<span>
+						<kbd>?</kbd> help
+					</span>
+					<span>
+						<kbd>@</kbd> dms
+					</span>
+					<span>
+						<kbd>#</kbd> channels
+					</span>
 				</div>
 			</div>
 		</Modal>
