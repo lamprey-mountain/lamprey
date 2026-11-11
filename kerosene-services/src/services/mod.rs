@@ -199,6 +199,7 @@ impl Services {
         self.harvest.start_background_tasks();
         self.member_lists.start_background_tasks();
         self.notifications.start_background_tasks();
+        self.oauth.start_background_tasks();
         self.room_analytics.spawn_snapshot_task();
         self.search.start_background_tasks();
     }

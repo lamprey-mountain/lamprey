@@ -772,6 +772,8 @@ async fn oauth_token(
                 id_token = Some(srv.oauth_provider.sign_oidc_claims(&claims).await?);
             }
 
+            data.application_oauth_token_issued(app.id).await?;
+
             let response = OauthTokenResponse {
                 access_token: token.0,
                 token_type: "Bearer".to_string(),
@@ -825,6 +827,8 @@ async fn oauth_token(
                 },
             )
             .await?;
+
+            data.application_oauth_token_issued(app.id).await?;
 
             let response = OauthTokenResponse {
                 access_token: token.0,
@@ -918,6 +922,8 @@ async fn oauth_token(
                             id_token = Some(srv.oauth_provider.sign_oidc_claims(&claims).await?);
                         }
 
+                        data.application_oauth_token_issued(app.id).await?;
+
                         Ok(OauthTokenResponse {
                             access_token: token.0,
                             token_type: "Bearer".to_string(),
@@ -1007,6 +1013,8 @@ async fn oauth_token(
 
                 id_token = Some(srv.oauth_provider.sign_oidc_claims(&claims).await?);
             }
+
+            data.application_oauth_token_issued(app.id).await?;
 
             let response = OauthTokenResponse {
                 access_token: token.0,

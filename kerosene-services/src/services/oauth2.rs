@@ -1,12 +1,14 @@
 use std::time::{Duration, Instant};
 
-use common::v1::types::SessionId;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::oauth::{OauthGrantType, OauthTokenRequest, OauthTokenResponse};
+use common::v1::types::util::Time;
+use common::v1::types::{ApplicationId, SessionId};
 use dashmap::DashMap;
 use http::HeaderValue;
 use kerosene_core::config::ConfigOauthProviderKind;
 use serde::{Deserialize, Serialize};
+use tracing::error;
 use url::Url;
 use uuid::Uuid;
 
@@ -132,6 +134,31 @@ impl ServiceOauth {
         });
 
         s
+    }
+
+    pub fn start_background_tasks(&self) {
+        let globals = self.state.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(Duration::from_secs(60 * 60)).await;
+
+                let result: Result<Vec<ApplicationId>> = async {
+                    let mut txn = globals.begin().await?;
+                    let ids = txn.application_gc_dynamic(Time::now_utc()).await?;
+                    txn.commit().await?;
+                    Ok(ids)
+                }
+                .await;
+
+                match result {
+                    Ok(ids) if !ids.is_empty() => {
+                        tracing::info!("soft deleted {} expired dynamic oauth clients", ids.len());
+                    }
+                    Ok(_) => {}
+                    Err(e) => error!("failed to clean up dynamic oauth clients: {e:?}"),
+                }
+            }
+        });
     }
 
     pub fn create_url(&self, provider: &str, session_id: SessionId) -> Result<Url> {

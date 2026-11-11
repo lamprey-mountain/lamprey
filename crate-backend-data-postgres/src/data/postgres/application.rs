@@ -1,11 +1,14 @@
 use async_trait::async_trait;
 use common::v1::types::{
-    ApplicationId, PaginationDirection, PaginationQuery, PaginationResponse, UserId,
+    ApplicationId, DYNAMIC_APP_OWNER_ID, PaginationDirection, PaginationQuery, PaginationResponse,
+    UserId,
     application::Application,
     error::{ApiError, ErrorCode},
+    util::Time,
 };
 use lamprey_backend_core::Error;
 use sqlx::{query, query_scalar};
+use uuid::Uuid;
 
 use crate::{
     data::{DataApplication, postgres::Pagination},
@@ -129,7 +132,7 @@ impl DataApplication for Postgres {
                 b.application_id as "bridge_id?", b.platform_name, b.platform_url, b.platform_description
             FROM application a
             LEFT JOIN application_bridge b ON a.id = b.application_id
-        	WHERE a.id = $1
+            WHERE a.id = $1 AND a.deleted_at IS NULL
             "#,
             *id
         )
@@ -182,7 +185,7 @@ impl DataApplication for Postgres {
                     b.application_id as "bridge_id?", b.platform_name, b.platform_url, b.platform_description
                 FROM application a
                 LEFT JOIN application_bridge b ON a.id = b.application_id
-            	WHERE a.owner_id = $1 AND a.id > $2 AND a.id < $3
+                WHERE a.owner_id = $1 AND a.deleted_at IS NULL AND a.id > $2 AND a.id < $3
             	ORDER BY (CASE WHEN $4 = 'f' THEN a.id END), a.id DESC LIMIT $5
                 "#,
                 *owner_id,
@@ -192,7 +195,7 @@ impl DataApplication for Postgres {
                 (p.limit + 1) as i32
             ),
             query_scalar!(
-                "SELECT count(*) FROM application WHERE owner_id = $1",
+                "SELECT count(*) FROM application WHERE owner_id = $1 AND deleted_at IS NULL",
                 *owner_id
             ),
             |row| {
@@ -221,5 +224,59 @@ impl DataApplication for Postgres {
             },
             |i: &Application| i.id.to_string()
         )
+    }
+
+    async fn application_oauth_token_issued(&mut self, id: ApplicationId) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        query!(
+            "UPDATE application SET oauth_last_token_issued_at = now() WHERE id = $1",
+            *id
+        )
+        .execute(conn.ext())
+        .await?;
+        Ok(())
+    }
+
+    async fn application_gc_dynamic(&mut self, now: Time) -> Result<Vec<ApplicationId>> {
+        // TODO: move intervals to config, maybe move business logic out of sql
+        let mut tx = self.begin_tx().await?;
+        let rows = query!(
+            r#"
+            UPDATE application a SET deleted_at = $1
+            WHERE a.owner_id = $2
+              AND a.deleted_at IS NULL
+              AND NOT EXISTS (
+                SELECT 1
+                FROM oauth_refresh_token rt
+                JOIN session s ON s.id = rt.session_id
+                WHERE s.application_id = a.id
+              )
+              AND (
+                (a.oauth_last_token_issued_at IS NULL
+                  AND a.created_at < $1::timestamp - interval '24 hours')
+                OR (a.oauth_last_token_issued_at IS NOT NULL
+                  AND a.oauth_last_token_issued_at < $1::timestamp - interval '60 days')
+              )
+            RETURNING a.id
+            "#,
+            time::PrimitiveDateTime::from(now),
+            *DYNAMIC_APP_OWNER_ID,
+        )
+        .fetch_all(tx.ext())
+        .await?;
+
+        let ids: Vec<Uuid> = rows.into_iter().map(|row| row.id).collect();
+        if !ids.is_empty() {
+            query!(
+                "UPDATE usr SET deleted_at = $1 WHERE id = ANY($2)",
+                time::PrimitiveDateTime::from(now),
+                &ids,
+            )
+            .execute(tx.ext())
+            .await?;
+        }
+
+        tx.commit().await?;
+        Ok(ids.into_iter().map(Into::into).collect())
     }
 }

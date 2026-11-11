@@ -762,6 +762,14 @@ pub trait DataApplication {
         owner_id: UserId,
         q: PaginationQuery<ApplicationId>,
     ) -> Result<PaginationResponse<Application>>;
+
+    /// record that an oauth token was issued for this application
+    async fn application_oauth_token_issued(&mut self, id: ApplicationId) -> Result<()>;
+
+    /// soft delete dynamically registered clients that have expired
+    ///
+    /// returns the ids of the applications that were marked as deleted.
+    async fn application_gc_dynamic(&mut self, now: Time) -> Result<Vec<ApplicationId>>;
 }
 
 #[async_trait]
