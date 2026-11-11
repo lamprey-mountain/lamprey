@@ -16,9 +16,8 @@ the `Full` scope. `GET /api/v1/media/{media_id}` is public.
   progress. the current rest path inserts `Processing` immediately instead.
 - `Processing`: bytes are being transferred or inspected.
 - `Uploaded`: processing finished and the blob can be fetched from the cdn.
-- `Consumed`: the media has at least one active link. the blob is immutable and
-  `strip_exif` can no longer be changed. this status is derived when the media
-  is read, not stored separately.
+- `Consumed`: the media has at least one active link. this status is derived
+  when the media is read, not stored separately.
 - `Errored`: processing failed.
 
 an upload that is not touched for 5 minutes is dropped.
@@ -125,10 +124,9 @@ single byte ranges and conditional requests; harvest responses are
 
 - `GET /api/v1/media/{media_id}` – get metadata. accepts a local id or a
   federated id. deleted media is only visible to server admins.
-- `PATCH /api/v1/media/{media_id}` – update `alt`, `filename`, or `strip_exif`.
-  only the uploader can patch their media. `strip_exif` cannot be changed on
-  consumed media and cannot be changed back to `false`. setting it to `true`
-  updates the flag but does not rewrite the already-uploaded blob.
+- `PATCH /api/v1/media/{media_id}` – update `alt` or `filename`. only the
+  uploader can patch their media. blob data (including exif) is immutable;
+  stripping exif is only possible at upload time.
 - `DELETE /api/v1/media/{media_id}` – delete unlinked media. linked media
   returns `409 Conflict`.
 - `POST /api/v1/media/{media_id}/quarantine` – quarantine media (server admin

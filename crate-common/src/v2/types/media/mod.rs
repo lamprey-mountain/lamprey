@@ -87,7 +87,8 @@ pub enum MediaStatus {
     /// This media is done being uploaded and processed.
     Uploaded,
 
-    /// This media is `Uploaded` and linked to some resource. `strip_exif` can no longer be edited. The underlying blob is now immutable and can be fetched via cdn routes.
+    /// This media is `Uploaded` and linked to some resource. The underlying
+    /// blob is immutable and can be fetched via cdn routes.
     Consumed,
 
     /// This piece of media has errored
@@ -315,13 +316,6 @@ pub struct MediaPatch {
     #[schema(required = false, min_length = 1, max_length = 256)]
     #[validate(length(min = 1, max = 256))]
     pub filename: Option<String>,
-
-    /// Whether to strip sensitive exif info, like location or camera make and model.
-    ///
-    /// This can only be changed if the media status is not `Consumed`. Once
-    /// strip_exif is set to true, cannot be set to false.
-    #[serde(default)]
-    pub strip_exif: Option<bool>,
 }
 
 /// a request body for `media_create`

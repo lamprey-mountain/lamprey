@@ -285,10 +285,6 @@ pub enum ErrorCode {
     #[error("unknown redex")]
     UnknownRedex,
 
-    /// cannot set strip_exif to false once it has been set to true
-    #[error("cannot set strip_exif to false once it has been set to true")]
-    CannotUnsetStripExif,
-
     // TODO: rename, merge fix up error codes below
     /// cannot act on behalf of other users
     #[error("cannot act on behalf of other users")]

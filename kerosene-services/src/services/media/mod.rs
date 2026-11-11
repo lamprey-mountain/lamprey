@@ -119,15 +119,9 @@ impl ServiceMedia {
             return Err(Error::MissingPermissions);
         }
 
-        let should_strip_exif = patch.strip_exif == Some(true);
-
         let mut data = self.state.begin().await?;
         data.media_update(media_id, patch).await?;
         data.commit().await?;
-
-        if should_strip_exif {
-            // TODO: download, strip, reupload
-        }
 
         // TODO: update media items
         // let writer: MediaItemWriter = todo!("somehow get writer?");

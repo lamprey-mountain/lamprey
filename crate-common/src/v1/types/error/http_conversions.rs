@@ -55,7 +55,6 @@ impl ErrorCode {
             ErrorCode::UnknownRedex => StatusCode::NOT_FOUND,
             ErrorCode::Automod => StatusCode::FORBIDDEN,
             ErrorCode::MissingPermissions => StatusCode::FORBIDDEN,
-            ErrorCode::CannotUnsetStripExif => StatusCode::BAD_REQUEST,
             ErrorCode::CannotActOnBehalfOfOthers => StatusCode::FORBIDDEN,
             ErrorCode::ThreadArchived => StatusCode::BAD_REQUEST,
             ErrorCode::ThreadRemoved => StatusCode::NOT_FOUND,
