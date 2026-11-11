@@ -246,7 +246,7 @@ impl ServiceInteractions {
         }
 
         let srv = self.state.services();
-        let deferred = match respond.ty {
+        let (deferred, original_message_id) = match respond.ty {
             InteractionResponseCreateType::Pong => return Err(Error::Unimplemented),
             InteractionResponseCreateType::Reply { message } => {
                 let channel_id = match &entry.interaction.ty {
@@ -257,34 +257,18 @@ impl ServiceInteractions {
                     InteractionType::Unfurl(unfurl) => unfurl.context.channel.id,
                 };
 
-                let original_message_id = match &entry.interaction.ty {
-                    InteractionType::Button(button) => Some(button.context.message.id),
-                    InteractionType::Ping => unreachable!(),
-                    InteractionType::Unfurl(unfurl) => Some(unfurl.context.message.id),
-                };
-
+                let source_message_id = entry.interaction.ty.source_message_id();
                 let mut reply_message = message;
                 if reply_message.reply_id.is_none() {
-                    reply_message.reply_id = original_message_id;
+                    reply_message.reply_id = source_message_id;
                 }
 
-                let user = match &entry.interaction.ty {
-                    InteractionType::Button(button) => button.context.user.clone(),
-                    InteractionType::Ping => unreachable!(),
-                    InteractionType::Unfurl(unfurl) => unfurl.context.user.clone(),
-                };
-
-                let (user_id, source_message_id) = match &entry.interaction.ty {
-                    InteractionType::Ping => {
-                        unreachable!("validated that pings cant be replied to already")
-                    }
-                    InteractionType::Button(button) => {
-                        (button.context.user.id, Some(button.context.message.id))
-                    }
-                    InteractionType::Unfurl(unfurl) => {
-                        (unfurl.context.user.id, Some(unfurl.context.message.id))
-                    }
-                };
+                let user_id = entry
+                    .interaction
+                    .ty
+                    .user_id()
+                    .ok_or_else(|| Error::BadStatic("interaction has no user"))?;
+                let application_user_id: UserId = (*entry.interaction.application_id).into();
                 let message_interaction = MessageInteraction {
                     id,
                     application_id: entry.interaction.application_id,
@@ -292,19 +276,20 @@ impl ServiceInteractions {
                     source_message_id,
                 };
 
-                let _message = srv
+                let message = srv
                     .messages
-                    .create_as_webhook(
+                    .create_as_application(
                         channel_id,
-                        user.id,
+                        application_user_id,
                         reply_message,
                         Some(message_interaction),
+                        None,
                     )
                     .await?;
 
                 // TODO: return message
 
-                false
+                (false, Some(message.id))
             }
             InteractionResponseCreateType::MessageUpdate { patch } => {
                 let channel_id = match &entry.interaction.ty {
@@ -321,18 +306,14 @@ impl ServiceInteractions {
                     InteractionType::Unfurl(unfurl) => unfurl.context.message.id,
                 };
 
-                let webhook_user_id = match &entry.interaction.ty {
-                    InteractionType::Button(button) => button.context.user.id,
-                    InteractionType::Ping => unreachable!(),
-                    InteractionType::Unfurl(unfurl) => unfurl.context.user.id,
-                };
+                let application_user_id: UserId = (*entry.interaction.application_id).into();
 
                 let (_, _message) = srv
                     .messages
-                    .edit_as_webhook(channel_id, message_id, webhook_user_id, patch)
+                    .edit_as_application(channel_id, message_id, application_user_id, patch, None)
                     .await?;
 
-                false
+                (false, Some(message_id))
             }
             // InteractionResponseCreateType::ReplyDefer => true,
             // InteractionResponseCreateType::Defer => true,
@@ -376,7 +357,7 @@ impl ServiceInteractions {
                 state: InteractionEntryState::Responded {
                     expire_handle,
                     deferred,
-                    original_message_id: None, // TODO
+                    original_message_id,
                     followup_message_count: AtomicUsize::new(0),
                 },
             }),
@@ -482,12 +463,28 @@ impl ServiceInteractions {
         // eg. start a comment thread for document interactions
         // actually, maybe not. that sounds like it could lead to some confusing behavior..
 
-        let user_id = (*inter.interaction.application_id).into();
+        let application_user_id: UserId = (*inter.interaction.application_id).into();
+        let user_id = inter
+            .inner()
+            .ty
+            .user_id()
+            .ok_or_else(|| Error::BadStatic("interaction has no user"))?;
+        let message_interaction = MessageInteraction {
+            id,
+            application_id: inter.inner().application_id,
+            user_id,
+            source_message_id: inter.inner().ty.source_message_id(),
+        };
+
         let message = srv
             .messages
-            .create3(channel_id, user_id)
-            .nonce(idempotency_key)
-            .create_default(message)
+            .create_as_application(
+                channel_id,
+                application_user_id,
+                message,
+                Some(message_interaction),
+                idempotency_key,
+            )
             .await?;
 
         Ok(message)
