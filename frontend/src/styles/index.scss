@@ -2792,30 +2792,118 @@ button.big {
 
 .palette {
 	width: 400px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
 
 	.items {
-		height: 360px;
-		max-height: 60vh;
+		height: 320px;
+		max-height: 50vh;
 		overflow-y: auto;
 	}
 
-	input {
-		padding: 2px 4px;
-		margin-bottom: 8px;
-		width: 100%;
-	}
-
 	.item {
-		padding: 2px 4px;
-		border-radius: 2px;
+		padding: 3px 6px;
+		border-radius: 3px;
 		display: flex;
 		align-items: center;
 		cursor: pointer;
-		margin: 4px 0;
+		margin: 1px 0;
+		font-size: 0.9em;
 
 		& > span {
 			@include truncate;
 		}
+
+		& > span:not(.meta) {
+			flex: 1;
+			min-width: 0;
+		}
+
+		.meta {
+			margin-left: auto;
+			padding-left: 8px;
+			display: flex;
+			align-items: center;
+			gap: 3px;
+			min-width: 0;
+			max-width: 50%;
+			flex-shrink: 0;
+			font-size: 0.8em;
+
+			.room {
+				color: $fg-400;
+				@include truncate;
+			}
+
+			.chevron {
+				flex-shrink: 0;
+				color: $fg-500;
+				opacity: 0.6;
+			}
+
+			.category {
+				color: $fg-500;
+				opacity: 0.7;
+				font-size: 0.9em;
+				@include truncate;
+			}
+		}
+	}
+
+	.item.section-header {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		margin: 6px 0 2px;
+		padding: 2px 6px;
+		background: $bg-200;
+		color: $fg-500;
+		font-size: 0.7em;
+		font-weight: 600;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		cursor: default;
+	}
+
+	.empty {
+		height: 100%;
+		display: grid;
+		place-items: center;
+		font-size: 0.85em;
+	}
+
+	.help {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 6px 4px;
+		font-size: 0.85em;
+		color: $fg-400;
+
+		kbd {
+			margin-right: 4px;
+		}
+	}
+
+	kbd {
+		font-family: inherit;
+		font-size: 0.9em;
+		padding: 0 3px;
+		margin-right: 2px;
+		border: solid 1px $sep-400;
+		border-radius: 3px;
+		background: $bg-150;
+		color: $fg-400;
+	}
+
+	.hint {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+		padding-top: 6px;
+		border-top: solid 1px $sep-300;
+		font-size: 0.75em;
 	}
 
 	.item-icon {
@@ -2854,7 +2942,7 @@ button.big {
 	}
 
 	.item.selected,
-	.item:hover {
+	.item:not(.section-header):hover {
 		background: #fff2;
 	}
 }
