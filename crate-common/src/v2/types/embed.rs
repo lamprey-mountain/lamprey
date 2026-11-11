@@ -6,6 +6,10 @@ use crate::{
     v2::types::{EmbedId, media::Media},
 };
 
+/// the maximum length of a url in an embed
+#[cfg(any(feature = "utoipa", feature = "validator"))]
+const MAX_URL_LENGTH: usize = 2048;
+
 /// what type of embed this is for
 #[record]
 #[derive(Default, PartialEq, Eq)]
@@ -36,13 +40,16 @@ pub struct Embed {
     pub ty: EmbedType,
 
     /// the url this embed was requested for
-    // FIXME: validate length
+    #[schema(max_length = 2048)]
+    #[validate(custom(function = "validate_url_length"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<Url>,
 
     /// The final resolved url, after redirects and canonicalization
     ///
     /// If this is `None`, its the same as `url`.
+    #[schema(max_length = 2048)]
+    #[validate(custom(function = "validate_url_length"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub canonical_url: Option<Url>,
 
@@ -79,7 +86,8 @@ pub struct EmbedAuthor {
     #[validate(length(min = 1, max = 256))]
     pub name: String,
 
-    // FIXME: validate length
+    #[schema(max_length = 2048)]
+    #[validate(custom(function = "validate_url_length"))]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<Url>,
 
@@ -105,14 +113,74 @@ pub struct EmbedSite {
 #[record]
 pub struct EmbedGenerate {
     #[schema(min_length = 1, max_length = 8)]
-    #[validate(length(min = 1, max = 8))]
+    #[validate(length(min = 1, max = 8), custom(function = "validate_urls_length"))]
     pub urls: Vec<Url>,
+}
+
+#[cfg(feature = "validator")]
+fn validate_url_length(url: &impl AsRef<str>) -> Result<(), validator::ValidationError> {
+    if url.as_ref().len() > MAX_URL_LENGTH {
+        let mut err = validator::ValidationError::new("url_length");
+        err.add_param("max".into(), &MAX_URL_LENGTH);
+        return Err(err);
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "validator")]
+fn validate_urls_length(urls: &[Url]) -> Result<(), validator::ValidationError> {
+    for url in urls {
+        validate_url_length(url)?;
+    }
+
+    Ok(())
 }
 
 /// a request to create a new embed
 #[record]
 pub struct EmbedCreate {
     // TODO
+}
+
+#[cfg(all(test, feature = "validator"))]
+mod tests {
+    use super::*;
+    use validator::Validate;
+
+    fn url_of_length(len: usize) -> Url {
+        let base = "https://example.com/";
+        Url::parse(&format!("{base}{}", "a".repeat(len - base.len()))).unwrap()
+    }
+
+    #[test]
+    fn embed_author_url_length() {
+        let author = EmbedAuthor {
+            name: "author".to_string(),
+            url: Some(url_of_length(MAX_URL_LENGTH)),
+            avatar: None,
+        };
+        assert!(author.validate().is_ok());
+
+        let author = EmbedAuthor {
+            url: Some(url_of_length(MAX_URL_LENGTH + 1)),
+            ..author
+        };
+        assert!(author.validate().is_err());
+    }
+
+    #[test]
+    fn embed_generate_url_length() {
+        let req = EmbedGenerate {
+            urls: vec![url_of_length(MAX_URL_LENGTH)],
+        };
+        assert!(req.validate().is_ok());
+
+        let req = EmbedGenerate {
+            urls: vec![url_of_length(MAX_URL_LENGTH + 1)],
+        };
+        assert!(req.validate().is_err());
+    }
 }
 
 // TODO: finish impl and use
