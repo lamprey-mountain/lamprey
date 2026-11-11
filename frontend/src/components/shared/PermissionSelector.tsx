@@ -53,6 +53,10 @@ interface PermissionSelectorProps {
 	context?: "default" | "overwrite";
 	search?: string;
 	onSearch?: (search: string) => void;
+	/** disable every toggle */
+	canEdit?: boolean;
+	/** disable toggles for individual permissions */
+	canChange?: (perm: Permission) => boolean;
 }
 
 const permissionGroupOrder = (ty: RoomType) => {
@@ -155,6 +159,11 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 								<ul>
 									<For each={perms}>
 										{(p) => {
+											const canChange = createMemo(
+												() =>
+													props.canEdit !== false &&
+													(!props.canChange || props.canChange(p.id)),
+											);
 											const state = createMemo(
 												() => props.permStates[p.id] || "inherit",
 											);
@@ -176,7 +185,10 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 													);
 
 											return (
-												<li class="permission-item">
+												<li
+													class="permission-item"
+													classList={{ disabled: !canChange() }}
+												>
 													<div class="permission-info">
 														<div class="permission-name">{name}</div>
 														{props.showDescriptions && (
@@ -193,7 +205,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 															classList={{
 																"state-allow": state() === "allow",
 															}}
-															onClick={() => props.onPermChange(p.id, "allow")}
+															onClick={() => canChange() && props.onPermChange(p.id, "allow")}
 															title="Allow"
 														>
 															<img
@@ -208,7 +220,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 																"state-inherit": state() === "inherit",
 															}}
 															onClick={() =>
-																props.onPermChange(p.id, "inherit")
+																canChange() && props.onPermChange(p.id, "inherit")
 															}
 															title="Default"
 														>
@@ -223,7 +235,7 @@ export const PermissionSelector: Component<PermissionSelectorProps> = (
 															classList={{
 																"state-deny": state() === "deny",
 															}}
-															onClick={() => props.onPermChange(p.id, "deny")}
+															onClick={() => canChange() && props.onPermChange(p.id, "deny")}
 															title="Deny"
 														>
 															<img

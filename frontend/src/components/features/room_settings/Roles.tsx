@@ -21,7 +21,9 @@ import { Savebar } from "@/atoms/Savebar";
 import { Search } from "@/atoms/Search";
 import { PermissionSelector } from "@/components/shared/PermissionSelector";
 import { Avatar } from "@/components/shared/User";
+import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
+import { usePermissions } from "@/hooks/usePermissions";
 import { permissions } from "@/lib/permissions";
 import type { RoomT } from "@/types";
 import { Copyable } from "@/utils/general";
@@ -55,6 +57,18 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	const api2 = useApi();
 	const roles2 = useRoles();
 	const [, modalCtl] = useModals();
+	const currentUser = useCurrentUser();
+	const user_id = () => currentUser()?.id;
+	const perms = usePermissions(
+		user_id,
+		() => props.room.id,
+		() => undefined,
+	);
+
+	const canEditRole = (role: Role) =>
+		perms.has("RoleManage") &&
+		(props.room.owner_id === user_id() ||
+			perms.permissions().rank > (role.position ?? 0));
 
 	const [localRoles, setLocalRoles] = createStore<Role[]>([]);
 	const [isOrderDirty, setIsOrderDirty] = createSignal(false);
@@ -97,6 +111,7 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	});
 
 	const createRole = () => {
+		if (!perms.has("RoleManage")) return;
 		modalCtl.prompt("role name?", (name) => {
 			if (!name) return;
 			api2.client.http.POST("/api/v1/room/{room_id}/role", {
@@ -155,7 +170,12 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 				<h2>roles</h2>
 				<header class="roles-header">
 					<Search placeholder="Search roles..." onInput={setSearch} />
-					<button type="button" class="button big primary" onClick={createRole}>
+					<button
+						type="button"
+						class="button big primary"
+						disabled={!perms.has("RoleManage")}
+						onClick={createRole}
+					>
 						create role
 					</button>
 				</header>
@@ -165,6 +185,7 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 						roles={localRoles}
 						setRoles={setLocalRoles}
 						edit={edit}
+						canEditRole={canEditRole}
 					/>
 				</Show>
 				<Savebar
@@ -172,6 +193,7 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 					onSave={saveOrder}
 					show={isOrderDirty()}
 					saving={savingOrder()}
+					disabled={!perms.has("RoleManage")}
 				/>
 			</div>
 			<Show when={roles2.cache.has(edit.role.id!)}>
@@ -182,7 +204,12 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 					maxWidth={800}
 					classList={{ "role-edit-resizable": true }}
 				>
-					<RoleEditor room={props.room} edit={edit} />
+					<RoleEditor
+						room={props.room}
+						edit={edit}
+						canEditRole={canEditRole}
+						canChangePermission={(p) => perms.has(p)}
+					/>
 				</Resizable>
 			</Show>
 		</div>
@@ -194,6 +221,7 @@ const RoleList = (props: {
 	roles: Role[];
 	setRoles: import("solid-js/store").SetStoreFunction<Role[]>;
 	edit: RoleEditState;
+	canEditRole: (role: Role) => boolean;
 }) => {
 	const filteredRoles = createMemo(() => {
 		return props.roles.filter((i) => i.name.includes(props.search));
@@ -223,7 +251,7 @@ const RoleList = (props: {
 			return;
 		}
 		const role = props.roles.find((r) => r.id === id);
-		if (role?.id === role?.room_id) {
+		if (!role || role.id === role.room_id || !props.canEditRole(role)) {
 			setTarget(null);
 			return;
 		}
@@ -255,7 +283,7 @@ const RoleList = (props: {
 		}
 
 		const toRole = props.roles[toIndex];
-		if (toRole.id === toRole.room_id) return;
+		if (toRole.id === toRole.room_id || !props.canEditRole(toRole)) return;
 
 		if (after) toIndex++;
 		if (fromIndex < toIndex) toIndex--;
@@ -316,7 +344,7 @@ const RoleList = (props: {
 				{(i) => (
 					<li
 						data-role-id={i.id}
-						draggable={i.id !== i.room_id}
+						draggable={i.id !== i.room_id && props.canEditRole(i)}
 						onDragStart={handleDragStart}
 						onDragOver={handleDragOver}
 						onDrop={handleDrop}
@@ -399,13 +427,21 @@ const RoleList = (props: {
 	);
 };
 
-const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
+const RoleEditor = (props: {
+	room: RoomT;
+	edit: RoleEditState;
+	canEditRole: (role: Role) => boolean;
+	canChangePermission: (perm: Permission) => boolean;
+}) => {
 	const api2 = useApi();
 	const roles2 = useRoles();
 	const users2 = useUsers();
 	const roomMembers2 = useRoomMembers();
 	const [, modalCtl] = useModals();
 	const [activeTab, setActiveTab] = createSignal<"role" | "members">("role");
+	const canEdit = createMemo(() =>
+		props.canEditRole(props.edit.role as Role),
+	);
 	const [memberSearch, setMemberSearch] = createSignal("");
 	const [savingRole, setSavingRole] = createSignal(false);
 
@@ -433,6 +469,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	});
 
 	const addMember = () => {
+		if (!canEdit()) return;
 		modalCtl.open({
 			type: "role_members",
 			room_id: props.room.id,
@@ -441,10 +478,12 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	};
 
 	const removeMember = (user_id: string) => {
+		if (!canEdit()) return;
 		roles2.removeMember(props.room.id, props.edit.role.id!, user_id);
 	};
 
 	const deleteRole = (role_id: string) => () => {
+		if (!canEdit()) return;
 		modalCtl.confirm("are you sure?", async (confirmed) => {
 			if (!confirmed) return;
 			await roles2.deleteRole(props.room.id, role_id);
@@ -453,6 +492,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 
 	const saveRole = async () => {
 		const r = props.edit.role as Role;
+		if (!canEdit()) return;
 		if (!isDirty(r, roles2.cache.get(props.edit.role.id!)!)) return;
 		setSavingRole(true);
 		try {
@@ -476,6 +516,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				<button
 					type="button"
 					class="button danger"
+					disabled={!canEdit()}
 					onClick={deleteRole(props.edit.role.id!)}
 				>
 					delete role
@@ -507,6 +548,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				<input
 					type="text"
 					value={props.edit.name()}
+					disabled={!canEdit()}
 					onInput={(e) => {
 						props.edit.setRole((r) => ({
 							...r,
@@ -516,6 +558,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 				/>
 				<h3>description</h3>
 				<textarea
+					disabled={!canEdit()}
 					onInput={(e) => {
 						props.edit.setRole((r) => ({
 							...r,
@@ -553,6 +596,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 						<CheckboxOption
 							id={`role-${props.edit.role.id}-${i.key}`}
 							checked={(props.edit.role as Role)[i.key]}
+							disabled={!canEdit()}
 							onChange={(checked) => {
 								props.edit.setRole((r) => ({
 									...r,
@@ -577,7 +621,12 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					<h3>permissions</h3>
 				</div>
 
-				<RolePermissionSelector room={props.room} edit={props.edit} />
+				<RolePermissionSelector
+					room={props.room}
+					edit={props.edit}
+					canEdit={canEdit()}
+					canChangePermission={props.canChangePermission}
+				/>
 			</Show>
 			<Show when={activeTab() === "members"}>
 				<div class="members-tab">
@@ -590,6 +639,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 						<button
 							type="button"
 							class="button primary"
+							disabled={!canEdit()}
 							onClick={addMember}
 						>
 							add member
@@ -609,6 +659,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 										<button
 											type="button"
 											class="button"
+											disabled={!canEdit()}
 											onClick={() => removeMember(member.user_id)}
 										>
 											remove
@@ -626,6 +677,7 @@ const RoleEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 					roles2.cache.get(props.edit.role.id!)!,
 				)}
 				saving={savingRole()}
+				disabled={!canEdit()}
 				onCancel={() => {
 					props.edit.setRole({ id: null } as unknown as Role);
 				}}
@@ -650,6 +702,8 @@ function useRoleEditor(initial: Role | null) {
 const RolePermissionSelector = (props: {
 	room: RoomT;
 	edit: RoleEditState;
+	canEdit: boolean;
+	canChangePermission: (perm: Permission) => boolean;
 }) => {
 	const { t } = useCtx();
 	const [permSearch, setPermSearch] = createSignal("");
@@ -717,6 +771,8 @@ const RolePermissionSelector = (props: {
 			onPermChange={handlePermChange}
 			showDescriptions={true}
 			roomType={props.room.type}
+			canEdit={props.canEdit}
+			canChange={props.canChangePermission}
 		/>
 	);
 };

@@ -754,6 +754,7 @@
 	& > .content > .inner {
 		display: flex;
 		padding: 0;
+		background-color: $bg-200;
 		border: solid 1px $sep-300;
 		max-width: initial;
 		width: 80vw; // TODO: full width on mobile
@@ -3414,6 +3415,14 @@ button.link {
 		border-radius: 4px;
 		flex-wrap: wrap;
 
+		&.disabled {
+			opacity: 0.5;
+
+			.permission-controls {
+				pointer-events: none;
+			}
+		}
+
 		.permission-info {
 			flex: 1;
 			min-width: 0;
@@ -3445,7 +3454,7 @@ button.link {
 				cursor: pointer;
 				color: white;
 
-				&:hover {
+				&:not(:disabled):hover {
 					background-color: $bg-300;
 				}
 
