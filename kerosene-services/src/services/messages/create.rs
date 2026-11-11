@@ -40,6 +40,7 @@ struct MessageOperation<'a, S> {
 pub enum Author {
     User(Identity),
     Webhook { user: User },
+    Application { user: User },
     Server,
 }
 
@@ -48,6 +49,7 @@ impl Author {
         match self {
             Self::User(i) => i.user().map(|u| u.id),
             Self::Webhook { user } => Some(user.id),
+            Self::Application { user } => Some(user.id),
             Self::Server => None,
         }
     }
@@ -410,6 +412,28 @@ impl ServiceMessages {
     }
 
     #[tracing::instrument(
+        name = "messages.create.application",
+        skip_all,
+        fields(channel_id = %channel_id, application_user_id = %application_user_id),
+        err,
+    )]
+    pub async fn create_as_application(
+        &self,
+        channel_id: ChannelId,
+        application_user_id: UserId,
+        json: MessageCreate,
+        interaction: Option<MessageInteraction>,
+        nonce: Option<String>,
+    ) -> Result<Message> {
+        let srv = self.globals.services();
+        let user = srv.users.get(application_user_id, None).await?;
+        let author = Author::Application { user };
+
+        self.create_as_author(channel_id, author, json, interaction, nonce)
+            .await
+    }
+
+    #[tracing::instrument(
         name = "messages.create.webhook",
         skip_all,
         fields(channel_id = %channel_id, webhook_user_id = %webhook_user_id),
@@ -423,20 +447,35 @@ impl ServiceMessages {
         interaction: Option<MessageInteraction>,
     ) -> Result<Message> {
         let srv = self.globals.services();
-        let channel = srv.channels.get(channel_id, None).await?;
         let user = srv.users.get(webhook_user_id, None).await?;
+        let author = Author::Webhook { user };
+
+        self.create_as_author(channel_id, author, json, interaction, None)
+            .await
+    }
+
+    async fn create_as_author(
+        &self,
+        channel_id: ChannelId,
+        author: Author,
+        json: MessageCreate,
+        interaction: Option<MessageInteraction>,
+        nonce: Option<String>,
+    ) -> Result<Message> {
+        let srv = self.globals.services();
+        let channel = srv.channels.get(channel_id, None).await?;
 
         let op = MessageOperation {
             channel,
             message_id: MessageId::new(),
-            author: Author::Webhook { user },
+            author,
             kind: MessageOperationKind::MessageCreate(MessageCreateOperation { json }),
-            nonce: None,
+            nonce,
             stage: New {
                 header_timestamp: None,
                 interaction,
             },
-            // TODO: creating threads from webhooks
+            // TODO: creating threads from applications and webhooks
             is_thread_initial: false,
             _ph: PhantomData,
         };
@@ -446,6 +485,29 @@ impl ServiceMessages {
         let op = self.commit(op).await?;
         let op = self.finalize(op).await?;
         Ok(op.stage.message)
+    }
+
+    /// edit a message as the application that owns it
+    #[tracing::instrument(
+        name = "messages.edit.application",
+        skip_all,
+        fields(channel_id = %channel_id, message_id = %message_id, application_user_id = %application_user_id),
+        err,
+    )]
+    pub async fn edit_as_application(
+        &self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+        application_user_id: UserId,
+        json: MessagePatch,
+        header_timestamp: Option<Time>,
+    ) -> Result<(StatusCode, Message)> {
+        let srv = self.globals.services();
+        let user = srv.users.get(application_user_id, None).await?;
+        let author = Author::Application { user };
+
+        self.edit_as_author(channel_id, message_id, author, json, header_timestamp)
+            .await
     }
 
     #[tracing::instrument(
@@ -466,12 +528,29 @@ impl ServiceMessages {
         json: MessagePatch,
     ) -> Result<(StatusCode, Message)> {
         let srv = self.globals.services();
-        let channel = srv.channels.get(channel_id, None).await?;
         let user = srv.users.get(webhook_user_id, None).await?;
+        let author = Author::Webhook { user };
+
+        self.edit_as_author(channel_id, message_id, author, json, None)
+            .await
+    }
+
+    async fn edit_as_author(
+        &self,
+        channel_id: ChannelId,
+        message_id: MessageId,
+        author: Author,
+        json: MessagePatch,
+        header_timestamp: Option<Time>,
+    ) -> Result<(StatusCode, Message)> {
+        let srv = self.globals.services();
+        let channel = srv.channels.get(channel_id, None).await?;
+        let Some(author_id) = author.user_id() else {
+            return Err(Error::BadStatic("author has no user id"));
+        };
 
         let original = self.get(channel_id, message_id, None).await?;
-
-        if original.author_id != webhook_user_id {
+        if original.author_id != author_id {
             return Err(Error::ApiError(ApiError::from_code(
                 ErrorCode::UnknownMessage,
             )));
@@ -480,10 +559,13 @@ impl ServiceMessages {
         let op = MessageOperation {
             channel,
             message_id,
-            author: Author::Webhook { user },
+            author,
             kind: MessageOperationKind::MessageEdit(MessageEditOperation { json, original }),
             nonce: None,
-            stage: New::default(),
+            stage: New {
+                header_timestamp,
+                interaction: None,
+            },
             is_thread_initial: false,
             _ph: PhantomData,
         };
@@ -791,8 +873,8 @@ impl ServiceMessages {
                 )
                 .await
             }
-            Author::Webhook { .. } => {
-                // 1. webhooks bypass permission checks (for now)
+            Author::Webhook { .. } | Author::Application { .. } => {
+                // 1. webhooks and applications bypass permission checks (for now)
                 Ok((
                     MessagePermissions {
                         allow_external_emoji: true,
