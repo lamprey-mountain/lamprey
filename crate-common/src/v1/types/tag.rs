@@ -138,6 +138,18 @@ pub struct TagListQuery {
     pub archived: Option<bool>,
 }
 
+/// query a list of tag ids into full tag objects
+#[record]
+pub struct TagQuery {
+    #[validate(length(min = 1, max = 1024))]
+    pub tag_ids: Vec<TagId>,
+}
+
+#[record]
+pub struct TagQueryResponse {
+    pub tags: Vec<Tag>,
+}
+
 export_models!(
     Tag,
     TagMinimal,
@@ -146,4 +158,6 @@ export_models!(
     TagDeleteQuery,
     TagSearchQuery,
     TagListQuery,
+    TagQuery,
+    TagQueryResponse,
 );
