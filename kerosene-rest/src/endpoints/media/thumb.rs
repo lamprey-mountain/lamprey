@@ -12,9 +12,13 @@ async fn get(req: Req<routes::thumb_get::Endpoint>) -> Result<routes::thumb_get:
     let srv = req.services();
     let media_id = req.inner().media_id;
     let query = &req.inner().query;
+    let wait = req.inner().media_query.wait;
 
     let mut media_item = srv.media.get(media_id).await.cast_internal()?;
-    let media = media_item.ready().await;
+    let media = media_item
+        .ready_opt(wait)
+        .await
+        .ok_or_else(|| ApiError::from_code(ErrorCode::MediaNotReady))?;
 
     let paths = MediaPaths::new("media/");
     let thumb_sizes = &globals.config().media.thumb_sizes;

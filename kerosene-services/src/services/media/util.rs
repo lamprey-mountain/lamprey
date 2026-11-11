@@ -177,6 +177,20 @@ impl MediaItem {
         self.media()
     }
 
+    /// return the media if it is ready, waiting for it if `wait` is true
+    ///
+    /// returns `None` if the media is not ready and `wait` is false
+    pub async fn ready_opt(&mut self, wait: bool) -> Option<Arc<Media>> {
+        if wait {
+            return Some(self.ready().await);
+        }
+
+        match self.state() {
+            MediaItemState::Ready => Some(self.media()),
+            _ => None,
+        }
+    }
+
     /// download a file from the cdn to in memory bytes
     pub async fn download_bytes(&self) -> Result<Bytes> {
         self.inner

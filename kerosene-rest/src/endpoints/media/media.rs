@@ -15,9 +15,13 @@ async fn get(req: Req<routes::media_get::Endpoint>) -> Result<routes::media_get:
     let globals = req.globals();
     let srv = req.services();
     let media_id = req.inner().media_id;
-    let _wait = req.inner().query.wait;
+    let wait = req.inner().query.wait;
 
-    let media = srv.media.get(media_id).await.cast_internal()?.ready().await;
+    let mut media_item = srv.media.get(media_id).await.cast_internal()?;
+    let media = media_item
+        .ready_opt(wait)
+        .await
+        .ok_or_else(|| ApiError::from_code(ErrorCode::MediaNotReady))?;
     let meta = calculate_response_metadata(req.headers(), &MediaInfo::Media(&media))?;
     let body = if meta.unmodified || req.method() == http::Method::HEAD {
         Body::empty()
@@ -59,9 +63,13 @@ async fn get_filename(
     let srv = req.services();
     let media_id = req.inner().media_id;
     let filename = &req.inner().filename;
-    let _wait = req.inner().query.wait;
+    let wait = req.inner().query.wait;
 
-    let media = srv.media.get(media_id).await.cast_internal()?.ready().await;
+    let mut media_item = srv.media.get(media_id).await.cast_internal()?;
+    let media = media_item
+        .ready_opt(wait)
+        .await
+        .ok_or_else(|| ApiError::from_code(ErrorCode::MediaNotReady))?;
     if &media.filename != filename {
         return Err(ApiError::from_code(ErrorCode::UnknownMedia).into());
     }

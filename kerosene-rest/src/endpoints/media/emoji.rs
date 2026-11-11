@@ -13,11 +13,15 @@ async fn get(req: Req<routes::emoji_get::Endpoint>) -> Result<routes::emoji_get:
     let srv = req.services();
     let emoji_id = req.inner().emoji_id;
     let query = &req.inner().query;
+    let wait = req.inner().media_query.wait;
 
     let emoji = srv.emoji.get(emoji_id).await.cast_internal()?;
     let media_id = emoji.media_id;
     let mut media_item = srv.media.get(media_id).await.cast_internal()?;
-    let media = media_item.ready().await;
+    let media = media_item
+        .ready_opt(wait)
+        .await
+        .ok_or_else(|| ApiError::from_code(ErrorCode::MediaNotReady))?;
 
     let paths = MediaPaths::new("media/");
     let thumb_sizes = &globals.config().media.thumb_sizes;

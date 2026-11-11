@@ -20,6 +20,7 @@ impl ErrorCode {
             ErrorCode::UnknownMessageVersion => StatusCode::NOT_FOUND,
             ErrorCode::UnknownUser => StatusCode::NOT_FOUND,
             ErrorCode::UnknownMedia => StatusCode::NOT_FOUND,
+            ErrorCode::MediaNotReady => StatusCode::CONFLICT,
             ErrorCode::UnknownInvite => StatusCode::NOT_FOUND,
             ErrorCode::UnknownApplication => StatusCode::NOT_FOUND,
             ErrorCode::UnknownHarvest => StatusCode::NOT_FOUND,

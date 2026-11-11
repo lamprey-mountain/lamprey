@@ -102,9 +102,10 @@ cdn routes:
 all of these support `HEAD`. file, thumb, and gifv routes support single byte
 ranges, weak etags, and `If-None-Match` / `If-Modified-Since` / `If-Range`.
 
-both the file and thumbnail routes accept `?wait=true|false`. the option is
-defined but currently ignored: these routes always wait for processing to
-finish. media that has not finished processing will block the request.
+the file, thumbnail, and emoji routes accept `?wait=true|false` (default
+`true`). with `wait=true`, media that is still being transferred or processed
+blocks the request until it is ready. with `wait=false`, the request returns
+`409 Conflict` (`MediaNotReady`) instead of blocking.
 
 thumbnail sizes are configured by the server. if the requested size does not
 exist, the server picks the smallest configured size that is at least as large,

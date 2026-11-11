@@ -153,6 +153,10 @@ pub enum ErrorCode {
     #[error("unknown media")]
     UnknownMedia,
 
+    /// media is still being processed
+    #[error("media is still being processed")]
+    MediaNotReady,
+
     /// unknown invite
     #[error("unknown invite")]
     UnknownInvite,
