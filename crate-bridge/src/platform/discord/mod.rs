@@ -289,13 +289,28 @@ impl Discord {
                 );
             }
             GatewayEvent::MessageUpdate(event) => {
-                let new_message = (*event).0;
+                let update = (*event).0;
 
-                if let Some(webhook_id) = new_message.webhook_id {
+                if let Some(webhook_id) = update.webhook_id {
                     if self.webhook_lookup.contains_key(&webhook_id) {
                         return;
                     }
                 }
+
+                // update payloads can be partial, so refetch the full message
+                let new_message = match self.http.message(update.channel_id, update.id).await {
+                    Ok(response) => match response.model().await {
+                        Ok(message) => message,
+                        Err(e) => {
+                            warn!(message_id = %update.id, "failed to fetch updated message: {e:?}");
+                            update
+                        }
+                    },
+                    Err(e) => {
+                        warn!(message_id = %update.id, "failed to fetch updated message: {e:?}");
+                        update
+                    }
+                };
 
                 self.route_portal_event(
                     new_message.channel_id,
