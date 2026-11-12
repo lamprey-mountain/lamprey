@@ -12,9 +12,11 @@ use common::v1::types::{MessageCall, MessageSync, MessageType};
 use dashmap::{DashMap, DashSet};
 use lamprey_backend_data_postgres::{DbMessageCreate, DbMessageUpdate};
 use std::{sync::Arc, time::Duration};
+use tokio::time::Instant;
 use tracing::error;
 
 const CALL_CLEANUP_TIMEOUT: Duration = Duration::from_secs(300);
+const AUDIENCE_UPDATE_INTERVAL: Duration = Duration::from_secs(30);
 
 pub struct CallHandleInner {
     pub call: Call,
@@ -25,6 +27,13 @@ pub struct CallHandleInner {
 }
 
 pub type CallHandle = Arc<CallHandleInner>;
+
+#[derive(Default)]
+pub struct AudienceUpdate {
+    last_broadcast_at: Option<Instant>,
+    last_count: Option<u64>,
+    pending: Option<tokio::task::AbortHandle>,
+}
 
 impl CallHandleInner {
     #[inline]
@@ -111,7 +120,7 @@ impl ServiceVoice {
             inner: CallMetadata {
                 topic: params.topic,
                 created_at: Time::now_utc(),
-                audience_count: Some(0),
+                audience_count: (channel.ty == ChannelType::Broadcast).then_some(0),
             },
         };
 
@@ -217,6 +226,12 @@ impl ServiceVoice {
                 task.abort();
             }
 
+            if let Some((_, audience)) = self.audience_updates.remove(&channel_id) {
+                if let Some(task) = audience.pending {
+                    task.abort();
+                }
+            }
+
             if let Some(message_id) = handle.message_id {
                 // TODO: split out this code
                 let globals = self.state.clone();
@@ -274,6 +289,160 @@ impl ServiceVoice {
         }
 
         false
+    }
+
+    /// update a broadcast call's audience count
+    ///
+    /// recomputes the count from active voice states and broadcasts `CallUpdate`,
+    /// throttled to at most once every 30 seconds per channel.
+    pub async fn call_update_audience(&self, channel_id: ChannelId) -> Result<()> {
+        let audience_count = {
+            let Some(handle) = self.call_get(channel_id) else {
+                return Ok(());
+            };
+
+            handle
+                .voice_states
+                .iter()
+                .filter(|state| state.value().inner().suppress)
+                .count() as u64
+        };
+
+        let channel = self.state.services().channels.get(channel_id, None).await?;
+        if channel.ty != ChannelType::Broadcast {
+            return Ok(());
+        }
+
+        self.call_set_audience_count(channel_id, audience_count);
+        self.call_throttle_audience_update(channel_id, audience_count)
+            .await
+    }
+
+    fn call_set_audience_count(&self, channel_id: ChannelId, audience_count: u64) {
+        let Some(mut entry) = self.calls.get_mut(&channel_id) else {
+            return;
+        };
+
+        let handle = entry.value();
+        if handle.call.inner.audience_count == Some(audience_count) {
+            return;
+        }
+
+        let mut call = handle.call.clone();
+        call.inner.audience_count = Some(audience_count);
+
+        *entry.value_mut() = Arc::new(CallHandleInner {
+            call,
+            sfus: handle.sfus.clone(),
+            cleanup_task: handle.cleanup_task.clone(),
+            voice_states: handle.voice_states.clone(),
+            message_id: handle.message_id,
+        });
+    }
+
+    async fn call_throttle_audience_update(
+        &self,
+        channel_id: ChannelId,
+        audience_count: u64,
+    ) -> Result<()> {
+        let now = Instant::now();
+        let mut scheduled = false;
+
+        {
+            let mut entry = self.audience_updates.entry(channel_id).or_default();
+
+            if entry.last_count == Some(audience_count) {
+                if let Some(task) = entry.pending.take() {
+                    task.abort();
+                }
+                return Ok(());
+            }
+
+            if entry.pending.is_some() {
+                return Ok(());
+            }
+
+            let can_broadcast = entry
+                .last_broadcast_at
+                .is_none_or(|last| now.duration_since(last) >= AUDIENCE_UPDATE_INTERVAL);
+
+            if can_broadcast {
+                if let Some(task) = entry.pending.take() {
+                    task.abort();
+                }
+                entry.last_broadcast_at = Some(now);
+                entry.last_count = Some(audience_count);
+            } else if entry.pending.is_none() {
+                let last = entry.last_broadcast_at.expect("call must be broadcast");
+                let delay = AUDIENCE_UPDATE_INTERVAL - now.duration_since(last);
+                let state = self.state.clone();
+
+                let task = tokio::spawn(async move {
+                    tokio::time::sleep(delay).await;
+
+                    let voice = state.services();
+                    if let Err(err) = voice.voice.call_flush_audience_update(channel_id).await {
+                        error!("couldn't update call audience: {err}");
+                    }
+                })
+                .abort_handle();
+
+                entry.pending = Some(task);
+                scheduled = true;
+            }
+
+            drop(entry);
+        }
+
+        if scheduled {
+            return Ok(());
+        }
+
+        self.call_broadcast_audience_update(channel_id).await
+    }
+
+    async fn call_flush_audience_update(&self, channel_id: ChannelId) -> Result<()> {
+        let Some(handle) = self.call_get(channel_id) else {
+            self.audience_updates.remove(&channel_id);
+            return Ok(());
+        };
+
+        let audience_count = handle.call.inner.audience_count.unwrap_or_default();
+
+        let should_broadcast = {
+            let mut entry = self.audience_updates.entry(channel_id).or_default();
+            entry.pending = None;
+
+            if entry.last_count == Some(audience_count) {
+                false
+            } else {
+                entry.last_broadcast_at = Some(Instant::now());
+                entry.last_count = Some(audience_count);
+                true
+            }
+        };
+
+        if should_broadcast {
+            self.call_broadcast_audience_update(channel_id).await?;
+        }
+
+        Ok(())
+    }
+
+    async fn call_broadcast_audience_update(&self, channel_id: ChannelId) -> Result<()> {
+        let Some(handle) = self.call_get(channel_id) else {
+            return Ok(());
+        };
+
+        self.state
+            .messaging()
+            .broadcast_channel(
+                channel_id,
+                MessageSync::CallUpdate {
+                    call: handle.call.clone(),
+                },
+            )
+            .await
     }
 
     /// update a call

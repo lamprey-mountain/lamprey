@@ -242,6 +242,10 @@ impl ServiceVoice {
             )
             .await?;
 
+        if chan.ty == ChannelType::Broadcast {
+            self.call_update_audience(update.channel_id).await?;
+        }
+
         Ok(handle)
     }
 
@@ -361,12 +365,12 @@ impl ServiceVoice {
             )
             .await?;
 
-        if call.voice_states.is_empty() {
-            let srv = self.state.services();
-            let channel = srv.channels.get(channel_id, None).await?;
-            if channel.ty != ChannelType::Broadcast {
-                Box::pin(self.call_delete(channel_id, false)).await;
-            }
+        let srv = self.state.services();
+        let channel = srv.channels.get(channel_id, None).await?;
+        if channel.ty == ChannelType::Broadcast {
+            self.call_update_audience(channel_id).await?;
+        } else if call.voice_states.is_empty() {
+            Box::pin(self.call_delete(channel_id, false)).await;
         }
 
         Ok(())

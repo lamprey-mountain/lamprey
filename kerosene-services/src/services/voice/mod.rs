@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use crate::services::voice::calls::CallHandle;
+use crate::services::voice::calls::{AudienceUpdate, CallHandle};
 use crate::services::voice::sfus::SfuHandle;
 use common::v1::types::voice::messages::SfuCommand;
 use common::v1::types::voice::router::{VoiceRouter, VoiceRouterConfig};
@@ -16,6 +16,7 @@ pub mod voice_state;
 pub struct ServiceVoice {
     pub state: Globals,
     pub calls: DashMap<ChannelId, CallHandle>,
+    pub audience_updates: DashMap<ChannelId, AudienceUpdate>,
     pub sfus: DashMap<SfuId, SfuHandle>,
     pub router: RwLock<VoiceRouter>,
 }
@@ -26,6 +27,7 @@ impl ServiceVoice {
         Self {
             state,
             calls: DashMap::new(),
+            audience_updates: DashMap::new(),
             sfus: DashMap::new(),
             router: RwLock::new(router),
         }
