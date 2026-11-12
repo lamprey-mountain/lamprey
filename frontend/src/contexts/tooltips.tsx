@@ -199,9 +199,16 @@ export const TooltipProvider = (props: ParentProps) => {
 		) as HTMLElement | null;
 		if (!target) return;
 
-		if (target === targetRef()) {
-			considerHiding();
+		if (target !== targetRef()) return;
+
+		// moving between elements inside the target (or into the tooltip
+		// itself) should not dismiss it, otherwise it flickers
+		const related = e.relatedTarget as Node | null;
+		if (related && (target.contains(related) || tipRef()?.contains(related))) {
+			return;
 		}
+
+		considerHiding();
 	};
 
 	document.addEventListener("mouseover", handleMouseOver);
