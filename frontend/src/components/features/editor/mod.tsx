@@ -20,6 +20,7 @@ export {
 export type EditorOptions = {
 	schema?: typeof defaultSchema;
 	createState: (schema: typeof defaultSchema) => EditorState;
+	initialState?: () => EditorState | undefined;
 	nodeViews?: (view: EditorView) => Record<string, NodeViewConstructor>;
 	handleDOMEvents?: ProsemirrorEditorProps["handleDOMEvents"];
 	autofocus?: boolean;
@@ -116,7 +117,7 @@ export const createEditor = (opts: EditorOptions) => {
 				placeholderPlugin = createPlaceholderPlugin();
 				view = new EditorView(editorRef!, {
 					domParser: DOMParser.fromSchema(schema),
-					state: opts.createState(schema),
+					state: opts.initialState?.() ?? opts.createState(schema),
 					nodeViews: opts.nodeViews?.(view!),
 					handleDOMEvents: opts.handleDOMEvents,
 					editable: () => !(props.disabled ?? false),

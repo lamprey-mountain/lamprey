@@ -11,6 +11,7 @@ import { RouteMedia } from "@/components/shared/MediaPage";
 import { RouteVerifyEmail } from "@/components/shared/VerifyEmail";
 import { CurrentUserProvider } from "@/contexts/currentUser.tsx";
 import { DisplayProvider } from "@/contexts/display.tsx";
+import { MessageDraftsProvider } from "@/contexts/drafts";
 import { FocusRingProvider } from "@/contexts/focus-ring";
 import {
 	AutocompleteProvider,
@@ -201,6 +202,7 @@ export const AppProviders: Component<ParentProps<{ resolved: boolean }>> = (
 				[chatctx, ctx],
 				ReadTracking,
 				ModalsProvider,
+				MessageDraftsProvider,
 				Uploads,
 				SearchProvider,
 				VoiceProvider,

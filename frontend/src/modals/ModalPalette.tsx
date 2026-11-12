@@ -10,6 +10,7 @@ import icSettings from "@/assets/settings.png";
 import { Search } from "@/atoms/Search";
 import { ChannelIcon } from "@/components/shared/User";
 import { useCurrentUser } from "@/contexts/currentUser";
+import { useMessageDrafts } from "@/contexts/drafts";
 import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
 import { parsePaletteLink } from "@/lib/palette-link";
@@ -74,6 +75,7 @@ export const ModalPalette = () => {
 	const rooms2 = useRooms();
 	const dms2 = useDms();
 	const ctx = useCtx();
+	const drafts = useMessageDrafts();
 	const navigate = useNavigate();
 	const currentUser = useCurrentUser();
 	const [, modalCtl] = useModals();
@@ -227,17 +229,13 @@ export const ModalPalette = () => {
 				}
 			}
 
-			// Check in-memory drafts from channel contexts (Input.tsx)
-			const chCtx = ctx.channel_contexts.get(channel.id);
-			if (chCtx) {
-				const [chState] = chCtx;
-				const editorState = chState.editor_state;
-				if (editorState?.doc.textContent.trim()) {
-					draftChannels.push({
-						channel,
-						draftTimestamp: 0,
-					});
-				}
+			// Check in-memory message drafts (Input.tsx)
+			const messageDraft = drafts.get(channel.id);
+			if (messageDraft?.state.doc.textContent.trim()) {
+				draftChannels.push({
+					channel,
+					draftTimestamp: messageDraft.updated_at,
+				});
 			}
 		}
 

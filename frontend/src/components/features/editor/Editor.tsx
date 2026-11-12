@@ -48,6 +48,7 @@ export { schema };
 
 export type EditorProps = {
 	initialContent?: () => string;
+	initialState?: () => EditorState | undefined;
 	keymap?: { [key: string]: Command };
 	initialSelection?: "start" | "end";
 	mentionRenderer?: (node: HTMLElement, userId: string) => void;
@@ -149,6 +150,7 @@ export const createEditor = (opts: EditorProps): Editor => {
 	const editor = createBaseEditor({
 		schema,
 		createState: () => createState(),
+		initialState: opts.initialState,
 		nodeViews: createEditorNodeViews(),
 	});
 

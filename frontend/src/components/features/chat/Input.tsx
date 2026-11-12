@@ -5,6 +5,7 @@ import {
 	createEffect,
 	createMemo,
 	createSignal,
+	on,
 	onCleanup,
 	onMount,
 } from "solid-js";
@@ -32,6 +33,7 @@ import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useChannel } from "@/contexts/channel";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
+import { useMessageDrafts } from "@/contexts/drafts";
 import { useFocusRing } from "@/contexts/focus-ring";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal.tsx";
@@ -59,6 +61,7 @@ export function Input(props: InputProps) {
 	const roomMembers2 = useRoomMembers();
 	const store = useApi();
 	const [ch, chUpdate] = useChannel()!;
+	const drafts = useMessageDrafts();
 	const focusRing = useFocusRing();
 	const submit = useMessageSubmit(() => props.channel.id);
 	const reply_id = () => ch.reply_id;
@@ -184,7 +187,7 @@ export function Input(props: InputProps) {
 	};
 
 	const onEmojiPick = (emoji: string, _keepOpen?: boolean) => {
-		const editorState = ch.editor_state;
+		const editorState = drafts.get(props.channel.id)?.state;
 		if (editorState) {
 			const { from, to } = editorState.selection;
 			const customMatch = emoji.match(/^<(a?):([^:]+):([^>]+)>$/);
@@ -202,12 +205,12 @@ export function Input(props: InputProps) {
 				tr = editorState.tr.insertText(emoji, from, to);
 			}
 			const newState = editorState.apply(tr);
-			chUpdate("editor_state", newState);
+			drafts.set(props.channel.id, newState);
 		}
 	};
 
 	const onChange = (state: EditorState) => {
-		chUpdate("editor_state", state);
+		drafts.set(props.channel.id, state);
 		const hasContent = state.doc.textContent.trim().length > 0;
 		if (hasContent) {
 			sendTyping();
@@ -222,7 +225,7 @@ export function Input(props: InputProps) {
 	const messageNav = useMessageNav(() => props.channel.id);
 
 	const commandHint = createMemo(() => {
-		const state = ch.editor_state;
+		const state = drafts.get(props.channel.id)?.state;
 		if (!state) return;
 
 		const args = getCommandArgs(state, slashCommands);
@@ -294,6 +297,7 @@ export function Input(props: InputProps) {
 		autocomplete,
 		slashCommands: () => slashCommands,
 		isValidUser,
+		initialState: () => drafts.get(props.channel.id)?.state,
 		keymap: {
 			Tab: () => {
 				if (ch.messageNavActive) {
@@ -400,11 +404,17 @@ export function Input(props: InputProps) {
 		});
 	});
 
-	createEffect(() => {
-		const state = ch.editor_state;
-		editor.setState(state);
-		editor.focus();
-	});
+	createEffect(
+		on(
+			() => props.channel.id,
+			() => {
+				const state = drafts.get(props.channel.id)?.state;
+				if (!state) return;
+				editor.setState(state);
+				editor.focus();
+			},
+		),
+	);
 
 	createEffect(() => {
 		const rid = reply_id();
