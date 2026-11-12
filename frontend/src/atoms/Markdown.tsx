@@ -79,10 +79,8 @@ function RoleMention(props: { id: string }) {
 	const ctx = useContext(MarkdownContext);
 	const api = useApi();
 	const { setMenu } = useMenu();
-	const role = createMemo(() => {
-		if (!ctx?.channel?.room_id) return null;
-		return api.roles.cache.get(props.id);
-	});
+	const room_id = () => ctx?.channel?.room_id ?? "";
+	const role = api.roles.useRole(room_id, () => props.id);
 
 	return (
 		<span
