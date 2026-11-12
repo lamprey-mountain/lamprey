@@ -43,7 +43,7 @@ impl Transform<'_> {
     /// - `Text` can be appended to other `Text` (content is concatenated)
     /// - `Media` can be appended to `Gallery` (added to items)
     /// - any component can be appended to `Container` and `Section`
-    /// - any component can be appended to `Details`. it will be appended to `details`, not `summary`.
+    /// - any component can be appended to `Details`. it will be appended to `children`, not `summary`.
     /// - valid components can be appended to `Row`
     pub fn append(&mut self, target_id: ComponentId, other: Components) {
         todo!()

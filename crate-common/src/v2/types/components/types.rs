@@ -18,6 +18,7 @@ use crate::{
 ///
 /// - `Container` creates a visually distinct group of other components
 /// - `Section` creates a section without any margin/padding
+/// - `Divider` creates a horizontal separator
 /// - `Details` creates a collapseable section
 /// - `Form` creates a form that can be filled out and submitted
 /// - `Row` creates a container that arranges components horizontally
@@ -59,6 +60,7 @@ pub enum ComponentType {
     // layout
     Container(Container),
     Section(Section),
+    Divider(Divider),
     Details(Details),
     Form(Form),
     Row(Row),
@@ -168,17 +170,28 @@ pub struct Details {
     pub open: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
-    /// the first child is the summary
+    /// the always-visible summary
+    pub summary: Vec<ComponentId>,
+    /// the collapsible body
     pub children: Vec<ComponentId>,
 }
 
 /// a section without any margin/padding
 #[record]
 pub struct Section {
+    pub components: Vec<ComponentId>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
-    pub components: Vec<ComponentId>,
+
+    /// hide the contents behind a spoiler until clicked
+    #[serde(default)]
+    pub spoiler: bool,
 }
+
+/// a horizontal separator
+#[record]
+pub struct Divider {}
 
 /// a semantic grouping of input elements that can be submitted together
 ///
@@ -196,6 +209,21 @@ pub struct Form {
 pub struct Row {
     // TODO: maybe allow other component types?
     pub components: Vec<ComponentId>,
+
+    /// how the components are distributed horizontally
+    #[serde(default)]
+    pub justify: Justify,
+}
+
+/// horizontal distribution of a row's components
+#[record]
+#[derive(Default, Copy, PartialEq, Eq)]
+pub enum Justify {
+    #[default]
+    Start,
+    Center,
+    End,
+    Between,
 }
 
 /// display a single piece of media
@@ -257,6 +285,10 @@ pub struct Container {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<Color>,
+
+    /// hide the contents behind a spoiler until clicked
+    #[serde(default)]
+    pub spoiler: bool,
 }
 
 impl ComponentType {

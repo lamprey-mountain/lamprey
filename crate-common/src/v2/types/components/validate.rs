@@ -311,10 +311,14 @@ impl ComponentType {
                 }
             }
             ComponentType::Details(details) => {
+                self.validate_child_ids(&details.summary, "summary", state);
                 self.validate_child_ids(&details.children, "children", state);
             }
             ComponentType::Section(section) => {
                 self.validate_child_ids(&section.components, "components", state);
+            }
+            ComponentType::Divider(_) => {
+                // nothing to validate
             }
             ComponentType::Form(form) => {
                 state.enter("custom_id", |s| s.validate_custom_id(&form.custom_id));

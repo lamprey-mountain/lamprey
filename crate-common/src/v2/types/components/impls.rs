@@ -124,6 +124,7 @@ impl Components {
             match &mut comp.ty {
                 ComponentType::Container(container) => container.components.retain(|c| *c != id),
                 ComponentType::Details(details) => {
+                    details.summary.retain(|c| *c != id);
                     details.children.retain(|c| *c != id);
                 }
                 ComponentType::Section(section) => section.components.retain(|c| *c != id),
@@ -174,7 +175,7 @@ impl Components {
     /// - `Text` can be appended to other `Text` (content is concatenated)
     /// - `Media` can be appended to `Gallery` (added to items)
     /// - any component can be appended to `Container` and `Section`
-    /// - any component can be appended to `Details`. it will be appended to `details`, not `summary`.
+    /// - any component can be appended to `Details`. it will be appended to `children`, not `summary`.
     /// - valid components can be appended to `Row`
     pub fn append(&mut self, target_id: ComponentId, other: Components) -> ApiResult<()> {
         let mut id_allocator = IdAllocator::new();
@@ -293,6 +294,7 @@ impl Components {
                 row.components = clone_children(&row.components);
             }
             ComponentType::Details(details) => {
+                details.summary = clone_children(&details.summary);
                 details.children = clone_children(&details.children);
             }
             _ => {}
@@ -374,6 +376,11 @@ impl Components {
                     if let Some(pos) = details.children.iter().position(|c| *c == target_id) {
                         details
                             .children
+                            .splice(pos..pos + 1, replacement_ids.clone());
+                        true
+                    } else if let Some(pos) = details.summary.iter().position(|c| *c == target_id) {
+                        details
+                            .summary
                             .splice(pos..pos + 1, replacement_ids.clone());
                         true
                     } else {
@@ -524,8 +531,9 @@ impl<'c> ComponentRef<'c> {
                 .collect::<Vec<_>>()
                 .into_iter(),
             ComponentType::Details(details) => details
-                .children
+                .summary
                 .iter()
+                .chain(details.children.iter())
                 .map(|id| self.components.get(*id).unwrap())
                 .collect::<Vec<_>>()
                 .into_iter(),
@@ -555,8 +563,9 @@ impl<'c> ComponentRef<'c> {
                 .iter()
                 .fold(init, |i, c| f(i, self.components.get(*c).unwrap())),
             ComponentType::Details(details) => details
-                .children
+                .summary
                 .iter()
+                .chain(details.children.iter())
                 .fold(init, |i, c| f(i, self.components.get(*c).unwrap())),
             _ => init,
         }

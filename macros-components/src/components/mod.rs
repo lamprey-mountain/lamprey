@@ -159,6 +159,7 @@ fn map_component_type(name: Ident) -> Ident {
         "container" => "Container",
         "text" => "Text",
         "details" => "Details",
+        "divider" => "Divider",
         "section" => "Section",
         "form" => "Form",
         "media" => "Media",
