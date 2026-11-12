@@ -1,26 +1,52 @@
 @use "./util.scss" as *;
 
 .room-settings-members {
-	& header {
-		display: flex;
+	display: flex;
+	height: 100%;
+	width: 100%;
 
-		& .name {
-			width: 224px;
-			margin-left: 36px;
-		}
+	// the scrollable pane spans the full width so its scrollbar sits on the
+	// right edge; the content itself stays narrower and left aligned
+	& .member-main {
+		flex: 1;
 
-		& .joined {
-			width: 96px;
+		& > * {
+			max-width: 760px;
 		}
 	}
 
-	& > ul > li {
+	& .member-main,
+	& .member-panel {
+		padding: 0.5rem;
+		overflow-y: auto;
+	}
+
+	& .empty {
+		padding: 8px 4px;
+	}
+
+	& .member-main > ul > li {
 		& + li {
 			border-top: solid $sep-500 1px;
 		}
 
 		padding: 8px 4px;
 		display: flex;
+		align-items: center;
+		cursor: pointer;
+
+		&:hover {
+			background: $bg-300;
+		}
+
+		&.selected {
+			background: $bg-400;
+		}
+
+		&:focus-visible {
+			outline: 2px solid $link-400;
+			outline-offset: -2px;
+		}
 
 		& .profile {
 			display: flex;
@@ -44,8 +70,10 @@
 
 		& .roles {
 			display: flex;
+			flex-wrap: wrap;
 			gap: 4px;
 			align-items: center;
+			min-width: 0;
 
 			& button {
 				padding: 0 4px;
@@ -54,16 +82,110 @@
 				border-radius: 2px;
 				background: $bg-300;
 
-				&:hover {
+				&:hover,
+				&:focus-visible {
 					background: $bg-400;
+				}
+
+				&[disabled] {
+					background: $bg-300;
+					color: inherit;
+					cursor: default;
 				}
 			}
 		}
 
-		& .joined {
-			width: 96px;
+		& .member-flags {
+			margin-left: 8px;
+			flex-shrink: 0;
+		}
+
+		& .more-button {
+			opacity: 0;
+			flex-shrink: 0;
+			transition: opacity 120ms;
+		}
+
+		&:hover .more-button,
+		&:focus-within .more-button {
+			opacity: 1;
+		}
+
+		@media (hover: none) {
+			& .more-button {
+				opacity: 1;
+			}
+		}
+	}
+}
+
+.member-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	width: 100%;
+
+	& > header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+
+		& h3 {
+			font-size: 1em;
+			font-weight: bold;
+		}
+	}
+
+	& .member-head {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding-top: 8px;
+
+		& .avatar {
+			width: 48px;
+			height: 48px;
+		}
+
+		& .names {
 			display: flex;
 			flex-direction: column;
+		}
+
+		& .name {
+			font-size: 1.1rem;
+			font-weight: bold;
+		}
+	}
+
+	& .member-info {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding-top: 8px;
+		border-top: solid $sep-500 1px;
+
+		& .row {
+			display: flex;
+			justify-content: space-between;
+			gap: 8px;
+		}
+	}
+
+	& .actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+	}
+
+	& .member-roles {
+		padding-top: 8px;
+		border-top: solid $sep-500 1px;
+
+		& .roles-button {
+			width: 100%;
+			text-align: left;
+			white-space: normal;
 		}
 	}
 }
@@ -961,5 +1083,48 @@
 				}
 			}
 		}
+	}
+}
+
+.member-flags {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+
+	& .member-flag {
+		position: relative;
+		width: 18px;
+		height: 18px;
+
+		& .icon2 {
+			width: 100%;
+			height: 100%;
+			background: $color-red;
+		}
+
+		&.muted::after,
+		&.deafened::after {
+			content: "";
+			position: absolute;
+			left: 1px;
+			right: 1px;
+			top: 50%;
+			height: 2px;
+			background: $color-red;
+			transform: rotate(-45deg);
+			box-shadow: 0 0 0 1.5px $bg-200;
+		}
+	}
+}
+
+.user-profile .member-section {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+
+	& .member-meta {
+		display: flex;
+		justify-content: space-between;
+		gap: 8px;
 	}
 }

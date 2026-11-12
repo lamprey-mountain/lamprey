@@ -53,6 +53,7 @@ import {
 	FolderMenu,
 	InviteApplicationMenu,
 	MediaAdminMenu,
+	MemberRolesMenu,
 	MessageMenu,
 	PermissionOverwriteMenu,
 	RoleMenu,
@@ -516,6 +517,11 @@ export function OverlayProvider(props: ParentProps) {
 			}
 			case "role": {
 				return <RoleMenu role_id={menu.role_id} room_id={menu.room_id} />;
+			}
+			case "member_roles": {
+				return (
+					<MemberRolesMenu room_id={menu.room_id} user_id={menu.user_id} />
+				);
 			}
 			case "topic": {
 				return <TopicMenu channel_id={menu.channel_id} />;

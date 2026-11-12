@@ -57,6 +57,7 @@ export type Menu = {
 			onDelete?: () => void;
 	  }
 	| { type: "role"; role_id: string; room_id?: string }
+	| { type: "member_roles"; room_id: string; user_id: string }
 	| { type: "channel_nav"; room_id?: string; view_id?: string }
 	| {
 			type: "calendar_event";

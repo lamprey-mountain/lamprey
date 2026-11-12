@@ -109,7 +109,7 @@ const tabs: TabItem[] = [
 		noPad: true,
 		permissionCheck: (p) => p.has("RoleManage"),
 	},
-	{ name: "members", path: "members", component: Members },
+	{ name: "members", path: "members", component: Members, noPad: true },
 	{ category: "moderation" },
 	{
 		name: "automod",

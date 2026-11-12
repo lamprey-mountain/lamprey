@@ -176,6 +176,13 @@ export class RoomMembersService extends BaseService<RoomMember> {
 		}
 	}
 
+	/** loads the next page of members for a room that was subscribed via useList */
+	fetchNextPage(room_id: string): Promise<void> | undefined {
+		const list = this._roomLists.get(room_id);
+		if (!list) return;
+		return this.fetchRoomPage(room_id, list, list.state.cursor ?? undefined);
+	}
+
 	useList(
 		room_id: () => string | undefined,
 	): Resource<PaginatedList | undefined> {

@@ -43,7 +43,9 @@ export function useGlobalEventHandlers() {
 
 	const handleKeypress = (e: KeyboardEvent) => {
 		if (e.key === "Escape") {
-			if (modals.length) {
+			if (menu()) {
+				setMenu(null);
+			} else if (modals.length) {
 				modalCtl.close();
 			} else if (userView()) {
 				// return focus to whatever opened the user popout

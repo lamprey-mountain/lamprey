@@ -6,6 +6,7 @@ export * from "./Emoji.tsx";
 export * from "./Folder.tsx";
 export * from "./InviteApplication.tsx";
 export * from "./MediaAdmin.tsx";
+export * from "./MemberRoles.tsx";
 export * from "./Message.tsx";
 export * from "./PermissionOverwrite.tsx";
 export * from "./Role.tsx";
