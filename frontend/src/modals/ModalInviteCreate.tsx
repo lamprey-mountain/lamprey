@@ -82,34 +82,21 @@ export const ModalInviteCreate = (props: ModalInviteCreateProps) => {
 			role_ids: selectedRoleIds().length > 0 ? selectedRoleIds() : undefined,
 		};
 
-		if (props.channel_id) {
-			const { data, error } = await api.client.http.POST(
-				"/api/v1/channel/{channel_id}/invite",
-				{
-					params: { path: { channel_id: props.channel_id } },
-					body,
-				},
-			);
-			if (data) {
-				setInviteCode(data.code);
+		try {
+			const invite = props.channel_id
+				? await api.invites.createChannelInvite(props.channel_id, body)
+				: props.room_id
+					? await api.invites.createRoomInvite(props.room_id, body)
+					: null;
+			if (invite) {
+				setInviteCode(invite.code);
 				queueMicrotask(() => inputRef()?.select());
 			}
-			if (error) console.error(error);
-		} else if (props.room_id) {
-			const { data, error } = await api.client.http.POST(
-				"/api/v1/room/{room_id}/invite",
-				{
-					params: { path: { room_id: props.room_id } },
-					body,
-				},
-			);
-			if (data) {
-				setInviteCode(data.code);
-				queueMicrotask(() => inputRef()?.select());
-			}
-			if (error) console.error(error);
+		} catch (e) {
+			console.error("failed to create invite", e);
+		} finally {
+			setCreating(false);
 		}
-		setCreating(false);
 	};
 
 	const inviteLink = createMemo(() => {

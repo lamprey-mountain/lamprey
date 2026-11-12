@@ -1,4 +1,4 @@
-import type { Invite, Pagination } from "sdk";
+import type { InviteWithMetadata, Pagination } from "sdk";
 import { createResource, type Resource } from "solid-js";
 import { logger } from "@/utils/logger";
 import { PaginatedList } from "../core/PaginatedList";
@@ -6,25 +6,32 @@ import { BaseService } from "../core/Service";
 
 const log = logger.for("api/invites");
 
-export class InvitesService extends BaseService<Invite> {
+type InviteCreateBody = {
+	description?: string | null;
+	expires_at?: string | null;
+	max_uses?: number | null;
+	role_ids?: string[] | null;
+};
+
+export class InvitesService extends BaseService<InviteWithMetadata> {
 	protected cacheName = "invite";
 
 	private _roomLists = new Map<string, PaginatedList>();
 	private _channelLists = new Map<string, PaginatedList>();
 	private _serverList: PaginatedList | null = null;
 
-	getKey(item: Invite): string {
+	getKey(item: InviteWithMetadata): string {
 		return item.code;
 	}
 
-	async fetch(id: string): Promise<Invite> {
-		const data = await this.retryWithBackoff<Invite>(() =>
+	async fetch(id: string): Promise<InviteWithMetadata> {
+		const invite = await this.retryWithBackoff<InviteWithMetadata>(() =>
 			this.client.http.GET("/api/v1/invite/{invite_code}", {
 				params: { path: { invite_code: id } },
 			}),
 		);
-		this.upsert(data);
-		return data;
+		this.upsert(invite);
+		return invite;
 	}
 
 	async accept(invite_code: string): Promise<void> {
@@ -33,6 +40,82 @@ export class InvitesService extends BaseService<Invite> {
 				params: { path: { invite_code } },
 			}),
 		);
+	}
+
+	private async createInvite(
+		params: { room_id: string } | { channel_id: string },
+		body: InviteCreateBody,
+	): Promise<InviteWithMetadata> {
+		const invite = await this.retryWithBackoff<InviteWithMetadata>(() =>
+			"room_id" in params
+				? this.client.http.POST("/api/v1/room/{room_id}/invite", {
+						params: { path: { room_id: params.room_id } },
+						body,
+					})
+				: this.client.http.POST("/api/v1/channel/{channel_id}/invite", {
+						params: { path: { channel_id: params.channel_id } },
+						body,
+					}),
+		);
+
+		this.upsert(invite);
+		this.prependToLists(invite);
+		return invite;
+	}
+
+	createRoomInvite(room_id: string, body: InviteCreateBody = {}) {
+		return this.createInvite({ room_id }, body);
+	}
+
+	createChannelInvite(channel_id: string, body: InviteCreateBody = {}) {
+		return this.createInvite({ channel_id }, body);
+	}
+
+	private prependToLists(invite: InviteWithMetadata) {
+		const target = invite.target;
+		if (target.type === "Room") {
+			this._roomLists.get(target.room.id)?.prependId(invite.code);
+			if (target.channel?.id) {
+				this._channelLists.get(target.channel.id)?.prependId(invite.code);
+			}
+		} else if (target.type === "Gdm") {
+			this._channelLists.get(target.channel.id)?.prependId(invite.code);
+		} else if (target.type === "Server") {
+			this._serverList?.prependId(invite.code);
+		}
+	}
+
+	async deleteInvite(code: string): Promise<void> {
+		await this.retryWithBackoff(() =>
+			this.client.http.DELETE("/api/v1/invite/{invite_code}", {
+				params: { path: { invite_code: code } },
+			}),
+		);
+		this.delete(code);
+	}
+
+	protected override afterDelete(id: string) {
+		for (const list of this._roomLists.values()) list.removeId(id);
+		for (const list of this._channelLists.values()) list.removeId(id);
+		this._serverList?.removeId(id);
+	}
+
+	fetchNextRoomPage(room_id: string): Promise<void> | undefined {
+		const list = this._roomLists.get(room_id);
+		if (!list) return;
+		return this.fetchRoomPage(room_id, list, list.state.cursor ?? undefined);
+	}
+
+	fetchNextChannelPage(channel_id: string): Promise<void> | undefined {
+		const list = this._channelLists.get(channel_id);
+		if (!list) return;
+		return this.fetchChannelPage(channel_id, list, list.state.cursor ?? undefined);
+	}
+
+	fetchNextServerPage(): Promise<void> | undefined {
+		const list = this._serverList;
+		if (!list) return;
+		return this.fetchServerPage(list, list.state.cursor ?? undefined);
 	}
 
 	private async fetchRoomPage(
@@ -44,7 +127,7 @@ export class InvitesService extends BaseService<Invite> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<Pagination<Invite>>(() =>
+			const data = await this.retryWithBackoff<Pagination<InviteWithMetadata>>(() =>
 				this.client.http.GET("/api/v1/room/{room_id}/invite", {
 					params: {
 						path: { room_id },
@@ -77,7 +160,7 @@ export class InvitesService extends BaseService<Invite> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<Pagination<Invite>>(() =>
+			const data = await this.retryWithBackoff<Pagination<InviteWithMetadata>>(() =>
 				this.client.http.GET("/api/v1/channel/{channel_id}/invite", {
 					params: {
 						path: { channel_id },
@@ -109,7 +192,7 @@ export class InvitesService extends BaseService<Invite> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<Pagination<Invite>>(() =>
+			const data = await this.retryWithBackoff<Pagination<InviteWithMetadata>>(() =>
 				this.client.http.GET("/api/v1/server/invite", {
 					params: {
 						query: {
