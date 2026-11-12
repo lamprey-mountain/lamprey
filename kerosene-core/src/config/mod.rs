@@ -472,6 +472,12 @@ pub struct ConfigVoice {
     /// defaults to the number of cpu cores
     pub workers: Option<u8>,
 
+    /// how often str0m emits peer statistics, in seconds
+    ///
+    /// 0 disables statistics collection. defaults to 5 seconds
+    #[serde(default = "default_voice_stats_interval_secs")]
+    pub stats_interval_secs: u64,
+
     /// the first udp port in the rtp media range
     ///
     /// each shard binds one port from this range
@@ -494,6 +500,10 @@ pub struct ConfigVoice {
     ///
     /// defaults to being disabled
     pub stun_port: Option<u16>,
+}
+
+fn default_voice_stats_interval_secs() -> u64 {
+    5
 }
 
 fn default_rtp_port_min() -> u16 {

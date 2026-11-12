@@ -20,24 +20,37 @@ pub fn prometheus_registry() -> Option<&'static Registry> {
 
 /// setup tracing, opentelemetry, etc based on a server config
 pub fn init(config: &Config) -> ServerResult<()> {
+    init_with_service(config, "lamprey-backend", true)
+}
+
+/// setup tracing, opentelemetry, etc for a service without a prometheus registry
+pub fn init_service(config: &Config, service_name: &'static str) -> ServerResult<()> {
+    init_with_service(config, service_name, false)
+}
+
+fn init_with_service(
+    config: &Config,
+    service_name: &'static str,
+    prometheus: bool,
+) -> ServerResult<()> {
     let filter = EnvFilter::from_str(&config.rust_log)?;
     let fmt_layer = tracing_subscriber::fmt::layer();
 
-    let resource = Resource::builder()
-        .with_service_name("lamprey-backend")
-        .build();
+    let resource = Resource::builder().with_service_name(service_name).build();
 
-    // prometheus is always available so /metrics does not depend on otlp being enabled
-    let registry = Registry::new();
-    let prometheus_exporter = opentelemetry_prometheus::exporter()
-        .with_registry(registry.clone())
-        .build()
-        .map_err(ServerError::internal)?;
-    let _ = PROMETHEUS_REGISTRY.set(registry);
+    let mut meter_provider =
+        opentelemetry_sdk::metrics::SdkMeterProvider::builder().with_resource(resource.clone());
 
-    let mut meter_provider = opentelemetry_sdk::metrics::SdkMeterProvider::builder()
-        .with_resource(resource.clone())
-        .with_reader(prometheus_exporter);
+    if prometheus {
+        // prometheus is always available so /metrics does not depend on otlp being enabled
+        let registry = Registry::new();
+        let prometheus_exporter = opentelemetry_prometheus::exporter()
+            .with_registry(registry.clone())
+            .build()
+            .map_err(ServerError::internal)?;
+        let _ = PROMETHEUS_REGISTRY.set(registry);
+        meter_provider = meter_provider.with_reader(prometheus_exporter);
+    }
 
     if config.otel.enabled {
         let mut exporter_builder = opentelemetry_otlp::MetricExporter::builder().with_tonic();
@@ -64,7 +77,7 @@ pub fn init(config: &Config) -> ServerResult<()> {
             .with_resource(resource.clone())
             .with_batch_exporter(exporter_builder.build().map_err(ServerError::internal)?)
             .build();
-        let tracer = provider.tracer("lamprey-backend");
+        let tracer = provider.tracer(service_name);
 
         // the tracer provider is kept alive by the global tracer provider
         opentelemetry::global::set_tracer_provider(provider);

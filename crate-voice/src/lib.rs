@@ -2,6 +2,7 @@ pub mod backend;
 pub mod client;
 pub mod error;
 pub mod mesh;
+pub mod metrics;
 pub mod server;
 pub mod util;
 

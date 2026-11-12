@@ -120,6 +120,7 @@ token = "a1b2c3" # shared secret with crate-voice
 host_ipv4 = "192.168.12.34" # address to bind and announce, must be reachable
 host_ipv6 = "2001:db8:0a0b:12f0:0000:0000" # same, for ipv6
 # workers = 4 # defaults to cpu cores
+# stats_interval_secs = 5 # str0m peer stats interval, 0 disables
 # rtp_port_min = 56000 # first rtp media udp port
 # rtp_port_max = 56999 # last rtp media udp port; range must be >= workers wide
 # quic_port = 0 # defaults to a random port

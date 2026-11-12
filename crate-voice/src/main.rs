@@ -1,12 +1,8 @@
-use std::str::FromStr;
-
 use anyhow::Result;
 use figment::providers::{Env, Format, Toml};
-use lamprey_backend_core::config::Config;
+use lamprey_backend_core::{config::Config, observability};
 use lamprey_voice::Sfu;
-use opentelemetry_otlp::WithExportConfig;
 use tracing::debug;
-use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -20,7 +16,7 @@ async fn main() -> Result<()> {
         .merge(Env::raw().only(&["RUST_LOG"]))
         .extract()?;
 
-    setup_otel(&config)?;
+    observability::init_service(&config, "lamprey-voice")?;
 
     debug!("hello, world!");
 
@@ -50,45 +46,6 @@ async fn main() -> Result<()> {
 
     // TODO: proper shutdown handling
     futures::future::pending::<()>().await;
-
-    Ok(())
-}
-
-pub fn setup_otel(config: &Config) -> Result<()> {
-    if config.otel.enabled {
-        let endpoint = config
-            .otel
-            .traces
-            .as_deref()
-            .or(config.otel_trace_endpoint.as_deref());
-        let exporter = if let Some(endpoint) = endpoint {
-            opentelemetry_otlp::SpanExporter::builder()
-                .with_tonic()
-                .with_endpoint(endpoint)
-                .build()?
-        } else {
-            opentelemetry_otlp::SpanExporter::builder()
-                .with_tonic()
-                .build()?
-        };
-        let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
-            .with_batch_exporter(exporter)
-            .build();
-        use opentelemetry::trace::TracerProvider;
-        let tracer = provider.tracer("lamprey-voice");
-        opentelemetry::global::set_tracer_provider(provider);
-        let telemetry_layer = tracing_opentelemetry::layer().with_tracer(tracer);
-        let subscriber = Registry::default()
-            .with(EnvFilter::from_str(&config.rust_log)?)
-            .with(tracing_subscriber::fmt::layer())
-            .with(telemetry_layer);
-        tracing::subscriber::set_global_default(subscriber)?;
-    } else {
-        let subscriber = Registry::default()
-            .with(EnvFilter::from_str(&config.rust_log)?)
-            .with(tracing_subscriber::fmt::layer());
-        tracing::subscriber::set_global_default(subscriber)?;
-    }
 
     Ok(())
 }

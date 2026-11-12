@@ -23,8 +23,6 @@ futures-util = { workspace = true }
 lamprey-backend-core = { workspace = true }
 num_cpus = "1.17.0"
 opentelemetry = { workspace = true }
-opentelemetry-otlp = { workspace = true, features = ["grpc-tonic", "logs", "metrics", "trace"] }
-opentelemetry_sdk = { workspace = true, features = ["rt-tokio", "tokio"] }
 postcard = { workspace = true }
 quinn = { workspace = true }
 rand = "0.10.3"
@@ -43,6 +41,4 @@ tokio-stream = { workspace = true, features = ["sync"] }
 tokio-tungstenite = { workspace = true, features = ["rustls-tls-webpki-roots"] }
 tokio-util = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
-tracing-opentelemetry = { workspace = true }
-tracing-subscriber = { workspace = true, features = ["env-filter"] }
 url = { workspace = true }

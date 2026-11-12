@@ -3,7 +3,7 @@ use lamprey_backend_core::config::ConfigVoice;
 use std::{
     collections::HashMap,
     net::{IpAddr, SocketAddr},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use bytes::Bytes;
@@ -17,6 +17,7 @@ use tokio_stream::StreamExt;
 use tokio_util::time::{DelayQueue, delay_queue::Key};
 use tracing::{debug, warn};
 
+use crate::metrics::{ShardMetrics, VoiceMetrics};
 use crate::prelude::*;
 use crate::util::stun::extract_local_ufrag;
 use crate::{backend::BackendHandle, server::shard_call::ShardCall};
@@ -43,6 +44,9 @@ pub struct Shard {
 
     timeout_queue: DelayQueue<(CallSlot, PeerSlot)>,
     timeout_keys: HashMap<(CallSlot, PeerSlot), Key>,
+
+    metrics: Option<Arc<ShardMetrics>>,
+    stats_interval: Option<Duration>,
 }
 
 #[derive(Clone)]
@@ -78,6 +82,7 @@ impl Shard {
         backend: BackendHandle,
         config: ConfigVoice,
         port: u16,
+        metrics: Option<Arc<VoiceMetrics>>,
     ) -> Result<(Self, ShardHandle)> {
         let (control_tx, control_rx) = mpsc::channel(100);
 
@@ -96,6 +101,12 @@ impl Shard {
         let sock_v4 = bind_media_socket(addr_v4, false)?;
         let sock_v6 = bind_media_socket(addr_v6, true)?;
 
+        let metrics = metrics.map(|metrics| metrics.register_shard());
+        let stats_interval = metrics.as_ref().and_then(|_| {
+            (config.stats_interval_secs > 0)
+                .then(|| Duration::from_secs(config.stats_interval_secs))
+        });
+
         let me = Self {
             backend,
             control_rx,
@@ -107,6 +118,8 @@ impl Shard {
             channels: HashMap::new(),
             timeout_queue: DelayQueue::new(),
             timeout_keys: HashMap::new(),
+            metrics,
+            stats_interval,
         };
 
         let handle = ShardHandle { control_tx };
@@ -207,6 +220,9 @@ impl Shard {
                     self.sock_v6.send_to(&t.contents, t.destination).await
                 };
                 if let Err(e) = res {
+                    if let Some(metrics) = &self.metrics {
+                        metrics.udp_send_error();
+                    }
                     warn!("Failed to send UDP packet: {:?}", e);
                 }
             }
@@ -280,10 +296,19 @@ impl Shard {
         match cmd {
             ShardCommand::CreatePeer(channel_id, state) => {
                 debug!(?channel_id, ?state.user_id, "Shard: Creating peer");
-                let call_slot = *self
-                    .channels
-                    .entry(channel_id)
-                    .or_insert_with(|| self.calls.insert(ShardCall::new(channel_id)));
+                let call_slot = match self.channels.get(&channel_id) {
+                    Some(&slot) => slot,
+                    None => {
+                        if let Some(metrics) = &self.metrics {
+                            metrics.call_created();
+                        }
+                        let slot = self
+                            .calls
+                            .insert(ShardCall::new(channel_id, self.metrics.clone()));
+                        self.channels.insert(channel_id, slot);
+                        slot
+                    }
+                };
                 let Some(call) = self.calls.get_mut(call_slot) else {
                     warn!(
                         ?channel_id,
@@ -292,7 +317,10 @@ impl Shard {
                     return;
                 };
 
-                let mut rtc = RtcConfig::new().set_ice_lite(true).build(Instant::now());
+                let mut rtc = RtcConfig::new()
+                    .set_ice_lite(true)
+                    .set_stats_interval(self.stats_interval)
+                    .build(Instant::now());
 
                 if let Ok(addr) = self.sock_v4.local_addr() {
                     if let Ok(c) = Candidate::host(addr, "udp") {

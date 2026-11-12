@@ -1,4 +1,4 @@
-pub use kerosene_core::{config, ffmpeg, types};
+pub use kerosene_core::{config, ffmpeg, observability, types};
 pub mod data;
 pub mod error;
 pub mod queue;

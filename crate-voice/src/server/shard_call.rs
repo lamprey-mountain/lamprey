@@ -8,6 +8,7 @@ use crate::{
         PeerChange, Webrtc,
         track::{Inbound, Outbound, TrackState},
     },
+    metrics::ShardMetrics,
     prelude::*,
 };
 
@@ -40,6 +41,7 @@ pub struct ShardCall {
     inbound: SlotMap<TrackSlot, Inbound>,   // formerly `tracks`
     outbound: SlotMap<TrackSlot, Outbound>, // formerly `sinks`
     paused: HashSet<PeerSlot>,
+    metrics: Option<Arc<ShardMetrics>>,
     // TODO: add routing information
     // - inbound tracks by user id
     // - outbound tracks by inbound track key
@@ -50,7 +52,7 @@ pub struct ShardCall {
 }
 
 impl ShardCall {
-    pub fn new(channel_id: ChannelId) -> Self {
+    pub fn new(channel_id: ChannelId, metrics: Option<Arc<ShardMetrics>>) -> Self {
         Self {
             channel_id,
             peers: SlotMap::with_key(),
@@ -58,6 +60,7 @@ impl ShardCall {
             inbound: SlotMap::with_key(),
             outbound: SlotMap::with_key(),
             paused: HashSet::new(),
+            metrics,
         }
     }
 
@@ -73,6 +76,9 @@ impl ShardCall {
         let peer = Webrtc::new(rtc, s);
         let slot = self.peers.insert(peer);
         self.users.insert(user_id, slot);
+        if let Some(metrics) = &self.metrics {
+            metrics.peer_created();
+        }
         slot
     }
 
@@ -87,6 +93,9 @@ impl ShardCall {
     pub fn remove_peer(&mut self, peer_slot: PeerSlot) {
         if let Some(peer) = self.peers.remove(peer_slot) {
             info!(user_id = %peer.user_id(), channel_id = %self.channel_id, "remove peer");
+            if let Some(metrics) = &self.metrics {
+                metrics.peer_removed(peer.stats().bwe_tx());
+            }
             let user_id = peer.user_id();
             if self.users.get(&user_id) == Some(&peer_slot) {
                 self.users.remove(&user_id);
@@ -112,6 +121,7 @@ impl ShardCall {
     }
 
     /// a signalling command from a peer
+    #[tracing::instrument(skip_all)]
     pub fn handle_signalling(
         &mut self,
         peer: PeerSlot,
@@ -600,6 +610,22 @@ impl ShardCall {
                 debug!(channel_id = ?self.channel_id, dc_id = ?channel_id, "Data channel closed");
             }
 
+            SEvent::PeerStats(stats) => {
+                if let Some(metrics) = &self.metrics {
+                    peer.stats_mut().peer_stats(&stats, metrics);
+                }
+            }
+            SEvent::MediaIngressStats(stats) => {
+                if let Some(metrics) = &self.metrics {
+                    peer.stats_mut().media_ingress(&stats, metrics);
+                }
+            }
+            SEvent::MediaEgressStats(stats) => {
+                if let Some(metrics) = &self.metrics {
+                    peer.stats_mut().media_egress(&stats, metrics);
+                }
+            }
+
             SEvent::ChannelData(data) => {
                 debug!(channel_id = ?self.channel_id, dc_id = ?data.id, "Data channel data");
 
@@ -688,6 +714,11 @@ impl ShardCall {
             }
         }
 
+        if changes.is_empty() {
+            return Vec::new();
+        }
+
+        let _span = tracing::info_span!("sfu.renegotiate").entered();
         let mut events = vec![];
 
         // apply changes for each peer

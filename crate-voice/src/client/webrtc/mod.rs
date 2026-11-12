@@ -5,6 +5,7 @@ use str0m::Rtc;
 use tracing::{debug, trace};
 
 use crate::client::webrtc::mapping::Mapping;
+use crate::metrics::PeerStatsState;
 use crate::prelude::*;
 use crate::{
     client::webrtc::{datachannels::Datachannels, signalling::Signalling},
@@ -24,6 +25,7 @@ pub struct Webrtc {
     signalling: Signalling,
     datachannels: Datachannels,
     mapping: Mapping,
+    stats: PeerStatsState,
 }
 
 // TODO: figure out how big webrtc is
@@ -40,6 +42,7 @@ impl Webrtc {
             signalling: Signalling::new(),
             datachannels: Datachannels::new(),
             mapping: Mapping::new(),
+            stats: PeerStatsState::default(),
         }
     }
 
@@ -156,6 +159,14 @@ impl Webrtc {
 
     pub fn mapping_mut(&mut self) -> &mut Mapping {
         &mut self.mapping
+    }
+
+    pub fn stats(&self) -> &PeerStatsState {
+        &self.stats
+    }
+
+    pub fn stats_mut(&mut self) -> &mut PeerStatsState {
+        &mut self.stats
     }
 
     pub fn poll_output(&mut self) -> Result<SOutput> {

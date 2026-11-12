@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::{
     backend::{BackendConnection, BackendHandle},
     mesh::{Mesh, MeshHandle},
+    metrics::VoiceMetrics,
     prelude::*,
     server::{
         ports::PortAllocator,
@@ -29,6 +30,7 @@ pub struct Sfu {
     user_to_channel: HashMap<UserId, ChannelId>,
     config_full: Box<Config>,
     config: Box<ConfigVoice>,
+    metrics: Option<Arc<VoiceMetrics>>,
 }
 
 /// a single voice call known by this sfu
@@ -49,6 +51,11 @@ impl Sfu {
         // PERF: init in parallel
         let backend = BackendConnection::connect(config.clone()).await?;
         let mesh = Mesh::spawn(&config).await?;
+        let metrics = config.otel.enabled.then(|| {
+            let metrics = Arc::new(VoiceMetrics::new());
+            metrics.register();
+            metrics
+        });
 
         let me = Sfu {
             backend,
@@ -60,6 +67,7 @@ impl Sfu {
             user_to_channel: HashMap::new(),
             config_full: Box::new(config),
             config: Box::new(voice_config),
+            metrics,
         };
 
         let handle = SfuHandle {
@@ -101,6 +109,9 @@ impl Sfu {
             return;
         }
         info!("Spawned {started}/{num_shards} shards");
+        if let Some(metrics) = &self.metrics {
+            metrics.set_active_shards(started as u64);
+        }
 
         let backend = self.backend.clone();
         let mut commands = Box::pin(backend.subscribe());
@@ -126,6 +137,9 @@ impl Sfu {
                         }
                         Err(e) => error!("Shard task panicked: {}", e),
                     }
+                    if let Some(metrics) = &self.metrics {
+                        metrics.shard_stopped();
+                    }
                     // TODO: try to respawn shard
                 }
             }
@@ -140,50 +154,64 @@ impl Sfu {
             }
             SfuCommand::CreatePeer { channel_id, state } => {
                 let user_id = state.user_id;
-                debug!(?channel_id, ?user_id, "Creating peer");
+                tracing::info_span!(
+                    "sfu.create_peer",
+                    channel_id = ?channel_id,
+                    user_id = %user_id
+                )
+                .in_scope(|| {
+                    debug!(?channel_id, ?user_id, "Creating peer");
 
-                let shard = match self.calls.get(&channel_id) {
-                    Some(call) => {
-                        debug!(?channel_id, "Using existing call shard");
-                        call.shard.clone()
-                    }
-                    None => {
-                        debug!(?channel_id, "Creating new call for channel");
-                        // TODO: select shard based on load
-                        // TODO: shut down `ShardCall`s when idle
-                        // TODO: update user_to_channel based on voice state, disconnect
-                        let shard = match self.shards.first() {
-                            Some(s) => s.clone(),
-                            None => {
-                                error!("No shards available to handle CreatePeer");
-                                return;
-                            }
-                        };
-                        self.calls.insert(
-                            channel_id,
-                            Call {
-                                shard: shard.clone(),
-                            },
-                        );
-                        shard
-                    }
-                };
+                    let shard = match self.calls.get(&channel_id) {
+                        Some(call) => {
+                            debug!(?channel_id, "Using existing call shard");
+                            call.shard.clone()
+                        }
+                        None => {
+                            debug!(?channel_id, "Creating new call for channel");
+                            // TODO: select shard based on load
+                            // TODO: shut down `ShardCall`s when idle
+                            // TODO: update user_to_channel based on voice state, disconnect
+                            let shard = match self.shards.first() {
+                                Some(s) => s.clone(),
+                                None => {
+                                    error!("No shards available to handle CreatePeer");
+                                    return;
+                                }
+                            };
+                            self.calls.insert(
+                                channel_id,
+                                Call {
+                                    shard: shard.clone(),
+                                },
+                            );
+                            shard
+                        }
+                    };
 
-                self.user_to_channel.insert(user_id, channel_id);
+                    self.user_to_channel.insert(user_id, channel_id);
 
-                shard.create_peer(channel_id, state);
+                    shard.create_peer(channel_id, state);
+                });
             }
             SfuCommand::Signalling {
                 user_id,
                 channel_id,
                 inner,
             } => {
-                debug!(?user_id, ?channel_id, ?inner, "Received signalling command");
-                if let Some(call) = self.calls.get(&channel_id) {
-                    call.shard.handle_signalling(channel_id, user_id, inner);
-                } else {
-                    warn!("Received signalling for unknown channel {:?}", channel_id);
-                }
+                tracing::info_span!(
+                    "sfu.signalling",
+                    channel_id = ?channel_id,
+                    user_id = %user_id
+                )
+                .in_scope(|| {
+                    debug!(?user_id, ?channel_id, ?inner, "Received signalling command");
+                    if let Some(call) = self.calls.get(&channel_id) {
+                        call.shard.handle_signalling(channel_id, user_id, inner);
+                    } else {
+                        warn!("Received signalling for unknown channel {:?}", channel_id);
+                    }
+                });
             }
             // SfuCommand::GenerateKeyframe {
             //     mid,
@@ -207,7 +235,14 @@ impl Sfu {
 
     async fn spawn_shard(&mut self, ports: &mut PortAllocator) -> Result<()> {
         for port in ports.candidates() {
-            match Shard::new(self.backend.clone(), (*self.config).clone(), port).await {
+            match Shard::new(
+                self.backend.clone(),
+                (*self.config).clone(),
+                port,
+                self.metrics.clone(),
+            )
+            .await
+            {
                 Ok((shard, handle)) => {
                     ports.mark_used(port);
                     info!(port, "Spawned shard");

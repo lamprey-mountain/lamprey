@@ -10,6 +10,9 @@ coordinates state and signalling.
   per worker (`config.voice.workers`, or one per cpu by default). each shard
   binds one fixed udp port from `config.voice.rtp_port_min..=rtp_port_max`, so
   that range must be open for inbound udp and at least as wide as `workers`.
+- when `otel.enabled` is set, the sfu exports traces, logs, and aggregate voice
+  metrics over otlp (`service.name=lamprey-voice`). peer statistics are collected
+  every `config.voice.stats_interval_secs` seconds (0 disables collection).
 - each voice channel is a **call**. calls are created when the first user
   joins and deleted when the last user leaves (broadcast calls are kept).
 - an sfu can **cascade** to other sfus over a QUIC mesh (`crate-voice/src/mesh`)
