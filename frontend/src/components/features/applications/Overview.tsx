@@ -1,13 +1,13 @@
 import type { EditorState } from "prosemirror-state";
-import { createUpload } from "sdk";
 import { Show } from "solid-js";
-import { useApi } from "@/api";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Checkbox } from "@/atoms/icons";
+import { UploadOverlay } from "@/atoms/UploadOverlay";
 import { Avatar } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useMenu } from "@/contexts/mod";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { Copyable } from "@/utils/general";
 import { createEditor } from "../editor/Editor";
 import { serializeToMarkdown } from "../editor/serializer";
@@ -15,7 +15,6 @@ import { BridgeSettings } from "./Bridge";
 import { type ApplicationDraft, useApplications } from "./context";
 
 export const Overview = (props: { draft: ApplicationDraft }) => {
-	const api = useApi();
 	const menu = useMenu();
 	const apps = useApplications();
 
@@ -37,19 +36,11 @@ export const Overview = (props: { draft: ApplicationDraft }) => {
 		apps.updateDraft(id(), { [key]: value });
 	};
 
-	const setAvatarFile = async (f: File) => {
-		await createUpload({
-			client: api.client,
-			file: f,
-			onComplete(media) {
-				updateApp("avatar", media.id);
-			},
-			onFail(_error) {},
-			onPause() {},
-			onResume() {},
-			onProgress(_progress) {},
-		});
-	};
+	const avatarUpload = useImageUpload({
+		onComplete(media) {
+			updateApp("avatar", media.id);
+		},
+	});
 
 	const removeAvatar = async () => {
 		updateApp("avatar", null);
@@ -67,7 +58,7 @@ export const Overview = (props: { draft: ApplicationDraft }) => {
 	let avatarInputEl!: HTMLInputElement;
 
 	const openAvatarPicker = () => {
-		avatarInputEl?.click();
+		avatarUpload.openPicker(avatarInputEl);
 	};
 
 	const appWithAvatar = () => {
@@ -130,7 +121,10 @@ export const Overview = (props: { draft: ApplicationDraft }) => {
 				<div class="avatar-uploader" onClick={openAvatarPicker}>
 					<div class="avatar-inner">
 						<Avatar user={appWithAvatar()} />
-						<div class="overlay">upload avatar</div>
+						<UploadOverlay
+							progress={avatarUpload.progress()}
+							label="upload avatar"
+						/>
 					</div>
 					<Show when={currentData().avatar}>
 						<button
@@ -148,10 +142,7 @@ export const Overview = (props: { draft: ApplicationDraft }) => {
 						style="display:none"
 						ref={avatarInputEl}
 						type="file"
-						onInput={(e) => {
-							const f = e.target.files?.[0];
-							if (f) setAvatarFile(f);
-						}}
+						onInput={avatarUpload.onInput}
 					/>
 				</div>
 			</div>

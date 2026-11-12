@@ -1,13 +1,15 @@
 import type { EditorState } from "prosemirror-state";
-import { createUpload, type User } from "sdk";
+import type { User } from "sdk";
 import { createSignal, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { Savebar } from "@/atoms/Savebar";
+import { UploadOverlay } from "@/atoms/UploadOverlay";
 import { Avatar } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { getThumbFromId } from "@/media/util";
 import { Copyable } from "@/utils/general";
 import { createEditor } from "../editor/Editor";
@@ -25,6 +27,17 @@ export function Profile(props: VoidProps<{ user: User }>) {
 	const [editingAvatar, setEditingAvatar] = createSignal(props.user.avatar);
 	const [editingBanner, setEditingBanner] = createSignal(props.user.banner);
 	const [saving, setSaving] = createSignal(false);
+
+	const avatarUpload = useImageUpload({
+		onComplete(media) {
+			setEditingAvatar(media.id);
+		},
+	});
+	const bannerUpload = useImageUpload({
+		onComplete(media) {
+			setEditingBanner(media.id);
+		},
+	});
 
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
@@ -83,36 +96,8 @@ export function Profile(props: VoidProps<{ user: User }>) {
 		descriptionEditor.setState();
 	};
 
-	const setAvatarFile = async (f: File) => {
-		await createUpload({
-			client: api2.client,
-			file: f,
-			onComplete(media) {
-				setEditingAvatar(media.id);
-			},
-			onFail(_error) {},
-			onPause() {},
-			onResume() {},
-			onProgress(_progress) {},
-		});
-	};
-
 	const removeAvatar = async () => {
 		setEditingAvatar(null);
-	};
-
-	const setBannerFile = async (f: File) => {
-		await createUpload({
-			client: api2.client,
-			file: f,
-			onComplete(media) {
-				setEditingBanner(media.id);
-			},
-			onFail(_error) {},
-			onPause() {},
-			onResume() {},
-			onProgress(_progress) {},
-		});
 	};
 
 	const removeBanner = async () => {
@@ -122,13 +107,13 @@ export function Profile(props: VoidProps<{ user: User }>) {
 	let avatarInputEl!: HTMLInputElement;
 
 	const openAvatarPicker = () => {
-		avatarInputEl?.click();
+		avatarUpload.openPicker(avatarInputEl);
 	};
 
 	let bannerInputEl!: HTMLInputElement;
 
 	const openBannerPicker = () => {
-		bannerInputEl?.click();
+		bannerUpload.openPicker(bannerInputEl);
 	};
 
 	const userWithAvatar = () => ({
@@ -173,7 +158,10 @@ export function Profile(props: VoidProps<{ user: User }>) {
 				<div class="avatar-uploader" onClick={openAvatarPicker}>
 					<div class="avatar-inner">
 						<Avatar user={userWithAvatar()} />
-						<div class="overlay">upload avatar</div>
+						<UploadOverlay
+							progress={avatarUpload.progress()}
+							label="upload avatar"
+						/>
 					</div>
 					<Show when={editingAvatar()}>
 						<button
@@ -191,10 +179,7 @@ export function Profile(props: VoidProps<{ user: User }>) {
 						style="display:none"
 						ref={avatarInputEl}
 						type="file"
-						onInput={(e) => {
-							const f = e.target.files?.[0];
-							if (f) setAvatarFile(f);
-						}}
+						onInput={avatarUpload.onInput}
 					/>
 				</div>
 			</div>
@@ -229,16 +214,16 @@ export function Profile(props: VoidProps<{ user: User }>) {
 							</Show>
 						</div>
 					</Show>
-					<div class="overlay">upload banner</div>
+					<UploadOverlay
+						progress={bannerUpload.progress()}
+						label="upload banner"
+					/>
 				</div>
 				<input
 					style="display:none"
 					ref={bannerInputEl}
 					type="file"
-					onInput={(e) => {
-						const f = e.target.files?.[0];
-						if (f) setBannerFile(f);
-					}}
+					onInput={bannerUpload.onInput}
 				/>
 			</div>
 			<br />

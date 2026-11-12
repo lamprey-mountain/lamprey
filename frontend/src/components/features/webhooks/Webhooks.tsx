@@ -1,16 +1,18 @@
 import { debounce } from "@solid-primitives/scheduled";
 import fuzzysort from "fuzzysort";
 import type { Channel, Webhook } from "sdk";
-import { createUpload, getTimestampFromUUID } from "sdk";
+import { getTimestampFromUUID } from "sdk";
 import { createSignal, For, Show } from "solid-js";
-import { useApi, useChannels, useUsers } from "@/api";
+import { useChannels, useUsers } from "@/api";
 import { ChannelPicker } from "@/atoms/ChannelPicker";
 import { Icon } from "@/atoms/Icon";
 import { Savebar } from "@/atoms/Savebar";
 import { Search } from "@/atoms/Search";
 import { Time } from "@/atoms/Time";
 import { createTooltip } from "@/atoms/Tooltip";
+import { UploadOverlay } from "@/atoms/UploadOverlay";
 import { Avatar, UserDisplayName } from "@/components/shared/User";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { useConfig } from "@/lib/config";
 import { icCheck, icCopy } from "@/utils/icons";
 import {
@@ -120,7 +122,6 @@ function WebhookCreator(props: { user_id: string; room_id?: string }) {
 }
 
 function WebhooksInner(props: { scope: WebhookScope }) {
-	const api = useApi();
 	const users = useUsers();
 	const config = useConfig();
 	const channels = useChannels();
@@ -182,20 +183,6 @@ function WebhooksInner(props: { scope: WebhookScope }) {
 		return `${config.api_url}/api/v1/webhook/${draftId(draft)}/${token}`;
 	};
 
-	const setAvatarFile = async (draft: WebhookDraft, file: File) => {
-		await createUpload({
-			client: api.client,
-			file,
-			onComplete(media) {
-				webhooks.updateDraft(draftId(draft), { avatar: media.id });
-			},
-			onFail(_error) {},
-			onPause() {},
-			onResume() {},
-			onProgress(_progress) {},
-		});
-	};
-
 	return (
 		<div class="room-settings-integrations">
 			<h2>webhooks</h2>
@@ -214,11 +201,18 @@ function WebhooksInner(props: { scope: WebhookScope }) {
 						const created = () => draftWebhook(draft);
 						const draftState = () =>
 							draft.state === "clean" ? undefined : draft.state;
+
+						const avatarUpload = useImageUpload({
+							onComplete(media) {
+								webhooks.updateDraft(id, { avatar: media.id });
+							},
+						});
+
 						let avatarInputEl: HTMLInputElement | undefined;
 
 						const openAvatarPicker = () => {
 							if (deleted()) return;
-							avatarInputEl?.click();
+							avatarUpload.openPicker(avatarInputEl);
 						};
 
 						return (
@@ -231,7 +225,10 @@ function WebhooksInner(props: { scope: WebhookScope }) {
 									<div class="avatar-uploader" onClick={openAvatarPicker}>
 										<div class="avatar-inner">
 											<Avatar user={webhookUser(draft)} />
-											<div class="overlay">upload avatar</div>
+											<UploadOverlay
+												progress={avatarUpload.progress()}
+												label="upload avatar"
+											/>
 										</div>
 										<Show when={draftAvatar(draft)}>
 											<button
@@ -249,10 +246,7 @@ function WebhooksInner(props: { scope: WebhookScope }) {
 											style="display:none"
 											ref={avatarInputEl}
 											type="file"
-											onInput={(e) => {
-												const file = e.target.files?.[0];
-												if (file) setAvatarFile(draft, file);
-											}}
+											onInput={avatarUpload.onInput}
 										/>
 									</div>
 								</div>

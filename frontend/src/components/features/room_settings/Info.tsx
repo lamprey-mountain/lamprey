@@ -1,5 +1,4 @@
 import type { EditorState } from "prosemirror-state";
-import { createUpload } from "sdk";
 import { createSignal, onMount, Show, type VoidProps } from "solid-js";
 import { useApi, useChannels } from "@/api";
 import { ChannelPicker } from "@/atoms/ChannelPicker";
@@ -7,11 +6,13 @@ import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { DurationInput } from "@/atoms/DurationInput";
 import { Checkbox } from "@/atoms/icons";
 import { Savebar } from "@/atoms/Savebar";
+import { UploadOverlay } from "@/atoms/UploadOverlay";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { RoomIcon } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { getThumbFromId } from "@/media/util";
 import type { ChannelT, RoomT } from "@/types";
 
@@ -28,20 +29,17 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	const [editingBanner, setEditingBanner] = createSignal(props.room.banner);
 	const [saving, setSaving] = createSignal(false);
 
-	const setAvatarFile = async (f: File) => {
-		await createUpload({
-			client: api2.client,
-			file: f,
-			onComplete(media) {
-				setRoomIcon(media.id);
-				api2.rooms.update(props.room.id, { icon: media.id });
-			},
-			onFail(_error) {},
-			onPause() {},
-			onResume() {},
-			onProgress(_progress) {},
-		});
-	};
+	const avatarUpload = useImageUpload({
+		onComplete(media) {
+			setRoomIcon(media.id);
+			api2.rooms.update(props.room.id, { icon: media.id });
+		},
+	});
+	const bannerUpload = useImageUpload({
+		onComplete(media) {
+			setEditingBanner(media.id);
+		},
+	});
 
 	const removeAvatar = async () => {
 		setRoomIcon(null);
@@ -49,31 +47,17 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 	};
 
 	const openAvatarPicker = () => {
-		avatarInputEl?.click();
+		avatarUpload.openPicker(avatarInputEl);
 	};
 
 	let bannerInputEl!: HTMLInputElement;
-
-	const setBannerFile = async (f: File) => {
-		await createUpload({
-			client: api2.client,
-			file: f,
-			onComplete(media) {
-				setEditingBanner(media.id);
-			},
-			onFail(_error) {},
-			onPause() {},
-			onResume() {},
-			onProgress(_progress) {},
-		});
-	};
 
 	const removeBanner = () => {
 		setEditingBanner(null);
 	};
 
 	const openBannerPicker = () => {
-		bannerInputEl?.click();
+		bannerUpload.openPicker(bannerInputEl);
 	};
 
 	const [editingName, setEditingName] = createSignal(props.room.name);
@@ -196,7 +180,10 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 					<div class="avatar-uploader" onClick={openAvatarPicker}>
 						<div class="avatar-inner">
 							<RoomIcon room={props.room} />
-							<div class="overlay">upload avatar</div>
+							<UploadOverlay
+								progress={avatarUpload.progress()}
+								label="upload avatar"
+							/>
 						</div>
 						<Show when={roomIcon()}>
 							<button
@@ -214,10 +201,7 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 							class="hidden"
 							ref={avatarInputEl}
 							type="file"
-							onInput={(e) => {
-								const f = e.target.files?.[0];
-								if (f) setAvatarFile(f);
-							}}
+							onInput={avatarUpload.onInput}
 						/>
 					</div>
 				</label>
@@ -263,16 +247,16 @@ export function Info(props: VoidProps<{ room: RoomT }>) {
 							undefined,
 					}}
 				>
-					<div class="overlay">upload banner</div>
+					<UploadOverlay
+						progress={bannerUpload.progress()}
+						label="upload banner"
+					/>
 				</div>
 				<input
 					style="display:none"
 					ref={bannerInputEl}
 					type="file"
-					onInput={(e) => {
-						const f = e.target.files?.[0];
-						if (f) setBannerFile(f);
-					}}
+					onInput={bannerUpload.onInput}
 				/>
 			</div>
 			<br />

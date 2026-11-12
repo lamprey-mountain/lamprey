@@ -1,6 +1,5 @@
 import type { EditorState } from "prosemirror-state";
 import type { Channel } from "sdk";
-import { createUpload } from "sdk";
 import { createSignal, onMount, Show, type VoidProps } from "solid-js";
 import { createStore } from "solid-js/store";
 import { useApi, useChannels } from "@/api";
@@ -10,11 +9,13 @@ import { DurationInput, type DurationPreset } from "@/atoms/DurationInput.tsx";
 import { Checkbox } from "@/atoms/icons";
 import { Savebar } from "@/atoms/Savebar";
 import { Slider } from "@/atoms/Slider";
+import { UploadOverlay } from "@/atoms/UploadOverlay";
 import { UserRoleSelect } from "@/atoms/UserRoleSelect";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { ChannelIconGdm } from "@/components/shared/User";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
+import { useImageUpload } from "@/hooks/useImageUpload";
 import { channelDescription } from "@/utils/channel";
 
 const slowmodePresets: DurationPreset[] = [
@@ -109,23 +110,15 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 				)
 			: [];
 
-	const setIconFile = async (f: File) => {
-		await createUpload({
-			client: api.client,
-			file: f,
-			onComplete(media) {
-				setDraft("icon", media.id);
-				api.client.http.PATCH("/api/v1/channel/{channel_id}", {
-					params: { path: { channel_id: props.channel.id } },
-					body: { icon: media.id },
-				});
-			},
-			onFail(_error) {},
-			onPause() {},
-			onResume() {},
-			onProgress(_progress) {},
-		});
-	};
+	const iconUpload = useImageUpload({
+		onComplete(media) {
+			setDraft("icon", media.id);
+			api.client.http.PATCH("/api/v1/channel/{channel_id}", {
+				params: { path: { channel_id: props.channel.id } },
+				body: { icon: media.id },
+			});
+		},
+	});
 
 	const removeIcon = async () => {
 		setDraft("icon", null);
@@ -136,7 +129,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 	};
 
 	const openIconPicker = () => {
-		iconInputEl?.click();
+		iconUpload.openPicker(iconInputEl);
 	};
 
 	const hasVoice = () => {
@@ -257,7 +250,10 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 						<div class="avatar-uploader" onClick={openIconPicker}>
 							<div class="avatar-inner">
 								<ChannelIconGdm id={props.channel.id} icon={draft.icon} />
-								<div class="overlay">upload icon</div>
+								<UploadOverlay
+									progress={iconUpload.progress()}
+									label="upload icon"
+								/>
 							</div>
 							<Show when={draft.icon}>
 								{/* TODO: keyboard a11y (tabindex, style, onKeydown/press)*/}
@@ -276,10 +272,7 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 								style="display:none"
 								ref={iconInputEl}
 								type="file"
-								onInput={(e) => {
-									const f = e.target.files?.[0];
-									if (f) setIconFile(f);
-								}}
+								onInput={iconUpload.onInput}
 							/>
 						</div>
 					</label>
