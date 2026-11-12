@@ -2,6 +2,7 @@ import { createIntersectionObserver } from "@solid-primitives/intersection-obser
 import { createSignal, For, Show, type VoidProps } from "solid-js";
 import { useApi, useRoomBans, useUsers } from "@/api";
 import { useCtx } from "@/app/context";
+import { Search } from "@/atoms/Search";
 import { Time } from "@/atoms/Time.tsx";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
 import { Avatar } from "@/components/shared/User";
@@ -16,6 +17,22 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 	const bans = roomBans2.useList(() => props.room.id);
 
 	const [bottom, setBottom] = createSignal<Element | undefined>();
+	const [search, setSearch] = createSignal("");
+
+	const filteredIds = () => {
+		const ids = bans()?.state.ids ?? [];
+		const query = search().trim().toLowerCase();
+		if (!query) return ids;
+		return ids.filter((id) => {
+			const ban = roomBans2.cache.get(id);
+			if (!ban) return false;
+			const name = users2.cache.get(ban.user_id)?.name ?? ban.user_id;
+			return (
+				name.toLowerCase().includes(query) ||
+				(ban.reason ?? "").toLowerCase().includes(query)
+			);
+		});
+	};
 
 	createIntersectionObserver(
 		() => (bottom() ? [bottom()!] : []),
@@ -38,6 +55,11 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 	return (
 		<div class="room-settings-bans">
 			<h2>bans</h2>
+			<Search
+				class="bans-search"
+				placeholder="search bans..."
+				onInput={setSearch}
+			/>
 			<header>
 				<div class="name">name</div>
 				<div class="created">created at</div>
@@ -46,7 +68,7 @@ export function Bans(props: VoidProps<{ room: RoomT }>) {
 			</header>
 			<Show when={bans()}>
 				<ul>
-					<For each={bans()?.state.ids}>
+					<For each={filteredIds()}>
 						{(id) => {
 							const ban = roomBans2.cache.get(id);
 							if (!ban) return null;

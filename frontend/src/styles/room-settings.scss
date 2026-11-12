@@ -434,6 +434,10 @@
 }
 
 .room-settings-bans {
+	& > .bans-search {
+		margin: 8px 0 12px;
+	}
+
 	& header {
 		display: flex;
 
