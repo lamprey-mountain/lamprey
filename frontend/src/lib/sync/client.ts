@@ -11,6 +11,7 @@ import {
 	type MessageReady,
 	type MessageSync,
 	type paths,
+	ratelimitMiddleware,
 	type Stream,
 	type SubscribeChannelOptions,
 	type SubscribeRoomOptions,
@@ -133,6 +134,8 @@ function createWorkerClient(opts: ClientOptions): Client {
 			return request.request;
 		},
 	});
+
+	http.use(ratelimitMiddleware({ onRatelimit: opts.onRatelimit }));
 
 	const send = (message: WorkerRequest) => port.postMessage(message);
 

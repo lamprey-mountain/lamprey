@@ -1,4 +1,5 @@
 import type { Client } from "./client.ts";
+import { parseRetryAfter } from "./lib/ratelimit.ts";
 import type { Media } from "./types.ts";
 
 export type UploadOptions = {
@@ -97,6 +98,11 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 				);
 				if (error) throw error;
 				if (data) opts.onComplete(data);
+			} else if (xhr.status === 429 || xhr.status >= 500) {
+				const retryAfter = parseRetryAfter(
+					xhr.getResponseHeader("retry-after"),
+				);
+				setTimeout(resumeUpload, retryAfter ?? 1000);
 			} else {
 				opts.onFail(new Error(`upload failed: ${xhr.responseText}`));
 			}
@@ -107,8 +113,9 @@ export async function createUpload(opts: UploadOptions): Promise<Upload> {
 		};
 
 		xhr.onerror = () => {
-			console.log("upload failed, retrying in 1s...");
-			setTimeout(resumeUpload, 1000);
+			const retryAfter = parseRetryAfter(xhr.getResponseHeader("retry-after"));
+			console.log("upload failed, retrying...", retryAfter ?? 1000);
+			setTimeout(resumeUpload, retryAfter ?? 1000);
 		};
 
 		const token = opts.client.opts.token;

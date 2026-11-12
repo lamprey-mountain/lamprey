@@ -1,5 +1,6 @@
 export * from "./client.ts";
 export * from "./client2.ts";
+export * from "./lib/ratelimit.ts";
 export * from "./messages.ts";
 export type { paths } from "./schema.d.ts";
 export * as types from "./types.ts"; // TODO: deprecate/remove?

@@ -1,3 +1,4 @@
+import { isRatelimitError, ratelimitFromError } from "sdk";
 import { useApi, useChannels } from "@/api";
 import { useCtx } from "@/app/context";
 
@@ -38,12 +39,24 @@ export function useMessageSubmit(channel_id: string | (() => string)) {
 		const channel = channels2.cache.get(dest);
 		const messagesService = store.messages;
 
-		messagesService.send(dest, {
-			content: text || null,
-			reply_id,
-			attachments,
-			embeds: [],
-		});
+		messagesService
+			.send(dest, {
+				content: text || null,
+				reply_id,
+				attachments,
+				embeds: [],
+			})
+			.catch((err: unknown) => {
+				if (!isRatelimitError(err)) throw err;
+
+				const info = ratelimitFromError(err);
+				if (!info) return;
+
+				chUpdate?.(
+					"slowmode_expire_at",
+					new Date(Date.now() + info.retry_after * 1000),
+				);
+			});
 
 		if (channel?.slowmode_message && !bypassSlowmode) {
 			const now = new Date();

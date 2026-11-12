@@ -1,6 +1,6 @@
 import { ReactiveMap } from "@solid-primitives/map";
 import type { IDBPDatabase } from "idb";
-import type { Client } from "sdk";
+import { type Client, retryWithBackoff as retryRequest } from "sdk";
 import {
 	type Accessor,
 	batch,
@@ -52,81 +52,15 @@ export abstract class BaseService<T> {
 	}
 
 	/**
-	 * Retry a failed HTTP request with exponential backoff and jitter.
-	 * Automatically extracts data from the response and throws on error.
-	 * Respects the Retry-After header for 429 responses.
+	 * Retry a failed HTTP request, respecting ratelimit info from the response
+	 * body and the Retry-After header.
 	 */
-	protected async retryWithBackoff<T>(
+	protected retryWithBackoff<T>(
 		fn: () => Promise<{ data?: T; error?: unknown; response: Response }>,
 		retries = 3,
 		baseDelay = 1000,
 	): Promise<T> {
-		for (let i = 0; i < retries; i++) {
-			let res: { data?: T; error?: unknown; response: Response } | undefined;
-			try {
-				res = await fn();
-			} catch (e: unknown) {
-				// Don't retry on client errors (4xx except 429)
-				const error = e as {
-					response?: { status?: number; headers?: Headers };
-				};
-				if (
-					error?.response?.status &&
-					error.response.status < 500 &&
-					error.response.status !== 429
-				) {
-					throw e;
-				}
-				if (i === retries - 1) throw e;
-				// Use Retry-After header if available, otherwise exponential backoff with jitter
-				const delay = this.getRetryDelay(error.response, i, baseDelay);
-				await new Promise((r) => setTimeout(r, delay));
-				continue;
-			}
-
-			const { data, error } = res;
-			if (!error) return data as T;
-
-			if (res.response.status < 500 && res.response.status !== 429) {
-				throw error;
-			}
-
-			if (i === retries - 1) throw error;
-			// Use Retry-After header if available, otherwise exponential backoff with jitter
-			const delay = this.getRetryDelay(res.response, i, baseDelay);
-			await new Promise((r) => setTimeout(r, delay));
-		}
-		throw new Error("too many errors");
-	}
-
-	/**
-	 * Calculate retry delay based on Retry-After header or exponential backoff with jitter.
-	 */
-	private getRetryDelay(
-		response: { headers?: Headers } | undefined,
-		retryAttempt: number,
-		baseDelay: number,
-	): number {
-		const retryAfter = response?.headers?.get("Retry-After");
-		if (retryAfter) {
-			// Retry-After can be either:
-			// 1. A delay in seconds (e.g., "5")
-			// 2. An HTTP date timestamp (e.g., "Wed, 21 Oct 2015 07:28:00 GMT")
-			const delayInSeconds = Number.parseInt(retryAfter, 10);
-			if (!Number.isNaN(delayInSeconds)) {
-				return delayInSeconds * 1000;
-			}
-
-			// Try parsing as a date
-			const retryDate = new Date(retryAfter);
-			if (!Number.isNaN(retryDate.getTime())) {
-				const delay = retryDate.getTime() - Date.now();
-				return Math.max(0, delay);
-			}
-		}
-
-		// Fallback to exponential backoff with jitter
-		return baseDelay * 2 ** retryAttempt + Math.random() * 100;
+		return retryRequest(fn, { retries, baseDelay });
 	}
 
 	/**

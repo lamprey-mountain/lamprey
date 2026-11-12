@@ -6,6 +6,7 @@ import {
 	type MessageEnvelope,
 	type paths,
 } from "../index.ts";
+import { ratelimitMiddleware } from "../lib/ratelimit.ts";
 import type { ClientOptions } from "./client";
 import { Syncer } from "./syncer";
 
@@ -159,6 +160,8 @@ export class DirectBackend extends Backend {
 				return r.request;
 			},
 		});
+
+		http.use(ratelimitMiddleware({ onRatelimit: o.onRatelimit }));
 
 		this.http = http;
 	}

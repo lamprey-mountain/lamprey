@@ -3,6 +3,7 @@ import type * as oapi from "openapi-fetch";
 import createFetch from "openapi-fetch";
 import { JsonStream } from "./lib/json-stream.ts";
 import { MsgpackStream } from "./lib/msgpack-stream.ts";
+import { type RatelimitInfo, ratelimitMiddleware } from "./lib/ratelimit.ts";
 import { createObservable, type Observer } from "./observable.ts";
 import type { paths } from "./schema.d.ts";
 import type {
@@ -30,6 +31,7 @@ export type ClientOptions = {
 	format?: "json" | "msgpack";
 	compress?: "deflate";
 	preferWebtransport?: boolean;
+	onRatelimit?: (info: RatelimitInfo) => void;
 };
 
 export type Http = oapi.Client<paths>;
@@ -104,6 +106,8 @@ export function createClient(opts: ClientOptions): Client {
 			return r.request;
 		},
 	});
+
+	http.use(ratelimitMiddleware({ onRatelimit: opts.onRatelimit }));
 
 	let isConnecting = false;
 	let shouldStop = false;
@@ -385,6 +389,8 @@ export function createWebsocketClient(
 		},
 	});
 
+	http.use(ratelimitMiddleware({ onRatelimit: opts.onRatelimit }));
+
 	function setState(newState: ClientState) {
 		state.set(newState);
 	}
@@ -562,6 +568,8 @@ export function createWebtransportClient(
 			return r.request;
 		},
 	});
+
+	http.use(ratelimitMiddleware({ onRatelimit: opts.onRatelimit }));
 
 	const state = createObservable<ClientState>("stopped");
 	const queue: Array<unknown> = [];

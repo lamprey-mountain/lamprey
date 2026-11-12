@@ -1,5 +1,6 @@
 import { Emitter } from "../core/events";
 import { ClientBackend } from "../core/private";
+import type { RatelimitInfo } from "../lib/ratelimit";
 import { RoomManager } from "../resources/room";
 import type { MessageSync } from "../types";
 import { type Backend, DirectBackend } from "./backend";
@@ -7,6 +8,7 @@ import { type Backend, DirectBackend } from "./backend";
 export type ClientOptions = {
 	apiUrl: string;
 	token?: string;
+	onRatelimit?: (info: RatelimitInfo) => void;
 	// maybe add cdn/media url
 	// TODO: allow passing custom fetch impl
 };

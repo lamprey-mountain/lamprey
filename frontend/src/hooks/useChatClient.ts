@@ -73,6 +73,9 @@ export function useChatClient(config: Config) {
 		onError(error, stream) {
 			syncLog.error("error", error.message, error);
 		},
+		onRatelimit(info) {
+			syncLog.warn("ratelimited", info);
+		},
 		onSync(msg, raw, stream) {
 			events.emit("sync", [msg, raw as MessageEnvelope]);
 		},
