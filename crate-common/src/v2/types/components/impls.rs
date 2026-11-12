@@ -33,7 +33,7 @@ pub struct ComponentRef<'c> {
 
 impl ComponentType {
     /// Whether this component type itself is interactive.
-    fn is_interactive(&self) -> bool {
+    pub(crate) fn is_interactive(&self) -> bool {
         match self {
             ComponentType::Button(button) => button.action.is_interactive(),
             ComponentType::Input(_)
