@@ -2,9 +2,9 @@ use std::collections::HashMap;
 
 use common::{
     v1::types::{
-        ChannelId, MessageClient, MessageEnvelope, MessagePayload, MessageSync, Permission,
-        RedexId, RoomId, Session, SyncSubscribeDocument, SyncSubscribeMemberList,
-        SyncSubscribeScript, SyncSubscription,
+        ChannelId, MemberListOp, MessageClient, MessageEnvelope, MessagePayload, MessageSync,
+        Permission, RedexId, RoomId, Session, SyncSubscribeDocument, SyncSubscribeMemberList,
+        SyncSubscribeScript, SyncSubscription, UserId,
         document::{DocumentStateVector, DocumentUpdate},
         voice::{VoiceStateUpdate, messages::SignallingCommand},
     },
@@ -948,6 +948,24 @@ impl Connection {
         Ok(())
     }
 
+    /// whether this user can moderate members in this room
+    async fn is_moderator(
+        globals: Globals,
+        user_id: Option<UserId>,
+        room_id: RoomId,
+    ) -> Result<bool> {
+        let Some(user_id) = user_id else {
+            return Ok(false);
+        };
+
+        let perms = globals
+            .services()
+            .perms
+            .for_room3(Some(user_id), room_id)
+            .await?;
+        Ok(perms.ensure_view()?.is_moderator())
+    }
+
     #[tracing::instrument(
         name = "sync.queue_message",
         level = "debug",
@@ -1051,6 +1069,79 @@ impl Connection {
                     }
 
                     MessageSync::AuditLogEntryCreate { entry }
+                }
+                MessageSync::RoomMemberCreate { mut member, user } => {
+                    if !Self::is_moderator(
+                        self.globals.clone(),
+                        self.session.user_id(),
+                        member.room_id,
+                    )
+                    .await?
+                    {
+                        member.strip_private();
+                    }
+
+                    MessageSync::RoomMemberCreate { member, user }
+                }
+                MessageSync::RoomMemberUpdate { mut member, user } => {
+                    if !Self::is_moderator(
+                        self.globals.clone(),
+                        self.session.user_id(),
+                        member.room_id,
+                    )
+                    .await?
+                    {
+                        member.strip_private();
+                    }
+
+                    MessageSync::RoomMemberUpdate { member, user }
+                }
+                MessageSync::MemberListSync {
+                    connection_id,
+                    room_id,
+                    channel_id,
+                    mut ops,
+                    groups,
+                } => {
+                    let is_moderator = match room_id {
+                        Some(room_id) => {
+                            Self::is_moderator(
+                                self.globals.clone(),
+                                self.session.user_id(),
+                                room_id,
+                            )
+                            .await?
+                        }
+                        None => false,
+                    };
+
+                    if !is_moderator {
+                        for op in &mut ops {
+                            match op {
+                                MemberListOp::Sync { room_members, .. } => {
+                                    if let Some(members) = room_members {
+                                        for member in members {
+                                            member.strip_private();
+                                        }
+                                    }
+                                }
+                                MemberListOp::Insert { room_member, .. } => {
+                                    if let Some(member) = room_member {
+                                        member.strip_private();
+                                    }
+                                }
+                                MemberListOp::Delete { .. } => {}
+                            }
+                        }
+                    }
+
+                    MessageSync::MemberListSync {
+                        connection_id,
+                        room_id,
+                        channel_id,
+                        ops,
+                        groups,
+                    }
                 }
                 m => m,
             };

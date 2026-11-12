@@ -211,7 +211,7 @@ impl MemberListSyncer {
     pub async fn poll(&mut self) -> Result<MessageSync> {
         loop {
             if let Some(mut msg) = self.outbox.pop_front() {
-                self.patch_msg(&mut msg);
+                self.patch_msg(&mut msg).await?;
                 return Ok(msg);
             }
 
@@ -264,7 +264,7 @@ impl MemberListSyncer {
         }
     }
 
-    fn patch_msg(&mut self, msg: &mut MessageSync) {
+    async fn patch_msg(&mut self, msg: &mut MessageSync) -> Result<()> {
         if let MessageSync::MemberListSync {
             connection_id,
             room_id,
@@ -274,6 +274,10 @@ impl MemberListSyncer {
         } = msg
         {
             *connection_id = self.conn_id;
+            let is_moderator = match room_id {
+                Some(room_id) => is_moderator(self.s.clone(), self.user_id, *room_id).await?,
+                None => false,
+            };
 
             for op in ops {
                 // NOTE: maybe i should remove from known_users/members when sending a delete op
@@ -295,6 +299,10 @@ impl MemberListSyncer {
                             rm_vec.retain(|m| self.known_room_members.insert((*rid, m.user_id)));
                             if rm_vec.is_empty() {
                                 *room_members = None;
+                            } else if !is_moderator {
+                                for member in rm_vec {
+                                    member.strip_private();
+                                }
                             }
                         }
                         if let (Some(tid), Some(tm_vec)) =
@@ -317,8 +325,14 @@ impl MemberListSyncer {
                             *user = None;
                         }
                         if let (Some(rid), Some(m)) = (room_id.as_ref(), room_member.as_ref()) {
-                            if !self.known_room_members.insert((*rid, m.user_id)) {
+                            let user_id = m.user_id;
+                            if !self.known_room_members.insert((*rid, user_id)) {
                                 *room_member = None;
+                            }
+                        }
+                        if !is_moderator {
+                            if let Some(member) = room_member.as_mut() {
+                                member.strip_private();
                             }
                         }
                         if let (Some(tid), Some(m)) = (channel_id.as_ref(), thread_member.as_ref())
@@ -332,5 +346,17 @@ impl MemberListSyncer {
                 }
             }
         }
+
+        Ok(())
     }
+}
+
+/// whether this user can moderate members in this room
+async fn is_moderator(s: Globals, user_id: Option<UserId>, room_id: RoomId) -> Result<bool> {
+    let Some(user_id) = user_id else {
+        return Ok(false);
+    };
+
+    let perms = s.services().perms.for_room3(Some(user_id), room_id).await?;
+    Ok(perms.ensure_view()?.is_moderator())
 }
