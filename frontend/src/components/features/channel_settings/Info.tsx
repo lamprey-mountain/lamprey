@@ -49,6 +49,7 @@ const autoArchivePresets: DurationPreset[] = [
 
 type Draft = {
 	name: string;
+	announcement: boolean;
 	nsfw: boolean;
 	autoArchive: number | null;
 	defaultAutoArchive: number | null;
@@ -65,6 +66,7 @@ type Draft = {
 
 const toDraft = (c: Channel): Draft => ({
 	name: c.name ?? c.auto_name ?? "",
+	announcement: c.type === "Announcement",
 	nsfw: c.nsfw ?? false,
 	autoArchive: c.auto_archive_duration ?? null,
 	defaultAutoArchive: c.default_auto_archive_duration ?? null,
@@ -141,6 +143,9 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		JSON.stringify(draft) !== JSON.stringify(toDraft(props.channel)) ||
 		description() !== (channelDescription(props.channel) ?? "");
 
+	const canChangeType = () =>
+		props.channel.type === "Text" || props.channel.type === "Announcement";
+
 	const hasThreadSlowmode = () => {
 		return (
 			props.channel.type === "Forum" ||
@@ -189,6 +194,9 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 		const updated = await channels.update(props.channel.id, {
 			name: draft.name,
 			description: description() || null,
+			...(draft.announcement !== (props.channel.type === "Announcement") && {
+				ty: draft.announcement ? "Announcement" : "Text",
+			}),
 			nsfw: draft.nsfw,
 			...(hasAutoArchive() && {
 				auto_archive_duration: draft.autoArchive,
@@ -485,6 +493,25 @@ export function Info(props: VoidProps<{ channel: Channel }>) {
 							required={false}
 						/>
 					</label>
+				</div>
+			</Show>
+			<Show when={canChangeType()}>
+				<div class="settings-group">
+					<CheckboxOption
+						id={`channel-${props.channel.id}-announcement`}
+						checked={draft.announcement}
+						onChange={(v) => setDraft("announcement", v)}
+						seed={`channel-${props.channel.id}-announcement`}
+					>
+						<Checkbox
+							checked={draft.announcement}
+							seed={`channel-${props.channel.id}-announcement`}
+						/>
+						<div>
+							<b>announcement</b>
+							<div>turn this channel into an announcement channel</div>
+						</div>
+					</CheckboxOption>
 				</div>
 			</Show>
 			<Show when={!isInfo() /* TODO: hasNsfw() */}>
