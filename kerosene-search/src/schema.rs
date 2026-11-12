@@ -7,8 +7,8 @@ use tantivy::{
     Term,
     query::{Query, TermQuery},
     schema::{
-        self, FAST, IndexRecordOption, JsonObjectOptions, STORED, STRING, Schema, SchemaBuilder,
-        TEXT, TextFieldIndexing, TextOptions,
+        self, FAST, INDEXED, IndexRecordOption, JsonObjectOptions, STORED, STRING, Schema,
+        SchemaBuilder, TEXT, TextFieldIndexing, TextOptions,
     },
     tokenizer::RAW_TOKENIZER_NAME,
 };
@@ -20,7 +20,7 @@ pub static SCHEMA: Lazy<UnifiedSchema> = Lazy::new(|| UnifiedSchema::default());
 ///
 /// bump this whenever the schema or the way documents are indexed changes in a
 /// way that requires the index to be dropped and fully reindexed
-pub const SCHEMA_VERSION: u64 = 1;
+pub const SCHEMA_VERSION: u64 = 2;
 
 #[derive(Debug, Clone)]
 pub struct UnifiedSchema {
@@ -146,7 +146,7 @@ impl Default for UnifiedSchema {
         // fast (raw tokenizer) so that results can be sorted by name
         let name = sb.add_text_field("name", text_options.clone().set_fast(RAW_TOKENIZER_NAME));
         let content = sb.add_text_field("content", text_options.clone());
-        let ip_addr = sb.add_ip_addr_field("ip_addr", FAST);
+        let ip_addr = sb.add_ip_addr_field("ip_addr", FAST | INDEXED);
         let user_agent = sb.add_text_field("user_agent", TEXT | STORED);
         let session_id = sb.add_text_field("session_id", STRING | FAST);
         let application_id = sb.add_text_field("application_id", STRING | FAST);

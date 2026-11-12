@@ -528,7 +528,7 @@ async fn admin_search_audit_logs(
 
     let res = srv
         .search
-        .search_audit_log(SearchAuditLogVisibility::Everything, req)
+        .search_audit_log(SearchAuditLogVisibility::Everything, req, true)
         .await?;
 
     Ok(Json(res))

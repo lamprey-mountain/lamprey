@@ -518,6 +518,24 @@ impl SearchDocument for SearchAuditLogEntry<'_> {
         doc.add_text(s.author_id, ent.user_id.to_string());
         doc.add_date(s.created_at, TantivyDT::from_utc(*ent.started_at));
 
+        if let Some(ip_addr) = &ent.ip_addr {
+            if let Ok(ip_addr) = ip_addr.parse::<std::net::IpAddr>() {
+                let ip_addr = match ip_addr {
+                    std::net::IpAddr::V4(ip) => ip.to_ipv6_mapped(),
+                    std::net::IpAddr::V6(ip) => ip,
+                };
+                doc.add_ip_addr(s.ip_addr, ip_addr);
+            }
+        }
+
+        if let Some(user_agent) = &ent.user_agent {
+            doc.add_text(s.user_agent, user_agent);
+        }
+
+        if let Some(session_id) = ent.session_id {
+            doc.add_text(s.session_id, session_id.to_string());
+        }
+
         let mut meta_fast: BTreeMap<String, OwnedValue> = BTreeMap::new();
         meta_fast.insert("status".to_string(), format!("{:?}", ent.status).into());
         meta_fast.insert("audit_event".to_string(), format!("{:?}", ent.ty).into());

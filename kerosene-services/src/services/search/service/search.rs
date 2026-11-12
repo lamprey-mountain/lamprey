@@ -429,6 +429,7 @@ impl ServiceSearch {
         &self,
         vis: SearchAuditLogVisibility,
         req: AuditLogSearchRequest,
+        include_sensitive_fields: bool,
     ) -> Result<AuditLogSearch> {
         let index = self.get_index().await?;
         let searcher = index.searcher().await?;
@@ -438,6 +439,7 @@ impl ServiceSearch {
             .search_audit_log_entries(TantivySearchAuditLogEntries {
                 req: req.clone(),
                 visibility: vis,
+                include_sensitive_fields,
             })
             .await?;
 

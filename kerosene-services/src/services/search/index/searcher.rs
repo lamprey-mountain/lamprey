@@ -62,6 +62,9 @@ pub struct TantivySearchMedia {
 pub struct TantivySearchAuditLogEntries {
     pub req: AuditLogSearchRequest,
     pub visibility: SearchAuditLogVisibility,
+
+    /// whether fields like `ip_addr`, `session_id`, and `user_agent` may be queried
+    pub include_sensitive_fields: bool,
 }
 
 pub struct TantivySearchRoomMembers {
@@ -135,8 +138,21 @@ impl ContentSearcher {
     where
         F: FnOnce(&mut QueryParser),
     {
+        self.parse_query_with_schema(SCHEMA.safe_schema.clone(), fields, q_str, configure)
+    }
+
+    fn parse_query_with_schema<F>(
+        &self,
+        schema: tantivy::schema::Schema,
+        fields: Vec<tantivy::schema::Field>,
+        q_str: &str,
+        configure: F,
+    ) -> Result<Box<dyn Query>>
+    where
+        F: FnOnce(&mut QueryParser),
+    {
         let mut query_parser = QueryParser::new(
-            SCHEMA.safe_schema.clone(),
+            schema,
             fields,
             self.searcher.index().tokenizers().clone(),
         );
@@ -545,10 +561,23 @@ impl ContentSearcher {
     ) -> Result<TantivyAuditLogEntries> {
         let mut q = BqBuilder::new();
 
-        // Text query on name
+        // Text query on name, optionally with sensitive audit fields
         if let Some(q_str) = &msg.req.inner.query {
             if !q_str.is_empty() {
-                q.must(self.parse_query(vec![SCHEMA.name], q_str)?);
+                let (schema, fields) = if msg.include_sensitive_fields {
+                    (
+                        SCHEMA.schema.clone(),
+                        vec![
+                            SCHEMA.name,
+                            SCHEMA.ip_addr,
+                            SCHEMA.user_agent,
+                            SCHEMA.session_id,
+                        ],
+                    )
+                } else {
+                    (SCHEMA.safe_schema.clone(), vec![SCHEMA.name])
+                };
+                q.must(self.parse_query_with_schema(schema, fields, q_str, |_| {})?);
             }
         }
 
