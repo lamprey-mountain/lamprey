@@ -24,6 +24,7 @@ import { Avatar } from "@/components/shared/User";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useMenu } from "@/contexts/menu";
 import { useModals } from "@/contexts/modal";
+import { useSearchParams } from "@/contexts/router";
 import { usePermissions } from "@/hooks/usePermissions";
 import { permissions } from "@/lib/permissions";
 import type { RoomT } from "@/types";
@@ -165,6 +166,22 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 	const [search, setSearch] = createSignal("");
 	const edit = useRoleEditor(null);
 
+	const [searchParams] = useSearchParams<{ role: string }>();
+	const [appliedRoleParam, setAppliedRoleParam] = createSignal<string | null>(
+		null,
+	);
+
+	createEffect(() => {
+		const role_id = searchParams.role;
+		if (!role_id || appliedRoleParam() === role_id) return;
+		const role = roles2.cache.get(role_id);
+		if (!role || role.room_id !== props.room.id) return;
+		setAppliedRoleParam(role_id);
+		edit.setRole(JSON.parse(JSON.stringify(role)));
+		edit.setName(role.name);
+		edit.setDesc(role.description || undefined);
+	});
+
 	return (
 		<div class="room-settings-roles">
 			<div class="role-main">
@@ -225,6 +242,7 @@ const RoleList = (props: {
 	canEditRole: (role: Role) => boolean;
 }) => {
 	const { setMenu } = useMenu();
+	const [, updateParams] = useSearchParams<{ role: string }>();
 
 	const filteredRoles = createMemo(() => {
 		return props.roles.filter((i) => i.name.includes(props.search));
@@ -372,10 +390,12 @@ const RoleList = (props: {
 						onClick={() => {
 							if (props.edit.role.id === i.id) {
 								props.edit.setRole({ id: null } as unknown as Role);
+								updateParams({ role: null });
 							} else {
 								props.edit.setRole(JSON.parse(JSON.stringify(i)));
 								props.edit.setName(i.name);
 								props.edit.setDesc(i.description || undefined);
+								updateParams({ role: i.id });
 							}
 						}}
 					>

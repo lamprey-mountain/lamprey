@@ -56,7 +56,7 @@ export function RoleMenu(props: { role_id: string; room_id?: string }) {
 		const rid = room_id();
 		if (!rid) return;
 		setMenu(null);
-		nav(`/room/${rid}/settings/roles`);
+		nav(`/room/${rid}/settings/roles?role=${props.role_id}`);
 	};
 
 	const manageMembers = () => {
