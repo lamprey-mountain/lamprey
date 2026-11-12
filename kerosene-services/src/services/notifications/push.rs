@@ -2,8 +2,8 @@ use std::time::Duration;
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64;
-use common::v1::types::{SessionId, UserId};
 use common::v1::types::notifications::bytes::NotificationBytes;
+use common::v1::types::{SessionId, UserId};
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use lamprey_backend_data_postgres::PushData;
 use p256::SecretKey;
@@ -250,11 +250,7 @@ impl ServiceNotifications {
             sub: format!("mailto:admin@{}", host),
         };
 
-        let token = jsonwebtoken::encode(
-            &Header::new(Algorithm::ES256),
-            &claims,
-            &keys.encoding,
-        )?;
+        let token = jsonwebtoken::encode(&Header::new(Algorithm::ES256), &claims, &keys.encoding)?;
 
         Ok(format!("vapid t={token}, k={}", keys.public))
     }

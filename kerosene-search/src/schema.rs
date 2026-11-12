@@ -183,9 +183,7 @@ impl Default for UnifiedSchema {
             let (name, field_type) = match entry.name() {
                 "ip_addr" | "user_agent" | "session_id" => {
                     let field_type = match entry.field_type() {
-                        schema::FieldType::Str(_) => {
-                            schema::FieldType::Str(TextOptions::default())
-                        }
+                        schema::FieldType::Str(_) => schema::FieldType::Str(TextOptions::default()),
                         schema::FieldType::IpAddr(_) => {
                             schema::FieldType::IpAddr(schema::IpAddrOptions::default())
                         }
