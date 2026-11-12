@@ -27,6 +27,13 @@ pub struct UnifiedSchema {
     /// the tantivy schema itself
     pub schema: Schema,
 
+    /// schema used for parsing user queries
+    ///
+    /// identical to [`Self::schema`], except that fields which must not be
+    /// searchable are renamed and left unindexed so the query parser rejects
+    /// them
+    pub safe_schema: Schema,
+
     /// the id of this object
     pub id: schema::Field, // text(STRING | FAST | STORED)
 
@@ -171,8 +178,30 @@ impl Default for UnifiedSchema {
 
         let schema = sb.build();
 
+        let mut safe_sb = SchemaBuilder::new();
+        for (_, entry) in schema.fields() {
+            let (name, field_type) = match entry.name() {
+                "ip_addr" | "user_agent" | "session_id" => {
+                    let field_type = match entry.field_type() {
+                        schema::FieldType::Str(_) => {
+                            schema::FieldType::Str(TextOptions::default())
+                        }
+                        schema::FieldType::IpAddr(_) => {
+                            schema::FieldType::IpAddr(schema::IpAddrOptions::default())
+                        }
+                        _ => unreachable!(),
+                    };
+                    (format!("__disallowed {}", entry.name()), field_type)
+                }
+                _ => (entry.name().to_string(), entry.field_type().clone()),
+            };
+            safe_sb.add_field(schema::FieldEntry::new(name, field_type));
+        }
+        let safe_schema = safe_sb.build();
+
         Self {
             schema,
+            safe_schema,
             id,
             doctype,
             subtype,
@@ -292,5 +321,39 @@ impl UnifiedSchema {
     /// construct a term query that requires `metadata_fast.public` to exist and be true
     pub fn query_public(&self) -> Box<dyn Query> {
         Box::new(TermQuery::new(self.term_public(), IndexRecordOption::Basic))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn safe_schema_hides_private_fields() {
+        for name in ["ip_addr", "user_agent", "session_id"] {
+            assert!(SCHEMA.safe_schema.find_field(name).is_none());
+        }
+    }
+
+    #[test]
+    fn safe_schema_keeps_searchable_fields() {
+        for name in ["id", "name", "content"] {
+            assert!(SCHEMA.safe_schema.find_field(name).is_some());
+        }
+    }
+
+    #[test]
+    fn safe_schema_private_fields_are_unindexed() {
+        for name in [
+            "__disallowed ip_addr",
+            "__disallowed user_agent",
+            "__disallowed session_id",
+        ] {
+            let (field, _) = SCHEMA
+                .safe_schema
+                .find_field(name)
+                .expect("safe field should exist");
+            assert!(!SCHEMA.safe_schema.get_field_entry(field).is_indexed());
+        }
     }
 }

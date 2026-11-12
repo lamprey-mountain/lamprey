@@ -135,7 +135,11 @@ impl ContentSearcher {
     where
         F: FnOnce(&mut QueryParser),
     {
-        let mut query_parser = QueryParser::for_index(self.searcher.index(), fields);
+        let mut query_parser = QueryParser::new(
+            SCHEMA.safe_schema.clone(),
+            fields,
+            self.searcher.index().tokenizers().clone(),
+        );
         configure(&mut query_parser);
         let (parsed_query, errs) = query_parser.parse_query_lenient(q_str);
         if !errs.is_empty() {
