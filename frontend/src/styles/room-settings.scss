@@ -319,8 +319,7 @@
 			}
 		}
 
-		& textarea,
-		input[type="text"] {
+		& input[type="text"] {
 			border: solid $sep-300 1px;
 			background: $bg-200;
 			padding: 2px 4px;
@@ -328,6 +327,21 @@
 
 			&:focus {
 				border: solid $link-500 1px;
+			}
+		}
+
+		& .role-description > .editor {
+			background: $bg-200;
+			border: solid $sep-300 1px;
+			border-radius: 2px;
+
+			&:focus-within {
+				border: solid $link-500 1px;
+			}
+
+			& > .ProseMirror {
+				padding: 2px 4px;
+				min-height: 3lh;
 			}
 		}
 

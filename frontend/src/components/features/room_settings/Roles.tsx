@@ -19,9 +19,13 @@ import { Markdown } from "@/atoms/Markdown.tsx";
 import { Resizable } from "@/atoms/Resizable";
 import { Savebar } from "@/atoms/Savebar";
 import { Search } from "@/atoms/Search";
+import { createEditor } from "@/components/features/editor/Editor";
+import { serializeToMarkdown } from "@/components/features/editor/serializer";
 import { PermissionSelector } from "@/components/shared/PermissionSelector";
 import { Avatar } from "@/components/shared/User";
+import { useAutocomplete } from "@/contexts/autocomplete";
 import { useCurrentUser } from "@/contexts/currentUser";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useMenu } from "@/contexts/menu";
 import { useModals } from "@/contexts/modal";
 import { useSearchParams } from "@/contexts/router";
@@ -179,7 +183,6 @@ export function Roles(props: VoidProps<{ room: RoomT }>) {
 		setAppliedRoleParam(role_id);
 		edit.setRole(JSON.parse(JSON.stringify(role)));
 		edit.setName(role.name);
-		edit.setDesc(role.description || undefined);
 	});
 
 	return (
@@ -394,7 +397,6 @@ const RoleList = (props: {
 							} else {
 								props.edit.setRole(JSON.parse(JSON.stringify(i)));
 								props.edit.setName(i.name);
-								props.edit.setDesc(i.description || undefined);
 								updateParams({ role: i.id });
 							}
 						}}
@@ -458,6 +460,43 @@ const RoleList = (props: {
 				)}
 			</For>
 		</ul>
+	);
+};
+
+const RoleDescriptionEditor = (props: {
+	room: RoomT;
+	edit: RoleEditState;
+}) => {
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+	const editor = createEditor({
+		channelId: () => props.room.id,
+		roomId: () => props.room.id,
+		toolbar,
+		autocomplete,
+		initialContent: () => props.edit.role.description ?? "",
+	});
+
+	// the editor dispatches a metadata transaction on mount, which would
+	// otherwise mark an untouched description as dirty
+	let mounted = false;
+
+	return (
+		<editor.View
+			placeholder="role description..."
+			submitOnEnter={false}
+			autofocus={false}
+			onChange={(state) => {
+				if (!mounted) {
+					mounted = true;
+					return;
+				}
+				props.edit.setRole((role) => ({
+					...role,
+					description: serializeToMarkdown(state.doc) || null,
+				}));
+			}}
+		/>
 	);
 };
 
@@ -589,17 +628,13 @@ const RoleEditor = (props: {
 					}}
 				/>
 				<h3>description</h3>
-				<textarea
-					disabled={!canEdit()}
-					onInput={(e) => {
-						props.edit.setRole((r) => ({
-							...r,
-							description: (e.target as HTMLTextAreaElement).value || null,
-						}));
-					}}
-				>
-					{props.edit.desc()}
-				</textarea>
+				<div class="role-description">
+					<Show when={props.edit.role.id} keyed>
+						{(_) => (
+							<RoleDescriptionEditor room={props.room} edit={props.edit} />
+						)}
+					</Show>
+				</div>
 				<br />
 				<br />
 				<For
@@ -726,9 +761,8 @@ function useRoleEditor(initial: Role | null) {
 		initial ?? ({ id: null } as unknown as Role),
 	);
 	const [name, setName] = createSignal(initial?.name ?? "");
-	const [desc, setDesc] = createSignal(initial?.description ?? undefined);
 
-	return { role, setRole, name, setName, desc, setDesc };
+	return { role, setRole, name, setName };
 }
 
 const RolePermissionSelector = (props: {
