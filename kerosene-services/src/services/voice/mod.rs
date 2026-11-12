@@ -8,7 +8,7 @@ use dashmap::DashMap;
 use tokio::sync::RwLock;
 
 pub mod calls;
-// pub mod ring;
+pub mod ring;
 pub mod sfus;
 pub mod sync;
 pub mod voice_state;

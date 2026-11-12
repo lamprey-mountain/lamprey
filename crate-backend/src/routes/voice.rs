@@ -7,7 +7,7 @@ use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::util::{Changes, Time};
-use common::v1::types::voice::{RingEligibility, VoiceStateScreenshareUpdate, VoiceStateUpdate};
+use common::v1::types::voice::{VoiceStateScreenshareUpdate, VoiceStateUpdate};
 use common::v1::types::{
     AuditLogEntryType, ChannelType, MessageSync, PaginationResponse, Permission,
 };
@@ -560,38 +560,61 @@ async fn voice_ring_eligibility(
     req: routes::voice_ring_eligibility::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
-    let chan = s
+    let eligibility = s
         .services()
-        .channels
-        .get(req.channel_id, Some(auth.user.id))
+        .voice
+        .ring_eligible(req.channel_id, auth.user.id)
         .await?;
-    Ok(Json(RingEligibility {
-        ringable: matches!(chan.ty, ChannelType::Dm | ChannelType::Gdm),
-    }))
+
+    Ok(Json(eligibility))
 }
 
-/// Voice ring start (TODO)
+/// Voice ring start
 #[handler(routes::voice_ring_start)]
 async fn voice_ring_start(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::voice_ring_start::Request,
+    State(s): State<Arc<ServerState>>,
+    req: routes::voice_ring_start::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let srv = s.services();
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
+
+    srv.voice
+        .ring_start(req.channel_id, &req.ring.user_ids)
+        .await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
-/// Voice ring stop (TODO)
+/// Voice ring stop
 #[handler(routes::voice_ring_stop)]
 async fn voice_ring_stop(
     auth: Auth,
-    State(_s): State<Arc<ServerState>>,
-    _req: routes::voice_ring_stop::Request,
+    State(s): State<Arc<ServerState>>,
+    req: routes::voice_ring_stop::Request,
 ) -> Result<impl IntoResponse> {
     auth.ensure_scopes(&[Scope::Full])?;
     auth.user.ensure_unsuspended()?;
-    Ok(Error::Unimplemented)
+
+    let srv = s.services();
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
+
+    srv.voice
+        .ring_stop(req.channel_id, &req.ring.user_ids)
+        .await?;
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {

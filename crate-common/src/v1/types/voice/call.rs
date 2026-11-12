@@ -8,7 +8,7 @@ use lamprey_macros::record;
 use crate::v1::types::util::some_option;
 use crate::{
     util::registry::export_models,
-    v1::types::{ChannelId, RoomId, misc::Time},
+    v1::types::{ChannelId, RoomId, UserId, misc::Time},
 };
 
 /// info about a currently active voice channel, with ids
@@ -29,6 +29,12 @@ pub struct CallMetadata {
     /// suppressed) are sent.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audience_count: Option<u64>,
+
+    /// users that are currently being rung for this call
+    ///
+    /// only used in dm and gdm channels
+    #[serde(default)]
+    pub ringing: Vec<UserId>,
 }
 
 /// info about a currently active voice channel, with extra ids

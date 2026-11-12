@@ -7035,6 +7035,12 @@ export interface components {
              *     roughly corresponds to the time that the first user joined
              */
             created_at: components["schemas"]["Time"];
+            /**
+             * @description users that are currently being rung for this call
+             *
+             *     only used in dm and gdm channels
+             */
+            ringing: components["schemas"]["Id"][];
             topic?: string | null;
         };
         CallPatch: {

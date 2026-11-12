@@ -121,6 +121,7 @@ impl ServiceVoice {
                 topic: params.topic,
                 created_at: Time::now_utc(),
                 audience_count: (channel.ty == ChannelType::Broadcast).then_some(0),
+                ringing: Vec::new(),
             },
         };
 
