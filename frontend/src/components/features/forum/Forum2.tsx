@@ -5,6 +5,7 @@ import { useSearchParams } from "@/contexts/router";
 // TODO: refactor out duplicated code from here and Message.tsx
 
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { debounce, leading, throttle } from "@solid-primitives/scheduled";
 import { ReactiveSet } from "@solid-primitives/set";
 import type { EditorState, Transaction } from "prosemirror-state";
@@ -178,7 +179,37 @@ export const Forum2 = (props: { channel: Channel }) => {
 	const archivedThreads = threads2.useListArchivedForChannel(forum_id);
 	const removedThreads = threads2.useListRemovedForChannel(forum_id);
 
-	// TODO: Implement proper pagination for threads
+	const [bottom, setBottom] = createSignal<Element | undefined>();
+
+	const fetchMoreThreads = () => {
+		if (searchQuery().trim()) return;
+
+		const active = activeThreads();
+		if (active?.state.has_more && !active.state.isLoading) {
+			threads2.fetchNextChannelPage(forum_id());
+		}
+
+		const archived = archivedThreads();
+		if (archived?.state.has_more && !archived.state.isLoading) {
+			threads2.fetchNextArchivedChannelPage(forum_id());
+		}
+
+		const removed = removedThreads();
+		if (
+			showRemoved() &&
+			removed?.state.has_more &&
+			!removed.state.isLoading
+		) {
+			threads2.fetchNextRemovedChannelPage(forum_id());
+		}
+	};
+
+	createIntersectionObserver(
+		() => (bottom() ? [bottom()!] : []),
+		(entries) => {
+			if (entries.some((entry) => entry.isIntersecting)) fetchMoreThreads();
+		},
+	);
 
 	const sortThreads = (items: Channel[]) => {
 		return [...items].sort((a, b) => {
@@ -233,7 +264,6 @@ export const Forum2 = (props: { channel: Channel }) => {
 		setShowCreateForm(true);
 	}
 
-	const [_bottom, setBottom] = createSignal<Element | undefined>();
 	const [showCreateForm, setShowCreateForm] = createSignal(
 		!!(params.title || params.body),
 	);

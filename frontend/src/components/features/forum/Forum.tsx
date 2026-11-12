@@ -1,4 +1,5 @@
 import { autoUpdate, flip, offset, shift } from "@floating-ui/dom";
+import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
 import { debounce } from "@solid-primitives/scheduled";
 import { A } from "@solidjs/router";
 import type { EditorState } from "prosemirror-state";
@@ -68,9 +69,7 @@ export const Forum = (props: { channel: Channel }) => {
 	const archivedThreads = threads2.useListArchivedForChannel(forum_id);
 	const removedThreads = threads2.useListRemovedForChannel(forum_id);
 
-	const [_bottom, setBottom] = createSignal<Element | undefined>();
-
-	// TODO: Implement proper pagination for threads
+	const [bottom, setBottom] = createSignal<Element | undefined>();
 
 	const user = useCurrentUser();
 	const user_id = () => user()?.id;
@@ -98,6 +97,36 @@ export const Forum = (props: { channel: Channel }) => {
 		setDebouncedSearch(value);
 		setParams({ q: value || null }, { replace: true });
 	}, 300);
+
+	const fetchMoreThreads = () => {
+		if (searchQuery().trim()) return;
+
+		const active = activeThreads();
+		if (active?.state.has_more && !active.state.isLoading) {
+			threads2.fetchNextChannelPage(forum_id());
+		}
+
+		const archived = archivedThreads();
+		if (archived?.state.has_more && !archived.state.isLoading) {
+			threads2.fetchNextArchivedChannelPage(forum_id());
+		}
+
+		const removed = removedThreads();
+		if (
+			showRemoved() &&
+			removed?.state.has_more &&
+			!removed.state.isLoading
+		) {
+			threads2.fetchNextRemovedChannelPage(forum_id());
+		}
+	};
+
+	createIntersectionObserver(
+		() => (bottom() ? [bottom()!] : []),
+		(entries) => {
+			if (entries.some((entry) => entry.isIntersecting)) fetchMoreThreads();
+		},
+	);
 
 	const [searchResults] = createResource(debouncedSearch, async (query) => {
 		if (!query.trim()) return [];

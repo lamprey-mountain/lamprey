@@ -47,28 +47,58 @@ export class ThreadsService extends BaseService<Channel> {
 		return map;
 	}
 
-	private async fetchPage(
-		endpoint: string,
-		pathParam: string,
-		pathValue: string,
-		list: PaginatedList,
+	private request(
+		type: ThreadListType,
+		identifier: string,
 		cursor?: string,
+	): Promise<{
+		data?: Pagination<Channel>;
+		error?: unknown;
+		response: Response;
+	}> {
+		const query = { dir: "f", limit: 100, from: cursor } as const;
+
+		switch (type) {
+			case "room":
+				return this.client.http.GET("/api/v1/room/{room_id}/thread", {
+					params: { path: { room_id: identifier }, query },
+				});
+			case "room_archived":
+				return this.client.http.GET("/api/v1/room/{room_id}/thread/archived", {
+					params: { path: { room_id: identifier }, query },
+				});
+			case "room_removed":
+				return this.client.http.GET("/api/v1/room/{room_id}/thread/removed", {
+					params: { path: { room_id: identifier }, query },
+				});
+			case "channel":
+				return this.client.http.GET("/api/v1/channel/{channel_id}/thread", {
+					params: { path: { channel_id: identifier }, query },
+				});
+			case "channel_archived":
+				return this.client.http.GET(
+					"/api/v1/channel/{channel_id}/thread/archived",
+					{ params: { path: { channel_id: identifier }, query } },
+				);
+			case "channel_removed":
+				return this.client.http.GET(
+					"/api/v1/channel/{channel_id}/thread/removed",
+					{ params: { path: { channel_id: identifier }, query } },
+				);
+		}
+	}
+
+	private async fetchPage(
+		list: PaginatedList,
+		type: ThreadListType,
+		identifier: string,
 	): Promise<void> {
 		if (list.state.isLoading || !list.state.has_more) return;
 		list.setLoading(true);
 
 		try {
 			const data = await this.retryWithBackoff<Pagination<Channel>>(() =>
-				this.client.http.GET(endpoint as any, {
-					params: {
-						path: { [pathParam]: pathValue },
-						query: {
-							dir: "f",
-							limit: 100,
-							from: cursor,
-						},
-					},
-				}),
+				this.request(type, identifier, list.state.cursor ?? undefined),
 			);
 
 			this.upsertBulk(data.items);
@@ -83,11 +113,34 @@ export class ThreadsService extends BaseService<Channel> {
 		}
 	}
 
+	private fetchNextPage(
+		type: ThreadListType,
+		identifier: string,
+	): Promise<void> | undefined {
+		const list = this.getListMap(type).get(identifier);
+		if (!list) return;
+		return this.fetchPage(list, type, identifier);
+	}
+
+	fetchNextChannelPage(channel_id: string): Promise<void> | undefined {
+		return this.fetchNextPage("channel", channel_id);
+	}
+
+	fetchNextArchivedChannelPage(
+		channel_id: string,
+	): Promise<void> | undefined {
+		return this.fetchNextPage("channel_archived", channel_id);
+	}
+
+	fetchNextRemovedChannelPage(
+		channel_id: string,
+	): Promise<void> | undefined {
+		return this.fetchNextPage("channel_removed", channel_id);
+	}
+
 	private useList(
 		id: () => string | undefined,
 		type: ThreadListType,
-		endpoint: string,
-		pathParam: string,
 	): Resource<PaginatedList | undefined> {
 		const [resource] = createResource(id, async (identifier) => {
 			if (!identifier) return undefined;
@@ -100,7 +153,7 @@ export class ThreadsService extends BaseService<Channel> {
 			}
 
 			if (list.state.ids.length === 0 && !list.state.isLoading) {
-				await this.fetchPage(endpoint, pathParam, identifier, list);
+				await this.fetchPage(list, type, identifier);
 			}
 
 			return list;
@@ -112,67 +165,37 @@ export class ThreadsService extends BaseService<Channel> {
 	useListForRoom(
 		room_id: () => string | undefined,
 	): Resource<PaginatedList | undefined> {
-		return this.useList(
-			room_id,
-			"room",
-			"/api/v1/room/{room_id}/thread",
-			"room_id",
-		);
+		return this.useList(room_id, "room");
 	}
 
 	useListArchivedForRoom(
 		room_id: () => string | undefined,
 	): Resource<PaginatedList | undefined> {
-		return this.useList(
-			room_id,
-			"room_archived",
-			"/api/v1/room/{room_id}/thread/archived",
-			"room_id",
-		);
+		return this.useList(room_id, "room_archived");
 	}
 
 	useListRemovedForRoom(
 		room_id: () => string | undefined,
 	): Resource<PaginatedList | undefined> {
-		return this.useList(
-			room_id,
-			"room_removed",
-			"/api/v1/room/{room_id}/thread/removed",
-			"room_id",
-		);
+		return this.useList(room_id, "room_removed");
 	}
 
 	useListForChannel(
 		channel_id: () => string | undefined,
 	): Resource<PaginatedList | undefined> {
-		return this.useList(
-			channel_id,
-			"channel",
-			"/api/v1/channel/{channel_id}/thread",
-			"channel_id",
-		);
+		return this.useList(channel_id, "channel");
 	}
 
 	useListArchivedForChannel(
 		channel_id: () => string | undefined,
 	): Resource<PaginatedList | undefined> {
-		return this.useList(
-			channel_id,
-			"channel_archived",
-			"/api/v1/channel/{channel_id}/thread/archived",
-			"channel_id",
-		);
+		return this.useList(channel_id, "channel_archived");
 	}
 
 	useListRemovedForChannel(
 		channel_id: () => string | undefined,
 	): Resource<PaginatedList | undefined> {
-		return this.useList(
-			channel_id,
-			"channel_removed",
-			"/api/v1/channel/{channel_id}/thread/removed",
-			"channel_id",
-		);
+		return this.useList(channel_id, "channel_removed");
 	}
 
 	handleThreadUpdate(thread: Channel) {
