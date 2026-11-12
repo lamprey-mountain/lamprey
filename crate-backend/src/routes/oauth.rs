@@ -53,6 +53,9 @@ struct NormalizedRegistration {
     grant_types: Vec<OauthGrantType>,
     response_types: Vec<OauthResponseType>,
     scope: Option<String>,
+    url_homepage: Option<String>,
+    url_terms_of_service: Option<String>,
+    url_privacy_policy: Option<String>,
 }
 
 /// Oauth info
@@ -95,6 +98,9 @@ async fn oauth_register(
         grant_types,
         response_types,
         scope,
+        url_homepage,
+        url_terms_of_service,
+        url_privacy_policy,
     } = normalize_registration(req.registration)?;
 
     let mut txn = s.acquire_data().await?;
@@ -122,9 +128,9 @@ async fn oauth_register(
         oauth_secret: None,
         oauth_redirect_uris: redirect_uris.clone(),
         oauth_confidential: false,
-        url_homepage: None,
-        url_terms_of_service: None,
-        url_privacy_policy: None,
+        url_homepage: url_homepage.clone(),
+        url_terms_of_service: url_terms_of_service.clone(),
+        url_privacy_policy: url_privacy_policy.clone(),
     };
     txn.application_insert(app.clone()).await?;
     txn.commit().await?;
@@ -164,6 +170,9 @@ async fn oauth_register(
         grant_types,
         response_types,
         scope,
+        client_uri: url_homepage,
+        tos_uri: url_terms_of_service,
+        policy_uri: url_privacy_policy,
     };
     let mut response = (StatusCode::CREATED, Json(response)).into_response();
     response
@@ -461,7 +470,43 @@ fn normalize_registration(req: OauthClientRegistrationRequest) -> Result<Normali
         grant_types,
         response_types,
         scope,
+        url_homepage: normalize_metadata_url(req.client_uri)?,
+        url_terms_of_service: normalize_metadata_url(req.tos_uri)?,
+        url_privacy_policy: normalize_metadata_url(req.policy_uri)?,
     })
+}
+
+/// validate an optional client metadata url (RFC 7591 `client_uri`, `tos_uri`,
+/// `policy_uri`)
+fn normalize_metadata_url(value: Option<String>) -> Result<Option<String>> {
+    let Some(value) = value
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+    else {
+        return Ok(None);
+    };
+
+    if value.chars().count() > 2048 {
+        return Err(oauth_error(
+            "invalid_client_metadata",
+            "client metadata urls must be 2048 characters or fewer",
+        ));
+    }
+
+    let url = url::Url::parse(&value).map_err(|_| {
+        oauth_error(
+            "invalid_client_metadata",
+            "client metadata urls must be absolute urls",
+        )
+    })?;
+    if !matches!(url.scheme(), "http" | "https") {
+        return Err(oauth_error(
+            "invalid_client_metadata",
+            "client metadata urls must use the http or https scheme",
+        ));
+    }
+
+    Ok(Some(value))
 }
 
 fn validate_pkce(app: &Application, q: &OauthAuthorizeParams) -> Result<()> {
@@ -976,6 +1021,10 @@ async fn oauth_token(
                 .user_id()
                 .ok_or(Error::Internal("session has no user".to_string()))?;
 
+            s.services()
+                .notifications
+                .push_unregister_session(old_session_id)
+                .await?;
             data.session_delete(old_session_id).await?;
             s.services().sessions.invalidate(old_session_id).await;
 
@@ -1071,6 +1120,9 @@ async fn oauth_revoke(
 ) -> Result<impl IntoResponse> {
     let mut data = s.data();
     let srv = s.services();
+    srv.notifications
+        .push_unregister_session(auth.session.id)
+        .await?;
     data.session_delete(auth.session.id).await?;
     srv.sessions.invalidate(auth.session.id).await;
     Ok(StatusCode::NO_CONTENT)
@@ -1251,6 +1303,9 @@ mod tests {
             grant_types: None,
             response_types: None,
             client_name: None,
+            client_uri: None,
+            tos_uri: None,
+            policy_uri: None,
             scope: None,
         }
     }
@@ -1302,5 +1357,37 @@ mod tests {
     #[test]
     fn redirect_uris_allow_ipv6_loopback() {
         assert!(validate_redirect_uris(&["http://[::1]:8080/callback".to_string()]).is_ok());
+    }
+
+    #[test]
+    fn registration_keeps_client_metadata_urls() {
+        let mut request = registration(vec!["https://example.com/callback"]);
+        request.client_uri = Some(" https://example.com ".to_string());
+        request.tos_uri = Some("https://example.com/terms".to_string());
+        request.policy_uri = Some("https://example.com/privacy".to_string());
+        let normalized = normalize_registration(request).unwrap();
+        assert_eq!(
+            normalized.url_homepage.as_deref(),
+            Some("https://example.com")
+        );
+        assert_eq!(
+            normalized.url_terms_of_service.as_deref(),
+            Some("https://example.com/terms")
+        );
+        assert_eq!(
+            normalized.url_privacy_policy.as_deref(),
+            Some("https://example.com/privacy")
+        );
+    }
+
+    #[test]
+    fn registration_rejects_invalid_client_metadata_urls() {
+        let mut request = registration(vec!["https://example.com/callback"]);
+        request.tos_uri = Some("not a url".to_string());
+        assert!(normalize_registration(request).is_err());
+
+        let mut request = registration(vec!["https://example.com/callback"]);
+        request.policy_uri = Some("javascript:alert(1)".to_string());
+        assert!(normalize_registration(request).is_err());
     }
 }

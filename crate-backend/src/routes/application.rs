@@ -177,7 +177,9 @@ async fn app_patch(
     app.oauth_redirect_uris = patch.oauth_redirect_uris.unwrap_or(app.oauth_redirect_uris);
     app.oauth_confidential = patch.oauth_confidential.unwrap_or(app.oauth_confidential);
     app.url_homepage = patch.url_homepage.unwrap_or(app.url_homepage);
-    app.url_terms_of_service = patch.url_terms_of_service.unwrap_or(app.url_terms_of_service);
+    app.url_terms_of_service = patch
+        .url_terms_of_service
+        .unwrap_or(app.url_terms_of_service);
     app.url_privacy_policy = patch.url_privacy_policy.unwrap_or(app.url_privacy_policy);
 
     data.application_update(app.clone()).await?;

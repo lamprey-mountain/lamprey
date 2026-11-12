@@ -234,6 +234,18 @@ pub struct OauthClientRegistrationRequest {
     #[serde(default)]
     pub client_name: Option<String>,
 
+    /// url of the client's homepage (RFC 7591 `client_uri`)
+    #[serde(default)]
+    pub client_uri: Option<String>,
+
+    /// url of the client's terms of service (RFC 7591 `tos_uri`)
+    #[serde(default)]
+    pub tos_uri: Option<String>,
+
+    /// url of the client's privacy policy (RFC 7591 `policy_uri`)
+    #[serde(default)]
+    pub policy_uri: Option<String>,
+
     #[serde(default)]
     pub scope: Option<String>,
 }
@@ -250,6 +262,12 @@ pub struct OauthClientRegistrationResponse {
     pub response_types: Vec<OauthResponseType>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub scope: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tos_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy_uri: Option<String>,
 }
 
 /// device authorization request (RFC 8628)

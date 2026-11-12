@@ -493,6 +493,9 @@ async fn register_client(
             ]),
             response_types: None,
             client_name: Some(client_name.clone()),
+            client_uri: None,
+            tos_uri: None,
+            policy_uri: None,
             scope: Some(scope_string(scope)),
         })
         .await
