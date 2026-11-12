@@ -291,6 +291,8 @@ pub trait DataMessage {
         author_id: UserId,
         pagination: PaginationQuery<MessageId>,
     ) -> Result<PaginationResponse<Message>>;
+    /// list all call messages that have not ended yet
+    async fn message_call_list_active(&mut self) -> Result<Vec<Message>>;
     async fn message_delete(&mut self, channel_id: ChannelId, message_id: MessageId) -> Result<()>;
     async fn message_delete_bulk(
         &mut self,

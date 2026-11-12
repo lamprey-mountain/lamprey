@@ -145,6 +145,10 @@ impl Globals {
 
         srv.start_background_tasks().await;
 
+        if let Err(err) = srv.voice.cleanup_stale_calls().await {
+            error!("failed to clean up stale calls: {err}");
+        }
+
         srv.notifications.init_vapid_keys().await?;
         srv.rooms.init_server_room().await?;
 

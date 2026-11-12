@@ -1269,6 +1269,55 @@ impl DataMessage for Postgres {
         )
     }
 
+    async fn message_call_list_active(&mut self) -> Result<Vec<Message>> {
+        let mut conn = self.acquire().await?;
+        let rows = query_as::<_, DbMessage>(
+            r#"
+            SELECT
+                mv.type as message_type,
+                m.id,
+                m.channel_id,
+                c.room_id,
+                m.author_id,
+                m.created_at,
+                m.deleted_at,
+                m.removed_at,
+                m.pinned,
+                m.created_seq,
+                m.lifecycle_seq,
+                m.flume,
+                m.interaction,
+                m.ephemeral,
+                mv.version_id,
+                mv.author_id as version_author_id,
+                mv.content,
+                mv.metadata,
+                mv.reply_id,
+                mv.override_name,
+                mv.embeds as embeds,
+                mv.components as components,
+                mv.created_at as version_created_at,
+                mv.deleted_at as version_deleted_at,
+                mv.created_seq as version_created_seq,
+                coalesce(att_json.attachments, '{}') as attachments,
+                NULL::bigint as count_direct,
+                NULL::bigint as count_recursive
+            FROM message AS m
+            JOIN message_version AS mv ON m.latest_version_id = mv.version_id
+            LEFT JOIN att_json ON att_json.version_id = mv.version_id
+            JOIN channel AS c ON m.channel_id = c.id
+            WHERE mv.type = 'Call'
+              AND mv.metadata IS NOT NULL
+              AND (mv.metadata->>'ended_at') IS NULL
+              AND m.deleted_at IS NULL
+            "#,
+        )
+        .fetch_all(conn.ext())
+        .await?;
+
+        Ok(rows.into_iter().map(Into::into).collect())
+    }
+
     async fn message_id_get_by_version(
         &mut self,
         channel_id: ChannelId,

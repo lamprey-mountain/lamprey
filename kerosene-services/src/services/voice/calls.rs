@@ -16,8 +16,6 @@ use tracing::error;
 
 const CALL_CLEANUP_TIMEOUT: Duration = Duration::from_secs(300);
 
-// TODO: clean up older MessageType::Call messages, set ended_at (handle server restarts)
-
 pub struct CallHandleInner {
     pub call: Call,
     pub sfus: DashSet<SfuId>,
@@ -52,6 +50,42 @@ impl ServiceVoice {
     /// get a call
     pub fn call_get(&self, channel_id: ChannelId) -> Option<CallHandle> {
         self.calls.get(&channel_id).map(|c| c.value().clone())
+    }
+
+    /// mark call messages left active by a previous server instance as ended
+    pub async fn cleanup_stale_calls(&self) -> Result<()> {
+        let mut txn = self.state.begin().await?;
+        let messages = txn.message_call_list_active().await?;
+        let ended_at = Time::now_utc();
+
+        for message in messages {
+            let MessageType::Call(call) = &message.latest_version.message_type else {
+                continue;
+            };
+
+            let update = DbMessageUpdate {
+                attachments: vec![],
+                author_id: message.author_id,
+                embeds: vec![],
+                components: vec![],
+                message_type: MessageType::Call(MessageCall {
+                    ended_at: Some(ended_at),
+                    participants: call.participants.clone(),
+                }),
+                created_at: Some(message.created_at.into()),
+                mentions: Default::default(),
+            };
+
+            txn.message_update_in_place(
+                message.channel_id,
+                message.latest_version.version_id,
+                update,
+            )
+            .await?;
+        }
+
+        txn.commit().await?;
+        Ok(())
     }
 
     /// create a call
