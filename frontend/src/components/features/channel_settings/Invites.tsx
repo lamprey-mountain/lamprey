@@ -64,10 +64,10 @@ export function Invites(props: VoidProps<{ channel: Channel }>) {
 											</div>
 										</div>
 										<div class="uses">
-											<span class="mono">{(i as any).uses}</span>
+											<span class="mono">{i.uses}</span>
 											<span class="dim">/</span>
 											<span class="mono">
-												{(i as any).max_uses ?? "\u221e"}
+												{i.max_uses ?? "\u221e"}
 											</span>
 										</div>
 										<div class="expires">

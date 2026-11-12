@@ -2841,6 +2841,10 @@ button.big {
 	}
 }
 
+.invites .empty {
+	padding: 4px 2px;
+}
+
 .invites .invites-invite {
 	display: flex;
 	align-items: center;
@@ -2856,6 +2860,10 @@ button.big {
 
 		code {
 			background: none;
+		}
+
+		.dim {
+			@include truncate;
 		}
 	}
 
@@ -2890,6 +2898,10 @@ button.big {
 
 	.expires {
 		width: 6rem;
+
+		.expired {
+			color: $error-500;
+		}
 	}
 
 	.dim {
