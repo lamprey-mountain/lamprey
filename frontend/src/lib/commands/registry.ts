@@ -1,6 +1,11 @@
+import type { Channel } from "sdk";
 import type { ChannelsService, RootStore } from "@/api";
 import type { ChatCtx } from "@/types/chat";
+import { parseDuration } from "./duration";
+import { tokenizeArgs } from "./tokenize";
 import type { Command, OptionDef } from "./types";
+
+export type CommandMatch = { command: Command; consumed: number };
 
 export class SlashCommands {
 	private commands: Command[] = [];
@@ -17,26 +22,44 @@ export class SlashCommands {
 		return this.commands.find((cmd) => cmd.name === name);
 	}
 
-	parse(
-		text: string,
-	): { command: Command; args: Record<string, unknown> } | undefined {
+	/** resolve `/command subcommand ...`, returning the deepest command and the
+	 * length of the matched prefix (including the leading slash) */
+	match(text: string): CommandMatch | undefined {
+		if (!text.startsWith("/")) return undefined;
 		const parts = text.slice(1).split(" ");
-		const top = this.find(parts[0]);
+		const top = this.find(parts[0] ?? "");
 		if (!top) return undefined;
 
 		let command = top;
-		let rawArgs = parts.slice(1);
+		let consumed = 1 + (parts[0]?.length ?? 0);
+		let idx = 1;
 
-		// descend through arbitrarily many levels, e.g. `/room settings notifications on`
 		while (command.subcommands?.length) {
-			const sub = command.subcommands.find((s) => s.name === rawArgs[0]);
+			const sub = command.subcommands.find((s) => s.name === parts[idx]);
 			if (!sub) break;
 			command = sub;
-			rawArgs = rawArgs.slice(1);
+			consumed += 1 + sub.name.length;
+			idx++;
 		}
 
+		return { command, consumed };
+	}
+
+	parse(
+		text: string,
+	): { command: Command; args: Record<string, unknown> } | undefined {
+		const match = this.match(text);
+		if (!match) return undefined;
+
+		const rawArgs = tokenizeArgs(text.slice(match.consumed)).map(
+			(token) => token.value,
+		);
+
 		// TODO: parse options from parent command?
-		return { command, args: parseOptions(command.options, rawArgs) };
+		return {
+			command: match.command,
+			args: parseOptions(match.command.options, rawArgs),
+		};
 	}
 
 	// TODO: clean up type signature
@@ -67,11 +90,50 @@ export class SlashCommands {
 			return;
 		}
 
+		resolveUserArgs(api, channel, parsed.command.options, parsed.args);
+
 		parsed.command.execute(
 			api,
 			channel,
 			parsed.args as any, // TODO: better typing
 		);
+	}
+}
+
+/** commands expect user ids, but users may type the displayed name */
+function resolveUserArgs(
+	api: RootStore,
+	channel: Channel,
+	options: OptionDef[],
+	args: Record<string, unknown>,
+) {
+	for (const opt of options) {
+		if (opt.kind !== "user") continue;
+
+		const value = args[opt.name];
+		if (typeof value !== "string" || !value) continue;
+
+		const mention = /^<@([^>]+)>$/.exec(value);
+		if (mention) {
+			args[opt.name] = mention[1];
+			continue;
+		}
+
+		if (api.users.cache.get(value)) continue;
+
+		const user = [...api.users.cache.values()].find((u) => u.name === value);
+		if (user) {
+			args[opt.name] = user.id;
+			continue;
+		}
+
+		const room_id = channel.room_id;
+		if (!room_id) continue;
+
+		const member = [...api.roomMembers.cache.values()].find(
+			(m) => m.room_id === room_id && m.override_name === value,
+		);
+		if (member) args[opt.name] = member.user_id;
 	}
 }
 
@@ -88,7 +150,7 @@ export function parseOptions(
 			idx = rawArgs.length;
 		} else if (opt.kind === "duration") {
 			args[opt.name] =
-				rawArgs[idx] !== undefined ? parseInt(rawArgs[idx], 10) : undefined;
+				rawArgs[idx] !== undefined ? parseDuration(rawArgs[idx]) : undefined;
 			idx++;
 		} else {
 			args[opt.name] = rawArgs[idx];
