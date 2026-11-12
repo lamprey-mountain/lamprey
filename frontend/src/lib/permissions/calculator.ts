@@ -654,6 +654,22 @@ export function canUseCommand(
 }
 
 /**
+ * Whether a channel's lock is currently active for the given member.
+ */
+export function isChannelLocked(
+	channel: Channel,
+	member?: RoomMember,
+): boolean {
+	const locked = channel.locked;
+	if (!locked) return false;
+	if (typeof locked !== "object") return true; // legacy boolean
+	if (locked.until && getDate(locked.until).valueOf() <= Date.now()) {
+		return false;
+	}
+	return !locked.allow_roles?.some((role_id) => member?.roles.includes(role_id));
+}
+
+/**
  * Check if a user can bypass channel locks
  */
 export function canUseLockedChannel(

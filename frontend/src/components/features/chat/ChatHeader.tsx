@@ -1,6 +1,6 @@
 import type { Channel } from "sdk";
 import { createMemo, createSignal, Match, Show, Switch } from "solid-js";
-import { useChannels, useMessages } from "@/api";
+import { useChannels, useMessages, useRoomMembers } from "@/api";
 import { useCtx } from "@/app/context";
 import icCall from "@/assets/call.png";
 import icDelete from "@/assets/delete.png";
@@ -20,6 +20,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
+import { isChannelLocked } from "@/lib/permissions/calculator";
 import {
 	channelDescription,
 	channelDisplayName,
@@ -37,6 +38,7 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 	const ctx = useCtx();
 	const channels2 = useChannels();
 	const messagesService = useMessages();
+	const roomMembers = useRoomMembers();
 	const [channelState, setChannelState] = useChannel()!;
 	const [, modalctl] = useModals();
 	const { menu, setMenu } = useMenu();
@@ -70,13 +72,23 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 		props.channel.type === "ThreadPrivate" ||
 		props.channel.type === "ThreadForum2";
 
+	const roomMember = () => {
+		const room_id = props.channel.room_id;
+		const user_id = currentUser()?.id;
+		return room_id && user_id
+			? roomMembers.cache.get(`${room_id}:${user_id}`)
+			: undefined;
+	};
+
 	const canEditChannelName = () => {
 		if (props.channel.type === "Dm") return false;
 		if (!isThread()) return hasPermission("ChannelManage");
-		// TODO: can edit if current user created the thread and thread isn't locked
-		// TODO: can edit if current user has ThreadEdit and thread isn't locked
-		// TODO: can edit if current user has ThreadManage
-		return hasPermission("ThreadManage");
+		if (hasPermission("ThreadManage")) return true;
+		if (isChannelLocked(props.channel, roomMember())) return false;
+		return (
+			props.channel.creator_id === currentUser()?.id ||
+			hasPermission("ThreadEdit")
+		);
 	};
 
 	const canDeleteMessages = () => hasPermission("MessageDelete");
