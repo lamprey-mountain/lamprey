@@ -51,6 +51,10 @@
 			opacity: 1;
 		}
 
+		& > .overlay.uploading {
+			opacity: 1;
+		}
+
 		& > .info {
 			padding: 4px;
 			background: rgba(0, 0, 0, 0.8);

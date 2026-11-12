@@ -793,6 +793,10 @@
 		&:hover .overlay {
 			opacity: 1;
 		}
+
+		& > .overlay.uploading {
+			opacity: 1;
+		}
 	}
 
 	.hidden {
