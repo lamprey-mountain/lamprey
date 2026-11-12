@@ -18,7 +18,7 @@ import type { ChannelContextT } from "@/contexts/channel";
 import type { DocumentContextT } from "@/contexts/document.tsx";
 import type { RoomContextT } from "@/contexts/room.tsx";
 import type { SlashCommands } from "@/contexts/slash-commands";
-import type en from "@/i18n/en.tsx";
+import type en from "@/i18n/en.json";
 
 export type Slice = {
 	start: number;

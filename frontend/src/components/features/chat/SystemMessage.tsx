@@ -20,6 +20,7 @@ import { Avatar } from "@/avatar/UserAvatar.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useMessageTabbable } from "@/contexts/message-focus";
 import { useNavigate } from "@/contexts/router.tsx";
+import { renderTemplate } from "@/lib/render-template.ts";
 import { MARK_END, MARK_START, PUA_REGEX } from "@/utils/diff.ts";
 import { getDate } from "@/utils/general.tsx";
 import {
@@ -136,8 +137,8 @@ export function SystemMessageMemberAdd(props: SystemMessageBaseProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{t(
-						"message_content.member_add",
+					{renderTemplate(
+						t("message_content.member_add"),
 						<span class="author">
 							<UserDisplayName
 								user_id={props.message.author_id}
@@ -176,8 +177,8 @@ export function SystemMessageMemberRemove(props: SystemMessageBaseProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{t(
-						"message_content.member_remove",
+					{renderTemplate(
+						t("message_content.member_remove"),
 						<span class="author">
 							<UserDisplayName
 								user_id={props.message.author_id}
@@ -211,8 +212,8 @@ export function SystemMessageMemberJoin(props: SystemMessageBaseProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{t(
-						"message_content.member_join",
+					{renderTemplate(
+						t("message_content.member_join"),
 						<span class="author">
 							<UserDisplayName
 								user_id={props.message.author_id}
@@ -246,8 +247,8 @@ export function SystemMessagePinned(props: SystemMessageBaseProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{t(
-						"message_content.message_pinned",
+					{renderTemplate(
+						t("message_content.message_pinned"),
 						<span class="author">
 							<UserDisplayName
 								user_id={props.message.author_id}
@@ -255,7 +256,7 @@ export function SystemMessagePinned(props: SystemMessageBaseProps) {
 								onClick
 							/>
 						</span>,
-						(text: string) => (
+						((text: string) => (
 							<button
 								type="button"
 								style="color: oklch(var(--color-fg1))"
@@ -272,7 +273,7 @@ export function SystemMessagePinned(props: SystemMessageBaseProps) {
 							>
 								{text}
 							</button>
-						),
+						))(t("message_content.a_message")),
 					)}
 				</div>
 			}
@@ -295,8 +296,8 @@ export function SystemMessageChannelRename(props: SystemMessageBaseProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{t(
-						"message_content.channel_rename",
+					{renderTemplate(
+						t("message_content.channel_rename"),
 						<span class="author">
 							<UserDisplayName
 								user_id={props.message.author_id}
@@ -349,8 +350,8 @@ export function SystemMessageCall(props: SystemMessageBaseProps) {
 				>
 					<Switch>
 						<Match when={duration() !== null && !participated()}>
-							{t(
-								"message_content.call_missed",
+							{renderTemplate(
+								t("message_content.call_missed"),
 								<span class="author">
 									<UserDisplayName
 										user_id={props.message.author_id}
@@ -362,8 +363,8 @@ export function SystemMessageCall(props: SystemMessageBaseProps) {
 							)}
 						</Match>
 						<Match when={duration() !== null}>
-							{t(
-								"message_content.call_ended",
+							{renderTemplate(
+								t("message_content.call_ended"),
 								<span class="author">
 									<UserDisplayName
 										user_id={props.message.author_id}
@@ -375,8 +376,8 @@ export function SystemMessageCall(props: SystemMessageBaseProps) {
 							)}
 						</Match>
 						<Match when={true}>
-							{t(
-								"message_content.call_started",
+							{renderTemplate(
+								t("message_content.call_started"),
 								<span class="author">
 									<UserDisplayName
 										user_id={props.message.author_id}
@@ -394,7 +395,7 @@ export function SystemMessageCall(props: SystemMessageBaseProps) {
 									tabIndex={tabbable() ? 0 : -1}
 									onClick={joinCall}
 								>
-									{t("message_content.call_join")}
+									{renderTemplate(t("message_content.call_join"))}
 								</button>
 							</Show>
 						</Match>
@@ -417,8 +418,8 @@ export function SystemMessageChannelPingback(props: SystemMessageBaseProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{t(
-						"message_content.channel_pingback",
+					{renderTemplate(
+						t("message_content.channel_pingback"),
 						<span class="author">
 							<UserDisplayName
 								user_id={props.message.author_id}
@@ -445,8 +446,8 @@ export function SystemMessageChannelIcon(props: SystemMessageBaseProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{t(
-						"message_content.channel_icon",
+					{renderTemplate(
+						t("message_content.channel_icon"),
 						<span class="author">
 							<UserDisplayName
 								user_id={props.message.author_id}
@@ -527,8 +528,8 @@ export function SystemMessageThreadCreated(props: SystemMessageBaseProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{t(
-						"message_content.thread_created",
+					{renderTemplate(
+						t("message_content.thread_created"),
 						<span class="author">
 							<UserDisplayName
 								user_id={props.message.author_id}
@@ -537,7 +538,7 @@ export function SystemMessageThreadCreated(props: SystemMessageBaseProps) {
 							/>
 						</span>,
 						link,
-						viewAll,
+						viewAll(t("message_content.view_all_threads")),
 					)}
 				</div>
 			}
@@ -581,8 +582,8 @@ export function SystemMessageChannelMoved(props: SystemMessageBaseProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{t(
-						"message_content.channel_moved",
+					{renderTemplate(
+						t("message_content.channel_moved"),
 						<span class="author">
 							<UserDisplayName
 								user_id={props.message.author_id}
@@ -807,8 +808,8 @@ export function SystemMessageNudge(props: SystemMessageBaseProps) {
 					classList={{ local: props.message.is_local }}
 				>
 					{/* @ts-ignore */}
-					{t(
-						"message_content.nudge",
+					{renderTemplate(
+						t("message_content.nudge"),
 						<span class="author">
 							<UserDisplayName
 								user_id={props.message.author_id}

@@ -28,7 +28,7 @@ import type {
 	Popout,
 	ThreadsViewData,
 } from "@/app/context";
-import type en from "@/i18n/en.tsx";
+import type en from "@/i18n/en.json";
 import { registerDefaultSlashCommands } from "@/lib/commands/builtin.ts";
 import { SlashCommands } from "@/lib/commands/registry.ts";
 import type { Config } from "@/lib/config";
@@ -123,7 +123,7 @@ export function useChatClient(config: Config) {
 	type Lang = "en";
 	const [lang, _setLang] = createSignal<Lang>("en");
 	const [dict] = createResource(lang, async (lang) => {
-		const m = await import(`../i18n/${lang}.tsx`);
+		const m = await import(`../i18n/${lang}.json`);
 		return i18n.flatten(m.default as typeof en);
 	});
 

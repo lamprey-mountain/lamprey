@@ -3,6 +3,7 @@ import type { AuditLogChange, AuditLogEntry } from "sdk";
 import type { JSX } from "solid-js";
 import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
+import { renderTemplate } from "@/lib/render-template.ts";
 
 const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -249,8 +250,12 @@ export function formatChanges(
 		case "InviteDelete": {
 			formatted.push(
 				<li>
-					{t("audit_log.changes.invite_deleted", {
-						invite_code: entWithMetadata.metadata?.code as string | undefined,
+					{renderTemplate(t("audit_log.changes.invite_deleted"), {
+						invite_code: (
+							<em class="light">
+								{entWithMetadata.metadata?.code as string | undefined}
+							</em>
+						),
 					})}
 				</li>,
 			);
@@ -546,15 +551,19 @@ export function formatChanges(
 			} else if (c.new) {
 				formatted.push(
 					<li>
-						{t("audit_log.changes.set_field", {
-							field: c.key,
+						{renderTemplate(t("audit_log.changes.set_field"), {
+							field: <em class="light">{c.key}</em>,
 							value: JSON.stringify(c.new) ?? "[null]",
 						})}
 					</li>,
 				);
 			} else {
 				formatted.push(
-					<li>{t("audit_log.changes.removed_field", { field: c.key })}</li>,
+					<li>
+						{renderTemplate(t("audit_log.changes.removed_field"), {
+							field: <em class="light">{c.key}</em>,
+						})}
+					</li>,
 				);
 			}
 		}
@@ -568,8 +577,8 @@ function renderPermissionDiff(
 	_room_id: string,
 	oldValues: Array<string>,
 	newValues: Array<string>,
-	addedLabel: keyof typeof import("@/i18n/en").default.audit_log.changes,
-	removedLabel: keyof typeof import("@/i18n/en").default.audit_log.changes,
+	addedLabel: keyof typeof import("@/i18n/en.json").audit_log.changes,
+	removedLabel: keyof typeof import("@/i18n/en.json").audit_log.changes,
 ): Array<JSX.Element> {
 	const formatted: Array<JSX.Element> = [];
 	const { t } = useCtx();
@@ -579,12 +588,20 @@ function renderPermissionDiff(
 
 	for (const p of added) {
 		formatted.push(
-			<li>{t(`audit_log.changes.${addedLabel}`, { permission: p })}</li>,
+			<li>
+				{renderTemplate(t(`audit_log.changes.${addedLabel}`), {
+					permission: <em class="light">{p}</em>,
+				})}
+			</li>,
 		);
 	}
 	for (const p of removed) {
 		formatted.push(
-			<li>{t(`audit_log.changes.${removedLabel}`, { permission: p })}</li>,
+			<li>
+				{renderTemplate(t(`audit_log.changes.${removedLabel}`), {
+					permission: <em class="light">{p}</em>,
+				})}
+			</li>,
 		);
 	}
 	return formatted;
