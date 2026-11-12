@@ -358,34 +358,145 @@
 }
 
 .room-settings-integrations {
-	details {
+	& > .webhooks-header {
+		display: flex;
+		align-items: stretch;
+		gap: 8px;
+		margin: 8px 0 16px;
+
+		& > .search {
+			flex: 1;
+			height: 32px;
+			box-sizing: border-box;
+		}
+
+		& > .button {
+			height: 32px;
+			box-sizing: border-box;
+		}
+	}
+
+	.webhooks-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.webhook-item {
+		display: flex;
+		align-items: flex-start;
+		gap: 12px;
+		padding: 8px;
 		background: $bg-150;
 		border: solid $sep-300 1px;
-		padding: 8px;
-		margin-bottom: 8px;
-	}
 
-	summary {
-		display: flex;
-		padding: 8px;
+		&[data-draft-state="create"],
+		&[data-draft-state="update"] {
+			border-style: dashed;
+			border-color: $sep-500;
 
-		.avatar {
-			height: 32px;
-			width: 32px;
+			.webhook-name {
+				color: $color-green;
+
+				&::after {
+					content: "*";
+				}
+			}
+		}
+
+		&[data-draft-state="update"] {
+			.webhook-name {
+				color: $color-blue;
+			}
+		}
+
+		&[data-draft-state="delete"] {
+			border-color: $color-red;
+			opacity: 0.7;
+
+			.webhook-name {
+				text-decoration: line-through;
+				color: $color-red;
+			}
 		}
 	}
 
-	details[open] > summary {
-		border-bottom: solid $sep-300 1px;
-		margin-bottom: 8px;
+	.webhook-avatar {
+		flex: none;
 	}
 
-	.info {
+	.webhook-main {
 		display: flex;
+		flex: 1;
+		flex-direction: column;
+		gap: 8px;
+		min-width: 0;
+	}
 
-		& > .avatar {
-			margin-right: 4px;
+	.webhook-name {
+		margin: 0;
+		font-size: 1rem;
+	}
+
+	.webhook-fields {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+
+		& > div {
+			flex: 1;
+			min-width: 160px;
 		}
+
+		input[type="text"] {
+			width: 100%;
+		}
+	}
+
+	.webhook-bottom {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+
+	.webhook-created {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 4px;
+		font-size: 0.9em;
+		color: $fg-300;
+
+		time {
+			color: $fg-200;
+		}
+
+		.mention {
+			background: oklch(var(--color-link-300) / 0.2);
+			color: oklch(var(--color-link-500));
+			border-radius: 3px;
+			padding: 0 2px;
+			cursor: pointer;
+
+			&:hover {
+				background: oklch(var(--color-link-300) / 0.35);
+			}
+		}
+	}
+
+	.webhook-actions {
+		display: flex;
+		flex: none;
+		gap: 8px;
+	}
+
+	.webhook-copy {
+		display: flex;
 	}
 
 	.tag-list {
