@@ -175,31 +175,44 @@ pub enum ContentType {
     Missing,
 }
 
+impl ContentType {
+    /// parse a content-type header value, ignoring any parameters
+    pub(crate) fn from_header_value(value: &str) -> Self {
+        let essence = value
+            .split(';')
+            .next()
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase();
+
+        let suffix = essence.rsplit_once('+').map(|(_, suffix)| suffix);
+
+        match essence.as_str() {
+            "application/json" => Self::Json,
+            "application/x-www-form-urlencoded" => Self::Form,
+            "application/msgpack" | "application/vnd.msgpack" | "application/x-msgpack" => {
+                Self::Msgpack
+            }
+            "multipart/form-data" => Self::Multipart,
+            // structured syntax suffix, e.g. `application/foo+json`
+            _ => match suffix {
+                Some("json") => Self::Json,
+                Some("msgpack") => Self::Msgpack,
+                _ => Self::Invalid,
+            },
+        }
+    }
+}
+
 impl HeadersRequest {
     pub fn from_parts(parts: &Parts) -> Result<Self> {
-        // FIXME: properly parse content-type; handle `application/foobar+json`
         let accept = Accept::from_headers(&parts.headers);
 
         let content_type = parts
             .headers
             .get(http::header::CONTENT_TYPE)
             .and_then(|h| h.to_str().ok())
-            .map(|s| {
-                if s.starts_with("application/json") {
-                    ContentType::Json
-                } else if s.starts_with("application/x-www-form-urlencoded") {
-                    ContentType::Form
-                } else if s.starts_with("application/msgpack")
-                    || s.starts_with("application/vnd.msgpack")
-                    || s.starts_with("application/x-msgpack")
-                {
-                    ContentType::Msgpack
-                } else if s.starts_with("multipart/form-data") {
-                    ContentType::Multipart
-                } else {
-                    ContentType::Invalid
-                }
-            })
+            .map(ContentType::from_header_value)
             .unwrap_or(ContentType::Missing);
 
         let reason = parts
