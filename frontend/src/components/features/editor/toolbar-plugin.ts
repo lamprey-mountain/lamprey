@@ -40,20 +40,23 @@ export function createToolbarPlugin(tb: FormattingToolbarContextT): Plugin {
 							endCoords.bottom - endCoords.top,
 						);
 
-						tb.showToolbar({
-							getBoundingClientRect() {
-								return {
-									x: left,
-									y: top,
-									width,
-									height,
-									left,
-									top,
-									right: left + width,
-									bottom: top + height,
-								};
+						tb.showToolbar(
+							{
+								getBoundingClientRect() {
+									return {
+										x: left,
+										y: top,
+										width,
+										height,
+										left,
+										top,
+										right: left + width,
+										bottom: top + height,
+									};
+								},
 							},
-						});
+							view,
+						);
 					}
 				},
 			};

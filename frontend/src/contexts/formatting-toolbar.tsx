@@ -1,4 +1,5 @@
 import type { ReferenceElement } from "@floating-ui/dom";
+import type { EditorView } from "prosemirror-view";
 import {
 	type Accessor,
 	createContext,
@@ -13,12 +14,13 @@ export type FormattingToolbarState = {
 	top: number;
 	left: number;
 	reference: ReferenceElement | null;
+	view: EditorView | null;
 };
 
 export type FormattingToolbarContextT = {
 	toolbar: Accessor<FormattingToolbarState>;
 	setToolbar: Setter<FormattingToolbarState>;
-	showToolbar: (reference: ReferenceElement) => void;
+	showToolbar: (reference: ReferenceElement, view: EditorView) => void;
 	hideToolbar: () => void;
 };
 
@@ -30,10 +32,11 @@ export const FormattingToolbarProvider: ParentComponent = (props) => {
 		top: 0,
 		left: 0,
 		reference: null,
+		view: null,
 	});
 
-	const showToolbar = (reference: ReferenceElement) => {
-		setToolbar({ visible: true, top: 0, left: 0, reference });
+	const showToolbar = (reference: ReferenceElement, view: EditorView) => {
+		setToolbar({ visible: true, top: 0, left: 0, reference, view });
 	};
 
 	const hideToolbar = () => {

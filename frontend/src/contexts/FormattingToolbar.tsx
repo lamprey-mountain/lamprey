@@ -11,17 +11,9 @@ type FormattingToolbarProps = {
 	onClose: () => void;
 };
 
-let currentView: EditorView | null = null;
-
-export const setFormattingToolbarView = (view: EditorView | null) => {
-	currentView = view;
-};
-
-const toggleFormat = (wrapper: string) => {
-	if (!currentView) return false;
-
+const toggleFormat = (view: EditorView, wrapper: string) => {
 	try {
-		const { state, dispatch } = currentView;
+		const { state, dispatch } = view;
 		const { from, to } = state.selection;
 
 		// Ensure valid selection range
@@ -63,7 +55,7 @@ const toggleFormat = (wrapper: string) => {
 		}
 
 		dispatch(tr);
-		currentView.focus();
+		view.focus();
 
 		return hasFormat;
 	} catch (e) {
@@ -73,11 +65,14 @@ const toggleFormat = (wrapper: string) => {
 };
 
 export const FormattingToolbar = (_props: FormattingToolbarProps) => {
+	const { toolbar } = useFormattingToolbar();
+
 	const applyFormat = (wrapper: string) => {
-		if (!currentView) return;
+		const view = toolbar().view;
+		if (!view) return;
 		setIsApplyingFormat(true);
 
-		toggleFormat(wrapper);
+		toggleFormat(view, wrapper);
 
 		setTimeout(() => {
 			setIsApplyingFormat(false);
