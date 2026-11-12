@@ -122,6 +122,9 @@ async fn oauth_register(
         oauth_secret: None,
         oauth_redirect_uris: redirect_uris.clone(),
         oauth_confidential: false,
+        url_homepage: None,
+        url_terms_of_service: None,
+        url_privacy_policy: None,
     };
     txn.application_insert(app.clone()).await?;
     txn.commit().await?;
@@ -144,6 +147,9 @@ async fn oauth_register(
                 .add("public", &app.public)
                 .add("oauth_redirect_uris", &app.oauth_redirect_uris)
                 .add("oauth_confidential", &app.oauth_confidential)
+                .add("url_homepage", &app.url_homepage)
+                .add("url_terms_of_service", &app.url_terms_of_service)
+                .add("url_privacy_policy", &app.url_privacy_policy)
                 .build(),
         },
     )

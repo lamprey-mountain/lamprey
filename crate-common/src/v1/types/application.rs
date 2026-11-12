@@ -37,9 +37,22 @@ pub struct Application {
 
     /// oauth whether this client can keep secrets confidential
     pub oauth_confidential: bool,
+
+    /// url to this application's homepage
+    #[schema(required = false, min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048), url)]
+    pub url_homepage: Option<String>,
+
+    /// url to this application's terms of service
+    #[schema(required = false, min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048), url)]
+    pub url_terms_of_service: Option<String>,
+
+    /// url to this application's privacy policy
+    #[schema(required = false, min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048), url)]
+    pub url_privacy_policy: Option<String>,
     // do i really need all these urls properties, or can i get away with a vec?
-    // url_terms_of_service: Option<Url>,
-    // url_privacy_policy: Option<Url>,
     // url_help_docs: Vec<Url>,
     // url_main_site: Vec<Url>,
     // url_interactions: Vec<Url>, // webhook
@@ -141,6 +154,24 @@ pub struct ApplicationCreate {
 
     #[serde(default)]
     pub oauth_confidential: Option<bool>,
+
+    /// url to this application's homepage
+    #[schema(required = false, min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048), url)]
+    #[serde(default)]
+    pub url_homepage: Option<String>,
+
+    /// url to this application's terms of service
+    #[schema(required = false, min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048), url)]
+    #[serde(default)]
+    pub url_terms_of_service: Option<String>,
+
+    /// url to this application's privacy policy
+    #[schema(required = false, min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048), url)]
+    #[serde(default)]
+    pub url_privacy_policy: Option<String>,
 }
 
 #[record]
@@ -164,6 +195,21 @@ pub struct ApplicationPatch {
     #[validate(length(max = 8))]
     pub oauth_redirect_uris: Option<Vec<String>>,
     pub oauth_confidential: Option<bool>,
+
+    /// url to this application's homepage
+    #[schema(required = false, min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048), url)]
+    pub url_homepage: Option<Option<String>>,
+
+    /// url to this application's terms of service
+    #[schema(required = false, min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048), url)]
+    pub url_terms_of_service: Option<Option<String>>,
+
+    /// url to this application's privacy policy
+    #[schema(required = false, min_length = 1, max_length = 2048)]
+    #[validate(length(min = 1, max = 2048), url)]
+    pub url_privacy_policy: Option<Option<String>>,
 }
 
 /// an application that is authorized to a user
@@ -226,6 +272,9 @@ impl Application {
             oauth_secret: None,
             oauth_redirect_uris: vec![],
             oauth_confidential: false,
+            url_homepage: self.url_homepage,
+            url_terms_of_service: self.url_terms_of_service,
+            url_privacy_policy: self.url_privacy_policy,
         }
     }
 }

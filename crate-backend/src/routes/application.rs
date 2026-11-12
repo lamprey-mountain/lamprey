@@ -45,6 +45,7 @@ async fn app_create(
         .check()?;
 
     let json = req.application;
+    json.validate()?;
     if let Some(bridge) = &json.bridge {
         if bridge.platform_name.is_none() {
             return Err(ApiError::from_code(ErrorCode::PlatformNameRequiredForBridge).into());
@@ -75,6 +76,9 @@ async fn app_create(
         oauth_secret: None,
         oauth_redirect_uris: vec![],
         oauth_confidential: false,
+        url_homepage: json.url_homepage,
+        url_terms_of_service: json.url_terms_of_service,
+        url_privacy_policy: json.url_privacy_policy,
     };
     data.application_insert(app.clone()).await?;
     audit_log_app(
@@ -88,6 +92,9 @@ async fn app_create(
                 .add("description", &app.description)
                 .add("bridge", &app.bridge)
                 .add("public", &app.public)
+                .add("url_homepage", &app.url_homepage)
+                .add("url_terms_of_service", &app.url_terms_of_service)
+                .add("url_privacy_policy", &app.url_privacy_policy)
                 .build(),
         },
     )
@@ -169,6 +176,9 @@ async fn app_patch(
     app.public = patch.public.unwrap_or(app.public);
     app.oauth_redirect_uris = patch.oauth_redirect_uris.unwrap_or(app.oauth_redirect_uris);
     app.oauth_confidential = patch.oauth_confidential.unwrap_or(app.oauth_confidential);
+    app.url_homepage = patch.url_homepage.unwrap_or(app.url_homepage);
+    app.url_terms_of_service = patch.url_terms_of_service.unwrap_or(app.url_terms_of_service);
+    app.url_privacy_policy = patch.url_privacy_policy.unwrap_or(app.url_privacy_policy);
 
     data.application_update(app.clone()).await?;
 
@@ -192,6 +202,17 @@ async fn app_patch(
                     "oauth_confidential",
                     &start.oauth_confidential,
                     &app.oauth_confidential,
+                )
+                .change("url_homepage", &start.url_homepage, &app.url_homepage)
+                .change(
+                    "url_terms_of_service",
+                    &start.url_terms_of_service,
+                    &app.url_terms_of_service,
+                )
+                .change(
+                    "url_privacy_policy",
+                    &start.url_privacy_policy,
+                    &app.url_privacy_policy,
                 )
                 .build(),
         },

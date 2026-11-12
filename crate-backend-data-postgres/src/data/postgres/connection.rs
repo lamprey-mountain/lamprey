@@ -24,6 +24,9 @@ struct DbConnection {
     app_oauth_secret: Option<String>,
     app_oauth_redirect_uris: serde_json::Value,
     app_oauth_confidential: bool,
+    app_url_homepage: Option<String>,
+    app_url_terms_of_service: Option<String>,
+    app_url_privacy_policy: Option<String>,
     bridge_platform_name: Option<String>,
     bridge_platform_url: Option<String>,
     bridge_platform_description: Option<String>,
@@ -53,6 +56,9 @@ impl From<DbConnection> for Connection {
                 oauth_redirect_uris: serde_json::from_value(val.app_oauth_redirect_uris)
                     .unwrap_or_default(),
                 oauth_confidential: val.app_oauth_confidential,
+                url_homepage: val.app_url_homepage,
+                url_terms_of_service: val.app_url_terms_of_service,
+                url_privacy_policy: val.app_url_privacy_policy,
             },
             scopes: serde_json::from_value(val.scopes).unwrap_or_default(),
             created_at: val.created_at.into(),
@@ -99,6 +105,7 @@ impl DataConnection for Postgres {
                 a.owner_id as app_owner_id, a.name as app_name, a.description as app_description,
                 a.public as app_public, a.oauth_secret as app_oauth_secret,
                 a.oauth_redirect_uris as app_oauth_redirect_uris, a.oauth_confidential as app_oauth_confidential,
+                a.url_homepage as app_url_homepage, a.url_terms_of_service as app_url_terms_of_service, a.url_privacy_policy as app_url_privacy_policy,
                 b.platform_name as "bridge_platform_name?", b.platform_url as "bridge_platform_url?", b.platform_description as "bridge_platform_description?"
             from connection c
             join application a on c.application_id = a.id
@@ -131,6 +138,7 @@ impl DataConnection for Postgres {
                     a.owner_id as app_owner_id, a.name as app_name, a.description as app_description,
                     a.public as app_public, a.oauth_secret as app_oauth_secret,
                     a.oauth_redirect_uris as app_oauth_redirect_uris, a.oauth_confidential as app_oauth_confidential,
+                    a.url_homepage as app_url_homepage, a.url_terms_of_service as app_url_terms_of_service, a.url_privacy_policy as app_url_privacy_policy,
                     b.platform_name as "bridge_platform_name?", b.platform_url as "bridge_platform_url?", b.platform_description as "bridge_platform_description?"
                 from connection c
                 join application a on c.application_id = a.id

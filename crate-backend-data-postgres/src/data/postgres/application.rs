@@ -24,8 +24,8 @@ impl DataApplication for Postgres {
         let mut tx = self.begin_tx().await?;
         query!(
             r#"
-            insert into application (id, owner_id, name, description, public, oauth_secret, oauth_redirect_uris, oauth_confidential)
-            values ($1, $2, $3, $4, $5, $6, $7, $8)
+            insert into application (id, owner_id, name, description, public, oauth_secret, oauth_redirect_uris, oauth_confidential, url_homepage, url_terms_of_service, url_privacy_policy)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             "#,
             *app.id,
             *app.owner_id,
@@ -35,6 +35,9 @@ impl DataApplication for Postgres {
             app.oauth_secret,
             serde_json::to_value(app.oauth_redirect_uris).unwrap(),
             app.oauth_confidential,
+            app.url_homepage,
+            app.url_terms_of_service,
+            app.url_privacy_policy,
         )
         .execute(tx.ext())
         .await?;
@@ -68,7 +71,10 @@ impl DataApplication for Postgres {
                 public = $4,
                 oauth_secret = $5,
                 oauth_redirect_uris = $6,
-                oauth_confidential = $7
+                oauth_confidential = $7,
+                url_homepage = $8,
+                url_terms_of_service = $9,
+                url_privacy_policy = $10
             where id = $1
             "#,
             *app.id,
@@ -78,6 +84,9 @@ impl DataApplication for Postgres {
             app.oauth_secret,
             serde_json::to_value(app.oauth_redirect_uris).unwrap(),
             app.oauth_confidential,
+            app.url_homepage,
+            app.url_terms_of_service,
+            app.url_privacy_policy,
         )
         .execute(tx.ext())
         .await?;
@@ -129,6 +138,7 @@ impl DataApplication for Postgres {
             r#"
         	SELECT
                 a.id, a.owner_id, a.name, a.description, a.public, a.oauth_secret, a.oauth_redirect_uris, a.oauth_confidential,
+                a.url_homepage, a.url_terms_of_service, a.url_privacy_policy,
                 b.application_id as "bridge_id?", b.platform_name, b.platform_url, b.platform_description
             FROM application a
             LEFT JOIN application_bridge b ON a.id = b.application_id
@@ -166,6 +176,9 @@ impl DataApplication for Postgres {
             oauth_redirect_uris: serde_json::from_value(app.oauth_redirect_uris)
                 .unwrap_or_default(),
             oauth_confidential: app.oauth_confidential,
+            url_homepage: app.url_homepage,
+            url_terms_of_service: app.url_terms_of_service,
+            url_privacy_policy: app.url_privacy_policy,
         })
     }
 
@@ -182,6 +195,7 @@ impl DataApplication for Postgres {
                 r#"
             	SELECT
                     a.id, a.owner_id, a.name, a.description, a.public, a.oauth_secret, a.oauth_redirect_uris, a.oauth_confidential,
+                    a.url_homepage, a.url_terms_of_service, a.url_privacy_policy,
                     b.application_id as "bridge_id?", b.platform_name, b.platform_url, b.platform_description
                 FROM application a
                 LEFT JOIN application_bridge b ON a.id = b.application_id
@@ -220,6 +234,9 @@ impl DataApplication for Postgres {
                     oauth_redirect_uris: serde_json::from_value(row.oauth_redirect_uris)
                         .unwrap_or_default(),
                     oauth_confidential: row.oauth_confidential,
+                    url_homepage: row.url_homepage,
+                    url_terms_of_service: row.url_terms_of_service,
+                    url_privacy_policy: row.url_privacy_policy,
                 }
             },
             |i: &Application| i.id.to_string()
