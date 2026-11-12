@@ -194,6 +194,26 @@ impl AuthCheck {
                 }
                 AuthCheck::Any(checks)
             }
+            MessageSync::InviteDeleteBulk { target, .. } => match target {
+                InviteTargetId::Room {
+                    room_id,
+                    channel_id,
+                    ..
+                } => match channel_id {
+                    Some(channel_id) => {
+                        AuthCheck::ChannelPerm(*channel_id, Permission::InviteManage)
+                    }
+                    None => AuthCheck::RoomPerm(*room_id, Permission::InviteManage),
+                },
+                InviteTargetId::Gdm { channel_id } => {
+                    AuthCheck::ChannelPerm(*channel_id, Permission::InviteManage)
+                }
+                InviteTargetId::Server => AuthCheck::RoomPerm(
+                    lamprey::v1::types::SERVER_ROOM_ID,
+                    Permission::InviteManage,
+                ),
+                InviteTargetId::User { user_id } => AuthCheck::User(*user_id),
+            },
             MessageSync::ChannelTyping { channel_id, .. } => AuthCheck::Channel(*channel_id),
             MessageSync::PassiveAck { user_id, .. } => AuthCheck::User(*user_id),
             MessageSync::PassiveRoom { user_id, .. } => AuthCheck::User(*user_id),

@@ -652,10 +652,12 @@ fn cache_invalidate_room_id(msg: &MessageSync) -> Option<RoomId> {
             InviteTarget::Room { room, .. } => Some(room.id),
             _ => None,
         },
-        MessageSync::InviteDelete { target, .. } => match target {
-            InviteTargetId::Room { room_id, .. } => Some(*room_id),
-            _ => None,
-        },
+        MessageSync::InviteDelete { target, .. } | MessageSync::InviteDeleteBulk { target, .. } => {
+            match target {
+                InviteTargetId::Room { room_id, .. } => Some(*room_id),
+                _ => None,
+            }
+        }
 
         // emoji aren't cached in rooms; they may be in the future
         MessageSync::EmojiCreate { emoji } => match &emoji.owner {

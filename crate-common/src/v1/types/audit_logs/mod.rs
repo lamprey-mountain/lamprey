@@ -5,9 +5,9 @@ use uuid::Uuid;
 use crate::util::registry::export_models;
 use crate::v1::types::{
     ApplicationId, AuditLogEntryId, AutomodRuleId, CalendarEventId, Channel, ChannelId,
-    ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, MediaId, MessageId,
-    MessageVerId, PermissionOverwriteType, RedexId, RedexVerId, RoleId, RoomId, RoomMember,
-    SessionId, TagId, User, UserId, WebhookId, application::Scopes, email::EmailAddr,
+    ChannelReorderItem, ChannelType, EmojiId, HarvestId, InviteCode, InviteTargetId, MediaId,
+    MessageId, MessageVerId, PermissionOverwriteType, RedexId, RedexVerId, RoleId, RoomId,
+    RoomMember, SessionId, TagId, User, UserId, WebhookId, application::Scopes, email::EmailAddr,
     reaction::ReactionKeyParam, role::RoleReorderItem, tag::Tag, util::Time, webhook::Webhook,
 };
 
@@ -70,6 +70,12 @@ pub struct AuditLogChange {
     pub new: Value,
     pub old: Value,
     pub key: String,
+}
+
+#[record]
+pub struct InviteDeleteBulkItem {
+    pub code: InviteCode,
+    pub description: Option<String>,
 }
 
 // NOTE: maybe i want to also have Channel{Remove,Restore}?
@@ -178,6 +184,11 @@ pub enum AuditLogEntryType {
 
         #[cfg_attr(feature = "serde", serde(default))]
         changes: Vec<AuditLogChange>,
+    },
+
+    InviteDeleteBulk {
+        target: InviteTargetId,
+        invites: Vec<InviteDeleteBulkItem>,
     },
 
     /// remove all reactions from a message
@@ -940,6 +951,7 @@ impl AuditLogEntryType {
                 | InviteCreate { .. }
                 | InviteUpdate { .. }
                 | InviteDelete { .. }
+                | InviteDeleteBulk { .. }
                 | ReactionDeleteAll { .. }
                 | ReactionDeleteKey { .. }
                 | ReactionDeleteUser { .. }
@@ -1055,6 +1067,7 @@ impl AuditLogEntryType {
 export_models!(
     AuditLogEntry,
     AuditLogChange,
+    InviteDeleteBulkItem,
     AuditLogEntryType,
     AuditLogFilter,
     AuditLogEntryStatus,

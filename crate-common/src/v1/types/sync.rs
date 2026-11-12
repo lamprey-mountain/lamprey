@@ -577,6 +577,12 @@ pub enum MessageSync {
         creator_id: UserId,
     },
 
+    /// delete all invites for a target at once
+    InviteDeleteBulk {
+        target: InviteTargetId,
+        codes: Vec<InviteCode>,
+    },
+
     ReactionCreate {
         user_id: UserId,
         channel_id: ChannelId,

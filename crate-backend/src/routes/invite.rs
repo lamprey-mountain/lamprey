@@ -168,6 +168,159 @@ async fn invite_delete(
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Invite room delete all
+///
+/// Delete all invites that go to a room
+#[handler(routes::invite_room_delete_all)]
+async fn invite_room_delete_all(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::invite_room_delete_all::Request,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+    let mut d = s.data();
+    let mut perms: Permissions2<CheckPermissions> = s
+        .services()
+        .perms
+        .for_room3(Some(auth.user.id), req.room_id)
+        .await?
+        .ensure_view()?;
+    perms.needs(Permission::InviteManage);
+    perms.check()?;
+
+    let deleted = d.invite_delete_room(req.room_id).await?;
+    let target = InviteTargetId::Room {
+        room_id: req.room_id,
+        channel_id: None,
+        role_ids: vec![],
+    };
+    let codes = deleted.iter().map(|i| i.code.clone()).collect();
+
+    let al = auth.audit_log(req.room_id);
+    al.commit_success(AuditLogEntryType::InviteDeleteBulk {
+        target: target.clone(),
+        invites: deleted,
+    })
+    .await?;
+
+    s.broadcast_room(
+        req.room_id,
+        auth.user.id,
+        MessageSync::InviteDeleteBulk { target, codes },
+    )
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Invite channel delete all
+///
+/// Delete all invites that go to a channel
+#[handler(routes::invite_channel_delete_all)]
+async fn invite_channel_delete_all(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::invite_channel_delete_all::Request,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+    let mut d = s.data();
+    let channel = d.channel_get(req.channel_id).await?;
+
+    let room_id = if channel.ty == ChannelType::Gdm {
+        let mut perms: Permissions2<CheckPermissions> = s
+            .services()
+            .perms
+            .for_channel3(Some(auth.user.id), channel.id)
+            .await?
+            .ensure_view()?;
+        perms.needs(Permission::InviteManage);
+        perms.check()?;
+        None
+    } else if let Some(room_id) = channel.room_id {
+        let mut perms: Permissions2<CheckPermissions> = s
+            .services()
+            .perms
+            .for_room3(Some(auth.user.id), room_id)
+            .await?
+            .ensure_view()?;
+        perms.needs(Permission::InviteManage);
+        perms.check()?;
+        Some(room_id)
+    } else {
+        return Err(ApiError::from_code(ErrorCode::ChannelNotInRoomOrGdm).into());
+    };
+
+    let deleted = d.invite_delete_channel(req.channel_id).await?;
+    let target = if channel.ty == ChannelType::Gdm {
+        InviteTargetId::Gdm {
+            channel_id: req.channel_id,
+        }
+    } else {
+        InviteTargetId::Room {
+            room_id: room_id.expect("channel is in a room"),
+            channel_id: Some(req.channel_id),
+            role_ids: vec![],
+        }
+    };
+    let codes = deleted.iter().map(|i| i.code.clone()).collect();
+
+    if let Some(room_id) = room_id {
+        let al = auth.audit_log(room_id);
+        al.commit_success(AuditLogEntryType::InviteDeleteBulk {
+            target: target.clone(),
+            invites: deleted,
+        })
+        .await?;
+    }
+
+    s.broadcast_channel(
+        req.channel_id,
+        auth.user.id,
+        MessageSync::InviteDeleteBulk { target, codes },
+    )
+    .await?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Invite user delete all
+///
+/// Delete all invites that go to a user
+#[handler(routes::invite_user_delete_all)]
+async fn invite_user_delete_all(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::invite_user_delete_all::Request,
+) -> Result<impl IntoResponse> {
+    auth.user.ensure_unsuspended()?;
+    auth.ensure_scopes(&[Scope::Full])?;
+    let target_user_id = req.user_id.unwrap_or(auth.user.id);
+
+    if auth.user.id != target_user_id {
+        return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownUser)));
+    }
+
+    let mut d = s.data();
+    let deleted = d.invite_delete_user(target_user_id).await?;
+    let target = InviteTargetId::User {
+        user_id: target_user_id,
+    };
+    let codes = deleted.iter().map(|i| i.code.clone()).collect();
+
+    let al = auth.audit_log(target_user_id.into_inner().into());
+    al.commit_success(AuditLogEntryType::InviteDeleteBulk {
+        target: target.clone(),
+        invites: deleted,
+    })
+    .await?;
+
+    s.broadcast(MessageSync::InviteDeleteBulk { target, codes })?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
 /// Invite resolve
 #[handler(routes::invite_resolve)]
 async fn invite_resolve(
@@ -1108,6 +1261,9 @@ async fn invite_user_list(
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(invite_delete))
+        .routes(routes2!(invite_room_delete_all))
+        .routes(routes2!(invite_channel_delete_all))
+        .routes(routes2!(invite_user_delete_all))
         .routes(routes2!(invite_resolve))
         .routes(routes2!(invite_use))
         .routes(routes2!(invite_room_create))

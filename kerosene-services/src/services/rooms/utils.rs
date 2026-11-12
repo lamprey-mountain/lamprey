@@ -27,10 +27,12 @@ pub fn sync_room_id(sync: &MessageSync) -> Option<RoomId> {
             InviteTarget::Room { room, .. } => Some(room.id),
             _ => None,
         },
-        MessageSync::InviteDelete { target, .. } => match target {
-            InviteTargetId::Room { room_id, .. } => Some(*room_id),
-            _ => None,
-        },
+        MessageSync::InviteDelete { target, .. } | MessageSync::InviteDeleteBulk { target, .. } => {
+            match target {
+                InviteTargetId::Room { room_id, .. } => Some(*room_id),
+                _ => None,
+            }
+        }
         MessageSync::EmojiCreate { emoji } => match &emoji.owner {
             Some(EmojiOwner::Room { room_id }) => Some(*room_id),
             _ => None,

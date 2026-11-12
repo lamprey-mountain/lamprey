@@ -7,11 +7,11 @@ use common::v1::types::redex::{
 };
 use common::v1::types::{
     ApplicationId, AuditLogEntry, AuditLogEntryId, AuditLogFilter, AutomodRuleId, CalendarEventId,
-    Channel, ChannelId, EmojiId, InviteCode, InvitePatch, InviteWithMetadata, MediaId, MessageId,
-    MessageVerId, NotificationId, PaginationQuery, PaginationResponse, Permission,
-    PermissionOverwriteType, Relationship, RelationshipPatch, RelationshipWithUserId, RoleId,
-    RoomBan, RoomId, RoomMember, RoomMemberOrigin, RoomMemberPut, RoomMemberUpdate, SearchDlqId,
-    TagId, ThreadMember, ThreadMemberCreate, UserId, WebhookId,
+    Channel, ChannelId, EmojiId, InviteCode, InviteDeleteBulkItem, InvitePatch, InviteWithMetadata,
+    MediaId, MessageId, MessageVerId, NotificationId, PaginationQuery, PaginationResponse,
+    Permission, PermissionOverwriteType, Relationship, RelationshipPatch, RelationshipWithUserId,
+    RoleId, RoomBan, RoomId, RoomMember, RoomMemberOrigin, RoomMemberPut, RoomMemberUpdate,
+    SearchDlqId, TagId, ThreadMember, ThreadMemberCreate, UserId, WebhookId,
     application::{Application, Connection, Scopes},
     automod::{AutomodRule, AutomodRuleCreate, AutomodRuleUpdate},
     calendar::{
@@ -398,6 +398,12 @@ pub trait DataInvite {
         origin_code: &InviteCode,
     ) -> Result<InviteWithMetadata>;
     async fn invite_delete(&mut self, code: InviteCode) -> Result<()>;
+    async fn invite_delete_room(&mut self, room_id: RoomId) -> Result<Vec<InviteDeleteBulkItem>>;
+    async fn invite_delete_channel(
+        &mut self,
+        channel_id: ChannelId,
+    ) -> Result<Vec<InviteDeleteBulkItem>>;
+    async fn invite_delete_user(&mut self, user_id: UserId) -> Result<Vec<InviteDeleteBulkItem>>;
 
     async fn invite_insert_room(
         &mut self,

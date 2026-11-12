@@ -3,8 +3,8 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::federation::Hostname;
 use common::v1::types::util::Time;
 use common::v1::types::{
-    ChannelId, InviteTarget, InviteWithMetadata, PaginationDirection, PaginationQuery,
-    PaginationResponse, RoleId,
+    ChannelId, InviteDeleteBulkItem, InviteTarget, InviteWithMetadata, PaginationDirection,
+    PaginationQuery, PaginationResponse, RoleId,
 };
 use sqlx::{query, query_scalar};
 
@@ -253,6 +253,92 @@ impl DataInvite for Postgres {
         .execute(conn.ext())
         .await?;
         Ok(())
+    }
+
+    async fn invite_delete_room(&mut self, room_id: RoomId) -> Result<Vec<InviteDeleteBulkItem>> {
+        let mut conn = self.acquire().await?;
+        let deleted = query!(
+            r#"
+            update invite set deleted_at = now()
+            where target_type = 'room' and target_id = $1 and deleted_at is null
+            returning code, description
+            "#,
+            *room_id
+        )
+        .fetch_all(conn.ext())
+        .await?;
+        Ok(deleted
+            .into_iter()
+            .map(|row| InviteDeleteBulkItem {
+                code: InviteCode(row.code),
+                description: row.description,
+            })
+            .collect())
+    }
+
+    async fn invite_delete_channel(
+        &mut self,
+        channel_id: ChannelId,
+    ) -> Result<Vec<InviteDeleteBulkItem>> {
+        let channel = self.channel_get(channel_id).await?;
+        let mut conn = self.acquire().await?;
+        let deleted = if channel.ty == common::v1::types::ChannelType::Gdm {
+            query!(
+                r#"
+                update invite set deleted_at = now()
+                where target_type = 'gdm' and target_id = $1 and deleted_at is null
+                returning code, description
+                "#,
+                *channel_id
+            )
+            .fetch_all(conn.ext())
+            .await?
+            .into_iter()
+            .map(|row| InviteDeleteBulkItem {
+                code: InviteCode(row.code),
+                description: row.description,
+            })
+            .collect::<Vec<_>>()
+        } else {
+            query!(
+                r#"
+                update invite set deleted_at = now()
+                where target_type = 'room' and target_channel_id = $1 and deleted_at is null
+                returning code, description
+                "#,
+                *channel_id
+            )
+            .fetch_all(conn.ext())
+            .await?
+            .into_iter()
+            .map(|row| InviteDeleteBulkItem {
+                code: InviteCode(row.code),
+                description: row.description,
+            })
+            .collect::<Vec<_>>()
+        };
+        Ok(deleted)
+    }
+
+    async fn invite_delete_user(&mut self, user_id: UserId) -> Result<Vec<InviteDeleteBulkItem>> {
+        let mut conn = self.acquire().await?;
+        let deleted = query!(
+            r#"
+            update invite set deleted_at = now()
+            where target_type = 'user' and target_id = $1 and deleted_at is null
+            returning code, description
+            "#,
+            *user_id
+        )
+        .fetch_all(conn.ext())
+        .await?;
+        Ok(deleted
+            .into_iter()
+            .map(|row| InviteDeleteBulkItem {
+                code: InviteCode(row.code),
+                description: row.description,
+            })
+            .collect())
     }
 
     async fn invite_list_room(

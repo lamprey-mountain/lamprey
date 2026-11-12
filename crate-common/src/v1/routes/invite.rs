@@ -96,6 +96,29 @@ pub mod invite_room_list {
     }
 }
 
+/// Invite room delete all
+///
+/// Delete all invites that go to a room
+#[endpoint(
+    delete,
+    path = "/room/{room_id}/invite",
+    tags = ["invite"],
+    scopes = [Full],
+    permissions = [InviteManage],
+    audit_log_events = ["InviteDeleteBulk"],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod invite_room_delete_all {
+    use crate::v1::types::RoomId;
+
+    pub struct Request {
+        #[path]
+        pub room_id: RoomId,
+    }
+
+    pub struct Response {}
+}
+
 /// Invite list channel
 #[endpoint(
     get,
@@ -120,6 +143,29 @@ pub mod invite_channel_list {
         #[json]
         pub invites: PaginationResponse<Invite>,
     }
+}
+
+/// Invite channel delete all
+///
+/// Delete all invites that go to a channel
+#[endpoint(
+    delete,
+    path = "/channel/{channel_id}/invite",
+    tags = ["invite"],
+    scopes = [Full],
+    permissions_optional = [InviteManage],
+    audit_log_events = ["InviteDeleteBulk"],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod invite_channel_delete_all {
+    use crate::v1::types::ChannelId;
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {}
 }
 
 /// Invite channel create
@@ -266,6 +312,28 @@ pub mod invite_user_create {
         #[json]
         pub invite: Invite,
     }
+}
+
+/// Invite user delete all
+///
+/// Delete all invites that go to a user
+#[endpoint(
+    delete,
+    path = "/user/{user_id}/invite",
+    tags = ["invite"],
+    scopes = [Full],
+    audit_log_events = ["InviteDeleteBulk"],
+    response(NO_CONTENT, description = "success"),
+)]
+pub mod invite_user_delete_all {
+    use crate::v1::types::misc::UserIdReq;
+
+    pub struct Request {
+        #[path]
+        pub user_id: UserIdReq,
+    }
+
+    pub struct Response {}
 }
 
 /// Invite user list
