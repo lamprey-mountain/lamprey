@@ -3,8 +3,8 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::oauth::ScopeBits;
 use common::v1::types::util::Time;
 use common::v1::types::{
-    ChannelId, ConnectionId, Permission, PermissionOverwriteType, RoomId, SERVER_ROOM_ID, Session,
-    UserId,
+    ChannelId, ConnectionId, Permission, PermissionOverwriteType, RoleId, RoomId, SERVER_ROOM_ID,
+    Session, UserId,
 };
 use dashmap::DashMap;
 use kerosene_core::compat::authz::AuthCheck;
@@ -121,10 +121,20 @@ impl ServicePermissions {
         user_id: Option<UserId>,
         room_id: RoomId,
     ) -> Result<Permissions2<CheckVisibility>> {
+        self.for_room3_with_roles(user_id, room_id, None).await
+    }
+
+    /// like [`Self::for_room3`], but overrides the member's roles
+    pub async fn for_room3_with_roles(
+        &self,
+        user_id: Option<UserId>,
+        room_id: RoomId,
+        role_ids: Option<&[RoleId]>,
+    ) -> Result<Permissions2<CheckVisibility>> {
         let srv = self.globals.services();
         let room = srv.rooms.load(room_id).ready(true).await?;
         let calc = room.permissions();
-        Ok(calc.query(user_id, None))
+        Ok(calc.query_with_roles(user_id, None, role_ids))
     }
 
     /// calculate the permissions a user has on this server
@@ -138,6 +148,16 @@ impl ServicePermissions {
         user_id: Option<UserId>,
         channel_id: ChannelId,
     ) -> Result<Permissions2<CheckVisibility>> {
+        self.for_channel_inner_with_roles(user_id, channel_id, None)
+            .await
+    }
+
+    async fn for_channel_inner_with_roles(
+        &self,
+        user_id: Option<UserId>,
+        channel_id: ChannelId,
+        role_ids: Option<&[RoleId]>,
+    ) -> Result<Permissions2<CheckVisibility>> {
         let srv = self.globals.services();
         let chan = srv.channels.get(channel_id, user_id).await?;
 
@@ -145,7 +165,7 @@ impl ServicePermissions {
             let is_thread = chan.is_thread();
             let room = srv.rooms.load(room_id).ready(true).await?;
             let calc = room.permissions();
-            let mut perms = calc.query(user_id, Some(&chan.into()));
+            let mut perms = calc.query_with_roles(user_id, Some(&chan.into()), role_ids);
 
             // load slowmode fields
             // PERF: cache slowmode data
@@ -244,6 +264,17 @@ impl ServicePermissions {
         channel_id: ChannelId,
     ) -> Result<Permissions2<CheckVisibility>> {
         self.for_channel_inner(user_id, channel_id).await
+    }
+
+    /// like [`Self::for_channel3`], but overrides the member's roles
+    pub async fn for_channel3_with_roles(
+        &self,
+        user_id: Option<UserId>,
+        channel_id: ChannelId,
+        role_ids: Option<&[RoleId]>,
+    ) -> Result<Permissions2<CheckVisibility>> {
+        self.for_channel_inner_with_roles(user_id, channel_id, role_ids)
+            .await
     }
 
     pub async fn invalidate_room(&self, user_id: UserId, room_id: RoomId) {

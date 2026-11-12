@@ -33,7 +33,18 @@ impl<'a> RoomPermissions<'a> {
         user_id: Option<UserId>,
         channel: Option<&CachedChannel>,
     ) -> Permissions2<CheckVisibility> {
+        self.query_with_roles(user_id, channel, None)
+    }
+
+    /// like [`Self::query`], but overrides the member's roles
+    pub fn query_with_roles(
+        &self,
+        user_id: Option<UserId>,
+        channel: Option<&CachedChannel>,
+        role_ids: Option<&[RoleId]>,
+    ) -> Permissions2<CheckVisibility> {
         let member = user_id.and_then(|uid| self.room.members.get(&uid).map(|m| &m.member));
+        let role_ids = role_ids.or_else(|| member.map(|m| m.roles.as_slice()));
 
         let mut bits = PermissionBits::default();
         let mut rank = 0u16;
@@ -49,6 +60,7 @@ impl<'a> RoomPermissions<'a> {
             &mut quarantined,
             user_id,
             member,
+            role_ids,
         );
 
         // calculate channel overwrites
@@ -61,6 +73,7 @@ impl<'a> RoomPermissions<'a> {
                     &mut timed_out,
                     channel,
                     member,
+                    role_ids,
                 );
 
                 // private thread logic
@@ -178,6 +191,7 @@ impl<'a> RoomPermissions<'a> {
         quarantined: &mut bool,
         user_id: Option<UserId>,
         member: Option<&RoomMember>,
+        role_ids: Option<&[RoleId]>,
     ) {
         // the server user and room owner get full permissions
         if user_id.is_some_and(|uid| uid == SERVER_USER_ID || self.room.room.owner_id == Some(uid))
@@ -188,7 +202,21 @@ impl<'a> RoomPermissions<'a> {
         }
 
         let Some(member) = member else {
-            if self.room.room.public {
+            if let Some(role_ids) = role_ids {
+                let everyone_role_id: RoleId = self.room.room.id.into_inner().into();
+                if let Some(role) = self.room.roles.get(&everyone_role_id) {
+                    bits.add_all(role.allow);
+                    bits.remove_all(role.deny);
+                }
+
+                for role_id in role_ids {
+                    if let Some(role) = self.room.roles.get(role_id) {
+                        bits.add_all(role.allow);
+                        bits.remove_all(role.deny);
+                        *rank = (*rank).max(role.position);
+                    }
+                }
+            } else if self.room.room.public {
                 let everyone_role_id: RoleId = self.room.room.id.into_inner().into();
                 if let Some(role) = self.room.roles.get(&everyone_role_id) {
                     bits.add_all(role.allow);
@@ -208,7 +236,7 @@ impl<'a> RoomPermissions<'a> {
             denied_bits.add_all(role.deny);
         }
 
-        for role_id in &member.roles {
+        for role_id in role_ids.unwrap_or(member.roles.as_slice()) {
             if let Some(role) = self.room.roles.get(role_id) {
                 allowed_bits.add_all(role.allow);
                 denied_bits.add_all(role.deny);
@@ -242,15 +270,23 @@ impl<'a> RoomPermissions<'a> {
         timed_out: &mut bool,
         cc: &CachedChannel,
         member: Option<&RoomMember>,
+        role_ids: Option<&[RoleId]>,
     ) {
         if let Some(parent_id) = cc.inner.parent_id {
             if let Some(parent) = self.room.channels.get(&parent_id) {
-                self.calculate_channel_permissions(bits, channel_locked, timed_out, parent, member);
+                self.calculate_channel_permissions(
+                    bits,
+                    channel_locked,
+                    timed_out,
+                    parent,
+                    member,
+                    role_ids,
+                );
             }
         }
 
-        self.apply_channel_overwrites(bits, cc, member);
-        self.apply_channel_locked(bits, channel_locked, timed_out, cc, member, bits);
+        self.apply_channel_overwrites(bits, cc, member, role_ids);
+        self.apply_channel_locked(bits, channel_locked, timed_out, cc, role_ids, bits);
     }
 
     fn apply_channel_overwrites(
@@ -258,6 +294,7 @@ impl<'a> RoomPermissions<'a> {
         bits: &mut PermissionBits,
         cc: &CachedChannel,
         member: Option<&RoomMember>,
+        role_ids: Option<&[RoleId]>,
     ) {
         if cc.overwrites.is_empty() {
             return;
@@ -269,8 +306,8 @@ impl<'a> RoomPermissions<'a> {
             bits.remove_all(ow.deny);
         }
 
-        if let Some(member) = member {
-            for role_id in &member.roles {
+        if let Some(role_ids) = role_ids {
+            for role_id in role_ids {
                 if let Some(ow) = cc.overwrites.get(&role_id.into_inner().into()) {
                     if ow.ty == PermissionOverwriteType::Role {
                         bits.add_all(ow.allow);
@@ -278,7 +315,9 @@ impl<'a> RoomPermissions<'a> {
                     }
                 }
             }
+        }
 
+        if let Some(member) = member {
             // NOTE: should i still apply overwrites even for non members?
             if let Some(ow) = cc.overwrites.get(&member.user_id.into_inner().into()) {
                 if ow.ty == PermissionOverwriteType::User {
@@ -295,7 +334,7 @@ impl<'a> RoomPermissions<'a> {
         channel_locked: &mut bool,
         timed_out: &mut bool,
         cc: &CachedChannel,
-        member: Option<&RoomMember>,
+        role_ids: Option<&[RoleId]>,
         computed_bits: &PermissionBits,
     ) {
         let Some(locked) = &cc.inner.locked else {
@@ -306,8 +345,8 @@ impl<'a> RoomPermissions<'a> {
             return;
         }
 
-        let has_bypass = member.map_or(false, |m| {
-            m.roles
+        let has_bypass = role_ids.map_or(false, |roles| {
+            roles
                 .iter()
                 .any(|r| locked.allow_roles.contains(&(*r).into()))
         });

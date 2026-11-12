@@ -7,7 +7,7 @@ use axum::{Json, extract::Path, extract::State};
 use common::v1::types::SERVER_ROOM_ID;
 use common::v1::types::application::Scope;
 use common::v1::types::federation::ip_addr::IpMetadata;
-use common::v1::types::{ChannelId, Permission, RoomId, UserId};
+use common::v1::types::{ChannelId, Permission, RoleId, RoomId, UserId};
 use serde::{Deserialize, Serialize};
 use url::Url;
 use utoipa::ToSchema;
@@ -168,6 +168,8 @@ struct TestPermissionsRequest {
     room_id: RoomId,
     channel_id: Option<ChannelId>,
     user_id: UserId,
+    #[serde(default)]
+    role_ids: Vec<RoleId>,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -293,15 +295,21 @@ async fn debug_test_permissions(
         .ensure_view()?
         .check()?;
 
+    let role_ids = if json.role_ids.is_empty() {
+        None
+    } else {
+        Some(json.role_ids.as_slice())
+    };
+
     let permissions = if let Some(channel_id) = json.channel_id {
         s.services()
             .perms
-            .for_channel3(Some(json.user_id), channel_id)
+            .for_channel3_with_roles(Some(json.user_id), channel_id, role_ids)
             .await?
     } else {
         s.services()
             .perms
-            .for_room3(Some(json.user_id), json.room_id)
+            .for_room3_with_roles(Some(json.user_id), json.room_id, role_ids)
             .await?
     };
 
