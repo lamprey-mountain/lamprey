@@ -69,7 +69,7 @@ impl From<DbRoomMember> for RoomMember {
             timeout_until: row.timeout_until.map(|t| t.assume_utc().into()),
             quarantined: row.quarantined,
 
-            // FIXME: only return for moderators
+            // NOTE: origin is moderator-only. callers must strip it before sending this to clients.
             origin: row
                 .origin
                 .map(|o| serde_json::from_value(o).expect("invalid data in db")),

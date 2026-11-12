@@ -583,12 +583,14 @@ pub async fn integration_list(
     let srv = req.services();
     let body = req.inner();
 
-    srv.perms
+    let perms = srv
+        .perms
         .for_room3(Some(auth_user.id), body.room_id)
         .await
         .cast_internal()?
-        .ensure_view()?
-        .check()?;
+        .ensure_view()?;
+    perms.check()?;
+    let is_moderator = perms.is_moderator();
 
     let mut data = req.globals().begin_read().await.cast_internal()?;
     let ids = data
@@ -603,10 +605,13 @@ pub async fn integration_list(
             .user_get(id.into_inner().into())
             .await
             .cast_internal()?;
-        let member = data
+        let mut member = data
             .room_member_get(body.room_id, id.into_inner().into())
             .await
             .cast_internal()?;
+        if !is_moderator {
+            member.strip_private();
+        }
         integrations.push(common::v1::types::application::Integration {
             application,
             bot,

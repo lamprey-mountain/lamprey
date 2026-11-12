@@ -283,16 +283,23 @@ pub async fn member_list(
     let srv = req.services();
     let body = req.inner();
 
-    srv.perms
+    let perms = srv
+        .perms
         .for_room3(identity.user_id(), body.room_id)
         .await
-        .cast_internal()?;
+        .cast_internal()?
+        .ensure_view()?;
 
     let mut data = req.globals().begin_read().await.cast_internal()?;
-    let members = data
+    let mut members = data
         .role_member_list(body.role_id, body.pagination.clone())
         .await
         .cast_internal()?;
+    if !perms.is_moderator() {
+        for member in &mut members.items {
+            member.strip_private();
+        }
+    }
 
     Ok(routes::role_member_list::Response { members })
 }
@@ -332,6 +339,7 @@ pub async fn member_add(
         .ensure_view()?;
     perms.needs(Permission::RoleApply);
     perms.check()?;
+    let is_moderator = perms.is_moderator();
 
     let role = data
         .role_select(body.room_id, body.role_id)
@@ -351,7 +359,7 @@ pub async fn member_add(
     data.role_member_put(body.room_id, body.user_id, body.role_id)
         .await
         .cast_internal()?;
-    let member = data
+    let mut member = data
         .room_member_get(body.room_id, body.user_id)
         .await
         .cast_internal()?;
@@ -379,6 +387,10 @@ pub async fn member_add(
         )
         .await
         .cast_internal()?;
+
+    if !is_moderator {
+        member.strip_private();
+    }
 
     Ok(routes::role_member_add::Response { member })
 }

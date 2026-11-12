@@ -368,6 +368,11 @@ impl<T: CheckState> Permissions2<T> {
         self.metadata.rank
     }
 
+    /// whether this user can moderate members in this room
+    pub fn is_moderator(&self) -> bool {
+        self.bits.has(Permission::Admin) || self.bits.has(Permission::MemberKick)
+    }
+
     pub fn member_state(&self) -> &MemberState {
         &self.metadata.member_state
     }

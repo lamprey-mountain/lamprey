@@ -38,12 +38,18 @@ pub async fn list(
         identity.ensure_user()?;
     }
     perms.check()?;
+    let is_moderator = perms.is_moderator();
 
     let mut data = req.globals().begin_read().await.cast_internal()?;
-    let members = data
+    let mut members = data
         .room_member_list(body.room_id, body.pagination.clone())
         .await
         .cast_internal()?;
+    if !is_moderator {
+        for member in &mut members.items {
+            member.strip_private();
+        }
+    }
 
     Ok(routes::room_member_list::Response { members })
 }
@@ -64,17 +70,21 @@ pub async fn get(
         common::v1::types::misc::UserIdReq::RemoteUser(user_id, _) => *user_id,
     };
 
-    srv.perms
+    let perms = srv
+        .perms
         .for_room3(identity.user_id(), body.room_id)
         .await
         .cast_internal()?
         .ensure_view()?;
 
     let mut data = req.globals().begin_read().await.cast_internal()?;
-    let member = data
+    let mut member = data
         .room_member_get(body.room_id, target_user_id)
         .await
         .cast_internal()?;
+    if !perms.is_moderator() {
+        member.strip_private();
+    }
 
     Ok(routes::room_member_get::Response { member })
 }
@@ -333,6 +343,7 @@ pub async fn add(
         txn.commit().await.cast_internal()?;
     }
 
+    let is_moderator = perms.is_moderator();
     let changes = changes.build();
     if !changes.is_empty() {
         req.audit_log()
@@ -369,6 +380,10 @@ pub async fn add(
             .send_room_join(body.room_id, target_user_id, Some(res.clone()))
             .await
             .cast_internal()?;
+    }
+
+    if !is_moderator {
+        res.strip_private();
     }
 
     Ok(routes::room_member_add::Response { member: res })
@@ -595,6 +610,10 @@ pub async fn update(
         .await
         .cast_internal()?;
 
+    if !perms.is_moderator() {
+        res.strip_private();
+    }
+
     Ok(routes::room_member_update::Response { member: res })
 }
 
@@ -727,6 +746,7 @@ pub async fn search(
         perms.needs(Permission::ServerOversee);
     }
     perms.check()?;
+    let is_moderator = perms.is_moderator();
 
     let limit = body.search.limit.unwrap_or(10).min(100);
     let search = RoomMemberSearchRequest {
@@ -738,11 +758,16 @@ pub async fn search(
         },
         sort_field: RoomMemberSearchOrderField::Joined,
     };
-    let results = srv
+    let mut results = srv
         .search
         .search_room_members(body.room_id, search)
         .await
         .cast_internal()?;
+    if !is_moderator {
+        for member in &mut results.room_members {
+            member.strip_private();
+        }
+    }
 
     Ok(routes::room_member_search::Response { results })
 }
@@ -774,12 +799,18 @@ pub async fn search_advanced(
         perms.needs(Permission::ServerOversee);
     }
     perms.check()?;
+    let is_moderator = perms.is_moderator();
 
-    let results = srv
+    let mut results = srv
         .search
         .search_room_members(body.room_id, body.search.clone())
         .await
         .cast_internal()?;
+    if !is_moderator {
+        for member in &mut results.room_members {
+            member.strip_private();
+        }
+    }
 
     Ok(routes::room_member_search_advanced::Response { results })
 }

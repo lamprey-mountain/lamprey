@@ -222,6 +222,11 @@ pub struct RoomMemberDeleteQuery {
 }
 
 impl RoomMember {
+    /// remove fields that only moderators should see
+    pub fn strip_private(&mut self) {
+        self.origin = None;
+    }
+
     pub fn apply_patch(&mut self, patch: RoomMemberUpdate) {
         if let Some(override_name) = patch.override_name {
             self.override_name = override_name;
