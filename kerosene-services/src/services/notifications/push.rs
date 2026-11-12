@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as B64;
-use common::v1::types::UserId;
+use common::v1::types::{SessionId, UserId};
 use common::v1::types::notifications::bytes::NotificationBytes;
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use lamprey_backend_data_postgres::PushData;
@@ -98,6 +98,44 @@ impl ServiceNotifications {
         Ok(())
     }
 
+    /// unregister a session's subscription from its push service and delete it
+    ///
+    /// best effort: failures to reach the push service are logged, not returned
+    #[tracing::instrument(name = "notifications.push.unregister", skip_all, fields(session_id = %session_id))]
+    pub async fn push_unregister_session(&self, session_id: SessionId) -> Result<()> {
+        let mut data = self.globals.begin().await?;
+        let subscription = match data.push_get(session_id).await {
+            Ok(sub) => Some(sub),
+            Err(Error::NotFound) => None,
+            Err(e) => return Err(e),
+        };
+        data.push_delete(session_id).await?;
+        data.commit().await?;
+
+        if let Some(sub) = subscription {
+            tokio::spawn(Self::push_unregister_inner(self.globals.clone(), sub));
+        }
+
+        Ok(())
+    }
+
+    /// unregister all of a user's subscriptions from their push services and delete them
+    ///
+    /// best effort: failures to reach the push service are logged, not returned
+    #[tracing::instrument(name = "notifications.push.unregister_all", skip_all, fields(user_id = %user_id))]
+    pub async fn push_unregister_user(&self, user_id: UserId) -> Result<()> {
+        let mut data = self.globals.begin().await?;
+        let subscriptions = data.push_list_for_user(user_id).await?;
+        data.push_delete_for_user(user_id).await?;
+        data.commit().await?;
+
+        for sub in subscriptions {
+            tokio::spawn(Self::push_unregister_inner(self.globals.clone(), sub));
+        }
+
+        Ok(())
+    }
+
     /// send a notification to a session via web push api
     #[tracing::instrument(
         name = "notifications.push.inner",
@@ -116,26 +154,13 @@ impl ServiceNotifications {
             .map_err(|e| Error::Internal(format!("invalid auth key: {}", e)))?;
         let ciphertext = ece::encrypt(&p256dh, &auth, &payload)
             .map_err(|e| Error::Internal(format!("encryption failed: {}", e)))?;
-        let host = state
-            .config()
-            .html_url // NOTE: why do i use html_url here?
-            .host_str()
-            .ok_or_else(|| Error::Internal("missing host in html_url".to_string()))?
-            .to_string();
 
         let endpoint = Url::parse(&sub.endpoint)?;
-        let claims = JwtClaims {
-            aud: endpoint.origin().ascii_serialization(),
-            exp: OffsetDateTime::now_utc().unix_timestamp() + 12 * 3600,
-            // TODO: use something better?
-            sub: format!("mailto:admin@{}", host),
-        };
-
-        let token = jsonwebtoken::encode(
-            &Header::new(Algorithm::ES256),
-            &claims,
-            &vapid_keys.encoding,
-        )?;
+        let authorization = state
+            .services()
+            .notifications
+            .vapid_authorization(&endpoint)
+            .await?;
 
         // TODO: use http service
         // TODO: verify that headers/encoding are correct
@@ -144,10 +169,7 @@ impl ServiceNotifications {
             .post(&sub.endpoint)
             .header("Content-Encoding", "aes128gcm")
             .header("TTL", "2419200")
-            .header(
-                "Authorization",
-                format!("vapid t={token}, k={}", vapid_keys.public),
-            )
+            .header("Authorization", authorization)
             .header("Crypto-Key", format!("p256ecdsa={}", vapid_keys.public))
             .body(ciphertext)
             .send()
@@ -173,6 +195,68 @@ impl ServiceNotifications {
         }
 
         Ok(())
+    }
+
+    /// unsubscribe a subscription from its push service
+    async fn push_unregister_inner(state: Globals, sub: PushData) {
+        if let Err(e) = Self::push_unregister_request(&state, &sub).await {
+            error!(
+                "failed to unregister push subscription for session {}: {e}",
+                sub.session_id
+            );
+        }
+    }
+
+    async fn push_unregister_request(state: &Globals, sub: &PushData) -> Result<()> {
+        let endpoint = Url::parse(&sub.endpoint)?;
+        let authorization = state
+            .services()
+            .notifications
+            .vapid_authorization(&endpoint)
+            .await?;
+
+        // TODO: use http service
+        let res = reqwest::Client::new()
+            .delete(endpoint.as_str())
+            .header("Authorization", authorization)
+            .send()
+            .await?;
+
+        match res.status() {
+            status if status.is_success() => Ok(()),
+            // subscription is already gone
+            StatusCode::GONE | StatusCode::NOT_FOUND => Ok(()),
+            status => Err(Error::Internal(format!(
+                "unexpected status unregistering push subscription: {status}"
+            ))),
+        }
+    }
+
+    /// build a vapid `Authorization` header value for a push endpoint
+    async fn vapid_authorization(&self, endpoint: &Url) -> Result<String> {
+        let keys = self.get_vapid_keys().await?;
+        let host = self
+            .globals
+            .config()
+            .html_url // NOTE: why do i use html_url here?
+            .host_str()
+            .ok_or_else(|| Error::Internal("missing host in html_url".to_string()))?
+            .to_string();
+
+        let claims = JwtClaims {
+            aud: endpoint.origin().ascii_serialization(),
+            exp: OffsetDateTime::now_utc().unix_timestamp() + 12 * 3600,
+            // TODO: use something better?
+            sub: format!("mailto:admin@{}", host),
+        };
+
+        let token = jsonwebtoken::encode(
+            &Header::new(Algorithm::ES256),
+            &claims,
+            &keys.encoding,
+        )?;
+
+        Ok(format!("vapid t={token}, k={}", keys.public))
     }
 
     pub(super) async fn spawn_push_task(state: Globals) {

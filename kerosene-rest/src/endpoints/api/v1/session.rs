@@ -127,6 +127,11 @@ pub async fn delete(
 
     let target = target_session(&req, req.inner().session_id.clone()).await?;
 
+    srv.notifications
+        .push_unregister_session(target.id)
+        .await
+        .cast_internal()?;
+
     let mut data = globals.begin().await.cast_internal()?;
     data.session_delete(target.id).await.cast_internal()?;
     data.commit().await.cast_internal()?;
@@ -170,6 +175,11 @@ pub async fn delete_all(
     let identity = req.identity();
     let user = identity.ensure_user()?;
     identity.ensure_scopes(&[Scope::Full])?;
+
+    srv.notifications
+        .push_unregister_user(user.id)
+        .await
+        .cast_internal()?;
 
     let mut data = globals.begin().await.cast_internal()?;
     data.session_delete_all(user.id).await.cast_internal()?;
