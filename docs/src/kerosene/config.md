@@ -120,9 +120,13 @@ token = "a1b2c3" # shared secret with crate-voice
 host_ipv4 = "192.168.12.34" # address to bind and announce, must be reachable
 host_ipv6 = "2001:db8:0a0b:12f0:0000:0000" # same, for ipv6
 # workers = 4 # defaults to cpu cores
-# udp_port = 0 # defaults to a random port
+# rtp_port_min = 56000 # first rtp media udp port
+# rtp_port_max = 56999 # last rtp media udp port; range must be >= workers wide
 # quic_port = 0 # defaults to a random port
 # stun_port = 3478 # builtin stun server, disabled by default
+#
+# the rtp range must be reachable from clients (open it in your firewall/nat)
+# and each shard binds one port from it.
 
 [webtransport]
 # webtransport should just work but you can manually configure it like so

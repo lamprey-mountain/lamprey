@@ -26,6 +26,9 @@ pub enum Error {
     #[error("channel error: {0}")]
     Channel(String),
 
+    #[error("config error: {0}")]
+    Config(String),
+
     #[error("backend error: {0}")]
     Backend(String),
 

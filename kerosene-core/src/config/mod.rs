@@ -472,12 +472,17 @@ pub struct ConfigVoice {
     /// defaults to the number of cpu cores
     pub workers: Option<u8>,
 
-    /// the udp port to use for media traffic
+    /// the first udp port in the rtp media range
     ///
-    /// defaults to a random port
-    // TODO: remove
-    #[serde(default)]
-    pub udp_port: u16,
+    /// each shard binds one port from this range
+    #[serde(default = "default_rtp_port_min")]
+    pub rtp_port_min: u16,
+
+    /// the last udp port in the rtp media range (inclusive)
+    ///
+    /// the range must be at least as wide as `workers`
+    #[serde(default = "default_rtp_port_max")]
+    pub rtp_port_max: u16,
 
     /// the quic port to use for cascading traffic (TODO)
     ///
@@ -489,6 +494,14 @@ pub struct ConfigVoice {
     ///
     /// defaults to being disabled
     pub stun_port: Option<u16>,
+}
+
+fn default_rtp_port_min() -> u16 {
+    56000
+}
+
+fn default_rtp_port_max() -> u16 {
+    56999
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

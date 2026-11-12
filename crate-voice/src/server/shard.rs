@@ -1,11 +1,16 @@
 use common::v1::types::voice::internal::SfuVoiceState;
 use lamprey_backend_core::config::ConfigVoice;
-use std::{collections::HashMap, net::SocketAddr, time::Instant};
+use std::{
+    collections::HashMap,
+    net::{IpAddr, SocketAddr},
+    time::Instant,
+};
 
 use bytes::Bytes;
 use common::v1::types::voice::messages::{SfuEvent, SignallingCommand};
 use common::v2::types::{ChannelId, UserId};
 use slotmap::SlotMap;
+use socket2::{Domain, Protocol, Socket, Type};
 use str0m::{Candidate, RtcConfig};
 use tokio::{net::UdpSocket, sync::mpsc};
 use tokio_stream::StreamExt;
@@ -69,20 +74,27 @@ pub enum ShardCommand {
 // }
 
 impl Shard {
-    pub async fn new(backend: BackendHandle, config: ConfigVoice) -> Result<(Self, ShardHandle)> {
+    pub async fn new(
+        backend: BackendHandle,
+        config: ConfigVoice,
+        port: u16,
+    ) -> Result<(Self, ShardHandle)> {
         let (control_tx, control_rx) = mpsc::channel(100);
 
         let host_v4 = config
             .host_ipv4
             .as_deref()
-            .ok_or_else(|| Error::Channel("host_ipv4 missing in config".into()))?;
+            .ok_or_else(|| Error::Config("host_ipv4 missing in config".into()))?;
         let host_v6 = config
             .host_ipv6
             .as_deref()
-            .ok_or_else(|| Error::Channel("host_ipv6 missing in config".into()))?;
+            .ok_or_else(|| Error::Config("host_ipv6 missing in config".into()))?;
 
-        let sock_v4 = UdpSocket::bind(format!("{host_v4}:0")).await?;
-        let sock_v6 = UdpSocket::bind(format!("[{host_v6}]:0")).await?;
+        let addr_v4 = SocketAddr::new(parse_host(host_v4, "host_ipv4")?, port);
+        let addr_v6 = SocketAddr::new(parse_host(host_v6, "host_ipv6")?, port);
+
+        let sock_v4 = bind_media_socket(addr_v4, false)?;
+        let sock_v6 = bind_media_socket(addr_v6, true)?;
 
         let me = Self {
             backend,
@@ -386,4 +398,26 @@ impl ShardHandle {
 
     // pub fn handle_remote_inbound(&self, ...) { todo!() }
     // pub fn handle_remote_outbound(&self, ...) { todo!() }
+}
+
+fn parse_host(host: &str, field: &str) -> Result<IpAddr> {
+    host.parse()
+        .map_err(|_| Error::Config(format!("invalid {field}: {host}")))
+}
+
+fn bind_media_socket(addr: SocketAddr, only_v6: bool) -> Result<UdpSocket> {
+    let domain = if addr.is_ipv4() {
+        Domain::IPV4
+    } else {
+        Domain::IPV6
+    };
+
+    let socket = Socket::new(domain, Type::DGRAM, Some(Protocol::UDP))?;
+    if only_v6 {
+        socket.set_only_v6(true)?;
+    }
+    socket.bind(&addr.into())?;
+    socket.set_nonblocking(true)?;
+
+    Ok(UdpSocket::from_std(socket.into())?)
 }
