@@ -6,6 +6,9 @@ import type {
 	AutocompleteItem,
 	AutocompleteKind,
 } from "@/contexts/autocomplete";
+import type { SlashCommands } from "@/lib/commands/registry";
+import { quoteArg } from "@/lib/commands/tokenize";
+import { getActiveSlot, getCommandArgs } from "./command-args.ts";
 
 export const autocompleteKey = new PluginKey("autocomplete");
 
@@ -21,6 +24,8 @@ function getTriggerChar(type: AutocompleteKind["type"]): string {
 			return ":";
 		case "command":
 			return "/";
+		case "commandArg":
+			return "";
 	}
 }
 
@@ -92,6 +97,7 @@ export function createAutocompletePlugin(
 	autocomplete: AutocompleteContext,
 	channelId: () => string,
 	roomId: () => string,
+	slashCommands?: () => SlashCommands | undefined,
 ): Plugin {
 	const handleTrigger = (view: EditorView, triggerChar: string): boolean => {
 		const state = view.state;
@@ -205,7 +211,7 @@ export function createAutocompletePlugin(
 			// For commands, replace from start of the current block/line
 			const $pos = state.selection.$from;
 			const parentStart = $pos.start($pos.depth);
-			const commandText = `/${commandItem.id}`;
+			const commandText = `/${commandItem.id} `;
 			let tr = state.tr.replaceWith(
 				parentStart,
 				to,
@@ -215,8 +221,8 @@ export function createAutocompletePlugin(
 			tr = tr.setSelection(
 				TextSelection.create(tr.doc, parentStart + commandText.length),
 			);
-			view.dispatch(tr);
 			autocomplete.hide();
+			view.dispatch(tr);
 			return;
 		} else if (type === "mention") {
 			// Handle user, role, or everyone mention
@@ -253,6 +259,87 @@ export function createAutocompletePlugin(
 
 		view.dispatch(tr);
 		autocomplete.hide();
+	};
+
+	const getArgs = (view: EditorView) =>
+		getCommandArgs(view.state, slashCommands?.());
+
+	const isArgTrigger = (query: string) => /^[@#:]/.test(query);
+
+	const syncCommandArg = (view: EditorView): boolean => {
+		const kind = autocomplete.state.kind;
+		if (kind?.type !== "commandArg") return false;
+
+		const args = getArgs(view);
+		if (!args) return false;
+
+		const slot = getActiveSlot(args, view.state.selection.from);
+		if (!slot || slot.index !== kind.index) return false;
+		if (isArgTrigger(slot.query)) return false;
+
+		autocomplete.updateQuery(slot.query);
+		autocomplete.setReference(createRefElement(view));
+		return true;
+	};
+
+	const showCommandArg = (view: EditorView): boolean => {
+		const args = getArgs(view);
+		if (!args) return false;
+
+		const slot = getActiveSlot(args, view.state.selection.from);
+		if (!slot) return false;
+		if (slot.option.kind !== "user" && slot.option.kind !== "duration") {
+			return false;
+		}
+		if (isArgTrigger(slot.query)) return false;
+
+		autocomplete.show(createRefElement(view), {
+			type: "commandArg",
+			option: slot.option,
+			index: slot.index,
+			onSelect: (value, item) => applyCommandArg(view, slot.index, value, item),
+			channelId: channelId(),
+			roomId: roomId(),
+		});
+		autocomplete.updateQuery(slot.query);
+		return true;
+	};
+
+	const applyCommandArg = (
+		view: EditorView,
+		index: number,
+		value: string,
+		item?: AutocompleteItem,
+	) => {
+		const args = getArgs(view);
+		const slot = args?.slots[index];
+		if (!args || !slot) {
+			autocomplete.hide();
+			return;
+		}
+
+		const state = view.state;
+		const replacement =
+			slot.option.kind === "user" && item?.type === "user"
+				? state.schema.nodes.mention.create({
+						user: item.user_id,
+						name: item.name,
+					})
+				: state.schema.text(quoteArg(value));
+
+		const to = slot.filled ? slot.end : slot.start;
+		let tr = state.tr.replaceWith(slot.start, to, replacement);
+
+		let pos = slot.start + replacement.nodeSize;
+		const before = pos > 1 ? tr.doc.textBetween(pos - 1, pos) : "";
+		if (before !== " ") {
+			tr = tr.insert(pos, state.schema.text(" "));
+			pos++;
+		}
+		tr = tr.setSelection(TextSelection.create(tr.doc, pos));
+
+		autocomplete.hide();
+		view.dispatch(tr);
 	};
 
 	const updateQuery = (view: EditorView) => {
@@ -331,14 +418,23 @@ export function createAutocompletePlugin(
 					const currentKind = autocomplete.state.kind;
 					const docChanged = !prevState.doc.eq(view.state.doc);
 
-					if (currentKind) {
+					if (currentKind?.type === "commandArg") {
+						// Argument autocomplete is active - keep it in sync
+						if (syncCommandArg(view)) return;
+						autocomplete.hide();
+					} else if (currentKind) {
 						// Autocomplete is active - update query and position
 						updateQuery(view);
+						if (autocomplete.state.kind) return;
+						// trigger disappeared (e.g. space after a command name)
+						if (docChanged && showCommandArg(view)) return;
 						return;
 					}
 
-					// Check for new trigger (only if doc changed and we're not already showing)
 					if (!docChanged) return;
+
+					// Inside a command's arguments? Show users/durations for the slot
+					if (showCommandArg(view)) return;
 
 					const cursorPos = view.state.selection.from;
 					if (cursorPos <= 0) return;

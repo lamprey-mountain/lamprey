@@ -24,6 +24,10 @@ import cancelIc from "@/assets/x.png";
 import { EmojiButton } from "@/atoms/EmojiButton.tsx";
 import { Icon } from "@/atoms/Icon";
 import { createTooltip } from "@/atoms/Tooltip.tsx";
+import {
+	getActiveSlot,
+	getCommandArgs,
+} from "@/components/features/editor/command-args";
 import { createEditor } from "@/components/features/editor/Editor.tsx";
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useChannel } from "@/contexts/channel";
@@ -31,6 +35,7 @@ import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useFocusRing } from "@/contexts/focus-ring";
 import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal.tsx";
+import { useSlashCommands } from "@/contexts/slash-commands";
 import { useUploads } from "@/contexts/uploads.tsx";
 import { useMessageNav } from "@/hooks/useMessageNav";
 import { useMessageSubmit } from "@/hooks/useMessageSubmit.ts";
@@ -213,7 +218,22 @@ export function Input(props: InputProps) {
 
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
+	const slashCommands = useSlashCommands();
 	const messageNav = useMessageNav(() => props.channel.id);
+
+	const commandHint = createMemo(() => {
+		const state = ch.editor_state;
+		if (!state) return;
+
+		const args = getCommandArgs(state, slashCommands);
+		if (!args) return;
+
+		return {
+			name: args.name,
+			command: args.command,
+			slot: getActiveSlot(args, state.selection.from),
+		};
+	});
 
 	const focusOnMessage = () => {
 		const active = document.activeElement;
@@ -243,11 +263,37 @@ export function Input(props: InputProps) {
 		return false;
 	};
 
+	let hintEl: HTMLDivElement | undefined;
+	let descEl: HTMLSpanElement | undefined;
+	const [argOffset, setArgOffset] = createSignal(0);
+
+	const isValidUser = (value: string) => {
+		const mention = /^<@([^>]+)>$/.exec(value);
+		if (mention) return !!store.users.cache.get(mention[1]);
+
+		if (store.users.cache.get(value)) return true;
+		for (const user of store.users.cache.values()) {
+			if (user.name === value) return true;
+		}
+
+		const room_id = props.channel.room_id;
+		if (!room_id) return false;
+
+		for (const member of store.roomMembers.cache.values()) {
+			if (member.room_id === room_id && member.override_name === value) {
+				return true;
+			}
+		}
+		return false;
+	};
+
 	const editor = createEditor({
 		channelId: () => props.channel.id ?? "",
 		roomId: () => props.channel.room_id ?? "",
 		toolbar,
 		autocomplete,
+		slashCommands: () => slashCommands,
+		isValidUser,
 		keymap: {
 			Tab: () => {
 				if (ch.messageNavActive) {
@@ -320,6 +366,30 @@ export function Input(props: InputProps) {
 				return true;
 			},
 		},
+	});
+
+	createEffect(() => {
+		const slot = commandHint()?.slot;
+		const view = editor.view;
+
+		if (!slot || !view || !hintEl) {
+			setArgOffset(0);
+			return;
+		}
+
+		// put the current argument's hint after the command description, but
+		// align it with the argument itself when there is room
+		try {
+			const bar = hintEl.getBoundingClientRect();
+			const argX = view.coordsAtPos(slot.start).left - bar.left;
+			const descRight = descEl
+				? descEl.getBoundingClientRect().right - bar.left
+				: 0;
+			// keep it after the description, but push it towards the argument's x
+			setArgOffset(Math.max(0, argX - descRight - 8));
+		} catch {
+			setArgOffset(0);
+		}
 	});
 
 	onMount(() => {
@@ -501,6 +571,30 @@ export function Input(props: InputProps) {
 			</Switch>
 			<Show when={reply()}>
 				<InputReply thread={props.channel} reply={reply()!} />
+			</Show>
+			<Show when={commandHint()}>
+				{(hint) => (
+					<div class="command-hint" ref={hintEl}>
+						<span class="name">{hint().name}</span>
+						<span class="description" ref={descEl}>
+							{hint().command.description}
+						</span>
+						<Show when={hint().slot}>
+							{(slot) => (
+								<span
+									class="arg-info"
+									style={{ "margin-left": `${argOffset()}px` }}
+								>
+									<span class="separator">{"\u2022"}</span>
+									<span class="arg">{slot().option.name}</span>
+									<Show when={slot().option.description}>
+										<span class="description">{slot().option.description}</span>
+									</Show>
+								</span>
+							)}
+						</Show>
+					</div>
+				)}
 			</Show>
 			<div class="text" enterkeyhint="send" ref={(el) => (textEl = el)}>
 				<label class="upload">

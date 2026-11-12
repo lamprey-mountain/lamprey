@@ -13,6 +13,7 @@ import { DOMParser } from "prosemirror-model";
 import { type Command, EditorState, TextSelection } from "prosemirror-state";
 import type { AutocompleteContext } from "@/contexts/autocomplete.tsx";
 import type { FormattingToolbarContextT } from "@/contexts/formatting-toolbar.tsx";
+import type { SlashCommands } from "@/lib/commands/registry";
 import { createAutocompletePlugin } from "./autocomplete-plugin.ts";
 import { createPastePlugin, createSubmitPlugin } from "./core-plugins.ts";
 import { serializeToEditorHTML } from "./editor-html.ts";
@@ -34,6 +35,7 @@ import {
 } from "./mod.tsx";
 import { createEditorNodeViews } from "./node-views.tsx";
 import { schema } from "./schema.ts";
+import { createSlashCommandPlugin } from "./slash-command-plugin.ts";
 import { createToolbarPlugin } from "./toolbar-plugin.ts";
 
 let isApplyingFormat = false;
@@ -55,6 +57,8 @@ export type EditorProps = {
 	roomId?: () => string;
 	toolbar?: FormattingToolbarContextT;
 	autocomplete?: AutocompleteContext;
+	slashCommands?: () => SlashCommands | undefined;
+	isValidUser?: (value: string) => boolean;
 };
 
 export type Editor = {
@@ -73,6 +77,7 @@ export const createEditor = (opts: EditorProps): Editor => {
 		opts.autocomplete!,
 		opts.channelId,
 		opts.roomId ?? (() => ""),
+		opts.slashCommands,
 	);
 	const emojiPlugin = createEmojiPlugin();
 
@@ -107,6 +112,9 @@ export const createEditor = (opts: EditorProps): Editor => {
 				createPlaceholderPlugin(),
 				autocompletePlugin,
 				createMarkdownHighlightPlugin(),
+				...(opts.slashCommands
+					? [createSlashCommandPlugin(opts.slashCommands, opts.isValidUser)]
+					: []),
 				createMarkdownInputRulesPlugin(),
 				createPastePlugin(),
 				createSubmitPlugin(),

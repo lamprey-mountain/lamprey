@@ -7,6 +7,7 @@ import {
 	useContext,
 } from "solid-js";
 import { createStore } from "solid-js/store";
+import type { OptionDef } from "@/lib/commands/types";
 
 export type AutocompleteState = {
 	visible: boolean;
@@ -50,6 +51,14 @@ export type AutocompleteKind =
 			type: "command";
 			onSelect: (command: string) => void;
 			channelId: string;
+	  }
+	| {
+			type: "commandArg";
+			option: OptionDef;
+			index: number;
+			onSelect: (value: string, item?: AutocompleteItem) => void;
+			channelId: string;
+			roomId?: string;
 	  };
 
 export type AutocompleteMentionItem =
@@ -61,7 +70,8 @@ export type AutocompleteItem =
 	| AutocompleteMentionItem
 	| { type: "channel"; channel: Channel; channel_id: string; name: string }
 	| { type: "emoji"; id: string; name: string; char?: string }
-	| { type: "command"; command: string; id: string; description?: string };
+	| { type: "command"; command: string; id: string; description?: string }
+	| { type: "arg"; value: string; label: string; description?: string };
 
 function isMentionKind(
 	kind: AutocompleteKind | null,
@@ -85,6 +95,12 @@ function isCommandKind(
 	kind: AutocompleteKind | null,
 ): kind is Extract<AutocompleteKind, { type: "command" }> {
 	return kind?.type === "command";
+}
+
+function isCommandArgKind(
+	kind: AutocompleteKind | null,
+): kind is Extract<AutocompleteKind, { type: "commandArg" }> {
+	return kind?.type === "commandArg";
 }
 
 const AutocompleteContext = createContext<AutocompleteContext>();
@@ -128,6 +144,9 @@ export const AutocompleteProvider: ParentComponent = (props) => {
 		const item = state.items[state.activeIndex];
 		if (item && state.kind) {
 			const kind = state.kind;
+			// hide before running the selection so onSelect can immediately
+			// reopen autocomplete for the next command argument
+			hide();
 			if (
 				isMentionKind(kind) &&
 				(item.type === "user" ||
@@ -141,8 +160,10 @@ export const AutocompleteProvider: ParentComponent = (props) => {
 				kind.onSelect(item.id, item.name, item.char);
 			} else if (isCommandKind(kind) && item.type === "command") {
 				kind.onSelect(item.command);
+			} else if (isCommandArgKind(kind)) {
+				if (item.type === "user") kind.onSelect(item.name, item);
+				else if (item.type === "arg") kind.onSelect(item.value);
 			}
-			hide();
 		}
 	};
 

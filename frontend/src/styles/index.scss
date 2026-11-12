@@ -367,7 +367,139 @@
 
 			.ProseMirror {
 				padding-block: 8px;
+
+				.slash-command {
+					font-weight: bold;
+					color: $link-300;
+
+					&.invalid {
+						color: $color-red;
+					}
+				}
+
+				.slash-arg-name {
+					color: $fg-600;
+					font-weight: normal;
+					font-size: 0.9em;
+					margin-right: 3px;
+
+					&::after {
+						content: ":";
+					}
+
+					&.required {
+						color: $fg-500;
+						font-weight: bold;
+					}
+
+					&.current {
+						margin-right: 0;
+					}
+				}
+
+				.slash-arg-missing {
+					margin-left: 4px;
+
+					& > .slash-arg {
+						margin-right: 8px;
+					}
+				}
+
+				.slash-arg-placeholder {
+					color: $sep-800;
+					font-style: italic;
+				}
+
+				.slash-arg-quote {
+					color: $fg-600;
+				}
+
+				.slash-arg-at {
+					background: oklch(var(--color-link-300) / 0.2);
+					color: oklch(var(--color-link-500));
+					border-radius: 3px 0 0 3px;
+					padding: 0 0 0 2px;
+
+					&.invalid {
+						background: oklch(var(--color-red) / 0.15);
+						color: $color-red;
+					}
+				}
+
+				.slash-arg-value.user {
+					background: oklch(var(--color-link-300) / 0.2);
+					color: oklch(var(--color-link-500));
+					border-radius: 0 3px 3px 0;
+					padding: 0 2px 0 0;
+
+					&.invalid {
+						background: oklch(var(--color-red) / 0.15);
+						color: $color-red;
+					}
+				}
+
+				.slash-arg-invalid .mention {
+					background: oklch(var(--color-red) / 0.15);
+					color: $color-red;
+				}
 			}
+		}
+	}
+
+	.command-hint {
+		position: relative;
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		padding: 4px 8px;
+		font-size: 0.8em;
+		color: $fg-500;
+		background: $bg-250;
+		border: solid $bg-400 1px;
+		border-bottom: 0;
+		border-radius: var(--border-radius) var(--border-radius) 0 0;
+
+		& > .name {
+			flex-shrink: 0;
+			white-space: nowrap;
+			font-weight: bold;
+			color: oklch(from $link-300 calc(l - 0.02) calc(c - 0.05) h);
+		}
+
+		& > .description {
+			flex: 0 1 auto;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		& > .arg-info {
+			display: flex;
+			flex-shrink: 0;
+			align-items: baseline;
+			gap: 6px;
+			white-space: nowrap;
+			pointer-events: none;
+
+			& > .separator {
+				color: $sep-800;
+			}
+
+			& > .arg {
+				color: $fg-200;
+				font-weight: bold;
+			}
+
+			& > .description {
+				color: $fg-600;
+			}
+		}
+
+		& + .text {
+			border-top: none;
+			border-top-left-radius: 0;
+			border-top-right-radius: 0;
 		}
 	}
 
@@ -987,6 +1119,11 @@ input[type="url"] {
 	display: grid;
 	place-items: center;
 	z-index: 999;
+
+	// non-interactive tooltips must not steal hover from their target
+	&:not(.interactive) {
+		pointer-events: none;
+	}
 
 	& > .base {
 		position: absolute;
@@ -3362,7 +3499,7 @@ button.link {
 	}
 
 	& > .item {
-		padding: 4px 2px;
+		padding: 4px;
 		display: flex;
 		align-items: center;
 		gap: 8px;
@@ -3389,6 +3526,18 @@ button.link {
 		.avatar {
 			width: 20px;
 			height: 20px;
+		}
+	}
+
+	.command-arg {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		padding: 2px 6px;
+
+		& > .description {
+			color: $fg-600;
+			font-size: 0.85em;
 		}
 	}
 }

@@ -44,11 +44,21 @@ function isChannel(
 	return item.type === "channel";
 }
 
+function isArg(
+	item: AutocompleteItem,
+): item is Extract<AutocompleteItem, { type: "arg" }> {
+	return item.type === "arg";
+}
+
 export const Autocomplete = () => {
 	const { state, select, setIndex } = useAutocomplete();
 	const { filtered } = useAutocompleteData();
 	const listboxId = createUniqueId();
 	const optionId = (i: number) => `${listboxId}-opt-${i}`;
+	const kindLabel = () =>
+		state.kind?.type === "commandArg"
+			? state.kind.option.name
+			: state.kind?.type;
 
 	return (
 		<Show when={state.visible && state.kind && filtered().length > 0}>
@@ -56,11 +66,11 @@ export const Autocomplete = () => {
 				class="autocomplete"
 				role="listbox"
 				id={listboxId}
-				aria-label={`${state.kind?.type ?? "autocomplete"} suggestions`}
+				aria-label={`${kindLabel() ?? "autocomplete"} suggestions`}
 			>
 				<header>
-					<Show when={state.query} fallback={`list ${state.kind?.type}s`}>
-						filter {state.kind?.type} matching "{state.query}"
+					<Show when={state.query} fallback={`list ${kindLabel()}s`}>
+						filter {kindLabel()} matching "{state.query}"
 					</Show>
 				</header>
 				<For each={filtered()}>
@@ -166,6 +176,22 @@ export const Autocomplete = () => {
 									<div class="everyone-mention">
 										<span>@everyone</span>
 									</div>
+								</Match>
+								<Match when={isArg(result.obj)}>
+									{(() => {
+										const arg = result.obj as Extract<
+											AutocompleteItem,
+											{ type: "arg" }
+										>;
+										return (
+											<div class="command-arg">
+												<span class="label">{arg.label}</span>
+												<Show when={arg.description}>
+													<span class="description dim">{arg.description}</span>
+												</Show>
+											</div>
+										);
+									})()}
 								</Match>
 								<Match when={isChannel(result.obj)}>
 									{(() => {

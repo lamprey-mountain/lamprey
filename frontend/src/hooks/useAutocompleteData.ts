@@ -16,6 +16,7 @@ import type {
 import { useAutocomplete } from "@/contexts/autocomplete";
 import { useCurrentUser } from "@/contexts/currentUser";
 import { useSlashCommands } from "@/contexts/slash-commands";
+import { durationSuggestions } from "@/lib/commands/duration";
 import type { Command } from "@/lib/commands/types";
 import { type EmojiData, emojiResource } from "@/lib/emoji";
 import { usePermissions } from "./usePermissions";
@@ -33,8 +34,9 @@ export const useAutocompleteData = () => {
 
 	// Get permissions for @everyone/@room mentions
 	const channelForPerms = () => {
-		if (state.kind?.type === "mention") {
-			return api.channels.cache.get(state.kind.channelId);
+		const kind = state.kind;
+		if (kind?.type === "mention" || kind?.type === "commandArg") {
+			return api.channels.cache.get(kind.channelId);
 		}
 		return null;
 	};
@@ -51,73 +53,84 @@ export const useAutocompleteData = () => {
 	const [allCommands, setAllCommands] = createSignal<Command[]>([]);
 	const [allRoles, setAllRoles] = createSignal<Role[]>([]);
 
-	const threadMembersResource = api.threadMembers.useList(() =>
-		state.kind?.type === "mention" ? state.kind.channelId : undefined,
-	);
+	const threadMembersResource = api.threadMembers.useList(() => {
+		const kind = state.kind;
+		return kind?.type === "mention" || kind?.type === "commandArg"
+			? kind.channelId
+			: undefined;
+	});
 
 	const roomMembersResource = api.roomMembers.useList(() => {
-		if (state.kind?.type !== "mention") return;
-		const channel = api.channels.cache.get(state.kind.channelId);
-		return state.kind.roomId ?? channel?.room_id ?? undefined;
+		const kind = state.kind;
+		if (kind?.type !== "mention" && kind?.type !== "commandArg") return;
+		const channel = api.channels.cache.get(kind.channelId);
+		return kind.roomId ?? channel?.room_id ?? undefined;
 	});
 
 	const channel = () => api.channels.get(state.kind?.channelId ?? "");
+
+	const collectUsers = () => {
+		const threadMembers = threadMembersResource();
+		const roomMembers = roomMembersResource();
+
+		const userIds = new Set<string>();
+		// Access ids from PaginatedList state and fetch members from cache
+		threadMembers?.state.ids.forEach((id: string) => {
+			const member = api.threadMembers.cache.get(id);
+			if (member?.user_id) userIds.add(member.user_id);
+		});
+		roomMembers?.state.ids.forEach((id: string) => {
+			const member = api.roomMembers.cache.get(id);
+			if (member?.user_id) userIds.add(member.user_id);
+		});
+
+		// Build user list from cache or use member data as fallback
+		return [...userIds].map((id) => {
+			const cachedUser = api.users.cache.get(id);
+			if (cachedUser?.id) {
+				return cachedUser;
+			}
+			// Fallback: create a minimal user object from the member data
+			// Find the member to get any available name info
+			const threadMember = threadMembers?.state.ids
+				.map((id: string) => api.threadMembers.cache.get(id))
+				.find((m) => m?.user_id === id);
+			const roomMember = roomMembers?.state.ids
+				.map((id: string) => api.roomMembers.cache.get(id))
+				.find((m) => m?.user_id === id);
+			const member: RoomMember | ThreadMember | undefined =
+				threadMember || roomMember;
+			// override_name only exists on RoomMember, not ThreadMember
+			const name =
+				member && "override_name" in member
+					? ((member as RoomMember).override_name ?? undefined)
+					: undefined;
+			return {
+				id: id,
+				name: name || id,
+			} as User;
+		});
+	};
 
 	// Fetch data based on autocomplete type
 	createEffect(() => {
 		const kind = state.kind;
 		if (!kind) return;
 
-		if (kind.type === "mention") {
-			const threadMembers = threadMembersResource();
-			const roomMembers = roomMembersResource();
+		if (kind.type === "mention" || kind.type === "commandArg") {
+			if (kind.type === "mention" || kind.option.kind === "user") {
+				setAllUsers(collectUsers());
+			}
 
-			const userIds = new Set<string>();
-			// Access ids from PaginatedList state and fetch members from cache
-			threadMembers?.state.ids.forEach((id: string) => {
-				const member = api.threadMembers.cache.get(id);
-				if (member?.user_id) userIds.add(member.user_id);
-			});
-			roomMembers?.state.ids.forEach((id: string) => {
-				const member = api.roomMembers.cache.get(id);
-				if (member?.user_id) userIds.add(member.user_id);
-			});
-
-			// Build user list from cache or use member data as fallback
-			const users = [...userIds].map((id) => {
-				const cachedUser = api.users.cache.get(id);
-				if (cachedUser?.id) {
-					return cachedUser;
+			if (kind.type === "mention") {
+				// Also fetch mentionable roles for combined autocomplete
+				const roomId = kind.roomId ?? channel()?.room_id;
+				if (roomId) {
+					const mentionableRoles = [...api.roles.cache.values()].filter(
+						(r) => r.room_id === roomId && r.is_mentionable && r.id !== roomId,
+					);
+					setAllRoles(mentionableRoles);
 				}
-				// Fallback: create a minimal user object from the member data
-				// Find the member to get any available name info
-				const threadMember = threadMembers?.state.ids
-					.map((id: string) => api.threadMembers.cache.get(id))
-					.find((m) => m?.user_id === id);
-				const roomMember = roomMembers?.state.ids
-					.map((id: string) => api.roomMembers.cache.get(id))
-					.find((m) => m?.user_id === id);
-				const member: RoomMember | ThreadMember | undefined =
-					threadMember || roomMember;
-				// override_name only exists on RoomMember, not ThreadMember
-				const name =
-					member && "override_name" in member
-						? ((member as RoomMember).override_name ?? undefined)
-						: undefined;
-				return {
-					id: id,
-					name: name || id,
-				} as User;
-			});
-			setAllUsers(users);
-
-			// Also fetch mentionable roles for combined autocomplete
-			const roomId = kind.roomId ?? channel()?.room_id;
-			if (roomId) {
-				const mentionableRoles = [...api.roles.cache.values()].filter(
-					(r) => r.room_id === roomId && r.is_mentionable && r.id !== roomId,
-				);
-				setAllRoles(mentionableRoles);
 			}
 		} else if (kind.type === "channel") {
 			const channel = api.channels.cache.get(kind.channelId);
@@ -264,6 +277,43 @@ export const useAutocompleteData = () => {
 					hits: (r as { hits?: Array<{ value: string }> }).hits ?? [],
 				}),
 			);
+		} else if (kind.type === "commandArg") {
+			if (kind.option.kind === "user") {
+				const results = go(query, allUsers(), {
+					key: "name",
+					limit: 10,
+					all: true,
+				});
+				return results.map(
+					(r): AutocompleteSearchResult => ({
+						obj: {
+							type: "user" as const,
+							user_id: r.obj.id,
+							name: r.obj.name,
+							user: r.obj,
+						},
+						score: r.score,
+						hits: (r as { hits?: Array<{ value: string }> }).hits ?? [],
+					}),
+				);
+			}
+
+			if (kind.option.kind === "duration") {
+				return durationSuggestions(query).map(
+					(s): AutocompleteSearchResult => ({
+						obj: {
+							type: "arg" as const,
+							value: s.value,
+							label: s.label,
+							description: s.description,
+						},
+						score: 0,
+						hits: [{ value: s.label }],
+					}),
+				);
+			}
+
+			return [];
 		} else if (type === "command") {
 			const results = go(query, allCommands(), {
 				key: "name",
