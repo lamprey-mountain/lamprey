@@ -32,6 +32,7 @@ import { SearchProvider } from "@/contexts/search";
 import { SlashCommandsProvider } from "@/contexts/slash-commands.tsx";
 import { UploadsProvider } from "@/contexts/uploads.tsx";
 import { useAppConfig } from "@/hooks/useAppConfig.ts";
+import { useAppearance } from "@/hooks/useAppearance.ts";
 import { useChatClient } from "@/hooks/useChatClient.ts";
 import { useFavicon } from "@/hooks/useFavicon.ts";
 import { useGlobalEventHandlers } from "@/hooks/useGlobalEventHandlers.ts";
@@ -230,6 +231,7 @@ export const AppShell: Component<ParentProps> = (props) => {
 	useFavicon();
 	useGlobalEventHandlers();
 	useSettingsModals();
+	useAppearance();
 
 	const cursorStats = ctx.cursorStats;
 

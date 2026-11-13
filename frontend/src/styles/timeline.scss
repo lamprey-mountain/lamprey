@@ -340,6 +340,7 @@
 	grid-template-areas:
 		"reply reply" "aside header" "aside content" "aside accessories";
 	contain: content;
+	font-size: calc(1em * var(--chat-font-scale, 1));
 
 	& .user {
 		cursor: pointer;
@@ -618,7 +619,7 @@
 
 .root[data-message-style="cozy"] .message {
 	&.separate {
-		margin-top: 12px;
+		margin-top: var(--message-spacing, 12px);
 
 		& > .aside {
 			& > .avatar {

@@ -1,15 +1,9 @@
 /* colors and fonts used everywhere */
 
-:root {
-	--font-default:
-		"Atkinson Hyperlegible",
-		Inter,
-		system-ui,
-		Avenir,
-		Helvetica,
-		Arial,
-		sans-serif;
-	--font-mono: "Iosevka Zesty", "Courier New", Courier, monospace;
+// palettes are defined as mixins so that previews and other scoped elements can
+// reuse them without duplicating color values
+
+@mixin palette-dark {
 	--color-fg1: 100% 0 0;
 	--color-fg2: 94.9% 0 0;
 	--color-fg3: 89.8% 0 0;
@@ -34,14 +28,147 @@
 	--color-error: 60.2% 0.1976 20.66;
 	--color-status-online: 80.42% 0.1367 154.99;
 	--color-highlight: 60.2% 0.1976 20.66;
-
 	--color-red: 74.03% 0.1759 13.16;
 	--color-green: 85.53% 0.1395 130.14;
 	--color-yellow: 85.39% 0.1187 92.43;
 	--color-blue: 79.29% 0.1636 255.6;
 	--color-magenta: 80.6% 0.15 299.2;
-	/* --color-magenta2: 80.29% 0.1008 286.08; */
 	--color-cyan: 80.21% 0.1086 199.72;
 	--color-orange: 80.7% 0.1273 50.56;
 	--color-teal: 80% 0.128 168;
+}
+
+// high contrast dark: widen the fg/bg range and make separators visible
+@mixin palette-dark-contrast {
+	--color-fg1: 100% 0 0;
+	--color-fg2: 98% 0 0;
+	--color-fg3: 95.5% 0 0;
+	--color-fg4: 92% 0 0;
+	--color-fg5: 85% 0 0;
+	--color-fg6: 79% 0 0;
+	--color-bg1: 10% 0.008 229.4;
+	--color-bg1-5: 12% 0.009 229.4;
+	--color-bg2: 14% 0.01 234.2;
+	--color-bg2-5: 17% 0.01 234.2;
+	--color-bg3: 21% 0.011 225.5;
+	--color-bg4: 27% 0.014 217.8;
+	--color-sep: 46% 0.016 208.8;
+	--color-sep-300: 38% 0.016 219.8;
+	--color-sep-400: 43% 0.016 219.8;
+	--color-sep-800: 66% 0.0149 208.75;
+	--color-link-200: 68% 0.17 299.2;
+	--color-link-300: 76% 0.17 299.2;
+	--color-link-400: 0.83 0.15 299.2;
+	--color-link-500: 84% 0.17 299.2;
+	--color-warn: 92% 0.17 89.66;
+	--color-error: 70% 0.22 20.66;
+	--color-status-online: 88% 0.15 154.99;
+	--color-highlight: 70% 0.22 20.66;
+	--color-red: 80% 0.19 13.16;
+	--color-green: 90% 0.15 130.14;
+	--color-yellow: 90% 0.13 92.43;
+	--color-blue: 84% 0.17 255.6;
+	--color-magenta: 86% 0.17 299.2;
+	--color-cyan: 85% 0.12 199.72;
+	--color-orange: 86% 0.14 50.56;
+	--color-teal: 85% 0.14 168;
+}
+
+@mixin palette-light {
+	--color-fg1: 18% 0.008 229.4;
+	--color-fg2: 24% 0.008 229.4;
+	--color-fg3: 30% 0.009 229.4;
+	--color-fg4: 38% 0.01 225.5;
+	--color-fg5: 46% 0.011 225.5;
+	--color-fg6: 54% 0.012 217.8;
+	--color-bg1: 100% 0 0;
+	--color-bg1-5: 98% 0.002 229.4;
+	--color-bg2: 96% 0.003 234.2;
+	--color-bg2-5: 93.5% 0.004 234.2;
+	--color-bg3: 91% 0.005 225.5;
+	--color-bg4: 87% 0.007 217.8;
+	--color-sep: 74% 0.012 208.8;
+	--color-sep-300: 86% 0.008 219.8;
+	--color-sep-400: 80% 0.009 219.8;
+	--color-sep-800: 58% 0.013 208.75;
+	--color-link-200: 38% 0.16 299.2;
+	--color-link-300: 43% 0.18 299.2;
+	--color-link-400: 0.47 0.16 299.2;
+	--color-link-500: 40% 0.19 299.2;
+	--color-warn: 55% 0.13 89.66;
+	--color-error: 48% 0.2 20.66;
+	--color-status-online: 50% 0.14 154.99;
+	--color-highlight: 48% 0.2 20.66;
+	--color-red: 48% 0.18 13.16;
+	--color-green: 48% 0.14 130.14;
+	--color-yellow: 52% 0.12 92.43;
+	--color-blue: 48% 0.16 255.6;
+	--color-magenta: 46% 0.17 299.2;
+	--color-cyan: 46% 0.11 199.72;
+	--color-orange: 52% 0.14 50.56;
+	--color-teal: 46% 0.12 168;
+}
+
+@mixin palette-light-contrast {
+	--color-fg1: 0% 0 0;
+	--color-fg2: 10% 0 0;
+	--color-fg3: 18% 0 0;
+	--color-fg4: 26% 0 0;
+	--color-fg5: 34% 0 0;
+	--color-fg6: 42% 0 0;
+	--color-bg1: 100% 0 0;
+	--color-bg1-5: 100% 0 0;
+	--color-bg2: 98% 0 0;
+	--color-bg2-5: 96% 0 0;
+	--color-bg3: 94% 0 0;
+	--color-bg4: 91% 0 0;
+	--color-sep: 55% 0 0;
+	--color-sep-300: 70% 0 0;
+	--color-sep-400: 62% 0 0;
+	--color-sep-800: 40% 0 0;
+	--color-link-200: 26% 0.18 299.2;
+	--color-link-300: 30% 0.2 299.2;
+	--color-link-400: 0.34 0.18 299.2;
+	--color-link-500: 28% 0.22 299.2;
+	--color-warn: 40% 0.15 89.66;
+	--color-error: 38% 0.22 20.66;
+	--color-status-online: 36% 0.16 154.99;
+	--color-highlight: 38% 0.22 20.66;
+	--color-red: 40% 0.2 13.16;
+	--color-green: 36% 0.16 130.14;
+	--color-yellow: 42% 0.14 92.43;
+	--color-blue: 38% 0.18 255.6;
+	--color-magenta: 36% 0.19 299.2;
+	--color-cyan: 36% 0.13 199.72;
+	--color-orange: 42% 0.16 50.56;
+	--color-teal: 36% 0.14 168;
+}
+
+:root {
+	--font-default:
+		"Atkinson Hyperlegible",
+		Inter,
+		system-ui,
+		Avenir,
+		Helvetica,
+		Arial,
+		sans-serif;
+	--font-mono: "Iosevka Zesty", "Courier New", Courier, monospace;
+
+	// dark is the fallback so nothing is unthemed before the theme is resolved
+	@include palette-dark;
+	color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+	@include palette-light;
+	color-scheme: light;
+}
+
+:root[data-theme="dark"][data-contrast="high"] {
+	@include palette-dark-contrast;
+}
+
+:root[data-theme="light"][data-contrast="high"] {
+	@include palette-light-contrast;
 }

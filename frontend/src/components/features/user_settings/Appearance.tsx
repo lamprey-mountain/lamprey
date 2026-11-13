@@ -1,14 +1,16 @@
 import type { Preferences, User } from "sdk";
-import { Show, type VoidProps } from "solid-js";
+import { createMemo, Show, type VoidProps } from "solid-js";
 import { useCtx } from "@/app/context";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
 import { Dropdown } from "@/atoms/Dropdown";
 import { Checkbox } from "@/atoms/icons";
 import { Markdown } from "@/atoms/Markdown";
+import { Slider } from "@/atoms/Slider";
 import { Time } from "@/atoms/Time";
 import { Avatar } from "@/avatar/UserAvatar";
 import { useCurrentUser } from "@/contexts/currentUser";
-import { flags } from "@/lib/flags";
+import { useSystemPrefersDark } from "@/hooks/useAppearance";
+import { resolveTheme } from "@/lib/theme";
 import { MessageView, UserDisplayName } from "../chat/Message";
 
 type Theme = Preferences["frontend"]["theme"];
@@ -25,44 +27,53 @@ type BooleanSetting =
 export function Appearance(props: VoidProps<{ user: User }>) {
 	const ctx = useCtx();
 	const { t } = useCtx();
+	const systemPrefersDark = useSystemPrefersDark();
 
-	const toggle = (setting: BooleanSetting) => () => {
+	const scheme = createMemo(
+		() =>
+			resolveTheme(ctx.preferences().frontend.theme, systemPrefersDark()).scheme,
+	);
+
+	const setFrontend = <K extends keyof Preferences["frontend"]>(
+		key: K,
+		value: Preferences["frontend"][K],
+	) => {
 		const c = ctx.preferences();
 		ctx.setPreferences({
 			...c,
-			frontend: {
-				...c.frontend,
-				[setting]: !c.frontend[setting],
-			},
+			frontend: { ...c.frontend, [key]: value },
 		});
 	};
 
-	// TODO(#429): auto, light, dark mode themes
-	// TODO(#429): theme accent color
-	// TODO(#429): high contrast mode
-	// TODO: preview message styling
-	// TODO: show send message button
-	// TODO: message group spacing
-	// TODO: chat font scale
-	// TODO: application scale
-	// TODO: saturation
+	const setTheme = (theme: Theme) => setFrontend("theme", theme);
+
+	const toggle = (setting: BooleanSetting) => () =>
+		setFrontend(setting, !ctx.preferences().frontend[setting]);
 
 	return (
 		<div class="user-settings-appearance">
 			<h2>{t("user_settings.appearance")}</h2>
 			<br />
-			<Show when={flags.has("themes")}>
-				<div class="themes">
-					<button class="theme-button">
-						<ThemePreview theme="dark" />
-						<div class="dim">dark</div>
-					</button>
-					<button class="theme-button">
-						<ThemePreview theme="light" />
-						<div class="dim">light</div>
-					</button>
-				</div>
-			</Show>
+			<div class="themes">
+				<button
+					class="theme-button"
+					classList={{ active: scheme() === "dark" }}
+					aria-pressed={scheme() === "dark"}
+					onClick={() => setTheme("dark")}
+				>
+					<ThemePreview theme="dark" />
+					<div class="dim">{t("user_settings.theme_dark") || "dark"}</div>
+				</button>
+				<button
+					class="theme-button"
+					classList={{ active: scheme() === "light" }}
+					aria-pressed={scheme() === "light"}
+					onClick={() => setTheme("light")}
+				>
+					<ThemePreview theme="light" />
+					<div class="dim">{t("user_settings.theme_light") || "light"}</div>
+				</button>
+			</div>
 			<div class="option apart">
 				<div>
 					<div>{t("user_settings.theme")}</div>
@@ -74,16 +85,7 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 				<Dropdown<Theme>
 					selected={ctx.preferences().frontend.theme}
 					onSelect={(value) => {
-						if (value) {
-							const c = ctx.preferences();
-							ctx.setPreferences({
-								...c,
-								frontend: {
-									...c.frontend,
-									theme: value,
-								},
-							});
-						}
+						if (value) setTheme(value);
 					}}
 					options={[
 						{
@@ -194,22 +196,12 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 								"Adjust the spacing between message groups"}
 						</div>
 					</div>
-					<input
-						type="range"
-						min="0"
-						max="24"
+					<Slider
+						min={0}
+						max={24}
 						value={ctx.preferences().frontend.message_spacing ?? 8}
-						onChange={(e) => {
-							const c = ctx.preferences();
-							ctx.setPreferences({
-								...c,
-								frontend: {
-									...c.frontend,
-									message_spacing: e.currentTarget.valueAsNumber,
-								},
-							});
-						}}
-						class="slider"
+						valueLabel={`${ctx.preferences().frontend.message_spacing ?? 8}px`}
+						onInput={(v) => setFrontend("message_spacing", v)}
 					/>
 				</div>
 				<div class="option apart">
@@ -220,22 +212,13 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 								"Adjust the size of chat text"}
 						</div>
 					</div>
-					<input
-						type="range"
-						min="80"
-						max="150"
+					<Slider
+						min={80}
+						max={150}
+						step={5}
 						value={ctx.preferences().frontend.chat_font_scale ?? 100}
-						onChange={(e) => {
-							const c = ctx.preferences();
-							ctx.setPreferences({
-								...c,
-								frontend: {
-									...c.frontend,
-									chat_font_scale: e.currentTarget.valueAsNumber,
-								},
-							});
-						}}
-						class="slider"
+						valueLabel={`${ctx.preferences().frontend.chat_font_scale ?? 100}%`}
+						onInput={(v) => setFrontend("chat_font_scale", v)}
 					/>
 				</div>
 				<div class="option apart">
@@ -246,22 +229,13 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 								"Adjust the overall application size"}
 						</div>
 					</div>
-					<input
-						type="range"
-						min="80"
-						max="150"
+					<Slider
+						min={80}
+						max={150}
+						step={5}
 						value={ctx.preferences().frontend.app_scale ?? 100}
-						onChange={(e) => {
-							const c = ctx.preferences();
-							ctx.setPreferences({
-								...c,
-								frontend: {
-									...c.frontend,
-									app_scale: e.currentTarget.valueAsNumber,
-								},
-							});
-						}}
-						class="slider"
+						valueLabel={`${ctx.preferences().frontend.app_scale ?? 100}%`}
+						onInput={(v) => setFrontend("app_scale", v)}
 					/>
 				</div>
 				<div class="option apart">
@@ -272,22 +246,12 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 								"Adjust the color saturation"}
 						</div>
 					</div>
-					<input
-						type="range"
-						min="0"
-						max="100"
+					<Slider
+						min={0}
+						max={100}
 						value={ctx.preferences().frontend.saturation ?? 100}
-						onChange={(e) => {
-							const c = ctx.preferences();
-							ctx.setPreferences({
-								...c,
-								frontend: {
-									...c.frontend,
-									saturation: e.currentTarget.valueAsNumber,
-								},
-							});
-						}}
-						class="slider"
+						valueLabel={`${ctx.preferences().frontend.saturation ?? 100}%`}
+						onInput={(v) => setFrontend("saturation", v)}
 					/>
 				</div>
 				<h3 class="dim">{t("user_settings.reduced_motion")}</h3>
@@ -349,7 +313,7 @@ const ThemePreview = (props: { theme: string }) => {
 	const now = new Date();
 
 	return (
-		<div class="theme-preview" data-theme={props.theme}>
+		<div class="theme-preview" data-preview-theme={props.theme}>
 			<article class="message separate">
 				<aside class="aside">
 					<Avatar user={getMe()} animate={false /* TODO: make this work */} />
