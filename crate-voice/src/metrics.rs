@@ -98,8 +98,8 @@ impl VoiceMetrics {
         metrics
     }
 
-    pub fn set_active_shards(&self, active: u64) {
-        self.active_shards.store(active, Relaxed);
+    pub fn shard_started(&self) {
+        self.active_shards.fetch_add(1, Relaxed);
     }
 
     pub fn shard_stopped(&self) {

@@ -388,10 +388,10 @@ impl Shard {
 
 impl ShardHandle {
     // NOTE: maybe i should make this async?
-    pub fn create_peer(&self, channel_id: ChannelId, s: SfuVoiceState) {
-        let _ = self
-            .control_tx
-            .try_send(ShardCommand::CreatePeer(channel_id, s));
+    pub fn create_peer(&self, channel_id: ChannelId, s: SfuVoiceState) -> Result<()> {
+        self.control_tx
+            .try_send(ShardCommand::CreatePeer(channel_id, s))
+            .map_err(|e| Error::Channel(format!("shard did not accept CreatePeer: {e}")))
     }
 
     // pub fn generate_keyframe(
@@ -416,12 +416,14 @@ impl ShardHandle {
         channel_id: ChannelId,
         user_id: UserId,
         inner: SignallingCommand,
-    ) {
-        let _ = self.control_tx.try_send(ShardCommand::Signalling {
-            channel_id,
-            user_id,
-            inner,
-        });
+    ) -> Result<()> {
+        self.control_tx
+            .try_send(ShardCommand::Signalling {
+                channel_id,
+                user_id,
+                inner,
+            })
+            .map_err(|e| Error::Channel(format!("shard did not accept signalling: {e}")))
     }
 
     // pub fn handle_remote_inbound(&self, ...) { todo!() }

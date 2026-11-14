@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
 use crate::{
     backend::{BackendConnection, BackendHandle},
@@ -16,16 +19,24 @@ use common::{
 };
 use futures::StreamExt;
 use lamprey_backend_core::config::{Config, ConfigVoice};
-use tokio::task::{Id, JoinSet};
+use tokio::task::{Id, JoinError, JoinSet};
 use tracing::{debug, error, info, warn};
+
+/// how long a shard has to live before its exit is not considered a startup failure
+const MIN_SHARD_LIFETIME: Duration = Duration::from_secs(5);
+
+/// how many shards may die right after startup before respawning is given up on
+const MAX_QUICK_SHARD_DEATHS: u32 = 3;
 
 /// main entry point for the server
 pub struct Sfu {
     backend: BackendHandle,
     mesh: MeshHandle,
-    shards: Vec<ShardHandle>,
+    /// running shards, keyed by the id of the task running them
+    shards: HashMap<Id, SfuShard>,
     shard_tasks: JoinSet<Result<()>>,
-    shard_ports: HashMap<Id, u16>,
+    /// shards in a row that died right after they were spawned
+    quick_shard_deaths: u32,
     calls: HashMap<ChannelId, Call>,
     user_to_channel: HashMap<UserId, ChannelId>,
     config_full: Box<Config>,
@@ -38,6 +49,16 @@ pub struct Sfu {
 /// contains routing data and logic for local and remote cascading
 pub struct Call {
     shard: ShardHandle,
+    /// task id of the shard hosting this call
+    shard_task: Id,
+}
+
+/// a shard that is currently running
+struct SfuShard {
+    handle: ShardHandle,
+    /// udp port the shard's media socket is bound to
+    port: u16,
+    spawned_at: Instant,
 }
 
 pub struct SfuHandle {
@@ -60,9 +81,9 @@ impl Sfu {
         let me = Sfu {
             backend,
             mesh,
-            shards: Vec::new(),
+            shards: HashMap::new(),
             shard_tasks: JoinSet::new(),
-            shard_ports: HashMap::new(),
+            quick_shard_deaths: 0,
             calls: HashMap::new(),
             user_to_channel: HashMap::new(),
             config_full: Box::new(config),
@@ -109,9 +130,6 @@ impl Sfu {
             return;
         }
         info!("Spawned {started}/{num_shards} shards");
-        if let Some(metrics) = &self.metrics {
-            metrics.set_active_shards(started as u64);
-        }
 
         let backend = self.backend.clone();
         let mut commands = Box::pin(backend.subscribe());
@@ -122,25 +140,7 @@ impl Sfu {
                     self.handle_command(cmd).await;
                 }
                 Some(res) = self.shard_tasks.join_next_with_id() => {
-                    match res {
-                        Ok((id, Ok(()))) => {
-                            if let Some(port) = self.shard_ports.remove(&id) {
-                                ports.release(port);
-                            }
-                            warn!("Shard task exited unexpectedly");
-                        }
-                        Ok((id, Err(e))) => {
-                            if let Some(port) = self.shard_ports.remove(&id) {
-                                ports.release(port);
-                            }
-                            error!("Shard task failed: {}", e);
-                        }
-                        Err(e) => error!("Shard task panicked: {}", e),
-                    }
-                    if let Some(metrics) = &self.metrics {
-                        metrics.shard_stopped();
-                    }
-                    // TODO: try to respawn shard
+                    self.handle_shard_exit(res, &mut ports).await;
                 }
             }
         }
@@ -172,17 +172,15 @@ impl Sfu {
                             // TODO: select shard based on load
                             // TODO: shut down `ShardCall`s when idle
                             // TODO: update user_to_channel based on voice state, disconnect
-                            let shard = match self.shards.first() {
-                                Some(s) => s.clone(),
-                                None => {
-                                    error!("No shards available to handle CreatePeer");
-                                    return;
-                                }
+                            let Some((shard_task, shard)) = self.select_shard() else {
+                                error!("No shards available to handle CreatePeer");
+                                return;
                             };
                             self.calls.insert(
                                 channel_id,
                                 Call {
                                     shard: shard.clone(),
+                                    shard_task,
                                 },
                             );
                             shard
@@ -191,7 +189,9 @@ impl Sfu {
 
                     self.user_to_channel.insert(user_id, channel_id);
 
-                    shard.create_peer(channel_id, state);
+                    if let Err(e) = shard.create_peer(channel_id, state) {
+                        warn!(?channel_id, ?user_id, "Failed to create peer on shard: {e}");
+                    }
                 });
             }
             SfuCommand::Signalling {
@@ -207,7 +207,9 @@ impl Sfu {
                 .in_scope(|| {
                     debug!(?user_id, ?channel_id, ?inner, "Received signalling command");
                     if let Some(call) = self.calls.get(&channel_id) {
-                        call.shard.handle_signalling(channel_id, user_id, inner);
+                        if let Err(e) = call.shard.handle_signalling(channel_id, user_id, inner) {
+                            warn!(?channel_id, ?user_id, "Failed to forward signalling: {e}");
+                        }
                     } else {
                         warn!("Received signalling for unknown channel {:?}", channel_id);
                     }
@@ -251,9 +253,19 @@ impl Sfu {
                         shard.run().await;
                         Ok(())
                     });
-                    self.shard_ports.insert(task.id(), port);
+                    self.shards.insert(
+                        task.id(),
+                        SfuShard {
+                            handle,
+                            port,
+                            spawned_at: Instant::now(),
+                        },
+                    );
 
-                    self.shards.push(handle);
+                    if let Some(metrics) = &self.metrics {
+                        metrics.shard_started();
+                    }
+
                     return Ok(());
                 }
                 Err(Error::Io(e)) if e.kind() == std::io::ErrorKind::AddrInUse => {
@@ -266,6 +278,60 @@ impl Sfu {
         Err(Error::Config(
             "exhausted rtp udp port range without binding a shard".into(),
         ))
+    }
+
+    /// pick a shard to host a new call
+    // TODO: select shard based on load
+    fn select_shard(&self) -> Option<(Id, ShardHandle)> {
+        self.shards
+            .iter()
+            .next()
+            .map(|(id, shard)| (*id, shard.handle.clone()))
+    }
+
+    /// clean up after a shard task, then replace it
+    async fn handle_shard_exit(
+        &mut self,
+        res: ::core::result::Result<(Id, Result<()>), JoinError>,
+        ports: &mut PortAllocator,
+    ) {
+        let (task_id, reason) = match res {
+            Ok((id, Ok(()))) => (id, "exited".to_string()),
+            Ok((id, Err(e))) => (id, format!("failed: {e}")),
+            Err(e) => (e.id(), format!("panicked: {e}")),
+        };
+
+        let Some(shard) = self.shards.remove(&task_id) else {
+            return;
+        };
+
+        error!(port = shard.port, "Shard task {reason}");
+        ports.release(shard.port);
+
+        if let Some(metrics) = &self.metrics {
+            metrics.shard_stopped();
+        }
+
+        // the peers of this shard are gone with it; route new peers of these calls to a live
+        // shard instead of a closed handle
+        self.calls.retain(|_, call| call.shard_task != task_id);
+
+        // spawning is broken if shards keep dying right after they start
+        if shard.spawned_at.elapsed() < MIN_SHARD_LIFETIME {
+            self.quick_shard_deaths += 1;
+        } else {
+            self.quick_shard_deaths = 0;
+        }
+
+        if self.quick_shard_deaths >= MAX_QUICK_SHARD_DEATHS {
+            error!("Not respawning shard: shards keep dying right after startup");
+            return;
+        }
+
+        info!(port = shard.port, "Respawning shard");
+        if let Err(e) = self.spawn_shard(ports).await {
+            error!("Failed to respawn shard: {e}");
+        }
     }
 }
 
