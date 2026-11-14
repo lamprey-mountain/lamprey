@@ -142,6 +142,16 @@ host_ipv6 = "2001:db8:0a0b:12f0:0000:0000" # same, for ipv6
 # traces = "http://localhost:4317"
 # metrics = "http://localhost:4317"
 
+# http ratelimits. every bucket has a per-user quota, with ip limits derived
+# from it; `multiplier` scales all of them (`0` is treated as `1`)
+# [ratelimit]
+# disabled = false # disable ratelimiting entirely
+# multiplier = 1 # e.g. 4 allows four times as many requests in the same window
+# exempt_users = ["9f2c..."] # user ids that bypass every limit, including ip limits
+# exempt_apps = ["51a7..."] # oauth app ids that bypass every limit; puppets of
+#                           # bridge apps (via `x-puppet-id`) are exempt too
+# exempt_ips = ["10.0.0.0/8"] # ips or cidrs that bypass every limit
+
 # overrides for ui serving. defaults to the embedded ui, if it exists
 # [ui]
 # path = "/srv/lamprey/static"
