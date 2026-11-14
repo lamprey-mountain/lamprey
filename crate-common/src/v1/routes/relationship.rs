@@ -65,11 +65,14 @@ pub mod friend_list_pending {
 /// Friend add
 ///
 /// Send or accept a friend request.
+///
+/// Sending a new request requires FriendCreate.
 #[endpoint(
     put,
     path = "/user/@self/friend/{target_id}",
     tags = ["relationship"],
     scopes = [Full],
+    permissions_server = [FriendCreate],
     audit_log_events = ["FriendRequest", "FriendAccept"],
     response(NO_CONTENT, description = "success"),
 )]

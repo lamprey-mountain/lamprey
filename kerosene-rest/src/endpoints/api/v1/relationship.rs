@@ -360,6 +360,7 @@ pub async fn block_add(
     let identity = req.identity();
     identity.ensure_scopes(&[common::v1::types::oauth::Scope::Full])?;
     let auth_user = identity.ensure_user()?;
+    auth_user.ensure_unsuspended()?;
 
     let globals = req.globals();
     let body = req.inner();
@@ -441,6 +442,7 @@ pub async fn block_remove(
     let identity = req.identity();
     identity.ensure_scopes(&[common::v1::types::oauth::Scope::Full])?;
     let auth_user = identity.ensure_user()?;
+    auth_user.ensure_unsuspended()?;
 
     let globals = req.globals();
     let body = req.inner();
@@ -512,6 +514,7 @@ pub async fn ignore_add(
     let identity = req.identity();
     identity.ensure_scopes(&[common::v1::types::oauth::Scope::Full])?;
     let auth_user = identity.ensure_user()?;
+    auth_user.ensure_unsuspended()?;
 
     let globals = req.globals();
     let body = req.inner();
@@ -565,6 +568,7 @@ pub async fn ignore_remove(
     let identity = req.identity();
     identity.ensure_scopes(&[common::v1::types::oauth::Scope::Full])?;
     let auth_user = identity.ensure_user()?;
+    auth_user.ensure_unsuspended()?;
 
     let globals = req.globals();
     let body = req.inner();
