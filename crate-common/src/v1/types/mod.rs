@@ -32,6 +32,8 @@ pub mod permission;
 pub mod preferences;
 pub mod presence;
 pub mod push;
+#[cfg(feature = "serde")]
+pub mod query;
 pub mod reaction;
 pub mod redex;
 pub mod role;

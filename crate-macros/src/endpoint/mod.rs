@@ -1327,7 +1327,7 @@ fn build_parts_extraction(
                     let ident = &f.ident;
                     let ty = &f.ty;
                     stmts.push(quote! {
-                        let #ident: #ty = ::serde_urlencoded::from_str(query_str)
+                        let #ident: #ty = crate::v1::types::query::from_str(query_str)
                             .map_err(|_| crate::v1::types::error::ApiError::with_message(
                                 crate::v1::types::error::ErrorCode::InvalidData,
                                 "failed to parse query parameters".to_string(),
@@ -1346,7 +1346,7 @@ fn build_parts_extraction(
                 struct __QueryParams {
                     #(#named_renames #named_idents: #named_tys,)*
                 }
-                let __qp: __QueryParams = ::serde_urlencoded::from_str(query_str)
+                let __qp: __QueryParams = crate::v1::types::query::from_str(query_str)
                     .map_err(|_| crate::v1::types::error::ApiError::with_message(
                         crate::v1::types::error::ErrorCode::InvalidData,
                         "failed to parse query parameters".to_string(),
