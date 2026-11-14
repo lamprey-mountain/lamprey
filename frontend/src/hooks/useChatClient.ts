@@ -107,6 +107,10 @@ export function useChatClient(config: Config) {
 
 	const store = new RootStore(client, events, db);
 
+	createEffect(() => {
+		if (db()) store.emoji.loadCached();
+	});
+
 	const cs = from(client.state);
 	createEffect(() => {
 		syncLog.debug("client state", cs() ?? "unknown", null);

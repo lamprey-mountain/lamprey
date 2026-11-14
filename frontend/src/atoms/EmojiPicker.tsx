@@ -138,40 +138,47 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 
 	const standardGroups = createMemo(() => parseEmoji());
 
-	const [customGroupsResource] = createResource(
-		() => [...api.rooms.cache.keys()],
-		async (roomIds) => {
-			await api.emoji.listAllCustom(roomIds);
-			return roomIds
-				.map((id) => api.rooms.cache.get(id))
-				.filter((r): r is Room => r !== undefined)
-				.map((room) => {
-					const emojis = [...api.emoji.cache.values()].filter((e) => {
-						if (e.owner?.owner === "Room") {
-							return e.owner.room_id === room.id;
-						}
-						return false;
-					});
+	const roomsWithEmoji = () =>
+		[...api.rooms.cache.values()].filter((room) => room.emoji_count > 0);
 
-					if (emojis.length === 0) return null;
+	// pass every room: rooms without emoji are used to drop stale cached emoji
+	createResource(() => [...api.rooms.cache.values()], async (rooms) => {
+		await api.emoji.loadCached();
+		await api.emoji.listAllCustom(rooms);
+	});
 
-					return {
-						id: `room-${room.id}`,
-						name: room.name,
-						room,
-						emojis: emojis.map((e) => ({
-							type: "custom",
-							label: e.name,
-							id: e.id,
-							media_id: e.media_id,
-							animated: e.animated,
-							room_id: room.id,
-						})),
-					} as EmojiGroup;
-				})
-				.filter((r) => r !== null) as EmojiGroup[];
-		},
-	);
+	const customGroups = createMemo<EmojiGroup[]>(() => {
+		const byRoom = new Map<string, UnifiedEmoji[]>();
+
+		for (const emoji of api.emoji.cache.values()) {
+			if (emoji.owner?.owner !== "Room") continue;
+
+			const room_id = emoji.owner.room_id;
+			let emojis = byRoom.get(room_id);
+			if (!emojis) {
+				emojis = [];
+				byRoom.set(room_id, emojis);
+			}
+
+			emojis.push({
+				type: "custom",
+				label: emoji.name,
+				id: emoji.id,
+				media_id: emoji.media_id,
+				animated: emoji.animated,
+				room_id,
+			});
+		}
+
+		return roomsWithEmoji()
+			.map((room) => ({
+				id: `room-${room.id}`,
+				name: room.name,
+				room,
+				emojis: byRoom.get(room.id) ?? [],
+			}))
+			.filter((group) => group.emojis.length > 0);
+	});
 
 	const favoritesGroup = createMemo<EmojiGroup | null>(() => {
 		const keys = ctx.preferences().frontend.favorite_emoji ?? [];
@@ -210,7 +217,7 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 
 	const allGroups = createMemo(() => {
 		const standard = standardGroups();
-		const custom = customGroupsResource() || [];
+		const custom = customGroups();
 		const favorites = favoritesGroup();
 		return favorites
 			? [favorites, ...custom, ...standard]

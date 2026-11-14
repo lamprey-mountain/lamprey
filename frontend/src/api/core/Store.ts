@@ -624,11 +624,30 @@ export class RootStore {
 		} else if (msg.type === "CalendarEventDelete") {
 			this.calendar.delete(msg.event_id);
 		} else if (msg.type === "EmojiCreate") {
+			const existed = this.emoji.cache.has(msg.emoji.id);
 			this.emoji.upsert(msg.emoji);
+			if (!existed && msg.emoji.owner?.owner === "Room") {
+				this.updateRoomEmojiCount(msg.emoji.owner.room_id, 1);
+			}
 		} else if (msg.type === "EmojiUpdate") {
+			const previous = this.emoji.cache.get(msg.emoji.id);
 			this.emoji.upsert(msg.emoji);
+
+			const previous_room =
+				previous?.owner?.owner === "Room" ? previous.owner.room_id : undefined;
+			const room =
+				msg.emoji.owner?.owner === "Room" ? msg.emoji.owner.room_id : undefined;
+			if (previous_room !== room) {
+				if (previous_room) this.updateRoomEmojiCount(previous_room, -1);
+				if (room) this.updateRoomEmojiCount(room, 1);
+			}
 		} else if (msg.type === "EmojiDelete") {
-			this.emoji.cache.delete(msg.emoji_id);
+			// only adjust the count when the emoji is known, so a replayed event or a
+			// partially loaded cache can't corrupt it. EmojiService refetches rooms
+			// whose count doesn't match the cache
+			const existed = this.emoji.cache.has(msg.emoji_id);
+			this.emoji.delete(msg.emoji_id);
+			if (existed) this.updateRoomEmojiCount(msg.room_id, -1);
 		} else if (msg.type === "ChannelTyping") {
 			const { channel_id, user_id, until } = msg;
 			const untilDate = getDate(until);
@@ -663,6 +682,15 @@ export class RootStore {
 
 			this.typingTimeouts.set(timeoutKey, timeout);
 		}
+	}
+
+	private updateRoomEmojiCount(room_id: string, delta: number) {
+		const room = this.rooms.cache.get(room_id);
+		if (!room) return;
+		this.rooms.upsert({
+			...room,
+			emoji_count: Math.max(0, room.emoji_count + delta),
+		});
 	}
 
 	async initSession() {

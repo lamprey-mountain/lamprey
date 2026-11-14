@@ -7,7 +7,7 @@ import type {
 	ThreadMember,
 	User,
 } from "sdk";
-import { createEffect, createMemo, createSignal } from "solid-js";
+import { createEffect, createMemo, createResource, createSignal } from "solid-js";
 import { useApi } from "@/api";
 import type {
 	AutocompleteItem,
@@ -66,6 +66,24 @@ export const useAutocompleteData = () => {
 		const channel = api.channels.cache.get(kind.channelId);
 		return kind.roomId ?? channel?.room_id ?? undefined;
 	});
+
+	const [roomEmojiResource] = createResource(
+		() => {
+			const kind = state.kind;
+			if (kind?.type !== "emoji") return;
+
+			const room_id = api.channels.cache.get(kind.channelId)?.room_id;
+			if (!room_id) return;
+
+			const room = api.rooms.cache.get(room_id);
+			return room && room.emoji_count > 0 ? room : undefined;
+		},
+		async (room) => {
+			if (!room) return;
+			await api.emoji.loadCached();
+			await api.emoji.listAllCustom([room]);
+		},
+	);
 
 	const channel = () => api.channels.get(state.kind?.channelId ?? "");
 
@@ -141,6 +159,9 @@ export const useAutocompleteData = () => {
 			);
 			setAllChannels(channels);
 		} else if (kind.type === "emoji") {
+			// rerun once cached emoji have been loaded
+			roomEmojiResource();
+
 			const channel = api.channels.cache.get(kind.channelId);
 			const roomId = channel?.room_id;
 
