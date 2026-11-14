@@ -690,6 +690,16 @@ impl ServiceChannels {
                     );
                 }
             }
+
+            // scan the starter message before creating the thread so a blocked starter message
+            // doesn't leave an orphaned thread behind. other actions are enforced on message creation.
+            if let Some(starter_message) = &json.starter_message {
+                let scan = automod.scan(starter_message, &ctx).await;
+                if scan.is_triggered() && scan.should_block() {
+                    srv.automod.enforce(&scan, &ctx).await?;
+                    scan.ensure_unblocked()?;
+                }
+            }
         }
 
         let channel_id = data
