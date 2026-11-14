@@ -14,6 +14,7 @@ import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useRovingTabindex } from "@/hooks/useRovingTabindex";
 import { channelDisplayName } from "@/utils/channel";
 
 type PermissionCheck = (p: ReturnType<typeof usePermissions>) => boolean;
@@ -80,6 +81,9 @@ const tabs: Array<{
 	},
 ];
 
+const tabId = (tab: (typeof tabs)[number]) =>
+	`${tab.action ? "action" : "path"}:${tab.action ?? tab.path}`;
+
 export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 	const api2 = useApi();
 	const [, modalCtl] = useModals();
@@ -93,6 +97,20 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 	);
 
 	const currentTab = () => tabs.find((i) => i.path === (props.page ?? ""));
+	const visibleTabs = () =>
+		tabs.filter(
+			(tab) =>
+				(!tab.channelTypes ||
+					tab.channelTypes.includes(props.channel.type)) &&
+				(!tab.permissionCheck || tab.permissionCheck(perms)),
+		);
+	const roving = useRovingTabindex({
+		ids: () => visibleTabs().map(tabId),
+		initialId: () => {
+			const tab = currentTab();
+			return tab ? tabId(tab) : undefined;
+		},
+	});
 
 	const handleAction = (action: string) => {
 		switch (action) {
@@ -129,17 +147,11 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 				channel settings: {currentTab()?.name}{" "}
 				<a href={`/channel/${props.channel.id}`}>back</a>
 			</header>
-			<nav>
+			<nav {...roving.containerProps}>
 				<ul>
 					<For each={tabs}>
 						{(tab) => (
-							<Show
-								when={
-									(!tab.channelTypes ||
-										tab.channelTypes.includes(props.channel.type)) &&
-									(!tab.permissionCheck || tab.permissionCheck(perms))
-								}
-							>
+							<Show when={visibleTabs().includes(tab)}>
 								<Switch>
 									<Match when={tab.action}>
 										{(action) => (
@@ -151,6 +163,8 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 													classList={{
 														danger: tab.style === "danger",
 													}}
+													data-roving-id={tabId(tab)}
+													tabIndex={roving.tabIndex(tabId(tab))}
 												>
 													{tab.name}
 												</button>
@@ -161,6 +175,8 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 										<li>
 											<a
 												href={`/channel/${props.channel.id}/settings/${tab.path}`}
+												data-roving-id={tabId(tab)}
+												tabIndex={roving.tabIndex(tabId(tab))}
 												onClick={(e) => {
 													e.preventDefault();
 													nav(

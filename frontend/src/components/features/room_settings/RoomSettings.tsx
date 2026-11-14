@@ -20,6 +20,7 @@ import { useCurrentUser } from "@/contexts/currentUser";
 import { useModals } from "@/contexts/modal";
 import { useNavigate, useRouter } from "@/contexts/router";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useRovingTabindex } from "@/hooks/useRovingTabindex";
 import { flags } from "@/lib/flags";
 import type { RoomT } from "@/types";
 
@@ -65,6 +66,9 @@ function isActionTab(tab: TabItem): tab is ActionTab {
 function isPageTab(tab: TabItem): tab is PageTab {
 	return "path" in tab;
 }
+
+const tabId = (tab: ActionTab | PageTab) =>
+	isActionTab(tab) ? `action:${tab.action}` : `path:${tab.path}`;
 
 // TODO: more permission checks
 const tabs: TabItem[] = [
@@ -279,6 +283,13 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 	const groupedTabs = createMemo(() =>
 		groupTabsByCategory(currentTabs(), perms, user_id, props.room),
 	);
+	const roving = useRovingTabindex({
+		ids: () => groupedTabs().flatMap((group) => group.items.map(tabId)),
+		initialId: () => {
+			const tab = currentTab();
+			return tab ? tabId(tab) : undefined;
+		},
+	});
 
 	const nav = useNavigate();
 	const router = useRouter();
@@ -316,7 +327,7 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 				{props.room.id === SERVER_ROOM_ID ? "admin settings" : "room settings"}:{" "}
 				{currentTab()?.name} <a href={`/room/${props.room.id}`}>back</a>
 			</header>
-			<nav>
+			<nav {...roving.containerProps}>
 				<ul>
 					<For each={groupedTabs()}>
 						{(group, groupIdx) => (
@@ -343,6 +354,8 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 															classList={{
 																danger: item().style === "danger",
 															}}
+															data-roving-id={tabId(item())}
+															tabIndex={roving.tabIndex(tabId(item()))}
 														>
 															{item().name}
 														</button>
@@ -354,6 +367,8 @@ export const RoomSettings = (props: { room: RoomT; page: string }) => {
 													<li>
 														<a
 															href={`/room/${props.room.id}/settings/${item().path}`}
+															data-roving-id={tabId(item())}
+															tabIndex={roving.tabIndex(tabId(item()))}
 															classList={{
 																active:
 																	router.overlay ===

@@ -21,6 +21,7 @@ import {
 } from "@/components/features/user_settings/mod";
 import { useModals } from "@/contexts/modal";
 import { useNavigate } from "@/contexts/router";
+import { useRovingTabindex } from "@/hooks/useRovingTabindex";
 
 // Tab type definitions with proper discriminated unions
 type CategoryTab = { category: string };
@@ -91,6 +92,8 @@ type GroupedTab = {
 	items: PageTab[];
 };
 
+const tabId = (tab: PageTab) => `path:${tab.path}`;
+
 function groupTabsByCategory(tabs: TabItem[]): GroupedTab[] {
 	const groups: GroupedTab[] = [];
 	let currentGroup: GroupedTab | null = null;
@@ -115,13 +118,20 @@ export const UserSettings = (props: { user: User; page: string }) => {
 		return tab && isPageTab(tab) ? tab : undefined;
 	};
 	const groupedTabs = createMemo(() => groupTabsByCategory(tabs));
+	const roving = useRovingTabindex({
+		ids: () => tabs.filter(isPageTab).map(tabId),
+		initialId: () => {
+			const tab = currentTab();
+			return tab ? tabId(tab) : undefined;
+		},
+	});
 
 	return (
 		<div class="settings">
 			<header>
 				user settings <a href="/">home</a>
 			</header>
-			<nav>
+			<nav {...roving.containerProps}>
 				<ul>
 					<For each={groupedTabs()}>
 						{(group, groupIdx) => (
@@ -140,6 +150,8 @@ export const UserSettings = (props: { user: User; page: string }) => {
 										<li>
 											<a
 												href={`/settings/${tab.path}`}
+												data-roving-id={tabId(tab)}
+												tabIndex={roving.tabIndex(tabId(tab))}
 												onClick={(e) => {
 													e.preventDefault();
 													nav(`/settings/${tab.path}`);
