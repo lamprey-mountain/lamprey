@@ -522,7 +522,7 @@ export class RootStore {
 						is_unread: s.unread,
 					});
 				} else if (s.type === "Pins") {
-					// TODO: handle pins
+					this.channels.setPinsReadAt(s.channel_id, new Date().toISOString());
 				}
 			}
 		} else if (msg.type === "MessageUpdate") {

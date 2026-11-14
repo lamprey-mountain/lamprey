@@ -3,6 +3,7 @@ import type { Emitter } from "@solid-primitives/event-bus";
 import type * as i18n from "@solid-primitives/i18n";
 import type { ReactiveMap } from "@solid-primitives/map";
 import type {
+	Channel,
 	Client,
 	Media,
 	MessageEnvelope,
@@ -41,6 +42,9 @@ export type Attachment = { local_id: string } & (
 			spoiler?: boolean;
 	  }
 );
+
+/** channel data including read state fields that are missing from the generated schema */
+export type ChannelReadState = Channel & { pins_read_at?: string | null };
 
 export type Data = {
 	cursor: Cursor;

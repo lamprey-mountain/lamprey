@@ -1,6 +1,6 @@
 import type { Channel, Message } from "sdk";
-import { createMemo, createSignal, For, Show } from "solid-js";
-import { useMessages } from "@/api";
+import { createMemo, createSignal, For, onMount, Show } from "solid-js";
+import { useChannels, useMessages } from "@/api";
 import { MessageView } from "./Message.tsx";
 import { MessageToolbarProvider } from "./message-toolbar-context.tsx";
 
@@ -10,7 +10,14 @@ type PinnedMessagesProps = {
 
 export function PinnedMessages(props: PinnedMessagesProps) {
 	const messagesService = useMessages();
+	const channelsService = useChannels();
 	const pinnedMessages = messagesService.listPinned(() => props.channel.id);
+
+	onMount(() => {
+		channelsService.ackPins(props.channel.id).catch((e) => {
+			console.error("Failed to ack pins", e);
+		});
+	});
 
 	const [dragging, setDragging] = createSignal<string | null>(null);
 	const [target, setTarget] = createSignal<{

@@ -9,6 +9,7 @@ import type {
 	TagPatch,
 } from "sdk";
 import { batch } from "solid-js";
+import type { ChannelReadState } from "@/types/chat";
 import { BaseService } from "../core/Service";
 
 const ACK_BULK_MAX = 1024;
@@ -183,6 +184,26 @@ export class ChannelsService extends BaseService<Channel> {
 				}
 			}
 		}
+	}
+
+	/** mark the pins in a channel as read */
+	async ackPins(channel_id: string): Promise<void> {
+		await this.retryWithBackoff(() =>
+			this.client.http.POST("/api/v1/ack", {
+				body: { acks: [{ type: "Pins" as const, channel_id }] },
+			}),
+		);
+
+		this.setPinsReadAt(channel_id, new Date().toISOString());
+	}
+
+	/** update the cached pins read timestamp for a channel */
+	setPinsReadAt(channel_id: string, read_at: string) {
+		const c = this.cache.get(channel_id);
+		if (!c) return;
+
+		const next: ChannelReadState = { ...c, pins_read_at: read_at };
+		this.cache.set(channel_id, next);
 	}
 
 	async archive(channel_id: string): Promise<Channel> {
