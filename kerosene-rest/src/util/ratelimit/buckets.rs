@@ -303,6 +303,15 @@ mod tests {
     }
 
     #[test]
+    fn scaling_multiplies_the_quota() {
+        let quota = Bucket::DefaultWrite.quota();
+        let scaled = scale(quota, 4);
+
+        assert_eq!(scaled.burst_size().get(), quota.burst_size().get() * 4);
+        assert_eq!(scaled.replenish_interval(), quota.replenish_interval() / 4);
+    }
+
+    #[test]
     fn media_reads_stay_on_the_default_bucket() {
         let route = Route::for_request(&Method::GET, "/api/v1/media/{media_id}", "/api/v1/media/x");
         assert_eq!(route.bucket, Bucket::DefaultRead);

@@ -33,6 +33,7 @@ async fn main() -> ServerResult<()> {
     // TODO: copy crate-backend/src/serve/mod.rs
     let globals = todo!();
 
+    ratelimit::init(&config.ratelimit);
     ratelimit::spawn_gc();
 
     let router: axum::Router = Routes::new_api()

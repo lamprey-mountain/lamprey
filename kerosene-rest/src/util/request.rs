@@ -73,11 +73,8 @@ where
         let method = parts.method.clone();
 
         let ratelimit_slot: RateLimitSlot = ratelimit::slot(&parts);
-        if let Err(err) = ratelimit::enforce_identity(
-            &ratelimit_slot,
-            identity.user_id(),
-            identity.session().map(|s| s.id),
-        ) {
+        let ratelimit_identity = ratelimit::RateLimitIdentity::new(&identity);
+        if let Err(err) = ratelimit::enforce_identity(&ratelimit_slot, &ratelimit_identity) {
             return Err(ExtractorRejection::ServerError(ServerError::Api(Box::new(
                 err,
             ))));

@@ -18,7 +18,7 @@ use axum::{
 };
 use buckets::{Bucket, Penalty, Route, scale};
 use common::v1::types::{
-    SessionId, UserId,
+    ApplicationId, SessionId, UserId,
     error::{ApiError, ErrorCode, Ratelimit, RatelimitScope},
 };
 use governor::{
@@ -26,6 +26,7 @@ use governor::{
     clock::{Clock, DefaultClock},
     middleware::StateInformationMiddleware,
 };
+use kerosene_core::{config::ConfigRatelimit, types::auth::Identity};
 use strum::IntoEnumIterator;
 
 type KeyedLimiter<K> = DefaultKeyedRateLimiter<K, StateInformationMiddleware>;
@@ -59,11 +60,46 @@ pub struct RateLimitState {
     keys: Vec<Key>,
     decision: Decision,
     identity_checked: bool,
+    exempt: bool,
     penalty: Penalty,
 }
 
 /// a slot the middleware injects into the request
 pub type RateLimitSlot = Arc<Mutex<Option<RateLimitState>>>;
+
+/// the identity details that decide whether a request is exempt and which
+/// identity limits apply
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RateLimitIdentity {
+    /// the user making the request
+    pub user_id: Option<UserId>,
+
+    /// the session making the request
+    pub session_id: Option<SessionId>,
+
+    /// the oauth application the session belongs to
+    pub app_id: Option<ApplicationId>,
+
+    /// the user this request acts on behalf of, if it is a puppet request
+    pub puppeteer_id: Option<UserId>,
+}
+
+impl RateLimitIdentity {
+    /// build the ratelimit identity from an authenticated identity
+    pub fn new(identity: &Identity) -> Self {
+        let puppeteer_id = match identity {
+            Identity::Puppet { puppeteer, .. } => Some(puppeteer.id),
+            _ => None,
+        };
+
+        Self {
+            user_id: identity.user_id(),
+            session_id: identity.session().map(|session| session.id),
+            app_id: identity.session().and_then(|session| session.app_id),
+            puppeteer_id,
+        }
+    }
+}
 
 /// keyed limiters and quotas for one bucket kind.
 ///
@@ -87,6 +123,7 @@ struct RateLimiter {
 }
 
 static GLOBAL: OnceLock<RateLimiter> = OnceLock::new();
+static SETTINGS: OnceLock<ConfigRatelimit> = OnceLock::new();
 static GC_STARTED: OnceLock<()> = OnceLock::new();
 
 impl Decision {
@@ -165,9 +202,10 @@ impl Decision {
 }
 
 impl RateLimiter {
-    fn new() -> Self {
+    fn new(config: &ConfigRatelimit) -> Self {
+        let factor = config.factor();
         let buckets = Bucket::iter()
-            .map(|bucket| (bucket, BucketLimiters::new(bucket)))
+            .map(|bucket| (bucket, BucketLimiters::new(bucket, factor)))
             .collect();
 
         Self { buckets }
@@ -300,13 +338,13 @@ impl RateLimiter {
 
 impl Default for RateLimiter {
     fn default() -> Self {
-        Self::new()
+        Self::new(settings())
     }
 }
 
 impl BucketLimiters {
-    fn new(bucket: Bucket) -> Self {
-        let quota_user = bucket.quota();
+    fn new(bucket: Bucket, factor: u32) -> Self {
+        let quota_user = scale(bucket.quota(), factor);
         let quota_v4 = scale(quota_user, 4);
         let quota_v6_64 = scale(quota_user, 4);
         let quota_v6_48 = scale(quota_user, 64);
@@ -327,6 +365,12 @@ impl BucketLimiters {
 
 /// middleware that applies ip limits and injects ratelimit headers
 pub async fn middleware(mut req: Request<Body>, next: Next) -> Response<Body> {
+    let config = settings();
+    let ip = client_ip(&req);
+    if config.disabled || ip.is_some_and(|ip| config.is_exempt_ip(ip)) {
+        return next.run(req).await;
+    }
+
     // prefer the route template (`/api/v1/user/{user_id}`) over the raw path so
     // bucket selection can't be confused by user-controlled path segments
     let path = req
@@ -335,38 +379,63 @@ pub async fn middleware(mut req: Request<Body>, next: Next) -> Response<Body> {
         .map(|path| path.as_str())
         .unwrap_or_else(|| req.uri().path());
     let route = Route::for_request(req.method(), path, req.uri().path());
-    let ip = client_ip(&req);
     let (decision, keys) = global().check_ip(route.bucket, route.scope, ip);
 
     let slot: RateLimitSlot = Arc::new(Mutex::new(Some(RateLimitState {
         keys,
         decision,
         identity_checked: false,
+        exempt: false,
         penalty: route.penalty,
     })));
     req.extensions_mut().insert(slot.clone());
 
-    if !decision.is_allowed() {
-        let mut res = Error::Api(Box::new(decision.into_error())).into_response();
-        decision.write_headers(res.headers_mut());
+    // an authenticated request may belong to an exempt user, so the ip limit is
+    // only enforced once the identity is known. requests without credentials
+    // can never be exempt and are rejected before doing any work.
+    if !decision.is_allowed() && !has_credentials(&req) {
+        return reject(decision);
+    }
+
+    let res = next.run(req).await;
+
+    let state = slot.lock().expect("ratelimit slot poisoned").clone();
+    let Some(state) = state else {
+        return res;
+    };
+
+    if state.exempt {
         return res;
     }
 
-    let mut res = next.run(req).await;
-
-    let state = slot.lock().expect("ratelimit slot poisoned").clone();
-    if let Some(state) = state {
-        let extra = state.penalty.extra_cost(res.status());
-        if extra > 0 {
-            for key in &state.keys {
-                global().charge(state.decision.bucket, *key, extra);
-            }
-        }
-
-        state.decision.write_headers(res.headers_mut());
+    // every api handler authenticates while extracting its request, which
+    // enforces the ip decision before the handler body runs (see
+    // `enforce_identity`). this only rejects routes that don't authenticate at
+    // all (ie. webhooks), or requests whose authentication failed.
+    if !state.decision.is_allowed() {
+        return reject(state.decision);
     }
 
+    let extra = state.penalty.extra_cost(res.status());
+    if extra > 0 {
+        for key in &state.keys {
+            global().charge(state.decision.bucket, *key, extra);
+        }
+    }
+
+    let mut res = res;
+    state.decision.write_headers(res.headers_mut());
     res
+}
+
+fn reject(decision: Decision) -> Response<Body> {
+    let mut res = Error::Api(Box::new(decision.into_error())).into_response();
+    decision.write_headers(res.headers_mut());
+    res
+}
+
+fn has_credentials(req: &Request<Body>) -> bool {
+    req.headers().contains_key(header::AUTHORIZATION)
 }
 
 /// spawn the background task that evicts idle keys
@@ -398,15 +467,37 @@ pub fn slot(parts: &http::request::Parts) -> RateLimitSlot {
 /// the middleware has already applied the ip limits for this request.
 pub fn enforce_identity(
     slot: &RateLimitSlot,
-    user_id: Option<UserId>,
-    session_id: Option<SessionId>,
+    identity: &RateLimitIdentity,
 ) -> std::result::Result<(), ApiError> {
     let mut guard = slot.lock().expect("ratelimit slot poisoned");
     let Some(state) = guard.as_mut() else {
         return Ok(());
     };
-    if state.identity_checked || (user_id.is_none() && session_id.is_none()) {
+    if state.identity_checked {
         return Ok(());
+    }
+
+    // exempt identities bypass every limit, including the ip limit that was
+    // applied before the identity was known
+    if is_exempt(identity) {
+        state.identity_checked = true;
+        state.exempt = true;
+        state.keys.clear();
+        return Ok(());
+    }
+
+    let user_id = identity.user_id;
+    let session_id = identity.session_id;
+    if user_id.is_none() && session_id.is_none() {
+        // without a user or session there is nothing that could make this request
+        // exempt, so the ip decision applies as-is. rejecting here instead of in
+        // the middleware guarantees it happens before the handler does any work
+        state.identity_checked = true;
+        return if state.decision.is_allowed() {
+            Ok(())
+        } else {
+            Err(state.decision.into_error())
+        };
     }
 
     let (bucket, scope) = (state.decision.bucket, state.decision.scope);
@@ -422,9 +513,47 @@ pub fn enforce_identity(
     }
 }
 
+/// apply the ratelimit settings from the server config
+///
+/// this should be called once at startup, before serving any requests. later
+/// calls are ignored.
+pub fn init(config: &ConfigRatelimit) {
+    let _ = SETTINGS.set(config.clone());
+}
+
+/// whether every request made with this identity bypasses ratelimits
+fn is_exempt(identity: &RateLimitIdentity) -> bool {
+    let settings = settings();
+
+    if identity
+        .user_id
+        .is_some_and(|user_id| settings.exempt_users.contains(&user_id))
+    {
+        return true;
+    }
+
+    // a bridge app is exempt along with every puppet it acts as, either because
+    // the app itself or the puppeteer is exempt
+    if identity
+        .puppeteer_id
+        .is_some_and(|user_id| settings.exempt_users.contains(&user_id))
+    {
+        return true;
+    }
+
+    identity
+        .app_id
+        .is_some_and(|app_id| settings.exempt_apps.contains(&app_id))
+}
+
 /// get the process-wide ratelimiter
 fn global() -> &'static RateLimiter {
-    GLOBAL.get_or_init(RateLimiter::new)
+    GLOBAL.get_or_init(|| RateLimiter::new(settings()))
+}
+
+/// get the configured ratelimit settings, or the defaults if `init` was not called
+fn settings() -> &'static ConfigRatelimit {
+    SETTINGS.get_or_init(ConfigRatelimit::default)
 }
 
 fn keyed<K>(quota: Quota) -> KeyedLimiter<K>

@@ -23,10 +23,12 @@ use lamprey::v1::types::redex::EvalLimits;
 
 mod internal;
 mod limits;
+mod ratelimit;
 mod secret;
 
 // TEMP: reexport
 pub use internal::*;
+pub use ratelimit::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
@@ -127,6 +129,9 @@ pub struct Config {
 
     #[serde(default)]
     pub limits: Limits,
+
+    #[serde(default)]
+    pub ratelimit: ConfigRatelimit,
 
     #[serde(default)]
     pub moderation: ConfigModeration,

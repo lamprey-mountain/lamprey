@@ -580,7 +580,12 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
             };
 
             let slot = kerosene_rest::ratelimit::slot(parts);
-            kerosene_rest::ratelimit::enforce_identity(&slot, Some(user.id), Some(session.id))
+            let ratelimit_identity = kerosene_rest::ratelimit::RateLimitIdentity {
+                user_id: Some(user.id),
+                session_id: Some(session.id),
+                ..Default::default()
+            };
+            kerosene_rest::ratelimit::enforce_identity(&slot, &ratelimit_identity)
                 .map_err(Error::from)?;
 
             return Ok(AuthRelaxed2 {
@@ -744,12 +749,14 @@ impl FromRequestParts<Arc<ServerState>> for AuthRelaxed2 {
         let audit_log_slot = parts.extensions.get::<AuditLogSlot>().cloned();
 
         let slot = kerosene_rest::ratelimit::slot(parts);
-        kerosene_rest::ratelimit::enforce_identity(
-            &slot,
-            user.as_ref().map(|u| u.id),
-            Some(session.id),
-        )
-        .map_err(Error::from)?;
+        let ratelimit_identity = kerosene_rest::ratelimit::RateLimitIdentity {
+            user_id: user.as_ref().map(|u| u.id),
+            session_id: Some(session.id),
+            app_id: session.app_id,
+            puppeteer_id: real_user.as_ref().map(|u| u.id),
+        };
+        kerosene_rest::ratelimit::enforce_identity(&slot, &ratelimit_identity)
+            .map_err(Error::from)?;
 
         Ok(AuthRelaxed2 {
             user,

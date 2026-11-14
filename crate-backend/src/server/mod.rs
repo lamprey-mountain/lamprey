@@ -56,9 +56,10 @@ impl Server {
     /// start the server
     pub async fn serve(&mut self) -> Result<()> {
         info!("starting server");
-        kerosene_rest::ratelimit::spawn_gc();
 
         let globals = self.globals();
+        kerosene_rest::ratelimit::init(&globals.config().ratelimit);
+        kerosene_rest::ratelimit::spawn_gc();
 
         let has_api = globals
             .config()
