@@ -3497,9 +3497,7 @@ button.link {
 	background: $bg-150;
 	border: solid $sep-300 1px;
 	box-shadow: 0 2px 8px $bg-100;
-	width: max-content;
-	min-width: 180px;
-	max-width: 360px;
+	width: 360px;
 
 	& > header {
 		font-size: 0.8em;
@@ -3527,6 +3525,21 @@ button.link {
 
 		& > .icon {
 			filter: invert(0.6);
+		}
+
+		& > .name {
+			flex: 1;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		& > .room {
+			margin-left: auto;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
 		}
 	}
 

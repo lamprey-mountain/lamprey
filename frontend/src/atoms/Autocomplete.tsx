@@ -103,7 +103,9 @@ export const Autocomplete = () => {
 										return (
 											<>
 												<UnicodeEmoji hex={getEmojiHex(emoji.char)} />
-												{emoji.name}
+												<span class="name" title={emoji.name}>
+													{emoji.short_name ?? emoji.name}
+												</span>
 											</>
 										);
 									})()}
@@ -125,7 +127,12 @@ export const Autocomplete = () => {
 													data-emoji-id={emoji.id}
 													src={getEmojiUrl(emoji.id)}
 												/>
-												{emoji.name}
+												<span class="name" title={emoji.name}>
+													{emoji.name}
+												</span>
+												<Show when={emoji.room_name}>
+													<span class="room dim">{emoji.room_name}</span>
+												</Show>
 											</>
 										);
 									})()}

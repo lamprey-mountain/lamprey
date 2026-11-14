@@ -69,7 +69,14 @@ export type AutocompleteMentionItem =
 export type AutocompleteItem =
 	| AutocompleteMentionItem
 	| { type: "channel"; channel: Channel; channel_id: string; name: string }
-	| { type: "emoji"; id: string; name: string; char?: string }
+	| {
+			type: "emoji";
+			id: string;
+			name: string;
+			short_name?: string;
+			char?: string;
+			room_name?: string;
+	  }
 	| { type: "command"; command: string; id: string; description?: string }
 	| { type: "arg"; value: string; label: string; description?: string };
 

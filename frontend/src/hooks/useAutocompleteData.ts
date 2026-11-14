@@ -27,6 +27,16 @@ type AutocompleteSearchResult = {
 	hits: Array<{ value: string }>;
 };
 
+function shortestName(shortcodes: string[], fallback: string): string {
+	let best = fallback;
+	for (const shortcode of shortcodes) {
+		if (shortcode.length >= 3 && shortcode.length < best.length) {
+			best = shortcode;
+		}
+	}
+	return best;
+}
+
 export const useAutocompleteData = () => {
 	const api = useApi();
 	const currentUser = useCurrentUser();
@@ -67,21 +77,16 @@ export const useAutocompleteData = () => {
 		return kind.roomId ?? channel?.room_id ?? undefined;
 	});
 
-	const [roomEmojiResource] = createResource(
+	const [emojiRoomsResource] = createResource(
 		() => {
-			const kind = state.kind;
-			if (kind?.type !== "emoji") return;
+			if (state.kind?.type !== "emoji") return;
 
-			const room_id = api.channels.cache.get(kind.channelId)?.room_id;
-			if (!room_id) return;
-
-			const room = api.rooms.cache.get(room_id);
-			return room && room.emoji_count > 0 ? room : undefined;
+			// pass every room: rooms without emoji are used to drop stale cached emoji
+			return [...api.rooms.cache.values()];
 		},
-		async (room) => {
-			if (!room) return;
+		async (rooms) => {
 			await api.emoji.loadCached();
-			await api.emoji.listAllCustom([room]);
+			await api.emoji.listAllCustom(rooms);
 		},
 	);
 
@@ -160,18 +165,16 @@ export const useAutocompleteData = () => {
 			setAllChannels(channels);
 		} else if (kind.type === "emoji") {
 			// rerun once cached emoji have been loaded
-			roomEmojiResource();
-
-			const channel = api.channels.cache.get(kind.channelId);
-			const roomId = channel?.room_id;
+			emojiRoomsResource();
 
 			const combined: (EmojiCustom | EmojiData)[] = [];
-			if (roomId) {
-				// Get custom emoji from cache for this room
-				const roomEmoji = [...api.emoji.cache.values()].filter(
-					(e) => e.owner?.owner === "Room" && e.owner.room_id === roomId,
-				);
-				combined.push(...roomEmoji);
+			for (const emoji of api.emoji.cache.values()) {
+				if (emoji.owner?.owner !== "Room") continue;
+
+				const room = api.rooms.cache.get(emoji.owner.room_id);
+				if (!room || room.emoji_count === 0) continue;
+
+				combined.push(emoji);
 			}
 			const unicodeEmoji = emojiResource();
 			if (unicodeEmoji) {
@@ -276,28 +279,44 @@ export const useAutocompleteData = () => {
 			);
 		} else if (type === "emoji") {
 			// Normalize emoji for search
-			const normalizedEmoji = allEmoji().map((e) => ({
-				...e,
-				searchLabel: "label" in e ? e.label : e.name,
-				id: "hexcode" in e ? e.hexcode : e.id,
-			}));
+			const normalizedEmoji = allEmoji().map((e) => {
+				let room_name: string | undefined;
+				if (!("hexcode" in e) && e.owner?.owner === "Room") {
+					room_name = api.rooms.cache.get(e.owner.room_id)?.name;
+				}
+
+				return {
+					...e,
+					searchLabel: "label" in e ? e.label : e.name,
+					id: "hexcode" in e ? e.hexcode : e.id,
+					room_name,
+				};
+			});
 			const results = go(query, normalizedEmoji, {
 				keys: ["searchLabel"],
 				limit: 10,
 				all: true,
 			});
-			return results.map(
-				(r): AutocompleteSearchResult => ({
+			return results.map((r): AutocompleteSearchResult => {
+				const name = "name" in r.obj ? r.obj.name : r.obj.label;
+				const short_name =
+					"shortcodes" in r.obj
+						? shortestName(r.obj.shortcodes, name)
+						: undefined;
+
+				return {
 					obj: {
 						type: "emoji" as const,
 						id: r.obj.id,
-						name: "name" in r.obj ? r.obj.name : r.obj.label,
+						name,
+						short_name,
 						char: "char" in r.obj ? r.obj.char : undefined,
+						room_name: r.obj.room_name,
 					},
 					score: r.score,
 					hits: (r as { hits?: Array<{ value: string }> }).hits ?? [],
-				}),
-			);
+				};
+			});
 		} else if (kind.type === "commandArg") {
 			if (kind.option.kind === "user") {
 				const results = go(query, allUsers(), {
