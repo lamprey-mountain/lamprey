@@ -157,6 +157,9 @@ export const createEditor = (opts: EditorProps): Editor => {
 	return {
 		...editor,
 		createState,
+		get view() {
+			return editor.view;
+		},
 		state: () => editor.view?.state,
 		View: (props: Parameters<typeof editor.View>[0]) => {
 			return <editor.View {...props} />;
