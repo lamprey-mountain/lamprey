@@ -5,7 +5,7 @@ use std::{
 
 use common::{
     v1::types::{
-        ChannelCreate, ChannelPatch, ChannelType, EmbedCreate, MessageAttachmentCreate,
+        Channel, ChannelCreate, ChannelPatch, ChannelType, EmbedCreate, MessageAttachmentCreate,
         MessageAttachmentCreateType, MessageAttachmentType, MessageCreate, MessageType,
         ParseMentions, RoomMemberPut,
         misc::{
@@ -209,6 +209,23 @@ impl LampreyPortal {
         }
 
         Ok(lamprey_thread_id)
+    }
+
+    /// look up a thread that already exists for a message
+    ///
+    /// threads created from a message share its id, so the thread can be found
+    /// by the message id without any other state
+    async fn thread_from_message(&self, message_id: lamprey::MessageId) -> Option<Channel> {
+        let channel = self
+            .http
+            .channel_get(ChannelId::from(message_id.into_inner()))
+            .await
+            .ok()?;
+        let is_thread = matches!(
+            channel.ty,
+            ChannelType::ThreadPublic | ChannelType::ThreadPrivate
+        );
+        (is_thread && channel.parent_id == Some(self.channel_id)).then_some(channel)
     }
 
     async fn handle_event(
@@ -754,9 +771,23 @@ impl LampreyPortal {
 
                 let channel = match source_message_id {
                     Some(message_id) => {
-                        self.http
+                        let created = self
+                            .http
                             .thread_create_from_message(self.channel_id, message_id, &create)
-                            .await?
+                            .await;
+                        match created {
+                            Ok(channel) => channel,
+                            // the thread may have been created in a previous run
+                            // without the portal being stored, and lamprey refuses
+                            // to create a second thread for a message
+                            Err(err) => match self.thread_from_message(message_id).await {
+                                Some(channel) => {
+                                    warn!(%message_id, "thread already exists for message, adopting it");
+                                    channel
+                                }
+                                None => return Err(err),
+                            },
+                        }
                     }
                     None => self.http.thread_create(self.channel_id, &create).await?,
                 };

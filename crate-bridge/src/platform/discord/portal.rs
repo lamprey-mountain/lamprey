@@ -7,7 +7,7 @@ use tracing::{Instrument, debug, error, warn};
 use twilight_http::Client as HttpClient;
 use twilight_model::channel::message::AllowedMentions;
 use twilight_model::channel::message::embed::{Embed, EmbedImage};
-use twilight_model::channel::{ChannelType, Message};
+use twilight_model::channel::{Channel, ChannelType, Message};
 use twilight_model::http::attachment::Attachment as HttpAttachment;
 use twilight_model::id::Id;
 
@@ -199,6 +199,32 @@ impl DiscordPortal {
         }
 
         Ok(discord_thread_id)
+    }
+
+    /// look up a thread that already exists for a message
+    ///
+    /// threads created from a message share its id, so the thread can be found
+    /// by the message id without any other state
+    async fn thread_from_message(
+        &self,
+        parent_id: ChannelId,
+        message_id: discord::MessageId,
+    ) -> Option<Channel> {
+        let channel = self
+            .http
+            .channel(ChannelId::new(message_id.get()))
+            .await
+            .ok()?
+            .model()
+            .await
+            .ok()?;
+        let is_thread = matches!(
+            channel.kind,
+            ChannelType::PublicThread
+                | ChannelType::PrivateThread
+                | ChannelType::AnnouncementThread
+        );
+        (is_thread && channel.parent_id == Some(parent_id)).then_some(channel)
     }
 
     async fn handle_event(
@@ -644,11 +670,26 @@ impl DiscordPortal {
 
                 let thread = match source_message_id {
                     Some(message_id) => {
-                        self.http
+                        let created = self
+                            .http
                             .create_thread_from_message(discord_cfg.channel_id, message_id, &name)
-                            .await?
-                            .model()
-                            .await?
+                            .await;
+                        match created {
+                            Ok(response) => response.model().await?,
+                            // the thread may have been created in a previous run
+                            // without the portal being stored, and discord refuses
+                            // to create a second thread for a message
+                            Err(err) => match self
+                                .thread_from_message(discord_cfg.channel_id, message_id)
+                                .await
+                            {
+                                Some(thread) => {
+                                    warn!(%message_id, "thread already exists for message, adopting it");
+                                    thread
+                                }
+                                None => return Err(err.into()),
+                            },
+                        }
                     }
                     None => {
                         self.http
