@@ -40,6 +40,7 @@ const AUDIT_LOG_TYPES = [
 	"InviteCreate",
 	"InviteUpdate",
 	"InviteDelete",
+	"InviteDeleteBulk",
 	"ReactionDeleteAll",
 	"ReactionDeleteKey",
 	"ReactionDeleteUser",
@@ -96,6 +97,8 @@ const AUDIT_LOG_TYPES = [
 	"RoomUndelete",
 	"RoomQuarantine",
 	"RoomUnquarantine",
+	"MediaQuarantine",
+	"MediaUnquarantine",
 	"MessagePin",
 	"MessageUnpin",
 	"MessagePinReorder",
@@ -118,7 +121,6 @@ const AUDIT_LOG_TYPES = [
 	"Reindex",
 	"ChannelReindex",
 	"RoomReindex",
-	"ReindexEverything",
 	"ServerUpdate",
 	"TagCreate",
 	"TagUpdate",
@@ -431,6 +433,19 @@ export function formatChanges(
 					})}
 				</li>,
 			);
+			break;
+		}
+		case "InviteDeleteBulk": {
+			for (const invite of ent.metadata.invites) {
+				formatted.push(
+					<li>
+						{renderTemplate(t("audit_log.changes.invite_deleted"), {
+							invite_code: <em class="light">{invite.code}</em>,
+						})}
+						{invite.description ? ` — ${invite.description}` : ""}
+					</li>,
+				);
+			}
 			break;
 		}
 		case "PermissionOverwriteCreate":
