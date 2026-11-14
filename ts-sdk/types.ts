@@ -39,6 +39,7 @@ export type RoomMember = components["schemas"]["RoomMember"];
 export type RoomMemberSearchResponse =
 	components["schemas"]["RoomMemberSearchResponse"];
 export type ThreadMember = components["schemas"]["ThreadMember"];
+export type ThreadList = components["schemas"]["ThreadList"];
 export type Media = components["schemas"]["Media"];
 export type MediaLinkType = components["schemas"]["MediaLinkType"];
 export type MessageCreate = components["schemas"]["MessageCreate"];

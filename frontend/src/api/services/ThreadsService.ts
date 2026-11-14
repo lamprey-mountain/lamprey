@@ -1,4 +1,4 @@
-import type { Channel, Pagination } from "sdk";
+import type { Channel, ThreadList } from "sdk";
 import { createResource, type Resource } from "solid-js";
 import { logger } from "@/utils/logger";
 import { PaginatedList } from "../core/PaginatedList";
@@ -6,10 +6,10 @@ import { BaseService } from "../core/Service";
 
 const log = logger.for("api/threads");
 
+const THREAD_PAGE_SIZE = 100;
+
 type ThreadListType =
 	| "room"
-	| "room_archived"
-	| "room_removed"
 	| "channel"
 	| "channel_archived"
 	| "channel_removed";
@@ -23,8 +23,6 @@ export class ThreadsService extends BaseService<Channel> {
 		super(...args);
 		this._roomLists = new Map([
 			["room", new Map()],
-			["room_archived", new Map()],
-			["room_removed", new Map()],
 			["channel", new Map()],
 			["channel_archived", new Map()],
 			["channel_removed", new Map()],
@@ -52,24 +50,16 @@ export class ThreadsService extends BaseService<Channel> {
 		identifier: string,
 		cursor?: string,
 	): Promise<{
-		data?: Pagination<Channel>;
+		data?: ThreadList;
 		error?: unknown;
 		response: Response;
 	}> {
-		const query = { dir: "f", limit: 100, from: cursor } as const;
+		const query = { dir: "f", limit: THREAD_PAGE_SIZE, from: cursor } as const;
 
 		switch (type) {
 			case "room":
 				return this.client.http.GET("/api/v1/room/{room_id}/thread", {
-					params: { path: { room_id: identifier }, query },
-				});
-			case "room_archived":
-				return this.client.http.GET("/api/v1/room/{room_id}/thread/archived", {
-					params: { path: { room_id: identifier }, query },
-				});
-			case "room_removed":
-				return this.client.http.GET("/api/v1/room/{room_id}/thread/removed", {
-					params: { path: { room_id: identifier }, query },
+					params: { path: { room_id: identifier } },
 				});
 			case "channel":
 				return this.client.http.GET("/api/v1/channel/{channel_id}/thread", {
@@ -97,15 +87,21 @@ export class ThreadsService extends BaseService<Channel> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<Pagination<Channel>>(() =>
+			const data = await this.retryWithBackoff<ThreadList>(() =>
 				this.request(type, identifier, list.state.cursor ?? undefined),
 			);
 
-			this.upsertBulk(data.items);
-			this.store.channels.upsertBulk(data.items);
+			this.upsertBulk(data.threads);
+			this.store.channels.upsertBulk(data.threads);
 
-			const newIds = data.items.map((thread) => thread.id);
-			list.appendPage(newIds, data.has_more, data.items.at(-1)?.id);
+			const newIds = data.threads.map((thread) => thread.id);
+			const hasMore =
+				type !== "room" && data.threads.length >= THREAD_PAGE_SIZE;
+			list.appendPage(
+				newIds,
+				hasMore,
+				type === "room" ? undefined : (data.cursor ?? data.threads.at(-1)?.id),
+			);
 		} catch (e) {
 			log.error(String(e));
 			list.setError(e);
@@ -126,15 +122,11 @@ export class ThreadsService extends BaseService<Channel> {
 		return this.fetchNextPage("channel", channel_id);
 	}
 
-	fetchNextArchivedChannelPage(
-		channel_id: string,
-	): Promise<void> | undefined {
+	fetchNextArchivedChannelPage(channel_id: string): Promise<void> | undefined {
 		return this.fetchNextPage("channel_archived", channel_id);
 	}
 
-	fetchNextRemovedChannelPage(
-		channel_id: string,
-	): Promise<void> | undefined {
+	fetchNextRemovedChannelPage(channel_id: string): Promise<void> | undefined {
 		return this.fetchNextPage("channel_removed", channel_id);
 	}
 
@@ -168,18 +160,6 @@ export class ThreadsService extends BaseService<Channel> {
 		return this.useList(room_id, "room");
 	}
 
-	useListArchivedForRoom(
-		room_id: () => string | undefined,
-	): Resource<PaginatedList | undefined> {
-		return this.useList(room_id, "room_archived");
-	}
-
-	useListRemovedForRoom(
-		room_id: () => string | undefined,
-	): Resource<PaginatedList | undefined> {
-		return this.useList(room_id, "room_removed");
-	}
-
 	useListForChannel(
 		channel_id: () => string | undefined,
 	): Resource<PaginatedList | undefined> {
@@ -210,18 +190,6 @@ export class ThreadsService extends BaseService<Channel> {
 				room_id: thread.room_id ?? null,
 				channel_id: null,
 				shouldInclude: !thread.archived_at && !thread.deleted_at,
-			},
-			{
-				type: "room_archived",
-				room_id: thread.room_id ?? null,
-				channel_id: null,
-				shouldInclude: !!thread.archived_at,
-			},
-			{
-				type: "room_removed",
-				room_id: thread.room_id ?? null,
-				channel_id: null,
-				shouldInclude: !!thread.deleted_at,
 			},
 			{
 				type: "channel",
