@@ -5,6 +5,7 @@ import {
 	createMemo,
 	createSignal,
 	For,
+	type JSX,
 	Match,
 	type ParentProps,
 	Show,
@@ -34,6 +35,7 @@ const MarkdownContext = createContext<{
 	channel?: Channel;
 	allowDiffTags?: boolean;
 	allowMarkTags?: boolean;
+	linksUntabbable?: boolean;
 }>();
 
 // --- Components ---
@@ -509,6 +511,7 @@ const matchMention = <T extends MentionData["type"]>(
 
 function RenderInline(props: { inline: SerializedInline }) {
 	const ctx = useCtx();
+	const md = useContext(MarkdownContext);
 	const { setMenu } = useMenu();
 	return (
 		<Switch>
@@ -545,6 +548,7 @@ function RenderInline(props: { inline: SerializedInline }) {
 						href={i().href}
 						target="_blank"
 						rel="noopener noreferrer nofollow ugc"
+						tabIndex={md?.linksUntabbable ? -1 : undefined}
 					>
 						<Show when={i().children.length} fallback={i().href}>
 							<For each={i().children}>
@@ -635,6 +639,10 @@ export type MarkdownProps = {
 	classList?: { [k: string]: boolean | undefined };
 	allowDiffFormatting?: boolean;
 	allowMarkFormatting?: boolean;
+	/** keep links out of the tab order (eg. for message previews) */
+	linksUntabbable?: boolean;
+	tabIndex?: number;
+	onKeyDown?: JSX.EventHandlerUnion<HTMLElement, KeyboardEvent>;
 	ref?: HTMLElement | ((el: HTMLElement) => void);
 };
 
@@ -655,6 +663,7 @@ export const Markdown = (props: ParentProps<MarkdownProps>) => {
 				channel: channel(),
 				allowDiffTags: props.allowDiffFormatting,
 				allowMarkTags: props.allowMarkFormatting,
+				linksUntabbable: props.linksUntabbable,
 			}}
 		>
 			<Show when={ast()}>
@@ -662,6 +671,8 @@ export const Markdown = (props: ParentProps<MarkdownProps>) => {
 					component={props.inline ? "span" : "div"}
 					class={`markdown ${props.class ?? ""}`}
 					classList={props.classList}
+					tabIndex={props.tabIndex}
+					onKeyDown={props.onKeyDown}
 					ref={props.ref as any}
 				>
 					<For each={ast()?.blocks}>

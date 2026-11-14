@@ -180,9 +180,12 @@ function MessagePreview(props: {
 	message: MessageT;
 	channel_id: string;
 	room_id?: string | null;
+	tabbable?: boolean;
+	onActivate?: () => void;
 }) {
 	const users = useUsers();
 	const author = users.use(() => props.message.author_id);
+	const contentTabbable = () => !!props.tabbable && !!props.onActivate;
 
 	return (
 		<>
@@ -195,12 +198,27 @@ function MessagePreview(props: {
 				thread_id={props.message.channel_id}
 				onClick
 				class="author"
+				tabIndex={props.tabbable ? 0 : undefined}
 			/>
 			<Show when={messagePreviewIcon(props.message)}>
 				{(icon) => <Icon src={icon()} />}
 			</Show>
 			<Show when={messagePreviewContent(props.message)}>
-				{(c) => <Markdown content={c()} channel_id={props.channel_id} inline />}
+				{(c) => (
+					<Markdown
+						content={c()}
+						channel_id={props.channel_id}
+						inline
+						linksUntabbable
+						tabIndex={contentTabbable() ? 0 : undefined}
+						onKeyDown={(e) => {
+							if (e.target !== e.currentTarget) return;
+							if (e.key !== "Enter" && e.key !== " ") return;
+							e.preventDefault();
+							props.onActivate?.();
+						}}
+					/>
+				)}
 			</Show>
 		</>
 	);
@@ -291,6 +309,7 @@ export function ReplyView(props: {
 		() => props.reply_id,
 	);
 	const [ch, chUpdate] = useOptionalChannel();
+	const tabbable = useMessageTabbable();
 
 	const scrollToReply = () => {
 		if (!chUpdate) return;
@@ -309,6 +328,8 @@ export function ReplyView(props: {
 								message={r()}
 								channel_id={props.channel_id}
 								room_id={props.room_id}
+								tabbable={tabbable()}
+								onActivate={chUpdate ? scrollToReply : undefined}
 							/>
 						)}
 					</Show>
