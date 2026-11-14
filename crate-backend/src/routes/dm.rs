@@ -6,7 +6,7 @@ use axum::response::IntoResponse;
 use common::v1::routes;
 use common::v1::types::application::Scope;
 use common::v1::types::error::{ApiError, ErrorCode};
-use common::v1::types::{MessageSync, Permission, RelationshipType};
+use common::v1::types::{ChannelType, MessageSync, Permission, RelationshipType};
 use http::StatusCode;
 use lamprey_macros::handler;
 use utoipa_axum::router::OpenApiRouter;
@@ -89,6 +89,8 @@ async fn dm_get(
     let Some(thread_id) = data.dm_get(auth.user.id, req.target_id).await? else {
         return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownDm)));
     };
+    // opening a dm shows it again
+    data.dm_set_hidden(auth.user.id, thread_id, false).await?;
     let srv = s.services();
     let thread = srv.channels.get(thread_id, Some(auth.user.id)).await?;
     Ok(Json(thread))
@@ -126,9 +128,36 @@ async fn dm_list(
     Ok(Json(res))
 }
 
+#[handler(routes::dm_hide)]
+async fn dm_hide(
+    auth: Auth,
+    State(s): State<Arc<ServerState>>,
+    req: routes::dm_hide::Request,
+) -> Result<impl IntoResponse> {
+    auth.ensure_scopes(&[Scope::Full])?;
+    let srv = s.services();
+    let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+    if channel.ty != ChannelType::Dm {
+        return Err(ApiError::from_code(ErrorCode::InvalidThreadType).into());
+    }
+    srv.perms
+        .for_channel3(Some(auth.user.id), req.channel_id)
+        .await?
+        .ensure_view()?
+        .check()?;
+
+    s.data()
+        .dm_set_hidden(auth.user.id, req.channel_id, true)
+        .await?;
+
+    let channel = srv.channels.get(req.channel_id, Some(auth.user.id)).await?;
+    Ok(Json(channel))
+}
+
 pub fn routes() -> OpenApiRouter<Arc<ServerState>> {
     OpenApiRouter::new()
         .routes(routes2!(dm_init))
         .routes(routes2!(dm_get))
         .routes(routes2!(dm_list))
+        .routes(routes2!(dm_hide))
 }

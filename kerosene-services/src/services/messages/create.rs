@@ -5,9 +5,9 @@ use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::message::MessageAttachmentCreateType;
 use common::v1::types::misc::Time;
 use common::v1::types::{
-    Channel, ChannelId, Mentions, Message, MessageAttachmentType, MessageCreate, MessageId,
-    MessageInteraction, MessagePatch, MessageSync, MessageType, MessageVersion, ParseMentions,
-    Permission, ThreadMemberCreate, User, UserId,
+    Channel, ChannelId, ChannelType, Mentions, Message, MessageAttachmentType, MessageCreate,
+    MessageId, MessageInteraction, MessagePatch, MessageSync, MessageType, MessageVersion,
+    ParseMentions, Permission, ThreadMemberCreate, User, UserId,
 };
 use common::v2::types::SERVER_USER_ID;
 use common::v2::types::media::MediaReference;
@@ -1144,6 +1144,11 @@ impl ServiceMessages {
                     ephemeral: false,
                 })
                 .await?;
+
+                // a new message makes the dm visible for both users again
+                if op.channel.ty == ChannelType::Dm {
+                    txn.dm_unhide(op.channel.id).await?;
+                }
             }
             MessageOperationKind::MessageEdit(_) => {
                 txn.message_update(

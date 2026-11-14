@@ -122,6 +122,9 @@ impl ServiceChannels {
                 channel.is_unread = Some(p.is_unread);
                 channel.last_read_id = p.last_read_id.map(Into::into);
                 channel.mention_count = Some(p.mention_count as u64);
+                if channel.ty == ChannelType::Dm {
+                    channel.dm_hidden = Some(p.dm_hidden);
+                }
             }
 
             channel.pins_read_at = pins_read_at.get(&channel.id).copied().flatten();

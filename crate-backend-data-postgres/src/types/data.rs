@@ -251,6 +251,7 @@ pub struct DbChannelPrivate {
     pub last_read_id: Option<Uuid>,
     pub is_unread: bool,
     pub mention_count: i64,
+    pub dm_hidden: bool,
 }
 
 pub struct DbChannelCreate {
@@ -388,6 +389,7 @@ impl From<DbChannel> for Channel {
             last_message_id: row.last_message_id.map(|i| i.into()),
             last_pin_timestamp: row.last_pin_timestamp.map(|t| t.into()),
             pinned_thread_ids: row.pinned_thread_ids.into_iter().map(Into::into).collect(),
+            dm_hidden: None,
             message_count: Some(row.message_count.try_into().expect("count is negative?")),
             parent_id: row.parent_id.map(|i| i.into()),
             position: row

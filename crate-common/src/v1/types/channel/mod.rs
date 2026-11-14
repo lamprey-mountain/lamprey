@@ -176,6 +176,18 @@ pub struct Channel {
     pub last_read_id: Option<MessageId>,
     pub mention_count: Option<u64>,
     pub pins_read_at: Option<Time>,
+
+    /// whether this dm channel is hidden for the current user
+    ///
+    /// a dm is hidden until a message is sent in it. users can hide a dm
+    /// themselves, and it becomes visible again when it's searched for or when
+    /// a new message is sent. only used by `Dm` channels.
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, skip_serializing_if = "Option::is_none")
+    )]
+    pub dm_hidden: Option<bool>,
+
     pub preferences: Option<PreferencesChannel>,
 
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
@@ -325,6 +337,8 @@ impl Serialize for Channel {
             #[serde(skip_serializing_if = "Option::is_none")]
             pins_read_at: Option<Time>,
             #[serde(skip_serializing_if = "Option::is_none")]
+            dm_hidden: Option<bool>,
+            #[serde(skip_serializing_if = "Option::is_none")]
             preferences: Option<&'a PreferencesChannel>,
 
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -442,6 +456,11 @@ impl Serialize for Channel {
             last_read_id: self.last_read_id.clone(),
             mention_count: self.mention_count,
             pins_read_at: self.pins_read_at,
+            dm_hidden: if self.ty == ChannelType::Dm {
+                self.dm_hidden
+            } else {
+                None
+            },
             preferences: self.preferences.as_ref(),
             document: if self.has_document() {
                 self.document.as_ref()

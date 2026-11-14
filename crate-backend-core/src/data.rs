@@ -883,12 +883,25 @@ pub trait DataUserEmail {
 
 #[async_trait]
 pub trait DataDm {
+    /// create a dm channel between two users
+    ///
+    /// dm is hidden for everyone except `creator_id` until a message is sent
     async fn dm_put(
         &mut self,
         user_a_id: UserId,
         user_b_id: UserId,
         channel_id: ChannelId,
+        creator_id: UserId,
     ) -> Result<()>;
+    /// hide or show a dm for a single user
+    async fn dm_set_hidden(
+        &mut self,
+        user_id: UserId,
+        channel_id: ChannelId,
+        hidden: bool,
+    ) -> Result<()>;
+    /// show a dm for both users
+    async fn dm_unhide(&mut self, channel_id: ChannelId) -> Result<()>;
     async fn dm_get(&mut self, user_a_id: UserId, user_b_id: UserId) -> Result<Option<ChannelId>>;
     async fn dm_list(
         &mut self,

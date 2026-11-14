@@ -158,6 +158,7 @@ impl ServiceUsers {
         other_id: UserId,
         locked: bool,
     ) -> Result<(Channel, bool)> {
+        let requester_id = user_id;
         let key = DmKey::new(user_id, other_id)?;
         let (user_id, other_id) = key.get_users();
 
@@ -172,12 +173,14 @@ impl ServiceUsers {
         let mut txn = self.globals.begin().await?;
         if let Some(thread_id) = txn.dm_get(user_id, other_id).await? {
             debug!("dm thread id {thread_id}");
-            let chan = srv.channels.get(thread_id, Some(user_id)).await?;
             txn.thread_member_put(thread_id, user_id, ThreadMemberCreate::default())
                 .await?;
             txn.thread_member_put(thread_id, other_id, ThreadMemberCreate::default())
                 .await?;
+            // opening a dm shows it again
+            txn.dm_set_hidden(requester_id, thread_id, false).await?;
             txn.commit().await?;
+            let chan = srv.channels.get(thread_id, Some(requester_id)).await?;
             return Ok((chan, false));
         }
         let thread_id = txn
@@ -206,13 +209,14 @@ impl ServiceUsers {
                 tags: None,
             })
             .await?;
-        txn.dm_put(user_id, other_id, thread_id).await?;
+        txn.dm_put(user_id, other_id, thread_id, requester_id)
+            .await?;
         txn.thread_member_put(thread_id, user_id, ThreadMemberCreate::default())
             .await?;
         txn.thread_member_put(thread_id, other_id, ThreadMemberCreate::default())
             .await?;
         txn.commit().await?;
-        let chan = srv.channels.get(thread_id, Some(user_id)).await?;
+        let chan = srv.channels.get(thread_id, Some(requester_id)).await?;
         Ok((chan, true))
     }
 

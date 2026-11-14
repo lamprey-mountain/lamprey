@@ -23,8 +23,9 @@ impl DataDm for Postgres {
         user_a_id: UserId,
         user_b_id: UserId,
         channel_id: ChannelId,
+        creator_id: UserId,
     ) -> Result<()> {
-        let mut conn = self.acquire().await?;
+        let mut tx = self.begin_tx().await?;
         let (user_a_id, user_b_id) = ensure_canonical(user_a_id, user_b_id);
         query!(
             r#"
@@ -34,6 +35,69 @@ impl DataDm for Postgres {
             "#,
             *user_a_id,
             *user_b_id,
+            *channel_id,
+        )
+        .execute(tx.ext())
+        .await?;
+
+        // dms are only visible to the user that created (or opened) them
+        query!(
+            r#"
+            INSERT INTO dm_visible (user_id, channel_id)
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+            "#,
+            *creator_id,
+            *channel_id,
+        )
+        .execute(tx.ext())
+        .await?;
+
+        tx.commit().await?;
+        Ok(())
+    }
+
+    async fn dm_set_hidden(
+        &mut self,
+        user_id: UserId,
+        channel_id: ChannelId,
+        hidden: bool,
+    ) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        if hidden {
+            query!(
+                "DELETE FROM dm_visible WHERE user_id = $1 AND channel_id = $2",
+                *user_id,
+                *channel_id,
+            )
+            .execute(conn.ext())
+            .await?;
+        } else {
+            query!(
+                r#"
+                INSERT INTO dm_visible (user_id, channel_id)
+                VALUES ($1, $2)
+                ON CONFLICT DO NOTHING
+                "#,
+                *user_id,
+                *channel_id,
+            )
+            .execute(conn.ext())
+            .await?;
+        }
+        Ok(())
+    }
+
+    async fn dm_unhide(&mut self, channel_id: ChannelId) -> Result<()> {
+        let mut conn = self.acquire().await?;
+        query!(
+            r#"
+            INSERT INTO dm_visible (user_id, channel_id)
+            SELECT user_a_id, channel_id FROM dm WHERE channel_id = $1
+            UNION ALL
+            SELECT user_b_id, channel_id FROM dm WHERE channel_id = $1
+            ON CONFLICT DO NOTHING
+            "#,
             *channel_id,
         )
         .execute(conn.ext())

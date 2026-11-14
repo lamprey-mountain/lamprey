@@ -78,3 +78,30 @@ pub mod dm_list {
         pub channels: PaginationResponse<Channel>,
     }
 }
+
+/// Channel hide dm
+///
+/// Hide a direct message channel from the dm list. It will be shown again when
+/// a message is sent, when it's searched for, or when a dm is started with the
+/// other user.
+#[endpoint(
+    put,
+    path = "/channel/{channel_id}/hide",
+    tags = ["dm"],
+    scopes = [Full],
+    permissions = [ChannelView],
+    response(OK, body = Channel, description = "success"),
+)]
+pub mod dm_hide {
+    use crate::v1::types::{Channel, ChannelId};
+
+    pub struct Request {
+        #[path]
+        pub channel_id: ChannelId,
+    }
+
+    pub struct Response {
+        #[json]
+        pub channel: Channel,
+    }
+}
