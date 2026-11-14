@@ -1,6 +1,6 @@
 //! http client for the rest api
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use crate::prelude::*;
 use common::{
@@ -13,6 +13,7 @@ use common::{
 };
 use headers::HeaderMapExt;
 use reqwest::header::HeaderMap;
+use tracing::warn;
 use url::Url;
 
 mod ratelimiter;
@@ -82,6 +83,21 @@ impl HttpBuilder {
     }
 }
 
+/// parse `Retry-After` as delay-seconds
+///
+/// the http-date form is not supported and falls back to the exponential delay
+fn retry_after(res: &reqwest::Response) -> Option<Duration> {
+    let value = res
+        .headers()
+        .get(reqwest::header::RETRY_AFTER)?
+        .to_str()
+        .ok()?;
+    value
+        .parse::<f64>()
+        .ok()
+        .map(|secs| Duration::from_secs_f64(secs.max(0.0)))
+}
+
 fn build_http(
     token: Option<SessionToken>,
     api_url: Option<Url>,
@@ -107,9 +123,51 @@ fn build_http(
     })
 }
 
+const MAX_RETRIES: u32 = 4;
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(30);
+
 impl Http {
     pub fn builder() -> HttpBuilder {
         HttpBuilder::default()
+    }
+
+    /// send a request, honoring `Retry-After` when the server rate limits us
+    ///
+    /// requests whose body can't be cloned (ie. streaming bodies) can't be
+    /// replayed and are never retried.
+    async fn send_with_retry(&self, mut req: reqwest::Request) -> Result<reqwest::Response> {
+        let mut attempt = 0;
+        loop {
+            let url = req.url().clone();
+            let can_retry = attempt < MAX_RETRIES;
+            let next = can_retry.then(|| req.try_clone()).flatten();
+
+            let res = self.client.execute(req).await?;
+            if res.status() != reqwest::StatusCode::TOO_MANY_REQUESTS {
+                return Ok(res);
+            }
+
+            let Some(next) = next else {
+                if can_retry {
+                    warn!(url = %url, "request body is not replayable, not retrying");
+                }
+                return Ok(res);
+            };
+
+            let delay = retry_after(&res)
+                .unwrap_or_else(|| Duration::from_millis(250).saturating_mul(1 << attempt));
+            let delay = delay.min(MAX_RETRY_DELAY);
+            warn!(
+                url = %url,
+                attempt,
+                retry_after_ms = delay.as_millis(),
+                "rate limited, retrying request"
+            );
+
+            tokio::time::sleep(delay).await;
+            req = next;
+            attempt += 1;
+        }
     }
 
     pub fn api_url(&self) -> &Url {
@@ -155,7 +213,7 @@ impl Http {
         let (parts, body) = http_req.into_parts();
         let bytes = body.buffer().await.unwrap();
         let reqwest_req = http::Request::from_parts(parts, reqwest::Body::from(bytes));
-        let res = self.client.execute(reqwest_req.try_into()?).await?;
+        let res = self.send_with_retry(reqwest_req.try_into()?).await?;
 
         let status = res.status();
         let headers = res.headers().clone();

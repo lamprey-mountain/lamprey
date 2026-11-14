@@ -46,7 +46,8 @@ use crate::http::Http;
 
 impl Http {
     pub async fn media_upload(&self, target: &MediaCreated, body: Vec<u8>) -> Result<()> {
-        self.client
+        let req = self
+            .client
             .patch(
                 target
                     .upload_url
@@ -57,9 +58,8 @@ impl Http {
             .header("content-type", "application/octet-stream")
             .header("content-length", body.len())
             .body(body)
-            .send()
-            .await?
-            .error_for_status()?;
+            .build()?;
+        self.send_with_retry(req).await?.error_for_status()?;
         Ok(())
     }
 
@@ -71,8 +71,8 @@ impl Http {
         let url = self
             .api_url()
             .join(&format!("/api/v1/channel/{channel_id}/thread"))?;
-        let res = self.client.get(url).query(query).send().await?;
-        let res = res.error_for_status()?;
+        let req = self.client.get(url).query(query).build()?;
+        let res = self.send_with_retry(req).await?.error_for_status()?;
         let text = res.text().await?;
         serde_json::from_str(&text).with_context(|| {
             error!(response_body = %text, "failed to decode response body");
@@ -88,8 +88,8 @@ impl Http {
         let url = self
             .api_url()
             .join(&format!("/api/v1/room/{room_id}/channel"))?;
-        let res = self.client.get(url).query(query).send().await?;
-        let res = res.error_for_status()?;
+        let req = self.client.get(url).query(query).build()?;
+        let res = self.send_with_retry(req).await?.error_for_status()?;
         let text = res.text().await?;
         serde_json::from_str(&text).with_context(|| {
             error!(response_body = %text, "failed to decode response body");
@@ -105,8 +105,8 @@ impl Http {
         let url = self
             .api_url()
             .join(&format!("/api/v1/channel/{channel_id}/message"))?;
-        let res = self.client.get(url).query(query).send().await?;
-        let res = res.error_for_status()?;
+        let req = self.client.get(url).query(query).build()?;
+        let res = self.send_with_retry(req).await?.error_for_status()?;
         let text = res.text().await?;
         serde_json::from_str(&text).with_context(|| {
             error!(response_body = %text, "failed to decode response body");
@@ -126,10 +126,10 @@ macro_rules! route {
                 $($param: $param_type),*,
             ) -> Result<$res> {
                 let url = self.api_url().join(&format!($url))?;
-                let res = self.client
+                let req = self.client
                     .delete(url.clone())
-                    .send()
-                    .await?;
+                    .build()?;
+                let res = self.send_with_retry(req).await?;
                 let status = res.status();
                 let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
                 if !status.is_success() {
@@ -151,10 +151,10 @@ macro_rules! route {
                 $($param: $param_type,)*
             ) -> Result<()> {
                 let url = self.api_url().join(&format!($url))?;
-                let res = self.client
+                let req = self.client
                     .delete(url)
-                    .send()
-                    .await?;
+                    .build()?;
+                let res = self.send_with_retry(req).await?;
                 if let Err(e) = res.error_for_status_ref() {
                     let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
                     error!(name = stringify!($name), status = %e.status().unwrap(), response_body = %text, "request failed");
@@ -173,12 +173,12 @@ macro_rules! route {
                 body: &$req,
             ) -> Result<$res> {
                 let url = self.api_url().join(&format!($url))?;
-                let res = self.client
+                let req = self.client
                     .$method(url.clone())
                     .header("content-type", "application/json")
                     .json(body)
-                    .send()
-                    .await?;
+                    .build()?;
+                let res = self.send_with_retry(req).await?;
                 let status = res.status();
                 let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
                 if !status.is_success() {
@@ -200,10 +200,10 @@ macro_rules! route {
                 $($param: $param_type),*
             ) -> Result<$res> {
                 let url = self.api_url().join(&format!($url))?;
-                let res = self.client
+                let req = self.client
                     .get(url.clone())
-                    .send()
-                    .await?;
+                    .build()?;
+                let res = self.send_with_retry(req).await?;
                 let status = res.status();
                 let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
                 if !status.is_success() {
@@ -225,10 +225,10 @@ macro_rules! route {
                 $($param: $param_type),*
             ) -> Result<$res> {
                 let url = self.api_url().join(&format!($url))?;
-                let res = self.client
+                let req = self.client
                     .$method(url.clone())
-                    .send()
-                    .await?;
+                    .build()?;
+                let res = self.send_with_retry(req).await?;
                 let status = res.status();
                 let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
                 if !status.is_success() {
@@ -251,12 +251,12 @@ macro_rules! route {
                 body: &$req,
             ) -> Result<()> {
                 let url = self.api_url().join(&format!($url))?;
-                let res = self.client
+                let req = self.client
                     .$method(url)
                     .header("content-type", "application/json")
                     .json(body)
-                    .send()
-                    .await?;
+                    .build()?;
+                let res = self.send_with_retry(req).await?;
                 if let Err(e) = res.error_for_status_ref() {
                     let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
                     error!(name = stringify!($name), status = %e.status().unwrap(), response_body = %text, "request failed");
@@ -274,10 +274,10 @@ macro_rules! route {
                 $($param: $param_type,)*
             ) -> Result<()> {
                 let url = self.api_url().join(&format!($url))?;
-                let res = self.client
+                let req = self.client
                     .$method(url)
-                    .send()
-                    .await?;
+                    .build()?;
+                let res = self.send_with_retry(req).await?;
                 if let Err(e) = res.error_for_status_ref() {
                     let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
                     error!(name = stringify!($name), status = %e.status().unwrap(), response_body = %text, "request failed");
@@ -297,11 +297,11 @@ macro_rules! route {
                 $query_param: $query_type,
             ) -> Result<$res> {
                 let url = self.api_url().join(&format!($url))?;
-                let res = self.client
+                let req = self.client
                     .$method(url.clone())
                     .query(&$query_param)
-                    .send()
-                    .await?;
+                    .build()?;
+                let res = self.send_with_retry(req).await?;
                 let status = res.status();
                 let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
                 if !status.is_success() {
@@ -326,12 +326,12 @@ macro_rules! route {
                 $query_param2: $query_type2,
             ) -> Result<$res> {
                 let url = self.api_url().join(&format!($url))?;
-                let res = self.client
+                let req = self.client
                     .$method(url.clone())
                     .query(&$query_param1)
                     .query(&$query_param2)
-                    .send()
-                    .await?;
+                    .build()?;
+                let res = self.send_with_retry(req).await?;
                 let status = res.status();
                 let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
                 if !status.is_success() {
@@ -355,11 +355,11 @@ macro_rules! route {
                 $query_param: $query_type,
             ) -> Result<()> {
                 let url = self.api_url().join(&format!($url))?;
-                let res = self.client
+                let req = self.client
                     .$method(url)
                     .query(&$query_param)
-                    .send()
-                    .await?;
+                    .build()?;
+                let res = self.send_with_retry(req).await?;
                 if let Err(e) = res.error_for_status_ref() {
                     let text = res.text().await.unwrap_or_else(|_| "failed to read body".to_string());
                     error!(name = stringify!($name), status = %e.status().unwrap(), response_body = %text, "request failed");
@@ -557,7 +557,8 @@ impl Http {
     /// exchange or refresh an oauth token
     pub async fn oauth_token(&self, body: &OauthTokenRequest) -> Result<OauthTokenResponse> {
         let url = self.api_url().join("/api/v1/oauth/token")?;
-        let res = self.client.post(url.clone()).form(body).send().await?;
+        let req = self.client.post(url.clone()).form(body).build()?;
+        let res = self.send_with_retry(req).await?;
         let status = res.status();
         let text = res
             .text()
@@ -579,7 +580,8 @@ impl Http {
         body: &OauthDeviceAuthorizationRequest,
     ) -> Result<OauthDeviceAuthorizationResponse> {
         let url = self.api_url().join("/api/v1/oauth/device/start")?;
-        let res = self.client.post(url.clone()).form(body).send().await?;
+        let req = self.client.post(url.clone()).form(body).build()?;
+        let res = self.send_with_retry(req).await?;
         let status = res.status();
         let text = res
             .text()
@@ -615,7 +617,7 @@ impl Http {
             .header("X-Timestamp", timestamp.unix_timestamp().to_string())
             .json(body);
 
-        let res = req.send().await?;
+        let res = self.send_with_retry(req.build()?).await?;
         let status = res.status();
         let text = res.text().await?;
         if !status.is_success() {
@@ -650,7 +652,9 @@ impl Http {
             req = req.header("X-Timestamp", timestamp.unix_timestamp().to_string());
         }
 
-        let res = req.json(&options.body).send().await?;
+        let res = self
+            .send_with_retry(req.json(&options.body).build()?)
+            .await?;
 
         let status = res.status();
         let text = res.text().await?;
