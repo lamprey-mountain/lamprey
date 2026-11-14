@@ -34,6 +34,7 @@
           (builtins.match ".*/\\.sqlx(/.*)?" path != null) ||
           (builtins.match ".*\\.html" path != null) ||
           (builtins.match ".*\\.js" path != null) ||
+          (builtins.match ".*\\.txt" path != null) ||
           (builtins.match ".*\\.wit" path != null) ||
           (builtins.match ".*/package\\.json" path != null) ||
           (builtins.match ".*/jsr\\.json" path != null) ||
