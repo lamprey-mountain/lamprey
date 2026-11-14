@@ -150,20 +150,19 @@ impl LampreyRealm {
                         }),
                     };
 
-                    if self
-                        .handle
-                        .bridge
-                        .db
-                        .portal_create(portal.clone())
-                        .await
-                        .is_ok()
-                    {
-                        let handle = self.handle.bridge.create_portal_handle(portal.id);
-                        let _ = self
-                            .handle
-                            .bridge
-                            .events
-                            .send(Arc::new(BridgeEvent::PortalCreated(portal, handle)));
+                    match self.handle.bridge.db.portal_create(portal.clone()).await {
+                        Ok(()) => {
+                            let handle = self.handle.bridge.create_portal_handle(portal.id);
+                            let _ = self
+                                .handle
+                                .bridge
+                                .events
+                                .send(Arc::new(BridgeEvent::PortalCreated(portal, handle)));
+                        }
+                        Err(err) => error!(
+                            portal_id = %portal.id,
+                            "failed to store portal for newly created channel: {err}"
+                        ),
                     }
                 }
                 RealmEvent::MemberUpdate(member) => {

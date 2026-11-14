@@ -155,11 +155,17 @@ impl DiscordRealm {
                                 }),
                             };
 
-                            if bridge.db.portal_create(portal.clone()).await.is_ok() {
-                                let handle = bridge.create_portal_handle(portal.id);
-                                let _ = bridge
-                                    .events
-                                    .send(Arc::new(BridgeEvent::PortalCreated(portal, handle)));
+                            match bridge.db.portal_create(portal.clone()).await {
+                                Ok(()) => {
+                                    let handle = bridge.create_portal_handle(portal.id);
+                                    let _ = bridge
+                                        .events
+                                        .send(Arc::new(BridgeEvent::PortalCreated(portal, handle)));
+                                }
+                                Err(err) => error!(
+                                    portal_id = %portal.id,
+                                    "failed to store portal for newly created channel: {err}"
+                                ),
                             }
                         }
                     }

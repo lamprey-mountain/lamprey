@@ -634,18 +634,20 @@ impl DiscordPortal {
                     }),
                 };
 
-                if self
-                    .handle
-                    .bridge
-                    .db
-                    .portal_create(portal.clone())
-                    .await
-                    .is_ok()
-                {
-                    let handle = self.handle.bridge.create_portal_handle(portal.id);
-                    let _ = self.handle.bridge.events.send(Arc::new(
-                        bridge_old::BridgeEvent::PortalCreated(portal, handle),
-                    ));
+                // the thread is already created on discord, so a failure here
+                // leaves it without a portal (and it will be created again on the
+                // next restart)
+                match self.handle.bridge.db.portal_create(portal.clone()).await {
+                    Ok(()) => {
+                        let handle = self.handle.bridge.create_portal_handle(portal.id);
+                        let _ = self.handle.bridge.events.send(Arc::new(
+                            bridge_old::BridgeEvent::PortalCreated(portal, handle),
+                        ));
+                    }
+                    Err(err) => error!(
+                        portal_id = %portal.id,
+                        "failed to store portal for newly created thread: {err}"
+                    ),
                 }
             }
             _ => {}

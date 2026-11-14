@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc};
-use tracing::debug;
+use tracing::{debug, error};
 use url::Url;
 
 use crate::bridge_old::{
@@ -272,11 +272,17 @@ impl BridgeActor {
                             }),
                         };
 
-                        if self.db.portal_create(portal.clone()).await.is_ok() {
-                            let handle = self.bridge_handle.create_portal_handle(portal.id);
-                            let _ = self
-                                .events
-                                .send(Arc::new(BridgeEvent::PortalCreated(portal, handle)));
+                        match self.db.portal_create(portal.clone()).await {
+                            Ok(()) => {
+                                let handle = self.bridge_handle.create_portal_handle(portal.id);
+                                let _ = self
+                                    .events
+                                    .send(Arc::new(BridgeEvent::PortalCreated(portal, handle)));
+                            }
+                            Err(err) => error!(
+                                portal_id = %portal.id,
+                                "failed to store linked portal: {err}"
+                            ),
                         }
                     }
 

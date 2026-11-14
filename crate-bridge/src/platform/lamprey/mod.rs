@@ -7,7 +7,7 @@ use futures::StreamExt;
 use sdk::syncer::SyncerEvent;
 use tokio::sync::{mpsc, oneshot};
 use tokio::task::{AbortHandle, JoinSet};
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::actor::bridge::BridgeCommand;
 use crate::bridge_old::{
@@ -221,6 +221,14 @@ impl Lamprey {
                             continue;
                         }
 
+                        // the snapshot can arrive before the persisted portals are
+                        // initialized, so check the database before treating the
+                        // channel as new
+                        if let Some(portal) = self.init_portal_from_db(&channel.id).await {
+                            self.send_portal_event(portal.id, PortalEvent::Backfill, None);
+                            continue;
+                        }
+
                         // threads hang off of their parent channel's portal
                         if let Some(parent_id) = channel.parent_id {
                             if self.portal_lookup.contains_key(&parent_id) {
@@ -261,6 +269,13 @@ impl Lamprey {
                     let channel_data = ChannelData::Lamprey {
                         channel: channel.clone(),
                     };
+
+                    // events can be replayed after a reconnect; never bridge the
+                    // same channel twice
+                    if let Some(portal) = self.init_portal_from_db(&channel.id).await {
+                        self.send_portal_event(portal.id, PortalEvent::Backfill, None);
+                        return Ok(());
+                    }
 
                     if let Some(parent_id) = channel.parent_id {
                         if self.portal_lookup.contains_key(&parent_id) {
@@ -866,7 +881,39 @@ impl Lamprey {
         }
     }
 
+    /// initialize a portal that exists in the database but isn't loaded yet
+    ///
+    /// used for channels/threads seen in a sync snapshot or replayed event, so
+    /// they are not bridged again (and backfilled instead).
+    async fn init_portal_from_db(&mut self, channel_id: &ChannelId) -> Option<Portal> {
+        let Some(portal) = self
+            .bridge
+            .db
+            .portal_get_by_lamprey_channel(channel_id.to_string())
+            .await
+            .inspect_err(|err| error!(%channel_id, "failed to look up portal: {err}"))
+            .ok()
+            .flatten()
+        else {
+            return None;
+        };
+
+        if !self.portal_data.contains_key(&portal.id) {
+            let handle = self.bridge.create_portal_handle(portal.id);
+            self.init_portal(&portal, &handle);
+        }
+
+        Some(portal)
+    }
+
     fn init_portal(&mut self, portal: &Portal, handle: &PortalHandle) {
+        // the portal may have been initialized already (eg. loaded from the
+        // database before its `PortalInit` event was handled). keep the handle
+        // its task is subscribed to instead of spawning a second task.
+        if self.portal_data.contains_key(&portal.id) {
+            return;
+        }
+
         let channel_id = if let Some(lamprey) = &portal.lamprey {
             self.portal_lookup.insert(lamprey.channel_id, portal.id);
             lamprey.channel_id

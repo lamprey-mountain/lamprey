@@ -757,7 +757,12 @@ impl Discord {
             }
             GatewayEvent::ThreadListSync(event) => {
                 for thread in event.threads {
-                    if self.portal_lookup.contains_key(&thread.id) {
+                    if let Some(portal_id) = self.portal_lookup.get(&thread.id).copied() {
+                        self.send_portal_event(portal_id, PortalEvent::Backfill, None);
+                        continue;
+                    }
+                    if let Some(portal) = self.init_portal_from_db(thread.id).await {
+                        self.send_portal_event(portal.id, PortalEvent::Backfill, None);
                         continue;
                     }
                     self.route_thread_create(thread);
@@ -792,13 +797,10 @@ impl Discord {
                 continue;
             }
 
-            if self
-                .bridge
-                .db
-                .portal_get_by_discord_channel(channel.id.to_string())
-                .await
-                .is_ok_and(|portal| portal.is_some())
-            {
+            // the portal may exist even if its init event hasn't been handled
+            // yet, so consult the database before treating the channel as new
+            if let Some(portal) = self.init_portal_from_db(channel.id).await {
+                self.send_portal_event(portal.id, PortalEvent::Backfill, None);
                 continue;
             }
 
@@ -1059,7 +1061,39 @@ impl Discord {
         }
     }
 
+    /// initialize a portal that exists in the database but isn't loaded yet
+    ///
+    /// used for guilds/threads discovered by the gateway before the persisted
+    /// portals are initialized, so they are not bridged again.
+    async fn init_portal_from_db(&mut self, channel_id: ChannelId) -> Option<Portal> {
+        let Some(portal) = self
+            .bridge
+            .db
+            .portal_get_by_discord_channel(channel_id.to_string())
+            .await
+            .inspect_err(|err| error!(%channel_id, "failed to look up portal: {err}"))
+            .ok()
+            .flatten()
+        else {
+            return None;
+        };
+
+        if !self.portal_data.contains_key(&portal.id) {
+            let handle = self.bridge.create_portal_handle(portal.id);
+            self.init_portal(&portal, &handle);
+        }
+
+        Some(portal)
+    }
+
     fn init_portal(&mut self, portal: &Portal, handle: &PortalHandle) {
+        // the portal may have been initialized already (eg. loaded from the
+        // database before its `PortalInit` event was handled). keep the handle
+        // its task is subscribed to instead of spawning a second task.
+        if self.portal_data.contains_key(&portal.id) {
+            return;
+        }
+
         if let Some(discord) = &portal.discord {
             self.portal_lookup.insert(discord.channel_id, portal.id);
             self.channels_creating
