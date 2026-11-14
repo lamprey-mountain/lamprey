@@ -17,6 +17,10 @@ export function createToolbarPlugin(tb: FormattingToolbarContextT): Plugin {
 					mouseSelection = false;
 					return false;
 				},
+				blur: () => {
+					tb.hideToolbar();
+					return false;
+				},
 			},
 		},
 		view(_editorView) {
