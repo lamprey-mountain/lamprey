@@ -1,4 +1,11 @@
-import { autoUpdate, flip, offset, type Placement } from "@floating-ui/dom";
+import {
+	autoUpdate,
+	flip,
+	offset,
+	type Placement,
+	shift,
+	size,
+} from "@floating-ui/dom";
 import { go } from "fuzzysort";
 import { useFloating } from "solid-floating-ui";
 import {
@@ -20,6 +27,8 @@ export type DropdownItem<T> = {
 	label: string;
 	view?: JSX.Element;
 };
+
+const DROPDOWN_PADDING = 16;
 
 const ChevronDown = () => (
 	<svg
@@ -105,7 +114,19 @@ export function createDropdown<T>(props: {
 	);
 	const position = useFloating(containerEl, dropdownEl, {
 		whileElementsMounted: autoUpdate,
-		middleware: [offset({ mainAxis: -1 }), flip()],
+		middleware: [
+			offset({ mainAxis: -1 }),
+			flip({ padding: DROPDOWN_PADDING }),
+			shift({ padding: DROPDOWN_PADDING }),
+			size({
+				padding: DROPDOWN_PADDING,
+				apply({ availableHeight, elements }) {
+					Object.assign(elements.floating.style, {
+						maxHeight: `${Math.max(0, availableHeight)}px`,
+					});
+				},
+			}),
+		],
 		placement: props.placement ?? "bottom",
 	});
 
@@ -358,7 +379,19 @@ export function MultiDropdown<T>(
 
 	const position = useFloating(containerEl, dropdownEl, {
 		whileElementsMounted: autoUpdate,
-		middleware: [offset({ mainAxis: -1 }), flip()],
+		middleware: [
+			offset({ mainAxis: -1 }),
+			flip({ padding: DROPDOWN_PADDING }),
+			shift({ padding: DROPDOWN_PADDING }),
+			size({
+				padding: DROPDOWN_PADDING,
+				apply({ availableHeight, elements }) {
+					Object.assign(elements.floating.style, {
+						maxHeight: `${Math.max(0, availableHeight)}px`,
+					});
+				},
+			}),
+		],
 		placement: props.placement ?? "bottom",
 	});
 
