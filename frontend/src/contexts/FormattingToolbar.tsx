@@ -11,6 +11,20 @@ type FormattingToolbarProps = {
 	onClose: () => void;
 };
 
+const isFormatActive = (view: EditorView, wrapper: string) => {
+	const { state } = view;
+	const { from, to } = state.selection;
+	if (from >= to) return false;
+
+	const beforeStart = Math.max(0, from - wrapper.length);
+	const afterEnd = Math.min(state.doc.content.size, to + wrapper.length);
+
+	return (
+		state.doc.textBetween(beforeStart, from) === wrapper &&
+		state.doc.textBetween(to, afterEnd) === wrapper
+	);
+};
+
 const toggleFormat = (view: EditorView, wrapper: string) => {
 	try {
 		const { state, dispatch } = view;
@@ -67,6 +81,11 @@ const toggleFormat = (view: EditorView, wrapper: string) => {
 export const FormattingToolbar = (_props: FormattingToolbarProps) => {
 	const { toolbar } = useFormattingToolbar();
 
+	const isActive = (wrapper: string) => {
+		const view = toolbar().view;
+		return view ? isFormatActive(view, wrapper) : false;
+	};
+
 	const applyFormat = (wrapper: string) => {
 		const view = toolbar().view;
 		if (!view) return;
@@ -84,6 +103,7 @@ export const FormattingToolbar = (_props: FormattingToolbarProps) => {
 			<button
 				type="button"
 				class="button"
+				classList={{ active: isActive("**") }}
 				onMouseDown={(e) => e.preventDefault()}
 				onClick={() => applyFormat("**")}
 				title="Bold"
@@ -93,6 +113,7 @@ export const FormattingToolbar = (_props: FormattingToolbarProps) => {
 			<button
 				type="button"
 				class="button"
+				classList={{ active: isActive("*") }}
 				onMouseDown={(e) => e.preventDefault()}
 				onClick={() => applyFormat("*")}
 				title="Italic"
@@ -102,6 +123,7 @@ export const FormattingToolbar = (_props: FormattingToolbarProps) => {
 			<button
 				type="button"
 				class="button"
+				classList={{ active: isActive("`") }}
 				onMouseDown={(e) => e.preventDefault()}
 				onClick={() => applyFormat("`")}
 				title="Code"
@@ -111,6 +133,7 @@ export const FormattingToolbar = (_props: FormattingToolbarProps) => {
 			<button
 				type="button"
 				class="button"
+				classList={{ active: isActive("~~") }}
 				onMouseDown={(e) => e.preventDefault()}
 				onClick={() => applyFormat("~~")}
 				title="Strikethrough"

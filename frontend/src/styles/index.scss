@@ -738,6 +738,10 @@
 			background-color: $bg-300;
 		}
 
+		&.active {
+			background-color: $bg-400;
+		}
+
 		img {
 			width: 16px;
 			height: 16px;
