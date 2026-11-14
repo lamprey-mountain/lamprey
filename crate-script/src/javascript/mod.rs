@@ -19,7 +19,8 @@ use common::v1::types::{
 use cpu_time::ProcessTime;
 use dashmap::DashMap;
 use futures::{FutureExt, future::Shared};
-use rquickjs::{Ctx, Exception, FromJs, async_with};
+use rquickjs::promise::MaybePromise;
+use rquickjs::{Ctx, Exception, FromJs, Promise};
 use tokio::sync::{broadcast, oneshot};
 use tracing::error;
 
@@ -213,54 +214,16 @@ impl Executor for JsExecutor {
             let _rt_guard = rt.clone();
             let events_sender_clone = events_sender.clone();
 
-            let extracted = async_with!(context => |ctx| {
-                match exec_inner(ctx.clone(), redex_id, input, events_sender_clone, script).await {
-                    Ok(a) => Ok(a),
-                    Err(err) => {
-                        if let Some(exception) = ctx.catch().into_object().and_then(rquickjs::Exception::from_object) {
-                            error!(
-                                %redex_id,
-                                %eval_id,
-                                message = %exception.message().unwrap_or_else(|| "Unknown JS error".to_string()),
-                                stack = %exception.stack().unwrap_or_else(|| "No stack trace".to_string()),
-                                "eval javascript exception"
-                            );
-                            Err(Error::from_exception(exception))
-                        } else {
-                            error!(%redex_id, %eval_id, "eval error: {:?}", err);
-                            Err(err)
-                        }
-                    }
-                }
-            })
+            let extracted = exec_inner(
+                &rt,
+                &context,
+                redex_id,
+                input,
+                events_sender_clone,
+                script,
+                start_time_wall + max_cpu_wall,
+            )
             .await;
-
-            loop {
-                match rt.execute_pending_job().await {
-                    Ok(true) => {}
-                    Ok(false) => break,
-                    Err(err) => {
-                        let _err = err
-                            .0
-                            .with(|ctx| {
-                                let err = ctx
-                                    .catch()
-                                    .into_object()
-                                    .and_then(Exception::from_object)
-                                    .map(Error::from_exception);
-                                match err {
-                                    Some(err) => return err,
-                                    None => todo!("handle None error?"),
-                                };
-                            })
-                            .await;
-                        return;
-                        // return Err(err);
-                        // TODO: do something better with the error?
-                        // return Err(Error::Rquickjs(...))
-                    }
-                }
-            }
 
             if let Err(err) = &extracted {
                 error!("eval runtime error: {:?}", err);
@@ -325,23 +288,107 @@ fn setup_environment(
     Ok(())
 }
 
-async fn exec_inner<'js>(
-    ctx: Ctx<'js>,
+/// run a single eval of a javascript redex
+///
+/// the run is executed as a task owned by the runtime, so it can suspend on host futures
+/// (ie. network requests) while this function keeps driving the runtime
+async fn exec_inner(
+    rt: &rquickjs::AsyncRuntime,
+    context: &rquickjs::AsyncContext,
     script_id: RedexId,
     input: EvalInput,
     events_sender: broadcast::Sender<Arc<ExecutionEvent>>,
     script: Arc<JsCompiledScript>,
+    deadline: Instant,
 ) -> Result<ScriptExtracted> {
-    setup_environment(&ctx, events_sender.clone(), script_id)?;
+    let (result_tx, mut result_rx) = oneshot::channel::<Result<ScriptExtracted>>();
 
-    events_sender
-        .send(Arc::new(ExecutionEvent::Status(EvalStatus::Active)))
-        .map_err(|e| Error::BroadcastSend(e.to_string()))?;
+    context
+        .with(|ctx| -> Result<()> {
+            setup_environment(&ctx, events_sender.clone(), script_id)?;
 
-    // SAFETY: the bytecode was compiled ourselves in `load_script`
-    let raw_module = unsafe { rquickjs::Module::load(ctx.clone(), &script.bytecode)? };
-    let (module, promise) = raw_module.eval()?;
-    promise.finish::<()>()?; // ensure top-level async code finishes
+            events_sender
+                .send(Arc::new(ExecutionEvent::Status(EvalStatus::Active)))
+                .map_err(|e| Error::BroadcastSend(e.to_string()))?;
+
+            // SAFETY: the bytecode was compiled ourselves in `load`
+            let raw_module = unsafe { rquickjs::Module::load(ctx.clone(), &script.bytecode)? };
+            let (module, eval_promise) = raw_module.eval()?;
+
+            // the run is resumed once this closure releases the runtime lock,
+            // which is what lets handlers await promises resolved by host futures
+            let run_ctx = ctx.clone();
+            let run_events_sender = events_sender.clone();
+            ctx.spawn(async move {
+                let result =
+                    run_handlers(run_ctx, module, eval_promise, input, &run_events_sender).await;
+                let _ = result_tx.send(result);
+            });
+
+            Ok(())
+        })
+        .await?;
+
+    // drive pending jobs and host futures until the run settles
+    let drive = async {
+        tokio::select! {
+            result = &mut result_rx => Some(result),
+            _ = rt.idle() => None,
+        }
+    };
+
+    match tokio::time::timeout_at(tokio::time::Instant::from(deadline), drive).await {
+        Ok(Some(Ok(result))) => result,
+        Ok(Some(Err(_))) => Err(Error::OneshotRecv("run task was dropped".to_string())),
+        // the runtime is idle but the run never produced a result
+        Ok(None) => match result_rx.try_recv() {
+            Ok(result) => result,
+            Err(_) => Err(Error::RuntimeError {
+                message: "run ended without a result".to_string(),
+                stack: String::new(),
+            }),
+        },
+        Err(_) => Err(Error::RuntimeError {
+            message: "run timed out".to_string(),
+            stack: String::new(),
+        }),
+    }
+}
+
+/// wait for a value to settle if it is a promise
+async fn settle<'js>(ctx: &Ctx<'js>, value: rquickjs::Value<'js>) -> Result<rquickjs::Value<'js>> {
+    MaybePromise::from_value(value)
+        .into_future::<rquickjs::Value<'js>>()
+        .await
+        .map_err(|err| js_error(ctx, err))
+}
+
+/// wait for a module's top level await to finish
+async fn settle_module<'js>(ctx: &Ctx<'js>, eval: Promise<'js>) -> Result<()> {
+    eval.into_future::<()>()
+        .await
+        .map_err(|err| js_error(ctx, err))
+}
+
+/// turn a pending javascript exception into an error
+fn js_error(ctx: &Ctx<'_>, err: rquickjs::Error) -> Error {
+    if matches!(err, rquickjs::Error::Exception) {
+        if let Some(exception) = ctx.catch().into_object().and_then(Exception::from_object) {
+            return Error::from_exception(exception);
+        }
+    }
+
+    Error::Rquickjs(err)
+}
+
+async fn run_handlers<'js>(
+    ctx: Ctx<'js>,
+    module: rquickjs::Module<'js, rquickjs::module::Evaluated>,
+    eval_promise: Promise<'js>,
+    input: EvalInput,
+    events_sender: &broadcast::Sender<Arc<ExecutionEvent>>,
+) -> Result<ScriptExtracted> {
+    settle_module(&ctx, eval_promise).await?;
 
     let registry = Arc::new(Mutex::new(ScriptRegistry::new()));
     let mut extracted = ScriptExtracted::new("unnamed".to_owned());
@@ -377,15 +424,18 @@ async fn exec_inner<'js>(
                     registry: Arc::clone(&registry),
                 },
             )?;
-            reg_fn.call::<_, ()>((controller,))?;
+            let result = reg_fn.call::<_, rquickjs::Value>((controller,))?;
+            settle(&ctx, result).await?;
         } else {
             // TODO: send warn or error to user
         }
     }
 
-    let r = registry.lock().unwrap();
-    for input in &r.inputs {
-        extracted.inputs.push(input.definition.clone());
+    {
+        let registry = registry.lock().unwrap();
+        for input in &registry.inputs {
+            extracted.inputs.push(input.definition.clone());
+        }
     }
 
     // extract some metadata
@@ -422,30 +472,38 @@ async fn exec_inner<'js>(
             // don't do anything just extract
         }
         EvalInput::Manual { id, .. } => {
-            if let Some(input) = r.find(&id) {
-                let _ = input.callback.clone().restore(&ctx)?.call::<_, ()>(());
+            let callback = registry
+                .lock()
+                .unwrap()
+                .find(&id)
+                .map(|input| input.callback.clone());
+
+            if let Some(callback) = callback {
+                let handler = callback.restore(&ctx)?;
+                let result = handler.call::<_, rquickjs::Value>(())?;
+                let _ = settle(&ctx, result).await;
             }
         }
         EvalInput::Http { request } => {
-            if let Some(input) = r
+            let callback = registry
+                .lock()
+                .unwrap()
                 .inputs
                 .iter()
-                .find(|i| matches!(i.definition.ty, RedexHandlerType::Http { .. }))
-            {
-                let handler = input.callback.clone().restore(&ctx)?;
+                .find(|input| matches!(input.definition.ty, RedexHandlerType::Http))
+                .map(|input| input.callback.clone());
 
-                let response: rquickjs::Value = handler.call((glue::http::Request {
+            if let Some(callback) = callback {
+                let handler = callback.restore(&ctx)?;
+
+                let response = handler.call::<_, rquickjs::Value>((glue::http::Request {
                     method: request.method().to_string(),
                     url: request.uri().to_string(),
                     headers: request.headers().to_owned(),
                     body: request.into_body(),
                 },))?;
 
-                let response: rquickjs::Value = match response.try_into_promise() {
-                    Ok(p) => p.finish()?,
-                    Err(val) => val,
-                };
-
+                let response = settle(&ctx, response).await?;
                 let response = glue::http::Response::from_js(&ctx, response)?;
 
                 let mut builder = http::Response::builder().status(response.status);
@@ -460,19 +518,25 @@ async fn exec_inner<'js>(
             }
         }
         EvalInput::Event { event } => {
-            for input in r
+            let callbacks: Vec<_> = registry
+                .lock()
+                .unwrap()
                 .inputs
                 .iter()
-                .find(|i| matches!(i.definition.ty, RedexHandlerType::Event))
-            {
-                let handler = input.callback.clone().restore(&ctx)?;
+                .filter(|input| matches!(input.definition.ty, RedexHandlerType::Event))
+                .map(|input| input.callback.clone())
+                .collect();
+
+            for callback in callbacks {
+                let handler = callback.restore(&ctx)?;
 
                 let js_event = rquickjs_serde::to_value(ctx.clone(), &*event).map_err(|e| {
                     rquickjs::Error::new_from_js_message("object", "MessageSync", e.to_string())
                 })?;
 
                 // TODO: error handling
-                let _ = handler.call::<_, ()>((js_event,));
+                let result = handler.call::<_, rquickjs::Value>((js_event,))?;
+                let _ = settle(&ctx, result).await;
             }
         }
     }
