@@ -661,6 +661,12 @@ export class RootStore {
 			const existed = this.emoji.cache.has(msg.emoji_id);
 			this.emoji.delete(msg.emoji_id);
 			if (existed) this.updateRoomEmojiCount(msg.room_id, -1);
+		} else if (msg.type === "TagCreate") {
+			this.tags.upsert(msg.tag);
+		} else if (msg.type === "TagUpdate") {
+			this.tags.upsert(msg.tag);
+		} else if (msg.type === "TagDelete") {
+			this.tags.delete(msg.tag_id);
 		} else if (msg.type === "ChannelTyping") {
 			const { channel_id, user_id, until } = msg;
 			const untilDate = getDate(until);
