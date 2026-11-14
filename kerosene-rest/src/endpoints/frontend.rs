@@ -547,7 +547,7 @@ async fn render_index(globals: &Globals, meta: &PageMeta) -> Result<Response> {
 
     let meta_tags = META_ENV
         .get_template("meta.html")
-        .and_then(|template| template.render(Serde(meta)))
+        .and_then(|template| template.render(context! { meta => Serde(meta) }))
         .map_err(Error::internal)?;
     // PERF: use template for meta and script (.replace allocs a new string each time)
     rendered = rendered.replace("<!-- VITE_JINJA_PLACEHOLDER:meta -->", &meta_tags);
