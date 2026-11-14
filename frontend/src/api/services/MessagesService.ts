@@ -960,6 +960,17 @@ export class MessagesService extends BaseService<Message> {
 		return resource;
 	}
 
+	/** force a refetch of a channel's pinned message listing */
+	refetchPinned(channel_id: string) {
+		const listing = this._pinnedListings.get(channel_id);
+		if (!listing) return;
+
+		// reset pagination so the refetch doesn't append to the existing list
+		listing.pagination = null;
+		listing.prom = null;
+		listing.refetch();
+	}
+
 	async reorderPins(
 		channel_id: string,
 		messages: { id: string; position: number }[],
@@ -977,6 +988,9 @@ export class MessagesService extends BaseService<Message> {
 				params: { path: { channel_id, message_id } },
 			},
 		);
+
+		// pinning a message marks the channel's pins as read
+		await this.store.channels.ackPins(channel_id);
 	}
 
 	async unpin(channel_id: string, message_id: string) {

@@ -442,6 +442,9 @@ export class RootStore {
 				(m as typeof m & { nonce?: string }).nonce = raw.nonce;
 			}
 			this.messages.handleMessageCreate(m);
+			if (m.latest_version.type === "MessagePinned") {
+				this.messages.refetchPinned(m.channel_id);
+			}
 			this.notifications.handleMessageCreate(m);
 			if (m.flume?.state === "Live") {
 				this.flumes.handleCreate(m.channel_id, m);
@@ -516,11 +519,21 @@ export class RootStore {
 			if (message.flume?.state !== "Live") {
 				this.flumes.handleCommit(message);
 			}
+			// the message was unpinned
+			if (this.messages.get(message.id)?.pinned && !message.pinned) {
+				this.messages.refetchPinned(message.channel_id);
+			}
 			this.messages.handleMessageUpdate(message);
 		} else if (msg.type === "MessageDelete") {
+			if (this.messages.get(msg.message_id)?.pinned) {
+				this.messages.refetchPinned(msg.channel_id);
+			}
 			this.flumes.handleDelete(msg.message_id);
 			this.messages.handleMessageDelete(msg.channel_id, msg.message_id);
 		} else if (msg.type === "MessageDeleteBulk") {
+			if (msg.message_ids.some((id) => this.messages.get(id)?.pinned)) {
+				this.messages.refetchPinned(msg.channel_id);
+			}
 			// PERF: would batch() improve this in any meaningful way?
 			for (const id of msg.message_ids) {
 				this.flumes.handleDelete(id);

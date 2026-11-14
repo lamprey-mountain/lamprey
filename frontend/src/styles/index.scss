@@ -4567,6 +4567,21 @@ button.round {
 		display: flex;
 	}
 
+	& > .menu > .pin-button {
+		position: relative;
+
+		& > .unread-indicator {
+			position: absolute;
+			right: 4px;
+			bottom: 4px;
+			height: 8px;
+			width: 8px;
+			border-radius: 50%;
+			background: $color-blue;
+			pointer-events: none;
+		}
+	}
+
 	&.selecting {
 		background-color: $bg-400;
 	}

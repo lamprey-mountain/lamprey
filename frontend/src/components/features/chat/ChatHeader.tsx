@@ -21,11 +21,13 @@ import { useMenu } from "@/contexts/menu.tsx";
 import { useModals } from "@/contexts/modal.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
 import { isChannelLocked } from "@/lib/permissions/calculator";
+import type { ChannelReadState } from "@/types/chat";
 import {
 	channelDescription,
 	channelDisplayName,
 	isAutoDescription,
 } from "@/utils/channel";
+import { getDate } from "@/utils/general";
 import { icActivityLog } from "@/utils/icons";
 import { useVoice } from "../voice/context";
 
@@ -442,16 +444,14 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 							<Icon src={icActivityLog} />
 						</button>
 					</Show>
-					<button
-						type="button"
-						class="button icon-button"
-						onClick={togglePinned}
-						classList={{ active: isShowingPinned() }}
-						ref={pinnedTooltip.content}
-						style={{ display: hasPins() ? undefined : "none" }}
-					>
-						<Icon src={icPin} color={null} />
-					</button>
+					<Show when={hasPins()}>
+						<PinButton
+							channel={props.channel}
+							active={isShowingPinned()}
+							onClick={togglePinned}
+							buttonRef={pinnedTooltip.content}
+						/>
+					</Show>
 					<Show when={props.showMembersButton ?? true}>
 						<button
 							type="button"
@@ -467,3 +467,50 @@ export const ChatHeader = (props: ChatHeaderProps) => {
 		</header>
 	);
 };
+
+function PinButton(props: {
+	channel: Channel;
+	active: boolean;
+	onClick: () => void;
+	buttonRef: (el: HTMLElement) => void;
+}) {
+	const channels2 = useChannels();
+	const messagesService = useMessages();
+	const pinned = messagesService.listPinned(() => props.channel.id);
+
+	const pinsReadAt = (): string | null | undefined => {
+		const channel: ChannelReadState | undefined = channels2.get(
+			props.channel.id,
+		);
+		return channel?.pins_read_at;
+	};
+
+	const hasUnreadPins = () => {
+		const items = pinned()?.items;
+		if (!items?.length) return false;
+
+		const read_at = pinsReadAt();
+		// pins that were never read count as unread
+		if (!read_at) return true;
+
+		const read_time = getDate(read_at).getTime();
+		return items.some(
+			(m) => getDate(m.pinned?.time ?? m.created_at).getTime() > read_time,
+		);
+	};
+
+	return (
+		<button
+			type="button"
+			class="button icon-button pin-button"
+			classList={{ active: props.active }}
+			onClick={props.onClick}
+			ref={props.buttonRef}
+		>
+			<Icon src={icPin} color={null} />
+			<Show when={hasUnreadPins()}>
+				<span class="unread-indicator" />
+			</Show>
+		</button>
+	);
+}
