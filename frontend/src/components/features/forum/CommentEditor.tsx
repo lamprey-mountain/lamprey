@@ -1,4 +1,3 @@
-import type { Transaction } from "prosemirror-state";
 import { createSignal, onMount } from "solid-js";
 import type { Channel, Message } from "ts-sdk";
 import { useMessages } from "@/api";
@@ -13,7 +12,7 @@ import { createEditor } from "../editor/Editor";
 
 export function CommentEditor(props: { message: Message; channel: Channel }) {
 	const messagesService = useMessages();
-	const [ch, chUpdate] = useChannel();
+	const [, chUpdate] = useChannel();
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
 	const [draft, setDraft] = createSignal(
@@ -23,25 +22,25 @@ export function CommentEditor(props: { message: Message; channel: Channel }) {
 	);
 
 	const onEmojiPick = (emoji: string, _keepOpen?: boolean) => {
-		const editorState = ch.editor_state;
-		if (editorState) {
-			const { from, to } = editorState.selection;
-			const customMatch = emoji.match(/^<:([^:]+):([^>]+)>$/);
-			let tr: Transaction;
-			if (customMatch) {
-				const name = customMatch[1];
-				const id = customMatch[2];
-				tr = editorState.tr.replaceWith(
+		const view = editor.view;
+		if (!view) return;
+
+		const { from, to } = view.state.selection;
+		const customMatch = emoji.match(/^<(a?):([^:]+):([^>]+)>$/);
+		const tr = customMatch
+			? view.state.tr.replaceWith(
 					from,
 					to,
-					editor.schema.nodes.emojiCustom.create({ id, name }),
-				);
-			} else {
-				tr = editorState.tr.insertText(emoji, from, to);
-			}
-			const newState = editorState.apply(tr);
-			chUpdate("editor_state", newState);
-		}
+					editor.schema.nodes.emojiCustom.create({
+						id: customMatch[3],
+						name: customMatch[2],
+						animated: customMatch[1] === "a",
+					}),
+				)
+			: view.state.tr.insertText(emoji, from, to);
+
+		view.dispatch(tr);
+		view.focus();
 	};
 
 	const editor = createEditor({

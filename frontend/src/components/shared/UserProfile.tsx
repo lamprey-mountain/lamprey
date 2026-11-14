@@ -190,13 +190,25 @@ export function UserProfile(props: UserProps) {
 	});
 
 	const onEmojiPick = (emoji: string, _keepOpen?: boolean) => {
-		const editorState = dmEditorState();
-		if (editorState) {
-			const { from, to } = editorState.selection;
-			const tr = editorState.tr.insertText(emoji, from, to);
-			const newState = editorState.apply(tr);
-			setDmEditorState(newState);
-		}
+		const view = dmEditor.view;
+		if (!view) return;
+
+		const { from, to } = view.state.selection;
+		const customMatch = emoji.match(/^<(a?):([^:]+):([^>]+)>$/);
+		const tr = customMatch
+			? view.state.tr.replaceWith(
+					from,
+					to,
+					dmEditor.schema.nodes.emojiCustom.create({
+						id: customMatch[3],
+						name: customMatch[2],
+						animated: customMatch[1] === "a",
+					}),
+				)
+			: view.state.tr.insertText(emoji, from, to);
+
+		view.dispatch(tr);
+		view.focus();
 	};
 
 	const onDmSubmit = async (text: string) => {

@@ -187,26 +187,25 @@ export function Input(props: InputProps) {
 	};
 
 	const onEmojiPick = (emoji: string, _keepOpen?: boolean) => {
-		const editorState = drafts.get(props.channel.id)?.state;
-		if (editorState) {
-			const { from, to } = editorState.selection;
-			const customMatch = emoji.match(/^<(a?):([^:]+):([^>]+)>$/);
-			let tr;
-			if (customMatch) {
-				const animated = customMatch[1] === "a";
-				const name = customMatch[2];
-				const id = customMatch[3];
-				tr = editorState.tr.replaceWith(
+		const view = editor.view;
+		if (!view) return;
+
+		const { from, to } = view.state.selection;
+		const customMatch = emoji.match(/^<(a?):([^:]+):([^>]+)>$/);
+		const tr = customMatch
+			? view.state.tr.replaceWith(
 					from,
 					to,
-					editor.schema.nodes.emojiCustom.create({ id, name, animated }),
-				);
-			} else {
-				tr = editorState.tr.insertText(emoji, from, to);
-			}
-			const newState = editorState.apply(tr);
-			drafts.set(props.channel.id, newState);
-		}
+					editor.schema.nodes.emojiCustom.create({
+						id: customMatch[3],
+						name: customMatch[2],
+						animated: customMatch[1] === "a",
+					}),
+				)
+			: view.state.tr.insertText(emoji, from, to);
+
+		view.dispatch(tr);
+		view.focus();
 	};
 
 	const onChange = (state: EditorState) => {
@@ -533,7 +532,7 @@ export function Input(props: InputProps) {
 	const jumpToReplySource = () => {
 		const source = ch.reply_jump_source;
 		if (source) {
-			ch.timelineState.controller.jumpToMessage(source, true);
+			ch.timelineState.controller.jumpToMessage(source, true, true);
 			chUpdate("reply_jump_source", undefined);
 		}
 	};
