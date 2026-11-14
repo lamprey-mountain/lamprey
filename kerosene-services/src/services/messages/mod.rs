@@ -757,6 +757,10 @@ impl ServiceMessages {
             .await
     }
 
+    /// fetch the media referenced by an embed
+    ///
+    /// remote media is best-effort: if it can't be downloaded, the embed is
+    /// created without it instead of failing the whole message.
     async fn fetch_media(
         &self,
         media_ref: Option<MediaReference>,
@@ -765,6 +769,17 @@ impl ServiceMessages {
         let Some(media_ref) = media_ref else {
             return Ok(None);
         };
+
+        if let MediaReference::Url { source_url } = media_ref.clone() {
+            return match self.fetch_media2(media_ref, user_id).await {
+                Ok(media) => Ok(Some(media)),
+                Err(err) => {
+                    warn!(url = %source_url, %err, "failed to import embed media");
+                    Ok(None)
+                }
+            };
+        }
+
         self.fetch_media2(media_ref, user_id).map_ok(Some).await
     }
 
