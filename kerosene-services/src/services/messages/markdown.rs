@@ -19,7 +19,11 @@ pub fn parse_mentions(content: &str, options: &ParseMentions) -> MentionsIds {
     let mut everyone = false;
 
     for mention in parsed.tree().iter_mentions() {
-        match mention.parse() {
+        // skip text that only looks like a mention, never count it as @everyone
+        let Some(data) = mention.parse() else {
+            continue;
+        };
+        match data {
             MentionData::User(u) => users.push(u),
             MentionData::Role(r) => roles.push(r),
             MentionData::Channel(c) => channels.push(c),

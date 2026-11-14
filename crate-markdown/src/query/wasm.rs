@@ -89,10 +89,12 @@ impl Parsed {
     pub fn js_mentions(&self) -> Vec<MentionItem> {
         self.tree()
             .iter_mentions()
-            .map(|m| MentionItem {
-                text: m.text(),
-                data: m.parse(),
-                span: m.syntax().text_range().into(),
+            .filter_map(|m| {
+                Some(MentionItem {
+                    text: m.text(),
+                    data: m.parse()?,
+                    span: m.syntax().text_range().into(),
+                })
             })
             .collect()
     }

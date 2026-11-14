@@ -126,10 +126,11 @@ impl PlaintextRenderer {
                 }
             }
             Inline::Mention(mention) => match mention.parse() {
-                MentionData::User(u) => format!("@{}", u),
-                MentionData::Role(r) => format!("@{}", r),
-                MentionData::Channel(c) => format!("#{}", c),
-                MentionData::Everyone => "@everyone".to_string(),
+                Some(MentionData::User(u)) => format!("@{}", u),
+                Some(MentionData::Role(r)) => format!("@{}", r),
+                Some(MentionData::Channel(c)) => format!("#{}", c),
+                Some(MentionData::Everyone) => "@everyone".to_string(),
+                None => mention.text(),
             },
             Inline::CustomEmoji(e) => format!(":{}:", e.parse().name),
             Inline::UnicodeEmoji(e) => e.text(),

@@ -243,28 +243,29 @@ impl Inner<'_> {
                 write!(self.writer, "{}", text.text().sanitized())?;
             }
             Inline::Mention(mention) => match mention.parse() {
-                MentionData::User(u) => write!(
+                Some(MentionData::User(u)) => write!(
                     self.writer,
                     "<span class=\"mention mention-user\" data-user-id=\"{id}\">@{name}</span>",
                     id = u,
                     name = "Unknown user",
                 )?,
-                MentionData::Role(r) => write!(
+                Some(MentionData::Role(r)) => write!(
                     self.writer,
                     "<span class=\"mention mention-role\" data-role-id=\"{id}\">@{name}</span>",
                     id = r,
                     name = "Unknown role",
                 )?,
-                MentionData::Channel(c) => write!(
+                Some(MentionData::Channel(c)) => write!(
                     self.writer,
                     "<span class=\"mention mention-channel\" data-channel-id=\"{id}\">#{name}</span>",
                     id = c,
                     name = "unknown channel",
                 )?,
-                MentionData::Everyone => write!(
+                Some(MentionData::Everyone) => write!(
                     self.writer,
                     "<span class=\"mention mention-everyone\">@everyone</span>"
                 )?,
+                None => write!(self.writer, "{}", mention.text().sanitized())?,
             },
             Inline::CustomEmoji(e) => {
                 let e = e.parse();

@@ -55,22 +55,33 @@ impl FromStr for MentionData {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // `<&id>` is canonical, `<@&id>` is a legacy form
-        if s == "@everyone" {
-            Ok(MentionData::Everyone)
-        } else if (s.starts_with("<@&") || s.starts_with("<&")) && s.ends_with('>') {
-            let start = if s.starts_with("<@&") { 3 } else { 2 };
-            let uuid = Uuid::parse_str(&s[start..s.len() - 1]).map_err(|e| e.to_string())?;
-            Ok(MentionData::Role(RoleId::from(uuid)))
-        } else if s.starts_with("<@") && s.ends_with('>') {
-            let uuid = Uuid::parse_str(&s[2..s.len() - 1]).map_err(|e| e.to_string())?;
-            Ok(MentionData::User(UserId::from(uuid)))
-        } else if s.starts_with("<#") && s.ends_with('>') {
-            let uuid = Uuid::parse_str(&s[2..s.len() - 1]).map_err(|e| e.to_string())?;
-            Ok(MentionData::Channel(ChannelId::from(uuid)))
-        } else {
-            Err(format!("invalid mention: {}", s))
+        let inner = s
+            .strip_prefix('<')
+            .and_then(|s| s.strip_suffix('>'))
+            .unwrap_or(s);
+
+        if inner == "everyone" || inner == "@everyone" {
+            return Ok(MentionData::Everyone);
         }
+
+        // `<&id>` is canonical, `<@&id>` is a legacy form
+        if let Some(id) = inner.strip_prefix("@&").or_else(|| inner.strip_prefix('&')) {
+            return Uuid::parse_str(id)
+                .map(|uuid| MentionData::Role(RoleId::from(uuid)))
+                .map_err(|e| e.to_string());
+        }
+        if let Some(id) = inner.strip_prefix('@') {
+            return Uuid::parse_str(id)
+                .map(|uuid| MentionData::User(UserId::from(uuid)))
+                .map_err(|e| e.to_string());
+        }
+        if let Some(id) = inner.strip_prefix('#') {
+            return Uuid::parse_str(id)
+                .map(|uuid| MentionData::Channel(ChannelId::from(uuid)))
+                .map_err(|e| e.to_string());
+        }
+
+        Err(format!("invalid mention: {}", s))
     }
 }
 
@@ -314,28 +325,9 @@ impl Mention {
         self.0.text().to_string()
     }
 
-    pub fn parse(&self) -> MentionData {
-        let text = self.0.text().to_string();
-        // `<&id>` is canonical, `<@&id>` is a legacy form
-        if (text.starts_with("<@&") || text.starts_with("<&")) && text.ends_with('>') {
-            let start = if text.starts_with("<@&") { 3 } else { 2 };
-            let uuid: Uuid = text[start..text.len() - 1]
-                .parse()
-                .expect("invalid Mention content");
-            MentionData::Role(RoleId::from(uuid))
-        } else if text.starts_with("<@") && text.ends_with('>') {
-            let uuid: Uuid = text[2..text.len() - 1]
-                .parse()
-                .expect("invalid Mention content");
-            MentionData::User(UserId::from(uuid))
-        } else if text.starts_with("<#") && text.ends_with('>') {
-            let uuid: Uuid = text[2..text.len() - 1]
-                .parse()
-                .expect("invalid Mention content");
-            MentionData::Channel(ChannelId::from(uuid))
-        } else {
-            MentionData::Everyone
-        }
+    /// parse this mention, or `None` if its text isn't a valid mention
+    pub fn parse(&self) -> Option<MentionData> {
+        MentionData::from_str(&self.text()).ok()
     }
 }
 

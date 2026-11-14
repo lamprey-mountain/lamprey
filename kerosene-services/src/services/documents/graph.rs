@@ -181,7 +181,7 @@ impl ServiceDocuments {
                 let tree = parsed.tree();
 
                 for mention in tree.iter_mentions() {
-                    if let MentionData::Channel(target_id) = mention.parse() {
+                    if let Some(MentionData::Channel(target_id)) = mention.parse() {
                         if doc_ids.contains(&target_id) {
                             edges.push(Edge {
                                 from: doc_id,

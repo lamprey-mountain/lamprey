@@ -228,7 +228,10 @@ impl SerializedInline {
                 children: c.children().map(Self::from_inline).collect(),
             },
             Inline::Text(t) => Self::Text { content: t.text() },
-            Inline::Mention(m) => Self::Mention { mention: m.parse() },
+            Inline::Mention(m) => match m.parse() {
+                Some(mention) => Self::Mention { mention },
+                None => Self::Text { content: m.text() },
+            },
             Inline::CustomEmoji(e) => {
                 let data = e.parse();
                 Self::CustomEmoji {

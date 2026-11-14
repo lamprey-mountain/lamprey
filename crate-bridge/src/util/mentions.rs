@@ -81,16 +81,18 @@ impl MessageTransformer {
             .flat_map(|node| {
                 let range = node.syntax().text_range();
                 let kind = match node.parse() {
-                    MentionData::User(id) if mentions.users.iter().any(|i| i.id == id) => {
+                    Some(MentionData::User(id)) if mentions.users.iter().any(|i| i.id == id) => {
                         MentionType::User(id.to_string())
                     }
-                    MentionData::Role(id) if mentions.roles.iter().any(|i| i.id == id) => {
+                    Some(MentionData::Role(id)) if mentions.roles.iter().any(|i| i.id == id) => {
                         MentionType::Role(id.to_string())
                     }
-                    MentionData::Channel(id) if mentions.channels.iter().any(|i| i.id == id) => {
+                    Some(MentionData::Channel(id))
+                        if mentions.channels.iter().any(|i| i.id == id) =>
+                    {
                         MentionType::Channel(id.to_string())
                     }
-                    MentionData::Everyone if mentions.everyone => MentionType::Everyone,
+                    Some(MentionData::Everyone) if mentions.everyone => MentionType::Everyone,
                     _ => return None,
                 };
 
