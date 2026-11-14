@@ -12,6 +12,7 @@ import {
 } from "solid-js";
 import { useChannels, usePreferences, useThreads } from "@/api";
 import { useCtx } from "@/app/context";
+import { Search } from "@/atoms/Search";
 import { Time } from "@/atoms/Time";
 import { ChannelIcon } from "@/components/shared/User";
 import { useModals } from "@/contexts/modal.tsx";
@@ -213,14 +214,12 @@ export const ThreadPopout = (props: { channel_id: string }) => {
 			<div class="background"></div>
 			<div class="content">
 				<div class="header">
-					<input
-						ref={searchInputRef}
-						type="search"
+					<Search
+						ref={(el) => (searchInputRef = el)}
 						placeholder="Search threads..."
-						value={search()}
-						onInput={(e) => onSearchInput(e.currentTarget.value)}
+						value={search}
+						onInput={onSearchInput}
 						onKeyDown={onKeyDown}
-						class="search-pad"
 					/>
 					<button type="button" class="primary button" onClick={onCreateThread}>
 						create thread

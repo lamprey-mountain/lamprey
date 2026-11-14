@@ -1,4 +1,4 @@
-import type { Accessor, Ref, Setter } from "solid-js";
+import type { Accessor, JSX, Ref, Setter } from "solid-js";
 import icSearch from "@/assets/search.png";
 import { Icon } from "./Icon";
 
@@ -10,6 +10,7 @@ export const Search = (props: {
 	onInput?: (s: string) => void;
 	onSubmit?: (value: string, e: KeyboardEvent) => void;
 	onEscape?: () => void;
+	onKeyDown?: JSX.EventHandler<HTMLInputElement, KeyboardEvent>;
 	class?: string;
 }) => {
 	return (
@@ -29,6 +30,7 @@ export const Search = (props: {
 				onKeyDown={(e) => {
 					if (e.key === "Enter") props.onSubmit?.(e.currentTarget.value, e);
 					if (e.key === "Escape") props.onEscape?.();
+					props.onKeyDown?.(e);
 				}}
 			/>
 		</div>
