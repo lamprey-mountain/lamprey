@@ -2,17 +2,17 @@ import {
 	createMemo,
 	createResource,
 	createSignal,
-	For,
-	Show,
 	type VoidProps,
 } from "solid-js";
 import { useApi } from "@/api";
 import type { Aggregation } from "@/api/services/RoomAnalyticsService.ts";
-import { useCtx } from "@/app/context";
 import { DateRangePicker } from "@/atoms/Daterangepicker.tsx";
 import { Dropdown } from "@/atoms/Dropdown.tsx";
+import { Chart, Charts } from "@/components/shared/Chart";
 import { formatBytes } from "@/media/util.tsx";
 import type { RoomT } from "@/types";
+
+const HOUR = 60 * 60 * 1000;
 
 export function RoomAnalytics(props: VoidProps<{ room: RoomT }>) {
 	const api2 = useApi();
@@ -24,11 +24,6 @@ export function RoomAnalytics(props: VoidProps<{ room: RoomT }>) {
 			.split("T")[0],
 		end: new Date().toISOString().split("T")[0],
 	});
-
-	const [hoveredTime, setHoveredTime] = createSignal<string | null>(null);
-	const [selectionStartTime, setSelectionStartTime] = createSignal<
-		string | null
-	>(null);
 
 	const refreshData = () => {
 		const start = dateRange().start;
@@ -57,14 +52,27 @@ export function RoomAnalytics(props: VoidProps<{ room: RoomT }>) {
 		api2.room_analytics.getMembersLeave(args.room_id, args),
 	);
 
-	const onZoom = (startBucket: string, endBucket: string) => {
-		const start = startBucket;
-		const end = endBucket;
-		if (start === end) return;
-		setDateRange({
-			start: start < end ? start : end,
-			end: start < end ? end : start,
-		});
+	// zoom indices come from whichever chart was dragged; all series share buckets
+	const buckets = createMemo(() => {
+		const datasets = [
+			analyticsOverview(),
+			analyticsMembersCount(),
+			analyticsMembersJoin(),
+			analyticsMembersLeave(),
+		];
+		const longest = datasets.reduce<Array<{ bucket: string }>>(
+			(best, data) => (data && data.length > best.length ? data : best),
+			[],
+		);
+		return longest.map((point) => point.bucket);
+	});
+
+	const onZoom = (startIndex: number, endIndex: number) => {
+		const axis = buckets();
+		const start = axis[Math.min(startIndex, endIndex)];
+		const end = axis[Math.max(startIndex, endIndex)];
+		if (start === undefined || end === undefined) return;
+		setDateRange({ start, end });
 	};
 
 	const resetZoom = () => {
@@ -107,364 +115,106 @@ export function RoomAnalytics(props: VoidProps<{ room: RoomT }>) {
 				</div>
 			</div>
 
-			<h3>Overview</h3>
-			<Chart
-				data={analyticsOverview()}
-				field="message_count"
-				name="Message Count"
-				hoveredTime={hoveredTime()}
-				setHoveredTime={setHoveredTime}
-				selectionStartTime={selectionStartTime()}
-				setSelectionStartTime={setSelectionStartTime}
-				onZoom={onZoom}
-			/>
-			<Chart
-				data={analyticsOverview()}
-				field="media_count"
-				name="Media Count"
-				hoveredTime={hoveredTime()}
-				setHoveredTime={setHoveredTime}
-				selectionStartTime={selectionStartTime()}
-				setSelectionStartTime={setSelectionStartTime}
-				onZoom={onZoom}
-			/>
-			<Chart
-				data={analyticsOverview()}
-				field="media_size"
-				name="Media Size"
-				formatter={formatBytes}
-				hoveredTime={hoveredTime()}
-				setHoveredTime={setHoveredTime}
-				selectionStartTime={selectionStartTime()}
-				setSelectionStartTime={setSelectionStartTime}
-				onZoom={onZoom}
-			/>
-			<h3>Members</h3>
-			<Chart
-				data={analyticsMembersCount()}
-				field="count"
-				name="Member Count"
-				hoveredTime={hoveredTime()}
-				setHoveredTime={setHoveredTime}
-				selectionStartTime={selectionStartTime()}
-				setSelectionStartTime={setSelectionStartTime}
-				onZoom={onZoom}
-			/>
-			<Chart
-				data={analyticsMembersJoin()}
-				field="count"
-				name="Members Joined"
-				hoveredTime={hoveredTime()}
-				setHoveredTime={setHoveredTime}
-				selectionStartTime={selectionStartTime()}
-				setSelectionStartTime={setSelectionStartTime}
-				onZoom={onZoom}
-			/>
-			<Chart
-				data={analyticsMembersLeave()}
-				field="count"
-				name="Members Left"
-				hoveredTime={hoveredTime()}
-				setHoveredTime={setHoveredTime}
-				selectionStartTime={selectionStartTime()}
-				setSelectionStartTime={setSelectionStartTime}
-				onZoom={onZoom}
-			/>
+			<Charts onZoom={onZoom}>
+				<h3>Overview</h3>
+				<AnalyticsChart
+					title="Message Count"
+					data={analyticsOverview()}
+					field="message_count"
+					loading={analyticsOverview.loading}
+				/>
+				<AnalyticsChart
+					title="Media Count"
+					data={analyticsOverview()}
+					field="media_count"
+					loading={analyticsOverview.loading}
+				/>
+				<AnalyticsChart
+					title="Media Size"
+					data={analyticsOverview()}
+					field="media_size"
+					format={formatBytes}
+					loading={analyticsOverview.loading}
+				/>
+				<h3>Members</h3>
+				<AnalyticsChart
+					title="Member Count"
+					data={analyticsMembersCount()}
+					field="count"
+					loading={analyticsMembersCount.loading}
+				/>
+				<AnalyticsChart
+					title="Members Joined"
+					data={analyticsMembersJoin()}
+					field="count"
+					loading={analyticsMembersJoin.loading}
+				/>
+				<AnalyticsChart
+					title="Members Left"
+					data={analyticsMembersLeave()}
+					field="count"
+					loading={analyticsMembersLeave.loading}
+				/>
+			</Charts>
 		</>
 	);
 }
 
-type ChartProps<T> = {
+type AnalyticsChartProps<T> = {
+	title: string;
 	data?: Array<{ bucket: string } & T>;
 	field: keyof T;
-	name: string;
-	formatter?: (value: number) => string;
-	hoveredTime: string | null;
-	setHoveredTime: (time: string | null) => void;
-	selectionStartTime: string | null;
-	setSelectionStartTime: (time: string | null) => void;
-	onZoom: (startBucket: string, endBucket: string) => void;
+	format?: (value: number) => string;
+	loading?: boolean;
 };
 
-function Chart<T extends { bucket: string }>(props: ChartProps<T>) {
-	const ctx = useCtx();
-	const data = createMemo(() => props.data ?? []);
-	const points = createMemo(() =>
-		data().map((d) => d[props.field] as unknown as number),
+function AnalyticsChart<T extends { bucket: string }>(
+	props: AnalyticsChartProps<T>,
+) {
+	const buckets = createMemo(
+		() => props.data?.map((point) => point.bucket) ?? [],
 	);
-	const maxHeight = createMemo(() => Math.max(...points(), 1));
-
-	const scaleX = createMemo(
-		() => 600 / (points().length > 1 ? points().length - 1 : 1),
+	const points = createMemo(
+		() => props.data?.map((point) => Number(point[props.field])) ?? [],
 	);
-	const scaleY = createMemo(() => 100 / maxHeight());
-
-	const pathStroke = createMemo(() => {
-		const pts = points();
-		if (pts.length === 0) return "";
-		const sx = scaleX();
-		const sy = scaleY();
-		return [
-			`M 0 ${-pts[0] * sy}`,
-			...pts.slice(1).map((d, i) => `L ${(i + 1) * sx} ${-d * sy}`),
-		].join(" ");
-	});
-
-	const pathFill = createMemo(() => {
-		const pts = points();
-		if (pts.length === 0) return "";
-		const sx = scaleX();
-		const sy = scaleY();
-		return [
-			`M 0 0`,
-			`L 0 ${-pts[0] * sy}`,
-			...pts.slice(1).map((d, i) => `L ${(i + 1) * sx} ${-d * sy}`),
-			`L ${sx * (pts.length - 1)} 0`,
-		].join(" ");
-	});
-
-	const ticks = createMemo(() => {
-		const d = data();
-		if (d.length === 0) return [];
-
-		const count = Math.min(6, d.length);
-		const result = [];
-		const sx = scaleX();
-
-		const getTime = (i: number) => new Date(d[i].bucket).getTime();
-		const startTime = getTime(0);
-		const endTime = getTime(d.length - 1);
-		const duration = endTime - startTime;
-
-		let formatter: (date: Date) => string;
-		if (duration < 48 * 60 * 60 * 1000) {
-			formatter = (date) =>
-				date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-		} else if (duration < 30 * 24 * 60 * 60 * 1000) {
-			formatter = (date) =>
-				date.toLocaleDateString([], { month: "numeric", day: "numeric" });
-		} else {
-			formatter = (date) => date.toLocaleDateString();
-		}
-
-		// Pick distributed points
-		for (let i = 0; i < count; i++) {
-			let index;
-			if (i === 0) index = 0;
-			else if (i === count - 1) index = d.length - 1;
-			else index = Math.floor((i * (d.length - 1)) / (count - 1));
-
-			result.push({
-				x: index * sx,
-				label: formatter(new Date(d[index].bucket)),
-				anchor: i === 0 ? "start" : i === count - 1 ? "end" : "middle",
-			});
-		}
-		return result;
-	});
-
-	let svgRef: SVGSVGElement | undefined;
-
-	const getIndexFromMouseEvent = (e: MouseEvent) => {
-		if (!svgRef || data().length === 0) return null;
-		const rect = svgRef.getBoundingClientRect();
-		const x = e.clientX - rect.left;
-		const ratio = x / rect.width;
-		const index = Math.round(ratio * (data().length - 1));
-		return Math.max(0, Math.min(data().length - 1, index));
-	};
-
-	const onMouseMove = (e: MouseEvent) => {
-		const index = getIndexFromMouseEvent(e);
-		if (index !== null) {
-			const point = data()[index];
-			props.setHoveredTime(point.bucket);
-
-			const val = props.formatter
-				? props.formatter(point[props.field] as unknown as number)
-				: (point[props.field] as unknown as number).toFixed(0);
-
-			ctx.setCursorStats({
-				x: e.clientX,
-				y: e.clientY,
-				label: `${new Date(point.bucket).toLocaleString()}: ${val}`,
-			});
-		}
-	};
-
-	const onMouseLeave = () => {
-		props.setHoveredTime(null);
-		ctx.setCursorStats(null);
-	};
-
-	const onMouseDown = (e: MouseEvent) => {
-		const index = getIndexFromMouseEvent(e);
-		if (index !== null) {
-			props.setSelectionStartTime(data()[index].bucket);
-		}
-	};
-
-	const onMouseUp = (e: MouseEvent) => {
-		if (props.selectionStartTime !== null) {
-			const index = getIndexFromMouseEvent(e);
-			if (index !== null) {
-				const endBucket = data()[index].bucket;
-				if (props.selectionStartTime !== endBucket) {
-					props.onZoom(props.selectionStartTime, endBucket);
-				}
-			}
-			props.setSelectionStartTime(null);
-		}
-	};
-
-	const hoveredIndex = createMemo(() => {
-		if (!props.hoveredTime) return null;
-		const idx = data().findIndex((d) => d.bucket === props.hoveredTime);
-		return idx !== -1 ? idx : null;
-	});
-
-	const selectionStartIndex = createMemo(() => {
-		if (!props.selectionStartTime) return null;
-		const idx = data().findIndex((d) => d.bucket === props.selectionStartTime);
-		return idx !== -1 ? idx : null;
-	});
+	const format = (value: number) => props.format?.(value) ?? value.toFixed(0);
 
 	return (
-		<div class="chart-container">
-			<div class="chart-header">
-				<h4>{props.name}</h4>
-			</div>
-			<div class="chart">
-				<Show when={props.data} fallback="loading...">
-					{(d) => (
-						<Show when={d().length > 0} fallback="No data available">
-							<svg
-								aria-hidden="true"
-								ref={svgRef}
-								viewBox="0 -105 600 120"
-								style="width: 100%; overflow: visible;"
-								onMouseMove={onMouseMove}
-								onMouseLeave={onMouseLeave}
-								onMouseDown={onMouseDown}
-								onMouseUp={onMouseUp}
-							>
-								<defs>
-									<linearGradient
-										id={`chart-gradient-${props.name.replace(/\s+/g, "-")}`}
-										x1="0"
-										x2="0"
-										y1="0"
-										y2="1"
-									>
-										<stop
-											offset="0%"
-											stop-color="oklch(var(--color-link-500) / 0.4)"
-										/>
-										<stop
-											offset="100%"
-											stop-color="oklch(var(--color-link-500) / 0.05)"
-										/>
-									</linearGradient>
-								</defs>
-								{/* Y axis labels */}
-								<For each={[-25, -50, -75, -100]}>
-									{(y) => (
-										<>
-											<line
-												x1="0"
-												x2="600"
-												y1={y}
-												y2={y}
-												stroke="oklch(var(--color-sep-400))"
-												stroke-width="1"
-												stroke-dasharray="4 4"
-											/>
-											<text
-												x="0"
-												y={y - 2}
-												fill="oklch(var(--color-fg5))"
-												font-size="10"
-											>
-												{props.formatter
-													? props.formatter(maxHeight() * (-y / 100))
-													: (maxHeight() * (-y / 100)).toFixed(0)}
-											</text>
-										</>
-									)}
-								</For>
-
-								<path
-									d={pathStroke()}
-									fill="none"
-									stroke="oklch(var(--color-link-500))"
-									stroke-width="2"
-								/>
-								<path
-									d={pathFill()}
-									fill={`url(#chart-gradient-${props.name.replace(
-										/\s+/g,
-										"-",
-									)})`}
-								/>
-
-								{/* Selection overlay */}
-								<Show
-									when={
-										selectionStartIndex() !== null && hoveredIndex() !== null
-									}
-								>
-									<rect
-										x={
-											Math.min(selectionStartIndex()!, hoveredIndex()!) *
-											scaleX()
-										}
-										y="-100"
-										width={
-											Math.abs(selectionStartIndex()! - hoveredIndex()!) *
-											scaleX()
-										}
-										height="100"
-										fill="oklch(var(--color-link-500) / 0.3)"
-									/>
-								</Show>
-
-								{/* Hover line */}
-								<Show when={hoveredIndex() !== null}>
-									<line
-										x1={hoveredIndex()! * scaleX()}
-										x2={hoveredIndex()! * scaleX()}
-										y1="0"
-										y2="-100"
-										stroke="oklch(var(--color-link-500) / 0.6)"
-										stroke-width="1"
-									/>
-									<circle
-										cx={hoveredIndex()! * scaleX()}
-										cy={-points()[hoveredIndex()!] * scaleY()}
-										r="4"
-										fill="oklch(var(--color-link-500))"
-									/>
-								</Show>
-
-								{/* X axis labels */}
-								<For each={ticks()}>
-									{(tick) => (
-										<text
-											x={tick.x}
-											y="15"
-											fill="oklch(var(--color-fg5))"
-											font-size="10"
-											text-anchor={tick.anchor as "start" | "end" | "middle"}
-										>
-											{tick.label}
-										</text>
-									)}
-								</For>
-							</svg>
-						</Show>
-					)}
-				</Show>
-			</div>
-		</div>
+		<Chart
+			title={props.title}
+			ariaLabel={props.title}
+			points={points()}
+			format={format}
+			formatIndex={tickFormatter(buckets())}
+			formatTooltip={(index) => ({
+				label: new Date(buckets()[index]).toLocaleString(),
+				value: format(points()[index]),
+			})}
+			emptyMessage={props.loading ? "Loading..." : "No data available"}
+		/>
 	);
 }
+
+const tickFormatter = (buckets: Array<string>) => {
+	if (buckets.length === 0) return () => "";
+
+	const start = new Date(buckets[0]).getTime();
+	const end = new Date(buckets[buckets.length - 1]).getTime();
+	const duration = end - start;
+
+	if (duration < 48 * HOUR) {
+		return (index: number) =>
+			new Date(buckets[index]).toLocaleTimeString([], {
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+	}
+	if (duration < 30 * 24 * HOUR) {
+		return (index: number) =>
+			new Date(buckets[index]).toLocaleDateString([], {
+				month: "numeric",
+				day: "numeric",
+			});
+	}
+	return (index: number) => new Date(buckets[index]).toLocaleDateString();
+};
