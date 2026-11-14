@@ -4,6 +4,7 @@ import {
 	type Accessor,
 	createContext,
 	createSignal,
+	onCleanup,
 	type ParentComponent,
 	type Setter,
 	useContext,
@@ -35,11 +36,27 @@ export const FormattingToolbarProvider: ParentComponent = (props) => {
 		view: null,
 	});
 
+	let showTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	const clearShowTimeout = () => {
+		if (showTimeout !== undefined) {
+			clearTimeout(showTimeout);
+			showTimeout = undefined;
+		}
+	};
+
+	onCleanup(clearShowTimeout);
+
 	const showToolbar = (reference: ReferenceElement, view: EditorView) => {
-		setToolbar({ visible: true, top: 0, left: 0, reference, view });
+		clearShowTimeout();
+		showTimeout = setTimeout(() => {
+			showTimeout = undefined;
+			setToolbar({ visible: true, top: 0, left: 0, reference, view });
+		}, 100);
 	};
 
 	const hideToolbar = () => {
+		clearShowTimeout();
 		setToolbar((prev) => ({ ...prev, visible: false }));
 	};
 
