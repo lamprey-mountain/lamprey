@@ -43,6 +43,17 @@ import {
 
 const log = logger.for("timeline");
 
+function getInitialScrollTask(anchor: MessageListAnchor): TimelineTask {
+	switch (anchor.type) {
+		case "context":
+			return { type: "SCROLL_MESSAGE", message_id: anchor.message_id };
+		case "backwards":
+			return { type: "SCROLL_BOTTOM" };
+		case "forwards":
+			return { type: "SCROLL_TOP" };
+	}
+}
+
 export const Timeline = (props: ChatProps) => {
 	const messages = useMessages();
 	const timeline = useTimeline();
@@ -255,29 +266,7 @@ export const Timeline = (props: ChatProps) => {
 		}
 	};
 
-	// TODO: queue.push SCROLL_BY
-	timeline.commands.on("scrollBy", (data) => {
-		scrollEl()?.scrollBy({
-			top: data.px,
-			behavior: data.smooth ? "smooth" : "auto",
-		});
-	});
-
 	forwardCommands(virt);
-
-	timeline.commands.on("ackMessage", (data) => {
-		timeline.readMarkerId = data.message_id;
-
-		if (!timeline.messages?.contains(data.message_id)) return;
-
-		// update anchor to rerender
-		// NOTE: maybe i should have a dedicated RERENDER task (with option to skip message fetch?)
-		queue.push({
-			type: "SET_ANCHOR",
-			anchor: timeline.anchor,
-			stabilize_message_id: data.stabilize_message_id,
-		});
-	});
 
 	timeline.commands.listen((e) => {
 		log.debug("command", e.name, e.details ?? "(null)");
@@ -289,20 +278,18 @@ export const Timeline = (props: ChatProps) => {
 
 	// fetch initial messages
 	const init = () => {
-		const a = timeline.anchor;
+		const anchor = timeline.anchor;
 
-		// TODO: use a second queue.push instead of this horrible nested ternary
-		const scroll: TimelineTask =
-			a.type === "context"
-				? { type: "SCROLL_MESSAGE", message_id: a.message_id }
-				: a.type === "backwards"
-					? { type: "SCROLL_BOTTOM" }
-					: { type: "SCROLL_TOP" };
+		queue.push({ type: "SET_ANCHOR", anchor });
 
-		queue.push({ type: "SET_ANCHOR", anchor: timeline.anchor }, scroll);
-
-		// TODO: restore scroll position
-		// timeline.scrollTop;
+		// when reopening a channel the saved position replaces the anchor's default
+		// scroll, which would otherwise override it (and the message centering for
+		// `context` anchors)
+		if (timeline.messages !== null) {
+			queue.push({ type: "SCROLL_EXACT", top: timeline.scrollTop });
+		} else {
+			queue.push(getInitialScrollTask(anchor));
+		}
 	};
 
 	init();
@@ -379,9 +366,30 @@ export const Timeline = (props: ChatProps) => {
 };
 
 // listen for timeline commands and map them to tasks
-// TODO: handle the rest of the commands
 function forwardCommands(virt: TimelineVirtualizer) {
 	const timeline = useTimeline();
+
+	timeline.commands.on("scrollBy", (data) => {
+		virt.queue.push({
+			type: "SCROLL_BY",
+			px: data.px,
+			smooth: data.smooth,
+		});
+	});
+
+	timeline.commands.on("ackMessage", (data) => {
+		timeline.readMarkerId = data.message_id;
+
+		if (!timeline.messages?.contains(data.message_id)) return;
+
+		// update anchor to rerender
+		// NOTE: maybe i should have a dedicated RERENDER task (with option to skip message fetch?)
+		virt.queue.push({
+			type: "SET_ANCHOR",
+			anchor: timeline.anchor,
+			stabilize_message_id: data.stabilize_message_id,
+		});
+	});
 
 	timeline.commands.on("jumpToBottom", (data) => {
 		virt.queue.push(

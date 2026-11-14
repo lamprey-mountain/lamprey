@@ -19,7 +19,6 @@ export const OVERSCAN = 20;
 export const HIGHLIGHT_TIMEOUT = 3000;
 export const STICKY_THRESHOLD = 80;
 
-// TODO: some kind of SCROLL_EXACT task type to scroll to an exact offset?
 // TODO(?): AWAIT_{LAYOUT,PAINT} tasks for sync?
 export type TimelineTask =
 	| {
@@ -31,7 +30,9 @@ export type TimelineTask =
 	| { type: "HIGHLIGHT"; message_id: string }
 	| { type: "SCROLL_TOP"; smooth?: boolean }
 	| { type: "SCROLL_BOTTOM"; smooth?: boolean }
-	| { type: "SCROLL_MESSAGE"; message_id: string; smooth?: boolean };
+	| { type: "SCROLL_MESSAGE"; message_id: string; smooth?: boolean }
+	| { type: "SCROLL_EXACT"; top: number }
+	| { type: "SCROLL_BY"; px: number; smooth?: boolean };
 
 export interface TimelineVirtualizerOptions {
 	scrollEl: Accessor<HTMLElement | null>;
@@ -352,6 +353,24 @@ export const createTimelineVirtualizer = (
 				} else {
 					log.warn("couldn't find message for SCROLL_MESSAGE", task);
 				}
+				break;
+			}
+			case "SCROLL_EXACT": {
+				const el = scrollEl();
+				if (!el) break;
+
+				const maxTop = Math.max(0, el.scrollHeight - el.clientHeight);
+				el.scrollTo({
+					top: Math.min(Math.max(0, task.top), maxTop),
+					behavior: "auto",
+				});
+				break;
+			}
+			case "SCROLL_BY": {
+				scrollEl()?.scrollBy({
+					top: task.px,
+					behavior: task.smooth ? "smooth" : "auto",
+				});
 				break;
 			}
 		}
