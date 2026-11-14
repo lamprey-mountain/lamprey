@@ -5,12 +5,13 @@ import {
 	type Room,
 	SERVER_ROOM_ID,
 } from "sdk";
-import { createSignal, For, Show, type VoidProps } from "solid-js";
+import { createMemo, createSignal, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown.tsx";
 import { Time } from "@/atoms/Time.tsx";
 import { AuditLogSkeleton } from "@/components/features/audit_log/AuditLogSkeleton";
 import {
+	AUDIT_LOG_TYPE_OPTIONS,
 	formatAuditLogEntry,
 	formatChanges,
 	mergeAuditLogEntries,
@@ -18,7 +19,19 @@ import {
 
 export function AuditLog(_props: VoidProps<{ room: Room }>) {
 	const api = useApi();
-	const log = api.auditLog.useList(() => SERVER_ROOM_ID);
+	const [userId, setUserId] = createSignal("");
+	const [action, setAction] = createSignal("");
+	const log = api.auditLog.useList(
+		() => SERVER_ROOM_ID,
+		undefined,
+		() => ({ user_id: userId() || undefined, type: action() || undefined }),
+	);
+	const users = createMemo(() => [
+		{ item: "", label: "all users" },
+		...Array.from(api.users.cache.values())
+			.map((user) => ({ item: user.id, label: user.name }))
+			.sort((a, b) => a.label.localeCompare(b.label)),
+	]);
 	const [isExpanded, setIsExpanded] = createSignal(false);
 	const expanded = new ReactiveSet();
 
@@ -46,29 +59,22 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 	return (
 		<>
 			<h2>audit log</h2>
-			{/* TODO: filter audit log by event type, actor, time range */}
+			{/* TODO: filter audit log by time range */}
 			<div style="display:flex;gap:4px">
 				<div>
 					<h3 class="dim">user</h3>
 					<Dropdown
-						selected=""
-						options={[
-							{ item: "foo", label: "foo" },
-							{ item: "bar", label: "bar" },
-							{ item: "baz", label: "baz" },
-						]}
+						selected={userId()}
+						onSelect={(item) => setUserId(item ?? "")}
+						options={users()}
 					/>
 				</div>
 				<div>
 					<h3 class="dim">action</h3>
 					<Dropdown
-						options={[
-							{ item: "", label: "all actions" },
-							{ item: "MessageDelete", label: "message delete" },
-							{ item: "MessageVersionDelete", label: "message version delete" },
-							{ item: "MessageDeleteBulk", label: "message delete bulk" },
-							{ item: "ReactionPurge", label: "reaction purge" },
-						]}
+						selected={action()}
+						onSelect={(item) => setAction(item ?? "")}
+						options={AUDIT_LOG_TYPE_OPTIONS}
 					/>
 				</div>
 				<div>

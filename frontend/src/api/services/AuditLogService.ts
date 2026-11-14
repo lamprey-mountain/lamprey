@@ -25,6 +25,11 @@ interface AuditLogPaginationResponse {
 	cursor?: string | null;
 }
 
+export interface AuditLogFilters {
+	user_id?: string;
+	type?: string;
+}
+
 export class AuditLogService extends BaseService<AuditLogEntry> {
 	protected cacheName = "audit_log";
 
@@ -81,6 +86,7 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 		list: PaginatedList,
 		cursor?: string,
 		channel_id?: string,
+		filters?: AuditLogFilters,
 	): Promise<void> {
 		if (list.state.isLoading || !list.state.has_more) return;
 		list.setLoading(true);
@@ -95,6 +101,8 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 							limit: 100,
 							from: cursor,
 							channel_id: channel_id ? [channel_id] : undefined,
+							user_id: filters?.user_id ? [filters.user_id] : undefined,
+							type: filters?.type ? [filters.type] : undefined,
 						},
 					},
 				}),
@@ -111,6 +119,7 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 		user_id: string,
 		list: PaginatedList,
 		cursor?: string,
+		filters?: AuditLogFilters,
 	): Promise<void> {
 		if (list.state.isLoading || !list.state.has_more) return;
 		list.setLoading(true);
@@ -120,7 +129,13 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 				this.client.http.GET("/api/v1/user/{user_id}/audit-logs", {
 					params: {
 						path: { user_id },
-						query: { dir: "b", limit: 100, from: cursor },
+						query: {
+							dir: "b",
+							limit: 100,
+							from: cursor,
+							user_id: filters?.user_id ? [filters.user_id] : undefined,
+							type: filters?.type ? [filters.type] : undefined,
+						},
 					},
 				}),
 			);
@@ -135,17 +150,24 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 	useList(
 		room_id: () => string | undefined,
 		channel_id?: () => string | undefined,
+		filters?: () => AuditLogFilters | undefined,
 	): Resource<PaginatedList | undefined> {
 		const [resource] = createResource(
 			() => {
 				const rid = room_id();
 				if (!rid) return undefined;
-				return { room_id: rid, channel_id: channel_id?.() };
+				const f = filters?.();
+				return {
+					room_id: rid,
+					channel_id: channel_id?.(),
+					user_id: f?.user_id,
+					type: f?.type,
+				};
 			},
 			async (ids) => {
 				if (!ids) return undefined;
 
-				const key = `room:${ids.room_id}:${ids.channel_id ?? ""}`;
+				const key = `room:${ids.room_id}:${ids.channel_id ?? ""}:${ids.user_id ?? ""}:${ids.type ?? ""}`;
 				let list = this._lists.get(key);
 				if (!list) {
 					list = new PaginatedList();
@@ -158,6 +180,7 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 						list,
 						undefined,
 						ids.channel_id,
+						{ user_id: ids.user_id, type: ids.type },
 					);
 				}
 
@@ -170,13 +193,19 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 
 	useUserList(
 		user_id: () => string | undefined,
+		filters?: () => AuditLogFilters | undefined,
 	): Resource<PaginatedList | undefined> {
 		const [resource] = createResource(
-			() => user_id(),
-			async (uid) => {
+			() => {
+				const uid = user_id();
 				if (!uid) return undefined;
+				const f = filters?.();
+				return { user_id: uid, actor_id: f?.user_id, type: f?.type };
+			},
+			async (params) => {
+				if (!params) return undefined;
 
-				const key = `user:${uid}`;
+				const key = `user:${params.user_id}:${params.actor_id ?? ""}:${params.type ?? ""}`;
 				let list = this._lists.get(key);
 				if (!list) {
 					list = new PaginatedList();
@@ -184,7 +213,10 @@ export class AuditLogService extends BaseService<AuditLogEntry> {
 				}
 
 				if (list.state.ids.length === 0 && !list.state.isLoading) {
-					await this.fetchUserPage(uid, list);
+					await this.fetchUserPage(params.user_id, list, undefined, {
+						user_id: params.actor_id,
+						type: params.type,
+					});
 				}
 
 				return list;
