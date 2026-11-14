@@ -196,24 +196,23 @@
 	}
 }
 
-.pinned-threads-heading {
-	font-size: 1rem;
-	margin-top: 8px;
-}
+.pinned-thread-group {
+	list-style: none;
 
-.pinned-thread-list {
-	margin-bottom: 8px;
+	& > .thread-group {
+		border-color: $link-400;
+	}
 
-	& > li {
+	.thread-group > li {
 		position: relative;
 	}
 
-	& > li.dragging {
+	.thread-group > li.dragging {
 		opacity: 0.5;
 	}
 
-	& > li.drop-before::before,
-	& > li.drop-after::after {
+	.thread-group > li.drop-before::before,
+	.thread-group > li.drop-after::after {
 		content: "";
 		position: absolute;
 		left: 0;
@@ -221,13 +220,14 @@
 		height: 2px;
 		background: $link-400;
 		pointer-events: none;
+		z-index: 1;
 	}
 
-	& > li.drop-before::before {
+	.thread-group > li.drop-before::before {
 		top: -1px;
 	}
 
-	& > li.drop-after::after {
+	.thread-group > li.drop-after::after {
 		bottom: -1px;
 	}
 }

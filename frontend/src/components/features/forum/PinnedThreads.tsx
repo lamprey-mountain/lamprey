@@ -1,5 +1,5 @@
 import type { Channel } from "sdk";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 import { useChannels } from "@/api";
 import { ThreadCard } from "./ThreadCard";
 
@@ -29,13 +29,6 @@ export function PinnedThreads(props: {
 	const [target, setTarget] = createSignal<DropTarget | null>(null);
 
 	const pinnedIds = () => props.channel.pinned_thread_ids ?? [];
-
-	const previewIds = createMemo(() => {
-		const fromId = dragging();
-		const dropTarget = target();
-		if (!fromId || !dropTarget) return pinnedIds();
-		return reorder(pinnedIds(), fromId, dropTarget);
-	});
 
 	const threadId = (e: DragEvent) =>
 		(e.currentTarget as HTMLElement).dataset.threadId;
@@ -111,25 +104,26 @@ export function PinnedThreads(props: {
 
 	return (
 		<Show when={pinnedIds().length > 0}>
-			<h3 class="pinned-threads-heading">pinned threads</h3>
-			<ul class="pinned-thread-list">
-				<For each={previewIds()}>
-					{(id) => (
-						<PinnedThreadItem
-							id={id}
-							openInSidebar={props.openInSidebar}
-							draggable={props.canManage}
-							dragging={dragging() === id}
-							dropBefore={target()?.id === id && !target()?.after}
-							dropAfter={target()?.id === id && target()?.after === true}
-							onDragStart={handleDragStart}
-							onDragOver={handleDragOver}
-							onDrop={handleDrop}
-							onDragEnd={handleDragEnd}
-						/>
-					)}
-				</For>
-			</ul>
+			<li class="pinned-thread-group">
+				<ul class="thread-group">
+					<For each={pinnedIds()}>
+						{(id) => (
+							<PinnedThreadItem
+								id={id}
+								openInSidebar={props.openInSidebar}
+								draggable={props.canManage}
+								dragging={dragging() === id}
+								dropBefore={target()?.id === id && !target()?.after}
+								dropAfter={target()?.id === id && target()?.after === true}
+								onDragStart={handleDragStart}
+								onDragOver={handleDragOver}
+								onDrop={handleDrop}
+								onDragEnd={handleDragEnd}
+							/>
+						)}
+					</For>
+				</ul>
+			</li>
 		</Show>
 	);
 }

@@ -341,13 +341,12 @@ export const Forum = (props: { channel: Channel }) => {
 				</div>
 			</div>
 
-			<PinnedThreads
-				channel={props.channel}
-				openInSidebar={openInSidebar()}
-				canManage={perms.has("ThreadManage")}
-			/>
-
 			<ul class="thread-list">
+				<PinnedThreads
+					channel={props.channel}
+					openInSidebar={openInSidebar()}
+					canManage={perms.has("ThreadManage")}
+				/>
 				<For each={threads().active}>
 					{(thread) => (
 						<li>
