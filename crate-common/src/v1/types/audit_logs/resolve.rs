@@ -32,6 +32,26 @@ impl AuditLogResolve {
             self.applications.insert(app_id);
         }
 
+        // pinned threads should be resolved so their names can be rendered
+        if let AuditLogEntryType::ChannelCreate { changes, .. }
+        | AuditLogEntryType::ChannelUpdate { changes, .. } = &entry.ty
+        {
+            for change in changes {
+                if change.key != "pinned_thread_ids" {
+                    continue;
+                }
+
+                for value in [&change.old, &change.new] {
+                    let Some(ids) = value.as_array() else { continue };
+                    for id in ids {
+                        if let Ok(id) = serde_json::from_value::<ChannelId>(id.clone()) {
+                            self.threads.insert(id);
+                        }
+                    }
+                }
+            }
+        }
+
         match &entry.ty {
             AuditLogEntryType::ChannelCreate {
                 channel_id,

@@ -691,6 +691,54 @@ export function formatChanges(
 							: t("audit_log.changes.channel_unmarked_nsfw")}
 					</li>,
 				);
+			} else if (
+				(ent.type === "ChannelUpdate" || ent.type === "ChannelCreate") &&
+				c.key === "pinned_thread_ids"
+			) {
+				// order changes are reorders, not pins/unpins, so compare as sets
+				const oldIds = (c.old ?? []) as Array<string>;
+				const newIds = (c.new ?? []) as Array<string>;
+				const oldSet = new Set(oldIds);
+				const newSet = new Set(newIds);
+				const added = newIds.filter((id) => !oldSet.has(id));
+				const removed = oldIds.filter((id) => !newSet.has(id));
+				for (const thread_id of added) {
+					formatted.push(
+						<li>
+							{t("audit_log.changes.thread_pinned", {
+								thread_name: resolveName(
+									api2,
+									entryRoom,
+									thread_id,
+									"channel",
+								),
+							})}
+						</li>,
+					);
+				}
+				for (const thread_id of removed) {
+					formatted.push(
+						<li>
+							{t("audit_log.changes.thread_unpinned", {
+								thread_name: resolveName(
+									api2,
+									entryRoom,
+									thread_id,
+									"channel",
+								),
+							})}
+						</li>,
+					);
+				}
+				if (
+					added.length === 0 &&
+					removed.length === 0 &&
+					oldIds.some((id, index) => newIds[index] !== id)
+				) {
+					formatted.push(
+						<li>{t("audit_log.changes.thread_pins_reordered")}</li>,
+					);
+				}
 			} else if (ent.type === "RoomUpdate" && c.key === "icon") {
 				if (c.old && c.new) {
 					formatted.push(<li>{t("audit_log.changes.icon_changed")}</li>);

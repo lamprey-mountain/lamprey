@@ -25,6 +25,7 @@ pub fn calculate_audit_log_entry_from_create(channel: &Channel) -> AuditLogEntry
             &channel.default_slowmode_message,
         )
         .add("tags", &channel.tags)
+        .add("pinned_thread_ids", &channel.pinned_thread_ids)
         .add("icon", &channel.icon)
         .add("locked", &channel.locked);
 
@@ -112,6 +113,11 @@ pub fn calculate_audit_log_entry_from_update(old: &Channel, new: &Channel) -> Au
             &new.default_slowmode_message,
         )
         .change("tags", &old.tags, &new.tags)
+        .change(
+            "pinned_thread_ids",
+            &old.pinned_thread_ids,
+            &new.pinned_thread_ids,
+        )
         .change("icon", &old.icon, &new.icon)
         .change("locked", &old.locked, &new.locked)
         .change("archived", &old.is_archived(), &new.is_archived());
