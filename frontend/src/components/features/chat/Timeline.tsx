@@ -90,15 +90,15 @@ export const Timeline = (props: ChatProps) => {
 	// any real interaction lets user ack again
 	const clearAutoReadSuppression = () => {
 		timeline.autoReadSuppressed = false;
+		virt.clearScrollState();
 	};
 
 	const ro = new ResizeObserver((entries) => {
-		let scrollElResized = false;
-		let delta = 0;
+		let changed = false;
 
 		for (const entry of entries) {
 			if (entry.target === scrollEl()) {
-				scrollElResized = true;
+				changed = true;
 				continue;
 			}
 
@@ -111,16 +111,13 @@ export const Timeline = (props: ChatProps) => {
 			const heightNew =
 				entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
 			if (heightOld !== heightNew) {
-				delta += heightNew - (heightOld ?? 0);
+				changed = true;
 				virt.measurements.set(key, heightNew);
 			}
 		}
 
-		if (delta !== 0 || scrollElResized) {
-			queue.push({
-				type: "RESIZE",
-				delta,
-			});
+		if (changed) {
+			queue.pushPriority({ type: "RESIZE" });
 		}
 	});
 
@@ -172,6 +169,24 @@ export const Timeline = (props: ChatProps) => {
 		Math.max(50, Math.ceil(globalThis.innerHeight / 20) * 3);
 	const calculatePaginateLen = () => Math.floor(calculateSliceLen() / 3);
 
+	const anchorKey = (anchor: MessageListAnchor) =>
+		`${anchor.type}:${anchor.limit}:${anchor.message_id ?? ""}`;
+
+	const pushAnchor = (anchor: MessageListAnchor) => {
+		const key = anchorKey(anchor);
+		if (
+			queue.some(
+				(task) =>
+					task.type === "SET_ANCHOR" && anchorKey(task.anchor) === key,
+			)
+		) {
+			return false;
+		}
+
+		queue.push({ type: "SET_ANCHOR", anchor });
+		return true;
+	};
+
 	// handle pagination on scroll
 	// return true if pagination was triggered
 	const attemptPagination = () => {
@@ -194,8 +209,7 @@ export const Timeline = (props: ChatProps) => {
 					limit: calculateSliceLen(),
 					message_id: msgs.items[idx]?.id,
 				};
-				queue.push({ type: "SET_ANCHOR", anchor });
-				return true;
+				return pushAnchor(anchor);
 			}
 		} else if (atBottom) {
 			if (msgs.has_forward) {
@@ -206,8 +220,7 @@ export const Timeline = (props: ChatProps) => {
 					limit: calculateSliceLen(),
 					message_id: msgs.items[idx]?.id,
 				};
-				queue.push({ type: "SET_ANCHOR", anchor });
-				return true;
+				return pushAnchor(anchor);
 			}
 		}
 
@@ -224,7 +237,8 @@ export const Timeline = (props: ChatProps) => {
 
 		timeline.scrollTop = el.scrollTop;
 
-		if (!queue.active) {
+		// a settling smooth scroll still shouldn't prevent pagination
+		if (!queue.active || virt.scrollState.settling) {
 			attemptPagination();
 		}
 
@@ -392,6 +406,7 @@ function forwardCommands(virt: TimelineVirtualizer) {
 	});
 
 	timeline.commands.on("jumpToBottom", (data) => {
+		virt.beginJump();
 		virt.queue.push(
 			{ type: "SET_ANCHOR", anchor: { type: "backwards", limit: 50 } },
 			{
@@ -402,6 +417,7 @@ function forwardCommands(virt: TimelineVirtualizer) {
 	});
 
 	timeline.commands.on("jumpToTop", (data) => {
+		virt.beginJump();
 		virt.queue.push(
 			{ type: "SET_ANCHOR", anchor: { type: "forwards", limit: 50 } },
 			{
@@ -412,6 +428,7 @@ function forwardCommands(virt: TimelineVirtualizer) {
 	});
 
 	timeline.commands.on("jumpToMessage", (data) => {
+		virt.beginJump();
 		virt.queue.push(
 			{
 				type: "SET_ANCHOR",
@@ -421,6 +438,7 @@ function forwardCommands(virt: TimelineVirtualizer) {
 					message_id: data.message_id,
 				},
 			},
+			{ type: "WAIT", frames: 2 },
 			{
 				type: "SCROLL_MESSAGE",
 				message_id: data.message_id,

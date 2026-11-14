@@ -1,4 +1,4 @@
-import { type Accessor, createSignal } from "solid-js";
+import { type Accessor, createSignal, onCleanup } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import { type MessageListAnchor, useMessages } from "@/api";
 import type { ChannelT } from "@/types";
@@ -18,6 +18,16 @@ export const PAGINATE_THRESHOLD = 800; // TODO: calculate dynamically
 export const OVERSCAN = 20;
 export const HIGHLIGHT_TIMEOUT = 3000;
 export const STICKY_THRESHOLD = 80;
+/** how long a scroll target is kept alive after landing on it */
+export const SCROLL_TARGET_TTL = 500;
+/** quiet time after the last scroll event that counts as "settled" */
+export const SCROLL_SETTLE_IDLE_MS = 100;
+/** how long to wait for a scroll to start before giving up on it */
+export const SCROLL_SETTLE_START_MS = 100;
+/** hard cap for waiting on a single scroll to settle */
+export const SCROLL_SETTLE_TIMEOUT_MS = 1000;
+/** fallback for WAIT when requestAnimationFrame is paused (hidden tab) */
+export const WAIT_FALLBACK_MS = 250;
 
 // TODO(?): AWAIT_{LAYOUT,PAINT} tasks for sync?
 export type TimelineTask =
@@ -26,17 +36,27 @@ export type TimelineTask =
 			anchor: MessageListAnchor;
 			stabilize_message_id?: string;
 	  }
-	| { type: "RESIZE"; delta: number }
+	| { type: "RESIZE" }
 	| { type: "HIGHLIGHT"; message_id: string }
 	| { type: "SCROLL_TOP"; smooth?: boolean }
 	| { type: "SCROLL_BOTTOM"; smooth?: boolean }
 	| { type: "SCROLL_MESSAGE"; message_id: string; smooth?: boolean }
 	| { type: "SCROLL_EXACT"; top: number }
-	| { type: "SCROLL_BY"; px: number; smooth?: boolean };
+	| { type: "SCROLL_BY"; px: number; smooth?: boolean }
+	| { type: "WAIT"; frames?: number };
 
 export interface TimelineVirtualizerOptions {
 	scrollEl: Accessor<HTMLElement | null>;
 	channel: ChannelT;
+}
+
+export interface TimelineScrollState {
+	/** a jump is queued: suppress scroll compensation from height changes */
+	pending: boolean;
+	/** a smooth scroll is in flight: pagination may still be requested */
+	settling: boolean;
+	/** message to re-center on after height changes */
+	target: null | { message_id: string };
 }
 
 export interface TimelineVirtualizer {
@@ -46,6 +66,11 @@ export interface TimelineVirtualizer {
 	accessTotalSize: Accessor<number>;
 	accessVisibleRows: Accessor<VirtualItem[]>;
 	measurements: Map<string, number>;
+	scrollState: TimelineScrollState;
+	/** mark a jump as queued (suppresses resize compensation) */
+	beginJump: () => void;
+	/** drop pending/target scroll state, e.g. when the user takes over */
+	clearScrollState: () => void;
 	refreshVisibleRows: () => void;
 	getIndexAtScrollTop: (scrollTop: number) => number;
 }
@@ -58,6 +83,62 @@ export interface HighlighterState {
 }
 
 const log = logger.for("timeline/virtualizer");
+
+type ScrollSettleReason = "scrollend" | "idle" | "timeout" | "no-movement";
+
+/**
+ * resolve once a scroll (usually smooth) has stopped moving. resolves early with
+ * "no-movement" if nothing starts within SCROLL_SETTLE_START_MS.
+ */
+function waitForScrollSettle(el: HTMLElement): Promise<ScrollSettleReason> {
+	return new Promise((resolve) => {
+		let started = false;
+		let settled = false;
+		let idleTimer: number | undefined;
+		let startTimer: number | undefined;
+		let timeoutTimer: number | undefined;
+
+		const finish = (reason: ScrollSettleReason) => {
+			if (settled) return;
+			settled = true;
+			el.removeEventListener("scrollend", onScrollEnd);
+			el.removeEventListener("scroll", onScroll);
+			if (idleTimer !== undefined) window.clearTimeout(idleTimer);
+			if (startTimer !== undefined) window.clearTimeout(startTimer);
+			if (timeoutTimer !== undefined) window.clearTimeout(timeoutTimer);
+			resolve(reason);
+		};
+
+		const onScroll = () => {
+			if (settled) return;
+			started = true;
+			if (startTimer !== undefined) window.clearTimeout(startTimer);
+			startTimer = undefined;
+			if (idleTimer !== undefined) window.clearTimeout(idleTimer);
+			// fallback for engines without scrollend
+			idleTimer = window.setTimeout(
+				() => finish("idle"),
+				SCROLL_SETTLE_IDLE_MS,
+			);
+		};
+
+		// ignore stale scrollend events from a previous scroll
+		const onScrollEnd = () => {
+			if (started) finish("scrollend");
+		};
+
+		el.addEventListener("scrollend", onScrollEnd);
+		el.addEventListener("scroll", onScroll, { passive: true });
+		startTimer = window.setTimeout(
+			() => finish("no-movement"),
+			SCROLL_SETTLE_START_MS,
+		);
+		timeoutTimer = window.setTimeout(
+			() => finish("timeout"),
+			SCROLL_SETTLE_TIMEOUT_MS,
+		);
+	});
+}
 
 export const createTimelineHighlighter = (): HighlighterState => {
 	const [pending, setPending] = createSignal<string | null>(null);
@@ -100,6 +181,28 @@ export const createTimelineVirtualizer = (
 	const messages = useMessages();
 	const timeline = useTimeline();
 	const highlighter = createTimelineHighlighter();
+	const scrollState: TimelineScrollState = {
+		pending: false,
+		settling: false,
+		target: null,
+	};
+	let scrollTargetTimer: null | number = null;
+	const clearScrollTarget = () => {
+		scrollState.target = null;
+		if (scrollTargetTimer !== null) {
+			clearTimeout(scrollTargetTimer);
+			scrollTargetTimer = null;
+		}
+	};
+	const clearScrollState = () => {
+		scrollState.pending = false;
+		clearScrollTarget();
+	};
+	const beginJump = () => {
+		scrollState.pending = true;
+		clearScrollTarget();
+	};
+	onCleanup(clearScrollTarget);
 
 	const [loading, setLoading] = createSignal(true);
 	const [totalSize, setTotalSize] = createSignal(0);
@@ -107,6 +210,15 @@ export const createTimelineVirtualizer = (
 
 	let hasLoaded = false;
 	const measurements = new Map<string, number>();
+
+	const settleScroll = async (el: HTMLElement) => {
+		scrollState.settling = true;
+		try {
+			return await waitForScrollSettle(el);
+		} finally {
+			scrollState.settling = false;
+		}
+	};
 
 	const getSize = (item: TimelineItemT2) => {
 		let s = measurements.get(item.key);
@@ -191,6 +303,15 @@ export const createTimelineVirtualizer = (
 	// TEMP: compat
 	const scrollEl = options.scrollEl;
 
+	const indexAtScrollTop = (layout: VirtualizerLayout, scrollTop: number) => {
+		const { offsets } = layout;
+		if (offsets.length === 0) return -1;
+
+		let idx = offsets.findIndex((o) => o > scrollTop);
+		idx = idx === -1 ? offsets.length - 1 : idx - 1;
+		return Math.max(0, idx);
+	};
+
 	const queue = new Queue(async (task: TimelineTask) => {
 		log.debug("execute task", task);
 
@@ -201,8 +322,6 @@ export const createTimelineVirtualizer = (
 				// 3. recalculate/update range
 				// 4. wait for solidjs to update the dom
 				// 5. stabilize scroll position
-
-				highlighter.reset();
 
 				const el = scrollEl();
 				if (!el) return;
@@ -237,6 +356,9 @@ export const createTimelineVirtualizer = (
 				// or maybe i should pick the center item if possible?
 
 				// PERF: use binary search
+				// read the old offset here, not before the fetch: RESIZE tasks that ran
+				// meanwhile already compensated their own height changes and updated
+				// cachedLayout, so counting them again would double the correction
 				const refIdxOld = refKey
 					? timeline.items.findIndex((x) => x.key === refKey)
 					: -1;
@@ -288,21 +410,61 @@ export const createTimelineVirtualizer = (
 				const el = scrollEl();
 				if (!el) return;
 
-				el.scrollBy({ top: task.delta, behavior: "instant" });
-
-				const isStuck =
-					el.scrollHeight - el.scrollTop - el.clientHeight < STICKY_THRESHOLD;
+				// keep the top visible item pinned so height changes above the
+				// viewport don't shift content. derived from the layout diff, so it
+				// is idempotent and never double counts SET_ANCHOR's correction
+				const prevLayout = cachedLayout;
+				const prevIdx = indexAtScrollTop(prevLayout, el.scrollTop);
+				const refKey = timeline.items[prevIdx]?.key;
+				const refOffsetOld =
+					prevIdx === -1 ? undefined : prevLayout.offsets[prevIdx];
 
 				cachedLayout = calculateLayout();
 				cachedRange = calculateRange();
 				setTotalSize(cachedLayout.totalSize);
 				setVisibleRows(reconcile(cachedRange, { key: "key", merge: true }));
 
+				const compensate = () => {
+					if (refKey === undefined || refOffsetOld === undefined) return;
+					const nextIdx = timeline.items.findIndex((x) => x.key === refKey);
+					if (nextIdx !== -1) {
+						el.scrollTop += cachedLayout.offsets[nextIdx] - refOffsetOld;
+					}
+				};
+
+				if (scrollState.pending) {
+					// a queued jump owns the scroll position
+				} else if (scrollState.target) {
+					// keep the jumped-to message centered as heights change
+					const target = scrollState.target;
+					const idx = timeline.items.findIndex(
+						(x) => x.type === "message" && x.message.id === target.message_id,
+					);
+					if (idx === -1) {
+						log.warn("RESIZE lost its scroll target", target);
+						clearScrollTarget();
+						compensate();
+					} else {
+						const vh = el.clientHeight;
+						const targetTop = Math.max(
+							0,
+							cachedLayout.offsets[idx] - vh / 2 + cachedLayout.sizes[idx] / 2,
+						);
+						if (Math.abs(targetTop - el.scrollTop) > 1) {
+							el.scrollTo({ top: targetTop, behavior: "instant" });
+						}
+					}
+				} else {
+					compensate();
+				}
+
 				// TODO: if an element resizes below the current viewport, don't call scrollBy()
 
 				// maybe overflow-anchor can keep stuff stable
 				// maybe i'd need to disable overflow-anchor during SET_ANCHOR
 
+				const isStuck =
+					el.scrollHeight - el.scrollTop - el.clientHeight < STICKY_THRESHOLD;
 				if (isStuck) {
 					el.scrollTo({ top: el.scrollHeight, behavior: "instant" });
 				}
@@ -314,44 +476,84 @@ export const createTimelineVirtualizer = (
 				break;
 			}
 			case "SCROLL_TOP": {
-				scrollEl()?.scrollTo({
-					top: 0,
-					behavior: task.smooth ? "smooth" : "auto",
-				});
+				const el = scrollEl();
+				if (el) {
+					clearScrollState();
+					el.scrollTo({
+						top: 0,
+						behavior: task.smooth ? "smooth" : "auto",
+					});
+					if (task.smooth) await settleScroll(el);
+				}
 				break;
 			}
 			case "SCROLL_BOTTOM": {
 				const el = scrollEl();
 				if (el) {
+					clearScrollState();
 					el.scrollTo({
 						top: el.scrollHeight,
 						behavior: task.smooth ? "smooth" : "auto",
 					});
+					if (task.smooth) await settleScroll(el);
 				}
 				break;
 			}
 			case "SCROLL_MESSAGE": {
+				clearScrollState();
 				// PERF: binary search, check timeline.messages (MessageRange)
 				const idx = timeline.items.findIndex(
 					(x) => x.type === "message" && x.message.id === task.message_id,
 				);
-				if (idx !== -1) {
-					const el = options.scrollEl();
-					if (!el) break;
+				if (idx === -1) {
+					log.warn("couldn't find message for SCROLL_MESSAGE", task);
+					break;
+				}
 
-					const { offsets, sizes } = calculateLayout();
-					// align message to center of view
-					const vh = el.clientHeight;
-					const itemOffset = offsets[idx];
-					const itemSize = sizes[idx];
-					const targetTop = Math.max(0, itemOffset - vh / 2 + itemSize / 2);
+				const el = options.scrollEl();
+				if (!el) break;
 
-					scrollEl()?.scrollTo({
+				const { offsets, sizes } = calculateLayout();
+				// align message to center of view
+				const vh = el.clientHeight;
+				const itemOffset = offsets[idx];
+				const itemSize = sizes[idx];
+				const targetTop = Math.max(0, itemOffset - vh / 2 + itemSize / 2);
+
+				if (Math.abs(targetTop - el.scrollTop) > 1) {
+					// track the target so later height changes re-center it instead of
+					// pushing it out of view
+					scrollState.target = { message_id: task.message_id };
+
+					el.scrollTo({
 						top: targetTop,
 						behavior: task.smooth ? "smooth" : "auto",
 					});
-				} else {
-					log.warn("couldn't find message for SCROLL_MESSAGE", task);
+
+					if (task.smooth) {
+						let reason = await settleScroll(el);
+						if (reason === "no-movement") {
+							el.scrollTo({ top: targetTop, behavior: "smooth" });
+							reason = await settleScroll(el);
+						}
+						if (reason === "no-movement") {
+							log.warn(
+								"SCROLL_MESSAGE smooth scroll did not start; scrolling instantly",
+								{
+									message_id: task.message_id,
+									scrollTop: el.scrollTop,
+									targetTop,
+								},
+							);
+							el.scrollTo({ top: targetTop, behavior: "auto" });
+						}
+					}
+
+					if (scrollTargetTimer !== null) clearTimeout(scrollTargetTimer);
+					scrollTargetTimer = window.setTimeout(() => {
+						scrollTargetTimer = null;
+						scrollState.target = null;
+					}, SCROLL_TARGET_TTL);
 				}
 				break;
 			}
@@ -359,6 +561,7 @@ export const createTimelineVirtualizer = (
 				const el = scrollEl();
 				if (!el) break;
 
+				clearScrollState();
 				const maxTop = Math.max(0, el.scrollHeight - el.clientHeight);
 				el.scrollTo({
 					top: Math.min(Math.max(0, task.top), maxTop),
@@ -367,10 +570,37 @@ export const createTimelineVirtualizer = (
 				break;
 			}
 			case "SCROLL_BY": {
-				scrollEl()?.scrollBy({
-					top: task.px,
-					behavior: task.smooth ? "smooth" : "auto",
+				const el = scrollEl();
+				if (el) {
+					clearScrollState();
+					el.scrollBy({
+						top: task.px,
+						behavior: task.smooth ? "smooth" : "auto",
+					});
+					if (task.smooth) await settleScroll(el);
+				}
+				break;
+			}
+			case "WAIT": {
+				// let the browser commit pending dom updates before continuing
+				const frames = Math.max(1, task.frames ?? 1);
+				await new Promise<void>((resolve) => {
+					let remaining = frames;
+					let timer: number | undefined;
+					const finish = () => {
+						if (timer !== undefined) window.clearTimeout(timer);
+						resolve();
+					};
+					const step = () => {
+						remaining--;
+						if (remaining <= 0) finish();
+						else requestAnimationFrame(step);
+					};
+					requestAnimationFrame(step);
+					// hidden tabs pause rAF: don't stall the queue forever
+					timer = window.setTimeout(finish, WAIT_FALLBACK_MS);
 				});
+				await new Promise<void>((r) => window.setTimeout(r, 0));
 				break;
 			}
 		}
@@ -383,16 +613,14 @@ export const createTimelineVirtualizer = (
 		accessTotalSize: totalSize,
 		accessVisibleRows: () => visibleRows,
 		measurements,
+		scrollState,
+		beginJump,
+		clearScrollState,
 		refreshVisibleRows: () => {
 			// PERF: skip updating visible rows if cachedRange didn't change
 			cachedRange = calculateRange();
 			setVisibleRows(reconcile(cachedRange, { key: "key", merge: true }));
 		},
-		getIndexAtScrollTop: (st: number): number => {
-			const { offsets } = cachedLayout;
-			let start = offsets.findIndex((o) => o > st);
-			start = start === -1 ? offsets.length - 1 : start - 1;
-			return Math.max(0, start);
-		},
+		getIndexAtScrollTop: (st: number) => indexAtScrollTop(cachedLayout, st),
 	};
 };
