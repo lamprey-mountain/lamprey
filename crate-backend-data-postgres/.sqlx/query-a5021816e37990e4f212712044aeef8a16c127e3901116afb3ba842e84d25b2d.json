@@ -6,12 +6,24 @@
       {
         "ordinal": 0,
         "name": "password_hash",
-        "type_info": "Bytea"
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "usr",
+            "name": "password_hash"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "password_salt",
-        "type_info": "Bytea"
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "usr",
+            "name": "password_salt"
+          }
+        }
       }
     ],
     "parameters": {

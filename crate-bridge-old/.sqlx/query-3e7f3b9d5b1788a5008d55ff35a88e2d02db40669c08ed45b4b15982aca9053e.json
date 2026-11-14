@@ -6,7 +6,13 @@
       {
         "name": "discord_role_id",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "discord_role_mapping",
+            "name": "discord_role_id"
+          }
+        }
       }
     ],
     "parameters": {

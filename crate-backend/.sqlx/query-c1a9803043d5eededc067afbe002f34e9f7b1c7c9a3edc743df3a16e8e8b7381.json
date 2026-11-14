@@ -6,12 +6,24 @@
       {
         "ordinal": 0,
         "name": "components",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "components"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "version_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "version_id"
+          }
+        }
       }
     ],
     "parameters": {

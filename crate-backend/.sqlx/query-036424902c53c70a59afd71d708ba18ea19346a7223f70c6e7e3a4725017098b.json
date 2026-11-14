@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            UPDATE application a SET deleted_at = $1\n            WHERE a.owner_id = $2\n              AND a.deleted_at IS NULL\n              AND NOT EXISTS (\n                SELECT 1\n                FROM oauth_refresh_token rt\n                JOIN session s ON s.id = rt.session_id\n                WHERE s.application_id = a.id\n              )\n              AND (\n                (a.oauth_last_token_issued_at IS NULL\n                  AND a.created_at < $1::timestamp - interval '24 hours')\n                OR (a.oauth_last_token_issued_at IS NOT NULL\n                  AND a.oauth_last_token_issued_at < $1::timestamp - interval '60 days')\n              )\n            RETURNING a.id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamp",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "036424902c53c70a59afd71d708ba18ea19346a7223f70c6e7e3a4725017098b"
+}

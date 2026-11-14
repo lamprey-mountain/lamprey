@@ -6,17 +6,35 @@
       {
         "ordinal": 0,
         "name": "target_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "search_reindex_queue",
+            "name": "target_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "target_type",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "search_reindex_queue",
+            "name": "target_type"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "last_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "search_reindex_queue",
+            "name": "last_id"
+          }
+        }
       }
     ],
     "parameters": {

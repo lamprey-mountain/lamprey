@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            insert into application (id, owner_id, name, description, public, oauth_secret, oauth_redirect_uris, oauth_confidential, url_homepage, url_terms_of_service, url_privacy_policy)\n            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Bool",
+        "Text",
+        "Jsonb",
+        "Bool",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fa7c682d993489ffebbab14f33ab8252342a7b34bc876f9b6777936e8490d6ee"
+}

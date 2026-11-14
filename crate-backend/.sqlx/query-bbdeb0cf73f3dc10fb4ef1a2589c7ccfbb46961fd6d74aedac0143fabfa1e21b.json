@@ -1,0 +1,497 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n    t.id,\n    t.room_id,\n    t.creator_id,\n    t.owner_id,\n    t.version_id,\n    t.name,\n    t.description,\n    t.auto_name,\n    t.auto_description,\n    t.icon,\n    t.url,\n    t.type as \"ty: _\",\n    t.nsfw,\n    t.latest_seq,\n    t.locked,\n    t.locked_until,\n    t.locked_roles,\n    t.archived_at,\n    t.deleted_at,\n    t.parent_id,\n    t.position,\n    t.bitrate,\n    t.user_limit,\n    t.invitable,\n    t.auto_archive_duration,\n    t.default_auto_archive_duration,\n    t.slowmode_thread,\n    t.slowmode_message,\n    t.default_slowmode_message,\n    t.last_activity_at,\n    t.last_pin_timestamp,\n    (SELECT coalesce(COUNT(*), 0) FROM thread_member WHERE channel_id = t.id AND membership = 'Join') AS \"member_count!\",\n    t.last_version_id as last_version_id,\n    t.last_message_id as last_message_id,\n    (SELECT coalesce(COUNT(*), 0) FROM message WHERE channel_id = t.id AND deleted_at IS NULL) AS \"message_count!\",\n    coalesce((SELECT json_agg(json_build_object('id', actor_id, 'type', type, 'allow', allow, 'deny', deny)) FROM permission_overwrite WHERE target_id = t.id), '[]'::json) as \"permission_overwrites!\",\n    (SELECT json_agg(tag_id) FROM channel_tag WHERE channel_id = t.id) as tags,\n    (SELECT coalesce(COUNT(*), 0) FROM channel_tag WHERE channel_id = t.id) AS \"tag_count!\",\n    (SELECT row_to_json(cd.*) FROM channel_document cd WHERE cd.channel_id = t.id) as document,\n    (SELECT row_to_json(cw.*) FROM channel_wiki cw WHERE cw.channel_id = t.id) as wiki,\n    (SELECT row_to_json(cc.*) FROM channel_calendar cc WHERE cc.channel_id = t.id) as calendar\nFROM channel t\nWHERE t.id = $1\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "room_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "room_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "creator_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "owner_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "owner_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "version_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "version_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "auto_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "auto_name"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "auto_description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "auto_description"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "icon",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "icon"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "url"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "ty: _",
+        "type_info": {
+          "Custom": {
+            "name": "channel_type",
+            "kind": {
+              "Enum": [
+                "Text",
+                "DmUnused",
+                "Forum",
+                "Voice",
+                "Dm",
+                "Gdm",
+                "Category",
+                "ThreadPublic",
+                "ThreadPrivate",
+                "Calendar",
+                "Broadcast",
+                "Announcement",
+                "Forum2",
+                "Info",
+                "ThreadForum2",
+                "Ticket",
+                "Document",
+                "DocumentComment",
+                "Wiki",
+                "Scripts",
+                "DocumentBranch"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "type"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "nsfw",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "nsfw"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "latest_seq",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "latest_seq"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "locked",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "locked"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "locked_until",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "locked_until"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "locked_roles",
+        "type_info": "UuidArray",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "locked_roles"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "archived_at",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "archived_at"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "deleted_at",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "deleted_at"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "parent_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "parent_id"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "position",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "position"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "bitrate",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "bitrate"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "user_limit",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "user_limit"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "invitable",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "invitable"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "auto_archive_duration",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "auto_archive_duration"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "default_auto_archive_duration",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "default_auto_archive_duration"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "slowmode_thread",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "slowmode_thread"
+          }
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "slowmode_message",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "slowmode_message"
+          }
+        }
+      },
+      {
+        "ordinal": 28,
+        "name": "default_slowmode_message",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "default_slowmode_message"
+          }
+        }
+      },
+      {
+        "ordinal": 29,
+        "name": "last_activity_at",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "last_activity_at"
+          }
+        }
+      },
+      {
+        "ordinal": 30,
+        "name": "last_pin_timestamp",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "last_pin_timestamp"
+          }
+        }
+      },
+      {
+        "ordinal": 31,
+        "name": "member_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 32,
+        "name": "last_version_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "last_version_id"
+          }
+        }
+      },
+      {
+        "ordinal": 33,
+        "name": "last_message_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "last_message_id"
+          }
+        }
+      },
+      {
+        "ordinal": 34,
+        "name": "message_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 35,
+        "name": "permission_overwrites!",
+        "type_info": "Json",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 36,
+        "name": "tags",
+        "type_info": "Json",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 37,
+        "name": "tag_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 38,
+        "name": "document",
+        "type_info": "Json",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 39,
+        "name": "wiki",
+        "type_info": "Json",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 40,
+        "name": "calendar",
+        "type_info": "Json",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      true,
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "bbdeb0cf73f3dc10fb4ef1a2589c7ccfbb46961fd6d74aedac0143fabfa1e21b"
+}

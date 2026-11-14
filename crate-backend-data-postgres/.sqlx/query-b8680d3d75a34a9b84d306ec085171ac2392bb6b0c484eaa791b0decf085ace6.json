@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT data FROM harvest\nWHERE (data->>'status' = 'Completed' AND (data->>'expires_at')::timestamptz <= $1)\n   OR (data->>'status' IN ('Failed', 'Cancelled') AND (queued_at at time zone 'UTC') < $2)\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "data",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "harvest",
+            "name": "data"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b8680d3d75a34a9b84d306ec085171ac2392bb6b0c484eaa791b0decf085ace6"
+}

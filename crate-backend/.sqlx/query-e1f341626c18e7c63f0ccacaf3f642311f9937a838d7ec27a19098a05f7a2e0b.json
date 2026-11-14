@@ -18,17 +18,35 @@
               ]
             }
           }
+        },
+        "origin": {
+          "Table": {
+            "table": "user_relationship",
+            "name": "rel"
+          }
         }
       },
       {
         "ordinal": 1,
         "name": "ignore",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "user_relationship",
+            "name": "ignore"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "ignore_until",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "user_relationship",
+            "name": "ignore_until"
+          }
+        }
       }
     ],
     "parameters": {

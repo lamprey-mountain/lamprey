@@ -1,0 +1,200 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            \tSELECT\n                    a.id, a.owner_id, a.name, a.description, a.public, a.oauth_secret, a.oauth_redirect_uris, a.oauth_confidential,\n                    a.url_homepage, a.url_terms_of_service, a.url_privacy_policy,\n                    b.application_id as \"bridge_id?\", b.platform_name, b.platform_url, b.platform_description\n                FROM application a\n                LEFT JOIN application_bridge b ON a.id = b.application_id\n                WHERE a.owner_id = $1 AND a.deleted_at IS NULL AND a.id > $2 AND a.id < $3\n            \tORDER BY (CASE WHEN $4 = 'f' THEN a.id END), a.id DESC LIMIT $5\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "owner_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "owner_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "public",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "public"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "oauth_secret",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "oauth_secret"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "oauth_redirect_uris",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "oauth_redirect_uris"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "oauth_confidential",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "oauth_confidential"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "url_homepage",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "url_homepage"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "url_terms_of_service",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "url_terms_of_service"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "url_privacy_policy",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "url_privacy_policy"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "bridge_id?",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "application_bridge",
+            "name": "application_id"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "platform_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application_bridge",
+            "name": "platform_name"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "platform_url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application_bridge",
+            "name": "platform_url"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "platform_description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application_bridge",
+            "name": "platform_description"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "e99c9bcb97b8ce3e62253abbf8f98544fe9ca0a76891aed756e2a3049406c561"
+}

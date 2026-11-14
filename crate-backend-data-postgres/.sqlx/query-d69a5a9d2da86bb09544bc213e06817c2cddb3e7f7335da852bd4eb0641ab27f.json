@@ -6,12 +6,24 @@
       {
         "ordinal": 0,
         "name": "code",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "totp_recovery",
+            "name": "code"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "used_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "totp_recovery",
+            "name": "used_at"
+          }
+        }
       }
     ],
     "parameters": {

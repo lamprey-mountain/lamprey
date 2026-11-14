@@ -1,0 +1,198 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n    mv.version_id,\n    mv.author_id,\n    mv.type as \"message_type: DbMessageType\",\n    mv.content,\n    mv.metadata,\n    mv.reply_id,\n    mv.override_name,\n    mv.embeds as \"embeds\",\n    mv.components as \"components\",\n    mv.created_at,\n    mv.deleted_at,\n    mv.created_seq,\n    coalesce(att_json.attachments, '{}') as \"attachments!\"\nFROM message_version AS mv\nJOIN message AS m ON m.id = mv.message_id\nLEFT JOIN att_json ON att_json.version_id = mv.version_id\nWHERE m.channel_id = $1\n  AND mv.message_id = ANY($2)\n  AND ($3::uuid IS NULL OR mv.version_id > $3)\nORDER BY mv.version_id\nLIMIT $4\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "version_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "author_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "author_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "message_type: DbMessageType",
+        "type_info": {
+          "Custom": {
+            "name": "message_type",
+            "kind": {
+              "Enum": [
+                "DefaultMarkdown",
+                "ThreadUpdate",
+                "DefaultTagged",
+                "ChannelRename",
+                "MemberAdd",
+                "MemberRemove",
+                "MemberJoin",
+                "MessagePinned",
+                "ChannelIcon",
+                "AutomodExecution",
+                "ChannelMoved",
+                "ChannelPingback",
+                "Call",
+                "ThreadCreated",
+                "Nudge",
+                "DocumentTag",
+                "DocumentEdits",
+                "DocumentMerged",
+                "ChannelTagged",
+                "ThreadInitial"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "content",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "metadata",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "metadata"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "reply_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "reply_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "override_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "override_name"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "embeds",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "embeds"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "components",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "components"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "deleted_at",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "deleted_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "created_seq",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "created_seq"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "attachments!",
+        "type_info": "Json",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "f1d39a8cfc00eb0618b35b778bfc43c8a29c5fee1f367a00225bce4552ba60a2"
+}

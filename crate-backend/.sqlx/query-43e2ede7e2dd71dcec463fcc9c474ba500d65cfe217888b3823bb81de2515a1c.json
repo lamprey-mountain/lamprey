@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "with recursive message_tree as (\n    select\n        m.id,\n        mv.reply_id,\n        1 as depth\n    from\n        message m\n        join message_version mv on m.latest_version_id = mv.version_id\n    where\n        m.channel_id = $1\n        and m.deleted_at is null\n        and (($2::uuid is not null and m.id = $2::uuid)\n             or ($2::uuid is null and mv.reply_id is null))\n    union all\n    select\n        m.id,\n        mv2.reply_id,\n        mt.depth + 1\n    from\n        message m\n        join message_version mv2 on m.latest_version_id = mv2.version_id\n        join message_tree mt on mv2.reply_id = mt.id\n    where\n        m.channel_id = $1\n        and m.deleted_at is null\n        and mt.depth < $3\n),\nranked_messages as (\n    select\n        id,\n        depth,\n        row_number() over (partition by reply_id order by id) as rn\n    from\n        message_tree\n),\nfiltered_messages as (\n    select id\n    from ranked_messages\n    where (depth = 1 or rn <= $4 or $4 is null)\n)\nselect count(*) from filtered_messages\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "43e2ede7e2dd71dcec463fcc9c474ba500d65cfe217888b3823bb81de2515a1c"
+}

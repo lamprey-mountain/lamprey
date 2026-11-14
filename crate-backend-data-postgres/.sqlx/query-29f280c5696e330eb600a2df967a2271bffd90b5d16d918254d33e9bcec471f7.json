@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
@@ -40,202 +46,402 @@
               ]
             }
           }
+        },
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "type"
+          }
         }
       },
       {
         "ordinal": 2,
         "name": "room_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "room_id"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "creator_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "creator_id"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "name"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "version_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "version_id"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "description",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "description"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "auto_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "auto_name"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "auto_description",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "auto_description"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "url",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "url"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "nsfw",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "nsfw"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "latest_seq",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "latest_seq"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "locked",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "locked"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "locked_until",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "locked_until"
+          }
+        }
       },
       {
         "ordinal": 14,
         "name": "locked_roles",
-        "type_info": "UuidArray"
+        "type_info": "UuidArray",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "locked_roles"
+          }
+        }
       },
       {
         "ordinal": 15,
         "name": "archived_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "archived_at"
+          }
+        }
       },
       {
         "ordinal": 16,
         "name": "deleted_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "deleted_at"
+          }
+        }
       },
       {
         "ordinal": 17,
         "name": "parent_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "parent_id"
+          }
+        }
       },
       {
         "ordinal": 18,
         "name": "position",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "position"
+          }
+        }
       },
       {
         "ordinal": 19,
         "name": "bitrate",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "bitrate"
+          }
+        }
       },
       {
         "ordinal": 20,
         "name": "user_limit",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "user_limit"
+          }
+        }
       },
       {
         "ordinal": 21,
         "name": "owner_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "owner_id"
+          }
+        }
       },
       {
         "ordinal": 22,
         "name": "icon",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "icon"
+          }
+        }
       },
       {
         "ordinal": 23,
         "name": "invitable",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "invitable"
+          }
+        }
       },
       {
         "ordinal": 24,
         "name": "auto_archive_duration",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "auto_archive_duration"
+          }
+        }
       },
       {
         "ordinal": 25,
         "name": "default_auto_archive_duration",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "default_auto_archive_duration"
+          }
+        }
       },
       {
         "ordinal": 26,
         "name": "slowmode_thread",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "slowmode_thread"
+          }
+        }
       },
       {
         "ordinal": 27,
         "name": "slowmode_message",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "slowmode_message"
+          }
+        }
       },
       {
         "ordinal": 28,
         "name": "default_slowmode_message",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "default_slowmode_message"
+          }
+        }
       },
       {
         "ordinal": 29,
         "name": "last_activity_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "last_activity_at"
+          }
+        }
       },
       {
         "ordinal": 30,
         "name": "last_pin_timestamp",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "last_pin_timestamp"
+          }
+        }
       },
       {
         "ordinal": 31,
         "name": "message_count!",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": "Expression"
       },
       {
         "ordinal": 32,
         "name": "member_count!",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": "Expression"
       },
       {
         "ordinal": 33,
         "name": "last_version_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "last_version_id"
+          }
+        }
       },
       {
         "ordinal": 34,
         "name": "last_message_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "last_message_id"
+          }
+        }
       },
       {
         "ordinal": 35,
         "name": "permission_overwrites!",
-        "type_info": "Json"
+        "type_info": "Json",
+        "origin": "Expression"
       },
       {
         "ordinal": 36,
         "name": "tags",
-        "type_info": "Json"
+        "type_info": "Json",
+        "origin": "Expression"
       },
       {
         "ordinal": 37,
         "name": "tag_count!",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": "Expression"
       },
       {
         "ordinal": 38,
         "name": "document",
-        "type_info": "Json"
+        "type_info": "Json",
+        "origin": "Expression"
       },
       {
         "ordinal": 39,
         "name": "wiki",
-        "type_info": "Json"
+        "type_info": "Json",
+        "origin": "Expression"
       },
       {
         "ordinal": 40,
         "name": "calendar",
-        "type_info": "Json"
+        "type_info": "Json",
+        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -252,7 +458,7 @@
       false,
       true,
       false,
-      false,
+      true,
       false,
       true,
       true,

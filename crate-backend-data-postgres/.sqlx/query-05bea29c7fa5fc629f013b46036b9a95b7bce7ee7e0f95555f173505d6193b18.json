@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE usr SET deleted_at = $1 WHERE id = ANY($2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamp",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "05bea29c7fa5fc629f013b46036b9a95b7bce7ee7e0f95555f173505d6193b18"
+}

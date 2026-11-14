@@ -34,142 +34,295 @@
               ]
             }
           }
+        },
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "type"
+          }
         }
       },
       {
         "ordinal": 1,
         "name": "id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "channel_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "channel_id"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "room_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "room_id"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "author_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "author_id"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "created_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "created_at"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "deleted_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "deleted_at"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "removed_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "removed_at"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "pinned",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "pinned"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "created_seq",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "created_seq"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "lifecycle_seq",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "lifecycle_seq"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "flume",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "flume"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "interaction",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "interaction"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "ephemeral",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "ephemeral"
+          }
+        }
       },
       {
         "ordinal": 14,
         "name": "version_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "version_id"
+          }
+        }
       },
       {
         "ordinal": 15,
         "name": "version_author_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "author_id"
+          }
+        }
       },
       {
         "ordinal": 16,
         "name": "content",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "content"
+          }
+        }
       },
       {
         "ordinal": 17,
         "name": "metadata",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "metadata"
+          }
+        }
       },
       {
         "ordinal": 18,
         "name": "reply_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "reply_id"
+          }
+        }
       },
       {
         "ordinal": 19,
         "name": "override_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "override_name"
+          }
+        }
       },
       {
         "ordinal": 20,
         "name": "embeds",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "embeds"
+          }
+        }
       },
       {
         "ordinal": 21,
         "name": "components",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "components"
+          }
+        }
       },
       {
         "ordinal": 22,
         "name": "version_created_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "created_at"
+          }
+        }
       },
       {
         "ordinal": 23,
         "name": "version_deleted_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "deleted_at"
+          }
+        }
       },
       {
         "ordinal": 24,
         "name": "version_created_seq",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "message_version",
+            "name": "created_seq"
+          }
+        }
       },
       {
         "ordinal": 25,
         "name": "attachments!",
-        "type_info": "Json"
+        "type_info": "Json",
+        "origin": "Expression"
       },
       {
         "ordinal": 26,
         "name": "count_direct",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": "Expression"
       },
       {
         "ordinal": 27,
         "name": "count_recursive",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": "Expression"
       }
     ],
     "parameters": {

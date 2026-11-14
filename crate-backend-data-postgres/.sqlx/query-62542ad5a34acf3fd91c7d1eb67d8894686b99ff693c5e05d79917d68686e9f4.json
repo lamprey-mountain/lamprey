@@ -6,12 +6,24 @@
       {
         "ordinal": 0,
         "name": "security_require_mfa",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "room",
+            "name": "security_require_mfa"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "security_require_sudo",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "room",
+            "name": "security_require_sudo"
+          }
+        }
       }
     ],
     "parameters": {

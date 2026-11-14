@@ -1,0 +1,212 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                select\n                    c.application_id, c.scopes as scopes, c.created_at,\n                    a.owner_id as app_owner_id, a.name as app_name, a.description as app_description,\n                    a.public as app_public, a.oauth_secret as app_oauth_secret,\n                    a.oauth_redirect_uris as app_oauth_redirect_uris, a.oauth_confidential as app_oauth_confidential,\n                    a.url_homepage as app_url_homepage, a.url_terms_of_service as app_url_terms_of_service, a.url_privacy_policy as app_url_privacy_policy,\n                    b.platform_name as \"bridge_platform_name?\", b.platform_url as \"bridge_platform_url?\", b.platform_description as \"bridge_platform_description?\"\n                from connection c\n                join application a on c.application_id = a.id\n                left join application_bridge b on a.id = b.application_id\n                where c.user_id = $1 and c.application_id > $2 and c.application_id < $3\n                order by (case when $4 = 'f' then c.application_id end), c.application_id desc limit $5\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "application_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "connection",
+            "name": "application_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "scopes",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "connection",
+            "name": "scopes"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "connection",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "app_owner_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "owner_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "app_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "app_description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "app_public",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "public"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "app_oauth_secret",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "oauth_secret"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "app_oauth_redirect_uris",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "oauth_redirect_uris"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "app_oauth_confidential",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "oauth_confidential"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "app_url_homepage",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "url_homepage"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "app_url_terms_of_service",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "url_terms_of_service"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "app_url_privacy_policy",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application",
+            "name": "url_privacy_policy"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "bridge_platform_name?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application_bridge",
+            "name": "platform_name"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "bridge_platform_url?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application_bridge",
+            "name": "platform_url"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "bridge_platform_description?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "application_bridge",
+            "name": "platform_description"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "76017ce1e7bed90f379e559c839e92b58e698d8040264d05dda5f43ec23082c0"
+}

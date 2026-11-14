@@ -6,12 +6,24 @@
       {
         "ordinal": 0,
         "name": "latest_seq!",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "latest_seq"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "room_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "room_id"
+          }
+        }
       }
     ],
     "parameters": {

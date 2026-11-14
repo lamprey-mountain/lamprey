@@ -35,6 +35,12 @@
               ]
             }
           }
+        },
+        "origin": {
+          "Table": {
+            "table": "channel",
+            "name": "type"
+          }
         }
       }
     ],

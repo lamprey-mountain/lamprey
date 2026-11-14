@@ -1,0 +1,334 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                r.id as \"id!\", r.version_id as \"version_id!\", r.room_id as \"room_id!\",\n                r.name as \"name!\", r.description, r.allow as \"allow!: _\",\n                r.deny as \"deny!: _\", r.is_mentionable as \"is_mentionable!\",\n                r.is_self_applicable as \"is_self_applicable!\",\n                coalesce(rm.count, 0) as \"member_count!\",\n                r.position as \"position!\",\n                r.hoist as \"hoist!\",\n                r.sticky as \"sticky!\"\n            FROM role r\n            LEFT JOIN (\n                SELECT role_id, count(*) as count\n                FROM role_member\n                GROUP BY role_id\n            ) rm ON rm.role_id = r.id\n            WHERE r.room_id = $1 AND r.id = ANY($2)\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "version_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "version_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "room_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "room_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "name!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "description"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "allow!: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "ApplicationCreate",
+                      "ApplicationManage",
+                      "IntegrationsManage",
+                      "IntegrationsBridge",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberKick",
+                      "MemberNickname",
+                      "MemberNicknameManage",
+                      "MemberTimeout",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageCreateThread",
+                      "MessageDelete",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MessageRemove",
+                      "ReactionAdd",
+                      "ReactionManage",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomEdit",
+                      "RoomManage",
+                      "ServerMaintenance",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ChannelSlowmodeBypass",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ChannelView",
+                      "AuditLogView",
+                      "AnalyticsView",
+                      "VoiceDeafen",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "VoiceVad",
+                      "VoiceRequest",
+                      "VoiceBroadcast",
+                      "CalendarEventCreate",
+                      "CalendarEventRsvp",
+                      "CalendarEventManage",
+                      "DocumentCreate",
+                      "DocumentEdit",
+                      "DocumentComment",
+                      "RoomCreate",
+                      "UserManage",
+                      "UserManageSelf",
+                      "UserProfileSelf",
+                      "DmCreate",
+                      "FriendCreate",
+                      "RoomJoin",
+                      "CallUpdate",
+                      "RoomJoinForce",
+                      "ScriptManage",
+                      "ScriptInspect"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "allow"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "deny!: _",
+        "type_info": {
+          "Custom": {
+            "name": "permission[]",
+            "kind": {
+              "Array": {
+                "Custom": {
+                  "name": "permission",
+                  "kind": {
+                    "Enum": [
+                      "Admin",
+                      "ApplicationCreate",
+                      "ApplicationManage",
+                      "IntegrationsManage",
+                      "IntegrationsBridge",
+                      "EmojiManage",
+                      "EmojiUseExternal",
+                      "InviteCreate",
+                      "InviteManage",
+                      "MemberBan",
+                      "MemberKick",
+                      "MemberNickname",
+                      "MemberNicknameManage",
+                      "MemberTimeout",
+                      "MessageAttachments",
+                      "MessageCreate",
+                      "MessageCreateThread",
+                      "MessageDelete",
+                      "MessageEmbeds",
+                      "MessageMassMention",
+                      "MessageMove",
+                      "MessagePin",
+                      "MessageRemove",
+                      "ReactionAdd",
+                      "ReactionManage",
+                      "RoleApply",
+                      "RoleManage",
+                      "RoomEdit",
+                      "RoomManage",
+                      "ServerMaintenance",
+                      "ServerMetrics",
+                      "ServerOversee",
+                      "ChannelSlowmodeBypass",
+                      "ChannelEdit",
+                      "ChannelManage",
+                      "ThreadCreatePrivate",
+                      "ThreadCreatePublic",
+                      "ThreadManage",
+                      "ThreadEdit",
+                      "ChannelView",
+                      "AuditLogView",
+                      "AnalyticsView",
+                      "VoiceDeafen",
+                      "VoiceMove",
+                      "VoiceMute",
+                      "VoicePriority",
+                      "VoiceSpeak",
+                      "VoiceVideo",
+                      "VoiceVad",
+                      "VoiceRequest",
+                      "VoiceBroadcast",
+                      "CalendarEventCreate",
+                      "CalendarEventRsvp",
+                      "CalendarEventManage",
+                      "DocumentCreate",
+                      "DocumentEdit",
+                      "DocumentComment",
+                      "RoomCreate",
+                      "UserManage",
+                      "UserManageSelf",
+                      "UserProfileSelf",
+                      "DmCreate",
+                      "FriendCreate",
+                      "RoomJoin",
+                      "CallUpdate",
+                      "RoomJoinForce",
+                      "ScriptManage",
+                      "ScriptInspect"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "deny"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "is_mentionable!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "is_mentionable"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "is_self_applicable!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "is_self_applicable"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "member_count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "position!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "position"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "hoist!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "hoist"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "sticky!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "role",
+            "name": "sticky"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "be7156ec7f6a377143d1aae1411a2313dc73623ce12e121fc03f2a1916595f80"
+}

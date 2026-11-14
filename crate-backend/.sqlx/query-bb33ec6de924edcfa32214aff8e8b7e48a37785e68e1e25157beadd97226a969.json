@@ -6,47 +6,101 @@
       {
         "ordinal": 0,
         "name": "code",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "room_templates",
+            "name": "code"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "room_templates",
+            "name": "name"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "description",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "room_templates",
+            "name": "description"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "created_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "room_templates",
+            "name": "created_at"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "updated_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "room_templates",
+            "name": "updated_at"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "creator_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "room_templates",
+            "name": "creator_id"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "source_room_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "room_templates",
+            "name": "source_room_id"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "snapshot",
-        "type_info": "Jsonb"
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "room_templates",
+            "name": "snapshot"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "dirty",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "room_templates",
+            "name": "dirty"
+          }
+        }
       }
     ],
     "parameters": {

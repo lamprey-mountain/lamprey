@@ -6,7 +6,13 @@
       {
         "name": "ext_id",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "puppet",
+            "name": "ext_id"
+          }
+        }
       }
     ],
     "parameters": {

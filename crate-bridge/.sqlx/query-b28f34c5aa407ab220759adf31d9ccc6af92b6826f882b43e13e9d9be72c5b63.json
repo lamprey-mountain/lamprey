@@ -6,57 +6,123 @@
       {
         "name": "id",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "id"
+          }
+        }
       },
       {
         "name": "realm_id",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "realm_id"
+          }
+        }
       },
       {
         "name": "lamprey_channel_id",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "lamprey_channel_id"
+          }
+        }
       },
       {
         "name": "lamprey_room_id",
         "ordinal": 3,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "lamprey_room_id"
+          }
+        }
       },
       {
         "name": "lamprey_last_id",
         "ordinal": 4,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "lamprey_last_id"
+          }
+        }
       },
       {
         "name": "discord_guild_id",
         "ordinal": 5,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "discord_guild_id"
+          }
+        }
       },
       {
         "name": "discord_parent_id",
         "ordinal": 6,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "discord_parent_id"
+          }
+        }
       },
       {
         "name": "discord_channel_id",
         "ordinal": 7,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "discord_channel_id"
+          }
+        }
       },
       {
         "name": "discord_webhook_url",
         "ordinal": 8,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "discord_webhook_url"
+          }
+        }
       },
       {
         "name": "discord_webhook_id",
         "ordinal": 9,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "discord_webhook_id"
+          }
+        }
       },
       {
         "name": "discord_last_id",
         "ordinal": 10,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "portal",
+            "name": "discord_last_id"
+          }
+        }
       }
     ],
     "parameters": {

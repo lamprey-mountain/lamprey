@@ -6,22 +6,46 @@
       {
         "ordinal": 0,
         "name": "id: Uuid",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "lifecycle_seq",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "lifecycle_seq"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "deleted_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "deleted_at"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "removed_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "message",
+            "name": "removed_at"
+          }
+        }
       }
     ],
     "parameters": {

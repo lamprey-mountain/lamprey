@@ -6,17 +6,35 @@
       {
         "ordinal": 0,
         "name": "id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "user_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "user_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "token",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "token"
+          }
+        }
       },
       {
         "ordinal": 3,
@@ -33,72 +51,151 @@
               ]
             }
           }
+        },
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "status"
+          }
         }
       },
       {
         "ordinal": 4,
         "name": "name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "name"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "expires_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "expires_at"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "ty",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "type"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "application_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "application_id"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "last_seen_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "last_seen_at"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "ip_addr",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 10,
         "name": "user_agent",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "user_agent"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "country_code",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "country_code"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "country_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "country_name"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "city_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "city_name"
+          }
+        }
       },
       {
         "ordinal": 14,
         "name": "authorized_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "authorized_at"
+          }
+        }
       },
       {
         "ordinal": 15,
         "name": "deauthorized_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "deauthorized_at"
+          }
+        }
       },
       {
         "ordinal": 16,
         "name": "sudo_expires_at",
-        "type_info": "Timestamp"
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "session",
+            "name": "sudo_expires_at"
+          }
+        }
       }
     ],
     "parameters": {

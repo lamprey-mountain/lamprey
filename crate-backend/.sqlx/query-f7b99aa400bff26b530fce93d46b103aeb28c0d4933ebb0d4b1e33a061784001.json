@@ -1,0 +1,188 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n    r.id, r.channel_id, r.creator_id, r.created_at, r.deleted_at, r.data, r.shortname,\n    rv.version_id, rv.creator_id AS version_creator_id, rv.created_at AS version_created_at,\n    rv.deleted_at AS version_deleted_at, rv.data AS version_data, rv.cached_inputs,\n    rv.status AS version_status\nFROM redex r\nJOIN LATERAL (\n    SELECT version_id, creator_id, created_at, deleted_at, data, cached_inputs, status\n    FROM redex_version\n    WHERE script_id = r.id AND deleted_at IS NULL\n    ORDER BY created_at DESC\n    LIMIT 1\n) rv ON true\nWHERE r.channel_id = $1 AND r.deleted_at IS NULL\n  AND r.id > $2 AND r.id < $3\nORDER BY (CASE WHEN $4 = 'f' THEN r.id END), r.id DESC LIMIT $5\n",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "redex",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "channel_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "redex",
+            "name": "channel_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "creator_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "redex",
+            "name": "creator_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "created_at",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "redex",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "deleted_at",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "redex",
+            "name": "deleted_at"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "data",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "redex",
+            "name": "data"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "shortname",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "redex",
+            "name": "shortname"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "version_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "redex_version",
+            "name": "version_id"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "version_creator_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "redex_version",
+            "name": "creator_id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "version_created_at",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "redex_version",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "version_deleted_at",
+        "type_info": "Timestamp",
+        "origin": {
+          "Table": {
+            "table": "redex_version",
+            "name": "deleted_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "version_data",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "redex_version",
+            "name": "data"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "cached_inputs",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "redex_version",
+            "name": "cached_inputs"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "version_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "redex_version",
+            "name": "status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "f7b99aa400bff26b530fce93d46b103aeb28c0d4933ebb0d4b1e33a061784001"
+}

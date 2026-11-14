@@ -6,17 +6,35 @@
       {
         "name": "lamprey_room_id!: String",
         "ordinal": 0,
-        "type_info": "Null"
+        "type_info": "Null",
+        "origin": {
+          "Table": {
+            "table": "realm",
+            "name": "lamprey_room_id"
+          }
+        }
       },
       {
         "name": "discord_guild_id!: String",
         "ordinal": 1,
-        "type_info": "Null"
+        "type_info": "Null",
+        "origin": {
+          "Table": {
+            "table": "realm",
+            "name": "discord_guild_id"
+          }
+        }
       },
       {
         "name": "continuous",
         "ordinal": 2,
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "realm",
+            "name": "continuous"
+          }
+        }
       }
     ],
     "parameters": {

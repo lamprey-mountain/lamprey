@@ -6,47 +6,101 @@
       {
         "name": "id!: Uuid",
         "ordinal": 0,
-        "type_info": "Null"
+        "type_info": "Null",
+        "origin": {
+          "Table": {
+            "table": "puppet",
+            "name": "id"
+          }
+        }
       },
       {
         "name": "ext_platform",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "puppet",
+            "name": "ext_platform"
+          }
+        }
       },
       {
         "name": "ext_id",
         "ordinal": 2,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "puppet",
+            "name": "ext_id"
+          }
+        }
       },
       {
         "name": "ext_avatar",
         "ordinal": 3,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "puppet",
+            "name": "ext_avatar"
+          }
+        }
       },
       {
         "name": "ext_banner",
         "ordinal": 4,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "puppet",
+            "name": "ext_banner"
+          }
+        }
       },
       {
         "name": "name",
         "ordinal": 5,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "puppet",
+            "name": "name"
+          }
+        }
       },
       {
         "name": "avatar",
         "ordinal": 6,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "puppet",
+            "name": "avatar"
+          }
+        }
       },
       {
         "name": "banner",
         "ordinal": 7,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "puppet",
+            "name": "banner"
+          }
+        }
       },
       {
         "name": "bot",
         "ordinal": 8,
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "puppet",
+            "name": "bot"
+          }
+        }
       }
     ],
     "parameters": {

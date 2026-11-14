@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "media_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "media_link",
+            "name": "media_id"
+          }
+        }
       }
     ],
     "parameters": {
