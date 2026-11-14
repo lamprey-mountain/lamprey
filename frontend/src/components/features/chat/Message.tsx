@@ -649,6 +649,7 @@ function DefaultMessage(
 			data-author-id={props.message.author_id}
 			classList={{
 				separate: props.separate,
+				"keyboard-focused": tabbable(),
 			}}
 			onClick={props.handleClick}
 			onMouseDown={(e) => {

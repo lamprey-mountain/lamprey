@@ -61,6 +61,7 @@ export type SystemMessageProps = SystemMessageBaseProps & {
 
 export const SystemMessage = (props: ParentProps<SystemMessageProps>) => {
 	const toolbar = useMessageToolbar();
+	const tabbable = useMessageTabbable();
 
 	return (
 		<article
@@ -69,6 +70,7 @@ export const SystemMessage = (props: ParentProps<SystemMessageProps>) => {
 			data-message-id={props.message.id}
 			classList={{
 				separate: props.separate,
+				"keyboard-focused": tabbable(),
 			}}
 			onClick={props.handleClick}
 			onMouseDown={(e) => {

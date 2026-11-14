@@ -547,7 +547,8 @@
 	color: $fg-500;
 }
 
-.message:hover {
+.message:hover,
+.message.keyboard-focused {
 	background-color: oklch(var(--color-bg1) / 0.3);
 
 	& > .aside > .time {
@@ -606,13 +607,16 @@
 		}
 	}
 
-	&:hover > .content {
-		& > .time.onlytime {
-			display: none;
-		}
+	&:hover,
+	&.keyboard-focused {
+		& > .content {
+			& > .time.onlytime {
+				display: none;
+			}
 
-		& > .time.full {
-			display: inline;
+			& > .time.full {
+				display: inline;
+			}
 		}
 	}
 }
