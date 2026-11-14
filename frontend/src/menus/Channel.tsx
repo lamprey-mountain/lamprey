@@ -11,6 +11,7 @@ import {
 import {
 	useApi,
 	useChannels,
+	useDms,
 	useRooms,
 	useTags,
 	useThreadMembers,
@@ -32,6 +33,7 @@ import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 export function ChannelMenu(props: { channel_id: string }) {
 	const ctx = useCtx();
 	const channels2 = useChannels();
+	const dms2 = useDms();
 	const threadMembers2 = useThreadMembers();
 	const tags2 = useTags();
 	const { markCategoryRead } = useReadTracking();
@@ -118,6 +120,17 @@ export function ChannelMenu(props: { channel_id: string }) {
 			readTracking.ack(props.channel_id, message_id, true, false);
 		}
 	};
+
+	const closeDm = async () => {
+		const c = channel();
+		if (!c) return;
+		await dms2.hide(c.id);
+		if (currentChannelIsOpen()) nav("/");
+	};
+
+	const currentChannelIsOpen = () =>
+		location.pathname === `/channel/${props.channel_id}` ||
+		location.pathname === `/thread/${props.channel_id}`;
 
 	const removeChannel = () => {
 		modalCtl.confirm(
@@ -256,6 +269,9 @@ export function ChannelMenu(props: { channel_id: string }) {
 		<Menu>
 			<Item onClick={markRead}>mark as read</Item>
 			<Item onClick={copyLink}>copy link</Item>
+			<Show when={channel()?.type === "Dm"}>
+				<Item onClick={closeDm}>close dm</Item>
+			</Show>
 			<Show when={channel()}>
 				{(c) => <ChannelNotificationMenu channel={c()} />}
 			</Show>

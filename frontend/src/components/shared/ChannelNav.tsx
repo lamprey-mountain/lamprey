@@ -45,6 +45,7 @@ import {
 	VIEW_UNCATEGORIZED_KEY,
 	viewCategoryKey,
 } from "@/lib/room-nav";
+import type { ChannelReadState } from "@/types/chat";
 import type { RoomNavItem, RoomNavView } from "@/types/room-nav";
 import { channelDisplayName } from "@/utils/channel";
 import { getDate } from "@/utils/general";
@@ -335,8 +336,9 @@ export const ChannelNav = (props: { room_id: string; view_id?: string }) => {
 
 		if (!props.room_id) {
 			for (const c of dms2.cache.values()) {
-				if (!c.deleted_at) {
-					allChannelsMap.set(c.id, c);
+				const channel: ChannelReadState = c;
+				if (!channel.deleted_at && !channel.dm_hidden) {
+					allChannelsMap.set(channel.id, channel);
 				}
 			}
 		}

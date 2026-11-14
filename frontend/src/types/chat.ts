@@ -43,8 +43,11 @@ export type Attachment = { local_id: string } & (
 	  }
 );
 
-/** channel data including read state fields that are missing from the generated schema */
-export type ChannelReadState = Channel & { pins_read_at?: string | null };
+/** channel data including per-user fields that are missing from the generated schema */
+export type ChannelReadState = Channel & {
+	pins_read_at?: string | null;
+	dm_hidden?: boolean | null;
+};
 
 export type Data = {
 	cursor: Cursor;

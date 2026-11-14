@@ -40,6 +40,7 @@ import {
 } from "@/lib/notifications/preferences";
 import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "@/lib/notifications/util";
 import { type ApiDB, clearApiDatabase } from "@/lib/sync/db";
+import type { ChannelReadState } from "@/types/chat";
 import { getDate } from "@/utils/general";
 import { logger } from "@/utils/logger";
 import { AuditLogService } from "../services/AuditLogService";
@@ -467,14 +468,20 @@ export class RootStore {
 				}
 			}
 
-			const channel = this.channels.cache.get(m.channel_id);
+			const channel: ChannelReadState | undefined = this.channels.cache.get(
+				m.channel_id,
+			);
 			const session = this.session();
 			const sessionUserId =
 				session?.status === "Unauthorized" ? undefined : session?.user_id;
 			const isOwnMessage = m.author_id === sessionUserId;
-			if (channel) {
+			if (!channel) {
+				// dms aren't part of a room's channel list, so refetch the list
+				// to pick up new dm channels (e.g. the recipient of a new dm)
+				if (!m.room_id) void this.dms.refresh();
+			} else {
 				if (isOwnMessage) {
-					this.channels.cache.set(m.channel_id, {
+					const updated: ChannelReadState = {
 						...channel,
 						message_count: (channel.message_count ?? 0) + 1,
 						mention_count: 0,
@@ -482,12 +489,15 @@ export class RootStore {
 						last_version_id: m.latest_version.version_id,
 						last_read_id: m.latest_version.version_id,
 						is_unread: false,
-					});
+						dm_hidden: channel.type === "Dm" ? false : channel.dm_hidden,
+					};
+					this.channels.cache.set(m.channel_id, updated);
+					if (updated.type === "Dm") this.dms.upsert(updated);
 				} else {
 					const notifs = resolveNotifs(this, channel);
 					const isMentioned = isMessageMention(this, channel, m, notifs);
 
-					this.channels.cache.set(m.channel_id, {
+					const updated: ChannelReadState = {
 						...channel,
 						last_message_id: m.id,
 						last_version_id: m.latest_version.version_id,
@@ -496,7 +506,11 @@ export class RootStore {
 							!notifs.muted && isMentioned
 								? (channel.mention_count ?? 0) + 1
 								: channel.mention_count,
-					});
+						// a new message makes the dm visible again
+						dm_hidden: channel.type === "Dm" ? false : channel.dm_hidden,
+					};
+					this.channels.cache.set(m.channel_id, updated);
+					if (updated.type === "Dm") this.dms.upsert(updated);
 				}
 			}
 		} else if (msg.type === "PassiveAck") {

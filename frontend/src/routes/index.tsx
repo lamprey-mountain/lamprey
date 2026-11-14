@@ -64,6 +64,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { flags } from "@/lib/flags";
 import { MediaSidebar } from "@/media/Sidebar";
 import type { RoomT } from "@/types";
+import type { ChannelReadState } from "@/types/chat";
 import { channelDisplayName } from "@/utils/channel";
 import { icMore } from "@/utils/icons";
 
@@ -670,6 +671,25 @@ export const RouteChannel = (
 	});
 
 	const currentUser = useCurrentUser();
+
+	// opening a dm shows it in the dm list again
+	createEffect(
+		on(
+			() => channel()?.id,
+			() => {
+				const ch: ChannelReadState | undefined = channel();
+				if (ch?.type !== "Dm" || !ch.dm_hidden) return;
+
+				const other = ch.recipients?.find((u) => u.id !== currentUser()?.id);
+				if (other) {
+					api.dms.showWithUser(other.id).catch((e) => {
+						console.error("Failed to show dm", e);
+					});
+				}
+			},
+		),
+	);
+
 	const title = () => {
 		const ch = channel();
 		if (!ch) return t("loading");
