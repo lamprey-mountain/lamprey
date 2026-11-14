@@ -109,7 +109,11 @@ export class InvitesService extends BaseService<InviteWithMetadata> {
 	fetchNextChannelPage(channel_id: string): Promise<void> | undefined {
 		const list = this._channelLists.get(channel_id);
 		if (!list) return;
-		return this.fetchChannelPage(channel_id, list, list.state.cursor ?? undefined);
+		return this.fetchChannelPage(
+			channel_id,
+			list,
+			list.state.cursor ?? undefined,
+		);
 	}
 
 	fetchNextServerPage(): Promise<void> | undefined {
@@ -127,17 +131,18 @@ export class InvitesService extends BaseService<InviteWithMetadata> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<Pagination<InviteWithMetadata>>(() =>
-				this.client.http.GET("/api/v1/room/{room_id}/invite", {
-					params: {
-						path: { room_id },
-						query: {
-							dir: "f",
-							limit: 100,
-							from: cursor,
+			const data = await this.retryWithBackoff<Pagination<InviteWithMetadata>>(
+				() =>
+					this.client.http.GET("/api/v1/room/{room_id}/invite", {
+						params: {
+							path: { room_id },
+							query: {
+								dir: "f",
+								limit: 100,
+								from: cursor,
+							},
 						},
-					},
-				}),
+					}),
 			);
 
 			this.upsertBulk(data.items);
@@ -160,17 +165,18 @@ export class InvitesService extends BaseService<InviteWithMetadata> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<Pagination<InviteWithMetadata>>(() =>
-				this.client.http.GET("/api/v1/channel/{channel_id}/invite", {
-					params: {
-						path: { channel_id },
-						query: {
-							dir: "f",
-							limit: 100,
-							from: cursor,
+			const data = await this.retryWithBackoff<Pagination<InviteWithMetadata>>(
+				() =>
+					this.client.http.GET("/api/v1/channel/{channel_id}/invite", {
+						params: {
+							path: { channel_id },
+							query: {
+								dir: "f",
+								limit: 100,
+								from: cursor,
+							},
 						},
-					},
-				}),
+					}),
 			);
 
 			this.upsertBulk(data.items);
@@ -192,16 +198,17 @@ export class InvitesService extends BaseService<InviteWithMetadata> {
 		list.setLoading(true);
 
 		try {
-			const data = await this.retryWithBackoff<Pagination<InviteWithMetadata>>(() =>
-				this.client.http.GET("/api/v1/server/invite", {
-					params: {
-						query: {
-							dir: "f",
-							limit: 100,
-							from: cursor,
+			const data = await this.retryWithBackoff<Pagination<InviteWithMetadata>>(
+				() =>
+					this.client.http.GET("/api/v1/server/invite", {
+						params: {
+							query: {
+								dir: "f",
+								limit: 100,
+								from: cursor,
+							},
 						},
-					},
-				}),
+					}),
 			);
 
 			this.upsertBulk(data.items);

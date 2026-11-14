@@ -142,10 +142,13 @@ export const EmojiPicker = (props: EmojiPickerProps) => {
 		[...api.rooms.cache.values()].filter((room) => room.emoji_count > 0);
 
 	// pass every room: rooms without emoji are used to drop stale cached emoji
-	createResource(() => [...api.rooms.cache.values()], async (rooms) => {
-		await api.emoji.loadCached();
-		await api.emoji.listAllCustom(rooms);
-	});
+	createResource(
+		() => [...api.rooms.cache.values()],
+		async (rooms) => {
+			await api.emoji.loadCached();
+			await api.emoji.listAllCustom(rooms);
+		},
+	);
 
 	const customGroups = createMemo<EmojiGroup[]>(() => {
 		const byRoom = new Map<string, UnifiedEmoji[]>();

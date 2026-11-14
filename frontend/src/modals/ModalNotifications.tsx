@@ -226,7 +226,9 @@ function RoomNotifications(props: ModalNotificationsProps) {
 							/>
 							<label for="opt-everyone">
 								<div>{t("notifs.mention_everyone")}</div>
-								<div class="dim">{t("notifs.mention_everyone_description")}</div>
+								<div class="dim">
+									{t("notifs.mention_everyone_description")}
+								</div>
 							</label>
 						</CheckboxOption>
 						<CheckboxOption
@@ -323,7 +325,9 @@ function ChannelNotifications(props: ModalNotificationsProps) {
 	};
 
 	const setMuted = (muted: boolean) => {
-		setNotifs({ mute: muted ? { expires_at: null, duration: null } : undefined });
+		setNotifs({
+			mute: muted ? { expires_at: null, duration: null } : undefined,
+		});
 	};
 
 	const defaultMessages = () =>
@@ -364,9 +368,7 @@ function ChannelNotifications(props: ModalNotificationsProps) {
 					/>
 					<Show when={channel()}>
 						{(c) => (
-							<div
-								style="display:flex;background:#aaa2;align-items:center;justify-content:space-between;padding:0 4px;gap:8px;"
-							>
+							<div style="display:flex;background:#aaa2;align-items:center;justify-content:space-between;padding:0 4px;gap:8px;">
 								<div>#{channelLabel(c())}</div>
 								<div style="display:flex;align-items:center;gap:8px;">
 									<Dropdown<NotifsMessages | "default">

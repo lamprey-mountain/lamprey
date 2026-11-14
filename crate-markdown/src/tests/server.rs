@@ -9,22 +9,10 @@ fn parse_mentions() {
     let parsed = parser.parse(source);
     let mentions: Vec<_> = parsed.tree().iter_mentions().collect();
     assert_eq!(mentions.len(), 5);
-    assert!(matches!(
-        mentions[0].parse(),
-        Some(MentionData::User(_))
-    ));
-    assert!(matches!(
-        mentions[1].parse(),
-        Some(MentionData::Role(_))
-    ));
-    assert!(matches!(
-        mentions[2].parse(),
-        Some(MentionData::Role(_))
-    ));
-    assert!(matches!(
-        mentions[3].parse(),
-        Some(MentionData::Channel(_))
-    ));
+    assert!(matches!(mentions[0].parse(), Some(MentionData::User(_))));
+    assert!(matches!(mentions[1].parse(), Some(MentionData::Role(_))));
+    assert!(matches!(mentions[2].parse(), Some(MentionData::Role(_))));
+    assert!(matches!(mentions[3].parse(), Some(MentionData::Channel(_))));
     assert!(matches!(mentions[4].parse(), Some(MentionData::Everyone)));
 }
 

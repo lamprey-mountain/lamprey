@@ -2,10 +2,7 @@ import { For, Show } from "solid-js";
 
 const ROW_WIDTHS = [48, 62, 39, 55, 44, 58, 35, 51];
 
-export function AuditLogSkeleton(props: {
-	rows?: number;
-	controls?: boolean;
-}) {
+export function AuditLogSkeleton(props: { rows?: number; controls?: boolean }) {
 	const rows = () => props.rows ?? 8;
 
 	return (

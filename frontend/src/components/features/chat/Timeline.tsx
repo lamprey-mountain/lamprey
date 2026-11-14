@@ -176,8 +176,7 @@ export const Timeline = (props: ChatProps) => {
 		const key = anchorKey(anchor);
 		if (
 			queue.some(
-				(task) =>
-					task.type === "SET_ANCHOR" && anchorKey(task.anchor) === key,
+				(task) => task.type === "SET_ANCHOR" && anchorKey(task.anchor) === key,
 			)
 		) {
 			return false;

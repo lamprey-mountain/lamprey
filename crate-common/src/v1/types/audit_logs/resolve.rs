@@ -42,7 +42,9 @@ impl AuditLogResolve {
                 }
 
                 for value in [&change.old, &change.new] {
-                    let Some(ids) = value.as_array() else { continue };
+                    let Some(ids) = value.as_array() else {
+                        continue;
+                    };
                     for id in ids {
                         if let Ok(id) = serde_json::from_value::<ChannelId>(id.clone()) {
                             self.threads.insert(id);

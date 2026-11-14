@@ -17,7 +17,10 @@ fn pagination_and_filter_parse_from_same_query() {
     assert_eq!(pagination.from, None);
 
     let filter: AuditLogFilter = query::from_str(&query_str).unwrap();
-    assert_eq!(filter.channel_id, vec![ChannelId::from_str(CHANNEL_A).unwrap()]);
+    assert_eq!(
+        filter.channel_id,
+        vec![ChannelId::from_str(CHANNEL_A).unwrap()]
+    );
     assert_eq!(filter.ty, vec!["RoomUpdate".to_string()]);
     assert!(filter.user_id.is_empty());
     assert_eq!(filter.status, AuditLogFilter::default().status);
@@ -36,7 +39,10 @@ fn repeated_keys_are_sequences() {
             ChannelId::from_str(CHANNEL_B).unwrap(),
         ]
     );
-    assert_eq!(filter.ty, vec!["RoomUpdate".to_string(), "RoomDelete".to_string()]);
+    assert_eq!(
+        filter.ty,
+        vec!["RoomUpdate".to_string(), "RoomDelete".to_string()]
+    );
 }
 
 #[test]

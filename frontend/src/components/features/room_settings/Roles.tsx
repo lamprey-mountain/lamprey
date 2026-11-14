@@ -463,10 +463,7 @@ const RoleList = (props: {
 	);
 };
 
-const RoleDescriptionEditor = (props: {
-	room: RoomT;
-	edit: RoleEditState;
-}) => {
+const RoleDescriptionEditor = (props: { room: RoomT; edit: RoleEditState }) => {
 	const toolbar = useFormattingToolbar();
 	const autocomplete = useAutocomplete();
 	const editor = createEditor({

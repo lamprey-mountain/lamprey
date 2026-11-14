@@ -113,11 +113,7 @@ export const Forum = (props: { channel: Channel }) => {
 		}
 
 		const removed = removedThreads();
-		if (
-			showRemoved() &&
-			removed?.state.has_more &&
-			!removed.state.isLoading
-		) {
+		if (showRemoved() && removed?.state.has_more && !removed.state.isLoading) {
 			threads2.fetchNextRemovedChannelPage(forum_id());
 		}
 	};

@@ -9,12 +9,12 @@ export type EmojiInfoProps =
 			emoji_id: string;
 			emoji_name: string;
 			emoji_animated: boolean;
-		}
+	  }
 	| {
 			type: "unicode";
 			char: string;
 			hex: string;
-		};
+	  };
 
 export const EmojiInfo = (props: EmojiInfoProps) => {
 	const custom = () => (props.type === "custom" ? props : undefined);

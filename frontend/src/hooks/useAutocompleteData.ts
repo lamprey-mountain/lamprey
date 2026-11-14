@@ -7,7 +7,12 @@ import type {
 	ThreadMember,
 	User,
 } from "sdk";
-import { createEffect, createMemo, createResource, createSignal } from "solid-js";
+import {
+	createEffect,
+	createMemo,
+	createResource,
+	createSignal,
+} from "solid-js";
 import { useApi } from "@/api";
 import type {
 	AutocompleteItem,

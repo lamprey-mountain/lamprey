@@ -129,10 +129,7 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 										<div class="tag-info">
 											<h3 class="name">{tag.name}</h3>
 											<div class="description">
-												<Show
-													when={tag.description}
-													fallback="No description"
-												>
+												<Show when={tag.description} fallback="No description">
 													{(desc) => <Markdown content={desc()} />}
 												</Show>
 											</div>

@@ -339,10 +339,7 @@ export function ReplyView(props: {
 	);
 }
 
-export function AttachmentView(props: {
-	att: Attachment;
-	gallery?: Media[];
-}) {
+export function AttachmentView(props: { att: Attachment; gallery?: Media[] }) {
 	return (
 		<Switch>
 			<Match when={props.att.type === "Media" && props.att.media}>

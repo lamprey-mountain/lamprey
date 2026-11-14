@@ -100,8 +100,7 @@ export const ChannelSettings = (props: { channel: Channel; page: string }) => {
 	const visibleTabs = () =>
 		tabs.filter(
 			(tab) =>
-				(!tab.channelTypes ||
-					tab.channelTypes.includes(props.channel.type)) &&
+				(!tab.channelTypes || tab.channelTypes.includes(props.channel.type)) &&
 				(!tab.permissionCheck || tab.permissionCheck(perms)),
 		);
 	const roving = useRovingTabindex({

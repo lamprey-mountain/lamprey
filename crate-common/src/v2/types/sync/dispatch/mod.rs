@@ -6,13 +6,13 @@
 use lamprey_macros::record;
 
 use crate::{
-    v1::types::{application::Application, Session, User},
+    v1::types::{Session, User, application::Application},
     v2::types::{
+        ConnectionId,
         sync::dispatch::{
             channel::DispatchChannel, client::DispatchClient, global::DispatchGlobal,
             media::DispatchMedia, room::DispatchRoom, user::DispatchUser, webhook::DispatchWebhook,
         },
-        ConnectionId,
     },
 };
 

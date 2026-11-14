@@ -150,6 +150,8 @@ pub fn from_str<T: DeserializeOwned>(input: &str) -> Result<T, QueryError> {
     }
 
     T::deserialize(MapDeserializer::new(
-        grouped.into_iter().map(|(key, values)| (key, Values(values))),
+        grouped
+            .into_iter()
+            .map(|(key, values)| (key, Values(values))),
     ))
 }

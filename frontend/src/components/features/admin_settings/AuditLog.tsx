@@ -1,9 +1,5 @@
 import { ReactiveSet } from "@solid-primitives/set";
-import {
-	getTimestampFromUUID,
-	type Room,
-	SERVER_ROOM_ID,
-} from "sdk";
+import { getTimestampFromUUID, type Room, SERVER_ROOM_ID } from "sdk";
 import { createMemo, createSignal, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown.tsx";

@@ -628,9 +628,7 @@ export function OverlayProvider(props: ParentProps) {
 							class="user-popout-animate"
 							data-placement={userViewFloating.placement}
 						>
-							<EmojiInfo
-								{...(ctx.popout()?.props as EmojiInfoProps)}
-							/>
+							<EmojiInfo {...(ctx.popout()?.props as EmojiInfoProps)} />
 						</div>
 					</div>
 				</Show>

@@ -1,8 +1,8 @@
 import { diffArrays } from "diff";
 import {
-	type api,
 	type AuditLogChange,
 	type AuditLogEntry,
+	type api,
 	getTimestampFromUUID,
 } from "sdk";
 import type { JSX } from "solid-js";
@@ -501,12 +501,7 @@ export function formatChanges(
 			formatted.push(
 				<li>
 					{t("audit_log.changes.bot_added", {
-						bot_name: resolveName(
-							api2,
-							entryRoom,
-							ent.metadata.bot_id,
-							"user",
-						),
+						bot_name: resolveName(api2, entryRoom, ent.metadata.bot_id, "user"),
 					})}
 				</li>,
 			);
@@ -706,12 +701,7 @@ export function formatChanges(
 					formatted.push(
 						<li>
 							{t("audit_log.changes.thread_pinned", {
-								thread_name: resolveName(
-									api2,
-									entryRoom,
-									thread_id,
-									"channel",
-								),
+								thread_name: resolveName(api2, entryRoom, thread_id, "channel"),
 							})}
 						</li>,
 					);
@@ -720,12 +710,7 @@ export function formatChanges(
 					formatted.push(
 						<li>
 							{t("audit_log.changes.thread_unpinned", {
-								thread_name: resolveName(
-									api2,
-									entryRoom,
-									thread_id,
-									"channel",
-								),
+								thread_name: resolveName(api2, entryRoom, thread_id, "channel"),
 							})}
 						</li>,
 					);

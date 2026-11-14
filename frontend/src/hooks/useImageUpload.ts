@@ -34,9 +34,7 @@ export function useImageUpload(opts: ImageUploadOptions) {
 			},
 		}).catch((error: unknown) => {
 			console.error("image upload failed", error);
-			opts.onError?.(
-				error instanceof Error ? error : new Error(String(error)),
-			);
+			opts.onError?.(error instanceof Error ? error : new Error(String(error)));
 			setProgress(null);
 		});
 	};

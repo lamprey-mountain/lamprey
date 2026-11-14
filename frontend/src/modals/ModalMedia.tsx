@@ -117,8 +117,7 @@ export const ModalMedia = (props: { media: Media; gallery?: Media[] }) => {
 	};
 
 	const endDrag = (e: PointerEvent) => {
-		const wasClick =
-			e.type === "pointerup" && !dragMoved && !startedOnImage;
+		const wasClick = e.type === "pointerup" && !dragMoved && !startedOnImage;
 		dragStart = null;
 		setDragging(false);
 		if (

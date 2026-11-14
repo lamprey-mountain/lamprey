@@ -31,7 +31,8 @@ export function Appearance(props: VoidProps<{ user: User }>) {
 
 	const scheme = createMemo(
 		() =>
-			resolveTheme(ctx.preferences().frontend.theme, systemPrefersDark()).scheme,
+			resolveTheme(ctx.preferences().frontend.theme, systemPrefersDark())
+				.scheme,
 	);
 
 	const setFrontend = <K extends keyof Preferences["frontend"]>(

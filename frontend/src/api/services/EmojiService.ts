@@ -114,20 +114,16 @@ export class EmojiService extends BaseService<EmojiCustom> {
 
 		const promise = (async () => {
 			try {
-				const data = await this.retryWithBackoff<Pagination<EmojiCustom>>(
-					() =>
-						this.client.http.GET("/api/v1/room/{room_id}/emoji", {
-							params: {
-								path: { room_id: room.id },
-								query: { limit: 1024 },
-							},
-						}),
+				const data = await this.retryWithBackoff<Pagination<EmojiCustom>>(() =>
+					this.client.http.GET("/api/v1/room/{room_id}/emoji", {
+						params: {
+							path: { room_id: room.id },
+							query: { limit: 1024 },
+						},
+					}),
 				);
 				this.upsertBulk(data.items);
-				this.pruneRoom(
-					room.id,
-					new Set(data.items.map((emoji) => emoji.id)),
-				);
+				this.pruneRoom(room.id, new Set(data.items.map((emoji) => emoji.id)));
 				this._fetchedRooms.set(room.id, room.emoji_count);
 			} catch (e) {
 				log.error(String(e));

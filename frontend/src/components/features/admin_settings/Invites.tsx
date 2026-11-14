@@ -63,9 +63,7 @@ export function Invites(_props: VoidProps<{ room: RoomT }>) {
 										<div class="uses">
 											<span class="mono">{i.uses ?? 0}</span>
 											<span class="dim">/</span>
-											<span class="mono">
-												{i.max_uses ?? "\u221e"}
-											</span>
+											<span class="mono">{i.max_uses ?? "\u221e"}</span>
 										</div>
 										<div class="expires">
 											<Show

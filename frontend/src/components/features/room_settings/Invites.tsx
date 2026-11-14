@@ -1,5 +1,11 @@
 import { createIntersectionObserver } from "@solid-primitives/intersection-observer";
-import { createEffect, createSignal, For, Show, type VoidProps } from "solid-js";
+import {
+	createEffect,
+	createSignal,
+	For,
+	Show,
+	type VoidProps,
+} from "solid-js";
 import { useInvites, useRoomMembers, useUsers } from "@/api";
 import { Time } from "@/atoms/Time.tsx";
 import { Avatar } from "@/components/shared/User";

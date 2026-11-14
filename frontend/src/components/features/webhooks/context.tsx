@@ -107,9 +107,7 @@ export const WebhooksProvider = (props: WebhooksProviderProps) => {
 									params: {
 										path: {
 											room_id:
-												props.scope.type === "room"
-													? props.scope.room_id
-													: "",
+												props.scope.type === "room" ? props.scope.room_id : "",
 										},
 									},
 									body: draft.create,

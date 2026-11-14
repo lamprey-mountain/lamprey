@@ -9,9 +9,12 @@ import { AUDIT_LOG_TYPE_OPTIONS } from "@/lib/audit-log-util";
 export function AuditLog(props: VoidProps<{ user: User }>) {
 	const api = useApi();
 	const [action, setAction] = createSignal("");
-	const log = api.auditLog.useUserList(() => props.user.id, () => ({
-		type: action() || undefined,
-	}));
+	const log = api.auditLog.useUserList(
+		() => props.user.id,
+		() => ({
+			type: action() || undefined,
+		}),
+	);
 
 	return (
 		<>

@@ -6,7 +6,7 @@ use lamprey_macros::record;
 
 use crate::{
     util::registry::export_models,
-    v1::types::{misc::Time, InviteCode, InviteTarget, User},
+    v1::types::{InviteCode, InviteTarget, User, misc::Time},
     v2::types::sync::stream::StreamProtocol,
 };
 

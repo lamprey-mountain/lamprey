@@ -666,7 +666,9 @@ export function isChannelLocked(
 	if (locked.until && getDate(locked.until).valueOf() <= Date.now()) {
 		return false;
 	}
-	return !locked.allow_roles?.some((role_id) => member?.roles.includes(role_id));
+	return !locked.allow_roles?.some((role_id) =>
+		member?.roles.includes(role_id),
+	);
 }
 
 /**
