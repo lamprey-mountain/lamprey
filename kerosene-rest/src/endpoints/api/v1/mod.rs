@@ -25,6 +25,7 @@ pub mod tag;
 pub mod thread;
 pub mod unfurler;
 pub mod user;
+pub mod webhook;
 
 pub fn register(r: &mut Routes) {
     r.nest("/v1", |r| {
@@ -53,5 +54,6 @@ pub fn register(r: &mut Routes) {
         thread::register(r);
         unfurler::register(r);
         user::register(r);
+        webhook::register(r);
     });
 }

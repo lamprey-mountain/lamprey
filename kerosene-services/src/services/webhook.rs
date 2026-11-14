@@ -1,15 +1,17 @@
 use std::time::Duration;
 
-use common::v1::types::audit_logs::AuditLogEntryType;
+use common::v1::types::audit_logs::{AuditLogChange, AuditLogEntryType};
 use common::v1::types::error::{ApiError, ErrorCode};
 use common::v1::types::sync::MessageSync;
 use common::v1::types::util::Changes;
 use common::v1::types::webhook::{Webhook, WebhookCreate, WebhookUpdate};
 use common::v1::types::{
-    ChannelId, PaginationQuery, PaginationResponse, Permission, RoomId, WebhookId,
+    ChannelId, Message, MessageCreate, PaginationQuery, PaginationResponse, Permission, RoomId,
+    UserId, WebhookId,
 };
 use kerosene_core::types::auth::{Auth5, Auth5Ext};
 use moka::future::Cache;
+use serde_json::Value;
 use validator::Validate;
 
 use crate::prelude::*;
@@ -82,6 +84,7 @@ impl ServiceWebhooks {
             webhook_id: webhook.id,
             changes: Changes::new()
                 .add("name", &webhook.name)
+                .add("avatar", &webhook.avatar)
                 .add("channel_id", &webhook.channel_id)
                 .build(),
         });
@@ -101,12 +104,41 @@ impl ServiceWebhooks {
         self.state.begin_read().await?.webhook_get(webhook_id).await
     }
 
+    pub async fn get_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<Webhook> {
+        self.state
+            .begin_read()
+            .await?
+            .webhook_get_with_token(webhook_id, token)
+            .await
+    }
+
+    pub async fn execute(
+        &self,
+        webhook_id: WebhookId,
+        token: &str,
+        json: MessageCreate,
+    ) -> Result<Message> {
+        let webhook = self.get_with_token(webhook_id, token).await?;
+
+        let srv = self.state.services();
+        let chan = srv.channels.get(webhook.channel_id, None).await?;
+        chan.ensure_has_text()?;
+
+        let author_id: UserId = (*webhook.id).into();
+        srv.messages
+            .create_as_webhook(webhook.channel_id, author_id, json, None)
+            .await
+    }
+
     pub async fn update<A: Auth5>(
         &self,
         webhook_id: WebhookId,
         auth: &mut A,
         json: WebhookUpdate,
     ) -> Result<Webhook> {
+        json.validate()?;
+        let rotate_token = json.rotate_token;
+
         let mut data = self.state.begin().await?;
         let webhook = data.webhook_get(webhook_id).await?;
 
@@ -125,18 +157,30 @@ impl ServiceWebhooks {
         let webhook = data.webhook_update(webhook_id, json).await?;
         data.commit().await?;
 
+        let mut changes = Changes::new()
+            .change("name", &webhook_before.name, &webhook.name)
+            .change("avatar", &webhook_before.avatar, &webhook.avatar)
+            .change(
+                "channel_id",
+                &webhook_before.channel_id,
+                &webhook.channel_id,
+            )
+            .build();
+        if rotate_token {
+            changes.push(AuditLogChange {
+                key: "token".to_string(),
+                old: Value::Null,
+                new: Value::Null,
+            });
+        }
+
         auth.set_room_id(room_id);
-        auth.al_push(AuditLogEntryType::WebhookUpdate {
-            webhook_id,
-            changes: Changes::new()
-                .change("name", &webhook_before.name, &webhook.name)
-                .change(
-                    "channel_id",
-                    &webhook_before.channel_id,
-                    &webhook.channel_id,
-                )
-                .build(),
-        });
+        if !changes.is_empty() {
+            auth.al_push(AuditLogEntryType::WebhookUpdate {
+                webhook_id,
+                changes,
+            });
+        }
 
         let sync_msg = MessageSync::WebhookUpdate {
             webhook: webhook.clone(),
@@ -145,6 +189,39 @@ impl ServiceWebhooks {
             .messaging()
             .broadcast_room(room_id, sync_msg)
             .await?;
+        self.broadcast_user_update(webhook_id).await?;
+
+        Ok(webhook)
+    }
+
+    pub async fn update_with_token(
+        &self,
+        webhook_id: WebhookId,
+        token: &str,
+        json: WebhookUpdate,
+    ) -> Result<Webhook> {
+        let json = WebhookUpdate {
+            channel_id: None,
+            ..json
+        };
+        json.validate()?;
+
+        let mut data = self.state.begin().await?;
+        let webhook = data
+            .webhook_update_with_token(webhook_id, token, json)
+            .await?;
+        data.commit().await?;
+
+        if let Some(room_id) = webhook.room_id {
+            let sync_msg = MessageSync::WebhookUpdate {
+                webhook: webhook.clone(),
+            };
+            self.state
+                .messaging()
+                .broadcast_room(room_id, sync_msg)
+                .await?;
+        }
+        self.broadcast_user_update(webhook_id).await?;
 
         Ok(webhook)
     }
@@ -187,6 +264,25 @@ impl ServiceWebhooks {
             .await?;
 
         Ok(())
+    }
+
+    pub async fn delete_with_token(&self, webhook_id: WebhookId, token: &str) -> Result<()> {
+        let mut data = self.state.begin().await?;
+        data.webhook_delete_with_token(webhook_id, token).await?;
+        data.commit().await
+    }
+
+    /// invalidate the webhook's user and tell everyone about it
+    async fn broadcast_user_update(&self, webhook_id: WebhookId) -> Result<()> {
+        let user_id: UserId = (*webhook_id).into();
+        let srv = self.state.services();
+        srv.users.invalidate(user_id).await;
+        let user = srv.users.get(user_id, None).await?;
+
+        self.state
+            .messaging()
+            .broadcast_global(MessageSync::UserUpdate { user })
+            .await
     }
 
     pub async fn list_channel(

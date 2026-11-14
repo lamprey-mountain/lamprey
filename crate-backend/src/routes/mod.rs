@@ -31,7 +31,6 @@ mod sync;
 mod user_connection;
 mod user_email;
 mod voice;
-mod webhook;
 
 pub mod metrics;
 pub mod util;
@@ -59,8 +58,7 @@ fn routes_v1(s: Arc<ServerState>) -> OpenApiRouter<Arc<ServerState>> {
         .merge(preferences::routes())
         .merge(user_connection::routes())
         .merge(user_email::routes())
-        .merge(voice::routes())
-        .merge(webhook::routes());
+        .merge(voice::routes());
 
     #[cfg(feature = "e2ee")]
     {
