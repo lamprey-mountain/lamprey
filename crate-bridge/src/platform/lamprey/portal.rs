@@ -474,6 +474,15 @@ impl LampreyPortal {
                     bridge_old::MessageData::Discord { message } => message,
                 };
 
+                // edits of messages we sent with our own webhook are echoes of our
+                // own bridging (eg. an edit we applied from lamprey), so sending
+                // them back would loop between the two platforms
+                if dm.webhook_id.is_some()
+                    && dm.webhook_id == self.portal.discord.as_ref().and_then(|d| d.webhook_id)
+                {
+                    return Ok(());
+                }
+
                 let puppet = ly.sync_puppet_discord(dm).await?;
 
                 let Some(portal_msg) = self

@@ -444,6 +444,13 @@ impl DiscordPortal {
                     return Ok(());
                 };
 
+                // messages that came from discord are already authoritative on
+                // discord; editing them through our webhook can only echo the
+                // update (or fail, since webhooks can't edit other authors)
+                if portal_msg.source_platform == Platform::Discord {
+                    return Ok(());
+                }
+
                 // TODO: deduplicate code with MessageCreate handler
                 let msg_inner = match &msg.latest_version.message_type {
                     common::v1::types::MessageType::DefaultMarkdown(m)
