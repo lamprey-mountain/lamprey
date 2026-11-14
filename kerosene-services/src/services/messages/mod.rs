@@ -770,10 +770,21 @@ impl ServiceMessages {
 
     // PERF: return Arc<Media>
     async fn fetch_media2(&self, media_ref: MediaReference, user_id: UserId) -> Result<Media> {
-        let Some(media_id) = media_ref.media_id() else {
-            return Err(Error::Unimplemented);
-        };
         let srv = self.globals.services();
+
+        let media_id = match media_ref {
+            MediaReference::Media { media_id } => media_id,
+            MediaReference::Url { source_url } => {
+                let mut item = srv
+                    .media
+                    .import_from_url(crate::services::media::Import::new(user_id), &source_url)
+                    .await?;
+                return Ok((*item.ready().await).clone());
+            }
+            // attachments can only be resolved by the request extractor
+            MediaReference::Attachment { .. } => return Err(Error::Unimplemented),
+        };
+
         let media = srv.media.get(media_id).await?.ready().await;
         if media.user_id != Some(user_id) {
             return Err(Error::MissingPermissions);
