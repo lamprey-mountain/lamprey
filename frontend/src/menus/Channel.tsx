@@ -196,18 +196,38 @@ export function ChannelMenu(props: { channel_id: string }) {
 		(parentChan()?.type === "Forum" || parentChan()?.type === "Forum2") &&
 		parentPerms.has("ThreadManage");
 
-	const togglePinnedThread = () => {
+	const togglePinnedThread = async () => {
 		const parent = parentChan();
 		if (!parent) return;
 
 		const current = parent.pinned_thread_ids ?? [];
-		const next = current.includes(props.channel_id)
-			? current.filter((id) => id !== props.channel_id)
-			: [...current, props.channel_id];
+		if (current.includes(props.channel_id)) {
+			const next = current.filter((id) => id !== props.channel_id);
+			try {
+				await channels2.update(parent.id, { pinned_thread_ids: next });
+			} catch (err) {
+				console.error("Failed to unpin thread", err);
+				modalCtl.alert("Failed to unpin thread");
+			}
+			return;
+		}
 
-		channels2.update(parent.id, { pinned_thread_ids: next }).catch((err) => {
-			console.error("Failed to update pinned threads", err);
-		});
+		if (current.length >= MAX_PINNED_THREADS) {
+			modalCtl.alert(`You can only pin up to ${MAX_PINNED_THREADS} threads.`);
+			return;
+		}
+
+		try {
+			if (channel()?.archived_at) {
+				await channels2.unarchive(props.channel_id);
+			}
+			await channels2.update(parent.id, {
+				pinned_thread_ids: [...current, props.channel_id],
+			});
+		} catch (err) {
+			console.error("Failed to pin thread", err);
+			modalCtl.alert("Failed to pin thread");
+		}
 	};
 
 	const joinOrLeaveChannel = () => {
@@ -444,14 +464,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 				</Switch>
 			</Show>
 			<Show when={canPinThread()}>
-				<Item
-					onClick={togglePinnedThread}
-					disabled={
-						!isPinned() &&
-						(!!channel()?.archived_at ||
-							pinnedThreadIds().length >= MAX_PINNED_THREADS)
-					}
-				>
+				<Item onClick={togglePinnedThread}>
 					{isPinned() ? "unpin thread" : "pin thread"}
 				</Item>
 			</Show>
