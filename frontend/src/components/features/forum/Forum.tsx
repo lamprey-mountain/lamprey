@@ -38,6 +38,7 @@ import {
 	isAutoDescription,
 } from "@/utils/channel";
 import { icChevron } from "@/utils/icons";
+import { PinnedThreads } from "./PinnedThreads";
 import { ThreadCard } from "./ThreadCard";
 import {
 	type Forum2Sort,
@@ -183,8 +184,11 @@ export const Forum = (props: { channel: Channel }) => {
 
 	const threads = createMemo(() => {
 		const all = unorderedThreads();
+		const pinned = new Set(props.channel.pinned_thread_ids ?? []);
 		return all.reduce(
 			(acc, t) => {
+				if (pinned.has(t.id)) return acc;
+
 				if (t.archived_at) {
 					acc.archived.push(t);
 				} else {
@@ -336,6 +340,12 @@ export const Forum = (props: { channel: Channel }) => {
 					</Portal>
 				</div>
 			</div>
+
+			<PinnedThreads
+				channel={props.channel}
+				openInSidebar={openInSidebar()}
+				canManage={perms.has("ThreadManage")}
+			/>
 
 			<ul class="thread-list">
 				<For each={threads().active}>

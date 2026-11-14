@@ -59,6 +59,7 @@ import { MessageToolbarProvider } from "../chat/message-toolbar-context.tsx";
 import { Comment } from "./Comment.tsx";
 import { type CommentSort, CommentSorting } from "./CommentSorting.tsx";
 import { CreateForm } from "./CreateForm.tsx";
+import { PinnedThreads } from "./PinnedThreads.tsx";
 import { ThreadCard } from "./ThreadCard.tsx";
 import {
 	type Forum2Sort,
@@ -247,8 +248,11 @@ export const Forum2 = (props: { channel: Channel }) => {
 
 	const threads = createMemo(() => {
 		const all = unorderedThreads();
+		const pinned = new Set(props.channel.pinned_thread_ids ?? []);
 		return all.reduce(
 			(acc, t) => {
+				if (pinned.has(t.id)) return acc;
+
 				if (t.archived_at) {
 					acc.archived.push(t);
 				} else {
@@ -388,6 +392,12 @@ export const Forum2 = (props: { channel: Channel }) => {
 						</Portal>
 					</div>
 				</div>
+
+				<PinnedThreads
+					channel={props.channel}
+					openInSidebar={openInSidebar()}
+					canManage={perms.has("ThreadManage")}
+				/>
 
 				<ul class="thread-list">
 					<For each={threads().active}>

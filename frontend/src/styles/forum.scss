@@ -196,6 +196,42 @@
 	}
 }
 
+.pinned-threads-heading {
+	font-size: 1rem;
+	margin-top: 8px;
+}
+
+.pinned-thread-list {
+	margin-bottom: 8px;
+
+	& > li {
+		position: relative;
+	}
+
+	& > li.dragging {
+		opacity: 0.5;
+	}
+
+	& > li.drop-before::before,
+	& > li.drop-after::after {
+		content: "";
+		position: absolute;
+		left: 0;
+		right: 0;
+		height: 2px;
+		background: $link-400;
+		pointer-events: none;
+	}
+
+	& > li.drop-before::before {
+		top: -1px;
+	}
+
+	& > li.drop-after::after {
+		bottom: -1px;
+	}
+}
+
 .forum2-list {
 	padding: 8px;
 	width: 100%;

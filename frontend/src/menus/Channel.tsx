@@ -26,6 +26,7 @@ import { useModals } from "@/contexts/modal";
 import { useReadTracking } from "@/contexts/read-tracking.tsx";
 import { useNavigate } from "@/contexts/router.tsx";
 import { usePermissions } from "@/hooks/usePermissions.ts";
+import { MAX_PINNED_THREADS } from "@/lib/forum.ts";
 import { getDate } from "@/utils/general.tsx";
 import { Item, Menu, Separator, Submenu } from "./Parts.tsx";
 
@@ -52,6 +53,11 @@ export function ChannelMenu(props: { channel_id: string }) {
 		self_id,
 		() => channel()?.room_id ?? undefined,
 		() => props.channel_id,
+	);
+	const parentPerms = usePermissions(
+		self_id,
+		() => parentChan()?.room_id ?? undefined,
+		() => parentChan()?.id,
 	);
 
 	// FIXME: documents are threads if they are in wikis
@@ -181,6 +187,27 @@ export function ChannelMenu(props: { channel_id: string }) {
 			: [...currentTags, tagId];
 
 		channels2.update(props.channel_id, { tags: newTags });
+	};
+
+	const pinnedThreadIds = () => parentChan()?.pinned_thread_ids ?? [];
+	const isPinned = () => pinnedThreadIds().includes(props.channel_id);
+	const canPinThread = () =>
+		isThread() &&
+		(parentChan()?.type === "Forum" || parentChan()?.type === "Forum2") &&
+		parentPerms.has("ThreadManage");
+
+	const togglePinnedThread = () => {
+		const parent = parentChan();
+		if (!parent) return;
+
+		const current = parent.pinned_thread_ids ?? [];
+		const next = current.includes(props.channel_id)
+			? current.filter((id) => id !== props.channel_id)
+			: [...current, props.channel_id];
+
+		channels2.update(parent.id, { pinned_thread_ids: next }).catch((err) => {
+			console.error("Failed to update pinned threads", err);
+		});
 	};
 
 	const joinOrLeaveChannel = () => {
@@ -415,6 +442,18 @@ export function ChannelMenu(props: { channel_id: string }) {
 						<Item onClick={unarchiveChannel}>unarchive</Item>
 					</Match>
 				</Switch>
+			</Show>
+			<Show when={canPinThread()}>
+				<Item
+					onClick={togglePinnedThread}
+					disabled={
+						!isPinned() &&
+						(!!channel()?.archived_at ||
+							pinnedThreadIds().length >= MAX_PINNED_THREADS)
+					}
+				>
+					{isPinned() ? "unpin thread" : "pin thread"}
+				</Item>
 			</Show>
 			<Show when={hasPermission("ThreadManage")}>
 				<Item onClick={toggleLock}>

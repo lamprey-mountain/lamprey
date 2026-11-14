@@ -9,6 +9,8 @@ export type Channel = Omit<components["schemas"]["Channel"], "type"> & {
 	broadcaster_id?: string | null;
 	/** @description the stream schedule, points to a calendar channel */
 	schedule_id?: string | null;
+	/** @description threads pinned in this channel, in display order */
+	pinned_thread_ids?: string[];
 };
 export type ChannelType = components["schemas"]["ChannelType"] | "Scripts";
 export type User = components["schemas"]["User"] & {
@@ -121,6 +123,8 @@ export type ChannelPatch = components["schemas"]["ChannelPatch"] & {
 	broadcaster_id?: string | null;
 	/** @description the stream schedule, points to a calendar channel */
 	schedule_id?: string | null;
+	/** @description threads pinned in this channel, in display order */
+	pinned_thread_ids?: string[] | null;
 };
 export type HistoryPagination = components["schemas"]["HistoryPagination"];
 export type DocumentBranchState = components["schemas"]["DocumentBranchState"];
