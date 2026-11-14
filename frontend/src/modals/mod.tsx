@@ -300,7 +300,7 @@ export function getModal(modal: ModalType) {
 		return <ModalPrompt text={modal.text} cont={modal.cont} />;
 	}
 	if (isMedia(modal)) {
-		return <ModalMedia media={modal.media} />;
+		return <ModalMedia media={modal.media} gallery={modal.gallery} />;
 	}
 	if (isMessageEdits(modal)) {
 		return (

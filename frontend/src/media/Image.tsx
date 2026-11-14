@@ -1,3 +1,4 @@
+import type { Media } from "sdk";
 import { createEffect, createMemo, createSignal, on, Show } from "solid-js";
 import iconDownload from "@/assets/download.png";
 import { Icon } from "@/atoms/Icon";
@@ -20,6 +21,8 @@ type ImageViewProps = MediaProps & {
 	thumb_width?: number;
 	thumb_height?: number;
 	spoiler?: boolean;
+	/** other images from the same message, for left/right navigation */
+	gallery?: Media[];
 };
 
 export const ImageView = (props: ImageViewProps) => {
@@ -68,7 +71,11 @@ export const ImageView = (props: ImageViewProps) => {
 		if (blurred2()) {
 			setBlurred(false);
 		} else {
-			modalctl.open({ type: "media", media: props.media });
+			modalctl.open({
+				type: "media",
+				media: props.media,
+				gallery: props.gallery,
+			});
 		}
 	};
 

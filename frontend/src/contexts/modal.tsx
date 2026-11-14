@@ -45,6 +45,8 @@ export type Modal =
 	| {
 			type: "media";
 			media: Media;
+			/** other images from the same message, for left/right navigation */
+			gallery?: Media[];
 	  }
 	| {
 			type: "message_edits";

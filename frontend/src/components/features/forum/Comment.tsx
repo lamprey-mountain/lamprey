@@ -294,14 +294,22 @@ export const Comment = (props: {
 								{(() => {
 									const version = message().latest_version;
 									if (!isMarkdown(version.type)) return null;
+									const attachments =
+										"attachments" in version ? version.attachments : undefined;
+									const gallery = (attachments ?? []).flatMap((a) =>
+										a.type === "Media" &&
+										a.media.content_type.startsWith("image/")
+											? [a.media]
+											: [],
+									);
 									return (
 										<>
-											<Show when={version.attachments?.length}>
+											<Show when={attachments?.length}>
 												<ul class="attachments">
-													<For each={version.attachments}>
+													<For each={attachments}>
 														{(att) => (
 															<li>
-																<AttachmentView att={att} />
+																<AttachmentView att={att} gallery={gallery} />
 															</li>
 														)}
 													</For>

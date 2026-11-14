@@ -13,6 +13,8 @@ export type MediaViewProps = {
 	media: Media;
 	attachment?: Attachment;
 	expanded?: boolean;
+	/** other images from the same message, for left/right navigation */
+	gallery?: Media[];
 };
 
 export const MediaView = (props: MediaViewProps) => {
@@ -33,6 +35,7 @@ export const MediaView = (props: MediaViewProps) => {
 				<ImageView
 					media={media()}
 					spoiler={props.attachment?.spoiler ?? false}
+					gallery={props.gallery}
 				/>
 			</Match>
 			<Match when={mainCt() === "video"}>

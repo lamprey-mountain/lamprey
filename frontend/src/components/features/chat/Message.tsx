@@ -3,6 +3,7 @@ import {
 	type Channel as ChannelT,
 	getTimestampFromUUID,
 	type LampreyComponent,
+	type Media,
 	type Message as MessageT,
 	type Preferences,
 	type UserWithRelationship,
@@ -317,11 +318,20 @@ export function ReplyView(props: {
 	);
 }
 
-export function AttachmentView(props: { att: Attachment }) {
+export function AttachmentView(props: {
+	att: Attachment;
+	gallery?: Media[];
+}) {
 	return (
 		<Switch>
 			<Match when={props.att.type === "Media" && props.att.media}>
-				{(media) => <MediaView media={media()} attachment={props.att} />}
+				{(media) => (
+					<MediaView
+						media={media()}
+						attachment={props.att}
+						gallery={props.gallery}
+					/>
+				)}
 			</Match>
 		</Switch>
 	);
@@ -583,6 +593,11 @@ function DefaultMessage(
 	const toolbar = useMessageToolbar();
 	const tabbable = useMessageTabbable();
 	const version = () => asMarkdown2(props.message.latest_version);
+	const imageGallery = () =>
+		(version()?.attachments ?? [])
+			.filter((a) => a.type === "Media" && a.media)
+			.map((a) => a.media)
+			.filter((m) => m.content_type.startsWith("image/"));
 	const flume = () =>
 		props.message.flume?.state === "Live" && flumes.get(props.message.id);
 
@@ -746,7 +761,7 @@ function DefaultMessage(
 						<For each={version()?.attachments}>
 							{(att) => (
 								<li>
-									<AttachmentView att={att} />
+									<AttachmentView att={att} gallery={imageGallery()} />
 								</li>
 							)}
 						</For>

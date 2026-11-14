@@ -297,11 +297,58 @@
 		max-width: 100%;
 		min-width: 0;
 		min-height: 0;
+		position: relative;
+		overflow: visible;
 	}
 
 	& .resize {
 		max-height: min(var(--height), 80vh);
 		max-width: min(var(--width), 80vw);
+	}
+}
+
+.modal-media {
+	.viewport {
+		display: grid;
+		place-items: center;
+		width: 80vw;
+		height: 80vh;
+		touch-action: none;
+		user-select: none;
+		cursor: grab;
+
+		&.dragging {
+			cursor: grabbing;
+		}
+	}
+
+	.zoom {
+		transform-origin: center;
+		will-change: transform;
+
+		img {
+			cursor: inherit;
+		}
+	}
+
+	.counter {
+		position: absolute;
+		bottom: 8px;
+		left: 50%;
+		translate: -50% 0;
+		padding: 2px 8px;
+		border-radius: 999px;
+		background: #111c;
+		color: $fg-200;
+		font-family: var(--font-mono);
+		font-size: 12px;
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 200ms ease;
+
+		&.visible {
+			opacity: 1;
+		}
 	}
 }
 
