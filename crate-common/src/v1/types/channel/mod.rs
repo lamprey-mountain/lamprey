@@ -962,8 +962,10 @@ impl Diff for ChannelPatch {
             }
         }
         // Option<Vec<T>> vs Option<Vec<T>>
-        if self.tags != other.tags {
-            return true;
+        if let Some(ref val) = self.tags {
+            if other.tags.as_ref() != Some(val) {
+                return true;
+            }
         }
         if let Some(ref val) = self.pinned_thread_ids {
             if val != &other.pinned_thread_ids {
