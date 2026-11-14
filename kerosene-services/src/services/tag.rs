@@ -81,6 +81,7 @@ impl ServiceTags {
                     .add("description", &tag.description)
                     .add("color", &tag.color)
                     .add("restricted", &tag.restricted)
+                    .add("spoiler", &tag.spoiler)
                     .build(),
             });
         }
@@ -118,11 +119,12 @@ impl ServiceTags {
             return Err(Error::ApiError(ApiError::from_code(ErrorCode::UnknownTag)));
         }
 
+        let channel = srv.channels.get(channel_id, Some(user_id)).await?;
+
         let tag_old = data.tag_get(tag_id).await?;
         let tag = data.tag_update(tag_id, patch).await?;
         data.commit().await?;
 
-        let channel = srv.channels.get(channel_id, Some(user_id)).await?;
         if let Some(room_id) = channel.room_id {
             auth.set_room_id(room_id);
             auth.al_push(AuditLogEntryType::TagUpdate {
@@ -134,6 +136,7 @@ impl ServiceTags {
                     .change("color", &tag_old.color, &tag.color)
                     .change("archived", &tag_old.archived, &tag.archived)
                     .change("restricted", &tag_old.restricted, &tag.restricted)
+                    .change("spoiler", &tag_old.spoiler, &tag.spoiler)
                     .build(),
             });
         }
@@ -186,7 +189,9 @@ impl ServiceTags {
                     .remove("name", &tag.name)
                     .remove("description", &tag.description)
                     .remove("color", &tag.color)
+                    .remove("archived", &tag.archived)
                     .remove("restricted", &tag.restricted)
+                    .remove("spoiler", &tag.spoiler)
                     .build(),
             });
         }
