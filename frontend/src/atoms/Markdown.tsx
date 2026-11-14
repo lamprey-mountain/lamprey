@@ -142,12 +142,9 @@ function CustomEmoji(props: { id: string; name: string; animated?: boolean }) {
 	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	return (
-		<img
-			class="emoji custom-emoji menu-emoji"
-			data-emoji-id={props.id}
-			src={getEmojiUrl(props.id)}
-			alt={`:${props.name}:`}
-			title={`:${props.name}:`}
+		<span
+			class="emoji-trigger"
+			onMouseDown={(e) => e.preventDefault()}
 			onClick={(e) => {
 				e.stopPropagation();
 				e.preventDefault();
@@ -155,6 +152,7 @@ function CustomEmoji(props: { id: string; name: string; animated?: boolean }) {
 					id: "custom-emoji-info",
 					ref: e.currentTarget,
 					props: {
+						type: "custom",
 						emoji_id: props.id,
 						emoji_name: props.name,
 						emoji_animated: props.animated ?? false,
@@ -175,7 +173,16 @@ function CustomEmoji(props: { id: string; name: string; animated?: boolean }) {
 					animated: props.animated,
 				});
 			}}
-		/>
+		>
+			<img
+				class="emoji custom-emoji menu-emoji"
+				data-emoji-id={props.id}
+				src={getEmojiUrl(props.id)}
+				alt={`:${props.name}:`}
+				title={`:${props.name}:`}
+				draggable={false}
+			/>
+		</span>
 	);
 }
 
@@ -501,6 +508,7 @@ const matchMention = <T extends MentionData["type"]>(
 };
 
 function RenderInline(props: { inline: SerializedInline }) {
+	const ctx = useCtx();
 	const { setMenu } = useMenu();
 	return (
 		<Switch>
@@ -582,6 +590,22 @@ function RenderInline(props: { inline: SerializedInline }) {
 				{(i) => (
 					<UnicodeEmoji
 						hex={getEmojiHex(i().content)}
+						onClick={(e) => {
+							e.stopPropagation();
+							e.preventDefault();
+							const target = e.currentTarget;
+							if (!(target instanceof HTMLElement)) return;
+							ctx.setPopout({
+								id: "custom-emoji-info",
+								ref: target,
+								props: {
+									type: "unicode",
+									char: i().content,
+									hex: getEmojiHex(i().content),
+								},
+								placement: "right-start",
+							});
+						}}
 						onContextMenu={(e) => {
 							e.preventDefault();
 							e.stopPropagation();

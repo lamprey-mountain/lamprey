@@ -216,6 +216,19 @@ kbd {
 		vertical-align: center;
 	}
 
+	.emoji-trigger,
+	.emoji-sprite.menu-emoji {
+		cursor: pointer;
+	}
+
+	.emoji-trigger {
+		display: inline-block;
+		vertical-align: middle;
+		padding: 0.1em;
+		margin: -0.1em;
+		line-height: 0;
+	}
+
 	li,
 	p {
 		white-space: pre-wrap;

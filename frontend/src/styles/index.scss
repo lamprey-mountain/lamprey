@@ -4919,7 +4919,7 @@ button.round {
 	cursor: pointer;
 }
 
-.custom-emoji-info {
+.emoji-info {
 	display: flex;
 	gap: 8px;
 	align-items: center;
@@ -4929,6 +4929,25 @@ button.round {
 	border-radius: 4px;
 	border: solid $sep-300 1px;
 	box-shadow: 4px 4px 8px #1118;
+
+	.names {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		max-width: 260px;
+		max-height: 240px;
+		overflow-y: auto;
+
+		.char {
+			font-size: 1.4em;
+			margin-bottom: 4px;
+		}
+
+		.name {
+			color: $fg-400;
+			font-size: 0.9em;
+		}
+	}
 }
 
 .error-container {

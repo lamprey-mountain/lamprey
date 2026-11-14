@@ -1,26 +1,70 @@
+import { For, Show } from "solid-js";
+import { UnicodeEmoji } from "@/atoms/UnicodeEmoji";
+import { emojiResource } from "@/lib/emoji";
 import { getEmojiUrl } from "@/media/util";
 
-export type CustomEmojiInfoProps = {
-	emoji_id: string;
-	emoji_name: string;
-	emoji_animated: boolean;
-};
+export type EmojiInfoProps =
+	| {
+			type: "custom";
+			emoji_id: string;
+			emoji_name: string;
+			emoji_animated: boolean;
+		}
+	| {
+			type: "unicode";
+			char: string;
+			hex: string;
+		};
 
-// TODO: show where the emoji is from
-// TODO: show button to add emoji to this room if this is external?
+export const EmojiInfo = (props: EmojiInfoProps) => {
+	const custom = () => (props.type === "custom" ? props : undefined);
+	const unicode = () => (props.type === "unicode" ? props : undefined);
 
-export const CustomEmojiInfo = (props: CustomEmojiInfoProps) => {
+	const unicodeData = () =>
+		props.type === "unicode"
+			? emojiResource().get(props.hex.toUpperCase())
+			: undefined;
+
+	const unicodeNames = () => {
+		const data = unicodeData();
+		if (!data) return [];
+		return [...new Set([data.label, ...data.shortcodes])];
+	};
+
 	return (
-		<div class="custom-emoji-info">
-			<a href={getEmojiUrl(props.emoji_id)}>
-				<img
-					class="emoji custom-emoji large"
-					src={getEmojiUrl(props.emoji_id)}
-					alt={`:${props.emoji_name}:`}
-					title={`:${props.emoji_name}:`}
-				/>
-			</a>
-			<div>{props.emoji_name}</div>
+		<div class="emoji-info">
+			<Show
+				when={custom()}
+				fallback={
+					<Show when={unicode()}>
+						{(emoji) => (
+							<>
+								<UnicodeEmoji hex={emoji().hex} class="large" />
+								<div class="names">
+									<div class="char">{emoji().char}</div>
+									<For each={unicodeNames()}>
+										{(name) => <div class="name">:{name}:</div>}
+									</For>
+								</div>
+							</>
+						)}
+					</Show>
+				}
+			>
+				{(emoji) => (
+					<>
+						<a href={getEmojiUrl(emoji().emoji_id)}>
+							<img
+								class="emoji custom-emoji large"
+								src={getEmojiUrl(emoji().emoji_id)}
+								alt={`:${emoji().emoji_name}:`}
+								title={`:${emoji().emoji_name}:`}
+							/>
+						</a>
+						<div>{emoji().emoji_name}</div>
+					</>
+				)}
+			</Show>
 		</div>
 	);
 };

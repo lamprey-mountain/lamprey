@@ -38,8 +38,8 @@ import { ThreadPopout } from "@/components/features/chat/ThreadPopout.tsx";
 import { ThreadActivity } from "@/components/features/forum/ThreadActivity.tsx";
 import { Authenticate } from "@/components/shared/Authenticate.tsx";
 import {
-	CustomEmojiInfo,
-	type CustomEmojiInfoProps,
+	EmojiInfo,
+	type EmojiInfoProps,
 } from "@/components/shared/CustomEmojiInfo.tsx";
 import { UserProfile } from "@/components/shared/UserProfile.tsx";
 import { UserProfileEdit } from "@/components/shared/UserProfileEdit.tsx";
@@ -628,8 +628,8 @@ export function OverlayProvider(props: ParentProps) {
 							class="user-popout-animate"
 							data-placement={userViewFloating.placement}
 						>
-							<CustomEmojiInfo
-								{...(ctx.popout()?.props as CustomEmojiInfoProps)}
+							<EmojiInfo
+								{...(ctx.popout()?.props as EmojiInfoProps)}
 							/>
 						</div>
 					</div>
