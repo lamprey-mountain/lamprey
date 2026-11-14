@@ -121,6 +121,21 @@ impl ContentSearcher {
         Self { searcher }
     }
 
+    /// validate a search limit
+    ///
+    /// tantivy's [`TopDocs::with_limit`] panics if the limit is zero, so reject it
+    /// before it reaches the collector
+    fn limit(limit: u16) -> Result<usize> {
+        if limit == 0 {
+            return Err(ApiError::with_message(
+                ErrorCode::InvalidData,
+                "search limit must be greater than 0".to_string(),
+            )
+            .into());
+        }
+        Ok(limit as usize)
+    }
+
     fn parse_query(
         &self,
         fields: Vec<tantivy::schema::Field>,
@@ -176,7 +191,7 @@ impl ContentSearcher {
         q.must(msg.visibility.into_query());
         let query = q.build();
 
-        let limit = msg.req.inner.limit as usize;
+        let limit = Self::limit(msg.req.inner.limit)?;
         let cursor = msg.req.inner.offset as usize;
 
         let (items_raw, count): (Vec<_>, _) = match (msg.req.sort_field, msg.req.inner.sort_order) {
@@ -235,7 +250,7 @@ impl ContentSearcher {
         q.must(msg.visibility.into_query());
         let query = q.build();
 
-        let limit = msg.req.inner.limit as usize;
+        let limit = Self::limit(msg.req.inner.limit)?;
         let cursor = msg.req.inner.offset as usize;
 
         let (items_raw, count): (Vec<_>, _) = match (msg.req.sort_field, msg.req.inner.sort_order) {
@@ -335,7 +350,7 @@ impl ContentSearcher {
         q.must(msg.visibility.into_query());
         let query = q.build();
 
-        let limit = msg.req.inner.limit as usize;
+        let limit = Self::limit(msg.req.inner.limit)?;
         // NOTE: No offset in search struct.
         let cursor = 0;
 
@@ -414,7 +429,7 @@ impl ContentSearcher {
         q.must(SCHEMA.query_doctype(Doctype::User));
         let query = q.build();
 
-        let limit = msg.req.inner.limit as usize;
+        let limit = Self::limit(msg.req.inner.limit)?;
         let cursor = msg.req.inner.offset as usize;
 
         let (items_raw, count): (Vec<_>, _) = match msg.req.sort_field {
@@ -496,7 +511,7 @@ impl ContentSearcher {
         q.must(msg.visibility.into_query());
         let query = q.build();
 
-        let limit = msg.req.inner.limit as usize;
+        let limit = Self::limit(msg.req.inner.limit)?;
         let cursor = msg.req.inner.offset as usize;
 
         let (items_raw, count): (Vec<_>, _) = match msg.req.sort_field {
@@ -582,7 +597,7 @@ impl ContentSearcher {
         q.must(msg.visibility.into_query());
         let query = q.build();
 
-        let limit = msg.req.inner.limit as usize;
+        let limit = Self::limit(msg.req.inner.limit)?;
         let cursor = msg.req.inner.offset as usize;
 
         let (items_raw, count): (Vec<_>, _) = match msg.req.sort_field {
@@ -636,7 +651,7 @@ impl ContentSearcher {
         q.must(msg.visibility.into_query());
         let query = q.build();
 
-        let limit = msg.req.inner.limit as usize;
+        let limit = Self::limit(msg.req.inner.limit)?;
         let cursor = msg.req.inner.offset as usize;
 
         // TODO: sort by msg.req.sort_field
@@ -672,7 +687,7 @@ impl ContentSearcher {
 
         let query = q.build();
 
-        let limit = msg.req.inner.limit as usize;
+        let limit = Self::limit(msg.req.inner.limit)?;
         let cursor = msg.req.inner.offset as usize;
 
         let top_docs = TopDocs::with_limit(limit)

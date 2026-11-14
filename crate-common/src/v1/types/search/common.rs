@@ -39,8 +39,8 @@ pub struct SearchRequest {
 
     /// the maximum number of items to return
     #[serde(default = "default_limit")]
-    #[schema(default = 100, minimum = 0, maximum = 1024)]
-    #[validate(range(min = 0, max = 1024))]
+    #[schema(default = 100, minimum = 1, maximum = 1024)]
+    #[validate(range(min = 1, max = 1024))]
     pub limit: u16,
 
     /// the number of items to skip before returning
