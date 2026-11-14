@@ -2,6 +2,12 @@ import type { Message, MessageVersion } from "sdk";
 import { isMarkdown } from "@/components/features/chat/Message";
 import { generateNotificationIcon } from "@/lib/drawing";
 import { notificationPermission } from "@/lib/notifications";
+import {
+	globalNotifs,
+	isMessageMention,
+	isMessageNotified,
+	resolveNotifs,
+} from "@/lib/notifications/preferences";
 import { stripMarkdownAndResolveMentions as stripMarkdownAndResolveMentionsOriginal } from "@/lib/notifications/util";
 import type { RootStore } from "../core/Store";
 
@@ -17,7 +23,6 @@ export class NotificationService {
 
 	async handleMessageCreate(m: Message) {
 		const me = this.store.users.get("@self");
-		let is_mentioned = false;
 		const latestVersion = m.latest_version;
 		const mentions = latestVersion?.mentions;
 		const isMarkdownMsg = latestVersion
@@ -25,47 +30,29 @@ export class NotificationService {
 			: false;
 		const content = latestVersion ? getContentFromVersion(latestVersion) : "";
 
-		// Determine if mentioned
-		if (me && m.author_id !== me.id && isMarkdownMsg && mentions) {
-			if (mentions.users?.some((u) => u.id === me.id)) {
-				is_mentioned = true;
-			}
-			if (!is_mentioned && mentions.everyone) {
-				is_mentioned = true;
-			}
-			if (!is_mentioned && mentions.roles && mentions.roles.length > 0) {
-				const channel = this.store.channels.get(m.channel_id);
-				if (channel?.room_id) {
-					const room_member = this.store.roomMembers.get(
-						`${channel.room_id}:${me.id}`,
-					);
-					if (room_member && mentions.roles) {
-						for (const role of mentions.roles) {
-							if (room_member.roles.some((r) => r === role.id)) {
-								is_mentioned = true;
-								break;
-							}
-						}
-					}
-				}
-			}
-		}
-
-		// We need access to preferences. For now, assume we can get them from store or global
-		// Since we haven't fully refactored preferences into RootStore, we might need a bridge
-		// or just read from the legacy location if available?
-		// Or better, let's inject a preferences accessor into RootStore.
+		// the channel may not be cached yet (eg. the first message in a new dm)
+		const channel = this.store.channels.get(m.channel_id);
+		const notifs = channel
+			? resolveNotifs(this.store, channel)
+			: globalNotifs(this.store);
+		const is_dm = channel
+			? channel.type === "Dm" || channel.type === "Gdm"
+			: !m.room_id;
+		const is_mentioned =
+			m.author_id !== me?.id &&
+			(is_dm ||
+				(!!channel && isMessageMention(this.store, channel, m, notifs)));
+		const notified = isMessageNotified(notifs, is_dm, is_mentioned);
 
 		const preferences = this.store.preferences.read();
 		if (!preferences) return;
 
 		if (
-			is_mentioned &&
+			notified &&
 			notificationPermission() === "granted" &&
 			preferences.frontend.desktop_notifs
 		) {
 			const author = this.store.users.get(m.author_id);
-			const channel = this.store.channels.get(m.channel_id);
 			const title = `${author?.name ?? "Someone"} in #${
 				channel?.name ?? "channel"
 			}`;
@@ -112,6 +99,7 @@ export class NotificationService {
 		const ttsEnabled = preferences.frontend.tts_notifs;
 		const ttsMode = preferences.notifs.tts;
 		const shouldSpeak =
+			notified &&
 			ttsEnabled &&
 			ttsMode !== "Nothing" &&
 			(ttsMode === "Always" || (ttsMode === "Mentions" && is_mentioned));
@@ -119,7 +107,6 @@ export class NotificationService {
 
 		if (shouldSpeak && !isOwnMessage && isMarkdownMsg) {
 			const author = this.store.users.get(m.author_id);
-			const channel = this.store.channels.get(m.channel_id);
 			const rawContent = content;
 			const processedContent = await stripMarkdownAndResolveMentionsOriginal(
 				rawContent,
