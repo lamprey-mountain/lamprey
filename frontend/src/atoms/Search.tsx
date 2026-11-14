@@ -5,6 +5,7 @@ import { Icon } from "./Icon";
 export const Search = (props: {
 	ref?: Ref<HTMLInputElement>;
 	placeholder?: string;
+	ariaLabel?: string;
 	value?: Accessor<string>;
 	onInput?: (s: string) => void;
 	onSubmit?: (value: string, e: KeyboardEvent) => void;
@@ -22,6 +23,7 @@ export const Search = (props: {
 				ref={props.ref}
 				type="search"
 				placeholder={props.placeholder}
+				aria-label={props.ariaLabel ?? props.placeholder}
 				value={props.value?.() ?? ""}
 				onInput={(e) => props.onInput?.(e.currentTarget.value)}
 				onKeyDown={(e) => {

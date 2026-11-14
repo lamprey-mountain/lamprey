@@ -2,6 +2,7 @@ import fuzzysort from "fuzzysort";
 import type { Scope } from "sdk";
 import { createResource, createSignal, For, onCleanup } from "solid-js";
 import { useApi } from "@/api";
+import { Search } from "@/atoms/Search";
 import { Time } from "@/atoms/Time";
 import { getDate } from "@/utils/general";
 
@@ -66,12 +67,7 @@ export function Connections() {
 		<div class="user-settings-connections">
 			<h2>connections</h2>
 			<header class="connections-header">
-				<input
-					type="search"
-					placeholder="search"
-					aria-label="search"
-					onInput={(e) => setSearch(e.target.value)}
-				/>
+				<Search placeholder="search" onInput={setSearch} />
 			</header>
 			<For each={filteredConnections()}>
 				{(c) => (
