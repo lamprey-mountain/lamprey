@@ -9,6 +9,7 @@ import { createSignal, For, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown.tsx";
 import { Time } from "@/atoms/Time.tsx";
+import { AuditLogSkeleton } from "@/components/features/audit_log/AuditLogSkeleton";
 import {
 	formatAuditLogEntry,
 	formatChanges,
@@ -77,7 +78,7 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 					</button>
 				</div>
 			</div>
-			<Show when={log()}>
+			<Show when={log()} fallback={<AuditLogSkeleton controls={false} />}>
 				<ul class="room-settings-audit-log">
 					<For
 						each={(() => {

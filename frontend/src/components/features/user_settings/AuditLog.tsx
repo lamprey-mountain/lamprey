@@ -3,6 +3,7 @@ import { Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown";
 import { AuditLogList } from "@/components/features/audit_log/AuditLogList";
+import { AuditLogSkeleton } from "@/components/features/audit_log/AuditLogSkeleton";
 
 export function AuditLog(props: VoidProps<{ user: User }>) {
 	const api = useApi();
@@ -26,7 +27,7 @@ export function AuditLog(props: VoidProps<{ user: User }>) {
 					/>
 				</div>
 			</div>
-			<Show when={log()}>
+			<Show when={log()} fallback={<AuditLogSkeleton />}>
 				{(l) => (
 					<AuditLogList
 						room_id={props.user.id}

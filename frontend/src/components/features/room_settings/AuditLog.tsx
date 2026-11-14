@@ -3,6 +3,7 @@ import { createEffect, createSignal, Show, type VoidProps } from "solid-js";
 import { useApi } from "@/api";
 import { Dropdown } from "@/atoms/Dropdown.tsx";
 import { AuditLogList } from "@/components/features/audit_log/AuditLogList";
+import { AuditLogSkeleton } from "@/components/features/audit_log/AuditLogSkeleton";
 
 export function AuditLog(props: VoidProps<{ room: Room }>) {
 	const api = useApi();
@@ -51,7 +52,7 @@ export function AuditLog(props: VoidProps<{ room: Room }>) {
 					/>
 				</div>
 			</div>
-			<Show when={log()}>
+			<Show when={log()} fallback={<AuditLogSkeleton />}>
 				{(l) => (
 					<AuditLogList
 						room_id={props.room.id}
