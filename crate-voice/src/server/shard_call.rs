@@ -6,6 +6,7 @@ use std::{
 use crate::{
     client::webrtc::{
         PeerChange, Webrtc,
+        signalling::AnswerOutcome,
         track::{Inbound, Outbound, TrackState},
     },
     metrics::ShardMetrics,
@@ -134,10 +135,17 @@ impl ShardCall {
                 SignallingCommand::VoiceState { state } => p.update_voice_state(state),
                 SignallingCommand::Offer { sdp, tracks } => {
                     match p.handle_offer(sdp) {
-                        Ok(answer) => {
-                            events.push((peer, SignallingEvent::Answer { sdp: answer }));
-
+                        Ok(offer) => {
                             let publisher_user_id = p.user_id();
+
+                            // the peer's offer rolled back our offer, so these tracks were
+                            // never negotiated and have to be offered again
+                            for mid in offer.rolled_back {
+                                roll_back_outbound(&mut self.outbound, peer, mid);
+                                p.mapping_mut().remove_by_mid(mid);
+                            }
+
+                            events.push((peer, SignallingEvent::Answer { sdp: offer.answer }));
 
                             // process incoming tracks
                             let mut incoming_mids = HashSet::new();
@@ -247,7 +255,14 @@ impl ShardCall {
                     }
                 }
                 SignallingCommand::Answer { sdp } => {
-                    p.handle_answer(sdp);
+                    match p.handle_answer(sdp) {
+                        Ok(AnswerOutcome::Accepted) => {}
+                        Ok(AnswerOutcome::Ignored) => return events,
+                        Err(e) => {
+                            warn!("Failed to handle answer: {:?}", e);
+                            return events;
+                        }
+                    }
 
                     // update inbound tracks
                     for (_, t) in self.inbound.iter_mut().filter(|(_, t)| t.publisher == peer) {
@@ -728,9 +743,12 @@ impl ShardCall {
                 Ok(Some((mids, offer))) => {
                     let user_id = peer.user_id();
 
-                    // update outbound tracks' state to Open
+                    // the tracks stay negotiating until the peer answers this offer, since a
+                    // colliding offer from the peer would roll it back
                     for (slot, mid) in mids {
-                        self.outbound[slot].state = TrackState::Open(mid);
+                        if let Some(outbound) = self.outbound.get_mut(slot) {
+                            outbound.state = TrackState::Negotiating(mid);
+                        }
                     }
 
                     // collect track metadata for SignallingEvent::Offer
@@ -754,6 +772,19 @@ impl ShardCall {
         }
 
         events
+    }
+}
+
+/// reset an outbound track whose mid came from a local offer that was rolled back
+///
+/// the mid was never negotiated, so the track has to be offered again. the caller is expected
+/// to drop the mid from the peer's mapping
+fn roll_back_outbound(outbound: &mut SlotMap<TrackSlot, Outbound>, peer: PeerSlot, mid: SMid) {
+    for (_, out) in outbound.iter_mut() {
+        if out.subscriber == peer && out.state.mid() == Some(mid) {
+            out.state = TrackState::Pending;
+            return;
+        }
     }
 }
 

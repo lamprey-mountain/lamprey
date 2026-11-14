@@ -8,7 +8,10 @@ use crate::client::webrtc::mapping::Mapping;
 use crate::metrics::PeerStatsState;
 use crate::prelude::*;
 use crate::{
-    client::webrtc::{datachannels::Datachannels, signalling::Signalling},
+    client::webrtc::{
+        datachannels::Datachannels,
+        signalling::{AnswerOutcome, OfferOutcome, Signalling},
+    },
     util::permissions::Permissions,
 };
 
@@ -112,15 +115,14 @@ impl Webrtc {
         self.rtc.is_alive()
     }
 
-    pub fn handle_offer(&mut self, sdp: SessionDescription) -> Result<SessionDescription> {
-        let answer = self.signalling.handle_offer(&mut self.rtc, sdp)?;
-        Ok(SessionDescription(answer.to_sdp_string()))
+    /// accept an offer from the peer, rolling back a local offer if it collides
+    pub fn handle_offer(&mut self, sdp: SessionDescription) -> Result<OfferOutcome> {
+        self.signalling.handle_offer(&mut self.rtc, sdp)
     }
 
-    pub fn handle_answer(&mut self, sdp: SessionDescription) {
-        if let Err(e) = self.signalling.handle_answer(&mut self.rtc, sdp) {
-            debug!("Failed to handle answer: {:?}", e);
-        }
+    /// accept an answer from the peer
+    pub fn handle_answer(&mut self, sdp: SessionDescription) -> Result<AnswerOutcome> {
+        self.signalling.handle_answer(&mut self.rtc, sdp)
     }
 
     pub fn handle_candidate(&mut self, candidate: IceCandidate) {
@@ -174,6 +176,10 @@ impl Webrtc {
     }
 
     /// apply changes to outbound tracks, renegotiating if needed
+    ///
+    /// on success the returned mids are part of the offer that is now waiting for an answer;
+    /// the caller has to keep those tracks in [`TrackState::Negotiating`] until the answer is
+    /// accepted, since the offer can still be rolled back by a colliding offer from the peer
     pub fn apply_outbound_changes(
         &mut self,
         pending: &[PeerChange],
@@ -187,7 +193,6 @@ impl Webrtc {
                     let mid =
                         changes.add_media((*kind).into(), SDirection::SendOnly, None, None, None);
                     tracks.push((*slot, mid));
-                    // TODO: in ShardCall self.outbound[slot].state = TrackState::Negotiating(mid);
                     new_mappings.push((mid, *slot));
                 }
                 PeerChange::Close(mid) => changes.stop_media(*mid),
@@ -198,7 +203,9 @@ impl Webrtc {
         // changes.add_channel_with_config(str0m::channel::ChannelConfig { label: (), ordered: (), reliability: (), negotiated: (), protocol: () });
         // changes.set_direction(mid, dir);
 
-        let out = match self.signalling.negotiate_if_needed(changes)? {
+        let mids: Vec<SMid> = new_mappings.iter().map(|(mid, _)| *mid).collect();
+
+        let out = match self.signalling.negotiate_if_needed(changes, mids)? {
             Some(o) => {
                 for (mid, slot) in new_mappings {
                     self.mapping.insert(mid, slot);
