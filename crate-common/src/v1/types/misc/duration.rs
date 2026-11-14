@@ -18,6 +18,18 @@ use utoipa::ToSchema;
 #[cfg_attr(feature = "utoipa", derive(ToSchema), schema(value_type = String))]
 pub struct Duration(u64);
 
+/// error returned when parsing a [`Duration`] from a string
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum DurationParseError {
+    /// a unit was given without a number before it
+    #[error("missing number before unit `{0}`")]
+    MissingNumber(String),
+
+    /// the unit is not supported
+    #[error("unknown duration unit `{0}`")]
+    UnknownUnit(String),
+}
+
 impl Duration {
     /// create a new duration as a specified number of milliseconds
     pub fn from_millis(ms: u64) -> Self {
@@ -56,7 +68,7 @@ impl<'de> Deserialize<'de> for Duration {
         match Helper::deserialize(deserializer)? {
             Helper::String(s) => s
                 .parse::<Duration>()
-                .map_err(|_| serde::de::Error::custom("invalid duration string")),
+                .map_err(|e| serde::de::Error::custom(e.to_string())),
             Helper::Number(n) => Ok(Duration::from_millis(n)),
         }
     }
@@ -102,7 +114,7 @@ impl fmt::Display for Duration {
 }
 
 impl FromStr for Duration {
-    type Err = ();
+    type Err = DurationParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.trim();
@@ -130,7 +142,9 @@ impl FromStr for Duration {
                 }
                 i -= 1; // backstep because loop will increment
 
-                let num = current_num.parse::<u64>().map_err(|_| ())?;
+                let num = current_num
+                    .parse::<u64>()
+                    .map_err(|_| DurationParseError::MissingNumber(current_unit.clone()))?;
 
                 let multiplier = match current_unit.to_lowercase().as_str() {
                     "ms" | "millis" | "millisecond" | "milliseconds" => 1,
@@ -139,7 +153,7 @@ impl FromStr for Duration {
                     "h" | "hr" | "hrs" | "hour" | "hours" => 1000 * 60 * 60,
                     "d" | "day" | "days" => 1000 * 60 * 60 * 24,
                     "w" | "wk" | "week" | "weeks" => 1000 * 60 * 60 * 24 * 7,
-                    _ => return Err(()),
+                    _ => return Err(DurationParseError::UnknownUnit(current_unit.clone())),
                 };
                 total_ms += num * multiplier;
 
@@ -186,6 +200,18 @@ mod tests {
     fn assert_parse(s: &str, expected: u64) {
         let d = Duration::from_str(s).unwrap();
         assert_eq!(d.as_millis(), expected, "failed to parse {}", s);
+    }
+
+    #[test]
+    fn test_parse_errors() {
+        assert_eq!(
+            Duration::from_str("12x"),
+            Err(DurationParseError::UnknownUnit("x".to_string()))
+        );
+        assert_eq!(
+            Duration::from_str("h"),
+            Err(DurationParseError::MissingNumber("h".to_string()))
+        );
     }
 
     #[test]
