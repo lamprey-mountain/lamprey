@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE channel SET\n                    version_id = $2,\n                    pinned_thread_ids = coalesce(\n                        (SELECT array_agg(pinned) FROM unnest(pinned_thread_ids) AS pinned\n                            WHERE NOT (pinned = ANY($1))),\n                        '{}'\n                    )\n                WHERE pinned_thread_ids && $1\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4a1f28881712471eb192f02dacba5add51b5300d4841746618c3be436c38cd71"
+}

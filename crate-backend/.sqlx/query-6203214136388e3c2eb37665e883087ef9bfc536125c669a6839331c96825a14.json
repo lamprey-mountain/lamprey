@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO dm_visible (user_id, channel_id)\n            SELECT user_a_id, channel_id FROM dm WHERE channel_id = $1\n            UNION ALL\n            SELECT user_b_id, channel_id FROM dm WHERE channel_id = $1\n            ON CONFLICT DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6203214136388e3c2eb37665e883087ef9bfc536125c669a6839331c96825a14"
+}
