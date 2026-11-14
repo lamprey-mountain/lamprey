@@ -45,6 +45,8 @@ type Tick = {
 
 export type ChartProps = {
 	points: Array<number>;
+	/** optional heading rendered above the chart */
+	title?: string;
 	/** fixed y-axis maximum, defaults to the largest data point */
 	height?: number;
 	/** value formatter used for the y-axis labels and the tooltip */
@@ -318,6 +320,11 @@ export const Chart = (props: VoidProps<ChartProps>) => {
 
 	return (
 		<div class="chart-container">
+			<Show when={props.title}>
+				<div class="chart-header">
+					<h4>{props.title}</h4>
+				</div>
+			</Show>
 			<Show
 				when={props.points.length > 0}
 				fallback={

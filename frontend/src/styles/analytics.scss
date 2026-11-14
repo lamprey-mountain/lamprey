@@ -17,7 +17,6 @@
 
 	.chart-header {
 		display: flex;
-		justify-content: space-between;
 		align-items: center;
 		margin-bottom: 0.5rem;
 
@@ -26,28 +25,10 @@
 			font-size: 1rem;
 			color: $fg-300;
 		}
-
-		.chart-tooltip {
-			display: flex;
-			gap: 0.5rem;
-			font-size: 0.9rem;
-			background: $bg-300;
-			padding: 2px 8px;
-			border-radius: 4px;
-			border: 1px solid $sep-500;
-
-			.date {
-				color: $fg-500;
-			}
-
-			.value {
-				color: $link-500;
-				font-weight: bold;
-			}
-		}
 	}
 
 	.chart {
+		position: relative;
 		height: 200px;
 		width: 100%;
 		cursor: crosshair;
@@ -56,5 +37,38 @@
 			height: 100%;
 			width: 100%;
 		}
+	}
+
+	.chart-tooltip {
+		position: absolute;
+		top: 0;
+		transform: translateX(-50%);
+		display: flex;
+		gap: 0.5rem;
+		font-size: 0.9rem;
+		background: $bg-300;
+		padding: 2px 8px;
+		border-radius: 4px;
+		border: 1px solid $sep-500;
+		pointer-events: none;
+		white-space: nowrap;
+
+		.date {
+			color: $fg-500;
+		}
+
+		.value {
+			color: $link-500;
+			font-weight: bold;
+		}
+	}
+
+	.chart-empty {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+		height: 200px;
+		color: $fg-500;
 	}
 }
