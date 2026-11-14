@@ -1,5 +1,6 @@
 import { For, Show } from "solid-js";
 import { useApi } from "@/api";
+import { Markdown } from "@/atoms/Markdown";
 import { createTooltip } from "@/atoms/Tooltip";
 import type { ChannelT } from "@/types";
 
@@ -26,7 +27,7 @@ export const ThreadTags = (props: ThreadTagsProps) => {
 										<div style="text-align:left">
 											<div>{tag().name}</div>
 											<Show when={tag().description}>
-												{(desc) => <div class="dim">{desc()}</div>}
+												{(desc) => <Markdown class="dim" content={desc()} />}
 											</Show>
 											<Show when={false /* TODO: ui design for this */}>
 												<div class="dim">

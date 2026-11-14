@@ -3932,6 +3932,9 @@ button.link {
 }
 
 .tag-edit-form {
+	width: 360px;
+	max-width: 100%;
+
 	.option-block {
 		display: flex;
 		flex-direction: column;
@@ -3942,16 +3945,25 @@ button.link {
 			color: $fg-500;
 			font-size: 0.8rem;
 		}
-	}
 
-	#tagDescription {
-		border: solid $sep-300 1px;
-		background: $bg-150;
-		padding: 2px 4px;
-		border-radius: 2px;
+		& > input {
+			width: 100%;
+		}
 
-		&:focus {
-			border: solid $link-500 1px;
+		& > .editor {
+			width: 100%;
+			flex: initial;
+			border: solid $sep-300 1px;
+			background: $bg-150;
+			border-radius: 2px;
+
+			&:focus-within {
+				border: solid $link-500 1px;
+			}
+
+			& > .ProseMirror {
+				min-height: 3lh;
+			}
 		}
 	}
 }

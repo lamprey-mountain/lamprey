@@ -19,6 +19,7 @@ import {
 import { useCtx } from "@/app/context";
 import { formatDuration } from "@/atoms/Duration";
 import { Checkbox } from "@/atoms/icons";
+import { Markdown } from "@/atoms/Markdown";
 import { Search } from "@/atoms/Search.tsx";
 import { timeAgo } from "@/atoms/Time.tsx";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
@@ -435,7 +436,7 @@ export function ChannelMenu(props: { channel_id: string }) {
 													)}
 												</div>
 												<Show when={tag.description}>
-													<div class="dim">{tag.description}</div>
+													{(desc) => <Markdown class="dim" content={desc()} />}
 												</Show>
 											</div>
 										</div>

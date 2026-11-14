@@ -1,11 +1,18 @@
+import type { EditorState } from "prosemirror-state";
 import type { Tag, TagCreate } from "sdk";
 import { createSignal } from "solid-js";
 import { useChannels } from "@/api";
 import { CheckboxOption } from "@/atoms/CheckboxOption";
-import { ColorPicker } from "@/atoms/ColorPicker";
+import { ColorPickerButton } from "@/atoms/ColorPicker";
 import { Checkbox } from "@/atoms/icons";
+import { createEditor } from "@/components/features/editor/Editor";
+import { serializeToMarkdown } from "@/components/features/editor/serializer";
+import { useAutocomplete } from "@/contexts/autocomplete";
+import { useFormattingToolbar } from "@/contexts/formatting-toolbar";
 import { useModals } from "@/contexts/modal";
 import { Modal } from "./mod";
+
+const MAX_DESCRIPTION_LENGTH = 8192;
 
 interface ModalTagEditorProps {
 	tag?: Tag;
@@ -17,6 +24,9 @@ interface ModalTagEditorProps {
 export const ModalTagEditor = (props: ModalTagEditorProps) => {
 	const channels2 = useChannels();
 	const [, modalCtl] = useModals();
+	const toolbar = useFormattingToolbar();
+	const autocomplete = useAutocomplete();
+	const forumChannel = channels2.use(() => props.forumChannelId);
 
 	const [name, setName] = createSignal(props.tag?.name || "");
 	const [description, setDescription] = createSignal(
@@ -29,8 +39,37 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
 
+	const editor = createEditor({
+		channelId: () => props.forumChannelId,
+		roomId: () => forumChannel()?.room_id ?? "",
+		toolbar,
+		autocomplete,
+		initialContent: () => description(),
+	});
+
+	// the editor dispatches metadata transactions on mount, and serializing the parsed
+	// content back to markdown doesn't reproduce the stored description exactly. keep the
+	// description untouched until the document actually changes.
+	let descriptionBaseline: string | undefined;
+
+	const handleDescriptionChange = (state: EditorState) => {
+		const markdown = serializeToMarkdown(state.doc);
+		descriptionBaseline ??= markdown;
+		if (markdown === descriptionBaseline) return;
+		descriptionBaseline = markdown;
+		setDescription(markdown);
+	};
+
 	const handleSubmit = async (e: SubmitEvent) => {
 		e.preventDefault();
+
+		if (description().length > MAX_DESCRIPTION_LENGTH) {
+			setError(
+				`Description must be at most ${MAX_DESCRIPTION_LENGTH} characters.`,
+			);
+			return;
+		}
+
 		setLoading(true);
 		setError(null);
 
@@ -86,19 +125,18 @@ export const ModalTagEditor = (props: ModalTagEditorProps) => {
 				</div>
 
 				<div class="option-block">
-					<label for="tagDescription">Description</label>
-					<textarea
-						id="tagDescription"
-						value={description()}
-						onInput={(e) => setDescription(e.currentTarget.value)}
-						maxLength={8192}
-						rows={3}
+					<label class="small">Description</label>
+					<editor.View
+						autofocus={false}
+						placeholder="what is this tag for?"
+						submitOnEnter={false}
+						onChange={handleDescriptionChange}
 					/>
 				</div>
 
 				<div class="option-block">
 					<label for="tagColor">Color</label>
-					<ColorPicker
+					<ColorPickerButton
 						value={color() ?? "#000000"}
 						onInput={(newColor) => setColor(newColor)}
 					/>

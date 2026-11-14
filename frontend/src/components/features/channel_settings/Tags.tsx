@@ -12,6 +12,7 @@ import { useApi, useChannels } from "@/api";
 import icDelete from "@/assets/delete.png";
 import icEdit from "@/assets/edit.png";
 import { Icon } from "@/atoms/Icon";
+import { Markdown } from "@/atoms/Markdown";
 import { Search } from "@/atoms/Search";
 import { useCurrentUser } from "@/contexts/currentUser.tsx";
 import { useModals } from "@/contexts/modal";
@@ -128,7 +129,12 @@ export function Tags(props: VoidProps<{ channel: Channel }>) {
 										<div class="tag-info">
 											<h3 class="name">{tag.name}</h3>
 											<div class="description">
-												{tag.description ?? "No description"}
+												<Show
+													when={tag.description}
+													fallback="No description"
+												>
+													{(desc) => <Markdown content={desc()} />}
+												</Show>
 											</div>
 											<div class="dim">
 												{tag.active_thread_count} active threads •{" "}
