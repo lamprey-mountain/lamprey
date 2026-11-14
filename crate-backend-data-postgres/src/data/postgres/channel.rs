@@ -296,6 +296,14 @@ impl DataChannel for Postgres {
 
         let version_id = ChannelVerId::new();
 
+        let pinned_thread_ids: Vec<_> = patch
+            .pinned_thread_ids
+            .clone()
+            .unwrap_or_else(|| thread.pinned_thread_ids.clone())
+            .into_iter()
+            .map(|i| i.into_inner())
+            .collect();
+
         let archived_at = match patch.archived {
             Some(true) => Some(time::OffsetDateTime::now_utc()),
             Some(false) => None,
@@ -359,7 +367,8 @@ impl DataChannel for Postgres {
                 locked_until = $22,
                 locked_roles = $23,
                 auto_name = $24,
-                auto_description = $25
+                auto_description = $25,
+                pinned_thread_ids = $26
             WHERE id = $1
         "#,
             thread_id.into_inner(),
@@ -408,6 +417,7 @@ impl DataChannel for Postgres {
             &locked_roles,
             patch.auto_name.unwrap_or(thread.auto_name),
             patch.auto_description.unwrap_or(thread.auto_description),
+            &pinned_thread_ids,
         )
         .execute(tx.ext())
         .await?;

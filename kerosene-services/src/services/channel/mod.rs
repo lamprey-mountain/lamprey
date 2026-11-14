@@ -5,9 +5,9 @@ use common::v1::types::presence::Status;
 use common::v1::types::util::{Diff, Time};
 use common::v1::types::{
     Channel, ChannelCreate, ChannelId, ChannelPatch, ChannelType, DEFAULT_AUTO_ARCHIVE_DURATION,
-    Message, MessageChannelIcon, MessageChannelMoved, MessageChannelRename, MessageChannelTagged,
-    MessageId, MessageSync, MessageThreadCreated, MessageType, Permission, PermissionOverwrite,
-    RoomFeature, RoomId, ThreadMemberCreate, UserId,
+    MAX_PINNED_THREADS, Message, MessageChannelIcon, MessageChannelMoved, MessageChannelRename,
+    MessageChannelTagged, MessageId, MessageSync, MessageThreadCreated, MessageType, Permission,
+    PermissionOverwrite, RoomFeature, RoomId, ThreadMemberCreate, UserId,
 };
 use common::v2::types::MessageVerId;
 use kerosene_core::error::{ApiError, ErrorCode};
@@ -1060,10 +1060,12 @@ impl ServiceChannels {
 
         perms.ensure_unlocked()?;
 
-        // if the patch contains more than just archive/lock changes, do a general permission check
+        // if the patch contains more than just archive/lock/pin changes, do a general permission check
         let mut other_changes = patch.clone();
         other_changes.archived = None;
         other_changes.locked = None;
+        // pinned threads have their own permission check
+        other_changes.pinned_thread_ids = None;
         if other_changes.changes(&chan_old) {
             if chan_old.is_thread() {
                 if chan_old.creator_id != user.id {
@@ -1269,6 +1271,74 @@ impl ServiceChannels {
             chan_old.ensure_is_thread()?;
         }
 
+        if let Some(pinned_thread_ids) = &patch.pinned_thread_ids {
+            if !matches!(chan_old.ty, ChannelType::Forum | ChannelType::Forum2) {
+                return Err(ApiError::from_code(ErrorCode::InvalidData).into());
+            }
+            perms.ensure(Permission::ThreadManage)?;
+
+            if pinned_thread_ids.len() > MAX_PINNED_THREADS {
+                return Err(Error::BadStatic("too many pinned threads"));
+            }
+
+            let mut seen = HashSet::new();
+            for pinned_thread_id in pinned_thread_ids {
+                if !seen.insert(*pinned_thread_id) {
+                    return Err(Error::BadStatic("duplicate pinned thread"));
+                }
+
+                let pinned_thread = srv.channels.get(*pinned_thread_id, None).await?;
+                if pinned_thread.parent_id != Some(thread_id) {
+                    return Err(ApiError::from_code(ErrorCode::InvalidParentChannelType).into());
+                }
+
+                // archived threads can't be newly pinned
+                if pinned_thread.is_archived()
+                    && !chan_old.pinned_thread_ids.contains(pinned_thread_id)
+                {
+                    return Err(ApiError::from_code(ErrorCode::ChannelArchived).into());
+                }
+            }
+        }
+
+        // archiving a pinned thread also unpins it, which normally requires ThreadManage.
+        // require the same here and remove it from the parent forum's pins.
+        let unpinned_parent = if patch.archived == Some(true) {
+            match chan_old.parent_id {
+                Some(parent_id) => {
+                    let parent = srv.channels.get(parent_id, None).await?;
+                    if parent.pinned_thread_ids.contains(&thread_id) {
+                        srv.perms
+                            .for_channel(user_id, parent_id)
+                            .await?
+                            .ensure(Permission::ThreadManage)?;
+
+                        let pinned_thread_ids = parent
+                            .pinned_thread_ids
+                            .iter()
+                            .copied()
+                            .filter(|id| *id != thread_id)
+                            .collect();
+                        data.channel_update(
+                            parent_id,
+                            ChannelPatch {
+                                pinned_thread_ids: Some(pinned_thread_ids),
+                                ..Default::default()
+                            },
+                        )
+                        .await?;
+
+                        Some(parent)
+                    } else {
+                        None
+                    }
+                }
+                None => None,
+            }
+        } else {
+            None
+        };
+
         if let Some(room_id) = chan_old.room_id {
             let automod = srv.automod.load(room_id).await?;
             let ctx = AutomodContext {
@@ -1304,6 +1374,27 @@ impl ServiceChannels {
             let ty = util::calculate_audit_log_entry_from_update(&chan_old, &chan_new);
             auth.set_room_id(room_id);
             auth.al_push(ty);
+        }
+
+        if let Some(parent_old) = unpinned_parent {
+            self.invalidate(parent_old.id).await;
+            let parent_new = self.get(parent_old.id, None).await?;
+            if let Some(room_id) = parent_new.room_id {
+                auth.set_room_id(room_id);
+                auth.al_push(util::calculate_audit_log_entry_from_update(
+                    &parent_old,
+                    &parent_new,
+                ));
+                self.globals
+                    .messaging()
+                    .broadcast_room(
+                        room_id,
+                        MessageSync::ChannelUpdate {
+                            channel: Box::new(parent_new),
+                        },
+                    )
+                    .await?;
+            }
         }
 
         // TODO: dry up channel update message logic (move stuff to messages service)
@@ -1551,6 +1642,25 @@ impl ServiceChannels {
                                 let _ = globals.messaging().broadcast_channel(parent_id, msg).await;
                             } else {
                                 warn!(channel_id = %thread_id, "auto archived thread channel has no room_id or parent_id");
+                            }
+
+                            // the thread was unpinned from its parent forum
+                            if let Some(parent_id) = parent_id {
+                                srv.channels.invalidate(parent_id).await;
+                                if let Ok(parent) = srv.channels.get(parent_id, None).await {
+                                    let msg = MessageSync::ChannelUpdate {
+                                        channel: Box::new(parent),
+                                    };
+                                    if let Some(room_id) = room_id {
+                                        let _ =
+                                            globals.messaging().broadcast_room(room_id, msg).await;
+                                    } else {
+                                        let _ = globals
+                                            .messaging()
+                                            .broadcast_channel(parent_id, msg)
+                                            .await;
+                                    }
+                                }
                             }
                         }
                     }

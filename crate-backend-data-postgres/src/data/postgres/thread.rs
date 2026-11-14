@@ -109,8 +109,8 @@ impl DataThread for Postgres {
     }
 
     async fn thread_auto_archive(&mut self) -> Result<Vec<ChannelId>> {
-        let mut conn = self.acquire().await?;
-        let archived_threads = query!(
+        let mut tx = self.begin_tx().await?;
+        let archived_ids: Vec<_> = query!(
             r#"
             UPDATE channel
             SET
@@ -127,13 +127,35 @@ impl DataThread for Postgres {
             "#,
             ChannelVerId::new().into_inner()
         )
-        .fetch_all(conn.ext())
+        .fetch_all(tx.ext())
         .await?
         .into_iter()
-        .map(|row| ChannelId::from(row.id))
+        .map(|row| row.id)
         .collect();
 
-        Ok(archived_threads)
+        // archived threads can no longer be pinned to their parent forum
+        if !archived_ids.is_empty() {
+            query!(
+                r#"
+                UPDATE channel SET
+                    version_id = $2,
+                    pinned_thread_ids = coalesce(
+                        (SELECT array_agg(pinned) FROM unnest(pinned_thread_ids) AS pinned
+                            WHERE NOT (pinned = ANY($1))),
+                        '{}'
+                    )
+                WHERE pinned_thread_ids && $1
+                "#,
+                &archived_ids,
+                ChannelVerId::new().into_inner(),
+            )
+            .execute(tx.ext())
+            .await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(archived_ids.into_iter().map(ChannelId::from).collect())
     }
 
     async fn thread_all_active_room(&mut self, room_id: RoomId) -> Result<Vec<Channel>> {
@@ -144,7 +166,7 @@ impl DataThread for Postgres {
             SELECT
                 c.id, c.room_id, c.creator_id, c.owner_id, c.version_id, c.name, c.description, c.auto_name, c.auto_description, c.icon, c.url, c.type as "ty: _", c.nsfw, c.latest_seq, c.locked, c.locked_until, c.locked_roles, c.archived_at, c.deleted_at, c.parent_id, c.position, c.bitrate, c.user_limit, c.invitable, c.auto_archive_duration,
                 c.default_auto_archive_duration, c.slowmode_thread, c.slowmode_message,
-                c.default_slowmode_message, c.last_activity_at, c.last_pin_timestamp,
+                c.default_slowmode_message, c.last_activity_at, c.last_pin_timestamp, c.pinned_thread_ids,
                 (SELECT coalesce(COUNT(*), 0) FROM thread_member WHERE channel_id = c.id AND membership = 'Join') AS "member_count!",
                 c.last_version_id as last_version_id,
                 c.last_message_id as last_message_id,

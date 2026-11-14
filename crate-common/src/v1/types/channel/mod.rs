@@ -30,6 +30,9 @@ use super::{RoomId, UserId};
 /// default number of seconds after which inactive threads are auto-archived (3 days)
 pub const DEFAULT_AUTO_ARCHIVE_DURATION: u64 = 72 * 60 * 60;
 
+/// maximum number of threads that can be pinned to a `Forum` or `Forum2` channel
+pub const MAX_PINNED_THREADS: usize = 4;
+
 pub mod components;
 
 /// A channel
@@ -151,6 +154,12 @@ pub struct Channel {
     pub message_count: Option<u64>,
     pub root_message_count: Option<u64>,
     pub last_pin_timestamp: Option<Time>,
+
+    /// threads pinned in this channel, in display order
+    ///
+    /// only used by `Forum` and `Forum2` channels
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub pinned_thread_ids: Vec<ChannelId>,
 
     /// bitrate, for voice channels. defaults to 65535 (64Kibps).
     #[cfg_attr(feature = "validator", validate(range(min = 8192)))]
@@ -295,6 +304,8 @@ impl Serialize for Channel {
             last_message_id: Option<MessageId>,
             #[serde(skip_serializing_if = "Option::is_none")]
             last_pin_timestamp: Option<Time>,
+            #[serde(skip_serializing_if = "is_empty")]
+            pinned_thread_ids: &'a [ChannelId],
             #[serde(skip_serializing_if = "Option::is_none")]
             message_count: Option<u64>,
             #[serde(skip_serializing_if = "Option::is_none")]
@@ -359,6 +370,10 @@ impl Serialize for Channel {
             !*b
         }
 
+        fn is_empty<T>(slice: &&[T]) -> bool {
+            slice.is_empty()
+        }
+
         let view = ChannelView {
             id: self.id,
             room_id: self.room_id,
@@ -402,6 +417,11 @@ impl Serialize for Channel {
             last_version_id: self.last_version_id,
             last_message_id: self.last_message_id,
             last_pin_timestamp: self.last_pin_timestamp,
+            pinned_thread_ids: if matches!(self.ty, ChannelType::Forum | ChannelType::Forum2) {
+                &self.pinned_thread_ids
+            } else {
+                &[]
+            },
             message_count: if self.has_text() {
                 self.message_count
             } else {
@@ -844,6 +864,12 @@ pub struct ChannelPatch {
     )]
     pub default_slowmode_message: Option<Option<u64>>,
 
+    /// pinned threads in this channel, in display order
+    ///
+    /// only valid for `Forum` and `Forum2` channels. requires `ThreadManage`.
+    #[validate(length(max = 4))]
+    pub pinned_thread_ids: Option<Vec<ChannelId>>,
+
     pub document: Option<DocumentPatch>,
     pub wiki: Option<WikiPatch>,
     pub calendar: Option<CalendarPatch>,
@@ -919,6 +945,11 @@ impl Diff for ChannelPatch {
         // Option<Vec<T>> vs Option<Vec<T>>
         if self.tags != other.tags {
             return true;
+        }
+        if let Some(ref val) = self.pinned_thread_ids {
+            if val != &other.pinned_thread_ids {
+                return true;
+            }
         }
         // Option<bool> vs bool
         if let Some(val) = self.nsfw {
@@ -1048,6 +1079,9 @@ impl Diff for ChannelPatch {
             other.icon = val;
         }
         other.tags = self.tags.or(other.tags);
+        if let Some(val) = self.pinned_thread_ids {
+            other.pinned_thread_ids = val;
+        }
         other.nsfw = self.nsfw.unwrap_or(other.nsfw);
         if let Some(val) = self.bitrate {
             other.bitrate = val;
