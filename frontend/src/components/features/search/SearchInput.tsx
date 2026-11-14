@@ -272,8 +272,7 @@ export const SearchInput = (props: {
 			return filterSuggestions().length > 0 || recentSearches().length > 0;
 		}
 		const def = SEARCH_FILTERS[f.type];
-		if (!def) return false;
-		return def.getSuggestions(f.query, searchContext()).length > 0;
+		return !!def;
 	});
 
 	const { states, setStates } = useSearch();

@@ -136,7 +136,10 @@ export const SearchAutocomplete = (props: {
 }) => {
 	const [hoveredFilter, setHoveredFilter] = createSignal<string | null>(null);
 
-	const isShowingTwoColumn = () =>
+	const activeFilterKey = () =>
+		props.filter && props.filter.type !== "filter" ? props.filter.type : null;
+
+	const isBareFilterMode = () =>
 		props.filter?.type === "filter" && props.filter.query === "";
 
 	const handleFilterHover = (key: string | null) => {
@@ -144,6 +147,7 @@ export const SearchAutocomplete = (props: {
 	};
 
 	const handleFilterSelect = (key: string) => {
+		setHoveredFilter(null);
 		props.onCompletion({ type: "text", text: `${key}:` });
 	};
 
@@ -164,6 +168,64 @@ export const SearchAutocomplete = (props: {
 		);
 	};
 
+	const renderAutocompleteItems = () => (
+		<>
+			<ul>
+				<For each={props.autocompleteItems}>
+					{(item, idx) => {
+						const isHovered = () => idx() === (props.hoveredIndex ?? 0);
+						const isSeparator = () => item.isSeparator;
+
+						return (
+							<Show
+								when={!isSeparator()}
+								fallback={
+									<li class="autocomplete-separator">Recent Searches</li>
+								}
+							>
+								<li
+									id={item.id}
+									class="autocomplete-item"
+									classList={{
+										hovered: isHovered(),
+										"not-recent": !item.id.startsWith("recent"),
+									}}
+									onMouseDown={(e) => {
+										e.preventDefault();
+										item.onSelect();
+									}}
+									onMouseEnter={() => props.setHoveredIndex?.(idx())}
+								>
+									<Show
+										when={item.user}
+										fallback={
+											<Show when={item.channel}>
+												{(ch) => (
+													<ChannelIcon
+														channel={ch()}
+														style="width: 16px; height: 16px; flex: none;"
+													/>
+												)}
+											</Show>
+										}
+									>
+										{(user) => <Avatar user={user()} animate={isHovered()} />}
+									</Show>
+									{renderLabel(item.label, isHovered())}
+								</li>
+							</Show>
+						);
+					}}
+				</For>
+			</ul>
+			<Show when={props.autocompleteItems.length === 0}>
+				<div class="dim" style="text-align: center; padding: 16px;">
+					no suggestions
+				</div>
+			</Show>
+		</>
+	);
+
 	return (
 		<Show when={props.hasSuggestions}>
 			<div
@@ -176,70 +238,20 @@ export const SearchAutocomplete = (props: {
 				onBlur={props.onBlur}
 			>
 				<Show
-					when={isShowingTwoColumn()}
-					fallback={
-						<div class="side right">
-							<ul>
-								<For each={props.autocompleteItems}>
-									{(item, idx) => {
-										const isHovered = () => idx() === (props.hoveredIndex ?? 0);
-										const isSeparator = () => item.isSeparator;
-
-										return (
-											<Show
-												when={!isSeparator()}
-												fallback={
-													<li class="autocomplete-separator">
-														Recent Searches
-													</li>
-												}
-											>
-												<li
-													id={item.id}
-													class="autocomplete-item"
-													classList={{
-														hovered: isHovered(),
-														"not-recent": !item.id.startsWith("recent"),
-													}}
-													onMouseDown={(e) => {
-														e.preventDefault();
-														item.onSelect();
-													}}
-													onMouseEnter={() => props.setHoveredIndex?.(idx())}
-												>
-													<Show
-														when={item.user}
-														fallback={
-															<Show when={item.channel}>
-																{(ch) => (
-																	<ChannelIcon
-																		channel={ch()}
-																		style="width: 16px; height: 16px; flex: none;"
-																	/>
-																)}
-															</Show>
-														}
-													>
-														{(user) => (
-															<Avatar user={user()} animate={isHovered()} />
-														)}
-													</Show>
-													{renderLabel(item.label, isHovered())}
-												</li>
-											</Show>
-										);
-									}}
-								</For>
-							</ul>
-						</div>
-					}
+					when={props.filter}
+					fallback={<div class="side right">{renderAutocompleteItems()}</div>}
 				>
 					<div class="side left">
 						<h3 class="dim">filters</h3>
-						<ul class="filters-list">
+						<ul
+							class="filters-list"
+							onMouseLeave={() => handleFilterHover(null)}
+						>
 							<For each={FILTER_METADATA}>
 								{(meta) => {
-									const isHovered = () => hoveredFilter() === meta.key;
+									const isHovered = () =>
+										hoveredFilter() === meta.key ||
+										(!hoveredFilter() && activeFilterKey() === meta.key);
 									const handleSelect = () => handleFilterSelect(meta.key);
 									return (
 										<li
@@ -271,11 +283,16 @@ export const SearchAutocomplete = (props: {
 							</For>
 						</ul>
 					</div>
-					<Show when={hoveredFilter() || !props.filter?.query}>
-						<div class="side right">
-							<Show
-								when={hoveredFilter()}
-								fallback={
+					<div class="side right">
+						<Show
+							when={
+								hoveredFilter() === activeFilterKey() ? null : hoveredFilter()
+							}
+							fallback={
+								<Show
+									when={isBareFilterMode()}
+									fallback={renderAutocompleteItems()}
+								>
 									<>
 										<header class="presets-header">
 											<h3 class="dim">preset searches</h3>
@@ -368,23 +385,23 @@ export const SearchAutocomplete = (props: {
 											</div>
 										</Show>
 									</>
-								}
-							>
-								{(filterKey) => (
-									<FilterValuesPanel
-										filterKey={filterKey()}
-										searchContext={props.searchContext}
-										onSelect={(value) => {
-											props.onCompletion({
-												type: "text",
-												text: `${filterKey()}:${value}`,
-											});
-										}}
-									/>
-								)}
-							</Show>
-						</div>
-					</Show>
+								</Show>
+							}
+						>
+							{(filterKey) => (
+								<FilterValuesPanel
+									filterKey={filterKey()}
+									searchContext={props.searchContext}
+									onSelect={(value) => {
+										props.onCompletion({
+											type: "text",
+											text: `${filterKey()}:${value}`,
+										});
+									}}
+								/>
+							)}
+						</Show>
+					</div>
 				</Show>
 			</div>
 		</Show>
