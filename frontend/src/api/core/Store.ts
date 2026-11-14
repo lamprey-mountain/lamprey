@@ -418,7 +418,7 @@ export class RootStore {
 			this.memberLists.updateMember(msg.member.user_id, msg.member.room_id);
 		} else if (msg.type === "RoomMemberDelete") {
 			this.roomMembers.cache.delete(`${msg.room_id}:${msg.user_id}`);
-			// TODO: MemberList delete logic
+			this.memberLists.removeMember(msg.room_id, msg.user_id);
 		} else if (msg.type === "ThreadMemberUpsert") {
 			for (const member of msg.added) {
 				this.threadMembers.upsert(member);

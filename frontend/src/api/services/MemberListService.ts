@@ -208,6 +208,30 @@ export class MemberListService {
 		}
 	}
 
+	/** remove a user from a cached member list, keeping group counts in sync */
+	removeMember(list_id: string, user_id: string) {
+		const list = this.lists.get(list_id);
+		if (!list) return;
+
+		const index = list.items.findIndex((item) => item.user.id === user_id);
+		if (index === -1) return;
+
+		const groups = list.groups.map((group) => ({ ...group }));
+		let offset = 0;
+		for (const group of groups) {
+			if (index < offset + group.count) {
+				group.count -= 1;
+				break;
+			}
+			offset += group.count;
+		}
+
+		this.lists.set(list_id, {
+			groups,
+			items: list.items.filter((item) => item.user.id !== user_id),
+		});
+	}
+
 	updateUser(user: User) {
 		for (const [id, list] of this.lists.entries()) {
 			let changed = false;
