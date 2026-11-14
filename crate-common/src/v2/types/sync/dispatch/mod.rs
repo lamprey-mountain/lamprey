@@ -6,24 +6,24 @@
 use lamprey_macros::record;
 
 use crate::{
-    v1::types::{Session, User, application::Application},
+    v1::types::{application::Application, Session, User},
     v2::types::{
-        ConnectionId,
         sync::dispatch::{
             channel::DispatchChannel, client::DispatchClient, global::DispatchGlobal,
-            room::DispatchRoom, user::DispatchUser,
+            media::DispatchMedia, room::DispatchRoom, user::DispatchUser, webhook::DispatchWebhook,
         },
+        ConnectionId,
     },
 };
 
 pub mod channel;
 pub mod client;
 pub mod global;
-// pub mod invite;
-// pub mod media;
+pub mod invite;
+pub mod media;
 pub mod room;
 pub mod user;
-// pub mod webhook;
+pub mod webhook;
 
 /// something happened
 // NOTE: probably not necessary to have this?
@@ -36,6 +36,8 @@ pub enum Dispatch {
     Channel(DispatchChannel),
     User(DispatchUser),
     Client(DispatchClient),
+    Media(DispatchMedia),
+    Webhook(DispatchWebhook),
     // TODO: other dispatches, e2ee dispatch, voice state
 
     // #[cfg(feature = "feat_e2ee")]
@@ -113,5 +115,17 @@ impl From<DispatchUser> for Dispatch {
 impl From<DispatchClient> for Dispatch {
     fn from(d: DispatchClient) -> Self {
         Self::Client(d)
+    }
+}
+
+impl From<DispatchMedia> for Dispatch {
+    fn from(d: DispatchMedia) -> Self {
+        Self::Media(d)
+    }
+}
+
+impl From<DispatchWebhook> for Dispatch {
+    fn from(d: DispatchWebhook) -> Self {
+        Self::Webhook(d)
     }
 }

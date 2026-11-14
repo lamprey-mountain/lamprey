@@ -1,36 +1,31 @@
 use lamprey_macros::record;
 
-use crate::v1::types::{Invite, InviteCode, InviteTargetId, RoomId};
+use crate::v1::types::{InviteCode, InviteTargetId, InviteWithMetadata};
 
-/// something happened with an invite
+/// an invite was created
 #[record]
-pub struct DispatchInvite {
-    pub invite_code: InviteCode,
-
-    /// the room this invite belongs to, if any
-    pub room_id: Option<RoomId>,
-
-    /// the target of this invite
-    ///
-    /// used to determine which scope (room/channel) this dispatch belongs to
+pub struct InviteCreate {
+    pub invite: Box<InviteWithMetadata>,
     pub target: InviteTargetId,
-
-    #[serde(flatten)]
-    pub inner: DispatchInviteInner,
 }
 
+/// an invite was updated
 #[record]
-#[serde(tag = "type")]
-pub enum DispatchInviteInner {
-    /// an invite was created
-    InviteCreate { invite: Box<Invite> },
+pub struct InviteUpdate {
+    pub invite: Box<InviteWithMetadata>,
+    pub target: InviteTargetId,
+}
 
-    /// an invite was updated
-    InviteUpdate { invite: Box<Invite> },
+/// an invite was deleted
+#[record]
+pub struct InviteDelete {
+    pub invite_code: InviteCode,
+    pub target: InviteTargetId,
+}
 
-    /// an invite was deleted
-    InviteDelete {
-        invite_code: InviteCode,
-        target: InviteTargetId,
-    },
+/// all invites for a target were deleted
+#[record]
+pub struct InviteDeleteBulk {
+    pub target: InviteTargetId,
+    pub codes: Vec<InviteCode>,
 }

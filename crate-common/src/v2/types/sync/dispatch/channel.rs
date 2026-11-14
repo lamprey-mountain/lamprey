@@ -1,7 +1,16 @@
 use lamprey_macros::record;
 
+use super::invite::{InviteCreate, InviteDelete, InviteDeleteBulk, InviteUpdate};
 use crate::{
-    v1::types::{Channel, ChannelId, ChannelSeq, Message, misc::Time, reaction::ReactionKey},
+    v1::types::{
+        calendar::{CalendarEvent, CalendarOverwrite, CalendarParticipant},
+        misc::Time,
+        reaction::ReactionKey,
+        tag::Tag,
+        voice::{Call, VoiceState},
+        CalendarEventId, Channel, ChannelId, ChannelSeq, InviteTargetId, Message, TagId,
+        ThreadMember,
+    },
     v2::types::{MessageId, MessageVerId, RoomId, UserId},
 };
 
@@ -25,6 +34,28 @@ pub enum DispatchChannel {
     ReactionDelete(ReactionDelete),
     ReactionDeleteKey(ReactionDeleteKey),
     ReactionDeleteAll(ReactionDeleteAll),
+    ThreadMemberUpsert(ThreadMemberUpsert),
+    CallCreate(CallCreate),
+    CallUpdate(CallUpdate),
+    CallDelete(CallDelete),
+    CalendarEventCreate(CalendarEventCreate),
+    CalendarEventUpdate(CalendarEventUpdate),
+    CalendarEventDelete(CalendarEventDelete),
+    CalendarOverwriteCreate(CalendarOverwriteCreate),
+    CalendarOverwriteUpdate(CalendarOverwriteUpdate),
+    CalendarOverwriteDelete(CalendarOverwriteDelete),
+    CalendarRsvpCreate(CalendarRsvpCreate),
+    CalendarRsvpDelete(CalendarRsvpDelete),
+    CalendarInstanceRsvpCreate(CalendarInstanceRsvpCreate),
+    CalendarInstanceRsvpDelete(CalendarInstanceRsvpDelete),
+    TagCreate(TagCreate),
+    TagUpdate(TagUpdate),
+    TagDelete(TagDelete),
+    VoiceStateUpdate(VoiceStateUpdate),
+    InviteCreate(ChannelInviteCreate),
+    InviteUpdate(ChannelInviteUpdate),
+    InviteDelete(ChannelInviteDelete),
+    InviteDeleteBulk(ChannelInviteDeleteBulk),
 }
 
 /// a channel was created
@@ -200,6 +231,193 @@ pub struct ReactionDeleteAll {
     pub seq: ChannelSeq,
 }
 
+/// members were added to or removed from a thread
+#[record]
+pub struct ThreadMemberUpsert {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub room_id: Option<RoomId>,
+
+    pub thread_id: ChannelId,
+    pub added: Vec<ThreadMember>,
+    pub removed: Vec<UserId>,
+    pub seq: ChannelSeq,
+}
+
+/// a call was created
+#[record]
+pub struct CallCreate {
+    pub call: Box<Call>,
+    pub seq: ChannelSeq,
+}
+
+/// a call was updated
+#[record]
+pub struct CallUpdate {
+    pub call: Box<Call>,
+    pub seq: ChannelSeq,
+}
+
+/// a call was deleted
+#[record]
+pub struct CallDelete {
+    pub channel_id: ChannelId,
+    pub seq: ChannelSeq,
+}
+
+/// a calendar event was created
+#[record]
+pub struct CalendarEventCreate {
+    pub event: Box<CalendarEvent>,
+    pub seq: ChannelSeq,
+}
+
+/// a calendar event was updated
+#[record]
+pub struct CalendarEventUpdate {
+    pub event: Box<CalendarEvent>,
+    pub seq: ChannelSeq,
+}
+
+/// a calendar event was deleted
+#[record]
+pub struct CalendarEventDelete {
+    pub channel_id: ChannelId,
+    pub event_id: CalendarEventId,
+    pub seq: ChannelSeq,
+}
+
+/// an overwrite was created for a calendar event instance
+#[record]
+pub struct CalendarOverwriteCreate {
+    pub channel_id: ChannelId,
+    pub event_id: CalendarEventId,
+    pub overwrite: Box<CalendarOverwrite>,
+    pub seq: ChannelSeq,
+}
+
+/// an overwrite was updated for a calendar event instance
+#[record]
+pub struct CalendarOverwriteUpdate {
+    pub channel_id: ChannelId,
+    pub event_id: CalendarEventId,
+    pub overwrite: Box<CalendarOverwrite>,
+    pub seq: ChannelSeq,
+}
+
+/// an overwrite was deleted for a calendar event instance
+#[record]
+pub struct CalendarOverwriteDelete {
+    pub channel_id: ChannelId,
+    pub event_id: CalendarEventId,
+    pub instance_seq: u64,
+    pub seq: ChannelSeq,
+}
+
+/// a user rsvped to a calendar event
+#[record]
+pub struct CalendarRsvpCreate {
+    pub channel_id: ChannelId,
+    pub event_id: CalendarEventId,
+    pub participant: Box<CalendarParticipant>,
+    pub seq: ChannelSeq,
+}
+
+/// a user removed their rsvp from a calendar event
+#[record]
+pub struct CalendarRsvpDelete {
+    pub channel_id: ChannelId,
+    pub event_id: CalendarEventId,
+    pub user_id: UserId,
+    pub seq: ChannelSeq,
+}
+
+/// a user rsvped to a calendar event instance
+#[record]
+pub struct CalendarInstanceRsvpCreate {
+    pub channel_id: ChannelId,
+    pub event_id: CalendarEventId,
+    pub instance_seq: u64,
+    pub participant: Box<CalendarParticipant>,
+    pub seq: ChannelSeq,
+}
+
+/// a user removed their rsvp from a calendar event instance
+#[record]
+pub struct CalendarInstanceRsvpDelete {
+    pub channel_id: ChannelId,
+    pub event_id: CalendarEventId,
+    pub instance_seq: u64,
+    pub user_id: UserId,
+    pub seq: ChannelSeq,
+}
+
+/// a tag was created
+#[record]
+pub struct TagCreate {
+    pub tag: Box<Tag>,
+    pub seq: ChannelSeq,
+}
+
+/// a tag was updated
+#[record]
+pub struct TagUpdate {
+    pub tag: Box<Tag>,
+    pub seq: ChannelSeq,
+}
+
+/// a tag was deleted
+#[record]
+pub struct TagDelete {
+    pub channel_id: ChannelId,
+    pub tag_id: TagId,
+    pub seq: ChannelSeq,
+}
+
+/// a user's voice state was updated
+#[record]
+pub struct VoiceStateUpdate {
+    pub user_id: UserId,
+    pub channel_id: ChannelId,
+    pub state: Option<Box<VoiceState>>,
+    pub seq: ChannelSeq,
+}
+
+/// an invite in this channel was created
+#[record]
+pub struct ChannelInviteCreate {
+    pub channel_id: ChannelId,
+    #[serde(flatten)]
+    pub invite: InviteCreate,
+    pub seq: ChannelSeq,
+}
+
+/// an invite in this channel was updated
+#[record]
+pub struct ChannelInviteUpdate {
+    pub channel_id: ChannelId,
+    #[serde(flatten)]
+    pub invite: InviteUpdate,
+    pub seq: ChannelSeq,
+}
+
+/// an invite in this channel was deleted
+#[record]
+pub struct ChannelInviteDelete {
+    pub channel_id: ChannelId,
+    #[serde(flatten)]
+    pub invite: InviteDelete,
+    pub seq: ChannelSeq,
+}
+
+/// multiple invites in this channel were deleted
+#[record]
+pub struct ChannelInviteDeleteBulk {
+    pub channel_id: ChannelId,
+    #[serde(flatten)]
+    pub invite: InviteDeleteBulk,
+    pub seq: ChannelSeq,
+}
+
 impl DispatchChannel {
     /// id of the channel this event happened in
     pub fn channel_id(&self) -> ChannelId {
@@ -218,6 +436,28 @@ impl DispatchChannel {
             DispatchChannel::ReactionDelete(a) => a.channel_id,
             DispatchChannel::ReactionDeleteKey(a) => a.channel_id,
             DispatchChannel::ReactionDeleteAll(a) => a.channel_id,
+            DispatchChannel::ThreadMemberUpsert(a) => a.thread_id,
+            DispatchChannel::CallCreate(a) => a.call.channel_id,
+            DispatchChannel::CallUpdate(a) => a.call.channel_id,
+            DispatchChannel::CallDelete(a) => a.channel_id,
+            DispatchChannel::CalendarEventCreate(a) => a.event.channel_id,
+            DispatchChannel::CalendarEventUpdate(a) => a.event.channel_id,
+            DispatchChannel::CalendarEventDelete(a) => a.channel_id,
+            DispatchChannel::CalendarOverwriteCreate(a) => a.channel_id,
+            DispatchChannel::CalendarOverwriteUpdate(a) => a.channel_id,
+            DispatchChannel::CalendarOverwriteDelete(a) => a.channel_id,
+            DispatchChannel::CalendarRsvpCreate(a) => a.channel_id,
+            DispatchChannel::CalendarRsvpDelete(a) => a.channel_id,
+            DispatchChannel::CalendarInstanceRsvpCreate(a) => a.channel_id,
+            DispatchChannel::CalendarInstanceRsvpDelete(a) => a.channel_id,
+            DispatchChannel::TagCreate(a) => a.tag.channel_id,
+            DispatchChannel::TagUpdate(a) => a.tag.channel_id,
+            DispatchChannel::TagDelete(a) => a.channel_id,
+            DispatchChannel::VoiceStateUpdate(a) => a.channel_id,
+            DispatchChannel::InviteCreate(a) => a.channel_id,
+            DispatchChannel::InviteUpdate(a) => a.channel_id,
+            DispatchChannel::InviteDelete(a) => a.channel_id,
+            DispatchChannel::InviteDeleteBulk(a) => a.channel_id,
         }
     }
 
@@ -238,6 +478,40 @@ impl DispatchChannel {
             DispatchChannel::ReactionDelete(a) => a.room_id,
             DispatchChannel::ReactionDeleteKey(a) => a.room_id,
             DispatchChannel::ReactionDeleteAll(a) => a.room_id,
+            DispatchChannel::ThreadMemberUpsert(a) => a.room_id,
+            DispatchChannel::CallCreate(a) => a.call.room_id,
+            DispatchChannel::CallUpdate(a) => a.call.room_id,
+            DispatchChannel::CallDelete(_) => None,
+            DispatchChannel::CalendarEventCreate(a) => a.event.room_id,
+            DispatchChannel::CalendarEventUpdate(a) => a.event.room_id,
+            DispatchChannel::CalendarEventDelete(_) => None,
+            DispatchChannel::CalendarOverwriteCreate(_) => None,
+            DispatchChannel::CalendarOverwriteUpdate(_) => None,
+            DispatchChannel::CalendarOverwriteDelete(_) => None,
+            DispatchChannel::CalendarRsvpCreate(_) => None,
+            DispatchChannel::CalendarRsvpDelete(_) => None,
+            DispatchChannel::CalendarInstanceRsvpCreate(_) => None,
+            DispatchChannel::CalendarInstanceRsvpDelete(_) => None,
+            DispatchChannel::TagCreate(_) => None,
+            DispatchChannel::TagUpdate(_) => None,
+            DispatchChannel::TagDelete(_) => None,
+            DispatchChannel::VoiceStateUpdate(a) => a.state.as_ref().and_then(|s| s.room_id),
+            DispatchChannel::InviteCreate(a) => match &a.invite.target {
+                InviteTargetId::Room { room_id, .. } => Some(*room_id),
+                _ => None,
+            },
+            DispatchChannel::InviteUpdate(a) => match &a.invite.target {
+                InviteTargetId::Room { room_id, .. } => Some(*room_id),
+                _ => None,
+            },
+            DispatchChannel::InviteDelete(a) => match &a.invite.target {
+                InviteTargetId::Room { room_id, .. } => Some(*room_id),
+                _ => None,
+            },
+            DispatchChannel::InviteDeleteBulk(a) => match &a.invite.target {
+                InviteTargetId::Room { room_id, .. } => Some(*room_id),
+                _ => None,
+            },
         }
     }
 
@@ -258,6 +532,28 @@ impl DispatchChannel {
             DispatchChannel::ReactionDelete(a) => Some(a.seq),
             DispatchChannel::ReactionDeleteKey(a) => Some(a.seq),
             DispatchChannel::ReactionDeleteAll(a) => Some(a.seq),
+            DispatchChannel::ThreadMemberUpsert(a) => Some(a.seq),
+            DispatchChannel::CallCreate(a) => Some(a.seq),
+            DispatchChannel::CallUpdate(a) => Some(a.seq),
+            DispatchChannel::CallDelete(a) => Some(a.seq),
+            DispatchChannel::CalendarEventCreate(a) => Some(a.seq),
+            DispatchChannel::CalendarEventUpdate(a) => Some(a.seq),
+            DispatchChannel::CalendarEventDelete(a) => Some(a.seq),
+            DispatchChannel::CalendarOverwriteCreate(a) => Some(a.seq),
+            DispatchChannel::CalendarOverwriteUpdate(a) => Some(a.seq),
+            DispatchChannel::CalendarOverwriteDelete(a) => Some(a.seq),
+            DispatchChannel::CalendarRsvpCreate(a) => Some(a.seq),
+            DispatchChannel::CalendarRsvpDelete(a) => Some(a.seq),
+            DispatchChannel::CalendarInstanceRsvpCreate(a) => Some(a.seq),
+            DispatchChannel::CalendarInstanceRsvpDelete(a) => Some(a.seq),
+            DispatchChannel::TagCreate(a) => Some(a.seq),
+            DispatchChannel::TagUpdate(a) => Some(a.seq),
+            DispatchChannel::TagDelete(a) => Some(a.seq),
+            DispatchChannel::VoiceStateUpdate(a) => Some(a.seq),
+            DispatchChannel::InviteCreate(a) => Some(a.seq),
+            DispatchChannel::InviteUpdate(a) => Some(a.seq),
+            DispatchChannel::InviteDelete(a) => Some(a.seq),
+            DispatchChannel::InviteDeleteBulk(a) => Some(a.seq),
         }
     }
 }

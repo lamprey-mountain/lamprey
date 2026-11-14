@@ -44,7 +44,7 @@ pub mod channel;
 pub mod document;
 pub mod flume;
 pub mod hello;
-// pub mod invite;
+pub mod invite;
 pub mod member_list;
 // pub mod redex;
 pub mod room;
@@ -106,4 +106,4 @@ impl TryFrom<u8> for StreamHeader {
     }
 }
 
-export_models!(StreamHeader, use member_list);
+export_models!(StreamHeader, use invite, use member_list);
