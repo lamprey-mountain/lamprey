@@ -31,7 +31,7 @@ use crate::config::{Config, DiscordConfig};
 use crate::platform::discord::interactions::{get_commands, parse_interaction};
 use crate::platform::discord::portal::DiscordPortal;
 use crate::prelude::*;
-use crate::types::ChannelData;
+use crate::types::{ChannelData, Platform};
 
 mod interactions;
 mod portal;
@@ -77,10 +77,21 @@ pub fn spawn(bridge: BridgeHandle, config_full: Config, config: DiscordConfig) -
     }
 }
 
+/// a message update that is being refetched before being bridged
+struct PendingUpdate {
+    /// bumped whenever a newer update for the same message arrives
+    generation: u64,
+    message: Message,
+}
+
 struct Discord {
     bridge: BridgeHandle,
     disable_slash_command_permission_checks: bool,
     rx: mpsc::Receiver<GatewayEvent>,
+    updates_rx: mpsc::UnboundedReceiver<(MessageId, u64, Option<Message>)>,
+    updates_tx: mpsc::UnboundedSender<(MessageId, u64, Option<Message>)>,
+    pending_updates: HashMap<MessageId, PendingUpdate>,
+    update_generation: u64,
     portal_tasks: JoinSet<(PortalId, Result<()>)>,
     realm_tasks: JoinSet<(RealmId, Result<()>)>,
     portal_aborts: HashMap<PortalId, AbortHandle>,
@@ -118,11 +129,17 @@ impl Discord {
         let (tx, rx) = mpsc::channel(1024);
         tokio::spawn(run_gateway(token, tx));
 
+        let (updates_tx, updates_rx) = mpsc::unbounded_channel();
+
         let me = Self {
             bridge,
             disable_slash_command_permission_checks: config_full
                 .disable_discord_slash_command_permission_checks,
             rx,
+            updates_rx,
+            updates_tx,
+            pending_updates: HashMap::new(),
+            update_generation: 0,
             portal_tasks: JoinSet::new(),
             realm_tasks: JoinSet::new(),
             portal_aborts: HashMap::new(),
@@ -207,6 +224,9 @@ impl Discord {
                 }
                 Some(event) = self.rx.recv() => {
                     self.handle_discord_event(event).await;
+                }
+                Some((id, generation, fetched)) = self.updates_rx.recv() => {
+                    self.handle_fetched_update(id, generation, fetched);
                 }
                 Some(result) = self.portal_tasks.join_next() => {
                     match result {
@@ -299,27 +319,25 @@ impl Discord {
                     }
                 }
 
-                // update payloads can be partial, so refetch the full message
-                let new_message = match self.http.message(update.channel_id, update.id).await {
-                    Ok(response) => match response.model().await {
-                        Ok(message) => message,
-                        Err(e) => {
-                            warn!(message_id = %update.id, "failed to fetch updated message: {e:?}");
-                            update
+                // edits of messages that we sent to discord are echoes of our own
+                // edits (eg. from unfurling), so never bridge them back
+                if let Some((portal_id, _)) = self.lookup_portal(update.channel_id) {
+                    if let Ok(Some(bridged)) = self
+                        .bridge
+                        .db
+                        .message_get_by_discord_id(portal_id, update.id)
+                        .await
+                    {
+                        if bridged.source_platform == Platform::Lamprey {
+                            return;
                         }
-                    },
-                    Err(e) => {
-                        warn!(message_id = %update.id, "failed to fetch updated message: {e:?}");
-                        update
                     }
-                };
+                }
 
-                self.route_portal_event(
-                    new_message.channel_id,
-                    PortalEvent::MessageUpdate(MessageData::Discord {
-                        message: Box::new(new_message),
-                    }),
-                );
+                // update payloads can be partial, so refetch the full message.
+                // this must not block the gateway loop: discord rate limits every
+                // single-message fetch per channel
+                self.queue_message_update(update);
             }
             GatewayEvent::TypingStart(event) => {
                 let discord_id = event.user_id.to_string();
@@ -328,6 +346,9 @@ impl Discord {
                 }
             }
             GatewayEvent::MessageDelete(event) => {
+                // don't bridge an edit that was queued before the delete
+                self.pending_updates.remove(&event.id);
+
                 if let Some((portal_id, thread)) = self.lookup_portal(event.channel_id) {
                     if let Ok(Some(msg)) = self
                         .bridge
@@ -348,6 +369,8 @@ impl Discord {
                     return;
                 };
                 for message_id in event.ids {
+                    self.pending_updates.remove(&message_id);
+
                     if let Ok(Some(msg)) = self
                         .bridge
                         .db
@@ -778,6 +801,80 @@ impl Discord {
             }
             _ => debug!("unhandled discord event"),
         }
+    }
+
+    /// queue a refetch of a partial message update
+    ///
+    /// fetching happens in a background task so a rate limited request can't
+    /// stall the gateway event loop
+    fn queue_message_update(&mut self, update: Message) {
+        self.update_generation += 1;
+        let generation = self.update_generation;
+        let id = update.id;
+
+        // coalesce updates that arrive while a fetch for the same message is
+        // still in flight; only the latest state matters
+        if let Some(pending) = self.pending_updates.get_mut(&id) {
+            pending.generation = generation;
+            pending.message = update;
+            return;
+        }
+
+        let channel_id = update.channel_id;
+        self.pending_updates.insert(
+            id,
+            PendingUpdate {
+                generation,
+                message: update,
+            },
+        );
+        self.spawn_message_fetch(channel_id, id, generation);
+    }
+
+    fn spawn_message_fetch(&self, channel_id: ChannelId, id: MessageId, generation: u64) {
+        let http = self.http.clone();
+        let tx = self.updates_tx.clone();
+
+        tokio::spawn(async move {
+            let fetched = match http.message(channel_id, id).await {
+                Ok(response) => match response.model().await {
+                    Ok(message) => Some(message),
+                    Err(e) => {
+                        warn!(message_id = %id, "failed to fetch updated message: {e:?}");
+                        None
+                    }
+                },
+                Err(e) => {
+                    warn!(message_id = %id, "failed to fetch updated message: {e:?}");
+                    None
+                }
+            };
+
+            let _ = tx.send((id, generation, fetched));
+        });
+    }
+
+    fn handle_fetched_update(&mut self, id: MessageId, generation: u64, fetched: Option<Message>) {
+        let Some(pending) = self.pending_updates.get(&id) else {
+            return;
+        };
+
+        // a newer update arrived while this one was being fetched
+        if pending.generation != generation {
+            let channel_id = pending.message.channel_id;
+            let generation = pending.generation;
+            self.spawn_message_fetch(channel_id, id, generation);
+            return;
+        }
+
+        let pending = self.pending_updates.remove(&id).expect("checked above");
+        let message = fetched.unwrap_or(pending.message);
+        self.route_portal_event(
+            message.channel_id,
+            PortalEvent::MessageUpdate(MessageData::Discord {
+                message: Box::new(message),
+            }),
+        );
     }
 
     async fn handle_guild_create(&mut self, guild: Guild) {
