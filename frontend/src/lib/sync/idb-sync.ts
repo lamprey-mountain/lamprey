@@ -310,24 +310,47 @@ export async function readAmbientFromDb(
 	user_id: string,
 	config: PreferencesGlobal,
 ): Promise<MessageSync | null> {
-	const [rooms, channels, roles, members] = await Promise.all([
+	const [rooms, channels, roles, members, thread_members] = await Promise.all([
 		db.getAll("room"),
 		db.getAll("channel"),
 		db.getAll("role"),
 		db.getAll("room_member"), // PERF: i only need my own room member
+		db.getAll("thread_member"),
 	]);
 
-	const threads = channels.filter(
+	const room_members = members.filter((member) => member.user_id === user_id);
+	const joined_rooms = new Set(room_members.map((member) => member.room_id));
+	const joined_threads = new Set(
+		thread_members
+			.filter((member) => member.user_id === user_id)
+			.map((member) => member.thread_id),
+	);
+
+	// the local database can contain rooms from searches, the admin panel, or a
+	// previous account; only replay rooms this user is actually a member of
+	const joined_rooms_list = rooms.filter((room) => joined_rooms.has(room.id));
+	const joined_channels = channels.filter((channel) => {
+		if (channel.room_id != null) return joined_rooms.has(channel.room_id);
+
+		// roomless channels are dms/gdms, which have no room membership. they
+		// belong to this user when they are a recipient (or, for older rows, when
+		// there is a thread member row)
+		return (
+			channel.recipients?.some((user) => user.id === user_id) === true ||
+			joined_threads.has(channel.id)
+		);
+	});
+
+	const threads = joined_channels.filter(
 		(channel) => isThread(channel) && !channel.archived_at,
 	);
-	const room_members = members.filter((member) => member.user_id === user_id);
 
 	return {
 		type: "Ambient",
 		user_id,
-		rooms,
-		roles: roles as Role[],
-		channels: channels.filter((channel) => !isThread(channel)),
+		rooms: joined_rooms_list,
+		roles: (roles as Role[]).filter((role) => joined_rooms.has(role.room_id)),
+		channels: joined_channels.filter((channel) => !isThread(channel)),
 		threads,
 		room_members: room_members as RoomMember[],
 		config,
