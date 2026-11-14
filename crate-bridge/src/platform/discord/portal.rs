@@ -670,7 +670,7 @@ impl DiscordPortal {
                         last_id: thread
                             .last_message_id
                             .map(|id| id.cast())
-                            .unwrap_or(Id::new(0)),
+                            .unwrap_or(discord::MIN_MESSAGE_ID),
                     }),
                 };
 

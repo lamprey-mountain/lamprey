@@ -63,6 +63,10 @@ pub type WebhookId = Id<WebhookMarker>;
 pub type AttachmentId = Id<AttachmentMarker>;
 pub type GuildChannel = Channel;
 
+/// smallest possible non-zero [`MessageId`], used when a channel or thread has no
+/// messages yet (`Id` cannot represent zero)
+pub const MIN_MESSAGE_ID: MessageId = Id::new(1);
+
 const RECONNECT_MIN_DELAY: Duration = Duration::from_secs(1);
 const RECONNECT_MAX_DELAY: Duration = Duration::from_secs(60);
 const DISCORD_API_BASE: &str = "https://discord.com/api";
@@ -545,7 +549,7 @@ impl Discord {
                             let discord_last_id = discord_channel
                                 .last_message_id
                                 .map(|id| id.cast())
-                                .unwrap_or(Id::new(0));
+                                .unwrap_or(MIN_MESSAGE_ID);
 
                             // create webhook
                             let webhook = match http

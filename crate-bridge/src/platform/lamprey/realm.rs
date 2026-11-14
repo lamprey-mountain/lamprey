@@ -146,7 +146,7 @@ impl LampreyRealm {
                             last_id: chan
                                 .last_message_id
                                 .map(|id| id.cast())
-                                .unwrap_or(discord::MessageId::new(0)),
+                                .unwrap_or(discord::MIN_MESSAGE_ID),
                         }),
                     };
 

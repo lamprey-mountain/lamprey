@@ -151,7 +151,7 @@ impl DiscordRealm {
                                     last_id: discord_channel
                                         .last_message_id
                                         .map(|id| id.cast())
-                                        .unwrap_or(Id::new(0)),
+                                        .unwrap_or(discord::MIN_MESSAGE_ID),
                                 }),
                             };
 
