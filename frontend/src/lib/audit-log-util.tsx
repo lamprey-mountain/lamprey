@@ -1,11 +1,26 @@
 import { diffArrays } from "diff";
-import type { AuditLogChange, AuditLogEntry } from "sdk";
+import {
+	type api,
+	type AuditLogChange,
+	type AuditLogEntry,
+	getTimestampFromUUID,
+} from "sdk";
 import type { JSX } from "solid-js";
 import { useApi } from "@/api";
 import { useCtx } from "@/app/context";
 import { renderTemplate } from "@/lib/render-template.ts";
 
 const MERGE_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
+type AuditLogVariant = api["AuditLogEntryType"];
+type AuditLogType = AuditLogVariant["type"];
+// the generated schema drops `metadata` for variants whose fields are all
+// optional (e.g. SessionDeleteAll), so only consider variants that have it
+type AuditLogVariantWithMetadata = Extract<
+	AuditLogVariant,
+	{ metadata: unknown }
+>;
+type AuditLogMetadata = AuditLogVariantWithMetadata["metadata"];
 
 const AUDIT_LOG_TYPES = [
 	"RoomCreate",
@@ -112,7 +127,17 @@ const AUDIT_LOG_TYPES = [
 	"RedexDelete",
 	"RedexVersionCreate",
 	"RedexVersionDelete",
-];
+] as const satisfies readonly AuditLogType[];
+
+// compile-time guards: the sdk types and the translations must stay in sync
+type AssertNever<T extends never> = T;
+type AuditLogMessages = typeof import("@/i18n/en.json")["audit_log"];
+type _AllAuditLogTypesListed = AssertNever<
+	Exclude<AuditLogType, (typeof AUDIT_LOG_TYPES)[number]>
+>;
+type _AllAuditLogTypesTranslated = AssertNever<
+	Exclude<AuditLogType, keyof AuditLogMessages>
+>;
 
 const formatTypeLabel = (type: string) =>
 	type.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase();
@@ -125,14 +150,20 @@ export const AUDIT_LOG_TYPE_OPTIONS = [
 	})),
 ];
 
-export interface MergedAuditLogEntry {
+type MetadataOf<K extends AuditLogType> = Extract<
+	AuditLogVariantWithMetadata,
+	{ type: K }
+>["metadata"];
+
+// correlate `type` and `metadata` so narrowing on `type` narrows metadata
+export type MergedAuditLogEntry = {
 	entries: AuditLogEntry[];
 	user_id: string;
-	type: string;
 	reason?: string | null;
-	metadata: Record<string, unknown>;
 	changes?: AuditLogChange[];
-}
+} & {
+	[K in AuditLogType]: { type: K; metadata: MetadataOf<K> };
+}[AuditLogType];
 
 /**
  * Merge audit log entries that are:
@@ -167,15 +198,12 @@ export function mergeAuditLogEntries(
 			if (currentTs - lastTs <= MERGE_WINDOW_MS) {
 				lastMerged.entries.push(entry);
 
-				// Check if entry has metadata with changes
-				const entryWithMetadata = entry as {
-					metadata?: { changes?: import("sdk").AuditLogChange[] };
-				};
-				if (entryWithMetadata.metadata?.changes) {
-					if (!lastMerged.changes) {
-						lastMerged.changes = [];
-					}
-					lastMerged.changes.push(...entryWithMetadata.metadata.changes);
+				const metadata = metadataOf(entry);
+				if ("changes" in metadata) {
+					lastMerged.changes = [
+						...(lastMerged.changes ?? []),
+						...(metadata.changes ?? []),
+					];
 				}
 
 				if (entry.reason) {
@@ -187,24 +215,29 @@ export function mergeAuditLogEntries(
 			}
 		}
 
-		merged.push({
-			entries: [entry],
-			user_id: entry.user_id,
-			type: entry.type,
-			reason: entry.reason,
-			metadata:
-				(entry as { metadata?: Record<string, unknown> }).metadata ?? {},
-			changes: (
-				entry as { metadata?: { changes?: import("sdk").AuditLogChange[] } }
-			).metadata?.changes,
-		});
+		merged.push(createMergedEntry(entry));
 	}
 
 	return merged;
 }
 
-function getTimestampFromUUID(uuid: string): Date {
-	return new Date(parseInt(uuid.substring(0, 8), 16) * 1000);
+function metadataOf(
+	ent: AuditLogEntry | MergedAuditLogEntry,
+): AuditLogMetadata {
+	return "metadata" in ent ? ent.metadata : ({} as AuditLogMetadata);
+}
+
+function createMergedEntry(entry: AuditLogEntry): MergedAuditLogEntry {
+	const metadata = metadataOf(entry);
+	const base = {
+		entries: [entry],
+		user_id: entry.user_id,
+		reason: entry.reason,
+		metadata,
+		changes: "changes" in metadata ? metadata.changes : undefined,
+	};
+	// the mapped union above cannot be inferred from loose field values
+	return { ...base, type: entry.type } as MergedAuditLogEntry;
 }
 
 const resolveName = (
@@ -245,92 +278,123 @@ const resolveName = (
 	return id;
 };
 
-function interpolate(template: string, params: Record<string, any>): string {
-	return template.replace(
-		/{{(\w+)}}/g,
-		(_, key) => params[key] ?? `{{${key}}}`,
-	);
+/** read a raw field out of the (union typed) audit log metadata */
+function getField(metadata: AuditLogMetadata, key: string): unknown {
+	return (metadata as Record<string, unknown>)[key];
+}
+
+function getStringField(
+	metadata: AuditLogMetadata,
+	key: string,
+): string | undefined {
+	const value = getField(metadata, key);
+	return typeof value === "string" ? value : undefined;
+}
+
+/** reaction key params are `t:<unicode emoji>` or `c:<custom emoji id>` */
+function resolveEmoji(
+	api2: ReturnType<typeof useApi>,
+	key: string | undefined,
+): string {
+	if (!key) return "unknown";
+	if (key.startsWith("c:")) {
+		const id = key.slice(2);
+		return api2.emoji.cache.get(id)?.name ?? id;
+	}
+	return key.startsWith("t:") ? key.slice(2) : key;
+}
+
+/** the room a lookup should use: nicknames are keyed by the entry's own room */
+function resolveRoomId(
+	room_id: string,
+	ent: AuditLogEntry | MergedAuditLogEntry,
+): string {
+	const firstEntry = "entries" in ent ? ent.entries[0] : ent;
+	return firstEntry.room_id || room_id;
 }
 
 export function formatAuditLogEntry(
 	room_id: string,
 	ent: AuditLogEntry | MergedAuditLogEntry,
-): string {
+): string | JSX.Element {
 	const { t } = useCtx();
 	const api2 = useApi();
 
 	const firstEntry = "entries" in ent ? ent.entries[0] : ent;
+	const entryRoom = resolveRoomId(room_id, ent);
+	const metadata = metadataOf(ent);
 
-	const actor = resolveName(api2, room_id, firstEntry.user_id, "user");
+	const actor = resolveName(api2, entryRoom, firstEntry.user_id, "user");
+	const messageIds = getField(metadata, "message_ids");
+	const pruned = getField(metadata, "pruned");
 
-	// Helper to safely access metadata (some entry types don't have it)
-	const metadata =
-		"metadata" in ent
-			? (ent.metadata as Record<string, unknown> | undefined)
-			: undefined;
-	const getMetadata = (key: string): unknown => metadata?.[key];
-
-	const params: Record<string, JSX.Element> = {
+	const params: Record<string, JSX.Element | string | number> = {
 		actor,
 		channel_name: resolveName(
 			api2,
-			room_id,
-			getMetadata("channel_id") as string | undefined,
+			entryRoom,
+			getStringField(metadata, "channel_id"),
 			"channel",
-			getMetadata("channel_name") as string | undefined,
+			getStringField(metadata, "channel_name"),
 		),
 		role_name: resolveName(
 			api2,
-			room_id,
-			getMetadata("role_id") as string | undefined,
+			entryRoom,
+			getStringField(metadata, "role_id"),
 			"role",
-			getMetadata("role_name") as string | undefined,
+			getStringField(metadata, "role_name"),
 		),
 		webhook_name: resolveName(
 			api2,
-			room_id,
-			getMetadata("webhook_id") as string | undefined,
+			entryRoom,
+			getStringField(metadata, "webhook_id"),
 			"webhook",
-			getMetadata("webhook_name") as string | undefined,
+			getStringField(metadata, "webhook_name"),
 		),
 		room_name: resolveName(
 			api2,
-			room_id,
-			getMetadata("room_id") as string | undefined,
+			entryRoom,
+			getStringField(metadata, "room_id"),
 			"room",
-			getMetadata("room_name") as string | undefined,
+			getStringField(metadata, "room_name"),
 		),
 		thread_name: resolveName(
 			api2,
-			room_id,
-			getMetadata("thread_id") as string | undefined,
+			entryRoom,
+			getStringField(metadata, "thread_id"),
 			"channel",
-			getMetadata("thread_name") as string | undefined,
+			getStringField(metadata, "thread_name"),
 		),
 		target: resolveName(
 			api2,
-			room_id,
-			(getMetadata("user_id") || getMetadata("overwrite_id")) as
-				| string
-				| undefined,
-			(getMetadata("type") as string) === "Role" ? "role" : "user",
-			getMetadata("target_name") as string | undefined,
+			entryRoom,
+			getStringField(metadata, "user_id") ??
+				getStringField(metadata, "overwrite_id"),
+			getStringField(metadata, "type") === "Role" ? "role" : "user",
+			getStringField(metadata, "target_name"),
 		),
 		bot_name: resolveName(
 			api2,
-			room_id,
-			getMetadata("bot_id") as string | undefined,
+			entryRoom,
+			getStringField(metadata, "bot_id"),
 			"user",
-			getMetadata("bot_name") as string | undefined,
+			getStringField(metadata, "bot_name"),
 		),
-		invite_code: (getMetadata("code") as string) ?? "unknown",
-		count: (getMetadata("message_ids") as string[])?.length ?? 0,
+		emoji: resolveEmoji(api2, getStringField(metadata, "key")),
+		invite_code: getStringField(metadata, "code") ?? "unknown",
+		count: Array.isArray(messageIds)
+			? messageIds.length
+			: typeof pruned === "number"
+				? pruned
+				: 0,
 	};
 
-	const translated = t(`audit_log.${ent.type}` as any, params);
-	if (!translated) return `${actor} - ${ent.type}`;
+	// NOTE: never pass `params` to `t`; it stringifies JSX params and leaves
+	// unresolved `{{placeholders}}` behind
+	const template = t(`audit_log.${ent.type}`);
+	if (!template) return `${actor} - ${ent.type}`;
 
-	return interpolate(translated, params);
+	return renderTemplate(template, params);
 }
 
 // TODO: format users, roles, channels as mentions
@@ -342,23 +406,17 @@ export function formatChanges(
 	const api2 = useApi();
 	const { t } = useCtx();
 
-	const entWithMetadata = ent as { metadata?: Record<string, unknown> };
+	const entryRoom = resolveRoomId(room_id, ent);
 	const channelName = resolveName(
 		api2,
-		room_id,
-		entWithMetadata.metadata?.channel_id as string | undefined,
+		entryRoom,
+		getStringField(metadataOf(ent), "channel_id"),
 		"channel",
 	);
 
 	switch (ent.type) {
 		case "MessageDelete":
 		case "MessageVersionDelete":
-		case "ReactionPurge": {
-			formatted.push(
-				<li>{t("audit_log.changes.in_channel", { name: channelName })}</li>,
-			);
-			break;
-		}
 		case "MessageDeleteBulk": {
 			formatted.push(
 				<li>{t("audit_log.changes.in_channel", { name: channelName })}</li>,
@@ -369,11 +427,7 @@ export function formatChanges(
 			formatted.push(
 				<li>
 					{renderTemplate(t("audit_log.changes.invite_deleted"), {
-						invite_code: (
-							<em class="light">
-								{entWithMetadata.metadata?.code as string | undefined}
-							</em>
-						),
+						invite_code: <em class="light">{ent.metadata.code}</em>,
 					})}
 				</li>,
 			);
@@ -382,17 +436,16 @@ export function formatChanges(
 		case "PermissionOverwriteCreate":
 		case "PermissionOverwriteUpdate":
 		case "PermissionOverwriteDelete": {
-			const overwriteType = (ent.metadata?.type as string) ?? "unknown";
 			const overwriteName = resolveName(
 				api2,
-				room_id,
-				ent.metadata?.overwrite_id as string | undefined,
-				(ent.metadata?.type as string) === "Role" ? "role" : "user",
+				entryRoom,
+				ent.metadata.overwrite_id,
+				ent.metadata.type === "Role" ? "role" : "user",
 			);
 			formatted.push(
 				<li>
 					{t("audit_log.changes.permission_overwrite_for", {
-						type: overwriteType,
+						type: ent.metadata.type,
 						target: overwriteName,
 					})}
 				</li>,
@@ -405,8 +458,8 @@ export function formatChanges(
 					{t("audit_log.changes.role_added", {
 						role_name: resolveName(
 							api2,
-							room_id,
-							ent.metadata?.role_id as string | undefined,
+							entryRoom,
+							ent.metadata.role_id,
 							"role",
 						),
 					})}
@@ -420,8 +473,8 @@ export function formatChanges(
 					{t("audit_log.changes.role_removed", {
 						role_name: resolveName(
 							api2,
-							room_id,
-							ent.metadata?.role_id as string | undefined,
+							entryRoom,
+							ent.metadata.role_id,
 							"role",
 						),
 					})}
@@ -435,8 +488,8 @@ export function formatChanges(
 					{t("audit_log.changes.bot_added", {
 						bot_name: resolveName(
 							api2,
-							room_id,
-							ent.metadata?.bot_id as string | undefined,
+							entryRoom,
+							ent.metadata.bot_id,
 							"user",
 						),
 					})}
@@ -450,8 +503,8 @@ export function formatChanges(
 					{t("audit_log.changes.user_kicked", {
 						user_name: resolveName(
 							api2,
-							room_id,
-							ent.metadata?.user_id as string | undefined,
+							entryRoom,
+							ent.metadata.user_id,
 							"user",
 						),
 					})}
@@ -465,8 +518,8 @@ export function formatChanges(
 					{t("audit_log.changes.user_banned", {
 						user_name: resolveName(
 							api2,
-							room_id,
-							ent.metadata?.user_id as string | undefined,
+							entryRoom,
+							ent.metadata.user_id,
 							"user",
 						),
 					})}
@@ -480,8 +533,8 @@ export function formatChanges(
 					{t("audit_log.changes.user_unbanned", {
 						user_name: resolveName(
 							api2,
-							room_id,
-							ent.metadata?.user_id as string | undefined,
+							entryRoom,
+							ent.metadata.user_id,
 							"user",
 						),
 					})}
@@ -495,8 +548,8 @@ export function formatChanges(
 					{t("audit_log.changes.user_added_to_thread", {
 						user_name: resolveName(
 							api2,
-							room_id,
-							ent.metadata?.user_id as string | undefined,
+							entryRoom,
+							ent.metadata.user_id,
 							"user",
 						),
 					})}
@@ -507,8 +560,8 @@ export function formatChanges(
 					{t("audit_log.changes.to_thread", {
 						channel_name: resolveName(
 							api2,
-							room_id,
-							ent.metadata?.thread_id as string | undefined,
+							entryRoom,
+							ent.metadata.thread_id,
 							"channel",
 						),
 					})}
@@ -522,8 +575,8 @@ export function formatChanges(
 					{t("audit_log.changes.user_removed_from_thread", {
 						user_name: resolveName(
 							api2,
-							room_id,
-							ent.metadata?.user_id as string | undefined,
+							entryRoom,
+							ent.metadata.user_id,
 							"user",
 						),
 					})}
@@ -534,8 +587,8 @@ export function formatChanges(
 					{t("audit_log.changes.to_thread", {
 						channel_name: resolveName(
 							api2,
-							room_id,
-							ent.metadata?.thread_id as string | undefined,
+							entryRoom,
+							ent.metadata.thread_id,
 							"channel",
 						),
 					})}
@@ -545,20 +598,16 @@ export function formatChanges(
 		}
 	}
 
-	const changes =
-		"changes" in ent && ent.changes
-			? ent.changes
-			: "metadata" in ent && ent.metadata && "changes" in ent.metadata
-				? (ent.metadata.changes as AuditLogChange[])
-				: undefined;
+	const metadata = metadataOf(ent);
+	const changes: AuditLogChange[] | undefined =
+		("changes" in ent && ent.changes) ||
+		("changes" in metadata ? metadata.changes : undefined);
 
 	if (changes) {
 		for (const c of changes) {
 			if (ent.type === "RoleUpdate" && c.key === "allow") {
 				formatted.push(
 					...renderPermissionDiff(
-						api2,
-						room_id,
 						(c.old ?? []) as Array<string>,
 						(c.new ?? []) as Array<string>,
 						"permission_granted",
@@ -568,8 +617,6 @@ export function formatChanges(
 			} else if (ent.type === "RoleUpdate" && c.key === "deny") {
 				formatted.push(
 					...renderPermissionDiff(
-						api2,
-						room_id,
 						(c.old ?? []) as Array<string>,
 						(c.new ?? []) as Array<string>,
 						"permission_denied",
@@ -583,8 +630,6 @@ export function formatChanges(
 			) {
 				formatted.push(
 					...renderPermissionDiff(
-						api2,
-						room_id,
 						(c.old ?? []) as Array<string>,
 						(c.new ?? []) as Array<string>,
 						"permission_granted",
@@ -598,8 +643,6 @@ export function formatChanges(
 			) {
 				formatted.push(
 					...renderPermissionDiff(
-						api2,
-						room_id,
 						(c.old ?? []) as Array<string>,
 						(c.new ?? []) as Array<string>,
 						"permission_revoked",
@@ -652,7 +695,7 @@ export function formatChanges(
 					formatted.push(
 						<li>
 							{t("audit_log.changes.role_added", {
-								role_name: resolveName(api2, room_id, r, "role"),
+								role_name: resolveName(api2, entryRoom, r, "role"),
 							})}
 						</li>,
 					);
@@ -661,7 +704,7 @@ export function formatChanges(
 					formatted.push(
 						<li>
 							{t("audit_log.changes.role_removed", {
-								role_name: resolveName(api2, room_id, r, "role"),
+								role_name: resolveName(api2, entryRoom, r, "role"),
 							})}
 						</li>,
 					);
@@ -691,8 +734,6 @@ export function formatChanges(
 }
 
 function renderPermissionDiff(
-	_api2: ReturnType<typeof useApi>,
-	_room_id: string,
 	oldValues: Array<string>,
 	newValues: Array<string>,
 	addedLabel: keyof typeof import("@/i18n/en.json").audit_log.changes,

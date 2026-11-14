@@ -1,6 +1,6 @@
 import { ReactiveSet } from "@solid-primitives/set";
 import { type AuditLogEntry, getTimestampFromUUID } from "sdk";
-import { createSignal, For, Show } from "solid-js";
+import { createMemo, createSignal, For, Show } from "solid-js";
 import { Time } from "@/atoms/Time.tsx";
 import {
 	formatAuditLogEntry,
@@ -14,7 +14,7 @@ export function AuditLogList(props: {
 }) {
 	const [isExpanded, setIsExpanded] = createSignal(false);
 	const expanded = new ReactiveSet<string>();
-	const merged = () => mergeAuditLogEntries(props.entries);
+	const merged = createMemo(() => mergeAuditLogEntries(props.entries));
 
 	const toggle = (id: string) => {
 		if (expanded.has(id)) {
@@ -52,6 +52,9 @@ export function AuditLogList(props: {
 						const ts = () => getTimestampFromUUID(firstEntry.id);
 						const entryDescription = () =>
 							formatAuditLogEntry(props.room_id, mergedEntry);
+						const changes = createMemo(() =>
+							formatChanges(props.room_id, mergedEntry),
+						);
 
 						return (
 							<li data-id={firstEntry.id}>
@@ -75,8 +78,7 @@ export function AuditLogList(props: {
 								</div>
 								<Show
 									when={
-										(formatChanges(props.room_id, mergedEntry).length !== 0 ||
-											mergedEntry.reason) &&
+										(changes().length !== 0 || mergedEntry.reason) &&
 										expanded.has(firstEntry.id)
 									}
 								>
@@ -84,7 +86,7 @@ export function AuditLogList(props: {
 										<Show when={mergedEntry.reason}>
 											<li>reason: {mergedEntry.reason}</li>
 										</Show>
-										{formatChanges(props.room_id, mergedEntry)}
+										{changes()}
 									</ul>
 								</Show>
 							</li>

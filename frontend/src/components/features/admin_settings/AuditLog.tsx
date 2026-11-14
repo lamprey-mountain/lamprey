@@ -1,6 +1,5 @@
 import { ReactiveSet } from "@solid-primitives/set";
 import {
-	type AuditLogEntry,
 	getTimestampFromUUID,
 	type Room,
 	SERVER_ROOM_ID,
@@ -34,6 +33,14 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 	]);
 	const [isExpanded, setIsExpanded] = createSignal(false);
 	const expanded = new ReactiveSet();
+	const entries = createMemo(
+		() =>
+			log()?.state.ids.flatMap((id) => {
+				const entry = api.auditLog.cache.get(id);
+				return entry ? [entry] : [];
+			}) ?? [],
+	);
+	const merged = createMemo(() => mergeAuditLogEntries(entries()));
 
 	const toggleAll = () => {
 		if (isExpanded()) {
@@ -86,22 +93,15 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 			</div>
 			<Show when={log()} fallback={<AuditLogSkeleton controls={false} />}>
 				<ul class="room-settings-audit-log">
-					<For
-						each={(() => {
-							const l = log();
-							if (!l) return [];
-							return mergeAuditLogEntries(
-								l.state.ids
-									.map((id) => api.auditLog.cache.get(id))
-									.filter((e): e is AuditLogEntry => e !== undefined),
-							);
-						})()}
-					>
+					<For each={merged()}>
 						{(mergedEntry) => {
 							const firstEntry = mergedEntry.entries[0];
 							const ts = () => getTimestampFromUUID(firstEntry.id);
 							const entryDescription = () =>
 								formatAuditLogEntry(SERVER_ROOM_ID, mergedEntry);
+							const changes = createMemo(() =>
+								formatChanges(SERVER_ROOM_ID, mergedEntry),
+							);
 
 							return (
 								<li data-id={firstEntry.id}>
@@ -120,9 +120,7 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 									</div>
 									<Show
 										when={
-											(formatChanges(SERVER_ROOM_ID, mergedEntry).length !==
-												0 ||
-												mergedEntry.reason) &&
+											(changes().length !== 0 || mergedEntry.reason) &&
 											expanded.has(firstEntry.id)
 										}
 									>
@@ -130,7 +128,7 @@ export function AuditLog(_props: VoidProps<{ room: Room }>) {
 											<Show when={mergedEntry.reason}>
 												<li>reason: {mergedEntry.reason}</li>
 											</Show>
-											{formatChanges(SERVER_ROOM_ID, mergedEntry)}
+											{changes()}
 										</ul>
 									</Show>
 								</li>
