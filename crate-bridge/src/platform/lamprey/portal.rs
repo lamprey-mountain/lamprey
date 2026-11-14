@@ -1,4 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use common::{
     v1::types::{
@@ -33,6 +36,9 @@ pub struct LampreyPortal {
     handle: PortalHandle,
     http: Http,
     channel_id: ChannelId,
+    /// last discord message id that was bridged, used to keep the persisted
+    /// backfill cursor monotonic
+    discord_cursor: Mutex<discord::MessageId>,
 }
 
 impl LampreyPortal {
@@ -43,12 +49,21 @@ impl LampreyPortal {
         http: Http,
         channel_id: ChannelId,
     ) -> (PortalId, Result<()>) {
+        let discord_cursor = Mutex::new(
+            portal
+                .discord
+                .as_ref()
+                .expect("lamprey portal has a discord side")
+                .last_id,
+        );
+
         let me = Self {
             portal_id,
             portal,
             handle,
             http,
             channel_id,
+            discord_cursor,
         };
         (portal_id, me.run().await)
     }
@@ -151,6 +166,27 @@ impl LampreyPortal {
         }
     }
 
+    /// persist the backfill cursor so reconnects don't replay old messages
+    async fn update_discord_cursor(&self, last_id: discord::MessageId) {
+        {
+            let mut cursor = self.discord_cursor.lock().unwrap();
+            if last_id <= *cursor {
+                return;
+            }
+            *cursor = last_id;
+        }
+
+        if let Err(err) = self
+            .handle
+            .bridge
+            .db
+            .portal_update_discord_last_id(self.portal_id, last_id)
+            .await
+        {
+            warn!(portal_id = %self.portal_id, "failed to update discord cursor: {err}");
+        }
+    }
+
     // Message-based thread channel ids equal their starter message id; private
     // threads (created via `thread_create`) have their own portal instead.
     async fn resolve_thread_channel(&self, thread: Option<ThreadId>) -> Result<Option<ChannelId>> {
@@ -210,6 +246,7 @@ impl LampreyPortal {
 
                 // don't bridge "thread created" message
                 if matches!(dm.kind, discord::MessageType::ThreadCreated) {
+                    self.update_discord_cursor(dm.id).await;
                     return Ok(());
                 }
 
@@ -222,6 +259,7 @@ impl LampreyPortal {
                     .await?
                     .is_some()
                 {
+                    self.update_discord_cursor(dm.id).await;
                     return Ok(());
                 }
 
@@ -424,6 +462,8 @@ impl LampreyPortal {
                         },
                     )
                     .await?;
+
+                self.update_discord_cursor(dm.id).await;
             }
             PortalEvent::MessageUpdate(data) => {
                 let dm = match data {

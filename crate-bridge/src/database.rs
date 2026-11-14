@@ -34,6 +34,18 @@ pub trait Database: fmt::Debug + Send + Sync {
 
     async fn portal_create(&self, portal: Portal) -> Result<()>;
     async fn portal_update(&self, portal: Portal) -> Result<()>;
+    /// update only the lamprey backfill cursor
+    async fn portal_update_lamprey_last_id(
+        &self,
+        id: PortalId,
+        last_id: lamprey::MessageId,
+    ) -> Result<()>;
+    /// update only the discord backfill cursor
+    async fn portal_update_discord_last_id(
+        &self,
+        id: PortalId,
+        last_id: discord::MessageId,
+    ) -> Result<()>;
     async fn portal_delete(&self, id: PortalId) -> Result<()>;
     async fn portal_list(&self) -> Result<Vec<Portal>>;
 
@@ -287,6 +299,32 @@ impl Database for SqliteDatabase {
         )
         .execute(&self.pool)
         .await?;
+        Ok(())
+    }
+
+    async fn portal_update_lamprey_last_id(
+        &self,
+        id: PortalId,
+        last_id: lamprey::MessageId,
+    ) -> Result<()> {
+        sqlx::query("UPDATE portal SET lamprey_last_id = ? WHERE id = ?")
+            .bind(last_id.to_string())
+            .bind(id.to_string())
+            .execute(&self.pool)
+            .await?;
+        Ok(())
+    }
+
+    async fn portal_update_discord_last_id(
+        &self,
+        id: PortalId,
+        last_id: discord::MessageId,
+    ) -> Result<()> {
+        sqlx::query("UPDATE portal SET discord_last_id = ? WHERE id = ?")
+            .bind(last_id.to_string())
+            .bind(id.to_string())
+            .execute(&self.pool)
+            .await?;
         Ok(())
     }
 

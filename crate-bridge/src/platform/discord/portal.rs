@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use opentelemetry::trace::FutureExt;
 use tokio::sync::broadcast;
@@ -24,6 +24,9 @@ pub struct DiscordPortal {
     portal: Portal,
     handle: PortalHandle,
     http: Arc<HttpClient>,
+    /// last lamprey message id that was bridged, used to keep the persisted
+    /// backfill cursor monotonic
+    lamprey_cursor: Mutex<lamprey::MessageId>,
 }
 
 impl DiscordPortal {
@@ -33,11 +36,20 @@ impl DiscordPortal {
         handle: PortalHandle,
         http: Arc<HttpClient>,
     ) -> (PortalId, Result<()>) {
+        let lamprey_cursor = Mutex::new(
+            portal
+                .lamprey
+                .as_ref()
+                .expect("discord portal has a lamprey side")
+                .last_id,
+        );
+
         let me = Self {
             portal_id,
             portal,
             handle,
             http,
+            lamprey_cursor,
         };
         (portal_id, me.run().await)
     }
@@ -144,6 +156,27 @@ impl DiscordPortal {
         }
     }
 
+    /// persist the backfill cursor so reconnects don't replay old messages
+    async fn update_lamprey_cursor(&self, last_id: lamprey::MessageId) {
+        {
+            let mut cursor = self.lamprey_cursor.lock().unwrap();
+            if last_id <= *cursor {
+                return;
+            }
+            *cursor = last_id;
+        }
+
+        if let Err(err) = self
+            .handle
+            .bridge
+            .db
+            .portal_update_lamprey_last_id(self.portal_id, last_id)
+            .await
+        {
+            warn!(portal_id = %self.portal_id, "failed to update lamprey cursor: {err}");
+        }
+    }
+
     // Message-based thread channel ids equal their starter message id; private
     // threads (created via `thread_create`) have their own portal instead.
     async fn resolve_thread(&self, thread: Option<ThreadId>) -> Result<Option<ChannelId>> {
@@ -205,6 +238,7 @@ impl DiscordPortal {
                     .await?
                     .is_some()
                 {
+                    self.update_lamprey_cursor(msg.id).await;
                     return Ok(());
                 }
 
@@ -219,6 +253,7 @@ impl DiscordPortal {
                     _ => {
                         debug!("unsupported lamprey message type");
                         // TODO: format and send anyways?
+                        self.update_lamprey_cursor(msg.id).await;
                         return Ok(());
                     }
                 };
@@ -367,13 +402,18 @@ impl DiscordPortal {
                         attachments,
                     };
 
-                    let _ = self
+                    if let Err(err) = self
                         .handle
                         .bridge
                         .db
                         .message_create(self.portal_id, updated_message)
-                        .await;
+                        .await
+                    {
+                        error!(portal_id = %self.portal_id, "failed to store bridged message: {err}");
+                    }
                 }
+
+                self.update_lamprey_cursor(msg.id).await;
             }
             PortalEvent::MessageUpdate(data) => {
                 let (msg, _user, _room_member, info) = match data {
